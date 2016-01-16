@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>BREP.js</title>
+	<script type="text/javascript">
+	</script>
+
+	<script type="text/javascript" src="wu.debug.js"></script>
+	<script type="text/javascript" src="NLA.js"></script>
+	<script type="text/javascript" src="earcut.dev.js"></script>
+	<script type="text/javascript" src="Vector3.js"></script>
+	<script type="text/javascript" src="Matrix4x4.js"></script>
+	<script type="text/javascript" src="Plane3.js"></script>
+	<script type="text/javascript" src="Line3.js"></script>
+	<script type="text/javascript" src="lightgl.js"></script>
+	<script type="text/javascript" src="CSG.js"></script>
+	<script type="text/javascript" src="MooTools-Core-1.5.2.js"></script>
+	<script id="fragment-shader" type="x-shader/x-fragment">
+	uniform vec3 color;
+    varying vec4 pos;
+    void main() {
+        float distance = pos.x * pos.x + pos.y * pos.y;
+        if (distance <= 0.98) {
+            gl_FragColor = vec4(color, 1.0);
+        } else if (distance <= 1.0) {
+			gl_FragColor = vec4(color, 0.5);
+		} else {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        }
+    }
+					  /*
+    precision mediump float;
+
+    varying vec4 pos;
+
+
+    void main() {
+        float inside = pos.r * pos.r + pos.g * pos.g;
+        if (inside <= 1) {
+            gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        } else {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        }
+    }
+	*/
+</script>
+	<script id="vertexShaderBasic" type="x-shader/x-vertex">
+    void main() {
+		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    }
+</script>
+	<script id="fragmentShaderLighting" type="x-shader/x-fragment">
+	uniform vec4 color;
+	varying vec3 normal;
+    void main() {
+        vec3 lightDir = normalize(vec3(-1, -2, -3));
+        float lightIntensity = 0.2 + 0.8 * max(0.0, -dot(lightDir, normalize(normal)));
+		gl_FragColor = color * lightIntensity;
+    }
+	</script>
+	<script id="vertexShaderLighting" type="x-shader/x-fragment">
+	uniform vec4 color;
+	varying vec3 normal;
+    void main() {
+		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+		normal = gl_NormalMatrix * gl_Normal;
+    }
+	</script>
+	<script id="vertexShaderArc" type="x-shader/x-vertex">
+	uniform float step, offset;
+	uniform float innerRadius, outerRadius;
+    void main() {
+		float radius = gl_Vertex.x == 1.0 ? outerRadius : innerRadius, angle = offset + gl_Vertex.y * step;
+		vec4 p = vec4(radius * cos(angle), radius * sin(angle), 0, 1);
+		gl_Position = gl_ModelViewProjectionMatrix * p;
+    }
+</script>
+	<script id="vertexShaderRing" type="x-shader/x-vertex">
+	#define M_PI 3.1415926535897932384626433832795
+	uniform float step;
+	uniform float innerRadius, outerRadius;
+	attribute float index;
+    void main() {
+		gl_Position = gl_ModelViewProjectionMatrix * vec4(index, index, index, 1);
+		float id = atan(gl_Vertex.x, gl_Vertex.y) / M_PI  * 32.0;
+		float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
+		gl_Position = gl_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
+    }
+</script>
+	<script id="fragmentShaderColor" type="x-shader/x-fragment">
+	uniform vec4 color;
+    void main() {
+		gl_FragColor = color;
+    }
+</script>
+	<script id="fragmentShaderColorHighlight" type="x-shader/x-fragment">
+	uniform vec4 color;
+    void main() {
+		float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
+		if (mod(diagonal, 50.0) > 40.0) { // mod(diagonal, 2.0) > 1.0
+			discard;
+			//gl_FragColor = color + vec4(0.2,0.2,0.2,0);
+		} else {
+			gl_FragColor = color - vec4(0.2,0.2,0.2,0);
+		}
+    }
+	</script>
+	<script id="vertexShaderTextureColor" type="x-shader/x-vertex">
+			varying vec2 texturePos;
+	void main() {
+		texturePos = gl_Vertex.xy;
+		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	}
+	</script>
+	<script id="fragmentShaderTextureColor" type="x-shader/x-fragment">
+	varying vec2 texturePos;
+	uniform vec4 color;
+	uniform sampler2D texture;
+    void main() {
+		gl_FragColor = texture2D(texture, texturePos) * color;
+    }
+</script>
+	<script type="text/javascript" src="brep.js"></script>
+
+	<script type="text/javascript">
+		window.onload = loadup;</script>
+	<link rel="stylesheet" href="qunit-1.20.0.css">
+</head>
+<body>
+<canvas id="testcanvas" width="1000px", height="500px"></canvas>
+</body>
+</html>

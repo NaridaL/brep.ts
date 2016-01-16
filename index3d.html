@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<script type="text/javascript">
+			window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
+						console.log(errorMsg, url, lineNumber, column, errorObj);
+					}
+			</script>
+		<script type="text/javascript" src="NLA.js"></script>
+		<script type="text/javascript" src="shaders.js"></script>
+		<script type="text/javascript" src="Vector3.js"></script>
+		<script type="text/javascript" src="Matrix4x4.js"></script>
+		<script type="text/javascript" src="Plane3.js"></script>
+		<script type="text/javascript" src="Line3.js"></script>
+		<script type="text/javascript" src="lightgl.js"></script>
+		<script type="text/javascript" src="MooTools-Core-1.6.0.js"></script>
+		<script type="text/javascript" src="csg.js"></script>
+		<script type="text/javascript" src="earcut.dev.js"></script>
+		<script type="text/javascript" src="brep.js"></script>
+
+		<script type="text/javascript" src="js3d.js"></script>
+		<script type="text/javascript">window.onload = main</script>
+
+		<script id="template" type="x-template">
+            <div>
+	            <span style="width: 8em; display: inline-block; text-transform: uppercase">$what</span>
+	            $name <a href="#" class="unsel">unsel</a></div>
+        </script>
+		<script id="templateConstraint" type="x-template">
+            <div>$name <a href="#" class="remove">Remove</a></div>
+        </script>
+		<script id="templateDistance" type="x-template">
+            <div>$name <input class="distanceInput" type="text" id="distanceInput$id" /></div>
+        </script>
+		<script id="templateAngle" type="x-template">
+            <div>$name <input class="distanceInput" type="text" id="distanceInput$id" /> <a href="#" class="fa">FA</a> <a href="#" class="fb">FB</a> <a href="#" class="fv">FV</a></div>
+        </script>
+		<script id="templateConstraintSub" type="x-template">
+			<div>$name <a href="#" class="removeFromConstraint">Free</a></div>
+		</script>
+		<script id="templateFeatureExtrude" type="x-template">
+			<div>
+				<span style="width: 8em; display: inline-block">$what</span>
+				<span style="width: 8em; display: inline-block;color: purple;">$name</span>
+				<a href="#" class="featureDelete icon-link" name="delete">&#x274C;</a>
+				<a href="#" class="featureEdit icon-link" name="edit">&#x1f589;</a>
+				<a href="#" class="featureEdit icon-link" name="toggleShow">&#x1f441;</a></div>
+		</script>
+
+		<style type="text/css">
+			body {
+				font-family: Verdana;
+			}
+			.selector {
+				border: 1px solid black;
+				cursor: pointer;
+				display: inline-block;
+				width: 10em;
+			}
+			.selecting {
+				border-color: darkred;
+				color: darkgreen;
+			}
+			.icon-link {
+				text-decoration: none;
+				color: darkred;
+			}
+
+			.editorBox {
+				background: #eeeeee;
+				padding: 4px;
+				display: none;
+				margin: 8px;
+			}
+			.editorBox .header {
+				font-weight: bold;
+			}
+			label {
+				display: block;
+			}
+			label span {
+				display: inline-block;
+				width: 7em;
+			}
+		</style>
+	</head>
+	<body>
+	<canvas id="myCanvas" width="1200" height="600" style="border:1px solid #000000;"></canvas>
+	<canvas id="textTextureCanvas" style="display: none;top: 80px; left: 8px; z-index: 1000" width="64" height="64"></canvas>
+	<br />
+	<div id="featureDisplay"
+
+	     style="background:#eeeeee; padding:4px;position: absolute; top: 40px; left: 8px; z-index: 1000;width: 20%; ">
+		TEEEST</div>
+	<div style="position: absolute; top: 20px; right: 8px; z-index: 1000;width: 20%; ">
+		<div id="sketchEditor" class="editorBox">
+			Edit Sketch
+			<input type="text" name="name" id="sketchEditorSketchName" class="string-id-input" />
+			<label><span>On Plane</span>
+			<div id="sketchEditorPlaneName" class="plane-select selector" name="planeName">&nbsp;</div></label>
+
+			<button name="done">Done</button>
+			<button name="delete">Delete</button>
+		</div>
+
+		<div id="selectedStuff" class="editorBox">
+			<span class="header">Elements</span>
+			<div id="selectedElements"></div>
+			<span class="header">Constraints</span>
+			<div id="selectedConstraints"></div>
+		</div>
+
+
+		<div id="planeDefiner" class="editorBox">
+			<span class="header">Define Plane</span>
+			<input type="text" id="planeDefinerPlaneId" class="string-id-input" name="planeId"/>
+			<select name="planeType" class="select-select">
+				<option value="face">Face</option>
+				<option value="points">Through Points</option>
+				<option value="anchorNormal">Anchor & Normal</option>
+				<option value="immediate">Immediate</option>
+			</select>
+			<div name="">
+				<label>
+				<span>Select face</span>
+				<div id="planeDefinerFaceId" class="face-select selector" name="faceName">&nbsp;</div></label>
+				<label><span>Offset</span>
+					<input type="" class="dimension-input" id="planeDefinerOffset" defaultValue="0" name="offset" /></label>
+
+			</div>
+			<div name="">
+				Input
+				<input class="select-text" name="source" />
+			</div>
+			<button name="done">Done</button>
+			<button name="delete">Delete</button>
+		</div>
+
+		<div id="extrudeEditor" class="editorBox">
+			<span class="header">Extrude</span>
+			<input type="text" name="name" class="plane-id string-id-input" />
+			<label>
+				<span>Select Loop</span>
+				<div class="segment-select selector" name="segmentName">&nbsp;</div></label>
+			<label><span>Start</span> <input type="text" class="dimension-input" name="start" defaultValue="0" /></label>
+			<label><span>End</span> <input type="text" class="dimension-input" name="end" defaultValue="0" /></label>
+			<select name="operation" class="select-select">
+				<option value="minus">Difference</option>
+				<option value="plus">Union</option>
+				<option value="and">Intersection</option>
+			</select>
+			<button name="done">Done</button>
+			<button name="delete">Delete</button>
+		</div>
+	</div>
+	<div id="buttonbar" style="position: absolute; top: 8px; left: 8px; z-index: 1000">
+		<button type="button" onclick="clicky()">Step</button>
+		<button type="button" id="clearmode">Clear Mode</button>
+		<button type="button" onclick="mode='addsegments';">Add Segments</button>
+		<button type="button" onclick="addSketch()">Add Sketch</button>
+		<button type="button" onclick="addPlane()">Add Plane</button>
+		<button type="button" onclick="addExtrude()">Extrude</button>
+		<button type="button" onclick="mode='addPoints';">Add Points</button>
+		<button type="button" onclick="makeGroup('parallel');">Parallel</button>
+		<button type="button" onclick="makePerpendicular();">Perpendicular</button>
+		<button type="button" onclick="makeGroup('equalLength');">Equal Length</button>
+		<button type="button" onclick="makeSelCoincident();">Coincident</button>
+		<button type="button" onclick="selPointOnLine();">Point on Line</button>
+		<button type="button" onclick="makeGroup('colinear');">Colinear</button>
+		<button type="button" onclick="makeDistance()">Distance</button>
+		<button type="button" onclick="makeAngle();">Angle</button>
+		<button type="button" onclick="faceSketchPlane();">Face Sketch Plane</button>
+	</div>
+	</body>
+</html>

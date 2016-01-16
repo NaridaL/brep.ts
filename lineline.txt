@@ -1,0 +1,45 @@
+
+      // obj is a line
+      if (this.isParallelTo(obj)) { return this.distanceFrom(obj.anchor); }
+      var N = this.direction.cross(obj.direction).toUnitVector().elements;
+      var A = this.anchor.elements, B = obj.anchor.elements;
+      return Math.abs((A[0] - B[0]) * N[0] + (A[1] - B[1]) * N[1] + (A[2] - B[2]) * N[2]);
+      
+      
+      
+      // obj is a line
+      if (this.intersects(obj)) { return this.intersectionWith(obj); }
+      if (this.isParallelTo(obj)) { return null; }
+      var D = this.direction.elements, E = obj.direction.elements;
+      var D1 = D[0], D2 = D[1], D3 = D[2], E1 = E[0], E2 = E[1], E3 = E[2];
+      // Create plane containing obj and the shared normal and intersect this with it
+      // Thank you: http://www.cgafaq.info/wiki/Line-line_distance
+      var x = (D3 * E1 - D1 * E3), y = (D1 * E2 - D2 * E1), z = (D2 * E3 - D3 * E2);
+      var N = Vector.create([x * E3 - y * E2, y * E1 - z * E3, z * E2 - x * E1]);
+      var P = Plane.create(obj.anchor, N);
+      return P.intersectionWith(this);
+      
+      
+    l = a + s*b
+    m = c + t*d
+    
+    (l - m) * b = 0
+    (l - m) * d = 0
+    
+    (a + s*b - c - t*d) * b = 0
+    (a + s*b - c - t*d) * d = 0
+    
+    (a0 + s*b0 - c0 + t*d0)*b0 + (a1 + s*b1 - c1 + t*d1)*b1 + (a2 + s*b2 - c2 + t*d2)*b2 = 0
+    a * b - c * b + s * (b * b) - t * (d * b) = 0
+    a * d - c * d + s * (b * d) - t * (d * d) = 0
+    
+    => s = (c * b - a * b + t * (d * b)) / (b * b)
+    a * d - c * d + (c * b - a * b + t * (d * b)) / (b * b) * (b * d) - t * (d * d) = 0
+    a * d - c * d + (c * b - a * b) / (b * b) * (b * d)  + t * ((d * b) / (b * b) * (b * d) - (d * d))= 0
+    t = ((c - a)* d) * (b * b) - (c -a ) * b * (b * d)) / ((d * b) * (b * d) - (b * b) * (d * d))
+    
+    
+    
+    
+    
+    

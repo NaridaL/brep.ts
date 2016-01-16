@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+ <meta charset="UTF-8"> <script>
+function myFunction() {
+    document.getElementById("demo").innerHTML = "Paragraph changed.";
+}
+</script>
+</head>
+<body>
+<script type="text/javascript" src="sylvester.src.js"></script>
+<script type="text/javascript" src="js.js"></script>
+ <canvas id="myCanvas" width="1200" height="600" style="border:1px solid #000000;">
+</canvas> 
+<br />
+<div id="buttonbar" style="position: absolute; top: 8px; left: 8px;">
+<button type="button" onclick="clicky()">Step</button></body>
+<button type="button" onclick="clicky()" id="clearmode">Clear Mode</button>
+<button type="button" onclick="mode='addsegments';">Add Segments</button>
+<button type="button" onclick="mode='addPoints';">Add Segments</button>
+<button type="button" onclick="makeParallel();">Parallel</button>
+<button type="button" onclick="makePerpendicular();">Perpendicular</button>
+<button type="button" onclick="makeSelCoincident();">Coincident</button>
+<button type="button" onclick="selPointOnLine();">Point on Line</button>
+<button type="button" onclick="makeSelColinear();">Colinear</button>
+</div>
+</body>
+</html>
