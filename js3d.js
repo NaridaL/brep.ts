@@ -12,48 +12,6 @@ Object.getOwnPropertyNames(Math).forEach(function (propertyName) {
 var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3
 var DEBUG = true
 
-/*
-var S0 = 0, S1 = 1, D0 = 2, D1 = 3;
-Array.prototype.concatenated = function () {
-	return Array.prototype.concat.apply([], this);
-}
-Array.prototype.pushAll = function (arr) {
-	Array.prototype.push.apply(this, arr);
-};
-Array.prototype.max = function() {
-	return Math.max.apply(null, this);
-};
-
-Array.prototype.min = function() {
-	return Math.min.apply(null, this);
-};
-Array.prototype.unique = function (o) {
-	return this.filter(function(item, pos, array) {
-		return array.indexOf(item) == pos;
-	});
-}
-Array.prototype.isEmpty = function () {
-	return 0 == this.length;
-};
-Array.prototype.removeAll = function (os) {
-	for (var i = this.length; --i > 0;) {
-		if (os.contains(this[i])) {
-			this.splice(i, 1);
-		}
-	}
-};
-Array.prototype.sliceStep = function (start, step, chunkSize) {
-	chunkSize = chunkSize || 1;
-	var result = new Array(ceil((this.length - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
-	var index = 0;
-	for (var i = 0; i < this.length; i += step) {
-		for (var j = 0; j < chunkSize; j++) {
-			result[index++] = this[start + i + j];
-		}
-	}
-	return result;
-}
-*/
 var globalId = 0;
 function Point(x, y) {
 	this.x = x;
@@ -68,8 +26,7 @@ function Sketch(planeName) {
 }
 Sketch.prototype = {
 	getConstraintsFor: function (el) {
-		console.log("el", el);
-		return this.constraints.filter((constraint) => constraint.type != 'coincident' && constraint.constrains(el));
+		return this.constraints.filter((constraint) => constraint.constrains(el))
 	},
 
 	constrainDistancePointFixedLineWC: function (point, lineWC, distance) {
@@ -161,28 +118,6 @@ Sketch.prototype = {
 				(x[ib + 1] - x[ia + 1]) * f[0],
 				(x[ib]     - x[ia]    ) * f[0])) / 2) );
 	},
-	/*
-	gaussNewtonStep2: function () {
-		//disableConsole();
-		var {F, x, b} = this
-		var Fx = F.map(function (f) { return f(x)});
-		console.log("x", x);
-		console.log("Fx", Fx);
-		console.log("b", b);
-		var jacobi = $M(calcDFx(F, x, Fx));
-		console.log("jacobi\n", calcDFx(F, x, Fx).toSource());
-		console.log("jacobi\n", jacobi.inspect());
-		var jacobiTranspose = jacobi.transpose();
-		var matrix = jacobiTranspose.multiply((jacobi.multiply(jacobiTranspose)).inverse());
-		console.log("inverseJacobi",matrix.inspect());
-		var xDif = matrix.multiply($V(Fx).subtract($V(b)));
-		console.log("xDif", xDif.inspect());
-		this.x = $V(x).subtract(xDif).elements;
-		Fx = F.map(function (f) { return f(x)});
-		//enableConsole();
-		return $V(Fx).subtract($V(b)).modulus();
-	},
-	*/
 	gaussNewtonStep: function () {
 		//disableConsole();
 		var {F, x, b} = this
@@ -206,8 +141,8 @@ Sketch.prototype = {
 		var points = [];
 		do {
 			points.push(currentPoint);
-			//console.log(currentPoint.coincidence.which.filter(function (point) { point instanceof SegmentEndPoint && point != currentPoint; }));
-			var otherPointsInCoincidence = currentPoint.coincidence.which.filter(function (point) {
+			//console.log(currentPoint.coincidence.cs.filter(function (point) { point instanceof SegmentEndPoint && point != currentPoint; }));
+			var otherPointsInCoincidence = currentPoint.coincidence.cs.filter(function (point) {
 				//console.log("point", point, point instanceof SegmentEndPoint, point != currentPoint);
 				return point instanceof SegmentEndPoint && point != currentPoint; });
 			if (otherPointsInCoincidence.length != 1) {
@@ -232,6 +167,7 @@ function SegmentEndPoint(x, y, line, sketch) {
 	this.line = line;
 	this.id = globalId++;
 	this.sketch = sketch
+	this.name = "segEndPoint" + (globalId++)
 	//this.sceneElement = addScenePoint();
 	//this.updateSceneElement();
 }
@@ -248,44 +184,40 @@ SegmentEndPoint.prototype = {
 
 	isConstrained: function () {
 		var line = this.line;
-		return constraints.some(
-			function (constraint) {
-				return constraint.type == "parallel" && constraint.which.contains(line)
-					|| constraint.type == "perpendicular" && (constraint.first == line || constraint.second == line)
-					|| constraint.type == "pointOnLine" && (constraint.line == line || constraint.point == this);
-			});
+		return constraints.some(constraint => constraint.constrains(this) || constraint.constrains(this.line))
 	},
 	remove: function () {
-		removeCoincidence(this, this.sketch);
+		removeCoincidence(this, currentSketch);
 	},
+	what: "SegmentEndPoint"
 }
 var globHighlight = "";
 function makeCoincident(p1, p2, sketch) {
 	if (p1.coincidence && p2.coincidence) {
 		for (var i = 0; i < p2.coincidence.length;  i++) {
-			p1.coincidence.which.push(p2.coincidence.which[i]);
-			p2.coincidence.which[i].coincidence = p1.coincidence;
+			p1.coincidence.cs.push(p2.coincidence.cs[i])
+			p2.coincidence.cs[i].coincidence = p1.coincidence
 		}
-		p1.coincidence.which.push(p2);
-		p2.coincidence = p1.coincidence;
+		p1.coincidence.cs.push(p2)
+		p2.coincidence = p1.coincidence
 	} else if (p1.coincidence) {
-		p1.coincidence.which.push(p2);
-		p2.coincidence = p1.coincidence;
+		p1.coincidence.cs.push(p2)
+		p2.coincidence = p1.coincidence
 	} else if (p2.coincidence) {
-		p2.coincidence.which.push(p1);
-		p1.coincidence = p2.coincidence;
+		p2.coincidence.cs.push(p1)
+		p1.coincidence = p2.coincidence
 	} else {
-		sketch.constraints.push(p1.coincidence = p2.coincidence = {"type":"coincident", "which":[p1,p2]});
+		sketch.constraints.push(p1.coincidence = p2.coincidence = new Constraint("coincident", [p1,p2]))
 	}
-	p2.x = p1.x;
-	p2.y = p1.y;
+	p2.x = p1.x
+	p2.y = p1.y
 }
 function removeCoincidence(p, sketch) {
 	if (!p.coincidence) return;
-	p.coincidence.which.remove(p);
-	if (p.coincidence.which.length == 1) {
+	p.coincidence.cs.remove(p);
+	if (p.coincidence.cs.length == 1) {
 		sketch.constraints.remove(p.coincidence);
-		p.coincidence.which[0].coincidence = undefined
+		p.coincidence.cs[0].coincidence = undefined
 	}
 	p.coincidence = undefined;
 }
@@ -299,6 +231,10 @@ function Segment(x1, y1, x2, y2) {
 	//this.updateSceneElement();
 }
 Segment.prototype = {
+	remove: function () {
+		assert (currentSketch.elements.contains(this))
+		this.removeFromSketch(currentSketch)
+	},
 	distanceToCoords: function (coords) {
 		return this.distanceTo(coords.x, coords.y);
 	},
@@ -312,6 +248,7 @@ Segment.prototype = {
 		return atan2(this.b.y - this.a.y, this.b.x - this.a.x);
 	},
 	removeFromSketch: function (sketch) {
+		// TODO: correctly remove all dependant constraints
 		this.a.remove();
 		this.b.remove();
 		sketch.elements.remove(this);
@@ -377,7 +314,8 @@ Segment.prototype = {
 	intersection: function (segment) {
 		return intersection(this.a.x, this.a.y, this.b.x, this.b.y,
 			segment.a.x, segment.a.y, segment.b.x, segment.b.y);
-	}
+	},
+	what: "Segment"
 }
 function intersection(x1, y1, x2, y2, x3, y3, x4, y4) {
 	var denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
@@ -412,13 +350,14 @@ function lengthSquared(x, y) {
 // (d0, d1)^T is normalized
 // x.length = 4 * lines.length
 function recalculate(sketch) {
+	"use strict";
 	function pushPoint(p) {
 		var varMap = sketch.varMap, x = sketch.x
 		if (varMap.has(p) /*	|| !p.isConstrained()*/) {
 			return;
 		}
 		if (p.coincidence) {
-			p.coincidence.which.forEach(function (p2) {
+			p.coincidence.cs.forEach(function (p2) {
 				varMap.set(p2, xIndex);
 			});
 		} else {
@@ -444,9 +383,9 @@ function recalculate(sketch) {
 			if (c.type == "parallel" || c.type == "colinear" || c.type == "equalLength") {
 				if (c.fixed) {
 					for (var j = 0; j < c.segments.length; j++) {
-						sketch.constrainAngleSegmentToPlane(c.segments[j], c.fixed, 1);
+						sketch.constrainAngleSegmentToPlane(c.segments[j], c.fixed.plane, 1);
 						if ("colinear" == c.type) {
-							sketch.constrainDistancePointFixedPlane(c.segments[j].a, c.fixed, 0);
+							sketch.constrainDistancePointFixedPlane(c.segments[j].a, c.fixed.plane, 0);
 						}
 					}
 				} else {
@@ -474,8 +413,8 @@ function recalculate(sketch) {
 			}
 			if (c.type == "pointOnLine" || c.type == "pointLineDistance") {
 				var distance = c.type == "pointLineDistance" ? c.distance : 0;
-				if (c.other instanceof CustomPlane) {
-					sketch.constrainDistancePointFixedPlane(c.point, c.other, distance)
+				if (c.other.plane) {
+					sketch.constrainDistancePointFixedPlane(c.point, c.other.plane, distance)
 				} else {
 					sketch.constrainDistancePointSegment(c.point, c.other, distance)
 				}
@@ -486,8 +425,8 @@ function recalculate(sketch) {
 			if (c.type == "perpendicular") {
 				var cosValue = c.type == "angle" ? cos(c.value) : 0
 				// assume that max. one element can be a line or a plane
-				if (c.other instanceof CustomPlane) {
-					sketch.constrainAngleSegmentToPlane(c.segment, c.other, cosValue);
+				if (c.other.plane) {
+					sketch.constrainAngleSegmentToPlane(c.segment, c.other.plane, cosValue);
 				} else {
 					sketch.constrainAngleSegmentSegment(c.segment, c.other, cosValue);
 				}
@@ -506,7 +445,7 @@ function recalculate(sketch) {
 			return;
 		}
 		var lastSize = 0
-		for (var count = 0; count < 2; count++) {
+		for (var count = 0; count < 10; count++) {
 			if ((lastSize = sketch.gaussNewtonStep()) < 1e-6) {
 				break;
 			}
@@ -730,18 +669,18 @@ function paintSegments(sketch) {
 		//console.log("line", line);
 		//console.log("hoverHighlight.length", hoverHighlight.length);
 		//ctx.beginPath();
-		paintLineXY(line.a.V3(), line.b.V3(), colorFor(highlighted.contains(line) || hoverHighlight.contains(line), selected.contains(line)));
+		paintLineXY(line.a.V3(), line.b.V3(), colorFor(highlighted.contains(line) || hoverHighlight == line, selected.contains(line)));
 
 
 		//console.log(line.a);
 		gl.pushMatrix();
 		gl.translate(line.a.V3());
-		renderColor(circleMesh, colorFor(highlighted.contains(line.a) || hoverHighlight.contains(line.a), selected.contains(line.a)));
+		renderColor(circleMesh, colorFor(highlighted.contains(line.a) || hoverHighlight == line.a, selected.contains(line.a)));
 		gl.popMatrix();
 
 		gl.pushMatrix();
 		gl.translate(line.b.V3());
-		renderColor(circleMesh, colorFor(highlighted.contains(line.b) || hoverHighlight.contains(line.b), selected.contains(line.b)));
+		renderColor(circleMesh, colorFor(highlighted.contains(line.b) || hoverHighlight == line.b, selected.contains(line.b)));
 		gl.popMatrix();
 
 	});
@@ -764,8 +703,8 @@ function paintConstraints(sketch) {
 		switch (constraint.type) {
 			case "coincident":
 				gl.pushMatrix();
-				gl.translate(constraint.which[0].x, constraint.which[0].y, 0);
-				renderColor(ringMesh, colorFor(highlighted.contains(constraint.which[0]) || hoverHighlight.contains(constraint.which[0]), selected.contains(constraint.which[0])));
+				gl.translate(constraint.cs[0].x, constraint.cs[0].y, 0);
+				renderColor(ringMesh, colorFor(highlighted.contains(constraint.cs[0]) || hoverHighlight == constraint.cs[0], selected.contains(constraint.cs[0])));
 				gl.popMatrix();
 				break;
 			case "parallel":
@@ -926,6 +865,7 @@ Object.defineProperty(CustomPlane.prototype, "plane", { get: function () { retur
 CustomPlane.prototype.toString = function() {
 	return "Plane #" + this.id;
 }
+CustomPlane.prototype.what ="Plane"
 CustomPlane.prototype.distanceTo = function (line) {
 	try {
 		return [
@@ -1036,11 +976,12 @@ function rebuildModel() {
 				.find(sketch => sketch.elements.some(el => el instanceof Segment && el.name == feature.segmentName))
 			var loopSegment = loopSketch.elements.find(el => el instanceof Segment && el.name == feature.segmentName)
 			var polygonPoints = loopSketch.getLoopForSegment(loopSegment).map(p => V3.create(p.x, p.y, 0))
+			var offsetDir = loopSketch.plane.normal.negated()
 			//console.log(polygonPoints.map(v =>v.ss))
-			polygonPoints = loopSketch.sketchToWorldMatrix.transformedPoints(polygonPoints)
+			polygonPoints = loopSketch.sketchToWorldMatrix.transformedPoints(polygonPoints).map(v => v.plus(offsetDir.times(feature.start)))
 			var length = feature.end - feature.start
-			var brep = BREP.extrude(polygonPoints, loopSketch.plane,
-				loopSketch.plane.normal.times(-length), feature.name)
+			var brep = BREP.extrude(polygonPoints, loopSketch.plane.translated(offsetDir.times(feature.start)),
+				offsetDir.times(length), feature.name)
 
 			if (modelCSG) {
 				modelCSG = modelCSG[feature.operation](brep)
@@ -1152,7 +1093,7 @@ function paintScreen () {
 				var face = modelCSG.faces[faceIndex]
 				var faceTriangleIndexes = csgMesh.faceIndexes.get(face)
 				lightingShader.uniforms({
-					color: rgbToVec4(hFace == face ? 0xff00ff : 0xff0000)
+					color: rgbToVec4(hoverHighlight == face ? 0xff00ff : 0xff0000)
 				}).draw(csgMesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
 				/*
 				singleColorShader.uniforms({
@@ -1177,17 +1118,15 @@ var circleMesh, ringMesh, segmentMesh, textMesh, xyLinePlaneMesh, cubeMesh, inde
 var modelCSG;
 var lastSegment;
 function setupCamera() {
-	gl.matrixMode(gl.PROJECTION);
-	gl.loadIdentity();
+	//console.log("eyePos", eyePos.ss, "eyeFocus", eyeFocus.ss, "eyeUp", eyeUp.ss)
+	gl.matrixMode(gl.PROJECTION)
+	gl.loadIdentity()
 	//gl.perspective(70, gl.canvas.width / gl.canvas.height, 0.1, 1000);
-	var lr = gl.canvas.width / 2 / zoomFactor;
-	var bt = gl.canvas.height / 2 / zoomFactor;
-	gl.ortho(-lr, lr, -bt, bt, -1e6, 1e6);
-	gl.lookAt(
-		eyePos.x, eyePos.y, eyePos.z,
-		eyeFocus.x, eyeFocus.y, eyeFocus.z,
-		eyeUp.x, eyeUp.y, eyeUp.z);
-	gl.matrixMode(gl.MODELVIEW);
+	var lr = gl.canvas.width / 2 / zoomFactor
+	var bt = gl.canvas.height / 2 / zoomFactor
+	gl.ortho(-lr, lr, -bt, bt, -1e6, 1e6)
+	gl.lookAt(eyePos, eyeFocus, eyeUp)
+	gl.matrixMode(gl.MODELVIEW)
 }
 function drawPlanes() {
 	planes.forEach(function (plane) {
@@ -1196,7 +1135,7 @@ function drawPlanes() {
 		gl.translate(plane.rightStart, plane.upStart, plane.w);
 		gl.scale(plane.rightEnd - plane.rightStart, plane.upEnd - plane.upStart, 1);
 
-		var shader = hoverHighlight.contains(plane) ? singleColorShaderHighlight : singleColorShader;
+		var shader = hoverHighlight == plane ? singleColorShaderHighlight : singleColorShader;
 
 		shader.uniforms({
 			color: rgbToVec4(plane.color)
@@ -1206,26 +1145,7 @@ function drawPlanes() {
 	})
 }
 
-var faces = [], hFace = [];
-CSG.Polygon.prototype.intersectsLine = function (line) {
-	//console.log(line);
-	var plane = this.plane
-	var lambda = line.intersectWithPlaneLambda(plane)
-	var p = line.at(lambda)
-	//console.log("p", p)
-	var direction = this.vertices[this.vertices.length - 1].pos.minus(this.vertices[0].pos)
-	//var testRay = new Line3d(p, direction)
-	var i = this.vertices.length - 1;
-	var inside = false;
-	while (i--) {
-		var a = this.vertices[i].pos, b = this.vertices[i + 1].pos
-		// check if segment ab intersects testRay
-		if (segmentIntersectsRay(a, b, p, direction)) {
-			inside = !inside
-		}
-	}
-	return inside ? lambda : NaN;
-}
+var faces = []
 function segmentIntersectsRay2(a, b, p, dir) {
 	var ab = b.minus(a)
 	var coord0 = "x", coord1 = "y"
@@ -1365,7 +1285,8 @@ function updateSelected() {
 	var div = $('selectedElements')
 	div.erase('text')
 	selected.forEach(function (sel) {
-		var newChild = template("template", {what: sel.constructor.name, name: sel.name});
+		console.log(sel)
+		var newChild = template("template", {what: sel.what, name: sel.name});
 		newChild.onmouseover = function (e) {
 			highlighted = [sel];
 			paintScreen();
@@ -1383,6 +1304,7 @@ function updateSelected() {
 	});
 	div = $('selectedConstraints')
 	div.erase('text')
+	console.log(selected.map((el) => currentSketch.getConstraintsFor(el)))
 	selected.map((el) => currentSketch.getConstraintsFor(el)).concatenated().unique().forEach(function (constraint) {
 		if ("pointDistance" == constraint.type || "pointLineDistance" == constraint.type) {
 			console.log("constraint.type", constraint.type);
@@ -1409,20 +1331,19 @@ function updateSelected() {
 				paintScreen();
 			}
 		} else {
-			console.log("wat");
 			var newChild = template("templateConstraint", {name: constraint.type});
 			newChild.inject(div);
 
-			constraint.cs.forEach(function (segment) {
-				var subChild = template("templateConstraintSub", {name: segment.toString()});
+			constraint.cs.forEach(function (el) {
+				var subChild = template("templateConstraintSub", {what: el.what, name: el.name});
 				subChild.inject(newChild);
 				subChild.getElement(".removeFromConstraint").onclick = function (e) {
-					removeFromGroupConstraint(segment, currentSketch, constraint.type);
+					removeFromConstraint(el, currentSketch, constraint)
 					updateSelected();
 					paintScreen();
 				};
 				subChild.onmouseover = function (e) {
-					highlighted = [segment];
+					highlighted = [el];
 					paintScreen();
 				};
 				subChild.onmouseout = function (e) {
@@ -1439,6 +1360,21 @@ function updateSelected() {
 }
 window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 	console.log(errorObj);
+}
+function NameRef(name) {
+	var x
+	if (x = NameRef.pool.get(name)) return x
+	this.ref = name
+}
+Object.defineProperty(NameRef.prototype, "what", { get: function () { return this.get instanceof BREP.Face ? "face" : "plane" } });
+Object.defineProperty(NameRef.prototype, "name", { get: function () { return this.get.name } });
+NameRef.pool = new Map()
+NameRef.prototype.isRef = true
+NameRef.prototype.get = function () {
+	return planes.find(plane => plane.name == this.ref) || modelCSG && modelCSG.faces.find(face => face.name == this.ref)
+}
+NameRef.prototype.getPlane = function () {
+	return planes.find(plane => plane.name == this.ref) || modelCSG && modelCSG.faces.find(face => face.name == this.ref).plane
 }
 function ensureNumbers() {
 	for (var i = 0; i < arguments.length; i++) {
@@ -1530,34 +1466,33 @@ var main = function () {
 			rebuildModel(sketch);
 			console.log(currentAddingSegment.a);
 		} else if (mode == "face-select") {
-			var face = hFace
-			if (face instanceof BREP.Face) {
-				modeClickCallback(face)
+			if (hoverHighlight instanceof BREP.Face) {
+				modeClickCallback(hoverHighlight)
 			}
 		} else if (mode == "plane-select") {
-			var plane = hoverHighlight[0]
-			if (plane instanceof CustomPlane) {
-				modeClickCallback(plane)
+			if (hoverHighlight instanceof CustomPlane) {
+				modeClickCallback(hoverHighlight)
 			}
 		} else if (mode == "segment-select") {
-			var segment = hoverHighlight[0]
-			if (segment instanceof Segment) {
-				modeClickCallback(segment)
+			if (hoverHighlight instanceof Segment) {
+				modeClickCallback(hoverHighlight)
 			}
 		} else {
-			if (!GL.keys.SHIFT) {
-				selected = hoverHighlight.slice();
-			} else {
-				if (selected.contains(hoverHighlight[0])) {
-					selected.remove(hoverHighlight[0]);
+			if(hoverHighlight != null) {
+				if (!GL.keys.SHIFT) {
+					selected = [hoverHighlight]
 				} else {
-					selected.push(hoverHighlight[0]);
+					if (selected.contains(hoverHighlight)) {
+						selected.remove(hoverHighlight);
+					} else {
+						selected.push(hoverHighlight);
+					}
 				}
+				updateSelected();
+				console.log("selected is now ", selected);
+				console.log("highlighted is now ", highlighted);
+				paintScreen();
 			}
-			updateSelected();
-			console.log ("selected is now ", selected);
-			console.log ("highlighted is now ", highlighted);
-			paintScreen();
 		}
 	}
 	gl.onmousemove = function (e) {
@@ -1576,10 +1511,10 @@ var main = function () {
 			var points = getAllPoints(sketch);
 			currentAddingSegment && points.removeAll(currentAddingSegment.points);
 			var pointDistances = points
-				.map(function (point) { return {point: point, distance: point.distanceToCoords(sketchCoords)}; })
+				.map(function (point) { return {point: point, distance: point.distanceToCoords(sketchCoords)} })
 				.filter(function (pair) { return pair.distance < 16; })
 				.sort(function (a, b) { return a.distance - b.distance; });
-			if (pointDistances.length != 0) {
+			if (pointDistances.length != 0 && currentAddingSegment) {
 				makeCoincident(pointDistances[0].point, currentAddingSegment.b, sketch);
 				sketchCoords = pointDistances[0].point;
 			}
@@ -1599,37 +1534,37 @@ var main = function () {
 			 };
 			 */
 		} else {
-			var nearest = Infinity
-			hFace = null
+			var elsWithDistances = []
+			hoverHighlight = null
+			// we need to do a seperate min search for the faces so that the nearest one to the camera is always selected
+			var hFace = null, nearest = Infinity
 			if (modelCSG) {
 				modelCSG.faces.forEach((face) => {
 					var distance;
 					if (!isNaN(distance = face.intersectsLine(mouseLine))) {
 						if (distance < nearest) {
-							//console.log(hFace, distance)
 							nearest = distance;
 							hFace = face
-							//console.log(polygon.shared, polygon, "[" + polygon.vertices.map((v)=>v2as(v.pos)).join(", ") +"]",v2as(mouseLine.anchor.csg()), v2as(mouseLine.direction.csg()), distance);
 						}
 					}
-				});
+				})
 			}
-			var planesWithDistance = planes.map((plane) => ({el: plane, distance: plane.distanceTo(mouseLine)}) );
-			hoverHighlight = [];
+			if (hFace) elsWithDistances.push({el: hFace, distance: 8})
+			elsWithDistances = elsWithDistances.concat(planes.map((plane) => ({el: plane, distance: plane.distanceTo(mouseLine)}) ))
 			if (intersection != null) {
 				var sketchCoords = sketch.worldToSketchMatrix.transformPoint(intersection)
-				planesWithDistance = sketch.elements.concat(getAllPoints(sketch))
-					.map(function (el) { return {"el": el, "distance": el.distanceToCoords(sketchCoords)}; })
-					.concat(planesWithDistance)
+				elsWithDistances = elsWithDistances.concat(
+					sketch.elements.concat(getAllPoints(sketch))
+						.map(function (el) { return {el: el, distance: el.distanceToCoords(sketchCoords)} }))
 			}
-			var elsByDistance = planesWithDistance
+			var elsByDistance = elsWithDistances
 				.filter(function (pair) { return pair.distance < 16; })
-				.sort(function (a, b) { return chainComparison(pointsFirst(a.el, b.el), a.distance - b.distance); });
+				.sort(function (a, b) { return chainComparison(pointsFirst(a.el, b.el), a.distance - b.distance) })
 			//console.log("elsByDistance", elsByDistance);
 			if (0 != elsByDistance.length) {
-				hoverHighlight.push(elsByDistance[0].el);
+				hoverHighlight = elsByDistance[0].el;
 			}
-			paintScreen();
+			paintScreen()
 		}
 		if (e.dragging) {
 			if (e.buttons & 4) {
@@ -1645,15 +1580,15 @@ var main = function () {
 			if (e.buttons & 2) {
 				var rotateLR = deg2rad(-e.deltaX / 6.0);
 				var rotateUD = deg2rad(-e.deltaY / 6.0);
+
 				// rotate
-				var matrix = M4.rotation(rotateLR, eyeUp);
-				//var horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp);
-				var horizontalRotationAxis = eyeUp.cross(eyePos.minus(eyeFocus));
-				matrix = matrix.times(M4.rotation(rotateUD, horizontalRotationAxis));
-				//console.log(matrix);
-				eyePos = matrix.transformPoint(eyePos);
+				var matrix = M4.rotationLine(eyeFocus, eyeUp, rotateLR)
+				//var horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
+				var horizontalRotationAxis = eyeUp.cross(eyePos.minus(eyeFocus))
+				matrix = matrix.times(M4.rotationLine(eyeFocus, horizontalRotationAxis, rotateUD))
+				eyePos = matrix.transformPoint(eyePos)
 				eyeUp = matrix.transformVector(eyeUp)
-				//console.log("eyepos", eyePos);
+
 				setupCamera();
 				paintScreen();
 			}
@@ -1873,6 +1808,27 @@ function removeFromGroupConstraint(el, sketch, type) {
 		groupConstraint.fixed = undefined;
 	}
 }
+function removeFromConstraint(el, sketch, constraint) {
+	switch (constraint.type) {
+		case "coincident":
+			el.remove(sketch)
+			break;
+		case "parallel":
+		case "perpendicular":
+		case "colinear":
+			removeFromGroupConstraint(el, sketch, constraint.type)
+			break;
+		case "pointDistance":
+		case "pointLineDistance":
+		case "pointOnLine":
+		case "angle":
+		case "equalLength":
+		default:
+			throw new Error("implement!" + constraint.type)
+			//throw new Error("unknown constraint " + constraint.type);
+		// console.log("errror", constraint.type);
+	}
+}
 // colinear, equal length or parallel
 /*
 function makeGroup2(type) {
@@ -1893,8 +1849,8 @@ function makeGroup2(type) {
 					newConstraint.fixed = segConstraint.fixed;
 				}
 				if (segConstraint != groupConstraint) {
-					segConstraint.which.forEach(function (segConstraintOther) {
-						groupConstraint.which.push(segConstraintOther);
+					segConstraint.cs.forEach(function (segConstraintOther) {
+						groupConstraint.cs.push(segConstraintOther);
 					});
 					currentSketch.constraints.remove(segConstraint);
 				}
@@ -1905,12 +1861,12 @@ function makeGroup2(type) {
 					}
 					newConstraint.fixed = el;
 				} else {
-					newConstraint.which.push(el);
+					newConstraint.cs.push(el);
 				}
 			}
 		}
-		constraints.which.push(el);
-		constraints.which.removeAll(oldConstraints);
+		constraints.cs.push(el);
+		constraints.cs.removeAll(oldConstraints);
 		rebuildModel();
 		paintScreen();
 	}
@@ -1918,15 +1874,16 @@ function makeGroup2(type) {
 }
 */
 function makeGroup(type) {
-	var els = selected.filter((el) => el instanceof Segment || ('equalLength' != type && el instanceof CustomPlane) );
+	var els = selected.filter((el) => el instanceof Segment || ('equalLength' != type && el.plane) )
 	if (els.length < 2) return;
 
 	var newGroup = els.map(el => {
+		el = el.plane ? new NameRef(el.name) : el
 		var c = getGroupConstraint(el, currentSketch, type);
 		return c
 			? (c.fixed ? c.segments.concat(c.fixed) : c.segments)
-			: el; }).concatenated().unique();
-	var fixeds = newGroup.filter(el => el instanceof CustomPlane);
+			: el }).concatenated().unique();
+	var fixeds = newGroup.filter(el => el.isRef);
 	if (1 < fixeds.length) {
 		throw new Error("cannot have two fixed");
 	}
@@ -1965,7 +1922,7 @@ Constraint.prototype = {
 }
 
 function makeAngle() {
-	var selSegments = selected.filter(function (s) { return s instanceof Segment || s instanceof CustomPlane; });
+	var selSegments = selected.filter((el) => el instanceof Segment || el.plane )
 	console.log(selSegments);
 	if (selSegments.length == 2) {
 		var segment = selSegments[0] instanceof Segment ? selSegments[0] : selSegments[1];
@@ -1980,7 +1937,7 @@ function makeAngle() {
 	}
 }
 function makePerpendicular() {
-	var selSegments = selected.filter(function (s) { return s instanceof Segment || s instanceof CustomPlane; });
+	var selSegments = selected.filter((el) => el instanceof Segment || el.plane )
 	if (selSegments.length == 2) {
 		var segment = selSegments[0] instanceof Segment ? selSegments[0] : selSegments[1];
 		var other = selSegments[0] instanceof Segment ? selSegments[1] : selSegments[0];
@@ -1996,7 +1953,7 @@ function makeDistance() {
 	if (2 != selected.length) return;
 	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1];
 	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0];
-	if (point instanceof SegmentEndPoint && (other instanceof Segment || other instanceof SegmentEndPoint || other instanceof CustomPlane)) {
+	if (point instanceof SegmentEndPoint && (other instanceof Segment || other instanceof SegmentEndPoint || other.plane)) {
 		var newConstraint;
 		if (other instanceof SegmentEndPoint) {
 			newConstraint = new Constraint("pointDistance", selected.slice(), {distance:round(other.distanceToCoords(point))});
@@ -2106,8 +2063,11 @@ function createIndexBuffer(count) {
 }
 
 function faceSketchPlane() {
-	eyePos = eyeFocus.plus(currentSketch.plane.normal.times(100));
-	eyeUp = currentSketch.plane.up;
+	var plane = currentSketch.plane;
+	var viewLine = L3.throughPoints(eyePos, eyeFocus)
+	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointOnLine(V3.ZERO)
+	eyePos = eyeFocus.plus(plane.normal.times(100));
+	eyeUp = plane.up;
 	setupCamera();
 	paintScreen();
 }
@@ -2149,6 +2109,8 @@ function addExtrude() {
 function editSketch(feature) {
 	currentSketch = feature;
 	var div = $("sketchEditor")
+	selected = []
+	updateSelected()
 	div.setStyle("display", "block")
 	setupSelectors(div, feature)
 

@@ -141,8 +141,8 @@ if (!NLA.Vector3) {
 		    return Math.abs(this.normal.dot(point) - this.w)
 	    },
 
-        intersectionLine: function () {
-
+        intersectionWithLine: function (line) {
+			line.intersectWithPlane(this)
         },
         // Returns the unique intersection with the argument, if one exists. The result
         // will be a vector if a line is supplied, and a line if a plane is supplied.
@@ -221,7 +221,7 @@ if (!NLA.Vector3) {
             }
              */
 	        assert(!this.isParallelToPlane(plane), "!this.isParallelToPlane(plane)")
-	        var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1), m = M4.forSys(n0, n1, n2)
+	        var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized(), m = M4.forSys(n0, n1, n2)
 	        var x0 = this.anchor, x1 = plane.anchor, x2 = V3.ZERO
 	        var p = n2.times(x2.dot(n2))
 		        .plus(n1.cross(n2).times(x0.dot(n0)))

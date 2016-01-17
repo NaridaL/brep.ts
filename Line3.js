@@ -327,8 +327,8 @@ if (!NLA.Vector3) {
 	    },
 
         transform: function (matrix4x4) {
-            var newpoint = this.point.multiply4x4(matrix4x4);
-            var pointPlusDirection = this.point.plus(this.dir1);
+            var newpoint = this.anchor.multiply4x4(matrix4x4);
+            var pointPlusDirection = this.anchor.plus(this.dir1);
             var newPointPlusDirection = pointPlusDirection.multiply4x4(matrix4x4);
             var newdirection = newPointPlusDirection.minus(newpoint);
             return L3(newpoint, newdirection);
@@ -336,8 +336,8 @@ if (!NLA.Vector3) {
 
 	    closestPointOnLine: function (point) {
 		    point = V3(point);
-		    var t = point.minus(this.point).dot(this.dir1) / this.dir1.dot(this.dir1);
-		    var closestpoint = this.point.plus(this.dir1.times(t));
+		    var t = point.minus(this.anchor).dot(this.dir1) / this.dir1.dot(this.dir1);
+		    var closestpoint = this.anchor.plus(this.dir1.times(t));
 		    return closestpoint;
 	    },
 

@@ -24,11 +24,12 @@
 
 		<script id="template" type="x-template">
             <div>
-	            <span style="width: 8em; display: inline-block; text-transform: uppercase">$what</span>
+	            <span style="width: 10em; display: inline-block; text-transform: uppercase">$what</span>
 	            $name <a href="#" class="unsel">unsel</a></div>
         </script>
 		<script id="templateConstraint" type="x-template">
-            <div>$name <a href="#" class="remove">Remove</a></div>
+            <div>
+	            $name <a href="#" class="remove">Remove</a></div>
         </script>
 		<script id="templateDistance" type="x-template">
             <div>$name <input class="distanceInput" type="text" id="distanceInput$id" /></div>
@@ -37,7 +38,9 @@
             <div>$name <input class="distanceInput" type="text" id="distanceInput$id" /> <a href="#" class="fa">FA</a> <a href="#" class="fb">FB</a> <a href="#" class="fv">FV</a></div>
         </script>
 		<script id="templateConstraintSub" type="x-template">
-			<div>$name <a href="#" class="removeFromConstraint">Free</a></div>
+			<div>
+				<span style="width: 10em; display: inline-block; text-transform: uppercase">$what</span>
+				$name <a href="#" class="removeFromConstraint">Free</a></div>
 		</script>
 		<script id="templateFeatureExtrude" type="x-template">
 			<div>
@@ -104,7 +107,7 @@
 			<button name="delete">Delete</button>
 		</div>
 
-		<div id="selectedStuff" class="editorBox">
+		<div id="selectedStuff" class="editorBox" style="display: block;">
 			<span class="header">Elements</span>
 			<div id="selectedElements"></div>
 			<span class="header">Constraints</span>

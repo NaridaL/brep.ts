@@ -635,25 +635,14 @@ if (!NLA.Vector3) {
     // toward the center point `cx, cy, cz` with an up direction of `ux, uy, uz`.
     // You can optionally pass an existing matrix in `result` to avoid allocating
     // a new matrix. This emulates the OpenGL function `gluLookAt()`.
-    M4.lookAt = function(ex, ey, ez, cx, cy, cz, ux, uy, uz, result) {
-        if (3 == arguments.length || 4 == arguments.length) {
-            var eye = ex, center = ey, up = ez, result = cx
-            assert(eye instanceof V3, "eye instanceof V3")
-            assert(center instanceof V3, "center instanceof V3")
-            assert(up instanceof V3, "up instanceof V3")
-            return M4.lookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up.x, up.y, up.z, result)
-        } else {
-            assert(9 == arguments.length || 10 == arguments.length, "9 == arguments.length || 10 == arguments.length")
-            assertNumbers(ex, ey, ez, cx, cy, cz, ux, uy, uz)
-        }
-        assert(!result || result instanceof M4, "!result || result instanceof M4")
+    M4.lookAt = function(e, c, u, result) {
+	    assert(3 == arguments.length || 4 == arguments.length, "3 == arguments.length || 4 == arguments.length")
+	    NLA.assertVectors(e, c, u)
+	    assert(!result || result instanceof M4, "!result || result instanceof M4")
 
         result = result || M4();
         var m = result.m;
 
-        var e = V3.create(ex, ey, ez);
-        var c = V3.create(cx, cy, cz);
-        var u = V3.create(ux, uy, uz);
         var f = e.minus(c).unit();
         var s = u.cross(f).unit();
         var t = f.cross(s).unit();

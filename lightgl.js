@@ -115,8 +115,8 @@ var GL = (function() {
 	    gl.rotate = function(a, x, y, z) {
 		    gl.multMatrix(M4.rotation(a, x, y, z, tempMatrix));
 	    };
-	    gl.lookAt = function(ex, ey, ez, cx, cy, cz, ux, uy, uz) {
-		    gl.multMatrix(M4.lookAt(ex, ey, ez, cx, cy, cz, ux, uy, uz, tempMatrix));
+	    gl.lookAt = function(eye, center, up) {
+		    gl.multMatrix(M4.lookAt(eye, center, up, tempMatrix));
 	    };
 	    gl.pushMatrix = function() {
 		    stack.push(M4.copy(gl[matrix]));

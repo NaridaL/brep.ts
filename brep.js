@@ -87,6 +87,7 @@ BREP.prototype.plus = function (brep) {
 BREP.segmentIntersectsVertexLoop = function (a, b, vertices) {
 }
 BREP.Face.prototype = {
+	what: "Face",
 	toString: function () {
 		return "[" + this.vertices.map((v) => v.toString()).join(", ") + "] on " + this.plane.toString()
 	},
@@ -97,6 +98,7 @@ BREP.Face.prototype = {
 				face.vertices.every((v2, j) => v2.like(vs[(i + j) % vs.length]))
 		)
 	},
+	constructor: BREP.Face,
 	containsPoint: function (point) {
 		// TODO: problem if the ray hits a corner exactly
 		assert(point instanceof V3, "point was"+ point.toString())
