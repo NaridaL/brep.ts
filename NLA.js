@@ -352,6 +352,14 @@ var ARRAY_UTILITIES = {
 		while (i--) {
 			this.remove(o[i]);
 		}
+	},
+	toggle: function (o) {
+		var index = this.indexOf(o);
+		if (index != -1) {
+			this.splice(index, 1);
+		} else {
+			this.push(o)
+		}
 	}
 }
 for (var key in ARRAY_UTILITIES) {

@@ -228,10 +228,9 @@ var GL = (function() {
 // `deltaX`, `deltaY`, and `dragging`.
     function addEventListeners() {
         var context = gl, oldX = 0, oldY = 0, buttons = {}, hasOld = false;
-        var has = Object.prototype.hasOwnProperty;
         function isDragging() {
             for (var b in buttons) {
-                if (has.call(buttons, b) && buttons[b]) return true;
+                if (b in buttons && buttons[b]) return true;
             }
             return false;
         }
@@ -271,12 +270,8 @@ var GL = (function() {
             oldX = e.x;
             oldY = e.y;
             e.dragging = isDragging();
-            e.preventDefault = function() {
-                e.original.preventDefault();
-            };
-            e.stopPropagation = function() {
-                e.original.stopPropagation();
-            };
+            e.preventDefault = function (){}//e.original.preventDefault
+            e.stopPropagation = e.original.stopPropagation
             return e;
         }
         function mousedown(e) {

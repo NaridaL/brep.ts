@@ -48,18 +48,19 @@ if (!NLA.Vector3) {
         },
         // Returns true iff the plane occupies the same space as the argument
         isCoplanarToPlane: function (plane) {
+	        NLA.assert(plane instanceof P3, "plane instanceof P3")
             return this.like(plane) || this.likeFlipped(plane)
         },
 	    like: function (plane) {
-		    NLA.assert(plane instanceof P3)
+		    NLA.assert(plane instanceof P3, "plane instanceof P3")
 		    return NLA.equals(this.w, plane.w) && this.normal.like(plane.normal)
 	    },
 	    likeFlipped: function (plane) {
-		    NLA.assert(plane instanceof P3)
+		    NLA.assert(plane instanceof P3, "plane instanceof P3")
 		    return NLA.equals(this.w, -plane.w) && this.normal.like(plane.normal.negated())
 	    },
         isParallelToPlane: function (plane) {
-            NLA.assert(plane instanceof P3)
+            NLA.assert(plane instanceof P3, "plane instanceof P3")
             return NLA.equals(1, Math.abs(this.normal.dot(plane.normal)))
         },
 
