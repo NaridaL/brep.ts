@@ -1002,8 +1002,8 @@ NLA.Matrix.prototype = {
     },
     solveBackwards: function (x) {
         NLA.assertVectors(x)
-        NLA.assert(this.height == x.dim(), "°°")
-        NLA.assert(this.isUpperTriangular(), "°°")
+        NLA.assert(this.height == x.dim(), "this.height == x.dim()")
+        NLA.assert(this.isUpperTriangular(), "this.isUpperTriangular()")
         var v = new Float64Array(this.width)
         var rowIndex = this.height
         while (rowIndex--) {

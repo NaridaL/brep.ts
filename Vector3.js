@@ -451,6 +451,21 @@ if (!NLA) {
 		}
 		return V3.create(x, y, z)
 	}
+	V3.flattenV3Array = function (v3arr, dest, srcStart, destStart, v3count) {
+		assert (v3arr.every(v3 => v3 instanceof V3), "v3arr.every(v3 => v3 instanceof V3)")
+		srcStart = srcStart || 0
+		destStart = destStart || 0
+		v3count = v3count || (v3arr.length - srcStart)
+		dest = dest || new Float32Array(3 * v3count)
+		assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count")
+		for (var i = 0; i < v3count; i++) {
+			var v = v3arr[srcStart + i]
+			dest[destStart + i * 3]     = v.x
+			dest[destStart + i * 3 + 1] = v.y
+			dest[destStart + i * 3 + 2] = v.z
+		}
+		return dest
+	}
 	Object.defineProperties(V3, {
 		ZERO: { value: V3.create(0, 0, 0) },
 		X: { value: V3.create(1, 0, 0) },

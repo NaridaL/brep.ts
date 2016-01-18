@@ -181,12 +181,19 @@ SegmentEndPoint.prototype = {
 		return V3(this.x, this.y, 0);
 	},
 
-	isConstrained: function () {
-		var line = this.line;
-		return constraints.some(constraint => constraint.constrains(this) || constraint.constrains(this.line))
+	isConstrained: function (sketch) {
+		var line = this.line
+		return sketch.constraints.some(constraint => constraint.constrains(this) || constraint.constrains(this.line))
 	},
-	remove: function () {
-		removeFromCoincidence(this, currentSketch);
+	freeFromConstraints: function (sketch) {
+		sketch.constraints.forEach(constraint => constraint.constrains(this) && removeFromConstraint(this, sketch, constraint))
+	},
+	/**
+	 * Can be called even if already removed
+	 * @param sketch
+	 */
+	removeFromSketch: function (sketch) {
+		this.line.removeFromSketch(sketch)
 	},
 	moveCoincidence: function (v3) {
 		if (this.coincidence) {
@@ -239,13 +246,11 @@ function deleteCoincidence(coincidence, sketch) {
 	coincidence.cs.forEach(p => p.coincidence = null)
 }
 function Segment(x1, y1, x2, y2) {
-	this.points = [new SegmentEndPoint(x1, y1, this), new SegmentEndPoint(x2, y2, this)];
-	this.a = this.points[0];
-	this.b = this.points[1];
-	this.id = globalId++;
+	this.points = [new SegmentEndPoint(x1, y1, this), new SegmentEndPoint(x2, y2, this)]
+	this.a = this.points[0]
+	this.b = this.points[1]
+	this.id = globalId++
 	this.name = "segment" + this.id
-	//this.sceneElement = addSceneSegment();
-	//this.updateSceneElement();
 }
 Segment.prototype = {
 	remove: function () {
@@ -264,20 +269,21 @@ Segment.prototype = {
 	angleAB: function () {
 		return atan2(this.b.y - this.a.y, this.b.x - this.a.x);
 	},
+	/**
+	 * Can be called even if already removed
+	 * @param sketch
+	 */
 	removeFromSketch: function (sketch) {
-		// TODO: correctly remove all dependant constraints
-		this.a.remove();
-		this.b.remove();
-		sketch.elements.remove(this);
-		removeFromGroupConstraint(this, sketch, "colinear");
-		removeFromGroupConstraint(this, sketch, "parallel");
-		removeFromGroupConstraint(this, sketch, "equalLength");
-		selected.remove(this);
+		this.a.freeFromConstraints(sketch)
+		this.b.freeFromConstraints(sketch)
+		sketch.elements.remove(this)
+		sketch.constraints.forEach(constraint => constraint.constrains(this) && removeFromConstraint(this, sketch, constraint))
+		selected.remove(this)
 	},
 	getOtherPoint: function (point) {
 		return this.a != point ? this.a : this.b;
 	},
-	getS: function (v) {
+	pointLambda: function (v) {
 		if (this.b.x - this.a.x > this.b.y - this.a.y) {
 			return (v.x - this.a.x) / (this.b.x - this.a.x);
 		} else {
@@ -332,7 +338,10 @@ Segment.prototype = {
 		return intersection(this.a.x, this.a.y, this.b.x, this.b.y,
 			segment.a.x, segment.a.y, segment.b.x, segment.b.y);
 	},
-	what: "Segment"
+	what: "Segment",
+	getL3: function() {
+		return L3.anchorDirection(this.a.V3, this.getVectorAB())
+	}
 }
 function intersection(x1, y1, x2, y2, x3, y3, x4, y4) {
 	var denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
@@ -400,7 +409,6 @@ function recalculate(sketch) {
 			if (c.type == "parallel" || c.type == "colinear" || c.type == "equalLength") {
 				if (c.fixed) {
 					for (var j = 0; j < c.segments.length; j++) {
-						console.log("c.fixed", c.fixed, c.fixed.plane, c.fixed.get(), modelCSG.faces.find(face => face.name =="initExtrudewall2"))
 						sketch.constrainAngleSegmentToPlane(c.segments[j], c.fixed.plane, 1);
 						if ("colinear" == c.type) {
 							sketch.constrainDistancePointFixedPlane(c.segments[j].a, c.fixed.plane, 0);
@@ -429,8 +437,8 @@ function recalculate(sketch) {
 			if (c.type == "pointDistance") {
 				sketch.constrainDistancePointPoint(c.cs[0], c.cs[1], c.distance);
 			}
-			if (c.type == "pointOnLine" || c.type == "pointLineDistance") {
-				var distance = c.type == "pointLineDistance" ? c.distance : 0;
+			if (c.type == "pointOnLine" || c.type == "pointLineDistance" || c.type == "pointPlaneDistance") {
+				var distance = c.type != "pointOnLine" ? c.distance : 0;
 				if (c.other.plane) {
 					sketch.constrainDistancePointFixedPlane(c.point, c.other.plane, distance)
 				} else {
@@ -639,10 +647,11 @@ function drawArc(center, startAngle, endAngle, innerRadius, outerRadius, color) 
 	}).draw(arcMesh);
 	gl.popMatrix();
 }
-var savedTextures = {};
+var savedTextures = new Map();
 function getTextureForString(str) {
-	if (savedTextures[str]) {
-		return savedTextures[str];
+	var texture
+	if (texture = savedTextures.get(str)) {
+		return texture
 	}
 
 	var canvas = $("textTextureCanvas");
@@ -664,15 +673,15 @@ function getTextureForString(str) {
 	ctx.imageSmoothingEnabled = false;
 
 
-	ctx.fillText(str, 0, 0);
+	ctx.fillText(str, 0, 0)
 
 
-	var texture = GL.Texture.fromImage(canvas, {minFilter: gl.LINEAR_MIPMAP_LINEAR, magFilter: gl.LINEAR});
-	texture.textWidthPx = textWidthPx;
+	texture = GL.Texture.fromImage(canvas, {minFilter: gl.LINEAR_MIPMAP_LINEAR, magFilter: gl.LINEAR})
+	texture.textWidthPx = textWidthPx
 
-	savedTextures[str] = texture;
+	savedTextures.set(str, texture)
 
-	return texture;
+	return texture
 }
 var zoomFactor = 1;
 function paintSegments(sketch) {
@@ -716,7 +725,7 @@ function getAllPoints(sketch) {
 }
 var highlighted = [], selected = [];
 function paintConstraints(sketch) {
-	var crossCount = 2;
+	var crossCount = 2, parallelCrossCount = 1;
 	sketch.constraints.forEach(function (constraint) {
 		switch (constraint.type) {
 			case "coincident":
@@ -728,55 +737,52 @@ function paintConstraints(sketch) {
 				gl.popMatrix();
 				break;
 			case "parallel":
+				var dir1 = constraint.segments[0].getVectorAB().normalized()
+				var dir90 = dir1.getPerpendicular().normalized()
+				var ARR_SPACING = 5
 				for (var c = 0; c < constraint.segments.length; c++) {
-					var line = constraint.segments[c];
-					var ab = line.getVectorAB();
-					var abLength = ab.length();
-					var ab1 = ab.normalized();
-					var ab90 = ab.getPerpendicular().normalized();
-					var crossLength = 10;
-					var crossSpacing = 3;
-					for (var i = 0; i < crossCount; i++) {
-						var s = abLength / 2 - crossSpacing * crossCount / 2 + i * crossSpacing;
-						var crossStart = line.a.V3().plus(ab1.times(s)).plus(ab90.times(crossLength / 2));
-						var crossEnd = line.a.V3().plus(ab1.times(s)).plus(ab90.times(-crossLength / 2));
+					var line = constraint.segments[c]
+					var ab = line.getVectorAB()
+					var abLength = ab.length()
+					var ab1 = ab.normalized()
+					for (var i = 0; i < parallelCrossCount; i++) {
+						var s = abLength / 2 - ARR_SPACING * parallelCrossCount / 2 + i * ARR_SPACING - 10
+						var arrPoint = line.a.V3().plus(ab1.times(s))
 						//console.log("crosspos", crossStart, crossEnd);
-						paintLineXY(crossStart, crossEnd);
+						paintLineXY(arrPoint.plus(dir90.times(-1)), arrPoint.plus(dir1.times(6).plus(dir90.times(5))))
+						paintLineXY(arrPoint.plus(dir90.times(1)), arrPoint.plus(dir1.times(6).plus(dir90.times(-5))))
 					}
 				}
-				crossCount++;
+				parallelCrossCount++;
 				break;
 			case "perpendicular":
-				/*
-				var intersection
-				var ab = constraint.segment.getVectorAB()
 				if (constraint.other instanceof Segment) {
-					intersection = constraint.segment.intersection(constraint.other);
-				} else if (constraint.other instanceof CustomPlane) {
-					var sketchLineWC = sketch.plane.intersectionWithPlane(constraint.other)
+					var ab = constraint.segment.getVectorAB()
+					var cd = constraint.other.getVectorAB()
+					var intersection = constraint.segment.intersection(constraint.other)
+					var abPos = constraint.segment.pointLambda(intersection)
+					var cdPos = constraint.other.pointLambda(intersection)
+					var abLine = ab.normalized().times(0.5 < abPos ? -16 : 16)
+					var cdLine = cd.normalized().times(0.5 < cdPos ? -16 : 16)
+					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
+					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
+				} else {
+					var ab = constraint.segment.getVectorAB()
+					var sketchLineWC = sketch.plane.intersectionWithPlane(constraint.other.plane)
 					var dir = sketch.worldToSketchMatrix.transformVector(sketchLineWC.dir1)
 					var p = sketch.worldToSketchMatrix.transformPoint(sketchLineWC.anchor)
 					var abXcd = ab.cross(dir)
 					var div = abXcd.lengthSquared()
 					var anchorDiff = p.minus(constraint.segment.a.V3())
-					var s = anchorDiff.cross(anchorDiff).dot(abXcd) / div
-					var t = anchorDiff.cross(ab).dot(abXcd) / div
-
-					//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1, "s", s, "t", t, "div", div)
-					return {segmentAt: s, lineAt: t}
+					var abPos = anchorDiff.cross(dir).dot(abXcd) / div
+					var linePos = anchorDiff.cross(ab).dot(abXcd) / div
+					var intersection = p.plus(dir.times(linePos))
+					var abLine = ab.normalized().times(0.5 < abPos ? -16 : 16)
+					var cdLine = dir.times(16)
+					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
+					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
 				}
-				var abPos = constraint.segment.getS(intersection);
-				var cdPos = constraint.other instanceof Segment
-				? constraint.other.getS(intersection)
-					 : t;
-				var abLine = ab.normalized().times(0.5 < abPos ? -16 : 16);
-				var cdLine = (constraint.other instanceof Segment ?
-					constraint.other.getVectorAB().normalized()
-						:dir).times(0.5 < cdPos ? -16 : 16);
-				paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine));
-				paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine));
-				*/
-				break;
+				break
 			case "colinear":
 				// assume segments dont overlap
 				var segments = constraint.segments;
@@ -823,45 +829,80 @@ function paintConstraints(sketch) {
 				break;
 			}
 			case "pointLineDistance":
-				/*
-				var texture = getTextureForString(constraint.distance);
-				var p = constraint.point.V3(), ab = constraint.other.getVectorAB(), a = constraint.other.a.V3();
-				var ab1 = ab.normalized();
-				var abLength = ab.length();
-				var ab90 = ab1.getPerpendicular();
-				var ap = p.minus(a);
-				var apProj = ab90.times(ap.dot(ab90));
-				paintLineXY(a, a.plus(apProj));
-				paintLineXY(a.plus(apProj), p);
-				var textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20;
+				var texture = getTextureForString(constraint.distance)
+				var p = constraint.point.V3(), ab = constraint.other.getVectorAB(), a = constraint.other.a.V3()
+				var ab1 = ab.normalized()
+				var abLength = ab.length()
+				var ab90 = ab1.getPerpendicular()
+				var ap = p.minus(a)
+				var apProj = ab90.times(-ap.dot(ab90))
+				paintLineXY(a, a.plus(apProj))
+				paintLineXY(a.plus(apProj), p)
+				var textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
 				var textCenter =  a.plus(apProj.times(1/2))
-				gl.pushMatrix();
-				gl.translate(textCenter);
-				gl.scale(20, 20, 10);
-				gl.multMatrix(M4.forSys(apProj.normalized(), ab1, V3.Z));
-				gl.translate(-textLength / 2 / 20, -0.5, 0);
-				renderText(constraint.distance, 0xff0000);
-				gl.popMatrix();
-				break;
-				*/
+				gl.pushMatrix()
+				gl.translate(textCenter)
+				gl.scale(20, 20, 10)
+				gl.multMatrix(M4.forSys(apProj.normalized(), ab1, V3.Z))
+				gl.translate(-textLength / 2 / 20, -0.5, 0)
+				renderText(constraint.distance, 0xff0000)
+				gl.popMatrix()
+				break
+			case "pointPlaneDistance":
+			{
+				var texture = getTextureForString(constraint.distance)
+				var p = constraint.point.V3()
+				var sketchLineWC = sketch.plane.intersectionWithPlane(constraint.other.plane)
+				var sketchLineSC = sketchLineWC.transform(sketch.worldToSketchMatrix)
+				var a = sketchLineSC.closestPointOnLine(p)
+				var ap = p.minus(a)
+				paintLineXY(a, p)
+				var textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
+				var textCenter = a.plus(ap.times(1 / 2))
+				gl.pushMatrix()
+				gl.translate(textCenter)
+				gl.scale(20, 20, 10)
+				gl.multMatrix(M4.forSys(sketchLineSC.dir1.cross(V3.Z), sketchLineSC.dir1, V3.Z))
+				gl.translate(-textLength / 2 / 20, -0.5, 0)
+				renderText(constraint.distance, 0xff0000)
+				gl.popMatrix()
+				break
+			}
 			case "pointOnLine":
-				var o = constraint.other;
-				var ab = o instanceof Segment ? constraint.other.getVectorAB() : sketch.plane.normal.cross(o.plane.normal);
-				var ab1 = ab.normalized();
-				var p = constraint.point.V3();
-				paintLineXY(p.plus(ab1.times(16)), p.plus(ab1.times(4)), 0x000000, 2);
-				paintLineXY(p.plus(ab1.times(-16)), p.plus(ab1.times(-4)), 0x000000, 2);
-				break;
+				var o = constraint.other
+				var ab = o instanceof Segment ? constraint.other.getVectorAB() : sketch.plane.normal.cross(o.plane.normal)
+				var ab1 = ab.normalized()
+				var p = constraint.point.V3()
+				paintLineXY(p.plus(ab1.times(16)), p.plus(ab1.times(4)), 0x000000, 2)
+				paintLineXY(p.plus(ab1.times(-16)), p.plus(ab1.times(-4)), 0x000000, 2)
+				break
 			case "angle":
-				var first = constraint.cs[0], second = constraint.cs[1];
-				var intersection = first.intersection(second);
-				var startAngle = (first.angleAB() + (constraint.f[0] == -1 ? PI : 0)) % (2 * PI), endAngle = startAngle + constraint.value;
-				drawArc(intersection, startAngle, endAngle, 20, 21, 0x000000);
-				break;
+				var first = constraint.cs[0], second = constraint.cs[1]
+				var intersection = first.intersection(second)
+				var startAngle = (first.angleAB() + (constraint.f[0] == -1 ? PI : 0)) % (2 * PI), endAngle = startAngle + constraint.value
+				drawArc(intersection, startAngle, endAngle, 20, 21, 0x000000)
+				break
 			case "equalLength":
-				break;
+				for (var c = 0; c < constraint.segments.length; c++) {
+					var line = constraint.segments[c];
+					var ab = line.getVectorAB();
+					var abLength = ab.length();
+					var ab1 = ab.normalized();
+					var ab90 = ab.getPerpendicular().normalized();
+					var crossLength = 10;
+					var crossSpacing = 3;
+					for (var i = 0; i < crossCount; i++) {
+						var s = abLength / 2 - crossSpacing * crossCount / 2 + i * crossSpacing + 10
+						var crossStart = line.a.V3().plus(ab1.times(s)).plus(ab90.times(crossLength / 2))
+						var crossEnd = line.a.V3().plus(ab1.times(s)).plus(ab90.times(-crossLength / 2))
+						//console.log("crosspos", crossStart, crossEnd)
+						paintLineXY(crossStart, crossEnd)
+					}
+				}
+				crossCount++;
+				break
 			default:
-				throw new Error("unknown constraint " + constraint.type);
+				throw new Error("unknown constraint " + constraint.type)
 			// console.log("errror", constraint.type);
 		}
 
@@ -1198,76 +1239,6 @@ function segmentIntersectsRay(a, b, p, dir) {
 	//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1, "s", s, "t", t, "div", div)
 	return t > 0 && s >= 0 && s <= 1
 }
-CSG.prototype.toMesh = function() {
-	function canonEdge(i0, i1) {
-		var iMin = min(i0, i1), iMax = max(i0, i1)
-		return (iMin << 16) | iMax
-	}
-	function uncanonEdge(key) {
-		return [key >> 16, key & 0xffff]
-	}
-	faces = [];
-	console.log("^calling tomesh");
-	var mesh = new GL.Mesh({ normals: true, colors: true, lines:true });
-	var indexer = new GL.Indexer();
-	var sharedMap = new Map();
-	var polygons = this.toPolygons();
-	var i = polygons.length;
-	while (i--) {
-		var p = polygons[i];
-		var sharedPolygons = sharedMap.get(p.shared);
-		if (!sharedPolygons) {
-			sharedMap.set(p.shared, sharedPolygons = []);
-		}
-		sharedPolygons.push(p);
-	}
-	console.log("Map", sharedMap);
-	var allValidEdges = [];
-	sharedMap.forEach((polygons, shared, map) => {
-		var allSharedEdges = []
-		faces.push({start: mesh.triangles.length * 3, count: polygons.length * 3, shared: shared})
-		polygons.forEach((polygon) => {
-			var indices = polygon.vertices.map(function(vertex) {
-				vertex.color = polygon.shared || [1, 1, 1];
-				return indexer.add(vertex);
-			});
-			for (var i = 2; i < indices.length; i++) {
-				mesh.triangles.push([indices[0], indices[i - 1], indices[i]]);
-			}
-			for (var i = 0; i < indices.length; i++) {
-				var i0 = indices[i], i1 = indices[(i + 1) % indices.length];
-				allSharedEdges.push(canonEdge(i0, i1))
-			}
-		})
-		allSharedEdges.sort()
-		console.log("allSharedEdges", allSharedEdges)
-		var validEdges = []
-		var i
-		for (i = allSharedEdges.length - 2; i >= 0; i--) {
-			if (allSharedEdges[i] == allSharedEdges[i + 1]) {
-				// remove both
-				i--;
-				continue;
-			}
-			validEdges.push(allSharedEdges[i + 1])
-		}
-		if (i == -1) {
-			validEdges.push(allSharedEdges[0])
-		}
-		console.log(validEdges)
-		allValidEdges = allValidEdges.concat(validEdges	)
-	})
-	allValidEdges.sort()
-	console.log("allValidEdges", allValidEdges)
-	mesh.lines = allValidEdges.unique().map(uncanonEdge)
-	console.log("indexer.unique.length", indexer.map);
-	console.log(mesh.lines)
-	mesh.vertices = indexer.unique.map(function(v) { return [v.pos.x, v.pos.y, v.pos.z]; });
-	//mesh.normals = indexer.unique.map(function(v) { return [v.normal.x, v.normal.y, v.normal.z]; });
-	mesh.colors = indexer.unique.map(function(v) { return v.color; });
-	mesh.compile()
-	return mesh;
-}
 function template(templateName, map) {
 	var html = $(templateName).text;
 	for (var key in map) {
@@ -1313,7 +1284,6 @@ function updateSelected() {
 	var div = $('selectedElements')
 	div.erase('text')
 	selected.forEach(function (sel) {
-		console.log(sel)
 		var newChild = template("template", {what: sel.what, name: sel.name});
 		newChild.onmouseover = function (e) {
 			highlighted = [sel];
@@ -1324,17 +1294,18 @@ function updateSelected() {
 			paintScreen();
 		};
 		newChild.getElement(".unsel").onclick = function (e) {
-			(sel instanceof SegmentEndPoint ? sel.line : sel).remove();
-			updateSelected();
-			paintScreen();
+			(sel instanceof SegmentEndPoint ? sel.line : sel).removeFromSketch(currentSketch)
+			updateSelected()
+			paintScreen()
 		};
-		newChild.inject(div);
+		newChild.inject(div)
 	});
 	div = $('selectedConstraints')
 	div.erase('text')
-	console.log(selected.map((el) => currentSketch.getConstraintsFor(el)))
 	selected.map((el) => currentSketch.getConstraintsFor(el)).concatenated().unique().forEach(function (constraint) {
-		if ("pointDistance" == constraint.type || "pointLineDistance" == constraint.type) {
+		if ("pointDistance" == constraint.type
+			|| "pointLineDistance" == constraint.type
+			|| "pointPlaneDistance" == constraint.type) {
 			console.log("constraint.type", constraint.type);
 			var newChild = template("templateDistance", {name: constraint.type, id: constraint.id});
 			newChild.inject(div);
@@ -1455,16 +1426,11 @@ var main = function () {
 	initModel()
 	updateFeatureDisplay()
 
-	var a = CSG.cube();
-	var b = CSG.sphere({ radius: 1.35 });
-	a.setColor(1, 1, 0);
-	b.setColor(0, 0.5, 1);
-	//testCSG = createCSG();
 	paintScreen();
 	window.onkeypress = function (e) {
 		if ("Delete" == e.key) {
-			selected.map((x) => x instanceof SegmentEndPoint ? x.line : x).unique().forEach((x) => x.remove());
-			paintScreen();
+			selected.map((x) => x instanceof SegmentEndPoint ? x.line : x).unique().forEach((x) => x.removeFromSketch(currentSketch))
+			paintScreen()
 		}
 	}
 	gl.canvas.onclick = function (e) {
@@ -1476,7 +1442,11 @@ var main = function () {
 		} else {
 			if (GL.keys.SHIFT) {
 				selected.toggle(hoverHighlight)
+			} else if (hoverHighlight) {
+				selected = [hoverHighlight]
 			}
+			updateSelected()
+			paintScreen()
 		}
 	}
 	gl.onmousedown = function (e) {
@@ -1501,12 +1471,6 @@ var main = function () {
 			if (lastSegment) {
 				makeCoincident(lastSegment.b, currentAddingSegment.a, sketch);
 			}
-			//console.log("e", e);
-			console.log("lines", sketch.elements);
-			//console.log("constraints", constraints);
-			console.log(currentAddingSegment.a);
-			rebuildModel(sketch);
-			console.log(currentAddingSegment.a);
 		} else if (mode == "face-select") {
 			if (hoverHighlight instanceof BREP.Face) {
 				modeClickCallback(hoverHighlight)
@@ -1522,10 +1486,10 @@ var main = function () {
 		} else {
 			var intersection = mouseLine.intersectWithPlane(sketch.plane)
 			beenSketchDragging = false
+			relPoss = new Map()
 			if(hoverHighlight != null) {
 				if (intersection && !GL.keys.SHIFT) {
 					var sketchCoords = sketch.worldToSketchMatrix.transformPoint(intersection)
-					relPoss = new Map()
 					if (!selected.contains(hoverHighlight)) {
 						selected = [hoverHighlight]
 					}
@@ -1702,7 +1666,7 @@ function rotationMesh(vertices, axis, total, count, close) {
 		var angle = total / count * i
 		var m = M4()
 		M4.rotationLine(axis.anchor, axis.dir1, angle, m)
-		Array.prototype.push.apply(mesh.vertices, m.transformedPoints(vertices).map(v => v.els()))
+		Array.prototype.push.apply(mesh.vertices, m.transformedPoints(vertices))
 
 		// add triangles
 		for (var j = 0; j < vc - 1; j++) {
@@ -1863,27 +1827,28 @@ function getGroupConstraint(el, sketch, type) {
 }
 // removes segment or plane from group constraint
 function removeFromGroupConstraint(el, sketch, type) {
-	var groupConstraint = getGroupConstraint(el, sketch, type);
+	var groupConstraint = getGroupConstraint(el, sketch, type)
 	if (!groupConstraint) return;
-	groupConstraint.segments.remove(el);
+	groupConstraint.segments.remove(el)
 	if (1 == groupConstraint.segments.length) {
 		sketch.constraints.remove(groupConstraint);
 	}
 	if (groupConstraint.fixed == el) {
 		groupConstraint.fixed = undefined;
 	}
+	groupConstraint.cs.remove(el)
 }
 function removeFromConstraint(el, sketch, constraint) {
 	switch (constraint.type) {
 		case "coincident":
-			el.remove(sketch)
+			removeFromCoincidence(el, sketch)
 			break;
 		case "parallel":
-		case "perpendicular":
 		case "colinear":
 		case "equalLength":
 			removeFromGroupConstraint(el, sketch, constraint.type)
 			break;
+		case "perpendicular":
 		case "pointDistance":
 		case "pointLineDistance":
 		case "pointOnLine":
@@ -2022,25 +1987,30 @@ function makePerpendicular() {
 	}
 }
 function makeDistance() {
-	if (2 != selected.length) return;
-	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1];
-	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0];
+	if (2 != selected.length) return
+	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
+	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0]
 	if (point instanceof SegmentEndPoint && (other instanceof Segment || other instanceof SegmentEndPoint || other.plane)) {
-		var newConstraint;
+		var newConstraint
 		if (other instanceof SegmentEndPoint) {
-			newConstraint = new Constraint("pointDistance", selected.slice(), {distance:round(other.distanceToCoords(point))});
+			newConstraint = new Constraint("pointDistance", selected.slice(), {distance:round(other.distanceToCoords(point))})
+		} else if (other instanceof Segment) {
+			var distance = round(other.distanceToCoords(point))
+			newConstraint = new Constraint("pointLineDistance", [point, other],
+				{point:point, other:other, distance: distance})
 		} else {
 			var distance = round(other.plane.intersectionWithPlane(currentSketch.plane)
 				.transform(currentSketch.worldToSketchMatrix).distanceToPoint(V3(point)))
-			newConstraint = new Constraint("pointLineDistance", [point, other],
-				{point:point, other:new NameRef(other.name), distance:  distance})
-			console.log(newConstraint);
+			other = new NameRef(other.name)
+			newConstraint = new Constraint("pointPlaneDistance", [point, other],
+				{point:point, other:other, distance: distance})
+			console.log(newConstraint)
 		}
-		currentSketch.constraints.push(newConstraint);
-		rebuildModel();
-		paintScreen();
-		updateSelected();
-		$("distanceInput"+newConstraint.id).select();
+		currentSketch.constraints.push(newConstraint)
+		rebuildModel()
+		paintScreen()
+		updateSelected()
+		$("distanceInput"+newConstraint.id).select()
 	}
 }
 function selPointOnLine() {

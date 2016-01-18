@@ -11,9 +11,11 @@ AABB.prototype = {
 		assert(p instanceof V3)
 		this.min = this.min.min(p)
 		this.max = this.max.max(p)
+		return this
 	},
 	addPoints: function (ps) {
 		ps.forEach(p => this.addPoint(p))
+		return this
 	},
 	addAABB: function (aabb) {
 		assert(aabb instanceof AABB)
