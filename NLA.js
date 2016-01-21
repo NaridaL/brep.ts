@@ -15,12 +15,6 @@ NLA.equals2 = (x, y, precision) => Math.abs(x - y) < precision
 NLA.eqAngle = (x, y) => NLA.zeroAngle(x - y)
 NLA.zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA.PRECISION) % (2 * Math.PI) < 2 * NLA.PRECISION
 NLA.snapTo = (x, to) => Math.abs(x - to) < NLA.PRECISION ? to : x
-NLA.Matrix = function (width, height, m) {
-	NLA.assert(width * height == m.length, "uhm...")
-	this.m = m;
-	this.width = width;
-	this.height = height;
-}
 var COLORS = {
 	RD_FILL:0x9EDBF9,
 	RD_STROKE:0x77B0E0,
@@ -75,7 +69,7 @@ NLA.assertNumbers = function () {
 }
 NLA.assert = function (value, message) {
 	if (NLA.DEBUG && !value) {
-		throw new Error("NLA.assert failed " + message);
+		throw new Error("NLA.assert failed: " + message);
 	}
 	return true
 }
@@ -215,62 +209,9 @@ NLA.CustomSet.prototype[Symbol.iterator] = NLA.CustomSet.prototype.entries
 NLA.CustomSet.prototype.keys = NLA.CustomSet.prototype.entries
 
 // Add several convenience methods to the classes that support a transform() method:
-NLA.addTransformationMethodsToPrototype = function(prot) {
-	var M4 = NLA.Matrix4x4
-	prot.mirrored = function(plane) {
-		return this.transform(M4.mirroring(plane));
-	};
-
-	prot.mirroredX = function() {
-		var plane = new CSG.Plane(CSG.Vector3D.Create(1, 0, 0), 0);
-		return this.mirrored(plane);
-	};
-
-	prot.mirroredY = function() {
-		var plane = new CSG.Plane(CSG.Vector3D.Create(0, 1, 0), 0);
-		return this.mirrored(plane);
-	};
-
-	prot.mirroredZ = function() {
-		var plane = new CSG.Plane(CSG.Vector3D.Create(0, 0, 1), 0);
-		return this.mirrored(plane);
-	};
-
-	prot.translate = function(v) {
-		return this.transform(M4.translation(v));
-	};
-
-	prot.scale = function(f) {
-		return this.transform(M4.scaling(f));
-	};
-
-	prot.rotateX = function(deg) {
-		return this.transform(M4.rotationX(deg));
-	};
-
-	prot.rotateY = function(deg) {
-		return this.transform(M4.rotationY(deg));
-	};
-
-	prot.rotateZ = function(deg) {
-		return this.transform(M4.rotationZ(deg));
-	};
-
-	prot.rotate = function(rotationCenter, rotationAxis, degrees) {
-		return this.transform(M4.rotation(rotationCenter, rotationAxis, degrees));
-	};
-
-	prot.rotateEulerAngles = function(alpha, beta, gamma, position) {
-		position = position || [0,0,0];
-
-		var Rz1 = M4.rotationZ(alpha);
-		var Rx  = M4.rotationX(beta);
-		var Rz2 = M4.rotationZ(gamma);
-		var T   = M4.translation(V3(position));
-
-		return this.transform(Rz2.times(Rx).times(Rz1).times(T));
-	};
-};
+NLA.addTransformationMethods = function (obj) {
+	NLA.addOwnProperties(obj, NLA.tranformablePrototype)
+}
 String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
@@ -363,12 +304,6 @@ var ARRAY_UTILITIES = {
 	}
 }
 for (var key in ARRAY_UTILITIES) {
-	if (Array.prototype[key] !== undefined) {
-		throw new Error("!!")
-	}
-	Array.prototype[key] = ARRAY_UTILITIES[key]
-}
-for (var key in ARRAY_UTILITIES) {
 	NLA["array" + key.capitalizeFirstLetter()] = function (arr, ...rest) {
 		ARRAY_UTILITIES[key].apply(arr, rest)
 	}
@@ -413,15 +348,9 @@ function arrayEquals(arr1, arr2) {
 	}
 	return result
 }
-NLA.Matrix.fromFunction = function(width, height, f) {
-	NLA.assertNumbers(width, height);
-	var m = new Float64Array(height * width)
-	var elIndex = height * width;
-	while (elIndex--) {
-		m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
-	}
-	return new NLA.Matrix(width, height, m);
-}
+
+
+///////// VECTOR
 NLA.Vector = function (v) {
 	if (NLA.DEBUG && !(v instanceof Float64Array)) {
 		throw new Error("!!");
@@ -439,76 +368,6 @@ NLA.Vector.fromFunction = function(dim, f) {
 }
 NLA.Vector.random = function (dim) {
 	return NLA.Vector.fromFunction(dim, (i) => Math.random())
-}
-NLA.Matrix.random = function (width, height) {
-    return NLA.Matrix.fromFunction(width, height, (i, j) => Math.random())
-}
-NLA.Matrix.identity = function(dim) {
-    NLA.assertNumbers(dim);
-    var m = new Float64Array(dim * dim)
-    // Float64Array are init to 0
-    var elIndex = dim * (dim + 1);
-    while (elIndex) {
-        elIndex -= (dim + 1)
-        m[elIndex] = 1
-    }
-    return new NLA.Matrix(dim, dim, m);
-}
-NLA.Matrix.permutation = function(dim, i, k) {
-    NLA.assertNumbers(dim);
-    var m = new Float64Array(dim * dim)
-    // Float64Array are init to 0
-    var elIndex = dim * (dim + 1);
-    while (elIndex) {
-        elIndex -= (dim + 1)
-        m[elIndex] = 1
-    }
-    m[i * dim + i] = 0
-    m[k * dim + k] = 0
-    m[i * dim + k] = 1
-    m[k * dim + i] = 1
-    return new NLA.Matrix(dim, dim, m);
-}
-NLA.Matrix.fromRowArrays = function() {
-    return NLA.Matrix.fromRowArrays2(arguments)
-}
-NLA.Matrix.fromRowArrays2 = function(arrays) {
-    if (0 == arrays.length) {
-        throw new Error("cannot have 0 vector");
-    }
-    var height = arrays.length
-    var width = arrays[0].length
-    var m = new Float64Array(height * width)
-    NLA.arrayCopy(arrays[0], 0, m, 0, width);
-    for (var rowIndex = 1; rowIndex < height; rowIndex++) {
-        if (arrays[rowIndex].length != width) {
-            throw new Error("all row arrays must be the same length")
-        }
-        NLA.arrayCopy(arrays[rowIndex], 0, m, rowIndex * width, width)
-    }
-    return new NLA.Matrix(width, height, m);
-}
-NLA.Matrix.fromColVectors = function (colVectors) {
-    return NLA.Matrix.fromColArrays(colVectors.map((v) => v.v))
-}
-NLA.Matrix.forWidthHeight = function(width, height) {
-	return new NLA.Matrix(width, height, new Float64Array(width * height))
-}
-NLA.Matrix.fromColArrays = function(colArrays) {
-    if (0 == colArrays.length) {
-        throw new Error("cannot have 0 vector");
-    }
-    var width = colArrays.length
-    var height = colArrays[0].length
-    var m = new Float64Array(height * width)
-    NLA.arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height)
-    for (var colIndex = 1; colIndex < width; colIndex++) {
-        if (colArrays[colIndex].length != height) {
-            throw new Error("all col arrays must be the same length")
-        }
-        NLA.arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height)
-    }
-    return new NLA.Matrix(width, height, m);
 }
 NLA.Vector.fromArguments = function () {
 	assert (false, "implement proper arg checking")
@@ -729,6 +588,16 @@ NLA.Vector.prototype = {
 		return arrayAbsSum(this.v)
 	}
 };
+NLA.addOwnProperties = function (target, props) {
+	for (var key in props) {
+		if (props.hasOwnProperty(key)) {
+			if (target.hasOwnProperty(key)) {
+				console.warn("target ", target, " already has property ", key)
+			}
+			target[key] = props[key]
+		}
+	}
+}
 NLA.forceFinite = function(val) {
 	val = parseFloat(val.replace(',', '.').replace(/^[^0-9,\.\-]/, ''))
 	return Number.isFinite(val) ? val : 0
@@ -781,11 +650,98 @@ NLA.forceFinite = function(val) {
 		};
 	}
 })();
-/*
-wu.prototype.toArray = function () {
-	return Array.from(this)
+
+
+
+
+
+
+/// MATRIX
+NLA.Matrix = function (width, height, m) {
+	NLA.assert(width * height == m.length, "uhm...")
+	this.m = m;
+	this.width = width;
+	this.height = height;
 }
-*/
+NLA.Matrix.random = function (width, height) {
+	return NLA.Matrix.fromFunction(width, height, (i, j) => Math.random())
+}
+NLA.Matrix.fromFunction = function(width, height, f) {
+	NLA.assertNumbers(width, height);
+	var m = new Float64Array(height * width)
+	var elIndex = height * width;
+	while (elIndex--) {
+		m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
+	}
+	return new NLA.Matrix(width, height, m);
+}
+NLA.Matrix.identity = function(dim) {
+	NLA.assertNumbers(dim);
+	var m = new Float64Array(dim * dim)
+	// Float64Array are init to 0
+	var elIndex = dim * (dim + 1);
+	while (elIndex) {
+		elIndex -= (dim + 1)
+		m[elIndex] = 1
+	}
+	return new NLA.Matrix(dim, dim, m);
+}
+NLA.Matrix.permutation = function(dim, i, k) {
+	NLA.assertNumbers(dim);
+	var m = new Float64Array(dim * dim)
+	// Float64Array are init to 0
+	var elIndex = dim * (dim + 1);
+	while (elIndex) {
+		elIndex -= (dim + 1)
+		m[elIndex] = 1
+	}
+	m[i * dim + i] = 0
+	m[k * dim + k] = 0
+	m[i * dim + k] = 1
+	m[k * dim + i] = 1
+	return new NLA.Matrix(dim, dim, m);
+}
+NLA.Matrix.fromRowArrays = function() {
+	return NLA.Matrix.fromRowArrays2(arguments)
+}
+NLA.Matrix.fromRowArrays2 = function(arrays) {
+	if (0 == arrays.length) {
+		throw new Error("cannot have 0 vector");
+	}
+	var height = arrays.length
+	var width = arrays[0].length
+	var m = new Float64Array(height * width)
+	NLA.arrayCopy(arrays[0], 0, m, 0, width);
+	for (var rowIndex = 1; rowIndex < height; rowIndex++) {
+		if (arrays[rowIndex].length != width) {
+			throw new Error("all row arrays must be the same length")
+		}
+		NLA.arrayCopy(arrays[rowIndex], 0, m, rowIndex * width, width)
+	}
+	return new NLA.Matrix(width, height, m);
+}
+NLA.Matrix.fromColVectors = function (colVectors) {
+	return NLA.Matrix.fromColArrays(colVectors.map((v) => v.v))
+}
+NLA.Matrix.forWidthHeight = function(width, height) {
+	return new NLA.Matrix(width, height, new Float64Array(width * height))
+}
+NLA.Matrix.fromColArrays = function(colArrays) {
+	if (0 == colArrays.length) {
+		throw new Error("cannot have 0 vector");
+	}
+	var width = colArrays.length
+	var height = colArrays[0].length
+	var m = new Float64Array(height * width)
+	NLA.arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height)
+	for (var colIndex = 1; colIndex < width; colIndex++) {
+		if (colArrays[colIndex].length != height) {
+			throw new Error("all col arrays must be the same length")
+		}
+		NLA.arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height)
+	}
+	return new NLA.Matrix(width, height, m);
+}
 NLA.Matrix.prototype = {
     e: function (rowIndex, colIndex) {
         NLA.assertNumbers(rowIndex, colIndex)
@@ -1270,6 +1226,7 @@ NLA.Vector.Unit = function (dim, dir) {
 	}
 	return new NLA.Vector(n)
 }
+
 NLA.combinations = function* (n) {
 	for (var i = 0; i < n; i++) {
 		for (var j = i; j < n; j++) {
@@ -1277,6 +1234,7 @@ NLA.combinations = function* (n) {
 		}
 	}
 }
+
 NLA.Line = function (anchor, dir1) {
 	NLA.assertVectors(anchor, dir1)
     console.log("sadjlkasjd", dir1)
@@ -1394,16 +1352,41 @@ NLA.Line.prototype = {
 		}
 	},
 }
-/*
-Object.defineProperties(NLA.Vector3, {
-    X: { value: new NLA.Vector3(1, 0, 0) },
-    Y: { value: new NLA.Vector3(0, 1, 0) },
-    Z: { value: new NLA.Vector3(0, 0, 1) },
-    ZERO: { value: new NLA.Vector3(0, 0, 0) },
-})
-Object.defineProperties(NLA.Line, {
-    X3: { value: new NLA.Line(NLA.Vector3.ZERO, NLA.Vector3.X) },
-    Y3: { value: new NLA.Vector3(NLA.Vector3.ZERO, NLA.Vector3.Y) },
-    Z3: { value: new NLA.Vector3(NLA.Vector3.ZERO, NLA.Vector3.Z) },
-})
-*/
+NLA.tranformablePrototype = (function() {
+	var prot = {}
+	prot.mirrored = function(plane) {
+		return this.transform(NLA.Matrix4x4.mirroring(plane));
+	}
+	prot.mirroredX = function() {
+		return this.mirrored(P3.YZ)
+	}
+	prot.mirroredY = function() {
+		return this.mirrored(P3.ZX)
+	}
+	prot.mirroredZ = function() {
+		return this.mirrored(P3.XY)
+	}
+	prot.translate = function(x, y, z) {
+		return this.transform(NLA.Matrix4x4.translation(x, y, z))
+	}
+	prot.scale = function(f) {
+		return this.transform(NLA.Matrix4x4.scaling(f))
+	}
+	prot.rotateX = function(radians) {
+		return this.transform(NLA.Matrix4x4.rotationX(radians))
+	}
+	prot.rotateY = function(radians) {
+		return this.transform(NLA.Matrix4x4.rotationY(radians))
+	}
+	prot.rotateZ = function(radians) {
+		return this.transform(NLA.Matrix4x4.rotationZ(radians))
+	}
+	prot.rotate = function(rotationCenter, rotationAxis, radians) {
+		return this.transform(NLA.Matrix4x4.rotation(rotationCenter, rotationAxis, radians))
+	}
+	prot.eulerZXZ = function(alpha, beta, gamma) {
+		return this.transform(NLA.Matrix4x4.eulerZXZ(alpha, beta, gamma))
+	}
+	return prot
+})();
+NLA.addOwnProperties(Array.prototype, ARRAY_UTILITIES)

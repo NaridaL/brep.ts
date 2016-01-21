@@ -27,11 +27,12 @@ if (!Array.prototype.find) {
 		return undefined;
 	};
 }
-function BREP(vertices, edges, faces, infiniteVolume) {
+function BREP(vertices, edges, faces, infiniteVolume, source) {
 	this.vertices = vertices;
 	this.edges = edges;
 	this.faces = faces;
 	this.infiniteVolume = infiniteVolume || false
+	this.source = source
 }
 var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3, cl = console.log, assert = NLA.assert
 BREP.box = function (w, h, d) {
@@ -52,12 +53,13 @@ BREP.box = function (w, h, d) {
 var faceId = 0
 BREP.Face = function(vertices, plane, name) {
 	assert(!plane || plane instanceof P3, "plane is not a P3")
+	NLA.assertVectors.apply(null, vertices)
 	this.vertices = vertices
 	this.name = name
 	// this.aabb
 	this.plane = plane ? plane : P3.throughPoints(vertices[0], vertices[1], vertices[2])
-	//console.log(vertices, plane)
-	//console.log(plane && vertices.map(v=> plane.distanceToPointSigned(v)))
+//	console.log(vertices.map(v => v.ss), plane && plane.toString())
+//	console.log(plane && vertices.map(v=> plane.distanceToPointSigned(v)))
 	assert(!plane || vertices.every((v) => plane.containsPoint(v)), "all vertices must be contained within the plane")
 	assert(Array.from(BREP.Face.segmentsIterator(vertices)).every((seg) => !seg[0].like(seg[1])), "no degenerate segments"+vertices.map(v=>v.ss).join(","))
 	var ccw = isCCW(vertices, this.plane.normal)
@@ -73,7 +75,10 @@ BREP.Face.segmentsIterator = function*(vertices) {
 	}
 }
 BREP.prototype.flipped = function () {
-	return new BREP(null, null, this.faces.map(f => f.flipped()), !this.infiniteVolume)
+	return new BREP(null, null, this.faces.map(f => f.flipped()), !this.infiniteVolume, this.source + ".flipped()")
+}
+BREP.prototype.toSource = BREP.prototype.toString = function () {
+	return this.source || Object.toSource.apply(this)
 }
 BREP.prototype.transform = function (m4) {
 	return new BREP(null, null, this.faces.map(f => f.transform(m4)), this.infiniteVolume)
@@ -89,7 +94,10 @@ BREP.segmentIntersectsVertexLoop = function (a, b, vertices) {
 BREP.Face.prototype = {
 	what: "Face",
 	toString: function () {
-		return "[" + this.vertices.map((v) => v.toString()).join(", ") + "] on " + this.plane.toString()
+		return `new BREP.Face([${this.vertices.map(v=>v.toString()).join(", ")}], ${this.plane.toString()})`
+	},
+	toSource: function () {
+		return this.toString()
 	},
 	equals: function (face) {
 
@@ -202,9 +210,10 @@ BREP.Face.prototype = {
 		return new BREP.Face(m4.transformedPoints(this.vertices), this.plane.transform(m4), this.name)
 	}
 }
-CSG.addTransformationMethodsToPrototype(V3.prototype)
-CSG.addTransformationMethodsToPrototype(BREP.Face.prototype)
-CSG.addTransformationMethodsToPrototype(BREP.prototype)
+NLA.addTransformationMethods(V3.prototype)
+NLA.addTransformationMethods(P3.prototype)
+NLA.addTransformationMethods(BREP.Face.prototype)
+NLA.addTransformationMethods(BREP.prototype)
 BREP.prototype.ss = function() {
 	return "new BREP(null, null, [" + this.faces.map((face) =>
 		"new BREP.Face(["+face.vertices.map((v) => v.toString(x => x)).join(",")+"], "+face.plane.toString((x) => x)+")"
@@ -341,8 +350,8 @@ function segmentsTouchOrIntersect(a, b, c, d) {
 		 && (NLA.equals(t, 0) || NLA.equals(t, 1) || (t > 0 && t < 1))
 }
 BREP.extrude = function(baseVertices, baseFacePlane, offset, name) {
-	assert (baseVertices.every(v => v instanceof V3))
-	assert (baseFacePlane instanceof P3)
+	assert (baseVertices.every(v => v instanceof V3), "baseVertices.every(v => v instanceof V3)")
+	assert (baseFacePlane instanceof P3, "baseFacePlane instanceof P3")
 	assert (offset instanceof V3, "offset must be V3")
 	if (baseFacePlane.normal.dot(offset) > 0) baseFacePlane = baseFacePlane.flipped()
 	if (!isCCW(baseVertices, baseFacePlane.normal)) {
@@ -361,7 +370,8 @@ BREP.extrude = function(baseVertices, baseFacePlane, offset, name) {
 			topVertices[m - 1 - i],
 			topVertices[m - 1 - (i + 1) % m]], undefined, name + "wall" + i))
 	}
-	return new BREP(null, null, faces)
+	return new BREP(null, null, faces, false,
+		`BREP.extrude(${baseVertices.toSource()}, ${baseFacePlane.toString()}, ${offset.ss}, "${name}")`)
 }
 BREP.prototype.union = function (brep2) {
 
@@ -424,59 +434,138 @@ function splitsVolumeEnclosingFaces(brep, segment, dir, faceNormal, removeCoplan
 		return !ff[0].face.reversed
 	}
 }
-BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOpposite) {
-	function getFacePlaneIntersectionSs(face2, line, facePlane) {
-		var xss = []
-		face2.vertices.forEach((v0, i, vertices) => {
-			var v1 = vertices[(i + 1) % vertices.length], v2 = vertices[(i + 2) % vertices.length]
-			console.log("segment", v0.toString(), v1.toString())
-			var st = segmentIntersectsLineST(v0, v1, line.anchor, line.dir1), s = st && st.segmentAt, t = st && st.lineAt
-			// st is undefined if this segment is parallel to the plane
-			if (st) {
-				if (NLA.equals(s, 1)) {
-					// the end of this segment lies on the line
-					// the start doesn't as st is undefined if the segment is parallel to the line
-					// we add this point if the next segment ends on the other side of the line
-					var pointDistanceSigned = facePlane.distanceToPointSigned(v2)
-					if (NLA.isZero(pointDistanceSigned)) {
-						// next segment is colinear
-						var outVector = outsideVector([v1, v2], face2.plane.normal)
-						if (outVector.dot(segmentVector([v0, v1])) < 0) {
-							xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
-						}
-					} else if (pointDistanceSigned * facePlane.distanceToPointSigned(v0) < 0) {
-						console.log("HHHEELEO", v1.toString(), line.pointLambda(v1))
+function getFacePlaneIntersectionSs2(brep2, face2, line, facePlane, removeCoplanarSame, removeCoplanarOpposite) {
+	var xss = []
+	face2.vertices.forEach((v0, i, vertices) => {
+		var v1 = vertices[(i + 1) % vertices.length], v2 = vertices[(i + 2) % vertices.length]
+		console.log("segment", v0.toString(), v1.toString())
+		var st = segmentIntersectsLineST(v0, v1, line.anchor, line.dir1), s = st && st.segmentAt, t = st && st.lineAt
+		// st is undefined if this segment is parallel to the plane
+		if (st) {
+			if (NLA.equals(s, 1)) {
+				// the end of this segment lies on the line
+				// the start doesn't as st is undefined if the segment is parallel to the line
+				// we add this point if the next segment ends on the other side of the line
+				var pointDistanceSigned = facePlane.distanceToPointSigned(v2)
+				if (NLA.isZero(pointDistanceSigned)) {
+					// next segment is colinear
+					var nextSegmentOut = outsideVector([v1, v2], face2.plane.normal)
+					if (nextSegmentOut.dot(segmentVector([v0, v1])) < 0) {
 						xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
 					}
+				} else if (pointDistanceSigned * facePlane.distanceToPointSigned(v0) < 0) {
+					console.log("HHHEELEO", pointDistanceSigned , v1.toString(), line.pointLambda(v1))
+					xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
+					console.log("partxss", xss, s)
 				}
-				if (s - NLA.PRECISION < 0 || s + NLA.PRECISION > 1) { return }
+			} else if (s > NLA.PRECISION && s < 1 - NLA.PRECISION) {
 				console.log("HHHEELE2O", v1.toString(), line.pointLambda(v1))
 				xss.push({t: t, on: [v0, v1], p: line.at(t)})
-			} else {
-				// check if the segment is IN the plane
-				if (line.containsPoint(v0)) {
-					console.log("getFacePLaneINter", line.toString(), v0.toString())
-					//
-					var normal = facePlane.normal
-					console.log("brep2.infiniteVolume",brep2.infiniteVolume)
-					if (splitsVolumeEnclosingFaces(brep2, [v0, v1], facePlane.projectedVector(face2.plane.normal), normal, removeCoplanarSame, removeCoplanarOpposite)
+			}
+		} else {
+			// check if the segment is IN the plane
+			if (line.containsPoint(v0)) {
+				console.log("getFacePLaneINter", line.toString(), v0.toString())
+				//
+				var normal = facePlane.normal
+				console.log("brep2.infiniteVolume",brep2.infiniteVolume)
+				if (splitsVolumeEnclosingFaces(brep2, [v0, v1], facePlane.projectedVector(face2.plane.normal), normal, removeCoplanarSame, removeCoplanarOpposite)
 					!= splitsVolumeEnclosingFaces(brep2, [v0, v1], facePlane.projectedVector(face2.plane.normal).negated(), normal, removeCoplanarSame, removeCoplanarOpposite)) {
-						// TODO: ??
-						xss.push({t: line.pointLambda(v0), on: [v0, v1], p: v0, endpoint: true})
-						xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
-					}
-					// figure out if we need to re-add the end point of the colinear segment
-					var outVector = outsideVector([v0, v1], face2.plane.normal)
-					if (outVector.dot(segmentVector([v1, v2])) > 0) {
-						xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
-					}
+					// TODO: ??
+					xss.push({t: line.pointLambda(v0), on: [v0, v1], p: v0, endpoint: true})
+					xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
+				}
+				// figure out if we need to re-add the end point of the colinear segment
+				var outVector = outsideVector([v0, v1], face2.plane.normal)
+				if (outVector.dot(segmentVector([v1, v2])) > 0) {
+					xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
+				}
 
+			}
+		}
+		console.log("partxss", xss)
+	})
+	//console.log(brep2.toString(), "face", face2.toString(), line.toString(), facePlane.toString(), removeCoplanarSame, removeCoplanarOpposite)
+	assert(xss.length % 2 == 0, "xss.length % 2 == 0")
+	return xss.sort((a, b) => a.t - b.t)
+}
+function getFacePlaneIntersectionSs(brep, brepFace, line, facePlane, removeCoplanarSame, removeCoplanarOpposite) {
+	var faceEdgePlaneIntersections = []
+	var signedDistances = brepFace.vertices.map(v => NLA.snapTo(facePlane.distanceToPointSigned(v), 0))
+	var colinearSegmentsInside = brepFace.vertices.map((v0, i, vertices) => {
+		var j = (i + 1) % vertices.length
+		var v1 = vertices[j]
+		var facePlaneNormal = facePlane.normal
+		return NLA.isZero(signedDistances[i]) && NLA.isZero(signedDistances[j]) &&
+			splitsVolumeEnclosingFaces(brep, [v0, v1], facePlane.projectedVector(brepFace.plane.normal), facePlaneNormal, removeCoplanarSame, removeCoplanarOpposite)
+			!= splitsVolumeEnclosingFaces(brep, [v0, v1], facePlane.projectedVector(brepFace.plane.normal).negated(), facePlaneNormal, removeCoplanarSame, removeCoplanarOpposite)
+	})
+	console.log(colinearSegmentsInside)
+	brepFace.vertices.forEach((v0, i, vertices) => {
+		var j = (i + 1) % vertices.length, k = (i + 2) % vertices.length
+		var v1 = vertices[(i + 1) % vertices.length], v2 = vertices[(i + 2) % vertices.length]
+		console.log("segment", v0.toString(x=>x.toFixed(3)), v1.toString(x=>x.toFixed(3)))
+
+		if (0 == signedDistances[i]) {
+			if (0 == signedDistances[j]) {
+				// segment is colinear to intersection line
+				//
+				var insideNext
+				if (0 == signedDistances[k]) {
+					// next segment is also colinear
+					insideNext = colinearSegmentsInside[j]
+				} else {
+					var outVector = outsideVector([v0, v1], brepFace.plane.normal)
+					insideNext = outVector.dot(segmentVector([v1, v2])) > 0
+				}
+				console.log("colienar segment", insideNext != colinearSegmentsInside[i], insideNext)
+				if (insideNext != colinearSegmentsInside[i]) {
+					faceEdgePlaneIntersections.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
 				}
 			}
-			console.log("partxss", xss)
-		})
-		return xss
-	}
+			console.log("segment away from line")
+			// else segment away from intersection line: do nothing
+		} else {
+			if (0 == signedDistances[j]) {
+				// the end of this segment lies on the line
+				// we add this point if the next segment ends on the other side of the line
+				if (0 == signedDistances[k]) {
+					// next segment is colinear
+					// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
+					// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
+					// point in the same direction (dot > 0)
+					var nextSegmentOut = outsideVector([v1, v2], brepFace.plane.normal)
+					var insideFaceBeforeColinear = nextSegmentOut.dot(segmentVector([v0, v1])) < 0
+					var colinearSegmentInsideFace = colinearSegmentsInside[j]
+					// if the "inside-ness" changes, add intersection point
+					console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOut)
+					if (insideFaceBeforeColinear != colinearSegmentInsideFace) {
+						console.log("HHHEELE3O", signedDistances[k], v1.toString(), line.pointLambda(v1))
+						faceEdgePlaneIntersections.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
+					}
+				} else if (signedDistances[i] * signedDistances[k] < 0) {
+					console.log("segment end on line followed by away")
+					console.log("HHHEELEO", signedDistances[k], v1.toString(), line.pointLambda(v1))
+					faceEdgePlaneIntersections.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
+					console.log("partxss", faceEdgePlaneIntersections, s)
+				}
+			} else {
+				// possible intersection; if endpoints on opposite side of line/plane
+				console.log("possible intersection",signedDistances[i] * signedDistances[j] < 0)
+				if (signedDistances[i] * signedDistances[j] < 0) {
+					console.log("HHHEELE2O", v1.toString(), line.pointLambda(v1))
+					var s = signedDistances[i] / (signedDistances[i] - signedDistances[j]), p = v0.lerp(v1, s)
+					faceEdgePlaneIntersections.push({t: line.pointLambda(p), on: [v0, v1], p: p, endpoint: false})
+				}
+			}
+		}
+		console.log("partxss", faceEdgePlaneIntersections)
+	})
+	//console.log(brep.toString(), "face", brepFace.toString(), line.toString(), facePlane.toString(), removeCoplanarSame, removeCoplanarOpposite)
+	assert(faceEdgePlaneIntersections.length % 2 == 0, "faceEdgePlaneIntersections.length % 2 == 0")
+	return faceEdgePlaneIntersections.sort((a, b) => a.t - b.t)
+}
+BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOpposite) {
 	function getNextPoint(segment, currentPoint, intersections) {
 		var sv = segmentVector(segment)
 		var sorted = intersections.filter((intersection) => {
@@ -526,9 +615,8 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 			}
 			var line = L3.fromPlanes(plane, p2)
 			console.log("line", line.toString())
-			var xss = getFacePlaneIntersectionSs(face2, line, plane)
-			xss.sort((a, b) => a.t - b.t)
-			console.log("xss", xss)
+			var xss = getFacePlaneIntersectionSs(brep2, face2, line, plane, removeCoplanarSame, removeCoplanarOpposite)
+			console.log("xss", xss.toSource())
 			var segmentOutsideVector = line.dir1.cross(plane.normal)
 			var dot = segmentOutsideVector.dot(p2.normal)
 			// iterate though the segments of the intersection of face2 on face's plane
@@ -611,7 +699,7 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 			}).concatenated().sort((a, b) => a.angle - b.angle)
 			assert(ff.length != 0, "ff.length != 0")
 			console.log(dir.toSource(), "dirr", dir.toSource(), ff)
-		return NLA.isZero(ff[0].angle) ? includeEdges : ff[0].reversed
+			return NLA.isZero(ff[0].angle) ? includeEdges : ff[0].reversed
 		}
 		// check intersections again, now that we have all the cross-section segments
 		intersections = intersections.filter(is => {
@@ -869,7 +957,13 @@ function testBREP() {
 		var a = new BREP(null, null, [ new BREP.Face([V3(5, 0, 0), V3(5, 5, 0), V3(0, 5, 0), V3(0, 0, 0)].reverse(), P3(V3.Z.negated(), 0))])
 		//var a = new BREP(null, null, [new BREP.Face([V3(5, 0, 5), V3(0, 0, 5), V3(0, 5, 5), V3(5, 5, 5)], P3(V3(0, 0, 1), 5))])
 		var a = BREP.box(5, 5, 5)
-		var b = BREP.box(1, 1, 5).translate(V3(1, 1, 1))
+		var b = BREP.box(1, 1, 5).translate(1, 1, 1)
+		var a = BREP.extrude([V3(0, 0, 0), V3(10, 0, 0), V3(0, 10, 0)].map(V3.perturbed), P3.XY, V3(0, 0, -5).perturbed(), "ex0").flipped()
+		var b = BREP.extrude([V3(-1, 10, -5), V3(-1, 8, -5), V3(-1, 10, -3)].map(V3.perturbed), P3.YZ.flipped().translate(-1, 0, 0), V3(8, 0, 0).perturbed(), "ex1").flipped()
+		var a =new BREP(null, null, [new BREP.Face([V3(0, 0, 0),V3(10, 0, 0),V3(10, 10, 0),V3(0, 10, 0)], P3(V3(0, 0, 1), 0))])
+		var b = BREP.tetrahedron(V3(5, 5, 5), V3(5, 5, -5), V3(10, 12, 1), V3(0, 12, 1))
+		console.log("a", a.toSource())
+		console.log("b", b.toSource())
 		//var b = BREP.tetrahedron(V3(1, 0, -1), V3(1, 0, 8), V3(1, 4, -1), V3(4, 0, -1))
 		//var b = BREP.tetrahedron(V3(2, -2, -2), V3(2, 4, -2), V3(1, -2, 4), V3(3, 4, 4))
 		//var b = new BREP(null, null, [new BREP.Face([V3(1, 0, 0), V3(1, 1, 0), V3(0, 1, 0), V3(0, 0, 0)])])
@@ -879,20 +973,42 @@ function testBREP() {
 			V3(4, 0, 6))
 		//var b = new BREP(null, null, [f1, f2, f3])
 		//var b = tet
-		//aMesh = a.toMesh()
-		//bMesh = b.toMesh()
+		aMesh = a.toMesh()
+		bMesh = b.toMesh()
 		console.log("css", b.ss())
 
 
-		var c = a.minus(b)//clipped(b, true, true)
+		var c = a.clipped(b, true, true)
 		cMesh = c.toNormalMesh()
 		console.log("css", c.ss())
 		//bMesh = b.clipped(a).toMesh()
 	} catch (e) {
 		console.log(e)
 	}
-	paintScreen()
+	paintScreen2()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function triangulateFace(face) {
 	var coords = [['y', 'z'], ['z', 'x'], ['x', 'y']][face.plane.normal.absMaxDim()]
 	var contour = [].concat.apply([], face.vertices.map((vertex) => [vertex[coords[0]], vertex[coords[1]]]))
@@ -913,83 +1029,6 @@ function isCCW(vertices, normal) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-var zoomFactor = 10;
-var eyePos = V3(0, 0, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Y;
-function setupCamera() {
-	gl.matrixMode(gl.PROJECTION);
-	gl.loadIdentity();
-	//gl.perspective(70, gl.canvas.width / gl.canvas.height, 0.1, 1000);
-	var lr = gl.canvas.width / 2 / zoomFactor;
-	var bt = gl.canvas.height / 2 / zoomFactor;
-	gl.ortho(-lr, lr, -bt, bt, -1e3, 1e5);
-	gl.lookAt(
-		eyePos.x, eyePos.y, eyePos.z,
-		eyeFocus.x, eyeFocus.y, eyeFocus.z,
-		eyeUp.x, eyeUp.y, eyeUp.z);
-	gl.matrixMode(gl.MODELVIEW);
-}
-var v2as = (vertex) => "["+vertex.x+", "+vertex.y+", "+vertex.z+"]";
-function CustomPlane(anchor2, right, up, upStart, upEnd, rightStart, rightEnd, color) {
-	var p = P3.throughPoints(anchor2, right, up, CustomPlane.prototype);
-	p.up = up;
-	p.right = right;
-	p.upStart = upStart;
-	p.upEnd = upEnd;
-	p.rightStart = rightStart;
-	p.rightEnd = rightEnd;
-	p.color = color;
-	p.id = lineId++;
-	return p;
-}
-
-function rgbToArr4(color) {
-	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
-}
-var lineId = 0
-CustomPlane.prototype = Object.create(P3.prototype);
-CustomPlane.prototype.constructor = CustomPlane;
-CustomPlane.prototype.toString = function () {
-	return "Plane #" + this.id;
-}
-CustomPlane.prototype.distanceTo = function (line) {
-	try {
-		return [
-			L3(this.anchor.plus(this.right.times(this.rightStart)), this.up),
-			L3(this.anchor.plus(this.right.times(this.rightEnd)), this.up),
-			L3(this.anchor.plus(this.up.times(this.upStart)), this.right),
-			L3(this.anchor.plus(this.up.times(this.upEnd)), this.right)].map(function (line2, line2Index) {
-			var info = line2.pointClosestTo2(line);
-			if (isNaN(info.t) // parallel lines
-				|| line2Index < 2 && this.upStart <= info.t && info.t <= this.upEnd
-				|| line2Index >= 2 && this.rightStart <= info.t && info.t <= this.rightEnd) {
-				return info.distance;
-			} else {
-				return 1e9;
-			}
-		}, this).min();
-	} catch (e) {
-		console.log(e);
-	}
-}
-
 //var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
 var planes = [
 	CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xff0000),
@@ -1008,7 +1047,7 @@ function drawPlanes() {
 		var shader = singleColorShader;
 
 		shader.uniforms({
-			color: rgbToArr4(plane.color)
+			color: rgbToVec4(plane.color)
 		}).draw(xyLinePlaneMesh, gl.LINES);
 
 		gl.popMatrix();
@@ -1028,7 +1067,7 @@ BREP.tetrahedron = function (a, b, c, d) {
 	}
 	return new BREP(null, null, faceVertices.map((vertices) => new BREP.Face(vertices)))
 }
-var singleColorShader, textureColorShader, singleColorShaderHighlight, arcShader, arcShader2,xyLinePlaneMesh,gl,cubeMesh,lightingShader
+var singleColorShader, textureColorShader, singleColorShaderHighlight, arcShader, arcShader2,xyLinePlaneMesh,gl,cubeMesh,lightingShader, vectorMesh
 
 window.loadup = function () {
 	/*
@@ -1085,7 +1124,7 @@ window.loadup = function () {
 				eyePos = eyePos.plus(worldMoveCamera);
 				eyeFocus = eyeFocus.plus(worldMoveCamera);
 				setupCamera();
-				paintScreen();
+				paintScreen2();
 			}
 			if (e.buttons & 2) {
 				var rotateLR = deg2rad(-e.deltaX / 6.0);
@@ -1099,7 +1138,7 @@ window.loadup = function () {
 				eyeUp = matrix.transformVector(eyeUp)
 				//console.log("eyepos", eyePos);
 				setupCamera();
-				paintScreen();
+				paintScreen2();
 			}
 		}
 	}
@@ -1107,12 +1146,14 @@ window.loadup = function () {
 	xyLinePlaneMesh.vertices = [[0, 0], [0, 1], [1, 1], [1, 0]];
 	xyLinePlaneMesh.lines = [[0, 1], [1, 2], [2, 3], [3, 0]];
 	xyLinePlaneMesh.compile();
-	singleColorShader = new GL.Shader($('vertexShaderBasic').text, $('fragmentShaderColor').text);
-	singleColorShaderHighlight = new GL.Shader($('vertexShaderBasic').text, $('fragmentShaderColorHighlight').text);
-	textureColorShader = new GL.Shader($('vertexShaderTextureColor').text, $('fragmentShaderTextureColor').text);
-	arcShader = new GL.Shader($('vertexShaderRing').text, $('fragmentShaderColor').text);
-	arcShader2 = new GL.Shader($('vertexShaderArc').text, $('fragmentShaderColor').text);
-	lightingShader = new GL.Shader($('vertexShaderLighting').text, $('fragmentShaderLighting').text);
+	vectorMesh = rotationMesh([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, false)
+
+	singleColorShader = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
+	singleColorShaderHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight);
+	textureColorShader = new GL.Shader(vertexShaderTextureColor, fragmentShaderTextureColor);
+	arcShader = new GL.Shader(vertexShaderRing, fragmentShaderColor);
+	arcShader2 = new GL.Shader(vertexShaderArc, fragmentShaderColor);
+	lightingShader = new GL.Shader(vertexShaderLighting, fragmentShaderLighting);
 
 	$(gl.canvas).addEvent('mousewheel', function (e) {
 		//console.log(e);
@@ -1126,14 +1167,14 @@ window.loadup = function () {
 		eyePos = eyePos.plus(worldMoveCamera);
 		eyeFocus = eyeFocus.plus(worldMoveCamera);
 		setupCamera();
-		paintScreen();
+		paintScreen2();
 	});
 
 
 	testBREP();
 }
 var aMesh, bMesh, cMesh
-function paintScreen() {
+function paintScreen2() {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.loadIdentity();
 	gl.scale(10, 10, 10);
@@ -1142,40 +1183,48 @@ function paintScreen() {
 
 	console.log("painting")
 
+	//drawVectors()
+
 
 	if (aMesh) {
 		singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.PP_STROKE)
+			color: rgbToVec4(COLORS.PP_STROKE)
 		}).draw(aMesh, gl.LINES);
 		singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.PP_FILL)
+			color: rgbToVec4(COLORS.PP_FILL)
 		}).draw(aMesh);
 	}
 	if (bMesh) {
+		gl.pushMatrix()
+		gl.translate(20, 0, 0)
 		singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.TS_STROKE)
+			color: rgbToVec4(COLORS.TS_STROKE)
 		}).draw(bMesh, gl.LINES);
 		singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.TS_FILL)
+			color: rgbToVec4(COLORS.TS_FILL)
 		}).draw(bMesh);
+		gl.popMatrix()
 	}
 	/*
 	if (cMesh) {
 		singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.RD_STROKE)
+			color: rgbToVec4(COLORS.RD_STROKE)
 		}).draw(cMesh, gl.LINES);
 		singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.RD_FILL)
+			color: rgbToVec4(COLORS.RD_FILL)
 		}).draw(cMesh);
 	}
 	*/
 	if (cMesh) {
+		gl.pushMatrix()
+		gl.translate(40, 0, 0)
 		/*singleColorShader.uniforms({
-			color: rgbToArr4(COLORS.RD_STROKE)
+			color: rgbToVec4(COLORS.RD_STROKE)
 		}).draw(cMesh, gl.LINES);*/
 		lightingShader.uniforms({
-			color: rgbToArr4(COLORS.RD_FILL)
+			color: rgbToVec4(COLORS.RD_FILL)
 		}).draw(cMesh);
+		gl.popMatrix()
 	}
 	drawPlanes();
 }

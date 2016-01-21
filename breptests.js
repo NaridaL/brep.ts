@@ -124,7 +124,7 @@ QUnit.test( "BREP.prototype.clipped() 9 overlapping vertices", function( assert 
 	assert.brepEquals(a.clipped(b), result)
 });
 QUnit.test( "BREP.prototype.clipped() 10 no overlap", function( assert ) {
-	var b = BREP.tetrahedron(V3(2, 2, 8), V3(3, 3, 8), V3(3, 2, -2), V3(2, 3, -2)).translate(V3(5, 5,0))
+	var b = BREP.tetrahedron(V3(2, 2, 8), V3(3, 3, 8), V3(3, 2, -2), V3(2, 3, -2)).translate(5, 5, 0)
 	var a = new BREP(null, null, [ new BREP.Face([V3(5, 0, 0), V3(5, 5, 0), V3(0, 5, 0), V3(0, 0, 0)].reverse(), P3(V3.Z.negated(), 0))])
 	assert.brepEquals(a.clipped(b), a)
 });
@@ -274,5 +274,55 @@ QUnit.test( "pointsToInside", function( assert ) {
 	assert.notOk(face.pointsToInside(v, V3(1, 1, 0)))
 	assert.notOk(face.pointsToInside(v, V3(-1, 0, 0)))
 	assert.notOk(face.pointsToInside(v, V3(0, -1, 0)))
+});
+QUnit.test( "getFacePlaneIntersectionSs 2", function( assert ) {
+	var brep = BREP.extrude([
+			V3(3.318793683290006e-10, 9.12934465653568e-10, 3.8212177478055603e-10), // 0 0 0
+			V3(9.999999999857609, 4.561232401125957e-13, 5.033029171552123e-10), // 10 0 0
+			V3(2.984222284459465e-10, 9.999999999852161, -1.0461618780772852e-9)], // 0 10 0
+		P3(V3(0, 0, 1), 0), V3(-1.8192047548394726e-10, -3.0150747681012967e-10, -5.0000000009123795), "ex0").flipped()
+	var result = getFacePlaneIntersectionSs(brep,
+	 new BREP.Face([
+	 V3(9.999999999675689, -3.010513535700171e-10, -5.000000000409076), // 10 0 -5
+	 V3(1.4995889284505332e-10, 6.114269888434384e-10, -5.000000000530258), // 0 0 -5
+	 V3(3.318793683290006e-10, 9.12934465653568e-10, 3.8212177478055603e-10), // 0 0 0
+	 V3(9.999999999857609, 4.561232401125957e-13, 5.033029171552123e-10)], // 10 0 0
+	 P3(V3(9.12478342464039e-11, 1, -6.03014953543423e-11), 9.129344656608087e-10)), // 0 1 0
+	 L3(V3(-1.3833878355530264e-10, 6.114269894465992e-10, -4.999999990964091), V3(-1, 9.12478342480723e-11, 2.7667756772219476e-11)),
+	 P3(V3(2.766775686256173e-11, 9.90075577448337e-10, 1), -4.999999990964091),
+	 true, true).map(is => is.p)
+	assert.compareV3arraysLike(result, [])
+	console.log(brep.faces[2])
+	var result2 = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X, P3.XY, true, true)
+	assert.compareV3arraysLike(result2, [])
+	console.log(result2)
+});
+QUnit.assert.compareV3arraysLike = function (actual, expected, message) {
+	this.push(expected.every((v, i) => v.like(actual[i])), actual.toSource(), expected.toSource(), message)
+}
+QUnit.test( "getFacePlaneIntersectionSs", function( assert ) {
+	var brep = BREP.extrude([
+			V3(3.318793683290006e-10, 9.12934465653568e-10, 3.8212177478055603e-10), // 0 0 0
+			V3(9.999999999857609, 4.561232401125957e-13, 5.033029171552123e-10), // 10 0 0
+			V3(2.984222284459465e-10, 9.999999999852161, -1.0461618780772852e-9)], // 0 10 0
+		P3(V3(0, 0, 1), 0), V3(-1.8192047548394726e-10, -3.0150747681012967e-10, -5.0000000009123795), "ex0")
+	/*var result = getFacePlaneIntersectionSs(brep,
+	 new BREP.Face([
+	 V3(9.999999999675689, -3.010513535700171e-10, -5.000000000409076), // 10 0 -5
+	 V3(1.4995889284505332e-10, 6.114269888434384e-10, -5.000000000530258), // 0 0 -5
+	 V3(3.318793683290006e-10, 9.12934465653568e-10, 3.8212177478055603e-10), // 0 0 0
+	 V3(9.999999999857609, 4.561232401125957e-13, 5.033029171552123e-10)], // 10 0 0
+	 P3(V3(9.12478342464039e-11, 1, -6.03014953543423e-11), 9.129344656608087e-10)), // 0 1 0
+	 L3(V3(-1.3833878355530264e-10, 6.114269894465992e-10, -4.999999990964091), V3(-1, 9.12478342480723e-11, 2.7667756772219476e-11)),
+	 P3(V3(2.766775686256173e-11, 9.90075577448337e-10, 1), -4.999999990964091),
+	 true, true)
+	 assert.deepEqual(result, [])*/
+	console.log(brep.faces[2].vertices.map(v => v.toString(v => v.toFixed(3))).toSource())
+	var result = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X.translate(0, 0, -1), P3.XY.translate(0, 0, -1), true, true).map(is => is.p)
+	assert.compareV3arraysLike(result, [V3(0, 0, -1), V3(10, 0, -1)])
+	var result = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X, P3.XY, true, true).map(is => is.p)
+	assert.compareV3arraysLike(result, [V3(0, 0, 0), V3(10, 0, 0)])
+	var result = getFacePlaneIntersectionSs(brep.translate(0, 0, 10), brep.translate(0, 0, 10).faces[2], L3.X.translate(0, 0, 6), P3.XY.translate(0, 0, 6), true, true).map(is => is.p)
+	assert.compareV3arraysLike(result, [V3(0, 0, 6), V3(10, 0, 6)])
 });
 

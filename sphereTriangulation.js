@@ -189,64 +189,6 @@ function st2(res) {
 
 
 
-var zoomFactor = 10;
-var eyePos = V3(0, 0, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Y;
-function setupCamera() {
-	gl.matrixMode(gl.PROJECTION);
-	gl.loadIdentity();
-	//gl.perspective(70, gl.canvas.width / gl.canvas.height, 0.1, 1000);
-	var lr = gl.canvas.width / 2 / zoomFactor;
-	var bt = gl.canvas.height / 2 / zoomFactor;
-	gl.ortho(-lr, lr, -bt, bt, -1e3, 1e5);
-	gl.lookAt(
-		eyePos.x, eyePos.y, eyePos.z,
-		eyeFocus.x, eyeFocus.y, eyeFocus.z,
-		eyeUp.x, eyeUp.y, eyeUp.z);
-	gl.matrixMode(gl.MODELVIEW);
-}
-var v2as = (vertex) => "["+vertex.x+", "+vertex.y+", "+vertex.z+"]";
-function CustomPlane(anchor2, right, up, upStart, upEnd, rightStart, rightEnd, color) {
-	var p = P3.throughPoints(anchor2, right, up, CustomPlane.prototype);
-	p.up = up;
-	p.right = right;
-	p.upStart = upStart;
-	p.upEnd = upEnd;
-	p.rightStart = rightStart;
-	p.rightEnd = rightEnd;
-	p.color = color;
-	p.id = lineId++;
-	return p;
-}
-
-function rgbToArr4(color) {
-	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
-}
-var lineId = 0
-CustomPlane.prototype = Object.create(P3.prototype);
-CustomPlane.prototype.constructor = CustomPlane;
-CustomPlane.prototype.toString = function () {
-	return "Plane #" + this.id;
-}
-CustomPlane.prototype.distanceTo = function (line) {
-	try {
-		return [
-			L3(this.anchor.plus(this.right.times(this.rightStart)), this.up),
-			L3(this.anchor.plus(this.right.times(this.rightEnd)), this.up),
-			L3(this.anchor.plus(this.up.times(this.upStart)), this.right),
-			L3(this.anchor.plus(this.up.times(this.upEnd)), this.right)].map(function (line2, line2Index) {
-			var info = line2.pointClosestTo2(line);
-			if (isNaN(info.t) // parallel lines
-				|| line2Index < 2 && this.upStart <= info.t && info.t <= this.upEnd
-				|| line2Index >= 2 && this.rightStart <= info.t && info.t <= this.rightEnd) {
-				return info.distance;
-			} else {
-				return 1e9;
-			}
-		}, this).min();
-	} catch (e) {
-		console.log(e);
-	}
-}
 
 //var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
 var planes = [

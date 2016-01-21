@@ -472,7 +472,7 @@ function recalculate(sketch) {
 		}
 		var lastSize = 0
 		for (var count = 0; count < 10; count++) {
-			if ((lastSize = sketch.gaussNewtonStep()) < 1e-6) {
+			if ((lastSize = sketch.gaussNewtonStep()) < NLA.PRECISION) {
 				break;
 			}
 		}
@@ -685,30 +685,33 @@ function getTextureForString(str) {
 }
 var zoomFactor = 1;
 function paintSegments(sketch) {
-	if (!sketch.plane) return;
+	console.log("paintSegments")
+
+	if (!sketch.plane) return
+	console.log(circleMesh)
 	//console.log("painting segments", sketch.elements.length);
 	/*ctx.clearRect (0, 0, ctx.canvas.width, ctx.canvas.height);
 	 ctx.fillStyle="rgb(100, 100, 255)";
 	 ctx.lineWidth=2;*/
 	//console.log(sketch.sketchToWorldMatrix);
-	gl.multMatrix(sketch.sketchToWorldMatrix);
+	gl.multMatrix(sketch.sketchToWorldMatrix)
 	sketch.elements.forEach(function (line) {
 		//console.log("line", line);
 		//console.log("hoverHighlight.length", hoverHighlight.length);
 		//ctx.beginPath();
-		paintLineXY(line.a.V3(), line.b.V3(), colorFor(highlighted.contains(line) || hoverHighlight == line, selected.contains(line)));
+		paintLineXY(line.a.V3(), line.b.V3(), colorFor(highlighted.contains(line) || hoverHighlight == line, selected.contains(line)))
 
 
 		//console.log(line.a);
-		gl.pushMatrix();
-		gl.translate(line.a.V3());
-		renderColor(circleMesh, colorFor(highlighted.contains(line.a) || hoverHighlight == line.a, selected.contains(line.a)));
-		gl.popMatrix();
+		gl.pushMatrix()
+		gl.translate(line.a.V3())
+		renderColor(circleMesh, colorFor(highlighted.contains(line.a) || hoverHighlight == line.a, selected.contains(line.a)))
+		gl.popMatrix()
 
-		gl.pushMatrix();
-		gl.translate(line.b.V3());
-		renderColor(circleMesh, colorFor(highlighted.contains(line.b) || hoverHighlight == line.b, selected.contains(line.b)));
-		gl.popMatrix();
+		gl.pushMatrix()
+		gl.translate(line.b.V3())
+		renderColor(circleMesh, colorFor(highlighted.contains(line.b) || hoverHighlight == line.b, selected.contains(line.b)))
+		gl.popMatrix()
 
 	});
 

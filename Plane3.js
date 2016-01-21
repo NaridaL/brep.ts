@@ -80,7 +80,7 @@ if (!NLA.Vector3) {
             return NLA.isZero(this.normal.dot(plane.normal))
         },
 	    toString: function (roundFunction) {
-		    roundFunction = roundFunction || ((v) => +v.toFixed(3))
+		    roundFunction = roundFunction || (v => v) //((v) => +v.toFixed(3))
 		    return "P3("+this.normal.toString(roundFunction) + ", " + roundFunction(this.w) +")"
 	    },
 	    translated: function (offset) {
@@ -145,51 +145,7 @@ if (!NLA.Vector3) {
         intersectionWithLine: function (line) {
 			line.intersectWithPlane(this)
         },
-        // Returns the unique intersection with the argument, if one exists. The result
-        // will be a vector if a line is supplied, and a line if a plane is supplied.
-        intersectionWith: function (obj) {
-            if (!this.intersects(obj)) {
-                return null;
-            }
-            if (obj.direction) {
-                // obj is a line
-                var A = obj.anchor.elements, D = obj.direction.elements,
-                    P = this.anchor.elements, N = this.normal.elements;
-                var multiplier = (N[0] * (P[0] - A[0]) + N[1] * (P[1] - A[1]) + N[2] * (P[2] - A[2])) / (N[0] * D[0] + N[1] * D[1] + N[2] * D[2]);
-                return Vector.create([A[0] + D[0] * multiplier, A[1] + D[1] * multiplier, A[2] + D[2] * multiplier]);
-            } else if (obj.normal) {
-                // obj is a plane
-                var direction = this.normal.cross(obj.normal).toUnitVector();
-                // To find an anchor point, we find one co-ordinate that has a value
-                // of zero somewhere on the intersection, and remember which one we picked
-                var N = this.normal.elements, A = this.anchor.elements,
-                    O = obj.normal.elements, B = obj.anchor.elements;
-                var solver = Matrix.Zero(2, 2), i = 0;
-                while (solver.isSingular()) {
-                    i++;
-                    solver = Matrix.create([
-                        [N[i % 3], N[(i + 1) % 3]],
-                        [O[i % 3], O[(i + 1) % 3]]
-                    ]);
-                }
-                // Then we solve the simultaneous equations in the remaining dimensions
-                var inverse = solver.inverse().elements;
-                var x = N[0] * A[0] + N[1] * A[1] + N[2] * A[2];
-                var y = O[0] * B[0] + O[1] * B[1] + O[2] * B[2];
-                var intersection = [
-                    inverse[0][0] * x + inverse[0][1] * y,
-                    inverse[1][0] * x + inverse[1][1] * y
-                ];
-                var anchor = [];
-                for (var j = 1; j <= 3; j++) {
-                    // This formula picks the right element from intersection by
-                    // cycling depending on which element we set to zero above
-                    anchor.push((i == j) ? 0 : intersection[(j + (5 - i) % 3) % 3]);
-                }
-                console.log("WAAAH", anchor, direction);
-                return Line.create(new GL.Vector(anchor[0], anchor[1], anchor[2]), direction);
-            }
-        },
+
         intersectionWithPlane: function (plane) {
             /*
              (x - a) * n = 0 // this
@@ -213,14 +169,8 @@ if (!NLA.Vector3) {
             var direction = this.normal.cross(plane.normal), anchor;
             var f1 = this.normal.y * plane.normal.x - plane.normal.y * this.normal.x, f2 = this.normal.z * plane.normal.x - plane.normal.z * this.normal.x;
             var goal = plane.anchor.dot(plane.normal) * this.normal.x - this.anchor.dot(this.normal) * plane.normal.x;
-            if (SYL.isZero(f1)) {
-                if (SYL.isZero(f2)) {
-                    anchor = new GL.Vector(plane.anchor.dot(plane.normal) / plane.normal.x, 0, 0);
-                } else {
-
-                }
-            }
-             */
+            */
+	        assert(plane instanceof P3, "plane instanceof P3")
 	        assert(!this.isParallelToPlane(plane), "!this.isParallelToPlane(plane)")
 	        var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized(), m = M4.forSys(n0, n1, n2)
 	        var x0 = this.anchor, x1 = plane.anchor, x2 = V3.ZERO
@@ -240,25 +190,6 @@ if (!NLA.Vector3) {
 	    projectedVector: function (x) {
 		    return x.minus(this.normal.times(x.dot(this.normal)))
 	    },
-
-        // Returns a copy of the plane, rotated by t radians about the given line
-        // See notes on Line#rotate.
-        rotate: function (t, line) {
-            var R = Matrix.Rotation(t, line.direction).elements;
-            var C = line.pointClosestTo(this.anchor).elements;
-            var A = this.anchor.elements, N = this.normal.elements;
-            var C1 = C[0], C2 = C[1], C3 = C[2], A1 = A[0], A2 = A[1], A3 = A[2];
-            var x = A1 - C1, y = A2 - C2, z = A3 - C3;
-            return Plane3.create([
-                C1 + R[0][0] * x + R[0][1] * y + R[0][2] * z,
-                C2 + R[1][0] * x + R[1][1] * y + R[1][2] * z,
-                C3 + R[2][0] * x + R[2][1] * y + R[2][2] * z
-            ], [
-                R[0][0] * N[0] + R[0][1] * N[1] + R[0][2] * N[2],
-                R[1][0] * N[0] + R[1][1] * N[1] + R[1][2] * N[2],
-                R[2][0] * N[0] + R[2][1] * N[1] + R[2][2] * N[2]
-            ]);
-        },
 
         // Returns the reflection of the plane in the given point, line or Plane3.
         reflectionIn: function (obj) {
@@ -285,7 +216,7 @@ if (!NLA.Vector3) {
 		    return P3(this.normal.negated(), -this.w)
 	    }
 
-    };
+    }
      // X-Y-Z planes
      P3.YZ = P3.ZY = P3(V3.X, 0)
      P3.ZX = P3.XZ = P3(V3.Y, 0)

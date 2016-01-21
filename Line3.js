@@ -342,7 +342,8 @@ if (!NLA.Vector3) {
 	    },
 
 
-    };
+    }
+	NLA.addTransformationMethods(L3.prototype)
 
     L3.fromPlanes = function (p1, p2) {
         assert(p1 instanceof P3)
@@ -354,26 +355,8 @@ if (!NLA.Vector3) {
         }
         direction = direction.times(1.0 / l);
 
-        var mabsx = Math.abs(direction.x);
-        var mabsy = Math.abs(direction.y);
-        var mabsz = Math.abs(direction.z);
-        var origin;
-        if ((mabsx >= mabsy) && (mabsx >= mabsz)) {
-            // direction vector is mostly pointing towards x
-            // find a point p for which x is zero:
-            var r = CSG.solve2Linear(p1.normal.y, p1.normal.z, p2.normal.y, p2.normal.z, p1.w, p2.w);
-            origin = V3(0, r[0], r[1]);
-        } else if ((mabsy >= mabsx) && (mabsy >= mabsz)) {
-            // find a point p for which y is zero:
-            var r = CSG.solve2Linear(p1.normal.x, p1.normal.z, p2.normal.x, p2.normal.z, p1.w, p2.w);
-            origin = V3(r[0], 0, r[1]);
-        } else {
-            // find a point p for which z is zero:
-            var r = CSG.solve2Linear(p1.normal.x, p1.normal.y, p2.normal.x, p2.normal.y, p1.w, p2.w);
-            origin = V3(r[0], r[1], 0);
-        }
-        return L3(origin, direction);
-    };
+	    return p1.intersectionWithPlane(p2)
+    }
 
     Object.defineProperties(L3, {
         X: { value: L3(V3.ZERO, V3.X) },

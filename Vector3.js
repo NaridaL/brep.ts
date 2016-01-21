@@ -64,7 +64,10 @@ if (!NLA) {
     }
 
     V3.prototype = {
-
+		perturbed: function (v, delta) {
+			delta = delta || NLA.PRECISION * 0.8
+			return this.map(x => x + (Math.random() - 0.5) * delta)
+		},
         e: function (index) {
             assert (index >= 0 && index < 3)
             return index == 0 ? this.x : (index == 1 ? this.y: this.z)
@@ -195,11 +198,6 @@ if (!NLA) {
         },
         dim: () => 3,
         els: function () { return [this.x, this.y, this.z] },
-        like: function (obj) {
-            if (obj === this) return true
-            if (!(obj instanceof V3)) return false
-	        return NLA.equals(this.x, obj.x) && NLA.equals(this.y, obj.y) && NLA.equals(this.z, obj.z)
-        },
         angleXY: function () {
             return Math.atan2(this.y, this.x)
         },
@@ -211,7 +209,7 @@ if (!NLA) {
             return V3.create(f(this.x), f(this.y), f(this.z))
         },
         toString: function (roundFunction) {
-	        roundFunction = roundFunction || ((v) => +v.toFixed(6))
+	        roundFunction = roundFunction || (v => v)//((v) => +v.toFixed(8))
             return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"
         },
         angleTo: function (vector) {
@@ -252,20 +250,24 @@ if (!NLA) {
             assert(!vector.isZero(), "!vector.isZero()")
             return NLA.isZero(this.dot(vector))
         },
+	    /**
+	     Returns the length of this NLA.Vector, i.e. the euclidean norm.
+	     */
+	    length: function () {
+		    return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
+	    },
         /**
-         Returns true iff the length of this vector is 0, as returned by NLA.isZero.
-         Definition: NLA.NLA.Vector.prototype.isZero = () => NLA.isZero(this.length())
+         Definition: V3.isZero == V3.like(V3.ZERO)
          */
         isZero: function () {
-            return NLA.isZero(this.length())
+            return this.like(V3.ZERO)
         },
-        /**
-         Returns the length of this NLA.Vector, i.e. the euclidean norm.
-         */
-        length: function () {
-            return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
-        },
-        /**
+	    like: function (obj) {
+		    if (obj === this) return true
+		    if (!(obj instanceof V3)) return false
+		    return NLA.equals(this.x, obj.x) && NLA.equals(this.y, obj.y) && NLA.equals(this.z, obj.z)
+	    },
+	    /**
          Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector.
          Throws a NLA.DebugError if this has a length of 0.
          */
@@ -452,7 +454,7 @@ if (!NLA) {
 		return V3.create(x, y, z)
 	}
 	V3.flattenV3Array = function (v3arr, dest, srcStart, destStart, v3count) {
-		assert (v3arr.every(v3 => v3 instanceof V3), "v3arr.every(v3 => v3 instanceof V3)")
+		//assert (v3arr.every(v3 => v3 instanceof V3), "v3arr.every(v3 => v3 instanceof V3)")
 		srcStart = srcStart || 0
 		destStart = destStart || 0
 		v3count = v3count || (v3arr.length - srcStart)
@@ -465,6 +467,9 @@ if (!NLA) {
 			dest[destStart + i * 3 + 2] = v.z
 		}
 		return dest
+	}
+	V3.perturbed = function (v, delta) {
+		return v.perturbed(delta)
 	}
 	Object.defineProperties(V3, {
 		ZERO: { value: V3.create(0, 0, 0) },

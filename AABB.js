@@ -159,7 +159,7 @@ AABB.prototype = {
 
 	
 }
-NLA.addTransformationMethodsToPrototype(AABB.prototype)
+NLA.addTransformationMethods(AABB.prototype)
 AABB.intersections = function (aabbs) {
 
 }
