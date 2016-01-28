@@ -52,6 +52,7 @@ if (!NLA) {
         throw new Error("invalid arguments" + arguments)
     }
 
+	V3.id = 0
     V3.create = function(x, y, z) {
         assertNumbers(x, y, z)
         var result = Object.create(V3.prototype)
@@ -59,7 +60,13 @@ if (!NLA) {
             x: { value: x },
             y: { value: y },
             z: { value: z },
+	        //id: {value: V3.id++}
         })
+	    /*
+	    if ([525, 659].contains(result.id)) {
+		    console.log("!!!!!!!!!CREATING V3 "+ result.id, result.hashCodes(), x, y, z, result.ss)
+	    }
+	    */
         return result
     }
 
@@ -159,7 +166,7 @@ if (!NLA) {
                 Math.max(this.x, p.x), Math.max(this.y, p.y), Math.max(this.z, p.z))
         },
         equals: function(v) {
-            return this.x == v.x && this.y == v.y && this.z == v.z
+            return this == v || this.x == v.x && this.y == v.y && this.z == v.z
         },
         cross: function(v) {
             return V3.create(
@@ -210,7 +217,7 @@ if (!NLA) {
         },
         toString: function (roundFunction) {
 	        roundFunction = roundFunction || (v => v)//((v) => +v.toFixed(8))
-            return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"
+            return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")" //+ this.id
         },
         angleTo: function (vector) {
 	        assert(1 == arguments.length)
@@ -221,11 +228,10 @@ if (!NLA) {
         },
 	    angleRelativeNormal: function (vector, normal1) {
 		    assert(2 == arguments.length)
-		    assert (vector instanceof V3)
-		    assert (normal1 instanceof V3)
+		    NLA.assertVectors (vector, normal1)
 		    assert (normal1.hasLength(1))
-		    assert (vector.isPerpendicularTo(normal1), ""+vector.toString() + " " + normal1.toString() + " " + vector.angleTo(normal1))
-		    assert (this.isPerpendicularTo(normal1))
+		    assert (vector.isPerpendicularTo(normal1), "vector.isPerpendicularTo(normal1)")
+		    assert (this.isPerpendicularTo(normal1), "this.isPerpendicularTo(normal1)")
 		    return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector))
 	    },
         /**
@@ -354,6 +360,32 @@ if (!NLA) {
 		    }
 		    return ~~((floatHashCode(this.x) * 31 + floatHashCode(this.y)) * 31 + floatHashCode(this.z))
 	    },
+	    // at most 8 hashcodes
+	    hashCodes: function() {
+		    function floatHashCode(f) {
+			    return ~~(f * (1 << 28))
+		    }
+		    // compare hashCode.floatHashCode
+		    // the following ops are equivalent to
+		    // floatHashCode((el - NLA.PRECISION) % (2 * NLA.PRECISION))
+		    // this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
+		    // the other 7 can be calculated by adding constants
+		    var xHC = ~~(this.x * (1 << 28) - 0.5),
+			    yHC = ~~(this.y * (1 << 28) - 0.5),
+			    zHC = ~~(this.z * (1 << 28) - 0.5),
+		    hc = ~~((xHC * 31 + yHC) * 31 + zHC)
+		    return [
+			    ~~(hc),
+			    ~~(hc + 961),
+			    ~~(hc + 31),
+			    ~~(hc + 31 + 961),
+
+			    ~~(hc + 1),
+			    ~~(hc + 1 + 961),
+			    ~~(hc + 1 + 31),
+			    ~~(hc + 1 + 31 + 961)
+		    ]
+	    },
 	    compareTo2: function (v3, precision) {
 		    precision = precision || 0
 		    if (!NLA.equals2(this.x, v3.x, precision)) {
@@ -470,6 +502,16 @@ if (!NLA) {
 	}
 	V3.perturbed = function (v, delta) {
 		return v.perturbed(delta)
+	}
+	V3.areDisjoint = function (it) {
+		var vSet = new NLA.CustomSet, v
+		while (v = it.next().value) {
+			if (!v.equals(vSet.canonicalizeLike(v))) {
+				// like value already in set
+				return false
+			}
+		}
+		return true
 	}
 	Object.defineProperties(V3, {
 		ZERO: { value: V3.create(0, 0, 0) },

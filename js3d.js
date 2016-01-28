@@ -472,7 +472,7 @@ function recalculate(sketch) {
 		}
 		var lastSize = 0
 		for (var count = 0; count < 10; count++) {
-			if ((lastSize = sketch.gaussNewtonStep()) < NLA.PRECISION) {
+			if ((lastSize = sketch.gaussNewtonStep()) < NLA.PRECISION / 1000) {
 				break;
 			}
 		}
@@ -685,10 +685,8 @@ function getTextureForString(str) {
 }
 var zoomFactor = 1;
 function paintSegments(sketch) {
-	console.log("paintSegments")
 
 	if (!sketch.plane) return
-	console.log(circleMesh)
 	//console.log("painting segments", sketch.elements.length);
 	/*ctx.clearRect (0, 0, ctx.canvas.width, ctx.canvas.height);
 	 ctx.fillStyle="rgb(100, 100, 255)";
@@ -997,7 +995,7 @@ function initModel() {
 	console.log("constraints", sketch.constraints);
 	features.push(new Extrude("initExtrude", sketch.elements[0].name))
 	features.push({type: "planeDefinition", planeType: "face", faceName: "initExtrudewall0", offset: 0, planeId: "planeCustom1", delete: PlaneDefinition.prototype.delete})
-	//features.push(currentSketch = new Sketch("planeCustom1"))
+	features.push(currentSketch = new Sketch("planeCustom1"))
 	//currentSketch.elements.push(new Segment(0,10,100,0));
 	//rebuildModel();
 	//selected = [currentSketch.elements[0], new NameRef("initExtruderoof").get()]
@@ -1025,14 +1023,14 @@ function directionObjectToVector(dirObj) {
 function rebuildModel() {
 	console.log("rebuilding model")
 	//NLA.DEBUG = false
-	//disableConsole()
+	disableConsole()
 	planes = [
 		CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xff0000, "planeYZ"),
 		CustomPlane(V3.ZERO, V3.Z, V3.X, -500, 500, -500, 500, 0x00ff00, "planeZX"),
 		CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0x0000ff, "planeXY"),
 	];
 	modelCSG = undefined
-	csgMesh = undefined
+	brepMesh = undefined
 	features.forEach((feature) => {
 		if (feature instanceof Sketch) {
 			feature.plane = planes.find(p => p.name == feature.planeName);
@@ -1058,7 +1056,7 @@ function rebuildModel() {
 			} else {
 				modelCSG = brep;
 			}
-			csgMesh = modelCSG.toNormalMesh()
+			brepMesh = modelCSG.toNormalMesh()
 		} else if (feature.type && "planeDefinition" == feature.type) {
 			if ("face" == feature.planeType && feature.faceName) {
 				var face = modelCSG.faces.find(face => face.name == feature.faceName)
@@ -1079,7 +1077,7 @@ function rebuildModel() {
 		}
 	})
 	paintScreen()
-	//enableConsole()
+	enableConsole()
 }
 var circleShaderMaterial, circlePlaneGeometry, segmentPlaneGeometry, segmentMaterial;
 var currentAddingSegment, connectingConstraint = [], currentPointConstraint, hoverHighlight = [];
@@ -1157,20 +1155,25 @@ function paintScreen () {
 
 
 		gl.pushMatrix();
-		if (csgMesh) {
+		if (brepMesh) {
 			var faceIndex = modelCSG.faces.length;
 			while (faceIndex--) {
 				var face = modelCSG.faces[faceIndex]
-				var faceTriangleIndexes = csgMesh.faceIndexes.get(face)
+				var faceTriangleIndexes = brepMesh.faceIndexes.get(face)
 				lightingShader.uniforms({
-					color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.contains(face) ? 0x00ff45 : 0xff0000))
-				}).draw(csgMesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
+					color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.contains(face) ? 0x00ff45 : COLORS.RD_FILL))
+				}).draw(brepMesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
 				/*
 				singleColorShader.uniforms({
 					color: rgbToVec4(0x0000ff)
-				}).draw(csgMesh, gl.LINES);
+				}).draw(brepMesh, gl.LINES);
 				*/
 			}
+			gl.projectionMatrix.m[11] -= 1 / (1 << 23) // prevent Z-fighting
+			singleColorShader.uniforms({
+				color: rgbToVec4(COLORS.RD_STROKE)
+			}).draw(brepMesh, gl.LINES);
+			gl.projectionMatrix.m[11] += 1 / (1 << 23) // prevent Z-fighting
 		}
 		gl.popMatrix();
 
@@ -1186,7 +1189,7 @@ function paintScreen () {
 	}
 }
 var gl;
-var circleMesh, ringMesh, segmentMesh, textMesh, xyLinePlaneMesh, cubeMesh, indexBuffer, arcMesh, csgMesh, vectorMesh;
+var circleMesh, ringMesh, segmentMesh, textMesh, xyLinePlaneMesh, cubeMesh, indexBuffer, arcMesh, brepMesh, vectorMesh;
 var modelCSG;
 var lastSegment;
 function setupCamera() {
@@ -1439,7 +1442,6 @@ var main = function () {
 	gl.canvas.onclick = function (e) {
 	}
 	gl.onmouseup = function (e) {
-		console.log("mouseup", e.which, e.button, e, gl.buttons)
 		if (beenSketchDragging) {
 			rebuildModel()
 		} else {

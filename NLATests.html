@@ -225,16 +225,25 @@
 		var a = new AABB(V3.ZERO, V3(20, 10, 30))
 		var b = new AABB(V3.ZERO, V3(1, 1, 1))
 		assert.ok(a.likeAABB(a))
-		assert.notOk(a.likeAABB(a.translate(V3(10, 0, 0))))
+		assert.notOk(a.likeAABB(a.translate(10, 0, 0)))
 		assert.ok(a.withoutAABB(b).likeAABB(new AABB(V3(0, 0, 1), V3(20, 10, 30))))
 	});
-	var count = 5000
-	 var start = new Date().getTime();
-	 var a = NLA.Matrix.random(8, 8)
-	 var s= Matrix.create(a.asRowArrays())
-	 console.log(a.inversed().toString())
-	 console.log(a.inversed().times(a).toString())
-	 console.log(s.inv().multiply(s))
+	QUnit.test( "V3.areDisjoint", function(assert ) {
+
+		assert.ok(V3.areDisjoint([V3.ZERO, V3.X, V3.Y].entries()))
+		assert.ok(V3.areDisjoint([V3.ZERO, V3.X, V3.X, V3.Y].entries())) // same value twice is ok, as same reference
+		assert.notOk(V3.areDisjoint([V3.ZERO, V3.X, V3(0, 0, 0), V3.Y].entries())) // not ok as V3.ZERO != V3(0, 0, 0)
+		assert.notOk(V3.areDisjoint([V3.ZERO, V3.X, V3(NLA.PRECISION / 2, 0, 0), V3.Y].entries())) // not ok as !V3.ZERO.like(V3(...))
+		assert.ok(V3.areDisjoint([V3(NLA.PRECISION * -0.7, 0, 0), V3(NLA.PRECISION * 0.7, 0, 0)].entries())) // not ok as V3.ZERO != V3(0, 0, 0)
+	});
+	QUnit.test( "V3.areDisjoint2", function(assert ) {
+		console.log(~~2147483657)
+		var s = new NLA.CustomSet()
+		var a = V3(0, 2.7499999999999996, -5), b = V3(0, 2.749999999999999, -5)
+		s.canonicalizeLike(a)
+		console.log(s._map, a.like(b), a.hashCodes(), b.hashCodes(), a.hashCode(), b.hashCode())
+		assert.ok(s.canonicalizeLike(b) == a)
+	});
 
 	/*
 

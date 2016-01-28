@@ -569,7 +569,10 @@ var GL = (function() {
 		// concatenations are chunked to avoid that limit.
 		compile: function(type) {
 			this.buffer = this.buffer || gl.createBuffer();
-			if (this.data[0] instanceof V3) {
+			if (this.data.length == 0) {
+				console.warn("empty buffer")
+			}
+			if (this.data.length == 0 || this.data[0] instanceof V3) {
 				var buffer = V3.flattenV3Array(this.data) // asserts that all elements are V3s
 				this.buffer.length = this.data.length
 				this.buffer.spacing = 3
@@ -583,6 +586,7 @@ var GL = (function() {
 				assert(spacing % 1 == 0, 'buffer elements not of consistent size, average size is ' + spacing)
 				assert(data.every(v => 'number' == typeof v), "data.every(v => 'number' == typeof v)")
 				this.buffer.length = data.length
+				if (NLA.DEBUG) { this.maxValue = data.max() }
 				this.buffer.spacing = spacing
 			}
 			gl.bindBuffer(this.target, this.buffer)
@@ -639,16 +643,27 @@ var GL = (function() {
 		// doesn't need to be called every frame, only needs to be done when the data
 		// changes.
 		compile: function() {
+			// TODO: ensure element buffer indexes are in bounds
+			var minVSize = Infinity
+			var minBufferName
 			for (var attribute in this.vertexBuffers) {
-				var buffer = this.vertexBuffers[attribute];
-				buffer.data = this[buffer.name];
-				buffer.compile();
+				var buffer = this.vertexBuffers[attribute]
+				buffer.data = this[buffer.name]
+				buffer.compile()
+				if (this[buffer.name].length < minVSize) {
+					minBufferName = attribute
+					minVSize = this[buffer.name].length
+				}
 			}
 
 			for (var name in this.indexBuffers) {
 				var buffer = this.indexBuffers[name];
 				buffer.data = this[name];
 				buffer.compile();
+				if (NLA.DEBUG && buffer.maxValue >= minVSize) {
+					throw new Error(`max index value for buffer ${name} \
+					is too large ${buffer.maxValue} min Vbuffer size: ${minVSize} ${minBufferName}`)
+				}
 			}
 		},
 
@@ -1312,7 +1327,11 @@ var GL = (function() {
 				gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer, buffer.buffer.spacing, buffer.buffer.length);
 				gl.enableVertexAttribArray(location);
 				//console.log(attribute)
-				gl.vertexAttribPointer(location, buffer.buffer.spacing, gl.FLOAT, false, 0, 0);
+				try {
+					gl.vertexAttribPointer(location, buffer.buffer.spacing, gl.FLOAT, false, 0, 0);
+				} catch (e) {
+					console.log("caught")
+				}
 
 				length = buffer.buffer.length / buffer.buffer.spacing;
 			}

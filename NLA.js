@@ -1,6 +1,6 @@
 "use strict";
 var NLA = {}
-NLA.PRECISION = 1 / (1 << 28)
+NLA.PRECISION = 1 / (1 << 27)
 console.log("NLA.PRECISION", NLA.PRECISION)
 /**
  *
@@ -41,21 +41,21 @@ function rad2deg(rad) {
 
 	return rad / .017453292519943295; // (angle / 180) * Math.PI;
 }
-
-NLA.repeatChar = function(count, ch) {
+NLA.repeatString = function(count, str) {
 	if (count == 0) {
-		return "";
+		return ""
 	}
-	var count2 = count / 2;
-	var result = ch;
+	count *= str.length
+	var halfCharLength = count / 2
+	var result = str
 
 	// double the input until it is long enough.
-	while (result.length <= count2) {
-		result += result;
+	while (result.length <= halfCharLength) {
+		result += result
 	}
 	// use substring to hit the precise length target without
 	// using extra memory
-	return result + result.substring(0, count - result.length);
+	return result + result.substring(0, count - result.length)
 }
 NLA.assertNumbers = function () {
     if (NLA.DEBUG) {
@@ -66,6 +66,7 @@ NLA.assertNumbers = function () {
             }
         }
     }
+	return true
 }
 NLA.assert = function (value, message) {
 	if (NLA.DEBUG && !value) {
@@ -82,6 +83,7 @@ NLA.assertVectors = function () {
             }
         }
     }
+	return true
 }
 NLA.mod = function (a, b) {
 	return ((a % b) + b) % b
@@ -117,7 +119,7 @@ NLA.CustomSet.prototype = {
 			if (bucket.some(x => x.equals(val))) { return false }
 			bucket.push(val)
 		} else {
-			this.map.set(hashCode, [val])
+			this._map.set(hashCode, [val])
 		}
 		this._size++
 		return true
@@ -134,7 +136,7 @@ NLA.CustomSet.prototype = {
 			if (existing) { return existing }
 			bucket.push(val)
 		} else {
-			this.map.set(hashCode, [val])
+			this._map.set(hashCode, [val])
 		}
 		this._size++
 		return val
@@ -178,6 +180,87 @@ NLA.CustomSet.prototype = {
 			var bucket = this._map.get(hashCode)
 			if (bucket) {
 				var index = bucket.findIndex(x => x.like(val))
+				if (-1 != index) {
+					var deleted = bucket[index]
+					if (1 == bucket.size) {
+						this._map.delete(bucket)
+					} else {
+						bucket.splice(index, 1)
+					}
+					this._size--
+					return deleted
+				}
+			}
+		}
+	},
+	entries: function* () {
+		for (var bucket of this._map) {
+			yield* bucket
+		}
+	},
+	clear: function () {
+		this._map.clear()
+		this._size = 0
+	},
+	get size() {
+		return this._size
+	}
+}
+NLA.CustomMap = function () {
+
+}
+NLA.CustomMap.prototype = {
+	set: function (key, val) {
+		var hashCode = key.hashCode(), bucket = this._map.get(hashCode)
+		if (bucket) {
+			var pairIndex = bucket.findIndex(pair => pair.key.equals(key))
+			if (-1 == pairIndex) {
+				bucket.push({key: key, value: val})
+			} else {
+				bucket[pairIndex].value = val
+				return false
+			}
+		} else {
+			this._map.set(hashCode, [{key: key, value: val}])
+		}
+		this._size++
+		return true
+	},
+	has: function (key) {
+		var hashCode = key.hashCode(), bucket = this._map.get(hashCode)
+		return bucket && bucket.some(x => x.key.equals(key))
+	},
+	getLike: function (val) {
+		for (var hashCode of val.hashCodes()) {
+			var bucket = this._map.get(hashCode)
+			var canonVal = bucket && bucket.find(x => x.key.like(val))
+			if (canonVal) return canonVal
+		}
+	},
+	setLike: function (key, val) {
+		return !this.getLike(val) && this.set(key, val)
+	},
+	delete: function (key) {
+		var hashCode = key.hashCode(), bucket = this._map.get(hashCode)
+		if (bucket) {
+			var index = bucket.findIndex(x => x.key.equals(key))
+			if (-1 != index) {
+				if (1 == bucket.size) {
+					this._map.delete(bucket)
+				} else {
+					bucket.splice(index, 1)
+				}
+				this._size--
+				return true
+			}
+		}
+		return false
+	},
+	deleteLike: function (key) {
+		for (var hashCode of key.hashCodes()) {
+			var bucket = this._map.get(hashCode)
+			if (bucket) {
+				var index = bucket.findIndex(x => x.key.like(key))
 				if (-1 != index) {
 					var deleted = bucket[index]
 					if (1 == bucket.size) {
@@ -256,6 +339,10 @@ var ARRAY_UTILITIES = {
 			return val > prev.val ? {val: val, el: curr} : prev
 		}, {val: Infinity, el: undefined}).el
 	},
+	/**
+	 Returns the sum of the absolute values of the components of this vector.
+	 E.g. NLA.V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
+	 */
 	absSum: function() {
 		var i = this.length
 		var result = 0
@@ -370,8 +457,8 @@ NLA.Vector.random = function (dim) {
 	return NLA.Vector.fromFunction(dim, (i) => Math.random())
 }
 NLA.Vector.fromArguments = function () {
-	assert (false, "implement proper arg checking")
-	console.log("args", arguments)
+	assert (arguments[0] instanceof Float64Array || arguments.every(a => 'number' == typeof a),
+	"arguments[0] instanceof Float64Array || arguments.every(a => 'number' == typeof a)")
 	return new NLA.Vector(arguments[0] instanceof Float64Array ? arguments[0] : Float64Array.from(arguments))
 }
 NLA.V = NLA.Vector.fromArguments
@@ -430,6 +517,7 @@ NLA.Vector.prototype = {
 		return new NLA.Vector(n)
 	},
 	cross: function(vector) {
+		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
 		var n = new Float64Array(3)
 		n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1]
 		n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2]
@@ -455,13 +543,9 @@ NLA.Vector.prototype = {
 		}
 		return new NLA.Vector(e);
 	},
-	toString: function () {
-		var strings = new Array(this.v.length)
-		var i = this.v.length
-		while (i--) {
-			strings[i] = "" + this.v[i]
-		}
-		return "(" + strings.join(", ") + ")"
+	toString: function (roundFunction) {
+		roundFunction = roundFunction || ((v) => +v.toFixed(6))
+		return "NLA.Vector(" + this.v.map(roundFunction).join(", ") + ")"
 	},
 	get x() {
 		return this.v[0]
@@ -476,15 +560,9 @@ NLA.Vector.prototype = {
 		return this.v[3]
 	},
 	angleTo: function (vector) {
-		if (!(vector instanceof NLA.Vector)) {
-			throw new Error("!!");
-		}
-		if (this.isZero()) {
-			throw new Error("cannot be zero length")
-		}
-		if (vector.isZero()) {
-			throw new Error("cannot be zero length")
-		}
+		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assert(!this.isZero(), "!this.isZero()")
+		assert(!vector.isZero(), "!vector.isZero()")
 		return Math.acos(this.dot(vector) / this.length() / vector.length())
 	},
 	/**
@@ -495,29 +573,17 @@ NLA.Vector.prototype = {
 			if vector has a length of 0
 	*/
 	isParallelTo: function (vector) {
-		if (!(vector instanceof NLA.Vector)) {
-			throw new Error("!!");
-		}
-		if (this.isZero()) {
-			throw new Error("cannot be zero length")
-		}
-		if (vector.isZero()) {
-			throw new Error("cannot be zero length")
-		}
+		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assert(!this.isZero(), "!this.isZero()")
+		assert(!vector.isZero(), "!vector.isZero()")
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
 		return NLA.equals(this.length() * vector.length(), Math.abs(this.dot(vector)))
 	},
 	isPerpendicularTo: function (vector) {
-		if (!(vector instanceof NLA.Vector)) {
-			throw new Error("!!");
-		}
-		if (this.isZero()) {
-			throw new Error("cannot be zero length")
-		}
-		if (vector.isZero()) {
-			throw new Error("cannot be zero length")
-		}
+		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assert(!this.isZero(), "!this.isZero()")
+		assert(!vector.isZero(), "!vector.isZero()")
 		return NLA.isZero(this.dot(vector))
 	},
 	/**
@@ -529,7 +595,7 @@ NLA.Vector.prototype = {
 		Returns the length of this NLA.NLA.Vector, i.e. the euclidian norm.
 	*/
 	length: function () {
-		var result = 0;
+		var result = 0
 		var u = this.v
 		var i = u.length
 		while (i--) {
@@ -564,10 +630,12 @@ NLA.Vector.prototype = {
 			NLA.V(3, 4).projectedOn(NLA.V(1, 1)) // returns
 	*/
 	projectedOn: function (b) {
+		assert (b instanceof NLA.Vector, "b instanceof NLA.Vector")
 		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
 		return b.times(this.dot(b) / b.dot(b))
 	},
 	rejectedOn: function (b) {
+		assert (b instanceof NLA.Vector, "b instanceof NLA.Vector")
 		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
 		return this.minus(b.times(this.dot(b) / b.dot(b)))
 	},
@@ -580,13 +648,6 @@ NLA.Vector.prototype = {
 		NLA.assertNumbers(length)
 		return NLA.equals(length, this.length())
 	},
-	/**
-		Returns the sum of the absolute values of the components of this vector.
-		E.g. NLA.V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
-	*/
-	absSum: function () {
-		return arrayAbsSum(this.v)
-	}
 };
 NLA.addOwnProperties = function (target, props) {
 	for (var key in props) {
@@ -664,6 +725,7 @@ NLA.Matrix = function (width, height, m) {
 	this.height = height;
 }
 NLA.Matrix.random = function (width, height) {
+	NLA.assertNumbers(width, height);
 	return NLA.Matrix.fromFunction(width, height, (i, j) => Math.random())
 }
 NLA.Matrix.fromFunction = function(width, height, f) {
@@ -687,7 +749,7 @@ NLA.Matrix.identity = function(dim) {
 	return new NLA.Matrix(dim, dim, m);
 }
 NLA.Matrix.permutation = function(dim, i, k) {
-	NLA.assertNumbers(dim);
+	NLA.assertNumbers(dim, i, k);
 	var m = new Float64Array(dim * dim)
 	// Float64Array are init to 0
 	var elIndex = dim * (dim + 1);
@@ -764,7 +826,7 @@ NLA.Matrix.prototype = {
 			(colIndex) => rounded.sliceStep(colIndex, this.width).map((x) => x.length).max())
 		return NLA.arrayFromFunction(this.height,
 			(rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width) // select matrix row
-				.map((x, colIndex) => NLA.repeatChar(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
+				.map((x, colIndex) => NLA.repeatString(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
 				.join(" ")
 		).map(x => x + "\n").join(""); // join rows
     },

@@ -242,7 +242,7 @@ if (!NLA.Vector3) {
 		    return [0, 1, 2, 3].map(
 			    (rowIndex) => rounded
 				    .slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
-				    .map((x, colIndex) => NLA.repeatChar(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
+				    .map((x, colIndex) => NLA.repeatString(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
 				    .join(" ")
 		    ).join("\n"); // join rows
 	    }

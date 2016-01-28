@@ -141,6 +141,17 @@ QUnit.test( "BREP.prototype.clipped() 12, projected poly on inside of face, edge
 	var result = new BREP(null, null, [new BREP.Face([V3(1, 0, 0),V3(0, 0, 0),V3(0, 5, 0),V3(5, 5, 0),V3(5, 0, 0),V3(3.6666666666666665, -3.537972128266059e-16, 0),V3(1, 3.555555555555555, 0)], P3(V3(0, 0, -1), 0))])
 	assert.brepEquals(a.clipped(b), result)
 });
+QUnit.test( "BREP.prototype.clipped() 13", function( assert ) {
+
+	var a = BREP.extrude([V3(0, 0, 0), V3(10, 0, 0), V3(0, 10, 0)], P3.XY, V3(0, 0, -5), "ex0").flipped()
+	//a = new BREP(null, null, [a.faces[0]])
+	var b = BREP.extrude([V3(0, 0, -6), V3(0, 4, -6), V3(0, 0, -2)], P3.YZ.flipped().translate(0, 0, 0), V3(13, 0, 0), "ex1").flipped()
+	b = new BREP(null, null, [b.faces[2]])
+
+	var c = b.clipped(a)
+	var result = new BREP(null, null, [new BREP.Face([V3(0, 2.999999999999999, -5),V3(7, 3, -5),V3(10, 0, -2.0000000000000004),V3(0, 0, -2)], P3(V3(0, -0.7071067811865476, -0.7071067811865476), 1.4142135623730954))])
+	assert.brepEquals(b.clipped(a), result)
+});
 QUnit.test( "BREP.prototype.minus BREP.box(5, 5, 5).minus(BREP.box(1, 1, 6))", function( assert ) {
 	var a = BREP.box(5, 5, 5)
 	var b = BREP.box(1, 1, 6)

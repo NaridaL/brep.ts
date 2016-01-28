@@ -33,7 +33,15 @@ function BREP(vertices, edges, faces, infiniteVolume, source) {
 	this.faces = faces;
 	this.infiniteVolume = infiniteVolume || false
 	this.source = source
+	function* faceVertices () {
+		var i = faces.length
+		while(i--) {
+			yield* faces[i].vertices
+		}
+	}
+	//NLA.DEBUG && assert(V3.areDisjoint(faceVertices()), "V3.areDisjoint(faceVertices())")
 }
+
 var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3, cl = console.log, assert = NLA.assert
 BREP.box = function (w, h, d) {
 	/*
@@ -242,7 +250,7 @@ BREP.prototype.toMesh = function() {
 		}
 		return index
 	}
-	var mesh = new GL.Mesh({ normals: true, colors: true, lines:true });
+	var mesh = new GL.Mesh({ normals: false, colors: false, lines:true });
 	var allValidEdges = [];
 	this.faces.forEach((face) => {
 		//var faceEdges = new Map()
@@ -261,13 +269,10 @@ BREP.prototype.toMesh = function() {
 		}
 		for (var i = 0; i < vs.length; i++) {
 			var i0 = vertexIndex(vs[i]), i1 = vertexIndex(vs[(i + 1) % vs.length]);
-
 			canonEdges.add(canonEdge(i0, i1))
 		}
 	})
-	var it =canonEdges.values(), ce
-	while (ce = it.next().value) mesh.lines.push(uncanonEdge(ce))
-	//console.log("mesh.lines", mesh.lines)
+	canonEdges.forEach(ce => mesh.lines.push(uncanonEdge(ce)))
 	mesh.compile()
 	return mesh;
 }
@@ -281,8 +286,16 @@ BREP.prototype.toNormalMesh = function() {
 	function uncanonEdge(key) {
 		return [key >> 16, key & 0xffff]
 	}
-	var mesh = new GL.Mesh({ normals: true, colors: true, lines:false });
-	var allValidEdges = [];
+	// this isn't the same vertexIndex function as in toMesh!
+	function vertexIndex (vertex) {
+		var index = vertexIndexMap.get(vertex)
+		if (index === undefined) {
+			index = mesh.vertices.length
+			vertexIndexMap.set(vertex, index)
+		}
+		return index
+	}
+	var mesh = new GL.Mesh({ normals: true, colors: false, lines:true });
 	var faceIndexes = new Map()
 	this.faces.forEach((face) => {
 		//var faceEdges = new Map()
@@ -291,8 +304,9 @@ BREP.prototype.toNormalMesh = function() {
 		var startIndex = mesh.vertices.length
 		faceIndexes.set(face, {start: mesh.triangles.length * 3, count: triangleSubIndexes.length})
 		vs.forEach(v => {
-			mesh.vertices.push(v.toArray())
-			mesh.normals.push(face.plane.normal.els())
+			vertexIndex(v)
+			mesh.vertices.push(v)
+			mesh.normals.push(face.plane.normal)
 		})
 		for (var i = 0; i < triangleSubIndexes.length; i += 3) {
 			var
@@ -305,14 +319,12 @@ BREP.prototype.toNormalMesh = function() {
 				vs[vi2]).dot(face.plane.normal)
 			mesh.triangles.push((dot > 0 ? [vi0, vi1, vi2] : [vi0, vi2, vi1]).map(x => x + startIndex))
 		}
-		/*
 		for (var i = 0; i < vs.length; i++) {
 			var i0 = vertexIndex(vs[i]), i1 = vertexIndex(vs[(i + 1) % vs.length]);
-
 			canonEdges.add(canonEdge(i0, i1))
 		}
-		*/
 	})
+	canonEdges.forEach(ce => mesh.lines.push(uncanonEdge(ce)))
 	//console.log("mesh.lines", mesh.lines)
 	mesh.faceIndexes = faceIndexes
 	mesh.compile()
@@ -397,7 +409,6 @@ function facesWithEdge(edge, faces) {
 		for (var i = 0; i < face.vertices.length; i++) {
 			var v0 = face.vertices[i], v1 = face.vertices[(i + 1) % face.vertices.length]
 			if (v0.like(edge[0]) && v1.like(edge[1]) || v0.like(edge[1]) && v1.like(edge[0])) {
-				console.log("OV", outsideVector([v0, v1], face.plane.normal))
 				return {face: face, edgeVector: segmentVector(edge), ov: outsideVector([v0, v1], face.plane.normal), reversed: !v0.like(edge[0])}
 			}
 		}
@@ -407,12 +418,9 @@ function segmentVector(edgeArray) {
 	return edgeArray[1].minus(edgeArray[0])
 }
 function splitsVolumeEnclosingFaces(brep, segment, dir, faceNormal, removeCoplanarSame, removeCoplanarOpposite) {
-	console.log("splitsVolumeEnclosingFaces", brep, segment, dir, faceNormal)
 	var ab1 = segmentVector(segment).normalized()
 	var relFaces = facesWithEdge(segment, brep.faces)
-	console.log("relFaces", relFaces)
 	var ff = relFaces.map((face) => {
-		console.log("dir", dir.ss, face.ov.negated().ss, dir.angleRelativeNormal(face.ov.negated(), ab1))
 		return ({
 			face: face,
 			angle: (dir.angleRelativeNormal(face.ov.negated(), ab1) + 2 * Math.PI + NLA.PRECISION / 2) % (2 * Math.PI)
@@ -420,13 +428,8 @@ function splitsVolumeEnclosingFaces(brep, segment, dir, faceNormal, removeCoplan
 	}).sort((a, b) => a.angle - b.angle)
 	assert(ff.length != 0)
 
-	console.log("fffff", segment, ff.toSource())
 	if (NLA.isZero(ff[0].angle)) {
 		var coplanarSame = ff[0].face.face.plane.normal.dot(faceNormal) > 0
-		console.log("returning", coplanarSame
-			? assert(removeCoplanarSame !== undefined) && removeCoplanarSame
-			: assert(removeCoplanarOpposite !== undefined) && removeCoplanarOpposite
-		)
 		return coplanarSame
 			? assert(removeCoplanarSame !== undefined) && removeCoplanarSame
 			: assert(removeCoplanarOpposite !== undefined) && removeCoplanarOpposite
@@ -456,7 +459,6 @@ function getFacePlaneIntersectionSs2(brep2, face2, line, facePlane, removeCoplan
 				} else if (pointDistanceSigned * facePlane.distanceToPointSigned(v0) < 0) {
 					console.log("HHHEELEO", pointDistanceSigned , v1.toString(), line.pointLambda(v1))
 					xss.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
-					console.log("partxss", xss, s)
 				}
 			} else if (s > NLA.PRECISION && s < 1 - NLA.PRECISION) {
 				console.log("HHHEELE2O", v1.toString(), line.pointLambda(v1))
@@ -483,13 +485,13 @@ function getFacePlaneIntersectionSs2(brep2, face2, line, facePlane, removeCoplan
 
 			}
 		}
-		console.log("partxss", xss)
 	})
 	//console.log(brep2.toString(), "face", face2.toString(), line.toString(), facePlane.toString(), removeCoplanarSame, removeCoplanarOpposite)
 	assert(xss.length % 2 == 0, "xss.length % 2 == 0")
 	return xss.sort((a, b) => a.t - b.t)
 }
-function getFacePlaneIntersectionSs(brep, brepFace, line, facePlane, removeCoplanarSame, removeCoplanarOpposite) {
+function getFacePlaneIntersectionSs(brep, brepFace, line, facePlane, removeCoplanarSame, removeCoplanarOpposite, uniqueVertices) {
+	//disableConsole()
 	var faceEdgePlaneIntersections = []
 	var signedDistances = brepFace.vertices.map(v => NLA.snapTo(facePlane.distanceToPointSigned(v), 0))
 	var colinearSegmentsInside = brepFace.vertices.map((v0, i, vertices) => {
@@ -497,14 +499,14 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, facePlane, removeCopla
 		var v1 = vertices[j]
 		var facePlaneNormal = facePlane.normal
 		return NLA.isZero(signedDistances[i]) && NLA.isZero(signedDistances[j]) &&
-			splitsVolumeEnclosingFaces(brep, [v0, v1], facePlane.projectedVector(brepFace.plane.normal), facePlaneNormal, removeCoplanarSame, removeCoplanarOpposite)
-			!= splitsVolumeEnclosingFaces(brep, [v0, v1], facePlane.projectedVector(brepFace.plane.normal).negated(), facePlaneNormal, removeCoplanarSame, removeCoplanarOpposite)
+			(splitsVolumeEnclosingFaces(brep, [v0, v1], facePlane.projectedVector(brepFace.plane.normal), facePlaneNormal, removeCoplanarSame, removeCoplanarOpposite)
+			!= splitsVolumeEnclosingFaces(brep, [v0, v1], facePlane.projectedVector(brepFace.plane.normal).negated(), facePlaneNormal, removeCoplanarSame, removeCoplanarOpposite))
 	})
-	console.log(colinearSegmentsInside)
+	//console.log(colinearSegmentsInside)
 	brepFace.vertices.forEach((v0, i, vertices) => {
 		var j = (i + 1) % vertices.length, k = (i + 2) % vertices.length
 		var v1 = vertices[(i + 1) % vertices.length], v2 = vertices[(i + 2) % vertices.length]
-		console.log("segment", v0.toString(x=>x.toFixed(3)), v1.toString(x=>x.toFixed(3)))
+		//console.log("segment", v0.toString(x=>x.toFixed(3)), v1.toString(x=>x.toFixed(3)))
 
 		if (0 == signedDistances[i]) {
 			if (0 == signedDistances[j]) {
@@ -518,12 +520,12 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, facePlane, removeCopla
 					var outVector = outsideVector([v0, v1], brepFace.plane.normal)
 					insideNext = outVector.dot(segmentVector([v1, v2])) > 0
 				}
-				console.log("colienar segment", insideNext != colinearSegmentsInside[i], insideNext)
+				//console.log("colinear segment", insideNext != colinearSegmentsInside[i], insideNext, colinearSegmentsInside[i])
 				if (insideNext != colinearSegmentsInside[i]) {
 					faceEdgePlaneIntersections.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
 				}
 			}
-			console.log("segment away from line")
+			//console.log("segment away from line")
 			// else segment away from intersection line: do nothing
 		} else {
 			if (0 == signedDistances[j]) {
@@ -538,34 +540,31 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, facePlane, removeCopla
 					var insideFaceBeforeColinear = nextSegmentOut.dot(segmentVector([v0, v1])) < 0
 					var colinearSegmentInsideFace = colinearSegmentsInside[j]
 					// if the "inside-ness" changes, add intersection point
-					console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOut)
+					//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOut)
 					if (insideFaceBeforeColinear != colinearSegmentInsideFace) {
-						console.log("HHHEELE3O", signedDistances[k], v1.toString(), line.pointLambda(v1))
 						faceEdgePlaneIntersections.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
 					}
 				} else if (signedDistances[i] * signedDistances[k] < 0) {
-					console.log("segment end on line followed by away")
-					console.log("HHHEELEO", signedDistances[k], v1.toString(), line.pointLambda(v1))
+					//console.log("segment end on line followed by away")
 					faceEdgePlaneIntersections.push({t: line.pointLambda(v1), on: [v0, v1], p: v1, endpoint: true})
-					console.log("partxss", faceEdgePlaneIntersections, s)
 				}
 			} else {
 				// possible intersection; if endpoints on opposite side of line/plane
-				console.log("possible intersection",signedDistances[i] * signedDistances[j] < 0)
+				//console.log("possible intersection",signedDistances[i] * signedDistances[j] < 0)
 				if (signedDistances[i] * signedDistances[j] < 0) {
-					console.log("HHHEELE2O", v1.toString(), line.pointLambda(v1))
-					var s = signedDistances[i] / (signedDistances[i] - signedDistances[j]), p = v0.lerp(v1, s)
+					var s = signedDistances[i] / (signedDistances[i] - signedDistances[j]), p = uniqueVertices.canonicalizeLike(v0.lerp(v1, s))
 					faceEdgePlaneIntersections.push({t: line.pointLambda(p), on: [v0, v1], p: p, endpoint: false})
 				}
 			}
 		}
-		console.log("partxss", faceEdgePlaneIntersections)
 	})
 	//console.log(brep.toString(), "face", brepFace.toString(), line.toString(), facePlane.toString(), removeCoplanarSame, removeCoplanarOpposite)
+	//enableConsole()
 	assert(faceEdgePlaneIntersections.length % 2 == 0, "faceEdgePlaneIntersections.length % 2 == 0")
 	return faceEdgePlaneIntersections.sort((a, b) => a.t - b.t)
 }
 BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOpposite) {
+	var uniqueVertices = new NLA.CustomSet()
 	function getNextPoint(segment, currentPoint, intersections) {
 		var sv = segmentVector(segment)
 		var sorted = intersections.filter((intersection) => {
@@ -604,19 +603,19 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 		var addedFaces = 0
 		// for each face in this BREP
 		var plane = face.plane
-		console.log("face", face.toString())
+		//console.log("face", face.toString())
 		var projectedSegments = []
 		var intersections = []
 		brep2.faces.forEach((face2) => {
-			console.log("face2", face2.toString())
+			//console.log("face2", face2.toString())
 			var p2 = face2.plane
 			if (plane.isParallelToPlane(p2)) {
 				return;
 			}
 			var line = L3.fromPlanes(plane, p2)
-			console.log("line", line.toString())
-			var xss = getFacePlaneIntersectionSs(brep2, face2, line, plane, removeCoplanarSame, removeCoplanarOpposite)
-			console.log("xss", xss.toSource())
+			//console.log("line", line.toString())
+			var xss = getFacePlaneIntersectionSs(brep2, face2, line, plane, removeCoplanarSame, removeCoplanarOpposite, uniqueVertices)
+			//console.log("xss", xss.toSource())
 			var segmentOutsideVector = line.dir1.cross(plane.normal)
 			var dot = segmentOutsideVector.dot(p2.normal)
 			// iterate though the segments of the intersection of face2 on face's plane
@@ -709,8 +708,9 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 			return true
 		})
 		console.log("face.vertices", face.vertices)
-		console.log("projectedSegments\n", projectedSegments.map((segment) => segment[0].toString() + "-"+segment[1].toString()).join("\n"))
+		//console.log("projectedSegments\n", projectedSegments.map((segment) => segment[0].toString() + "-"+segment[1].toString()).join("\n"))
 		if (projectedSegments.length == 0) {
+			console.log("brep2.infiniteVolume", brep2.infiniteVolume)
 			if (!brep2.infiniteVolume) {
 				newFaceVertices = face.vertices.slice()
 				newFaces.push(new BREP.Face(newFaceVertices, plane, face.name))
@@ -723,7 +723,7 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 			loopCount++
 			console.log("new face")
 			var newFaceVertices = [], i = 0
-			console.log("intersections\n", intersections.map(is => is.toSource()).join("\n"))
+			//console.log("intersections\n", intersections.map(is => is.toSource()).join("\n"))
 			var onProjected = true
 			var currentPoint = intersections.find((is) => !is.visited)
 			var startPoint, startNextPoint = null, prevPoint, hole = false
@@ -816,29 +816,30 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 								maxAngle = angle
 								nextSegment = seg
 								onProjectedNext = true
-								console.log("here")
 							}
 						}
 					})
 				}
 				assert(nextSegment)
-				console.log("nextSegment", nextSegment.toSource())
+//				console.log("nextSegment", nextSegment.toSource())
 				// simple edge point, find next edge
 				flipCount += +(onProjected != onProjectedNext)
 				onProjected = onProjectedNext
-				console.log("flipCount", flipCount)
+//				console.log("flipCount", flipCount)
 				newFaceVertices.push(currentPoint)
 				prevPoint = currentPoint
 				currentPoint = getNextPoint(nextSegment, currentPoint, intersections)
 				if (!startNextPoint) {
 					startNextPoint = currentPoint
 				}
-				console.log
-					("asdhasjkdhKJ","currentpoint", currentPoint.toString(),
+				/*console.log(
+					"currentPoint", currentPoint.toString(),
 					"startNextPoint", startNextPoint.toString(),
 					"prevPoint", prevPoint.toString(),
-					"startPoint",startPoint.toString())
-			} while (!(prevPoint == startPoint && startNextPoint == currentPoint) && i++ < 20 || i == 0)
+					"startPoint",startPoint.toString(),
+					startNextPoint.equals(currentPoint),
+					prevPoint.equals(startPoint))*/
+			} while (!(prevPoint.equals(startPoint) && startNextPoint.equals(currentPoint)) && i++ < 20 || i == 0)
 			if (i >= 20) {
 				assert(false, "too many")
 			}
@@ -855,26 +856,37 @@ BREP.prototype.clipped = function (brep2, removeCoplanarSame, removeCoplanarOppo
 				console.log("newFaceVertices",  new BREP.Face(newFaceVertices).toString())
 				console.log("reverseblash",new BREP.Face(newFaceVertices).containsPoint(face.vertices[0]))
 				var loop =new BREP.Face(newFaceVertices, plane, face.name)
-				var loopContainsFace = face.vertices.every(v => loop.containsPoint(v))
-				var faceContainsLoop = loop.vertices.every(v => face.containsPoint(v))
+				// TODO: short-circuit:
+				var loopContainsFace = face.vertices.every(v => loop.containsPoint2(v, true))
+				var faceContainsLoop = loop.vertices.every(v => { console.log(v.ss, face.containsPoint2(v, true)); return face.containsPoint2(v, true)})
 				console.log("loopContainsFace", loopContainsFace, "faceContainsLoop", faceContainsLoop)
 				if (loopContainsFace && faceContainsLoop) {
 					// perfect overlap
+					newFaces.push(new BREP.Face(newFaceVertices, face.plane, face.name))
 				} else if (loopContainsFace) {
-					newFaceVertices = face.vertices.slice()
-					newFaces.push(new BREP.Face(newFaceVertices, plane, face.name))
-					console.log("add face 4")
+					console.log("loopContainsFace", brep2.infiniteVolume)
+					if (brep2.infiniteVolume) {
+						newFaceVertices = face.vertices.slice()
+						newFaces.push(new BREP.Face(newFaceVertices, plane, face.name))
+						console.log("add face 4")
+					} else {
+						// do nothing
+					}
 				} else if (faceContainsLoop) {
-					newFaces.push(face.withHole(newFaceVertices))
-					console.log("add face 2")
+					if (brep2.infiniteVolume) {
+						newFaces.push(new BREP.Face(newFaceVertices, face.plane, face.name))
+					} else {
+						newFaces.push(face.withHole(newFaceVertices))
+					}
 					addedFaces++
 				} else {
 					// outside each other
-					newFaceVertices = face.vertices.slice()
-					newFaces.push(new BREP.Face(newFaceVertices, plane, face.name))
-					console.log("add face 1")
+					if (!brep2.infiniteVolume) {
+						newFaceVertices = face.vertices.slice()
+						newFaces.push(new BREP.Face(newFaceVertices, plane, face.name))
+						console.log("add face 1")
+					}
 				}
-				console.log("HOLE", newFaceVertices.toSource())
 			}
 		}
 		if (!addedFaces) {
@@ -958,12 +970,10 @@ function testBREP() {
 		//var a = new BREP(null, null, [new BREP.Face([V3(5, 0, 5), V3(0, 0, 5), V3(0, 5, 5), V3(5, 5, 5)], P3(V3(0, 0, 1), 5))])
 		var a = BREP.box(5, 5, 5)
 		var b = BREP.box(1, 1, 5).translate(1, 1, 1)
-		var a = BREP.extrude([V3(0, 0, 0), V3(10, 0, 0), V3(0, 10, 0)].map(V3.perturbed), P3.XY, V3(0, 0, -5).perturbed(), "ex0").flipped()
-		var b = BREP.extrude([V3(-1, 10, -5), V3(-1, 8, -5), V3(-1, 10, -3)].map(V3.perturbed), P3.YZ.flipped().translate(-1, 0, 0), V3(8, 0, 0).perturbed(), "ex1").flipped()
-		var a =new BREP(null, null, [new BREP.Face([V3(0, 0, 0),V3(10, 0, 0),V3(10, 10, 0),V3(0, 10, 0)], P3(V3(0, 0, 1), 0))])
-		var b = BREP.tetrahedron(V3(5, 5, 5), V3(5, 5, -5), V3(10, 12, 1), V3(0, 12, 1))
-		console.log("a", a.toSource())
-		console.log("b", b.toSource())
+		var a = BREP.extrude([V3(0, 0, 0), V3(10, 0, 0), V3(0, 10, 0)], P3.XY, V3(0, 0, -5), "ex0")
+		//a = new BREP(null, null, [a.faces[0]])
+		var b = BREP.extrude([V3(0, 4, -5), V3(0, 0, -5), V3(0, 4, -2)], P3.YZ.flipped().translate(0, 0, 0), V3(13, 0, 0), "ex1").translate(6, 2, 0)
+		//b = new BREP(null, null, [b.faces[4]])
 		//var b = BREP.tetrahedron(V3(1, 0, -1), V3(1, 0, 8), V3(1, 4, -1), V3(4, 0, -1))
 		//var b = BREP.tetrahedron(V3(2, -2, -2), V3(2, 4, -2), V3(1, -2, 4), V3(3, 4, 4))
 		//var b = new BREP(null, null, [new BREP.Face([V3(1, 0, 0), V3(1, 1, 0), V3(0, 1, 0), V3(0, 0, 0)])])
@@ -978,7 +988,7 @@ function testBREP() {
 		console.log("css", b.ss())
 
 
-		var c = a.clipped(b, true, true)
+		var c = a.minus(b)
 		cMesh = c.toNormalMesh()
 		console.log("css", c.ss())
 		//bMesh = b.clipped(a).toMesh()
@@ -1181,25 +1191,27 @@ function paintScreen2() {
 
 	gl.loadIdentity();
 
-	console.log("painting")
-
 	//drawVectors()
 
 
 	if (aMesh) {
+		gl.projectionMatrix.m[11] -= 1 / (1 << 23) // prevent Z-fighting
 		singleColorShader.uniforms({
 			color: rgbToVec4(COLORS.PP_STROKE)
 		}).draw(aMesh, gl.LINES);
+		gl.projectionMatrix.m[11] += 1 / (1 << 23)
 		singleColorShader.uniforms({
 			color: rgbToVec4(COLORS.PP_FILL)
 		}).draw(aMesh);
 	}
 	if (bMesh) {
 		gl.pushMatrix()
-		gl.translate(20, 0, 0)
+		//gl.translate(20, 0, 0)
+		gl.projectionMatrix.m[11] -= 1 / (1 << 23) // prevent Z-fighting
 		singleColorShader.uniforms({
 			color: rgbToVec4(COLORS.TS_STROKE)
 		}).draw(bMesh, gl.LINES);
+		gl.projectionMatrix.m[11] += 1 / (1 << 23)
 		singleColorShader.uniforms({
 			color: rgbToVec4(COLORS.TS_FILL)
 		}).draw(bMesh);
@@ -1218,10 +1230,12 @@ function paintScreen2() {
 	if (cMesh) {
 		gl.pushMatrix()
 		gl.translate(40, 0, 0)
-		/*singleColorShader.uniforms({
+		gl.projectionMatrix.m[11] -= 1 / (1 << 23) // prevent Z-fighting
+		singleColorShader.uniforms({
 			color: rgbToVec4(COLORS.RD_STROKE)
-		}).draw(cMesh, gl.LINES);*/
-		lightingShader.uniforms({
+		}).draw(cMesh, gl.LINES);
+		gl.projectionMatrix.m[11] += 1 / (1 << 23)
+		singleColorShader.uniforms({
 			color: rgbToVec4(COLORS.RD_FILL)
 		}).draw(cMesh);
 		gl.popMatrix()
