@@ -101,6 +101,7 @@ NLA.arrayCopy = function(src,sstart,dst,dstart,length) {
 	}       
 }
 NLA.clamp = function (val, min, max) {
+	NLA.assertNumbers(val, min, max)
 	return Math.max(min, Math.min(max, val))
 }
 NLA.CustomSet = function (iterable) {
@@ -465,7 +466,7 @@ NLA.V = NLA.Vector.fromArguments
 NLA.Vector.prototype = {
 	dim: function () { return this.v.length },
 	e: function (index) {
-		if (index < this.v.length) {
+		if (0 > index || index >= this.v.length) {
 			throw new Error("array index out of bounds")
 		}
 		return this.v[index]
@@ -578,7 +579,7 @@ NLA.Vector.prototype = {
 		assert(!vector.isZero(), "!vector.isZero()")
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
-		return NLA.equals(this.length() * vector.length(), Math.abs(this.dot(vector)))
+		return NLA.equals(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)))
 	},
 	isPerpendicularTo: function (vector) {
 		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
@@ -595,13 +596,16 @@ NLA.Vector.prototype = {
 		Returns the length of this NLA.NLA.Vector, i.e. the euclidian norm.
 	*/
 	length: function () {
+		return Math.sqrt(this.lengthSquared())
+	},
+	lengthSquared: function () {
 		var result = 0
 		var u = this.v
 		var i = u.length
 		while (i--) {
 			result += u[i] * u[i]
 		}
-		return Math.sqrt(result)
+		return result
 	},
 	/**
 		Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector.

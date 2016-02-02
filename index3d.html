@@ -24,18 +24,26 @@
 		<script id="template" type="x-template">
             <div>
 	            <span style="width: 10em; display: inline-block; text-transform: uppercase">$what</span>
-	            $name <a href="#" class="unsel">unsel</a></div>
+	            $name <a href="#" class="unsel icon-link">U</a>
+	            <a href="#" class="featureDelete icon-link remove" name="delete">&#x274C;</a></div>
         </script>
 		<script id="templateConstraint" type="x-template">
             <div>
-	            $name <a href="#" class="remove">Remove</a></div>
+	            $name
+	            <a href="#" class="featureDelete icon-link remove">&#x274C;</a></div>
         </script>
 		<script id="templateDistance" type="x-template">
             <div>$name <input class="distanceInput" type="text" id="distanceInput$id" />
-            <a href="#" class="remove">Remove</a></div>
+            <a href="#" class="featureDelete icon-link remove">&#x274C;</a>
+            </div>
         </script>
 		<script id="templateAngle" type="x-template">
-            <div>$name <input class="distanceInput" type="text" id="distanceInput$id" /> <a href="#" class="fa">FA</a> <a href="#" class="fb">FB</a> <a href="#" class="fv">FV</a></div>
+            <div>$name
+	            <input class="distanceInput" type="text" id="distanceInput$id" />
+	            <a href="#" class="fa">FA</a>
+	            <a href="#" class="fb">FB</a>
+	            <a href="#" class="fv">FV</a>
+	            <a href="#" class="featureDelete icon-link remove">&#x274C;</a></div>
         </script>
 		<script id="templateConstraintSub" type="x-template">
 			<div>
@@ -48,7 +56,7 @@
 				<span style="width: 8em; display: inline-block;color: purple;">$name</span>
 				<a href="#" class="featureDelete icon-link" name="delete">&#x274C;</a>
 				<a href="#" class="featureEdit icon-link" name="edit">&#x1f589;</a>
-				<a href="#" class="featureEdit icon-link" name="toggleShow">&#x1f441;</a></div>
+				<a href="#" class="featureHide icon-link" name="toggleHide">&#x1f441;</a></div>
 		</script>
 
 		<style type="text/css">
@@ -85,6 +93,10 @@
 			label span {
 				display: inline-block;
 				width: 7em;
+			}
+			.featureHide.hidden {
+				text-decoration: line-through;
+				color: darkgrey;
 			}
 		</style>
 	</head>
@@ -160,7 +172,8 @@
 	<div id="buttonbar" style="position: absolute; top: 8px; left: 8px; z-index: 1000">
 		<button type="button" onclick="clicky()">Step</button>
 		<button type="button" id="clearmode">Clear Mode</button>
-		<button type="button" onclick="mode='addsegments';">Add Segments</button>
+		<button type="button" onclick="mode='addsegments';arcmode=0;">Add Segments</button>
+		<button type="button" onclick="mode='addarc';arcmode=0;">Add Arc</button>
 		<button type="button" onclick="addSketch()">Add Sketch</button>
 		<button type="button" onclick="addPlane()">Add Plane</button>
 		<button type="button" onclick="addExtrude()">Extrude</button>

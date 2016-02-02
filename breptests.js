@@ -301,10 +301,10 @@ QUnit.test( "getFacePlaneIntersectionSs 2", function( assert ) {
 	 P3(V3(9.12478342464039e-11, 1, -6.03014953543423e-11), 9.129344656608087e-10)), // 0 1 0
 	 L3(V3(-1.3833878355530264e-10, 6.114269894465992e-10, -4.999999990964091), V3(-1, 9.12478342480723e-11, 2.7667756772219476e-11)),
 	 P3(V3(2.766775686256173e-11, 9.90075577448337e-10, 1), -4.999999990964091),
-	 true, true).map(is => is.p)
+	 true, true, new NLA.CustomSet()).map(is => is.p)
 	assert.compareV3arraysLike(result, [])
 	console.log(brep.faces[2])
-	var result2 = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X, P3.XY, true, true)
+	var result2 = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X, P3.XY, true, true, new NLA.CustomSet())
 	assert.compareV3arraysLike(result2, [])
 	console.log(result2)
 });
@@ -329,11 +329,11 @@ QUnit.test( "getFacePlaneIntersectionSs", function( assert ) {
 	 true, true)
 	 assert.deepEqual(result, [])*/
 	console.log(brep.faces[2].vertices.map(v => v.toString(v => v.toFixed(3))).toSource())
-	var result = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X.translate(0, 0, -1), P3.XY.translate(0, 0, -1), true, true).map(is => is.p)
+	var result = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X.translate(0, 0, -1), P3.XY.translate(0, 0, -1), true, true, new NLA.CustomSet()).map(is => is.p)
 	assert.compareV3arraysLike(result, [V3(0, 0, -1), V3(10, 0, -1)])
-	var result = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X, P3.XY, true, true).map(is => is.p)
+	var result = getFacePlaneIntersectionSs(brep, brep.faces[2], L3.X, P3.XY, true, true, new NLA.CustomSet()).map(is => is.p)
 	assert.compareV3arraysLike(result, [V3(0, 0, 0), V3(10, 0, 0)])
-	var result = getFacePlaneIntersectionSs(brep.translate(0, 0, 10), brep.translate(0, 0, 10).faces[2], L3.X.translate(0, 0, 6), P3.XY.translate(0, 0, 6), true, true).map(is => is.p)
+	var result = getFacePlaneIntersectionSs(brep.translate(0, 0, 10), brep.translate(0, 0, 10).faces[2], L3.X.translate(0, 0, 6), P3.XY.translate(0, 0, 6), true, true, new NLA.CustomSet()).map(is => is.p)
 	assert.compareV3arraysLike(result, [V3(0, 0, 6), V3(10, 0, 6)])
 });
 
