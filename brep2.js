@@ -14,9 +14,10 @@ var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3
 
 var eps = 1e-5
 var B2 = NLA.defineClass('B2', null,
-	function (faces) {
+	function (faces, infiniteVolume) {
 		assert(faces.every(f => f instanceof B2.Face), 'faces.every(f => f instanceof B2.Face)' + faces.toSource())
 		this.faces = faces
+		this.infiniteVolume = !!infiniteVolume
 	},
 	{
 		toMesh: function () {
@@ -28,10 +29,10 @@ var B2 = NLA.defineClass('B2', null,
 			return mesh
 		},
 		minus: function (brep2) {
-			return this.intersection(brep2.flipped())
+			return this.intersection(brep2.flipped(), true, true)
 		},
-		intersection: function (brep2) {
-
+		plus: function (brep2) {
+			return this.flipped().intersection(brep2.flipped(), true, true).flipped()
 		},
 		equals: function (brep) {
 			return this.faces.length == brep.faces.length &&
@@ -40,44 +41,13 @@ var B2 = NLA.defineClass('B2', null,
 		toString: function () {
 			return `new B2([\n${this.faces.join('\n').replace(/^/gm, '\t')}])`
 		},
-		clipped: function (b2, removeCoplanarSame, removeCoplanarOpposite) {
-			var faceMap = new Map(), edgeMap = new Map()
-			this.faces.forEach(face => {
-				//console.log('face', face.toString())
-				b2.faces.forEach(face2 => {
-					//console.log('face2', face2.toString())
-					face.doo(face2, this, b2, faceMap, edgeMap, removeCoplanarSame, removeCoplanarOpposite)
-				})
-			})
+		reconstituteFaces: function (oldFaces, edgeLooseSegments, faceMap, newFaces, infiniteVolume) {
 			// reconstitute faces
-			var edgeLooseSegments = new Map()
-			edgeMap.forEach((pointInfos, baseEdge) => {
-				var looseSegments = []
-				if (baseEdge.aT < baseEdge.bT) {
-					pointInfos.sort((a, b) => a.edgeT - b.edgeT)
-				} else {
-					pointInfos.sort((a, b) => b.edgeT - a.edgeT)
-				}
-				console.log('pointInfos', baseEdge.ss, pointInfos.toSource())
-				var currentEdge = new baseEdge.constructor(baseEdge.curve, baseEdge.a, baseEdge.a, baseEdge.aT, baseEdge.aT)
-				for (var i = 0; i < pointInfos.length; i++) {
-					var info = pointInfos[i]
-					if (info.edgeT == baseEdge.bT || info.edgeT == baseEdge.aT) { continue }
-					currentEdge.b = info.p
-					currentEdge.bT = info.edgeT
-					looseSegments.push(currentEdge)
-					currentEdge = new baseEdge.constructor(baseEdge.curve, info.p, info.p, info.edgeT, info.edgeT)
-				}
-				currentEdge.b = baseEdge.b
-				currentEdge.bT = baseEdge.bT
-				looseSegments.push(currentEdge)
-
-				edgeLooseSegments.set(baseEdge, looseSegments)
-			})
-			console.log('edgeLooseSegments', edgeLooseSegments)
-			var faces = []
-			var outsideEdges = []
-			this.faces.forEach(face => {
+			var insideEdges = []
+			oldFaces.forEach(face => {
+				console.log('reconstituting face', face.toString())
+				var els = face.edges.map(edge => edgeLooseSegments.get(edge)).map(s => '\n'+s).join()
+				console.log('edgeLooseSegments', els.toSource())
 				var looseEdges = faceMap.get(face)
 				if (!looseEdges) {
 					face.insideOutside = 'undecided'
@@ -90,6 +60,7 @@ var B2 = NLA.defineClass('B2', null,
 					while (currentEdge = looseEdges.find(edge => !edge.visited)) {
 						currentEdge.visited = true
 						var startEdge = currentEdge, edges = [], i = 0
+						var looseLoop = true
 						do {
 							console.log('currentEdge', currentEdge.b.ss, currentEdge.toSource())
 							edges.push(currentEdge)
@@ -99,56 +70,96 @@ var B2 = NLA.defineClass('B2', null,
 								currentEdge = possibleLooseEdges[0]
 								possibleLooseEdges.forEach(possibleLooseEdges => possibleLooseEdges.isCoEdge(currentEdge) && (possibleLooseEdges.visited = true))
 							} else {
+								looseLoop = false
 								var looseSegments, edge2
 								var found = face.edges.some(
 									edge => (looseSegments = edgeLooseSegments.get(edge)) && looseSegments.some(
 										edge => edge.a.like(currentEdge.b) && (currentEdge = edge)))
 								if (!found) {
 									currentEdge = face.edges.find(edge => edge.a.like(currentEdge.b))
-									outsideEdges.push(currentEdge)
+									insideEdges.push(currentEdge)
 								}
-								/*
-								 var loosePoints, baseEdge = face.edges.find(
-								 edge => (loosePoints = edgeMap.get(edge)) && loosePoints.some(info => info.p == currentEdge.b))
-								 assert(baseEdge, currentEdge.b.ss)
-								 var infoIndex = loosePoints.findIndex(info => info.p == currentEdge.b)
-								 var nextInfoIndex = (infoIndex + 1) % loosePoints.length
-								 var info = loosePoints[infoIndex], nextInfo = loosePoints[nextInfoIndex]
-								 currentEdge = new baseEdge.constructor(baseEdge.curve, info.p, nextInfo.p, info.edgeT, nextInfo.edgeT)
-								 */
 							}
 						} while (i++ < 20 && currentEdge != startEdge)
 						if (20 == i) {
 							assert(false, "too many")
 						}
-						var newFace = new face.constructor(face.surface, edges)
-						faces.push(newFace)
+						console.log(infiniteVolume, looseLoop)
+						if (infiniteVolume && looseLoop) {
+							newFaces.push(face.withHole(edges))
+							;[].push.apply(insideEdges, face.edges)
+							break
+						} else {
+							var newFace = new face.constructor(face.surface, edges)
+							newFaces.push(newFace)
+						}
 					}
 				}
 			})
-			while (outsideEdges.length != 0) {
-				console.log(outsideEdges.map(e => '\n'+e).join())
-				var edge = outsideEdges.pop()
-				var adjoiningFaces = facesWithEdge(edge, this.faces)
+			while (insideEdges.length != 0) {
+				console.log(insideEdges.map(e => '\n' + e).join())
+				var edge = insideEdges.pop()
+				var adjoiningFaces = facesWithEdge(edge, oldFaces)
 				adjoiningFaces.forEach(info => {
 					if (info.face.insideOutside == 'undecided') {
 						info.face.insideOutside = 'inside'
-						outsideEdges.push.apply(outsideEdges, info.face.edges)
+						insideEdges.push.apply(insideEdges, info.face.edges)
 					}
 				})
 			}
-			this.faces.forEach(face => {
+			oldFaces.forEach(face => {
 				if (face.insideOutside == 'inside') {
-					faces.push(face)
+					newFaces.push(face)
 				}
 			})
-			return new B2(faces)
+		},
+		intersection: function (brep2, reconThis, reconB2, removeCoplanarSame, removeCoplanarOpposite) {
+			var faceMap = new Map(), edgeMap = new Map()
+			this.faces.forEach(face => {
+				//console.log('face', face.toString())
+				brep2.faces.forEach(face2 => {
+					//console.log('face2', face2.toString())
+					face.doo(face2, this, brep2, faceMap, edgeMap, removeCoplanarSame, removeCoplanarOpposite)
+				})
+			})
+			var faces = []
+
+			var edgeLooseSegments = new Map()
+			edgeMap.forEach((pointInfos, baseEdge) => {
+				var looseSegments = []
+				if (baseEdge.aT < baseEdge.bT) {
+					pointInfos.sort((a, b) => a.edgeT - b.edgeT)
+				} else {
+					pointInfos.sort((a, b) => b.edgeT - a.edgeT)
+				}
+				console.log('pointInfos', baseEdge.ss, pointInfos.toSource())
+				var currentEdge = new baseEdge.constructor(baseEdge.curve, baseEdge.a, baseEdge.a, baseEdge.aT, baseEdge.aT)
+				for (var i = 0; i < pointInfos.length; i++) {
+					var info = pointInfos[i]
+					if (info.edgeT == baseEdge.bT || info.edgeT == baseEdge.aT) {
+						continue
+					}
+					currentEdge.b = info.p
+					currentEdge.bT = info.edgeT
+					looseSegments.push(currentEdge)
+					currentEdge = new baseEdge.constructor(baseEdge.curve, info.p, info.p, info.edgeT, info.edgeT)
+				}
+				currentEdge.b = baseEdge.b
+				currentEdge.bT = baseEdge.bT
+				looseSegments.push(currentEdge)
+
+				edgeLooseSegments.set(baseEdge, looseSegments)
+			})
+
+			reconThis && this.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, faces, brep2.infiniteVolume)
+			reconB2 && this.reconstituteFaces(brep2.faces, edgeLooseSegments, faceMap, faces, this.infiniteVolume)
+			return new B2(faces, this.infiniteVolume && brep2.infiniteVolume)
 		},
 		transform: function (m4) {
-			return new B2(this.faces.map(f => f.transform(m4)))
+			return new B2(this.faces.map(f => f.transform(m4)), this.infiniteVolume)
 		},
 		flipped: function () {
-			return new B2(this.faces.map(f => f.flipped()))
+			return new B2(this.faces.map(f => f.flipped()), !this.infiniteVolume)
 		}
 	}
 )
@@ -177,7 +188,7 @@ B2.Face.prototype = NLA.defineObject(null, {
 
 		return this.surface.equalsSurface(face.surface) &&
 				this.edges.length == face.edges.length &&
-				NLA.arrayRange(0, edgeCount)
+				NLA.arrayRange(0, edgeCount, 1)
 					.some(offset => this.edges.every((edge, i) => edge.equals(face.edges[(offset + i) % edgeCount])))
 	}
 })
@@ -213,12 +224,55 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 		addToMesh: function (mesh) {
 			var normal = this.surface.plane.normal
 			var vertices = this.edges.map(edge => edge.getVerticesNo0()).concatenated()
+			var holeVertices = this.hole && this.hole.map(edge => edge.getVerticesNo0()).concatenated()
 			var mvl = mesh.vertices.length;
-			var triangles = triangulateVertices(vertices, normal).map(index => index + mvl)
+			var triangles = triangulateVertices(vertices, normal, holeVertices).map(index => index + mvl)
 			for (var i = 0; i < vertices.length; i++) { mesh.lines.push(mvl + i, mvl + (i + 1) % vertices.length) }
 			Array.prototype.push.apply(mesh.vertices, vertices)
+			holeVertices && Array.prototype.push.apply(mesh.vertices, holeVertices)
 			Array.prototype.push.apply(mesh.triangles, triangles)
-			Array.prototype.push.apply(mesh.normals, NLA.arrayFromFunction(vertices.length, i => normal))
+			Array.prototype.push.apply(mesh.normals, NLA.arrayFromFunction(vertices.length + (holeVertices && holeVertices.length || 0), i => normal))
+		},
+		withHole: function (holeEdges) {
+			var face = new B2.PlaneFace(this.surface, this.edges)
+			face.hole = holeEdges
+			return face
+			/*
+			var v = this.vertices
+			var fail, i, j
+			for (i = 0; i < v.length; i++) {
+				var a = v[i]
+				for (j = 0; j < holeVertices.length; j++) {
+					var b = holeVertices[j]
+					fail = false
+					// check if segment ab intersects any other segment
+					for (var k = i + 1; k < v.length + i - 1; k++) {
+						var v0 = v[k % v.length], v1 = v[(k + 1) % v.length]
+						if (segmentsTouchOrIntersect(a, b, v0, v1)) {
+							fail = true;
+							break;
+						}
+					}
+					if (fail) continue
+					for (var k = j + 1; k < holeVertices.length + j - 1; k++) {
+						var v0 = holeVertices[k % holeVertices.length], v1 = holeVertices[(k + 1) % holeVertices.length]
+						if (segmentsTouchOrIntersect(a, b, v0, v1)) {
+							fail = true;
+							break;
+						}
+					}
+					if (!fail) break
+				}
+				if (!fail) break
+			}
+			if (fail) {
+				throw new Error("")
+			}
+			var cycledHole = holeVertices.slice(j).concat(holeVertices.slice(0, j + 1))
+			var newVertices = v.slice(0, i + 1).concat(cycledHole, v.slice(i))
+			console.log(newVertices.toSource())
+			return new BREP.Face(newVertices, this.plane, this.name + "holed")
+			*/
 		},
 		doo: function (face2, thisBrep, face2Brep, faceMap, edgeMap, removeCoplanarSame, removeCoplanarOpposite) {
 			if (face2 instanceof B2.RotationFace) {
@@ -259,12 +313,12 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 				}
 				newCurves.forEach((newCurve, key) => {
 					var {ps1, ps2, thisDir} = pss.get(newCurve)
-					console.log('ps', ps1.toSource(), ps2.toSource())
 					var segments = newCurve.getIntersectionSegments(ps1, ps2)
+					console.log('ps', ps1.toSource(), ps2.toSource())
 					// TODO: getCanon() TODO TODO TODO
 					console.log('segments', segments.toSource())
 					ps1.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
-					//ps2.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
+					ps2.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
 					segments.forEach(segment => {
 						console.log('segment', segment.toString())
 						mapAdd(faceMap, this, thisDir ? segment : segment.flipped())
@@ -319,17 +373,17 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 			var thisDir = !(face2.surface.normalAt(null).cross(this.surface.normalAt(null)).dot(intersectionLine.dir1) > 0)
 			// get intersections of newCurve with other edges of face and face2
 			var ps1 = getFacePlaneIntersectionSs(thisBrep, this, intersectionLine, face2Plane, true, false)
-			var ps2 = getFacePlaneIntersectionSs(face2Brep, face2, intersectionLine, thisPlane, true, false)
+			var ps2 = getFacePlaneIntersectionSs(face2Brep, face2, intersectionLine, thisPlane, false, false)
 
 			if (ps1.length == 0 && ps2.length == 0) {
 				// faces to not intersect
 				return
 			}
 
-			console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
 			var segments = getBlug(ps1, ps2, false, false, intersectionLine)
 			// TODO: getCanon() TODO TODO TODO
 			console.log('segments', segments.toSource())
+			console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
 			ps1.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
 			ps2.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
 			segments.forEach(segment => {
@@ -341,12 +395,15 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 	}
 )
 B2.PlaneFace.forVertices = function (planeSurface, vs) {
+	if (planeSurface instanceof P3) {
+		planeSurface = new PlaneSurface(planeSurface)
+	}
 	assert(isCCW(vs, planeSurface.plane.normal), 'isCCW(vs, planeSurface.plane.normal)')
 	var edges = vs.map((a, i) => {
 		var b = vs[(i + 1) % vs.length]
 		return StraightEdge.throughPoints(a, b)
 	})
-	return new B2.PlaneFace(planeSurface, edges)
+	return new B2.PlaneFace(planeSurface, edges, this.infiniteVolume)
 }
 function facesWithEdge(edge, faces) {
 	return arrayFilterMap(faces, (face) => {
@@ -455,7 +512,7 @@ function splitsVolumeEnclosingFaces(brep, edge, dirAtEdgeA, faceNormal, coplanar
 	}
 }
 B2.RotationFace = function (rot, edges) {
-	assert(rot instanceof RotationReqFofZ)
+	//assert(rot instanceof RotationReqFofZ)
 	this.surface = rot
 	this.edges = edges
 }
@@ -576,6 +633,63 @@ function pushQuad(triangles, a, b, c, d) {
 	triangles.push(a, b, c,
 	b, d, c)
 }
+B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
+	function (curve, a, b, aT, bT, flippedOf, aDir, bDir) {
+		assertNumbers(aT, bT)
+		assertVectors(a, b, aDir, bDir)
+		this.curve = curve
+		this.a = a
+		this.b = b
+		this.aT = aT
+		this.bT = bT
+		this.aDir = aDir
+		this.bDir = bDir
+		this.canon = flippedOf
+		this.id = globalId++
+	},
+	{
+		getVerticesNo0: function () {
+			return [this.b]
+		},
+		getIntersectionsWithISurface: function (is) {
+			assert (is.implicitFunction)
+			var start = min(this.aT, this.bT), end = max(this.aT, this.bT)
+			return intersectionPCurveISurface(t => this.curve.at(t), start, end, 0.1, is.implicitFunction())
+		},
+		getIntersectionsWithPlane: function (plane) {
+			var start = min(this.aT, this.bT), end = max(this.aT, this.bT)
+			var edgeT = this.curve.intersectWithPlaneLambda(plane)
+			edgeT = NLA.snapTo(edgeT, this.aT)
+			edgeT = NLA.snapTo(edgeT, this.bT)
+			return (start <= edgeT && edgeT <= end) ? [edgeT] : []
+		},
+		tangentAt: function (p) {
+			return this.tangent
+		},
+		flipped: function () {
+			return new B2.PCurveEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.bDir.negated(), this.aDir.negated())
+		},
+		transform: function (m4) {
+			return new B2.PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b),
+				this.aT, this.bT,
+				null,
+				m4.transformVector(this.aDir), m4.transformVector(this.bDir))
+		},
+		colinearToLine: function (line) {
+			return this.curve.equals(line)
+		},
+		isCoEdge: function (edge) {
+			// TODO: optimization with flippedOf etc
+			return edge.constructor == StraightEdge && (
+					this.a.like(edge.a) && this.b.like(edge.b)
+					|| this.a.like(edge.b) && this.b.like(edge.a)
+				)
+		},
+		likeEdge: function (edge) {
+			return edge.constructor == StraightEdge && this.a.like(edge.a) && this.b.like(edge.b)
+		}
+	}
+)
 var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 	function (line, a, b, aT, bT, flippedOf) {
 		assertNumbers(aT, bT)
@@ -630,6 +744,9 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 		},
 		likeEdge: function (edge) {
 			return edge.constructor == StraightEdge && this.a.like(edge.a) && this.b.like(edge.b)
+		},
+		equals: function (edge) {
+			return edge.constructor == StraightEdge && this.a.equals(edge.a) && this.b.equals(edge.b)
 		}
 	}
 )
@@ -644,6 +761,57 @@ B2.box = function (w, h, d, name) {
 		V3.create(w, 0, 0)
 	]
 	return B2.extrudeVertices(baseVertices, P3.XY.flipped(), V3.create(0, 0, d), name)
+}
+B2.puckman = function (radius, rads, height, name) {
+	// TODO: argument checking
+	/*
+	var mantleSurface = new CylinderSurface(L3.Z, radius)
+	var bottomMantleCurve = new EllipseCurve(V3.ZERO, V3.create(radius, 0, 0), V3.create(0, radius, 0))
+	var sliceRad =
+
+	var mantleFace = new B2.RotationFace(mantleSurface, )
+	*/
+	var circleCurve = new EllipseCurve(V3.ZERO, V3.create(radius, 0, 0), V3.create(0, -radius, 0))
+	var a = circleCurve.at(0)
+	var b = circleCurve.at(-rads)
+	var edges = [
+		StraightEdge.throughPoints(a, V3.ZERO),
+		StraightEdge.throughPoints(V3.ZERO, b),
+		StraightEdge.throughPoints(b, a)]
+		//new B2.PCurveEdge(circleCurve, b, a, 0, -rads, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))]
+	return B2.extrudeEdges(edges, P3.XY.flipped(), V3.create(0, 0, height), name)
+}
+B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name) {
+	// TODO checks..
+	console.log(baseFaceEdges.map(edge => '\n'+edge.toString()).join())
+	var translationMatrix = M4.translation(offset)
+	var topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix))
+	var edgeCount = baseFaceEdges.length
+	var bottomFace = new B2.PlaneFace(new PlaneSurface(baseFacePlane), baseFaceEdges)
+	var topFaceEdges = topEdges.map(edge => edge.flipped()).reverse()
+	var topFace = new B2.PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges)
+	var ribs = NLA.arrayFromFunction(edgeCount,
+		i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a))
+	var faces = baseFaceEdges.map((edge, i) => {
+		var j = (i + 1) % edgeCount
+		var faceEdges = [baseFaceEdges[i].flipped(), ribs[i], topEdges[i], ribs[j].flipped()]
+		console.log(faceEdges.map(edge => '\n'+edge.toString()).join())
+		var surface
+		var curve = edge.curve;
+		if (edge instanceof StraightEdge) {
+			var surfaceNormal = offset.cross(edge.tangent).normalized()
+			surface = new PlaneSurface(P3.normalOnAnchor(surfaceNormal, edge.a))
+			return new B2.PlaneFace(surface, faceEdges)
+		} else if (curve instanceof EllipseCurve) {
+			var l3Axis = L3(curve.center, offset.normalized())
+			surface = new CylinderSurface(l3Axis, curve.f1.length()) // TODO
+			return new B2.RotationFace(surface, faceEdges)
+		} else {
+			assert (false, edge)
+		}
+	})
+	faces.push(bottomFace, topFace)
+	return new B2(faces)
 }
 B2.extrudeVertices = function(baseVertices, baseFacePlane, offset, name) {
 	assert (baseVertices.every(v => v instanceof V3), "baseVertices.every(v => v instanceof V3)")
@@ -829,16 +997,6 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		}
 	}
 )
-B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', null,
-	function () {
-
-	},
-	{
-		getVerticesNo0: function() {
-
-		}
-	}
-)
 function CurvePI(parametricSurface, implicitSurface, startPoint) {
 	assert (parametricSurface.parametricFunction, 'parametricSurface.parametricFunction')
 	assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
@@ -920,15 +1078,26 @@ CurvePI.prototype = NLA.defineObject(null, {
 		// TODO : skip -><-
 		while (i < ps1.length || j < ps2.length) {
 			var a = ps1[i], b = ps2[j]
+			console.log("EEEEQUAL", a, b)
 			if (j >= ps2.length || a.t < b.t) {
 				last = a
 				in1 = !in1
 				i++
-			} else {
+			} else if (i >= ps1.length || a.t > b.t) {
 				last = b
 				in2 = !in2
 				j++
+			} else {
+				in1 = !in1
+				in2 = !in2
+				if (in1 == in2) {
+					a.used = true
+					b.used = true
+				}
+				j++
+				i++
 			}
+
 			if (currentSegment && !(in1 && in2)) {
 				currentSegment.b = last.p
 				currentSegment.bDir = last.insideDir.negated()
@@ -997,11 +1166,22 @@ function getBlug(ps1, ps2, in1, in2, curve) {
 			last = a
 			in1 = !in1
 			i++
-		} else {
+		} else if (i >= ps1.length || a.t > b.t) {
 			last = b
 			in2 = !in2
 			j++
+		} else {
+			last = a
+			in1 = !in1
+			in2 = !in2
+			if (in1 == in2) {
+				a.used = true
+				b.used = true
+			}
+			i++
+			j++
 		}
+		console.log("as", a, b, in1, in2)
 		if (currentSegment && !(in1 && in2)) {
 			currentSegment.b = last.p
 			currentSegment.bDir = last.insideDir && last.insideDir.negated()
@@ -1078,6 +1258,76 @@ PlaneSurface.prototype = NLA.defineObject(null, {
 		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
 	}
 })
+var CylinderSurface = NLA.defineClass('CylinderSurface', null,
+	function (l3Axis, radius) {
+		this.l3Axis = l3Axis
+		this.radius = radius
+		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		this.matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
+		this.matrixInversed = this.matrix.inversed()
+	},
+	{
+		toMesh: function (zStart, zEnd) {
+			var count = 2
+			var zInterval = zEnd - zStart, zStep = zInterval / (count - 1), z
+			var vertices = NLA.arrayFromFunction(count, i => (z = zStart + i * zStep, V3.create(this.radius, 0, z)))
+			var normals = NLA.arrayFromFunction(count, i => vertices[i].normalized())
+			vertices = this.matrix.transformedPoints(vertices)
+			normals = this.matrix.inversed().transposed().transformedVectors(normals).map(v => v.normalized())
+			return rotationMesh(vertices, this.l3Axis, 2 * Math.PI, 64, true, normals)
+		},
+		parametricNormal: function () {
+			return (d, z) => {
+				return this.matrix.transformVector(V3.create(cos(d), sin(d), 0))
+			}
+		},
+		normalAt: function (p) {
+			var pmPoint = this.pointToParameterFunction()(p)
+			return this.parametricNormal()(pmPoint.x, pmPoint.y)
+		},
+		parametricFunction: function () {
+			return (d, z) => {
+				return this.matrix.transformPoint(V3.create(this.radius * cos(d), this.radius * sin(d), z))
+			}
+		},
+		implicitFunction: function () {
+			return (pWC) => {
+				var p = this.matrixInversed.transformPoint(pWC)
+				var radiusLC = Math.sqrt(p.x * p.x + p.y * p.y)
+				return this.radius - radiusLC
+			}
+		},
+		boundsFunction: function () {
+			var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+			var matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
+			var matrixInverse = matrix.inversed()
+			var f = this.FofR, minZ = this.minZ, maxZ = this.maxZ
+			return function (pWC) {
+				var z = matrixInverse.transformPoint(pWC).z
+				return minZ <= z && z <= maxZ
+			}
+		},
+		pointToParameterFunction: function (p) {
+			return (pWC) => {
+				var p = this.matrixInversed.transformPoint(pWC)
+				return V3.create(atan2(p.y, p.x), p.z, 0)
+			}
+		},
+		getIntersectionCurve: function (surface2) {
+			if (surface2 instanceof P3) {
+				return this.getIntersectionWithPlane(surface2)
+			}
+		},
+		getIntersectionWithPlane: function (plane) {
+			var ellipseCenter = this.l3Axis.intersectionWithPlane(plane)
+			var pF = this.parametricFunction()
+			var f1 = L3(pF(0, 0), this.l3Axis.dir1).intersectionWithPlane(plane).minus(ellipseCenter)
+			var f2 = L3(pF(PI / 2, 0), this.l3Axis.dir1).intersectionWithPlane(plane).minus(ellipseCenter)
+			console.log(f1.ss, f2.ss)
+			return new EllipseCurve(ellipseCenter, f1, f2)
+		}
+	}
+)
 function RotationReqFofZ(l3Axis, FofR, minZ, maxZ) {
 	assert(l3Axis instanceof L3)
 	this.l3Axis = l3Axis
@@ -1357,12 +1607,14 @@ function initB2() {
  console.log(L3.X.at(t).ss, cyl(L3.X.at(t)))
 */
 
+
+
 	var face = B2.PlaneFace.forVertices(new PlaneSurface(P3.XY), [V3(0, 0, 0), V3(10, 0, 0),V3(10, 10, 0), V3(4, 4,0), V3(0, 10, 0)])
 	var extrusion = B2.extrudeVertices([V3(0, 0, 0), V3(10, 0, 0),V3(10, 10, 0), V3(4, 4,0), V3(0, 10, 0)], P3.XY, V3(0, 0, 4), "ex0")
-	var b2 = B2.box(10, 10, 5)
-	//b2 = new B2(b2.faces.slice(0,1))
-	//b2 = B2.box(5, 5, 5).flipped()
-	//var b2 = new B2(extrusion.faces.slice(0, 1))
+	var wideBox = B2.box(10, 10, 5).flipped()
+	//wideBox = new B2(wideBox.faces.slice(2, 3))
+	//wideBox = B2.box(5, 5, 5).flipped()
+	//var wideBox = new B2(extrusion.faces.slice(0, 1))
 
 	var plane = P3(V3(0, 1, 10).normalized(), 10), cpTop, cpBottom
 	planes.push(cpTop =CustomPlane.forPlane(plane, null, "custom3"),
@@ -1375,19 +1627,36 @@ function initB2() {
 	var top = new B2.PlaneFace(psTop, [psTopEdge]), bottom = new B2.PlaneFace(psBottom, [psBottomEdge])
 	var side = new B2.RotationFace(rot, [psTopEdge, psBottomEdge])
 	// top.addToMesh(new GL.Mesh({normals: true}));bottom.addToMesh(new GL.Mesh({normals: true}))
-	var brep = new B2([top, bottom, side])
-	//brep = B2.box(5, 5, 10).translate(0, -5, 0).rotateX(-0.2).translate(0, 3, 0).rotateZ(-0.2)
-	brep = B2.box(5, 5, 10).translate(-1,-1,0)
+	var tallBox = new B2([top, bottom, side])
+	//tallBox = B2.box(5, 5, 10).translate(0, -5, 0).rotateX(-0.2).translate(0, 3, 0).rotateZ(-0.2)
+	tallBox = B2.box(5, 5, 10).translate(0,-1,1).flipped()
+	tallBox = B2.extrudeVertices([V3(0,0),V3(0, 3), V3(-2, 5), V3(5, 5), V3(5,0)], P3.XY.flipped(), V3(0, 0, 10), 'lol')
+		.translate(0,-1,1)
+		.flipped()
 	/*
 	bMesh.computeNormalLines(1)
 	bMesh.compile()
 	*/
-	aMesh = b2.toMesh()
-	bMesh = brep.toMesh()
-
-	//disableConsole()
-	var c = brep.clipped(b2)
+	aMesh = wideBox.toMesh()
+	bMesh = tallBox.toMesh()
+	var c = tallBox.intersection(wideBox, true, false)
 	cMesh = c.toMesh()
+	dMesh = tallBox.intersection(wideBox, false, true).toMesh()
+	console.log(c.toSource())
+	/*
+	var cyl = new CylinderSurface(L3.Z, 5)
+	bMesh = cyl.toMesh(0, 50)
+	var curve = cyl.getIntersectionWithPlane(cpTop)
+	bMesh.addVertexBuffer('edgeTangents', 'edgeTangents')
+	for (var t = 0; t < 2 * PI; t+=0.1) {
+		var p = curve.at(t);
+		bMesh.edgeTangents.push(p, p.plus(curve.tangentAt(t).toLength(1)))
+		bMesh.edgeTangents.push(p, p.plus(curve.normalAt(t).toLength(1)))
+	}
+	console.log(bMesh.edgeTangents.map(V3.ss))
+	bMesh.compile()
+	//disableConsole()
+	 var c = B2.puckman(10, 2, 12, 'puckman')
 	/*
 	var curve = new EllipseCurve(V3.ZERO, V3(20, 0, 0), V3(3, 10, 0))
 	//  brep2.js:878:1 V3(20, 0, 0) V3(3, -10, 0) 60 -291 120 23.77134558278965
@@ -1421,7 +1690,6 @@ function initB2() {
 		bMesh.edgeTangents.push(curve2.points[i], curve2.points[i].plus(t.toLength(0.8)))
 	})
 	*/
-	console.log(c.toSource())
 	//aMesh = cMesh = null
 	//cMesh.computeNormalLines(0.2);cMesh.compile()
 	//cMesh = c.toMesh()
@@ -1433,7 +1701,7 @@ function initB2() {
 
 
 
-var aMesh, bMesh, cMesh
+var aMesh, bMesh, cMesh, dMesh
 function paintScreen2() {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.loadIdentity();
@@ -1474,6 +1742,16 @@ function paintScreen2() {
 		gl.projectionMatrix.m[11] += 1 / (1 << 14)
 		lightingShader.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
 			camPos: eyePos }).draw(cMesh)
+		gl.popMatrix()
+	}
+	if (dMesh) {
+		gl.pushMatrix()
+		gl.translate(45, 0, 0)
+		gl.projectionMatrix.m[11] -= 1 / (1 << 14) // prevent Z-fighting
+		dMesh.lines && singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES');
+		gl.projectionMatrix.m[11] += 1 / (1 << 14)
+		lightingShader.uniforms({ color: rgbToVec4(0xff0000),
+			camPos: eyePos }).draw(dMesh)
 		gl.popMatrix()
 	}
 	drawPlanes();
