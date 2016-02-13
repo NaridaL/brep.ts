@@ -47,7 +47,7 @@ var B2 = NLA.defineClass('B2', null,
 			oldFaces.forEach(face => {
 				console.log('reconstituting face', face.toString())
 				var els = face.edges.map(edge => edgeLooseSegments.get(edge)).map(s => '\n'+s).join()
-				console.log('edgeLooseSegments', els.toSource())
+				console.log('edgeLooseSegments', els)
 				var looseEdges = faceMap.get(face)
 				if (!looseEdges) {
 					face.insideOutside = 'undecided'
@@ -124,6 +124,17 @@ var B2 = NLA.defineClass('B2', null,
 			})
 			var faces = []
 
+			faceMap.forEach((faceLooses, face) => {
+				faceLooses.forEach(edge => {
+					face.edges.forEach(faceEdge => {
+						var edgeT = faceEdge.getEdgeT(edge.a)
+						if (undefined !== edgeT) {
+							console.log("WAARGH", edge.a.ss, faceEdge.toString(), edgeT)
+							NLA.mapAdd(edgeMap, faceEdge, {edgeT: edgeT, p: edge.a})
+						}
+					})
+				})
+			})
 			var edgeLooseSegments = new Map()
 			edgeMap.forEach((pointInfos, baseEdge) => {
 				var looseSegments = []
@@ -136,7 +147,7 @@ var B2 = NLA.defineClass('B2', null,
 				var currentEdge = new baseEdge.constructor(baseEdge.curve, baseEdge.a, baseEdge.a, baseEdge.aT, baseEdge.aT)
 				for (var i = 0; i < pointInfos.length; i++) {
 					var info = pointInfos[i]
-					if (info.edgeT == baseEdge.bT || info.edgeT == baseEdge.aT) {
+					if (info.edgeT == baseEdge.bT || info.edgeT == baseEdge.aT || info.edgeT == currentEdge.aT) {
 						continue
 					}
 					currentEdge.b = info.p
@@ -375,20 +386,27 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 			var ps1 = getFacePlaneIntersectionSs(thisBrep, this, intersectionLine, face2Plane, true, false)
 			var ps2 = getFacePlaneIntersectionSs(face2Brep, face2, intersectionLine, thisPlane, false, false)
 
-			if (ps1.length == 0 && ps2.length == 0) {
+			if (ps1.length == 0 || ps2.length == 0) {
 				// faces to not intersect
 				return
 			}
 
-			var segments = getBlug(ps1, ps2, false, false, intersectionLine)
+			var segments1 = getBlug(ps1.filter(ps => ps.caseB && !ps.hideOnFace), ps2.filter(ps => ps.caseB), false, false, intersectionLine)
+			var segments2 = getBlug(ps1.filter(ps => ps.caseB), ps2.filter(ps => ps.caseB && !ps.hideOnFace), false, false, intersectionLine)
 			// TODO: getCanon() TODO TODO TODO
-			console.log('segments', segments.toSource())
-			console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
+			if (intersectionLine.equals(L3(V3(0, 2, 0), V3(0, 0, 1)))) {
+				console.log(intersectionLine.toString())
+				console.log('segments', segments1.toSource(), segments2.toSource())
+				console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
+			}
 			ps1.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
 			ps2.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
-			segments.forEach(segment => {
+			segments1.forEach(segment => {
 				console.log('segment', segment.toString(), thisDir)
 				mapAdd(faceMap, this, thisDir ? segment : segment.flipped())
+			})
+			segments2.forEach(segment => {
+				console.log('segment', segment.toString(), thisDir)
 				mapAdd(faceMap, face2, thisDir ? segment.flipped() : segment)
 			})
 		}
@@ -422,6 +440,19 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, plane2, removeCoplanar
 		(splitsVolumeEnclosingFaces(brep, edge, testVector, plane2.normal, removeCoplanarSame, removeCoplanarOpposite)
 		!= splitsVolumeEnclosingFaces(brep, edge, testVector.negated(), plane2.normal, removeCoplanarSame, removeCoplanarOpposite))
 	)
+	var colinearSegmentsInsideCaseTrue = [], colinearSegmentsInsideCaseFalse = []
+	for (var i = 0; i < brepFace.edges.length; i++) {
+		if (colinearSegments[i]) {
+			var edge = brepFace.edges[i]
+			var csi1 = splitsVolumeEnclosingFaces(brep, edge, testVector, plane2.normal, removeCoplanarSame, removeCoplanarOpposite)
+			var csi2 = splitsVolumeEnclosingFaces(brep, edge, testVector.negated(), plane2.normal, removeCoplanarSame, removeCoplanarOpposite)
+			var a = INSIDE == csi1, b = INSIDE  == csi1 || COPLANAR_SAME == csi1
+			var c = INSIDE == csi2, d = INSIDE  == csi2 || COPLANAR_SAME == csi2
+			colinearSegmentsInsideCaseTrue[i] = b != d
+			colinearSegmentsInsideCaseFalse[i] = a != c
+		}
+	}
+
 	//console.log(colinearSegments, colinearSegmentsInside)
 	var ps = []
 	brepFace.edges.forEach((edge, i, edges) => {
@@ -431,15 +462,20 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, plane2, removeCoplanar
 			// edge colinear to intersection
 			var outVector = edge.bDir.cross(facePlane.normal)
 			var insideNext = outVector.dot(nextEdge.aDir) > 0
-			if (insideNext != colinearSegmentsInside[i]) {
-				ps.push({p: edge.b, insideDir: null, t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT})
+			var caseA = insideNext != colinearSegmentsInsideCaseTrue[i],
+				caseB = insideNext != colinearSegmentsInsideCaseFalse[i]
+			var colinearSegmentOutsideVector = edge.aDir.cross(facePlane.normal)
+			var displayOnFace = colinearSegmentOutsideVector.dot(plane2.normal) > 0
+			if (caseA || caseB || displayOnFace != insideNext) {
+				ps.push({p: edge.b, insideDir: null, t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT,
+					caseA: caseA, caseB: caseB, colinear: true, hideOnFace: displayOnFace == insideNext})
 				//console.log('colinear')
 			}
 		} else {
 			var edgeT = edge.getIntersectionsWithPlane(plane2)[0]
 			if (undefined !== edgeT) {
 				if (edgeT == edge.bT) {
-					// endpoint lies on intersection line -0.9800665778412416
+					// endpoint lies on intersection line
 					console.log('endpoint lies on intersection line',
 						intersectionLinePerpendicular.dot(edge.bDir) , intersectionLinePerpendicular.dot(nextEdge.aDir),
 						intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir), intersectionLinePerpendicular.ss,
@@ -449,24 +485,27 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, plane2, removeCoplanar
 						// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
 						// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
 						// point in the same direction (dot > 0)
-						var nextSegmentOutsideVector = nextEdge.aDir.cross(facePlane.normal)
-						var insideFaceBeforeColinear = nextSegmentOutsideVector.dot(edge.bDir) < 0
-						var colinearSegmentInsideFace = colinearSegmentsInside[j]
+						var colinearSegmentOutsideVector = nextEdge.aDir.cross(facePlane.normal)
+						var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
+						var caseA = insideFaceBeforeColinear != colinearSegmentsInsideCaseTrue[j],
+							caseB = insideFaceBeforeColinear != colinearSegmentsInsideCaseFalse[j]
+						var displayOnFace = colinearSegmentOutsideVector.dot(plane2.normal) > 0
 						// if the "inside-ness" changes, add intersection point
 						//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
-						if (insideFaceBeforeColinear != colinearSegmentInsideFace) {
-							ps.push({p: edge.b, insideDir: null, t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT})
+						if (caseA || caseB || displayOnFace != insideFaceBeforeColinear) {
+							ps.push({p: edge.b, insideDir: null, t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT
+								, caseA: caseA, caseB: caseB, colinear: true, hideOnFace: displayOnFace == insideFaceBeforeColinear})
 							//console.log('next colinear')
 						}
 					} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
 						// next segment is not colinear and ends on different side
-						ps.push({p: edge.b, insideDir: null, t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT})
+						ps.push({p: edge.b, insideDir: null, t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT, caseA: true, caseB: true})
 						//console.log('end on line, next other side')
 					}
 				} else if (edgeT != edge.aT) {
 					// edge crosses is line, neither starts nor ends on it
 					var p = edge.curve.at(edgeT)
-					ps.push({p: p, insideDir: null, t: line.pointLambda(p), edge: edge, edgeT: edgeT})
+					ps.push({p: p, insideDir: null, t: line.pointLambda(p), edge: edge, edgeT: edgeT, caseA: true, caseB: true})
 					console.log('middle')
 				}
 			}
@@ -475,6 +514,8 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, plane2, removeCoplanar
 	ps.sort((a, b) => a.t - b.t || -a.insideDir.dot(line.dir1))
 	return ps
 }
+
+var INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE= 3
 /**
  *
  * @param brep BREP to check
@@ -500,13 +541,11 @@ function splitsVolumeEnclosingFaces(brep, edge, dirAtEdgeA, faceNormal, coplanar
 	})
 	relFaces.sort((a, b) => a.angle - b.angle)
 	assert(relFaces.length != 0)
-	console.log(relFaces.map(f => f.toSource()).join('\n'))
+	//console.log(relFaces.map(f => f.toSource()).join('\n'))
 
 	if (NLA.isZero(relFaces[0].angle)) {
 		var coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0
-		return coplanarSame
-			? assert(coplanarSameInside !== undefined) && coplanarSameInside
-			: assert(coplanarOppositeInside !== undefined) && coplanarOppositeInside
+		return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
 	} else {
 		return !relFaces[0].reversed
 	}
@@ -713,11 +752,11 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 			return intersectionPCurveISurface(t => this.curve.at(t), start, end, 0.1, is.implicitFunction())
 		},
 		getIntersectionsWithPlane: function (plane) {
-			var start = min(this.aT, this.bT), end = max(this.aT, this.bT)
+			var minT = min(this.aT, this.bT), maxT = max(this.aT, this.bT)
 			var edgeT = this.curve.intersectWithPlaneLambda(plane)
 			edgeT = NLA.snapTo(edgeT, this.aT)
 			edgeT = NLA.snapTo(edgeT, this.bT)
-			return (start <= edgeT && edgeT <= end) ? [edgeT] : []
+			return (minT <= edgeT && edgeT <= maxT) ? [edgeT] : []
 		},
 		tangentAt: function (p) {
 			return this.tangent
@@ -747,6 +786,15 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 		},
 		equals: function (edge) {
 			return edge.constructor == StraightEdge && this.a.equals(edge.a) && this.b.equals(edge.b)
+		},
+		getEdgeT: function (p) {
+			assertVectors(p)
+			var edgeT = p.minus(this.curve.anchor).dot(this.curve.dir1)
+			if (!NLA.isZero(this.curve.at(edgeT).distanceTo(p))) { return }
+			var minT = min(this.aT, this.bT), maxT = max(this.aT, this.bT)
+			edgeT = NLA.snapTo(edgeT, this.aT)
+			edgeT = NLA.snapTo(edgeT, this.bT)
+			return (minT <= edgeT && edgeT <= maxT) ? edgeT : undefined
 		}
 	}
 )
@@ -1083,6 +1131,9 @@ CurvePI.prototype = NLA.defineObject(null, {
 				last = a
 				in1 = !in1
 				i++
+				if (a.colinear) {
+
+				}
 			} else if (i >= ps1.length || a.t > b.t) {
 				last = b
 				in2 = !in2
@@ -1108,6 +1159,9 @@ CurvePI.prototype = NLA.defineObject(null, {
 			} else if (in1 && in2) {
 				currentSegment = new CurvePIEdge(this, last.p, last.p, last.t, last.t, null, last.insideDir, last.insideDir)
 				last.used = true
+				if (last.colinear) {
+
+				}
 			}
 		}
 		var firstSegment = segments[0]
@@ -1181,7 +1235,7 @@ function getBlug(ps1, ps2, in1, in2, curve) {
 			i++
 			j++
 		}
-		console.log("as", a, b, in1, in2)
+//		console.log("as", a, b, in1, in2)
 		if (currentSegment && !(in1 && in2)) {
 			currentSegment.b = last.p
 			currentSegment.bDir = last.insideDir && last.insideDir.negated()
@@ -1639,9 +1693,9 @@ function initB2() {
 	*/
 	aMesh = wideBox.toMesh()
 	bMesh = tallBox.toMesh()
-	var c = tallBox.intersection(wideBox, true, false)
+	var c = wideBox.intersection(tallBox, true, false).flipped()
 	cMesh = c.toMesh()
-	dMesh = tallBox.intersection(wideBox, false, true).toMesh()
+	dMesh = wideBox.intersection(tallBox, false, true).flipped().toMesh()
 	console.log(c.toSource())
 	/*
 	var cyl = new CylinderSurface(L3.Z, 5)
