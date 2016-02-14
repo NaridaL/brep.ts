@@ -570,12 +570,14 @@ var GL = (function() {
 		compile: function(type) {
 			this.buffer = this.buffer || gl.createBuffer();
 			if (this.data.length == 0) {
-				console.warn("empty buffer")
+				console.warn("empty buffer " + this.name)
+				//console.trace()
 			}
 			if (this.data.length == 0 || this.data[0] instanceof V3) {
 				var buffer = V3.flattenV3Array(this.data) // asserts that all elements are V3s
 				this.buffer.length = this.data.length
 				this.buffer.spacing = 3
+				this.buffer.count = this.data.length
 			} else {
 				var data = [];
 				for (var i = 0, chunk = 10000; i < this.data.length; i += chunk) {
@@ -583,11 +585,12 @@ var GL = (function() {
 				}
 				var buffer = new this.type(data)
 				var spacing = this.data.length ? data.length / this.data.length : 0;
-				assert(spacing % 1 == 0, 'buffer elements not of consistent size, average size is ' + spacing)
+				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
 				assert(data.every(v => 'number' == typeof v), "data.every(v => 'number' == typeof v)")
 				this.buffer.length = data.length
 				if (NLA.DEBUG) { this.maxValue = data.max() }
 				this.buffer.spacing = spacing
+				this.buffer.count = data.length / spacing
 			}
 			gl.bindBuffer(this.target, this.buffer)
 			gl.bufferData(this.target, buffer, type || gl.STATIC_DRAW);
@@ -608,14 +611,15 @@ var GL = (function() {
 // initially enabled.
 	function Mesh(options) {
 		options = options || {};
+		this.hasBeenCompiled = false
 		this.vertexBuffers = {}
 		this.indexBuffers = {}
 		this.addVertexBuffer('vertices', 'gl_Vertex');
 		if (options.coords) this.addVertexBuffer('coords', 'gl_TexCoord')
 		if (options.normals) this.addVertexBuffer('normals', 'gl_Normal')
 		if (options.colors) this.addVertexBuffer('colors', 'gl_Color')
-		if (!('triangles' in options) || options.triangles) this.addIndexBuffer('triangles')
-		if (options.lines) this.addIndexBuffer('lines')
+		if (!('triangles' in options) || options.triangles) this.addIndexBuffer('TRIANGLES')
+		if (options.lines) this.addIndexBuffer('LINES')
 	}
 
 	Mesh.prototype = {
@@ -624,6 +628,9 @@ var GL = (function() {
 		// Add a new vertex buffer with a list as a property called `name` on this object
 		// and map it to the attribute called `attribute` in all shaders that draw this mesh.
 		addVertexBuffer: function(name, attribute) {
+			this.hasBeenCompiled = false
+			assert(name )
+			assert(attribute)
 			var buffer = this.vertexBuffers[attribute] = new Buffer(gl.ARRAY_BUFFER, Float32Array);
 			buffer.name = name;
 			this[name] = [];
@@ -633,8 +640,10 @@ var GL = (function() {
 		//
 		// Add a new index buffer with a list as a property called `name` on this object.
 		addIndexBuffer: function(name) {
+			this.hasBeenCompiled = false
 			var buffer = this.indexBuffers[name] = new Buffer(gl.ELEMENT_ARRAY_BUFFER, Uint16Array);
-			this[name] = [];
+			buffer.name = name;
+			this[name.toLowerCase()] = [];
 		},
 
 		// ### .compile()
@@ -658,31 +667,29 @@ var GL = (function() {
 
 			for (var name in this.indexBuffers) {
 				var buffer = this.indexBuffers[name];
-				buffer.data = this[name];
+				buffer.data = this[name.toLowerCase()];
 				buffer.compile();
-				if (NLA.DEBUG && buffer.maxValue >= minVSize) {
+				if (false && NLA.DEBUG && buffer.maxValue >= minVSize) {
 					throw new Error(`max index value for buffer ${name} \
 					is too large ${buffer.maxValue} min Vbuffer size: ${minVSize} ${minBufferName}`)
 				}
 			}
+			this.hasBeenCompiled = true
 		},
 
 		// ### .transform(matrix)
 		//
 		// Transform all vertices by `matrix` and all normals by the inverse transpose
 		// of `matrix`.
-		transform: function(matrix) {
-			this.vertices = this.vertices.map(function(v) {
-				return matrix.transformPoint(Vector.fromArray(v)).toArray();
-			});
+		transform: function(m4) {
+			var mesh = new GL.mesh({vertices: this.vertices, normals: this.normals})
+			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
-				var invTrans = matrix.inverse().transpose();
-				this.normals = this.normals.map(function(n) {
-					return invTrans.transformVector(Vector.fromArray(n)).normalized().toArray();
-				});
+				var invTrans = m4.inverse().transpose();
+				this.normals = this.normals.map(n => invTrans.transformVector(n).normalized())
 			}
-			this.compile();
-			return this;
+			mesh.compile()
+			return this
 		},
 
 		// ### .computeNormals()
@@ -714,6 +721,7 @@ var GL = (function() {
 		//
 		// Populate the `lines` index buffer from the `triangles` index buffer.
 		computeWireframe: function() {
+			assert(false)
 			var canonEdges = new Set()
 			function canonEdge(i0, i1) {
 				var iMin = min(i0, i1), iMax = max(i0, i1)
@@ -728,9 +736,39 @@ var GL = (function() {
 				canonEdges.add(canonEdge(t[1], t[2]))
 				canonEdges.add(canonEdge(t[2], t[0]))
 			}
-			if (!this.lines) this.addIndexBuffer('lines');
-			this.lines = canonEdges.map(uncanonEdge)
+			if (!this.lines) this.addIndexBuffer('LINES');
+			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
 			return this
+		},
+		computeWireframeFromFlatTriangles: function() {
+			var canonEdges = new Set()
+			function canonEdge(i0, i1) {
+				var iMin = min(i0, i1), iMax = max(i0, i1)
+				return (iMin << 16) | iMax
+			}
+			function uncanonEdge(key) {
+				return [key >> 16, key & 0xffff]
+			}
+			var t = this.triangles
+			for (var i = 0; i < this.triangles.length / 3; i += 3) {
+				canonEdges.add(canonEdge(t[i + 0], t[i + 1]))
+				canonEdges.add(canonEdge(t[i + 1], t[i + 2]))
+				canonEdges.add(canonEdge(t[i + 2], t[i + 0]))
+			}
+			if (!this.lines) this.addIndexBuffer('LINES');
+			this.lines = new Array(canonEdges.size)
+			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
+			return this
+		},
+		computeNormalLines: function (length) {
+			length = length || 1
+			var vs = this.vertices, si = this.vertices.length
+			if (!this.lines) this.addIndexBuffer('LINES');
+
+			for (var i = 0; i < this.normals.length; i++) {
+				vs[si + i] = vs[i].plus(this.normals[i].times(length))
+				this.lines.push(si + i, i)
+			}
 		},
 
 		// ### .getAABB()
@@ -884,6 +922,111 @@ var GL = (function() {
 		mesh.compile();
 		return mesh;
 	};
+	/**
+	 * Returns a sphere mesh with radius 1 created by subdividing the faces of a dodecahedron (20-sided)
+	 * The sphere is positioned at the origin
+	 * @param subdivisions
+	 *      How many recursive divisions to do. A subdivision divides a triangle into 4,
+	 *      so the total number of triangles is 20 * 4^subdivisions
+	 * @returns {Mesh}
+	 *      Contains vertex and normal buffers and index buffers for triangles and lines
+	 */
+	Mesh.sphere2 = function (subdivisions) {
+		var golden = (1 + Math.sqrt(5)) / 2, u = V3(1, golden, 0).normalized(), s = u.x, t = u.y
+		// base vertices of dodecahedron
+		var vertices = [
+			V3(-s,  t,  0),
+			V3( s,  t,  0),
+			V3(-s, -t,  0),
+			V3( s, -t,  0),
+
+			V3( 0, -s,  t),
+			V3( 0,  s,  t),
+			V3( 0, -s, -t),
+			V3( 0,  s, -t),
+
+			V3( t,  0, -s),
+			V3( t,  0,  s),
+			V3(-t,  0, -s),
+			V3(-t,  0,  s),]
+		// base triangles of dodecahedron
+		var triangles = [
+			0, 11, 5,
+			0, 5, 1,
+			0, 1, 7,
+			0, 7, 10,
+			0, 10, 11,
+
+			// 5 adjacent faces
+			1, 5, 9,
+			5, 11, 4,
+			11, 10, 2,
+			10, 7, 6,
+			7, 1, 8,
+
+			// 5 faces around point 3
+			3, 9, 4,
+			3, 4, 2,
+			3, 2, 6,
+			3, 6, 8,
+			3, 8, 9,
+
+			// 5 adjacent faces
+			4, 9, 5,
+			2, 4, 11,
+			6, 2, 10,
+			8, 6, 7,
+			9, 8, 1,
+		]
+
+		/**
+		 * Tesselates triangle a b c
+		 * a b c must already be in vertices with the indexes ia ib ic
+		 * res is the number of subdivisions to do. 0 just results in triangle and line indexes being added to the
+		 * respective buffers.
+		 * @param a
+		 * @param b
+		 * @param c
+		 * @param res
+		 * @param vertices
+		 * @param triangles
+		 * @param ia
+		 * @param ib
+		 * @param ic
+		 * @param lines
+		 */
+		function tesselateRecursively(a, b, c, res, vertices, triangles, ia, ib, ic, lines) {
+			if (0 == res) {
+				triangles.push([ia, ib, ic])
+				if (ia < ib) lines.push(ia, ib)
+				if (ib < ic) lines.push(ib, ic)
+				if (ic < ia) lines.push(ic, ia)
+			} else {
+				// subdivide the triangle abc into 4 by adding a vertex (with the correct distance from the origin)
+				// between each segment ab, bc and cd, then calling the function recursively
+				var abMid1 = a.plus(b).toLength(1), bcMid1 = b.plus(c).toLength(1), caMid1 = c.plus(a).toLength(1)
+				var iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
+				vertices.push(abMid1, bcMid1, caMid1)
+				tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, iabm, ibcm, icam, lines)
+				tesselateRecursively(a, abMid1, caMid1, res - 1, vertices, triangles, ia, iabm, icam, lines)
+				tesselateRecursively(b, bcMid1, abMid1, res - 1, vertices, triangles, ib, ibcm, iabm, lines)
+				tesselateRecursively(c, caMid1, bcMid1, res - 1, vertices, triangles, ic, icam, ibcm, lines)
+			}
+		}
+
+		var mesh = new GL.Mesh({normals: true, colors: false, lines: true});
+
+		mesh.vertices.pushAll(vertices)
+		for (var i = 0; i < 20; i++) {
+			var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
+			tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
+		}
+
+		mesh.normals = mesh.vertices
+		mesh.compile()
+		return mesh
+
+	}
 
 // ### GL.Mesh.load(json[, options])
 //
@@ -1110,27 +1253,25 @@ var GL = (function() {
 		fragmentSource = followScriptTagById(fragmentSource);
 
 		// Headers are prepended to the sources to provide some automatic functionality.
-		var header = '\
-    uniform mat3 gl_NormalMatrix;\
-    uniform mat4 gl_ModelViewMatrix;\
-    uniform mat4 gl_ProjectionMatrix;\
-    uniform mat4 gl_ModelViewProjectionMatrix;\
-    uniform mat4 gl_ModelViewMatrixInverse;\
-    uniform mat4 gl_ProjectionMatrixInverse;\
-    uniform mat4 gl_ModelViewProjectionMatrixInverse;\
-  ';
-		var vertexHeader = header + '\
-    attribute vec4 gl_Vertex;\
-    attribute vec4 gl_TexCoord;\
-    attribute vec3 gl_Normal;\
-    attribute vec4 gl_Color;\
-    vec4 ftransform() {\
-      return gl_ModelViewProjectionMatrix * gl_Vertex;\
-    }\
-  ';
-		var fragmentHeader = '\
-    precision highp float;\
-  ' + header;
+		var header = `
+	uniform mat3 gl_NormalMatrix;
+	uniform mat4 gl_ModelViewMatrix;
+	uniform mat4 gl_ProjectionMatrix;
+	uniform mat4 gl_ModelViewProjectionMatrix;
+	uniform mat4 gl_ModelViewMatrixInverse;
+	uniform mat4 gl_ProjectionMatrixInverse;
+	uniform mat4 gl_ModelViewProjectionMatrixInverse;
+`
+		var vertexHeader = header + `
+	attribute vec4 gl_Vertex;
+	attribute vec4 gl_TexCoord;
+	attribute vec3 gl_Normal;
+	attribute vec4 gl_Color;
+	vec4 ftransform() {
+		return gl_ModelViewProjectionMatrix * gl_Vertex;
+	}
+`
+		var fragmentHeader = `  precision highp float;` + header;
 
 		// Check for the use of built-in matrices that require expensive matrix
 		// multiplications to compute, and record these in `usedMatrices`.
@@ -1203,8 +1344,9 @@ var GL = (function() {
 	}
 
 	function isArray(obj) {
-		var str = Object.prototype.toString.call(obj);
-		return str == '[object Array]' || str == '[object Float32Array]' || str == '[object Float64Array]';
+		var type = typeof obj
+		//console.log(type, type.toString(), obj.toString(), obj, Object.prototype.toString.apply(obj))
+		return obj.constructor == Array || Float32Array == obj.constructor || Float64Array == obj.constructor
 	}
 
 	function isNumber(obj) {
@@ -1226,7 +1368,7 @@ var GL = (function() {
 			for (var name in uniforms) {
 				var types = ["FLOAT", "FLOAT_MAT2", "FLOAT_MAT3", "FLOAT_MAT4", "FLOAT_VEC2", "FLOAT_VEC3", "FLOAT_VEC4", "INT", "INT_VEC2", "INT_VEC3", "INT_VEC4", "UNSIGNED_INT"]
 				var location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name);
-				NLA.assert("undefined" != typeof location )
+				NLA.assert(!!location )
 				if (!location) continue;
 				this.uniformLocations[name] = location;
 				var value = uniforms[name];
@@ -1281,9 +1423,10 @@ var GL = (function() {
 		// (and either add indices to `lines` or call `computeWireframe()`) to draw the
 		// mesh in wireframe.
 		draw: function(mesh, mode, start, count) {
-			this.drawBuffers(mesh.vertexBuffers,
-				mesh.indexBuffers[mode == gl.LINES ? 'lines' : 'triangles'],
-				arguments.length < 2 ? gl.TRIANGLES : mode, start, count);
+			assert(mesh.hasBeenCompiled, 'mesh.hasBeenCompiled')
+			mode = mode || 'TRIANGLES'
+			assert(GL.drawModes.includes(mode), 'GL.drawModes.includes(mode) ' + mode)
+			this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[mode], gl[mode], start, count);
 		},
 
 		// ### .drawBuffers(vertexBuffers, indexBuffer, mode)
@@ -1295,6 +1438,7 @@ var GL = (function() {
 		// like `gl.TRIANGLES` or `gl.LINES`. This method automatically creates and caches
 		// vertex attribute pointers for attributes as needed.
 		drawBuffers: function(vertexBuffers, indexBuffer, mode, start, count) {
+			assert(GL.drawModes.map(m => gl[m]).includes(mode), 'GL.drawModes.map(m => gl[m]).includes(mode) ' + mode)
 			// Only construct up the built-in matrices we need for this shader.
 			var used = this.usedMatrices;
 			var MVM = gl.modelviewMatrix;
@@ -1333,7 +1477,8 @@ var GL = (function() {
 					console.log("caught")
 				}
 
-				length = buffer.buffer.length / buffer.buffer.spacing;
+				// TODO: uuuh
+				length = buffer.buffer.count
 			}
 
 			// Disable unused attribute pointers.
@@ -1355,15 +1500,15 @@ var GL = (function() {
 					if (start + count > length) {
 						throw new Error("invalid")
 					}
-					//console.log("drawArrays", mode, 0, length);
-					gl.drawArrays(mode, start || 0, count || length);
+					//console.log("drawArrays", mode, start || 0, count || length);
+					gl.drawArrays(mode, start || 0, count || length)
 				}
 			}
 
 			return this;
 		}
 	};
-
+	GL.drawModes = ['POINTS', 'LINES', 'LINE_STRIP', 'LINE_LOOP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN']
 // src/texture.js
 // Provides a simple wrapper around WebGL textures that supports render-to-texture.
 

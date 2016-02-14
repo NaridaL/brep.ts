@@ -307,7 +307,7 @@ if (!NLA.Vector3) {
             }
         },
 
-        intersectWithPlane: function (plane) {
+        intersectionWithPlane: function (plane) {
             // plane: plane.normal * p = plane.w
             // line: p=line.point + lambda * line.dir1
             var lambda = (plane.w - plane.normal.dot(this.anchor)) / plane.normal.dot(this.dir1);
@@ -340,7 +340,10 @@ if (!NLA.Vector3) {
 		    var closestpoint = this.anchor.plus(this.dir1.times(t));
 		    return closestpoint;
 	    },
-
+		projectedOnPlane: function (plane) {
+			assert(plane instanceof P3)
+			return L3(plane.projectedPoint(this.anchor), plane.projectedVector(this.dir1).normalized())
+		}
 
     }
 	NLA.addTransformationMethods(L3.prototype)

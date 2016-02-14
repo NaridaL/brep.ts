@@ -10,7 +10,6 @@ window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 	window[propertyName] = Math[propertyName];
 });
 var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3
-var DEBUG = true
 
 var globalId = 0;
 function Point(x, y) {
@@ -941,6 +940,19 @@ CustomPlane.prototype.distanceTo = function (line) {
 		console.log(e);
 	}
 }
+CustomPlane.forPlane = function (plane, color, name) {
+	var p = P3(plane.normal, plane.w, CustomPlane.prototype)
+	p.up = plane.normal.getPerpendicular().normalized()
+	p.right = p.up.cross(p.normal)
+	p.upStart = -500
+	p.upEnd = 500
+	p.rightStart = -500
+	p.rightEnd = 500
+	p.color = color || NLA.randomColor()
+	p.id = globalId++
+	p.name = name
+	return p;
+}
 
 var PlaneDefinition = function() {
 
@@ -1094,7 +1106,7 @@ function renderColor(mesh, color, mode) {
 function renderColorLines(mesh, color) {
 	singleColorShader.uniforms({
 		color: rgbToVec4(color)
-	}).draw(mesh, gl.LINES);
+	}).draw(mesh, 'LINES');
 }
 var TEXT_TEXTURE_HEIGHT = 128;
 function renderText(string, color) {
@@ -1158,17 +1170,17 @@ function paintScreen () {
 				var faceTriangleIndexes = brepMesh.faceIndexes.get(face)
 				lightingShader.uniforms({
 					color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.contains(face) ? 0x00ff45 : COLORS.RD_FILL))
-				}).draw(brepMesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
+				}).draw(brepMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count);
 				/*
 				singleColorShader.uniforms({
 					color: rgbToVec4(0x0000ff)
-				}).draw(brepMesh, gl.LINES);
+				}).draw(brepMesh, 'LINES');
 				*/
 			}
 			gl.projectionMatrix.m[11] -= 1 / (1 << 23) // prevent Z-fighting
 			singleColorShader.uniforms({
 				color: rgbToVec4(COLORS.RD_STROKE)
-			}).draw(brepMesh, gl.LINES);
+			}).draw(brepMesh, 'LINES');
 			gl.projectionMatrix.m[11] += 1 / (1 << 23) // prevent Z-fighting
 		}
 		gl.popMatrix();
@@ -1208,7 +1220,7 @@ function setupCamera() {
 	//gl.perspective(70, gl.canvas.width / gl.canvas.height, 0.1, 1000);
 	var lr = gl.canvas.width / 2 / zoomFactor
 	var bt = gl.canvas.height / 2 / zoomFactor
-	gl.ortho(-lr, lr, -bt, bt, -1e6, 1e6)
+	gl.ortho(-lr, lr, -bt, bt, -1e5, 1e5)
 	gl.lookAt(eyePos, eyeFocus, eyeUp)
 	gl.matrixMode(gl.MODELVIEW)
 }
@@ -1223,7 +1235,7 @@ function drawPlanes() {
 
 		shader.uniforms({
 			color: rgbToVec4(plane.color)
-		}).draw(xyLinePlaneMesh, gl.LINES)
+		}).draw(xyLinePlaneMesh, 'LINES')
 
 		gl.popMatrix()
 	})
@@ -1475,7 +1487,7 @@ var main = function () {
 		var sketch = currentSketch
 		console.log("mouseLine", getMouseLine(e).toString(), "mode", mode);
 		if (mode == "addsegments") {
-			var intersection = mouseLine.intersectWithPlane(sketch.plane)
+			var intersection = mouseLine.intersectionWithPlane(sketch.plane)
 			var sketchCoords = sketch.worldToSketchMatrix.transformPoint(intersection)
 			if (intersection == null) {
 				return;
@@ -1509,7 +1521,7 @@ var main = function () {
 				modeClickCallback(hoverHighlight)
 			}
 		} else {
-			var intersection = mouseLine.intersectWithPlane(sketch.plane)
+			var intersection = mouseLine.intersectionWithPlane(sketch.plane)
 			relPoss = new Map()
 			if(hoverHighlight != null) {
 				if (intersection && !GL.keys.SHIFT) {
@@ -1535,7 +1547,7 @@ var main = function () {
 		// try {
 		var mouseLine = getMouseLine(e);
 		var sketch = currentSketch
-		var intersection = sketch.plane && mouseLine.intersectWithPlane(sketch.plane)
+		var intersection = sketch.plane && mouseLine.intersectionWithPlane(sketch.plane)
 		if (mode == "addsegments") {
 			if (!intersection) {
 				return;
@@ -1660,7 +1672,7 @@ var main = function () {
 				paintScreen();
 			}
 			if (e.buttons & 1) {
-				var intersection = sketch.plane && mouseLine.intersectWithPlane(sketch.plane)
+				var intersection = sketch.plane && mouseLine.intersectionWithPlane(sketch.plane)
 				if (!intersection) {
 					return;
 				}
@@ -1699,7 +1711,7 @@ var main = function () {
 		mode = "";
 	}
 }
-var eyePos = V3(0, 0, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Y;
+var eyePos = V3(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z;
 function getMouseLine(pos) {
 	var ndc1 = V3(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 0);
 	var ndc2 = V3(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 1);
@@ -1709,15 +1721,16 @@ function getMouseLine(pos) {
 	var dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s);
 	return L3.anchorDirection(s, dir);
 }
-function rotationMesh(vertices, axis, total, count, close) {
-	var mesh = new GL.Mesh({normals: false})
+function rotationMesh(vertices, lineAxis, totalAngle, count, close, normals) {
+	var mesh = new GL.Mesh({normals: !!normals})
 	var vc = vertices.length, vTotal = vc * count
 
 	for (var i = 0; i < count; i++) {
-		var angle = total / count * i
+		var angle = totalAngle / count * i
 		var m = M4()
-		M4.rotationLine(axis.anchor, axis.dir1, angle, m)
+		M4.rotationLine(lineAxis.anchor, lineAxis.dir1, angle, m)
 		Array.prototype.push.apply(mesh.vertices, m.transformedPoints(vertices))
+		normals && Array.prototype.push.apply(mesh.normals, m.transformedVectors(normals))
 
 		// add triangles
 		for (var j = 0; j < vc - 1; j++) {
@@ -1726,6 +1739,7 @@ function rotationMesh(vertices, axis, total, count, close) {
 		}
 	}
 
+	//TODO: make sure normals dont need to be adjusted
 	mesh.compile()
 	return mesh
 }

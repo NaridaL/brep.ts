@@ -1,5 +1,18 @@
+
 "use strict";
 var NLA = {}
+
+NLA.assertVectors = function () {
+	if (NLA.DEBUG) {
+		for (var i = 0; i < arguments.length; i++) {
+			if (!(arguments[i] instanceof NLA.Vector3 || arguments[i] instanceof NLA.Vector)) {
+				// Arrays.prototype.slice.call is inefficient, but it doesn't matter here
+				throw new Error("NLA.assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i]);
+			}
+		}
+	}
+	return true
+}
 NLA.PRECISION = 1 / (1 << 27)
 console.log("NLA.PRECISION", NLA.PRECISION)
 /**
@@ -10,11 +23,16 @@ console.log("NLA.PRECISION", NLA.PRECISION)
 NLA.DEBUG = true
 NLA.isZero = (x) => Math.abs(x) < NLA.PRECISION
 NLA.isZero2 = (x, precision) => Math.abs(x) < precision
-NLA.equals = (x, y) => Math.abs(x - y) < NLA.PRECISION
+NLA.equals = (x, y) => Math.abs(x - y) <= NLA.PRECISION
+NLA.lt = (x, y) => x + NLA.PRECISION < y
+NLA.gt = (x, y) => x > y + NLA.PRECISION
+NLA.le = (x, y) => x <= y + NLA.PRECISION
+NLA.ge = (x, y) => x + NLA.PRECISION >= y
 NLA.equals2 = (x, y, precision) => Math.abs(x - y) < precision
 NLA.eqAngle = (x, y) => NLA.zeroAngle(x - y)
 NLA.zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA.PRECISION) % (2 * Math.PI) < 2 * NLA.PRECISION
 NLA.snapTo = (x, to) => Math.abs(x - to) < NLA.PRECISION ? to : x
+NLA.canonAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 var COLORS = {
 	RD_FILL:0x9EDBF9,
 	RD_STROKE:0x77B0E0,
@@ -72,17 +90,6 @@ NLA.assert = function (value, message) {
 	if (NLA.DEBUG && !value) {
 		throw new Error("NLA.assert failed: " + message);
 	}
-	return true
-}
-NLA.assertVectors = function () {
-    if (NLA.DEBUG) {
-        for (var i = 0; i < arguments.length; i++) {
-            if (!(arguments[i] instanceof NLA.Vector3 || arguments[i] instanceof NLA.Vector)) {
-                // Arrays.prototype.slice.call is inefficient, but it doesn't matter here
-                throw new Error("NLA.assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i]);
-            }
-        }
-    }
 	return true
 }
 NLA.mod = function (a, b) {
@@ -291,7 +298,17 @@ NLA.CustomMap.prototype = {
 NLA.CustomSet.prototype.values = NLA.CustomSet.prototype.entries
 NLA.CustomSet.prototype[Symbol.iterator] = NLA.CustomSet.prototype.entries
 NLA.CustomSet.prototype.keys = NLA.CustomSet.prototype.entries
-
+NLA.randomColor = function () {
+	return Math.floor(Math.random() * 0x1000000)
+}
+NLA.mapAdd = function (map, key, val) {
+	var list = map.get(key)
+	if (list) {
+		list.push(val)
+	} else {
+		map.set(key, [val])
+	}
+}
 // Add several convenience methods to the classes that support a transform() method:
 NLA.addTransformationMethods = function (obj) {
 	NLA.addOwnProperties(obj, NLA.tranformablePrototype)
@@ -300,6 +317,9 @@ String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
 var ARRAY_UTILITIES = {
+	pushAll: function (arr) {
+		Array.prototype.push.apply(this, arr)
+	},
 	copyStep: function(src,sstart,sstep, dst,dstart,dstep,count) {
 		var srcIndex = sstart + count * sstep;
 		var dIndex = dstart + count * dstep;
@@ -328,17 +348,27 @@ var ARRAY_UTILITIES = {
 	max: function() {
 		return Math.max.apply(null, this);
 	},
-	withMin: function (f) {
-		return this.reduce((prev, curr) => {
-			var val = f(curr)
-			return val < prev.val ? {val: val, el: curr} : prev
-		}, {val: Infinity, el: undefined}).el
+	indexWithMax: function (f) {
+		var i = this.length, result = -1, maxVal = -Infinity
+		while (i--) {
+			var val = f(this[i])
+			if (val > maxVal) {
+				maxVal = val
+				result = i
+			}
+		}
+		return result
 	},
 	withMax: function (f) {
-		return this.reduce((prev, curr) => {
-			var val = f(curr)
-			return val > prev.val ? {val: val, el: curr} : prev
-		}, {val: Infinity, el: undefined}).el
+		var i = this.length, result = undefined, maxVal = -Infinity
+		while (i--) {
+			var el = this[i], val = f(el)
+			if (val > maxVal) {
+				maxVal = val
+				result = el
+			}
+		}
+		return result
 	},
 	/**
 	 Returns the sum of the absolute values of the components of this vector.
@@ -360,9 +390,11 @@ var ARRAY_UTILITIES = {
 		}
 		return result
 	},
+	/*
 	contains: function (o) {
 		return -1 != this.indexOf(o)
 	},
+	*/
 	isEmpty: function () {
 		return 0 == this.length
 	},
@@ -389,8 +421,53 @@ var ARRAY_UTILITIES = {
 		} else {
 			this.push(o)
 		}
+	},
+	binaryIndexOf: function(searchElement, cmp) {
+
+		var minIndex = 0;
+		var maxIndex = this.length - 1;
+		var currentIndex;
+		var currentElement;
+
+		while (minIndex <= maxIndex) {
+			currentIndex = (minIndex + maxIndex) / 2 | 0;
+			currentElement = this[currentIndex];
+
+			if (cmp(currentElement, searchElement) < 0) {
+				minIndex = currentIndex + 1;
+			}
+			else if (cmp(currentElement, searchElement) > 0) {
+				maxIndex = currentIndex - 1;
+			}
+			else {
+				return currentIndex;
+			}
+		}
+
+		return -1;
+	},
+	binaryInsert: function (el, cmp) {
+		cmp = cmp || NLA.minus
+		var minIndex = 0
+		var maxIndex = this.length
+		var currentIndex
+		var currentElement
+
+		while (minIndex < maxIndex) {
+			currentIndex = ~~((minIndex + maxIndex) / 2)
+			currentElement = this[currentIndex]
+
+			if (cmp(currentElement, el) < 0) {
+				minIndex = currentIndex + 1
+			} else {
+				maxIndex = currentIndex
+			}
+		}
+
+		this.splice(minIndex, 0, el)
 	}
 }
+NLA.minus = (a, b) => a - b
 for (var key in ARRAY_UTILITIES) {
 	NLA["array" + key.capitalizeFirstLetter()] = function (arr, ...rest) {
 		ARRAY_UTILITIES[key].apply(arr, rest)
@@ -410,7 +487,8 @@ NLA.arrayCopyBlocks = function (src,sstart,sstep, dst,dstart,dstep,blockSize, bl
 }
 NLA.arrayRange = function (start, end, step) {
 	NLA.assertNumbers(start, step)
-	var result = new Array(Math.ceil((this.length - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
+	console.log(Math.ceil((end - start) / step))
+	var result = new Array(Math.ceil((end - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
 	var index = 0
 	for (var i = 0; i < end; i += step) {
 		result[index++] = i
@@ -659,10 +737,31 @@ NLA.addOwnProperties = function (target, props) {
 			if (target.hasOwnProperty(key)) {
 				console.warn("target ", target, " already has property ", key)
 			}
-			target[key] = props[key]
+			Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(props, key))
 		}
 	}
 }
+NLA.defineClass = function (name, parent, constructor, props, statics) {
+	assert('function' == typeof constructor, "'function' == typeof constructor")
+	constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
+	constructor.prototype.constructor = constructor
+	constructor.prototype.name = name
+	NLA.addOwnProperties(constructor, statics)
+	return constructor
+}
+NLA.defineObject = function (prot, props) {
+	var o = Object.create(prot || NLA.baseObject)
+	NLA.addOwnProperties(o, props)
+	return o
+}
+NLA.baseObject = NLA.defineObject(Object.prototype, {
+	toSource: function () {
+		return this.toString == Object.prototype.toString ? Object.prototype.toSource.apply(this) : this.toString()
+	},
+	get ss() {
+		return this.toSource()
+	}
+})
 NLA.forceFinite = function(val) {
 	val = parseFloat(val.replace(',', '.').replace(/^[^0-9,\.\-]/, ''))
 	return Number.isFinite(val) ? val : 0
@@ -939,7 +1038,7 @@ NLA.Matrix.prototype = {
 			var maxAbsValue = 0
 			var pivotRowIndex = colIndex
 			for (var rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
-				console.log("row ", rowIndex, "col ", colIndex);
+				//console.log("row ", rowIndex, "col ", colIndex);
 				var xi = this.e(colIndex, colIndex)
 				var xk = this.e(rowIndex, colIndex)
 				if (xk == 0) {
@@ -956,12 +1055,12 @@ NLA.Matrix.prototype = {
 					this.setEl(colIndex, col2, x1)
 					this.setEl(rowIndex, col2, x2)
 				}
-				console.log("r ", r, "c ", c, "s ", s, "sigma", sigma(c, s));
-				console.log(this.toString(),"cs\n", matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
+				//console.log("r ", r, "c ", c, "s ", s, "sigma", sigma(c, s));
+				//console.log(this.toString(),"cs\n", matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
 				qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed)
 			}
 		}
-		console.log(qTransposed.transposed().toString(), this.toString(), qTransposed.transposed().times(this).toString())
+		//console.log(qTransposed.transposed().toString(), this.toString(), qTransposed.transposed().times(this).toString())
 		return {Q: qTransposed.transposed(), R: this}
 	},
     isPermutation: function () {
@@ -1069,7 +1168,7 @@ NLA.Matrix.prototype = {
     },
 	rank: function () {
 		var {Q, R} = this.qrDecompositionGivensRotation()
-		console.log(R.toString())
+		//console.log(R.toString())
 		var rowIndex = this.height
 		while (rowIndex-- && R.row(rowIndex).isZero()) {}
 		return rowIndex + 1
@@ -1452,6 +1551,9 @@ NLA.tranformablePrototype = (function() {
 	}
 	prot.eulerZXZ = function(alpha, beta, gamma) {
 		return this.transform(NLA.Matrix4x4.eulerZXZ(alpha, beta, gamma))
+	}
+	prot.project = function(plane) {
+		return this.transform(NLA.Matrix4x4.projection(plane))
 	}
 	return prot
 })();

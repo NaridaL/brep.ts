@@ -2,10 +2,12 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>BREP.js Test Suite</title>
+	<title>BREP.js</title>
 	<script type="text/javascript">
 	</script>
 
+	<script type="text/javascript" src="MooTools-Core-1.6.0.js"></script>
+	<script type="text/javascript" src="shaders.js"></script>
 	<script type="text/javascript" src="NLA.js"></script>
 	<script type="text/javascript" src="earcut.dev.js"></script>
 	<script type="text/javascript" src="Vector3.js"></script>
@@ -15,14 +17,13 @@
 	<script type="text/javascript" src="lightgl.js"></script>
 	<script type="text/javascript" src="js3d.js"></script>
 	<script type="text/javascript" src="brep.js"></script>
+	<script type="text/javascript" src="sphereTriangulation.js"></script>
 	<script type="text/javascript" src="brep2.js"></script>
 
-	<link rel="stylesheet" href="qunit-1.20.0.css">
+	<script type="text/javascript">
+		window.onload = loadup;</script>
 </head>
 <body>
-	<div id="qunit"></div>
-	<div id="qunit-fixture"></div>
-	<script src="qunit-1.20.0.js"></script>
-	<script type="text/javascript" src="brep2tests.js"></script>
+<canvas id="testcanvas" width="1000px" height="500px"></canvas>
 </body>
 </html>

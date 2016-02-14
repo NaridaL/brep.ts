@@ -1,5 +1,5 @@
 
-var assert = NLA.assert, V3 = NLA.Vector3, M4 = NLA.Matrix4x4
+var V3 = NLA.Vector3, M4 = NLA.Matrix4x4
 function AABB(min = V3.INF, max = V3.INF.negated()) {
 	assert(min instanceof V3, "min instanceof V3" + min.toSource())
 	assert(max instanceof V3)

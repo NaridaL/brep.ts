@@ -8,9 +8,9 @@
 /**
  * Created by aval on 21/12/2015.
  */
-var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3, cl = console.log, assert = NLA.assert, PI = Math.PI
+var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3
 
-var golden = (1 + Math.sqrt(5)) / 2, u = V3(1, golden, 0).unit(), s = u.x, t = u.y
+var golden = (1 + Math.sqrt(5)) / 2, u = V3(1, golden, 0).normalized(), s = u.x, t = u.y
 var vertices = [
 	V3(-s,  t,  0),
 	V3( s,  t,  0),
@@ -58,7 +58,7 @@ function genFace(a, b, c, res, vertices, triangles) {
 	var totalAngle = a.angleTo(b)
 	var startIndex = vertices.length
 	var ab = b.minus(a), ac = c.minus(a)
-	var center = V3.add(a, b, c).div(3), center1 = center.unit()
+	var center = V3.add(a, b, c).div(3), center1 = center.normalized()
 
 	// area of sphere triangle = sphere area / 20 = 4/ 20 * PI * R² (R == 1)
 	// area of dedocahedron face sqrt(3) / 4 * a²
@@ -81,8 +81,8 @@ function genFace(a, b, c, res, vertices, triangles) {
 			distFactor = distFactor * weight + (1 - weight)
 			console.log(i, j, "dist",dist, distFactor, s, t, Math.min(s * Math.sin(Math.PI * 2 / 3), t * Math.sin(Math.PI * 2 / 3)) * 3)
 			var heightOffset = (-dist * dist / 2 + (1 - center.length())) * weight
-			var v = V3.add(center, ab.times(s0 * distFactor), ac.times(t0 * distFactor), center1.times(heightOffset)).unit()
-			//var v = V3.add(center, ab.times(s0), ac.times(t0)).unit()
+			var v = V3.add(center, ab.times(s0 * distFactor), ac.times(t0 * distFactor), center1.times(heightOffset)).normalized()
+			//var v = V3.add(center, ab.times(s0), ac.times(t0)).normalized()
 			vertices.push([v.x, v.y, v.z])
 		}
 	}
@@ -101,7 +101,7 @@ function st(res) {
 	var mesh = new GL.Mesh({ normals: false, colors: false, lines:false});
 	var a = V3(1, 0, 0), b = V3(0, 1, 0), c = V3(0, 0, 1)
 	//genFace(a, b, c, res, mesh.vertices, mesh.triangles)
-
+	mesh.vertices.push(vertices)
 	for (var i = 0; i < 20; i++) {
 		var [a, b, c] = triangles.slice(i * 3, i * 3 + 3).map(index => vertices[index])
 		console.log(triangles.slice(i * 3, i * 3 + 3).map(index => vertices[index]))
@@ -114,39 +114,37 @@ function st(res) {
 	return mesh
 }
 
-function tesselateRecursively(a, b, c, res, vertices, triangles, normals, ia, ib, ic) {
+function tesselateRecursively(a, b, c, res, vertices, triangles, ia, ib, ic, lines) {
 	if (0 == res) {
 		triangles.push([ia, ib, ic])
+		if (ia < ib) lines.push(ia, ib)
+		if (ib < ic) lines.push(ib, ic)
+		if (ic < ia) lines.push(ic, ia)
 	} else {
-		var abMid1 = a.plus(b).unit(), bcMid1 = b.plus(c).unit(), caMid1 = c.plus(a).unit()
+		var abMid1 = a.plus(b).normalized(), bcMid1 = b.plus(c).normalized(), caMid1 = c.plus(a).normalized()
 		var iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
-		vertices.push(abMid1.els(), bcMid1.els(), caMid1.els())
-		normals.push(abMid1.els(), bcMid1.els(), caMid1.els())
-		tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, normals, iabm, ibcm, icam)
-		tesselateRecursively(a, abMid1, caMid1, res - 1, vertices, triangles, normals, ia, iabm, icam)
-		tesselateRecursively(b, bcMid1, abMid1, res - 1, vertices, triangles, normals, ib, ibcm, iabm)
-		tesselateRecursively(c, caMid1, bcMid1, res - 1, vertices, triangles, normals, ic, icam, ibcm)
+		vertices.push(abMid1, bcMid1, caMid1)
+		tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, iabm, ibcm, icam, lines)
+		tesselateRecursively(a, abMid1, caMid1, res - 1, vertices, triangles, ia, iabm, icam, lines)
+		tesselateRecursively(b, bcMid1, abMid1, res - 1, vertices, triangles, ib, ibcm, iabm, lines)
+		tesselateRecursively(c, caMid1, bcMid1, res - 1, vertices, triangles, ic, icam, ibcm, lines)
 	}
 }
-function st2(res) {
-	var mesh = new GL.Mesh({ normals: true, colors: false, lines:false});
+function sphereMesh(subdivisions) {
+	var mesh = new GL.Mesh({normals: true, colors: false, lines: true});
 	var a = V3(1, 0, 0), b = V3(0, 1, 0), c = V3(0, 0, 1)
 	var subdividecount = 3
 
-	//mesh.vertices.push(a.els(), b.els(), c.els())
+	//mesh.vertices.push(a, b, c)
 	//tesselateRecursively(a, b, c, 1, mesh.vertices, mesh.triangles, 0, 1, 2)
 
+	mesh.vertices.pushAll(vertices)
 	for (var i = 0; i < 20; i++) {
-		var [a, c, b] = triangles.slice(i * 3, i * 3 + 3).map(index => vertices[index])
-		var ia = mesh.vertices.length
-		console.log("ia", ia, 4098 * i)
-		mesh.vertices.push(a.els(), b.els(), c.els())
-		tesselateRecursively(a, c, b, res, mesh.vertices, mesh.triangles, mesh.normals, ia, ia + 2, ia + 1)
+		var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
+		tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
 	}
 
 	mesh.normals = mesh.vertices
-	console.log(mesh.toSource())
-	mesh.computeWireframe()
 	mesh.compile()
 	return mesh
 }
@@ -187,33 +185,6 @@ function st2(res) {
 
 
 
-
-
-
-//var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
-var planes = [
-	CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xff0000),
-	CustomPlane(V3.ZERO, V3.X, V3.Z, -500, 500, -500, 500, 0x00ff00),
-	CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0x0000ff),
-	//	sketchPlane
-];
-
-function drawPlanes() {
-	planes.forEach(function (plane) {
-		gl.pushMatrix();
-		gl.multMatrix(M4.forSys(plane.right, plane.up, plane.normal));
-		gl.translate(plane.rightStart, plane.upStart, 0);
-		gl.scale(plane.rightEnd - plane.rightStart, plane.upEnd - plane.upStart, 1);
-
-		var shader = singleColorShader;
-
-		shader.uniforms({
-			color: rgbToArr4(plane.color)
-		}).draw(xyLinePlaneMesh, gl.LINES);
-
-		gl.popMatrix();
-	});
-}
 // abcd can be in any order
 var singleColorShader, textureColorShader, singleColorShaderHighlight, arcShader, arcShader2,xyLinePlaneMesh,gl,cubeMesh,lightingShader
 
@@ -316,7 +287,7 @@ window.loadup = function () {
 	paintScreen();
 });
 
-	aMesh = st2(3)
+	aMesh = sphereMesh(3)
 
 	//pointMesh = st()
 	paintScreen();

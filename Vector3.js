@@ -216,7 +216,7 @@ if (!NLA) {
             return V3.create(f(this.x), f(this.y), f(this.z))
         },
         toString: function (roundFunction) {
-	        roundFunction = roundFunction || (v => v)//((v) => +v.toFixed(8))
+	        roundFunction = roundFunction || ((v) => +v.toFixed(3))
             return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")" //+ this.id
         },
         angleTo: function (vector) {
@@ -274,13 +274,13 @@ if (!NLA) {
 		    return NLA.equals(this.x, obj.x) && NLA.equals(this.y, obj.y) && NLA.equals(this.z, obj.z)
 	    },
 	    /**
-         Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector.
-         Throws a NLA.DebugError if this has a length of 0.
-         */
-        normalized: function () {
-            assert(!this.isZero(), "cannot normalize zero vector")
-            return this.div(this.length())
-        },
+	     Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector.
+	     Throws a NLA.DebugError if this has a length of 0.
+	     */
+	    normalized: function () {
+		    assert(!this.isZero(), "cannot normalize zero vector")
+		    return this.div(this.length())
+	    },
 	    toLength: function (newLength) {
 		    assertNumbers(newLength)
 		    return this.times(newLength / this.length())
@@ -299,7 +299,7 @@ if (!NLA) {
             // https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
             return b.times(this.dot(b) / b.dot(b))
         },
-        rejectedOn: function (b) {
+        rejectedFrom: function (b) {
 	        assert(b instanceof V3, "b instanceof V3")
             // https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
             return this.minus(b.times(this.dot(b) / b.dot(b)))
@@ -341,7 +341,7 @@ if (!NLA) {
 		    return m4.transformPoint(this)
 	    },
 	    withElement: function (dim, el) {
-		    assert(["x", "y", "z"].contains(dim), ""+dim)
+		    assert(["x", "y", "z"].includes(dim), ""+dim)
 		    assertNumbers(el)
 		    if ("x" == dim) {
 			    return V3.create(el, this.y, this.z)
@@ -433,7 +433,7 @@ if (!NLA) {
     V3.fromFunction = function (f) {
         return V3.create(f(0), f(1), f(2))
     }
-
+	V3.ss = p => p.ss
     V3.min = function(a, b) {
         return V3.create(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z))
     }

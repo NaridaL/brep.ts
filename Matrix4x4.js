@@ -63,7 +63,7 @@ if (!NLA.Vector3) {
         // Transforms the vector as a point with a w coordinate of 1. This
         // means translations will have an effect, for example.
 	    transformPoint: function(v) {
-		    assert(v instanceof V3, "v instanceof V3")
+		    assertVectors(v)
 		    var m = this.m;
 		    var v0 = v.x;
 		    var v1 = v.y;
@@ -82,7 +82,7 @@ if (!NLA.Vector3) {
         // Transforms the vector as a vector with a w coordinate of 0. This
         // means translations will have no effect, for example.
         transformVector: function(v) {
-	        assert(v instanceof V3, "v instanceof V3")
+	        assertVectors(v)
             var m = this.m;
             return V3.create(
                 m[0] * v.x + m[1] * v.y + m[2] * v.z,
@@ -129,52 +129,6 @@ if (!NLA.Vector3) {
 				&& (1 >= !NLA.isZero($[8]) + !NLA.isZero($[9]) + !NLA.isZero($[10]))
 		},
 
-        // Multiply a NLA.V3D (interpreted as 3 column, 1 row) by this matrix
-        // (result = v*M)
-        // Fourth element is taken as 1
-        leftMultiplyVector3: function(v) {
-            var v0 = v.x;
-            var v1 = v.y;
-            var v2 = v.z;
-            var v3 = 1;
-            var x = v0 * this.m[0] + v1 * this.m[4] + v2 * this.m[8] + v3 * this.m[12];
-            var y = v0 * this.m[1] + v1 * this.m[5] + v2 * this.m[9] + v3 * this.m[13];
-            var z = v0 * this.m[2] + v1 * this.m[6] + v2 * this.m[10] + v3 * this.m[14];
-            var w = v0 * this.m[3] + v1 * this.m[7] + v2 * this.m[11] + v3 * this.m[15];
-            // scale such that fourth element becomes 1:
-            return V3.create(x / w, y / w, z / w);
-        },
-
-        // Right multiply the matrix by a NLA.Vector2D (interpreted as 2 row, 1 column)
-        // (result = M*v)
-        // Fourth element is taken as 1
-        rightMultiply1x2Vector: function(v) {
-            var v0 = v.x;
-            var v1 = v.y;
-            var v2 = 0;
-            var v3 = 1;
-            var x = v0 * this.m[ 0] + v1 * this.m[ 1] + v2 * this.m[ 2] + v3 * this.m[ 3];
-            var y = v0 * this.m[ 4] + v1 * this.m[ 5] + v2 * this.m[ 6] + v3 * this.m[ 7];
-            var w = v0 * this.m[12] + v1 * this.m[13] + v2 * this.m[14] + v3 * this.m[15];
-            // scale such that w becomes 1:
-            return new NLA.Vector2D(x / w, y / w);
-        },
-
-        // Multiply a NLA.Vector2D (interpreted as 2 column, 1 row) by this matrix
-        // (result = v*M)
-        // Fourth element is taken as 1
-        leftMultiply1x2Vector: function(v) {
-            var v0 = v.x;
-            var v1 = v.y;
-            var v2 = 0;
-            var v3 = 1;
-            var x = v0 * this.m[0] + v1 * this.m[4] + v2 * this.m[8] + v3 * this.m[12];
-            var y = v0 * this.m[1] + v1 * this.m[5] + v2 * this.m[9] + v3 * this.m[13];
-            var z = v0 * this.m[2] + v1 * this.m[6] + v2 * this.m[10] + v3 * this.m[14];
-            var w = v0 * this.m[3] + v1 * this.m[7] + v2 * this.m[11] + v3 * this.m[15];
-            // scale such that fourth element becomes 1:
-            return new NLA.Vector2D(x / w, y / w);
-        },
 	    isOrthogonal: function () {
 		    var t = M4.temp0, s = M4.temp1
 		    M4.transpose(this, t)
@@ -220,7 +174,7 @@ if (!NLA.Vector3) {
         },
 
 	    /**
-	     * Returns if the matrix has the following form:
+	     * Returns if the matrix has the following form (within NLA.PRECISION):
 	     * a b c 0
 	     * c d e 0
 	     * f g h 0
@@ -232,6 +186,9 @@ if (!NLA.Vector3) {
 			return NLA.equals(1, m[15])
 		        && NLA.isZero(m[12]) && NLA.isZero(m[13]) && NLA.isZero(m[14])
 		        && NLA.isZero(m[3]) && NLA.isZero(m[7]) && NLA.isZero(m[11])
+	    },
+	    isIdentity: function () {
+		    return this.m.every((val, i) => (i / 4 | 0) == (i % 4) ? NLA.equals(1, val) : NLA.isZero(val))
 	    },
 	    toString: function (f) {
 	        f = f || ((v) => v.toFixed(6).replace(/(0|\.)(?=0*$)/g, " ").toString())
@@ -643,9 +600,9 @@ if (!NLA.Vector3) {
         result = result || M4();
         var m = result.m;
 
-        var f = e.minus(c).unit();
-        var s = u.cross(f).unit();
-        var t = f.cross(s).unit();
+        var f = e.minus(c).unit()
+        var s = u.cross(f).unit()
+        var t = f.cross(s).unit()
 
         m[0] = s.x;
         m[1] = s.y;
@@ -779,6 +736,81 @@ if (!NLA.Vector3) {
         m[15] = 1
         return result
     };
+	M4.projection = function (plane, result) {
+		assert(plane instanceof P3, "plane instanceof P3")
+		assert(!result || result instanceof M4, "!result || result instanceof M4")
+		var nx = plane.normal.x;
+		var ny = plane.normal.y;
+		var nz = plane.normal.z;
+		var w = plane.w;
+		result = result || M4()
+		var m = result.m
+
+		/*
+		rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
+		return M4.forSys(
+			V3.X.rejectedFrom(plane.normal),
+			V3.Y.rejectedFrom(plane.normal),
+			V3.Z.rejectedFrom(plane.normal),
+			plane.anchor,
+			result
+		)
+		*/
+
+		m[0] = 1.0 - nx * nx
+		m[1] = -ny * nx
+		m[2] = -nz * nx
+		m[3] = nx * w
+
+		m[4] = -nx * ny
+		m[5] = 1.0 - ny * ny
+		m[6] = -nz * ny
+		m[7] = ny * w
+
+		m[8] = -nx * nz
+		m[9] = -ny * nz
+		m[10] = 1.0 - nz * nz
+		m[11] = nz * w
+
+		m[12] = 0
+		m[13] = 0
+		m[14] = 0
+		m[15] = 1
+
+		return result
+	}
+	M4.lineProjection = function (line, result) {
+		assert(line instanceof L3, line instanceof L3)
+		assert(!result || result instanceof M4, "!result || result instanceof M4")
+		var dx = line.dir1.x, dy = line.dir1.y, dz = line.dir1.z
+		var ax = line.anchor.x, ay = line.anchor.y, az = line.anchor.z
+		result = result || M4()
+		var m = result.m
+
+		/*
+		 projectedOn: return b.times(this.dot(b) / b.dot(b))
+		 */
+
+		m[0] = dx * dx
+		m[1] = dx * dy
+		m[2] = dx * dz
+		m[3] = ax
+
+		m[4] = dy * dx
+		m[5] = dy * dy
+		m[6] = dy * dz
+		m[7] = ay
+
+		m[8] = dz * dx
+		m[9] = dz * dy
+		m[10] = dz * dz
+		m[11] = az
+
+		m[12] = 0
+		m[13] = 0
+		m[14] = 0
+		m[15] = 1
+	}
 	M4.multiplyMultiple = function () {
 		var m4s = arguments
 		if (0 == m4s.length) return M4.identity()

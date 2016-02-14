@@ -3,18 +3,28 @@
  */
 var fragmentShaderLighting= `
 	uniform vec4 color;
+	uniform vec3 camPos;
 	varying vec3 normal;
+	varying vec4 vPosition;
 	void main() {
-		vec3 lightDir = normalize(vec3(-1, -2, -3));
-		float lightIntensity = 0.2 + 0.8 * max(0.0, -dot(lightDir, normalize(normal)));
+		vec3 normal1 = normalize(normal);
+		vec3 lightPos = vec3(100, 200, 400);
+		vec3 lightDir = normalize(vPosition.xyz - lightPos);
+        vec3 reflectionDirection = reflect(lightDir, normal1);
+        vec3 eyeDirection = normalize(camPos.xyz-vPosition.xyz);
+        float uMaterialShininess = 128.0;
+		float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+		float lightIntensity = 0.8 + 0.2 * max(0.0, -dot(lightDir, normal1)) + 0.3*specularLightWeighting;
 		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
 	}
 `
 var vertexShaderLighting = `
 	uniform vec4 color;
 	varying vec3 normal;
+	varying vec4 vPosition;
 	void main() {
 		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+        vPosition = gl_ModelViewMatrix * gl_Vertex;
 		normal = gl_NormalMatrix * gl_Normal;
 	}
 `

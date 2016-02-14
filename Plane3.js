@@ -143,7 +143,7 @@ if (!NLA.Vector3) {
 	    },
 
         intersectionWithLine: function (line) {
-			line.intersectWithPlane(this)
+			line.intersectionWithPlane(this)
         },
 
         intersectionWithPlane: function (plane) {
@@ -188,6 +188,7 @@ if (!NLA.Vector3) {
 		    return x.minus(this.normal.times(x.minus(this.anchor()).dot(this.normal)))
 	    },
 	    projectedVector: function (x) {
+		    // See Vector3.rejectedFrom. Simplified, as this.normal.length() == 1
 		    return x.minus(this.normal.times(x.dot(this.normal)))
 	    },
 
@@ -217,6 +218,7 @@ if (!NLA.Vector3) {
 	    }
 
     }
+	NLA.addTransformationMethods(P3.prototype)
      // X-Y-Z planes
      P3.YZ = P3.ZY = P3(V3.X, 0)
      P3.ZX = P3.XZ = P3(V3.Y, 0)

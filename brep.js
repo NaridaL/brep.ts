@@ -5,28 +5,6 @@
 	 }*/
 	window[propertyName] = Math[propertyName];
 });
-if (!Array.prototype.find) {
-	Array.prototype.find = function(predicate) {
-		if (this === null) {
-			throw new TypeError('Array.prototype.find called on null or undefined');
-		}
-		if (typeof predicate !== 'function') {
-			throw new TypeError('predicate must be a function');
-		}
-		var list = Object(this);
-		var length = list.length >>> 0;
-		var thisArg = arguments[1];
-		var value;
-
-		for (var i = 0; i < length; i++) {
-			value = list[i];
-			if (predicate.call(thisArg, value, i, list)) {
-				return value;
-			}
-		}
-		return undefined;
-	};
-}
 function BREP(vertices, edges, faces, infiniteVolume, source) {
 	this.vertices = vertices;
 	this.edges = edges;
@@ -42,7 +20,7 @@ function BREP(vertices, edges, faces, infiniteVolume, source) {
 	//NLA.DEBUG && assert(V3.areDisjoint(faceVertices()), "V3.areDisjoint(faceVertices())")
 }
 
-var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3, cl = console.log, assert = NLA.assert
+var M4 = NLA.Matrix4x4, V3 = NLA.Vector3, P3 = NLA.Plane3, L3 = NLA.Line3
 BREP.box = function (w, h, d) {
 	/*
 	 6 - 7
@@ -218,8 +196,6 @@ BREP.Face.prototype = {
 		return new BREP.Face(m4.transformedPoints(this.vertices), this.plane.transform(m4), this.name)
 	}
 }
-NLA.addTransformationMethods(V3.prototype)
-NLA.addTransformationMethods(P3.prototype)
 NLA.addTransformationMethods(BREP.Face.prototype)
 NLA.addTransformationMethods(BREP.prototype)
 BREP.prototype.ss = function() {
@@ -254,18 +230,14 @@ BREP.prototype.toMesh = function() {
 	var allValidEdges = [];
 	this.faces.forEach((face) => {
 		//var faceEdges = new Map()
-		var triangleSubIndexes = triangulateFace(face)
+		var triangleSubIndexes = triangulateVertices(face.vertices, face.plane.normal)
 		var vs = face.vertices;
 		for (var i = 0; i < triangleSubIndexes.length; i += 3) {
 			var
 				vi0 = vertexIndex(vs[triangleSubIndexes[i]]),
 				vi1 = vertexIndex(vs[triangleSubIndexes[i + 1]]),
 				vi2 = vertexIndex(vs[triangleSubIndexes[i + 2]]);
-			var dot = V3.normalOnPoints(
-				vs[triangleSubIndexes[i]],
-				vs[triangleSubIndexes[i + 1]],
-				vs[triangleSubIndexes[i + 2]]).dot(face.plane.normal)
-			mesh.triangles.push(dot > 0 ? [vi0, vi1, vi2] : [vi0, vi2, vi1])
+			mesh.triangles.push(vi0, vi1, vi2)
 		}
 		for (var i = 0; i < vs.length; i++) {
 			var i0 = vertexIndex(vs[i]), i1 = vertexIndex(vs[(i + 1) % vs.length]);
@@ -299,7 +271,7 @@ BREP.prototype.toNormalMesh = function() {
 	var faceIndexes = new Map()
 	this.faces.forEach((face) => {
 		//var faceEdges = new Map()
-		var triangleSubIndexes = triangulateFace(face)
+		var triangleSubIndexes = triangulateVertices(face.vertices, face.plane.normal)
 		var vs = face.vertices;
 		var startIndex = mesh.vertices.length
 		faceIndexes.set(face, {start: mesh.triangles.length * 3, count: triangleSubIndexes.length})
@@ -310,14 +282,10 @@ BREP.prototype.toNormalMesh = function() {
 		})
 		for (var i = 0; i < triangleSubIndexes.length; i += 3) {
 			var
-				vi0 = triangleSubIndexes[i],
-				vi1 = triangleSubIndexes[i + 1],
-				vi2 = triangleSubIndexes[i + 2];
-			var dot = V3.normalOnPoints(
-				vs[vi0],
-				vs[vi1],
-				vs[vi2]).dot(face.plane.normal)
-			mesh.triangles.push((dot > 0 ? [vi0, vi1, vi2] : [vi0, vi2, vi1]).map(x => x + startIndex))
+				vi0 = startIndex + triangleSubIndexes[i],
+				vi1 = startIndex + triangleSubIndexes[i + 1],
+				vi2 = startIndex + triangleSubIndexes[i + 2];
+			mesh.triangles.push(vi0, vi1, vi2)
 		}
 		for (var i = 0; i < vs.length; i++) {
 			var i0 = vertexIndex(vs[i]), i1 = vertexIndex(vs[(i + 1) % vs.length]);
@@ -1019,13 +987,32 @@ function testBREP() {
 
 
 
-function triangulateFace(face) {
-	var coords = [['y', 'z'], ['z', 'x'], ['x', 'y']][face.plane.normal.absMaxDim()]
-	var contour = [].concat.apply([], face.vertices.map((vertex) => [vertex[coords[0]], vertex[coords[1]]]))
-	return earcut(contour, [])
+function triangulateVertices(vertices, normal, holeVertices) {
+	var absMaxDim = normal.absMaxDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
+	var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
+	var contour = new Array(vertices.length * 2 + (holeVertices && holeVertices.length * 2 || 0))
+	var i = vertices.length
+	while (i--) {
+		contour[i * 2    ] = vertices[i][coord0] * factor
+		contour[i * 2 + 1] = vertices[i][coord1]
+	}
+	var holeStarts = []
+	if (holeVertices) {
+		i = holeVertices.length
+		var start = vertices.length * 2
+		while (i--) {
+			contour[start + i * 2    ] = holeVertices[i][coord0] * factor
+			contour[start + i * 2 + 1] = holeVertices[i][coord1]
+		}
+		holeStarts.push(vertices.length)
+	}
+	if (holeVertices) {
+		console.log('holeStarts', vertices.map(V3.ss), holeVertices.map(V3.ss), holeStarts, contour)
+	}
+	return earcut(contour, holeStarts)
 }
 function isCCW(vertices, normal) {
-	assert(!normal.isZero())
+	assert(!normal.isZero(),'!normal.isZero()')
 	var maxDim = normal.absMaxDim()
 	// order is important, coord0 and coord1 must be set so that coord0, coord1 and maxDim span a right-hand coordinate system
 	var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
@@ -1047,22 +1034,6 @@ var planes = [
 	//	sketchPlane
 ];
 
-function drawPlanes() {
-	planes.forEach(function (plane) {
-		gl.pushMatrix();
-		gl.multMatrix(M4.forSys(plane.right, plane.up, plane.normal));
-		gl.translate(plane.rightStart, plane.upStart, 0);
-		gl.scale(plane.rightEnd - plane.rightStart, plane.upEnd - plane.upStart, 1);
-
-		var shader = singleColorShader;
-
-		shader.uniforms({
-			color: rgbToVec4(plane.color)
-		}).draw(xyLinePlaneMesh, gl.LINES);
-
-		gl.popMatrix();
-	});
-}
 // abcd can be in any order
 BREP.tetrahedron = function (a, b, c, d) {
 	var dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
