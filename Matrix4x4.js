@@ -316,6 +316,7 @@ if (!NLA.Vector3) {
 	    assert(e0 instanceof V3, "e0 instanceof V3")
 	    assert(e1 instanceof V3, "e1 instanceof V3")
 	    assert(!e2 || e2 instanceof V3, "!e2 || e2 instanceof V3")
+	    assert(!origin || origin instanceof V3, "!origin || origin instanceof V3")
 
         e2 = e2 || e0.cross(e1);
 	    origin = origin || V3.ZERO
@@ -324,6 +325,14 @@ if (!NLA.Vector3) {
             e0.y, e1.y, e2.y, origin.y,
             e0.z, e1.z, e2.z, origin.z,
             0,	     0,    0, 1);
+    }
+    M4.forRows = function (n0, n1, n2) {
+	    assertVectors(n0, n1, n2)
+	    return M4(
+		    n0.x, n0.y, n0.z, 0,
+		    n1.x, n1.y, n1.z, 0,
+		    n2.x, n2.y, n2.z, 0,
+		    0,	     0,    0, 1);
     }
 
     // ### GL.Matrix.identity([result])
@@ -401,6 +410,7 @@ if (!NLA.Vector3) {
 
         return result;
     };
+
 
 	/**
 	 * Orthographic/orthogonal projection. Transforms the cuboid with the dimensions X: [left; right] Y: [bottom, top] Z: [near; far]
@@ -736,16 +746,28 @@ if (!NLA.Vector3) {
         m[15] = 1
         return result
     };
-	M4.projection = function (plane, result) {
+	M4.projection = function (plane, dir, result) {
+		// TODO: doc
+		/**
+		 *
+		 var lambda = (plane.w - plane.normal.dot(this.anchor)) / plane.normal.dot(this.dir1);
+		 var point = this.anchor.plus(this.dir1.times(lambda));
+
+		 a + d * (w - n . a) / (nd)
+		 a + dw - d * na
+		 */
 		assert(plane instanceof P3, "plane instanceof P3")
+		assert(!dir || dir instanceof V3, "!dir || dir instanceof V3")
 		assert(!result || result instanceof M4, "!result || result instanceof M4")
+		dir = dir || plane.normal
 		var nx = plane.normal.x;
 		var ny = plane.normal.y;
 		var nz = plane.normal.z;
+		var {x: dx, y: dy, z: dz} = dir
 		var w = plane.w;
 		result = result || M4()
 		var m = result.m
-
+		var nd = plane.normal.dot(dir)
 		/*
 		rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
 		return M4.forSys(
@@ -757,20 +779,24 @@ if (!NLA.Vector3) {
 		)
 		*/
 
-		m[0] = 1.0 - nx * nx
-		m[1] = -ny * nx
-		m[2] = -nz * nx
-		m[3] = nx * w
+		dx /= nd
+		dy /= nd
+		dz /= nd
 
-		m[4] = -nx * ny
-		m[5] = 1.0 - ny * ny
-		m[6] = -nz * ny
-		m[7] = ny * w
+		m[0] = 1.0 - nx * dx
+		m[1] = -ny * dx
+		m[2] = -nz * dx
+		m[3] = dx * w
 
-		m[8] = -nx * nz
-		m[9] = -ny * nz
-		m[10] = 1.0 - nz * nz
-		m[11] = nz * w
+		m[4] = -nx * dy
+		m[5] = 1.0 - ny * dy
+		m[6] = -nz * dy
+		m[7] = dy * w
+
+		m[8] = -nx * dz
+		m[9] = -ny * dz
+		m[10] = 1.0 - nz * dz
+		m[11] = dz * w
 
 		m[12] = 0
 		m[13] = 0

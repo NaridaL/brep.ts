@@ -586,7 +586,7 @@ var GL = (function() {
 				var buffer = new this.type(data)
 				var spacing = this.data.length ? data.length / this.data.length : 0;
 				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
-				assert(data.every(v => 'number' == typeof v), "data.every(v => 'number' == typeof v)")
+				assert(data.every(v => 'number' == typeof v), "data.every(v => 'number' == typeof v)" + data.toSource())
 				this.buffer.length = data.length
 				if (NLA.DEBUG) { this.maxValue = data.max() }
 				this.buffer.spacing = spacing
@@ -750,13 +750,13 @@ var GL = (function() {
 				return [key >> 16, key & 0xffff]
 			}
 			var t = this.triangles
-			for (var i = 0; i < this.triangles.length / 3; i += 3) {
+			for (var i = 0; i < this.triangles.length; i += 3) {
 				canonEdges.add(canonEdge(t[i + 0], t[i + 1]))
 				canonEdges.add(canonEdge(t[i + 1], t[i + 2]))
 				canonEdges.add(canonEdge(t[i + 2], t[i + 0]))
 			}
 			if (!this.lines) this.addIndexBuffer('LINES');
-			this.lines = new Array(canonEdges.size)
+			//this.lines = new Array(canonEdges.size)
 			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
 			return this
 		},

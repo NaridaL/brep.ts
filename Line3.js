@@ -314,6 +314,9 @@ if (!NLA.Vector3) {
             var point = this.anchor.plus(this.dir1.times(lambda));
             return point;
         },
+	    tangentAt: function () {
+		    return this.dir1
+	    },
         intersectWithPlaneLambda: function (plane) {
             // plane: plane.normal * p = plane.w
             // line: p=line.point + lambda * line.dir1
@@ -322,15 +325,16 @@ if (!NLA.Vector3) {
             var lambda = (plane.w - plane.normal.dot(this.anchor)) / div
             return lambda
         },
+	    getIntersectionsWithPlane: function (plane) {
+		    return [this.intersectWithPlaneLambda(plane)]
+	    },
 	    flipped: function () {
 		    return L3(this.anchor, this.dir1.negated())
 	    },
 
         transform: function (m4) {
             var newAnchor = m4.transformPoint(this.anchor)
-            var pointPlusDirection = this.anchor.plus(this.dir1)
-            var newPointPlusDirection = m4.transformPoint(pointPlusDirection)
-            var newDir = newPointPlusDirection.minus(newAnchor)
+            var newDir = m4.transformVector(this.dir1)
             return L3(newAnchor, newDir.normalized())
         },
 

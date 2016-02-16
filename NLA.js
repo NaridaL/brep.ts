@@ -19,6 +19,7 @@ console.log("NLA.PRECISION", NLA.PRECISION)
  *
  * @type {boolean}
  * @const
+ * @define {boolean}
  */
 NLA.DEBUG = true
 NLA.isZero = (x) => Math.abs(x) < NLA.PRECISION
@@ -742,13 +743,15 @@ NLA.addOwnProperties = function (target, props) {
 	}
 }
 NLA.defineClass = function (name, parent, constructor, props, statics) {
-	assert('function' == typeof constructor, "'function' == typeof constructor")
+	NLA.assert('function' == typeof constructor, "'function' == typeof constructor")
 	constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
 	constructor.prototype.constructor = constructor
 	constructor.prototype.name = name
 	NLA.addOwnProperties(constructor, statics)
 	return constructor
 }
+NLA.defaultRoundFunction = x => x.toFixed(2)
+
 NLA.defineObject = function (prot, props) {
 	var o = Object.create(prot || NLA.baseObject)
 	NLA.addOwnProperties(o, props)

@@ -12,6 +12,9 @@ if (!NLA.Vector3) {
 	 * Oriented plane, i.e. splits R^3 in half, with one half being "in front" of the plane.
 	 * Leads to multiple comparisons: isCoplanarToPlane returns if the plane occupies the same space,
 	 * like returns if the plane occupies the same space and has the same orientation
+	 *
+	 * Points x on the plane fulfill the equation: normal DOT x = w
+	 *
 	 * @param normal1 normalized plane normal
 	 * @param w signed (rel to normal1) distance from the origin
 	 * @param prototype object to set as prototype of the new Plane3 object. Defaults to Plane3.prototype
@@ -84,7 +87,7 @@ if (!NLA.Vector3) {
 		    return "P3("+this.normal.toString(roundFunction) + ", " + roundFunction(this.w) +")"
 	    },
 	    translated: function (offset) {
-		    return P3(this.normal, this.anchor.plus(offset).dot(this.normal))
+		    return P3(this.normal, offset.dot(this.normal))
 	    },
 
 	    transform: function(m4) {
@@ -99,24 +102,6 @@ if (!NLA.Vector3) {
 		    // and create a new plane from the transformed points:
 		    return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2)
 	    },
-
-        // Returns the plane's distance from the given object (point, line or plane)
-        distanceTo: function (obj) {
-	        throw new Error("uhhh")
-            if (this.intersects(obj) || this.contains(obj)) {
-                return 0;
-            }
-            if (obj.anchor) {
-                // obj is a plane or line
-                var A = this.anchor.elements, B = obj.anchor.elements, N = this.normal.elements;
-                return Math.abs((A[0] - B[0]) * N[0] + (A[1] - B[1]) * N[1] + (A[2] - B[2]) * N[2]);
-            } else {
-                // obj is a point
-                var P = obj.elements || obj;
-                var A = this.anchor.elements, N = this.normal.elements;
-                return Math.abs((A[0] - P[0]) * N[0] + (A[1] - P[1]) * N[1] + (A[2] - (P[2] || 0)) * N[2]);
-            }
-        },
 	    distanceToLine: function (line) {
 		    NLA.assert(line instanceof NLA.Line3)
 		    if (!this.isParallelToLine(line)) {
@@ -148,36 +133,25 @@ if (!NLA.Vector3) {
 
         intersectionWithPlane: function (plane) {
             /*
-             (x - a) * n = 0 // this
-             (x - b) * m = 0 // plane
-             x * n - a * n = 0 | * m0
-             x * m - b * m = 0 | * n0
 
-             (x1 * n1 + x2 * n2 - a * n) * m0 - (x1 * m1 + x2 * m2 - b * m) * n0= 0
-             x1 * (n1 * m0 - m1 * n0) + x2 * (n2 * m0 - m2 * n0) -a * n * m0 + b * m * n0 | * (dir1 * m0 - m1 * dir0)
-
-             x * dir - a * dir = 0
-             ...
-             x1 * (dir1 * m0 - m1 * dir0) + x2 * (dir2 * m0 - m2 * dir0) -a * dir * m0 + b * m * dir0 | * (n1 * m0 - m1 * n0)
-             (x2 * (n2 * m0 - m2 * n0) -a * n * m0 + b * m * n0)  * (dir1 * m0 - m1 * dir0)-(x2 * (dir2 * m0 - m2 * dir0) -a * dir * m0 + b * m * dir0) * (n1 * m0 - m1 * n0)
-             x2 * ((n2 * m0 - m2 * n0) * (dir1 * m0 - m1 * dir0) - (dir2 * m0 - m2 * dir0) * (n1 * m0 - m1 * n0))
-             x2 * ((n2 * m0 * dir1 * m0 - m2 * n0 * dir1 * m0 - n2 * m0 * m1 * dir0) - (dir2 * m0 * n1 * m0 - m2 * dir0 * n1 * m0 - m1 * n0 * dir2 * m0))
-             x2 * m0 (n2 * dir1 * m0 - m2 * n0 * dir1 - n2 * m1 * dir0 - dir2 * m0 * n1 + m2 * dir0 * n1 -m1 * n0 * dir2)
-             x2 * m0 (dir0 * (- m1 * n2 + n1 * m2) + dir1 *(m0 * n2 -n0 * m2) + dir2 * (- m0 * n1 -m1 * n0)
-             x2 * m0 * dir * (m X n)
-
-            var direction = this.normal.cross(plane.normal), anchor;
-            var f1 = this.normal.y * plane.normal.x - plane.normal.y * this.normal.x, f2 = this.normal.z * plane.normal.x - plane.normal.z * this.normal.x;
-            var goal = plane.anchor.dot(plane.normal) * this.normal.x - this.anchor.dot(this.normal) * plane.normal.x;
+                this: n0 * x = w0
+                plane: n1 * x = w1
+                plane perpendicular to both which goes through origin:
+                    n2 := n0 X x1
+                    n2 * x = 0
             */
 	        assert(plane instanceof P3, "plane instanceof P3")
 	        assert(!this.isParallelToPlane(plane), "!this.isParallelToPlane(plane)")
+	        /*
 	        var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized(), m = M4.forSys(n0, n1, n2)
 	        var x0 = this.anchor, x1 = plane.anchor, x2 = V3.ZERO
 	        var p = n2.times(x2.dot(n2))
 		        .plus(n1.cross(n2).times(x0.dot(n0)))
 		        .plus(n2.cross(n0).times(x1.dot(n1)))
 		            .div(m.determinant())
+	        */
+	        var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized()
+	        var p = M4.forRows(n0, n1, n2).inversed().transformVector(V3.create(this.w, plane.w, 0))
 			return NLA.Line3(p, n2)
         },
 
@@ -192,27 +166,6 @@ if (!NLA.Vector3) {
 		    return x.minus(this.normal.times(x.dot(this.normal)))
 	    },
 
-        // Returns the reflection of the plane in the given point, line or Plane3.
-        reflectionIn: function (obj) {
-            if (obj.normal) {
-                // obj is a plane
-                var A = this.anchor.elements, N = this.normal.elements;
-                var A1 = A[0], A2 = A[1], A3 = A[2], N1 = N[0], N2 = N[1], N3 = N[2];
-                var newA = this.anchor.reflectionIn(obj).elements;
-                // Add the plane's normal to its anchor, then mirror that in the other plane
-                var AN1 = A1 + N1, AN2 = A2 + N2, AN3 = A3 + N3;
-                var Q = obj.pointClosestTo([AN1, AN2, AN3]).elements;
-                var newN = [Q[0] + (Q[0] - AN1) - newA[0], Q[1] + (Q[1] - AN2) - newA[1], Q[2] + (Q[2] - AN3) - newA[2]];
-                return Plane3.create(newA, newN);
-            } else if (obj.direction) {
-                // obj is a line
-                return this.rotate(Math.PI, obj);
-            } else {
-                // obj is a point
-                var P = obj.elements || obj;
-                return Plane3.create(this.anchor.reflectionIn([P[0], P[1], (P[2] || 0)]), this.normal);
-            }
-        },
 	    flipped: function () {
 		    return P3(this.normal.negated(), -this.w)
 	    }

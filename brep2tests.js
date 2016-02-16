@@ -236,3 +236,32 @@ QUnit.test( "intersectionCircleLine", function( assert ) {
 	// y = -x + 2 => x + y = 2
 	assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), {x1: 2, x2: 0, y1:0, y2: 2})
 });
+QUnit.test( "CylinderSurface.intersectionLine", function( assert ) {
+	var cylSurface = CylinderSurface.cyl(5)
+	var line = L3.throughPoints(V3(10, 0, 0), V3(-10, 2, 10))
+	var isPoints = cylSurface.intersectionWithLine(line)
+	console.log(isPoints.toSource())
+	assert.equal(isPoints.length, 2, 'no of points')
+	assert.notOk(isPoints[0].like(isPoints[1]))
+
+	assert.ok(cylSurface.containsPoint(isPoints[0]))
+	assert.ok(cylSurface.containsPoint(isPoints[1]))
+
+	assert.ok(line.containsPoint(isPoints[0]), line.distanceToPoint(isPoints[0]))
+	assert.ok(line.containsPoint(isPoints[1]), line.distanceToPoint(isPoints[1]))
+});
+
+QUnit.test( "CylinderSurface.intersectionLine 2", function( assert ) {
+	var cylSurface = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(8, 0, 0), V3(0, 5, 0)), V3.Z, 1)
+	var line = L3.throughPoints(V3(10, 0, 0), V3(-10, 2, 10))
+	var isPoints = cylSurface.intersectionWithLine(line)
+	console.log(isPoints.toSource())
+	assert.equal(isPoints.length, 2, 'no of points')
+	assert.notOk(isPoints[0].like(isPoints[1]))
+
+	assert.ok(cylSurface.containsPoint(isPoints[0]))
+	assert.ok(cylSurface.containsPoint(isPoints[1]))
+
+	assert.ok(line.containsPoint(isPoints[0]), line.distanceToPoint(isPoints[0]))
+	assert.ok(line.containsPoint(isPoints[1]), line.distanceToPoint(isPoints[1]))
+});

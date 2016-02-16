@@ -208,6 +208,9 @@ if (!NLA) {
         angleXY: function () {
             return Math.atan2(this.y, this.x)
         },
+	    lengthXY: function () {
+		    return Math.sqrt(this.x * this.x + this.y * this.y)
+	    },
         /**
          * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
          * @param f function to apply to elements (number -> number)
@@ -216,7 +219,7 @@ if (!NLA) {
             return V3.create(f(this.x), f(this.y), f(this.z))
         },
         toString: function (roundFunction) {
-	        roundFunction = roundFunction || ((v) => +v.toFixed(3))
+	        roundFunction = roundFunction || NLA.defaultRoundFunction
             return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")" //+ this.id
         },
         angleTo: function (vector) {

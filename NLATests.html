@@ -293,6 +293,18 @@
 		assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(plane.normal))
 		assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
 	});
+	QUnit.test( "NLA.M4.projection 2", function (assert) {
+		var plane = P3(V3(1, 2, 3).normalized(), 5);
+		var dir = V3(1, 1, 1);
+		var proj = M4.projection(plane, dir)
+		assert.V3equals(proj.transformPoint(V3(2, 4, 6)), plane.anchor)
+		assert.V3equals(proj.transformVector(V3(2, 4, 6)), V3.ZERO)
+		var p2 = V3(3, 5, 22)
+		assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
+		assert.ok(plane.containsPoint(proj.transformPoint(p2)))
+		assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(dir))
+		assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
+	});
 	QUnit.test( "NLA.M4.isIdentity", function (assert) {
 		assert.ok(M4.identity().isIdentity())
 		assert.notOk(M4.scaling(1, 2, 3).isIdentity())
