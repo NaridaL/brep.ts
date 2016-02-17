@@ -230,7 +230,7 @@ BREP.prototype.toMesh = function() {
 	var allValidEdges = [];
 	this.faces.forEach((face) => {
 		//var faceEdges = new Map()
-		var triangleSubIndexes = triangulateVertices(face.vertices, face.plane.normal)
+		var triangleSubIndexes = triangulateVertices(face.plane.normal, face.vertices)
 		var vs = face.vertices;
 		for (var i = 0; i < triangleSubIndexes.length; i += 3) {
 			var
@@ -271,7 +271,7 @@ BREP.prototype.toNormalMesh = function() {
 	var faceIndexes = new Map()
 	this.faces.forEach((face) => {
 		//var faceEdges = new Map()
-		var triangleSubIndexes = triangulateVertices(face.vertices, face.plane.normal)
+		var triangleSubIndexes = triangulateVertices(face.plane.normal, face.vertices)
 		var vs = face.vertices;
 		var startIndex = mesh.vertices.length
 		faceIndexes.set(face, {start: mesh.triangles.length * 3, count: triangleSubIndexes.length})
@@ -987,27 +987,14 @@ function testBREP() {
 
 
 
-function triangulateVertices(vertices, normal, holeVertices) {
+function triangulateVertices(normal, vertices, holeStarts) {
 	var absMaxDim = normal.absMaxDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
 	var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
-	var contour = new Array(vertices.length * 2 + (holeVertices && holeVertices.length * 2 || 0))
+	var contour = new Array(vertices.length * 2)
 	var i = vertices.length
 	while (i--) {
 		contour[i * 2    ] = vertices[i][coord0] * factor
 		contour[i * 2 + 1] = vertices[i][coord1]
-	}
-	var holeStarts = []
-	if (holeVertices) {
-		i = holeVertices.length
-		var start = vertices.length * 2
-		while (i--) {
-			contour[start + i * 2    ] = holeVertices[i][coord0] * factor
-			contour[start + i * 2 + 1] = holeVertices[i][coord1]
-		}
-		holeStarts.push(vertices.length)
-	}
-	if (holeVertices) {
-		console.log('holeStarts', vertices.map(V3.ss), holeVertices.map(V3.ss), holeStarts, contour)
 	}
 	return earcut(contour, holeStarts)
 }

@@ -18,15 +18,14 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		toString: function (f) {
 			return `new EllipseCurve(${this.center}, ${this.f1}, ${this.f2})`
 		},
+		isValidT: (t) => -PI <= t && t <= PI,
 		asklkjas: function (aT, bT, a, b, reversed, includeFirst) {
-			var split = 4 * 5, inc = 2 * PI / split
+			var split = 4 * 2, inc = 2 * PI / split
 			var verts = []
 			if (includeFirst) verts.push(a)
+			console.log("revrs", reversed)
 			if (!reversed) {
-				// round aT + NLA.precision up to the next pos
-				if (bT <= aT) {
-					bT += 2 * PI
-				}
+				assert(aT < bT)
 				var start = ceil((aT + NLA.PRECISION) / inc)
 				var end = floor((bT - NLA.PRECISION) / inc)
 				console.log(aT, bT, start, end, inc)
@@ -34,9 +33,7 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 					verts.push(this.at(i * inc))
 				}
 			} else {
-				if (bT >= aT) {
-					bT -= 2 * PI
-				}
+				assert(bT < aT)
 				var start = floor((aT - NLA.PRECISION) / inc)
 				var end = ceil((bT + NLA.PRECISION) / inc)
 				for (var i = start; i >= end; i--) {
@@ -68,7 +65,7 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 				&& this.f1.like(curve.f1)
 				&& this.f2.like(curve.f2)
 		},
-		colinearTo: function (curve) {
+		isColinearTo: function (curve) {
 			if (curve.constructor != EllipseCurve) { return false }
 			if (!this.center.like(curve.center)) { return false }
 			if (this.isCircular()) {
@@ -82,10 +79,16 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		normalAt: function (t) {
 			return this.tangentAt(t).cross(this.normal)
 		},
-		pointLambda: function (p) {
+		pointLambda: function (p, hint) {
 			assertVectors(p)
 			var p2 = this.inverseMatrix.transformPoint(p)
-			return p2.angleXY()
+			var angle = p2.angleXY()
+			if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
+				return hint.dot(this.f2) < 0
+					? Math.PI
+					: -Math.PI
+			}
+			return angle
 		},
 		isOrthogonal: function (p) {
 			return this.f1.isPerpendicularTo(this.f2)
@@ -172,18 +175,27 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 			 solve system (5)/(6)
 			 g1 * eta + g2 * eta = g3 (6)
 			 */
+			if (plane.normal.isParallelTo(this.normal)) {
+				return []
+			}
 			var
 				n = plane.normal, w = plane.w,
 				center = this.center, f1 = this.f1, f2 = this.f2,
 				g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center)
 
 			var {x1: xi1, y1: eta1, x2: xi2, y2: eta2} = intersectionUnitCircleLine(g1, g2, g3)
+			if (isNaN(xi1)) {
+				return []
+			}
 			return [atan2(eta1, xi1), atan2(eta2, xi2)]
 
 		},
+		getPlane: function () {
+			return P3.normalOnAnchor(this.normal, this.center)
+		},
 		containsPoint: function (p) {
 			var localP = this.inverseMatrix.transformPoint(p)
-			return NLA.equals(1, p.lengthXY) && NLA.isZero(p.z)
+			return NLA.equals(1, localP.lengthXY()) && NLA.isZero(localP.z)
 		},
 		intersectWithEllipse: function (ellipse) {
 			if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
@@ -205,7 +217,7 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 	/** @constructor */
 	function (baseEllipse, dir, normalDir) {
 		assertVectors(dir)
-		assert(normalDir == 1 || normalDir == -1, "normalDir == 1 || normalDir == -1")
+		assert(1 == normalDir || -1 == normalDir, "normalDir == 1 || normalDir == -1" + normalDir)
 		assert(baseEllipse instanceof EllipseCurve)
 		//assert(!baseEllipse.normal.isPerpendicularTo(dir), !baseEllipse.normal.isPerpendicularTo(dir))
 		assert(dir.hasLength(1))
@@ -216,6 +228,9 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		this.inverseMatrix = this.matrix.inversed()
 	},
 	{
+		toString: function () {
+			return "CylinderSurface"
+		},
 		intersectionWithLine: function (line) {
 			// fun fun fun
 			var lineLocal = line.transform(this.inverseMatrix)
@@ -237,7 +252,19 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		},
 		containsEllipse: function (ellipse) {
 			var ellipseProjected = ellipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-			return this == ellipse || this.baseEllipse.isColinearTo(baseEllipse)
+			return this == ellipse || this.baseEllipse.isColinearTo(ellipseProjected)
+		},
+		containsLine: function (line) {
+			return this.dir.isParallelTo(line.dir1) && this.containsPoint(line.anchor)
+		},
+		containsCurve: function (curve) {
+			if (curve instanceof EllipseCurve) {
+				return this.containsEllipse(curve)
+			} else if (curve instanceof L3) {
+				return this.containsLine(curve)
+			} else {
+				assert(false)
+			}
 		},
 		transform: function (m4) {
 			return new CylinderSurface(
@@ -256,7 +283,7 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 			zEnd = zEnd || 100
 			var mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
 			var pF = this.parametricFunction(), pN = this.parametricNormal()
-			var split = 4 * 10, inc = 2 * PI / split
+			var split = 4 * 3, inc = 2 * PI / split
 			var c = split * 2
 			for (var i = 0; i < split; i++) {
 				var v = pF(i * inc, zStart)
@@ -276,8 +303,8 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 			}
 		},
 		normalAt: function (p) {
-			var pmPoint = this.pointToParameterFunction()(p)
-			return this.parametricNormal()(pmPoint.x, pmPoint.y)
+			var localP = this.inverseMatrix.transformPoint(p)
+			return this.parametricNormal()(localP.angleXY(), localP.z)
 		},
 		parametricFunction: function () {
 			return (d, z) => {
@@ -297,10 +324,16 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		boundsFunction: function () {
 			assert(false)
 		},
-		pointToParameterFunction: function (p) {
-			return (pWC) => {
-				var p = this.inverseMatrix.transformPoint(pWC)
-				return V3.create(p.angleXY(), p.z, 0)
+		pointToParameterFunction: function () {
+			return (pWC, hint) => {
+				var p2 = this.inverseMatrix.transformPoint(pWC)
+				var angle = p2.angleXY()
+				if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
+					angle = hint.dot(this.baseEllipse.f2) < 0
+						? Math.PI
+						: -Math.PI
+				}
+				return V3.create(angle, p2.z, 0)
 			}
 		},
 		getIntersectionsWithSurface: function (surface2) {
@@ -316,7 +349,15 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 			} else {
 				return [this.baseEllipse.transform(M4.projection(plane, this.dir))]
 			}
-		}
+		},
+		edgeLoopCCW: function (contour) {
+			if (contour.length < 3) {
+				assert(false)
+			} else {
+				var ptpF = this.pointToParameterFunction()
+				return isCCW(contour.map(e => ptpF(e.a)), V3.create(0, 0, this.normalDir))
+			}
+		},
 	},
 	{
 		cyl: function (radius) {

@@ -13,7 +13,7 @@ NLA.assertVectors = function () {
 	}
 	return true
 }
-NLA.PRECISION = 1 / (1 << 27)
+NLA.PRECISION = 1 / (1 << 25)
 console.log("NLA.PRECISION", NLA.PRECISION)
 /**
  *
@@ -32,7 +32,7 @@ NLA.ge = (x, y) => x + NLA.PRECISION >= y
 NLA.equals2 = (x, y, precision) => Math.abs(x - y) < precision
 NLA.eqAngle = (x, y) => NLA.zeroAngle(x - y)
 NLA.zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA.PRECISION) % (2 * Math.PI) < 2 * NLA.PRECISION
-NLA.snapTo = (x, to) => Math.abs(x - to) < NLA.PRECISION ? to : x
+NLA.snapTo = (x, to) => Math.abs(x - to) <= NLA.PRECISION ? to : x
 NLA.canonAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 var COLORS = {
 	RD_FILL:0x9EDBF9,
@@ -445,7 +445,7 @@ var ARRAY_UTILITIES = {
 			}
 		}
 
-		return -1;
+		return -minIndex-1;
 	},
 	binaryInsert: function (el, cmp) {
 		cmp = cmp || NLA.minus
@@ -750,7 +750,7 @@ NLA.defineClass = function (name, parent, constructor, props, statics) {
 	NLA.addOwnProperties(constructor, statics)
 	return constructor
 }
-NLA.defaultRoundFunction = x => x.toFixed(2)
+NLA.defaultRoundFunction = x => x.toFixed(2)//Math.round10(x, 2)
 
 NLA.defineObject = function (prot, props) {
 	var o = Object.create(prot || NLA.baseObject)

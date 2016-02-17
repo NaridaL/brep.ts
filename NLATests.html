@@ -275,7 +275,8 @@
 		assert.deepEqual(arr2, [-2, 5])
 	});
 	QUnit.test( "NLA.arrayBinaryIndexOf", function(assert ) {
-		assert.ok([1, 2, 2.5, 3, 4].binaryIndexOf(3, (a, b) => a - b), 3)
+		assert.equal([1, 2, 2.5, 3, 4].binaryIndexOf(3, (a, b) => a - b), 3)
+		assert.equal([1, 2, 2.5, 3, 4].binaryIndexOf(2.6, (a, b) => a - b), -3-1)
 	});
 	QUnit.test( "newtonIterate2d", function (assert) {
 		var res = newtonIterate2d((s, t) => s - 2, (s, t) => t - 4, 5, 5)

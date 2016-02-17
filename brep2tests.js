@@ -113,6 +113,7 @@ QUnit.test( "NLA.eqAngle", function( assert ) {
 });
 
 QUnit.test( "angleRelativeNormal", function( assert ) {
+	assert.fuzzyEquals(V3.X.angleRelativeNormal(V3.Y, V3.Z), Math.PI / 2 )
 	assert.fuzzyEquals(V3.Y.angleRelativeNormal(V3(32, Math.sqrt(2), -Math.sqrt(2)), V3.X), -Math.PI / 4 )
 	assert.fuzzyEquals(V3(-0.1, 1, 0).angleRelativeNormal(V3(0.0, 0, -1), V3.X), -Math.PI / 2)
 });
