@@ -20,7 +20,7 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		},
 		isValidT: (t) => -PI <= t && t <= PI,
 		asklkjas: function (aT, bT, a, b, reversed, includeFirst) {
-			var split = 4 * 2, inc = 2 * PI / split
+			var split = 4 * 17, inc = 2 * PI / split
 			var verts = []
 			if (includeFirst) verts.push(a)
 			console.log("revrs", reversed)
@@ -68,6 +68,7 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		isColinearTo: function (curve) {
 			if (curve.constructor != EllipseCurve) { return false }
 			if (!this.center.like(curve.center)) { return false }
+			if (this == curve) { return true }
 			if (this.isCircular()) {
 				return curve.isCircular() && NLA.equals(this.f1.length(), curve.f1.length())
 			} else {
@@ -228,6 +229,64 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		this.inverseMatrix = this.matrix.inversed()
 	},
 	{
+		edgeLoopContainsPoint: function (contour, p) {
+			assertVectors(p)
+			var line = L3(p, this.dir)
+			// create plane that goes through cylinder seam
+			var seamBase = this.baseEllipse.at(PI)
+			var intersectionLinePerpendicular = this.dir.cross(p.minus(seamBase))
+			var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
+			var colinearSegments = contour.map((edge) => edge.colinearToLine(line))
+			var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir) > 0)
+			var inside = false
+
+			function logIS(p) {
+				if (line.pointLambda(p) > 0) {
+					inside = !inside
+				}
+			}
+
+			contour.forEach((edge, i, edges) => {
+				var j = (i + 1) % edges.length, nextEdge = edges[j]
+				//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
+				if (colinearSegments[i]) {
+					// edge colinear to intersection
+					var outVector = edge.bDir.cross(plane.normal)
+					var insideNext = outVector.dot(nextEdge.aDir) > 0
+					if (colinearSegmentsInside[i] != insideNext) {
+						logIS(edge.b)
+					}
+				} else {
+					var edgeTs = edge.getIntersectionsWithPlane(plane2)
+					for (var k = 0; k < edgeTs.length; k++) {
+						var edgeT = edgeTs[k]
+						if (edgeT == edge.bT) {
+							// endpoint lies on intersection line
+							if (colinearSegments[j]) {
+								// next segment is colinear
+								// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
+								// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
+								// point in the same direction (dot > 0)
+								var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
+								var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
+								// if the "inside-ness" changes, add intersection point
+								//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
+								if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
+									logIS(edge.b)
+								}
+							} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
+								logIS(edge.b)
+							}
+						} else if (edgeT != edge.aT) {
+							// edge crosses line, neither starts nor ends on it
+							logIS(edge.curve.at(edgeT))
+						}
+					}
+				}
+			})
+			return inside
+
+		},
 		toString: function () {
 			return "CylinderSurface"
 		},
@@ -352,7 +411,17 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		},
 		edgeLoopCCW: function (contour) {
 			if (contour.length < 3) {
-				assert(false)
+				var totalAngle = 0
+				for (var i = 0; i < contour.length; i++) {
+					var ipp = (i + 1) % contour.length
+					var edge = contour[i], nextEdge = contour[ipp]
+					if (edge.curve instanceof EllipseCurve) {
+						totalAngle += edge.rotViaPlane(this.plane.normal)
+						console.log(edge.toString(), edge.rotViaPlane(this.plane.normal))
+					}
+					totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal)
+				}
+				return totalAngle > 0
 			} else {
 				var ptpF = this.pointToParameterFunction()
 				return isCCW(contour.map(e => ptpF(e.a)), V3.create(0, 0, this.normalDir))

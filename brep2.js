@@ -52,7 +52,7 @@ var B2 = NLA.defineClass('B2', null,
 					var sl = arr.find(subloop => {
 						var contains = surface.edgeLoopContainsPoint(subloop.edges, newLoop.edges[0].a)
 						console.log(newLoop.edges[0].a.ss, newLoop.ccw ? contains : !contains)
-						return newLoop.ccw ? contains : !contains
+						return contains
 					})
 					console.log("here", sl)
 					if (sl) {
@@ -61,9 +61,10 @@ var B2 = NLA.defineClass('B2', null,
 						// newLoop isnt contained by any other newLoop
 						for (var i = arr.length; --i >= 0; ) {
 							var subloop = arr[i]
+							//console.log("cheving subloop", surface.edgeLoopContainsPoint(newLoop.edges, subloop.edges[0].a))
 							if (surface.edgeLoopContainsPoint(newLoop.edges, subloop.edges[0].a)) {
 								newLoop.subloops.push(subloop)
-								arr.slice(i, i + 1) // remove it
+								arr.splice(i, 1) // remove it
 							}
 						}
 						arr.push(newLoop)
@@ -78,6 +79,7 @@ var B2 = NLA.defineClass('B2', null,
 			}
 			loops.forEach(loop => {
 				var ccw = surface.edgeLoopCCW(loop)
+				console.log('CCW', ccw)
 				placeRecursively({edges: loop, ccw: ccw, subloops: []}, topLevelLoops)
 				console.log(topLevelLoops)
 			})
@@ -134,6 +136,7 @@ var B2 = NLA.defineClass('B2', null,
 						if (20 == i) {
 							assert(false, "too many")
 						}
+						console.log('finished loop')
 						loops.push(edges)
 					}
 					if (this.assembleFacesFromLoops(newFaces, loops, face)) {
@@ -446,10 +449,17 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 
 					var in1 = ps1[0].insideDir.dot(newCurve.tangentAt(ps1[0].t)) < 0
 					var in2 = ps2[0].insideDir.dot(newCurve.tangentAt(ps2[0].t)) < 0
+					if(newCurve.debugToMesh) {
+						dMesh = new GL.Mesh()
+						newCurve.debugToMesh(dMesh, 'curve2')
+						dMesh.compile()
+						console.log(dMesh)
+					}
+					console.log('iscurve', newCurve.toString(), newCurve.tangentAt(ps1[0].t).ss)
+					console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
 					var segments = newCurve instanceof L3
 						? getBlug(ps1, ps2, newCurve)
 						: getIntersectionSegments(ps1, ps2, in1, in2, B2.PCurveEdge, newCurve)
-					console.log('ps', ps1.toSource(), ps2.toSource())
 					// TODO: getCanon() TODO TODO TODO
 					console.log('segments', segments.toSource())
 					ps1.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
@@ -778,36 +788,41 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 		var cmp = (a, b) => a.value - b.value
 		var f = this.surface.parametricFunction()
 		var normalF = this.surface.parametricNormal()
-		var reverseFkt = this.surface.pointToParameterFunction()
-		var vertexLoop = this.unrollLoop(this.edges)
-		vertexLoop.forEach(({x: d, y: z}) => {
-			var index0 = ribs.binaryIndexOf(d, (a, b) => NLA.snapTo(a.value - b, 0))
-			if (index0 < 0) {
-				ribs.splice(-index0-1, 0, {value: d, left: [], right: []})
-			}
-			minZ = min(minZ, z)
-			maxZ = max(maxZ, z)
+		var vertexLoops = this.holes.concat([this.edges]).map(loop => this.unrollLoop(loop))
+		vertexLoops.forEach(vertexLoop => {
+			vertexLoop.forEach(({x: d, y: z}) => {
+				var index0 = ribs.binaryIndexOf(d, (a, b) => NLA.snapTo(a.value - b, 0))
+				if (index0 < 0) {
+					ribs.splice(-index0-1, 0, {value: d, left: [], right: []})
+				}
+				minZ = min(minZ, z)
+				maxZ = max(maxZ, z)
+			})
 		})
 		var correction = 1
-		vertexLoop.forEach((v0, i, vs) => {
-			var v1 = vs[(i + 1) % vs.length], dDiff = v1.x - v0.x
-			console.log(v0.ss, v1.ss)
-			if (NLA.isZero(dDiff)) { return }
-			if (dDiff < 0) {
-				[v0, v1] = [v1, v0]
-				dDiff = -dDiff
-			}
-			var index0 = ribs.binaryIndexOf(v0.x, (a, b) => NLA.snapTo(a.value - b, 0))
-			var index1 = ribs.binaryIndexOf(v1.x, (a, b) => NLA.snapTo(a.value - b, 0))
-			ribs[index0].right.binaryInsert(v0.y)
-			for (var j = (index0 + correction) % ribs.length; j != index1; j = (j + correction) % ribs.length) {
-				var x = ribs[j].value
-				var part = (x - v0.x) / dDiff
-				var interpolated = v1.y * part + v0.y * (1 - part)
-				ribs[j].left.binaryInsert(interpolated)
-				ribs[j].right.binaryInsert(interpolated)
-			}
-			ribs[index1].left.binaryInsert(v1.y)
+		vertexLoops.forEach(vertexLoop => {
+			vertexLoop.forEach((v0, i, vs) => {
+				var v1 = vs[(i + 1) % vs.length], dDiff = v1.x - v0.x
+				console.log(v0.ss, v1.ss)
+				if (NLA.isZero(dDiff)) {
+					return
+				}
+				if (dDiff < 0) {
+					[v0, v1] = [v1, v0]
+					dDiff = -dDiff
+				}
+				var index0 = ribs.binaryIndexOf(v0.x, (a, b) => NLA.snapTo(a.value - b, 0))
+				var index1 = ribs.binaryIndexOf(v1.x, (a, b) => NLA.snapTo(a.value - b, 0))
+				ribs[index0].right.binaryInsert(v0.y)
+				for (var j = (index0 + correction) % ribs.length; j != index1; j = (j + correction) % ribs.length) {
+					var x = ribs[j].value
+					var part = (x - v0.x) / dDiff
+					var interpolated = v1.y * part + v0.y * (1 - part)
+					ribs[j].left.binaryInsert(interpolated)
+					ribs[j].right.binaryInsert(interpolated)
+				}
+				ribs[index1].left.binaryInsert(v1.y)
+			})
 		})
 		var vertices = [], triangles = [], normals = []
 		for (var i = 0; i < ribs.length; i++) {
@@ -849,6 +864,9 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 								vsStart + colPos * 2 + 1,
 								vsStart + (colPos + 1) * 2 + 1)
 							colPos += 2
+							if (ribLeft.right[colPos] < detailZ || ribRight.left[colPos] < detailZ) {
+								j--
+							}
 						} else {
 							pushQuad(triangles, flipped2,
 								vsStart + colPos * 2,
@@ -868,6 +886,9 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 							vsStart + colPos * 2 + 1)
 						inside = false
 						colPos++
+						if (ribLeft.right[colPos] < detailZ || ribRight.left[colPos] < detailZ) {
+							j--
+						}
 					} else {
 						pushQuad(triangles, flipped2,
 							detailVerticesStart + i * detailZs.length + j,
@@ -997,7 +1018,7 @@ B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 		},
 		isCoEdge: function (edge) {
 			// TODO: optimization with flippedOf etc
-			return edge.constructor == StraightEdge && (
+			return this.curve.isColinearTo(edge.curve) && (
 					this.a.like(edge.a) && this.b.like(edge.b)
 					|| this.a.like(edge.b) && this.b.like(edge.a)
 				)
@@ -1102,29 +1123,7 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 StraightEdge.throughPoints = function (a, b) {
 	return new StraightEdge(L3.throughPoints(a, b), a, b, 0, b.minus(a).length())
 }
-function CurvePILoop(curve, startPoint) {
-	assert(curve instanceof CurvePI)
-	this.curve = curve
-	assert(this.curve.isLoop)
-	this.a = this.b = this.startPoint = startPoint
-}
-CurvePILoop.prototype = NLA.defineObject(B2.Edge.prototype, {
-	getVerticesNo0: function () {
-		this.curve.calcPoints()
-		this.points = this.curve.points
-		return this.curve.points
-	},
-	getIntersectionsWithPSurface: function (pSurface) {
-		assert (pSurface.parametricFunction)
-	},
-	tangentAt: function (p) {
-		return this.curve.tangentAt(p)
-	},
-	isCCW: function (normal) {
-		var step = floor(this.points.length / 4), verts = NLA.arrayFromFunction(4, i => this.points[step * i])
-		return isCCW(verts, normal)
-	}
-})
+
 /**
  * Solves a quadratic system of equations of the form
  *      a * x + b * y = c
@@ -1134,9 +1133,11 @@ CurvePILoop.prototype = NLA.defineObject(B2.Edge.prototype, {
  * @param b double
  * @param c double
  * @returns {x1, y1, x2, y2} with x1 >= x2 and y1 <= y2
+ * a * b + (b -c) * (b + c)
  */
 function intersectionUnitCircleLine(a, b, c) {
 	assertNumbers(a, b, c)
+	// TODO: disambiguate on a < b
 	var term = sqrt(a * a + b * b - c * c)
 	return {
 		x1: (a * c + b * term) / (a * a + b * b),
@@ -1155,132 +1156,14 @@ function intersectionCircleLine(a, b, c, r) {
 		y2: (b * c + a * term) / (a * a + b * b)
 	}
 }
-function CurvePI(parametricSurface, implicitSurface, startPoint) {
-	assert (parametricSurface.parametricFunction, 'parametricSurface.parametricFunction')
-	assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
-	this.parametricSurface = parametricSurface
-	this.implicitSurface = implicitSurface
-	if (!startPoint) {
-		var pmPoint = curvePoint(this.implicitCurve(), V3(1, 1, 0))
-		this.startPoint = this.parametricSurface.parametricFunction()(pmPoint.x, pmPoint.y)
-	} else {
-		this.startPoint = startPoint
-	}
-	this.isLoop = false
-	this.calcPoints(this.startPoint)
-}
-var STEP_SIZE = 1
-CurvePI.prototype = NLA.defineObject(null, {
-	implicitCurve: function () {
-		var pF = this.parametricSurface.parametricFunction()
-		var iF = this.implicitSurface.implicitFunction()
-		return function (s, t) {
-			return iF(pF(s, t))
-		}
-	},
-	containsPoint: function (p) {
-		assertVectors(p)
-		return this.parametricSurface.containsPoint(p) && isZero(this.implicitSurface.implicitFunction()(p))
-	},
-	getVerticesNo0: function () {
-		function sliceCyclic(arr, start, end) {
-			if (start <= end) {
-				return arr.slice(start, end)
-			} else {
-				return arr.slice(start).concat(arr.slice(0, end))
-			}
-		}
 
-		// TODOOO
-		if (!this.canon) {
-			var start = floor(this.aT + 1), end = ceil(this.bT)
-			var arr = sliceCyclic(this.curve.points, start, end)
-		} else {
-			var start = floor(this.bT + 1), end = ceil(this.aT)
-			var arr = sliceCyclic(this.curve.points, start, end)
-			console.log("this.canon", !!this.canon, arr.length, start, end, this.aT)
-			arr.reverse()
-		}
-		arr.push(this.b)
-		return arr
-	},
-	calcPoints: function (curveStartPoint) {
-		if (!this.points) {
-			var pF = this.parametricSurface.parametricFunction()
-			var iF = this.implicitSurface.implicitFunction()
-			var iBounds = this.implicitSurface.boundsFunction()
-			var curveFunction = (s, t) => iF(pF(s, t))
-			var pTPF = this.parametricSurface.pointToParameterFunction()
-			var startParams = pTPF(this.startPoint)
-			this.pmTangentEndPoints = []
-			this.pmPoints = followAlgorithm(curveFunction, startParams, startParams, STEP_SIZE, null,
-				this.pmTangentEndPoints, (s, t) => iBounds(pF(s, t)))
-			this.isLoop = this.pmPoints[0].distanceTo(this.pmPoints[this.pmPoints.length - 1]) < STEP_SIZE * 1.1
-			this.startT = 0
-			if (!this.isLoop) {
-				// the curve starting at curveStartPoint is not closed, so we need to find curve points in the other
-				// direction until out of bounds
-				var pmTangent0 = this.pmTangentEndPoints[0].minus(this.pmPoints[0])
-				var pmTangentEndPoints2 = []
-				var pmPoints2 = followAlgorithm(curveFunction, startParams, startParams, STEP_SIZE, pmTangent0.negated(),
-					pmTangentEndPoints2, (s, t) => iBounds(pF(s, t)))
-				pmTangentEndPoints2 = pmTangentEndPoints2.map((ep, i) => pmPoints2[i].times(2).minus(ep))
-				this.startT = pmPoints2.length
-				pmPoints2.reverse()
-				pmPoints2.pop()
-				this.pmPoints = pmPoints2.concat(this.pmPoints)
-				pmTangentEndPoints2.reverse()
-				pmTangentEndPoints2.pop()
-				this.pmTangentEndPoints = pmTangentEndPoints2.concat(this.pmTangentEndPoints)
-			}
-			this.points = this.pmPoints.map(({x: d, y: z}) => pF(d, z))
-			this.tangents = this.pmTangentEndPoints.map(
-				({x: d, y: z}, i, ps) => pF(d, z).minus(this.points[i]))
-			//console.log('this.points', this.points.map(v => v.ss).join(", "))
-			this.startTangent = this.tangentAt(this.startT)
-		}
-	},
-	pointTangent: function (point) {
-		assertVectors(point)
-		assert(this.containsPoint(point), 'this.containsPoint(point)'+this.containsPoint(point))
-		this.calcPoints(point)
-		var pIndex = this.pointLambda(point)
-		return this.tangents[pIndex]
-	},
-	tangentAt: function (t) {
-		return this.tangents[Math.round(t)]
-	},
-	pointLambda: function (point) {
-		assertVectors(point)
-		assert(this.containsPoint(point), 'this.containsPoint(p)')
-		var pmPoint = this.parametricSurface.pointToParameterFunction()(point)
-		var ps = this.points, pmps = this.pmPoints, t = 0, prevDistance, pmDistance = pmPoint.distanceTo(pmps[0])
-		while (pmDistance > STEP_SIZE && t < ps.length - 1) { // TODO -1?
-			//console.log(t, pmps[t].ss, pmDistance)
-			t += Math.min(1, Math.round(pmDistance / STEP_SIZE / 2))
-			pmDistance = pmPoint.distanceTo(pmps[t])
-		}
-		if (t >= ps.length - 1) {
-			// point is not on this curve
-			return NaN
-		}
-		if (ps[t].like(point)) return t
-		var nextT = (t + 1) % ps.length, prevT = (t + ps.length - 1) % ps.length
-		if (ps[nextT].distanceTo(point) < ps[prevT].distanceTo(point)) {
-			return t + 0.4
-		} else {
-			return t - 0.4
-		}
-	}
-})
 function getIntersectionSegments (ps1, ps2, in1, in2, constructor, curve) {
 	var currentSegment
-	if (in1 && in2) {
-		currentSegment = new constructor(curve, V3.ZERO, V3.ZERO, 0, 0, null, V3.ZERO, V3.ZERO)
-	}
+	assert (!(in1 && in2), '!(in1 && in2) '+in1+' '+in2)
 	console.log('in', in1, in2)
 	// generate overlapping segments
 	var i = 0, j = 0, last, segments = []
+	var startP, startDir, startT
 	// TODO : skip -><-
 	while (i < ps1.length || j < ps2.length) {
 		var a = ps1[i], b = ps2[j]
@@ -1304,25 +1187,18 @@ function getIntersectionSegments (ps1, ps2, in1, in2, constructor, curve) {
 			j++
 		}
 //		console.log("as", a, b, in1, in2)
-		if (currentSegment && !(in1 && in2)) {
-			currentSegment.b = last.p
-			currentSegment.bDir = last.insideDir.negated()
-			currentSegment.bT = last.t
-			segments.push(currentSegment)
-			currentSegment = null
+		if (startP && !(in1 && in2)) {
+			segments.push(new constructor(curve, startP, last.p, startT, last.t, null, startDir, last.insideDir.negated()))
+			startP = undefined
 			last.used = true
 		} else if (in1 && in2) {
-			currentSegment = new constructor(curve, last.p, V3.ZERO, last.t, 0, null, last.insideDir, V3.ZERO)
+			startP = last.p
+			startDir = last.insideDir
+			startT = last.t
 			last.used = true
 		}
 	}
-	if (currentSegment) {
-		var firstSegment = segments[0]
-		assert(firstSegment)
-		firstSegment.a = currentSegment.a
-		firstSegment.aDir = currentSegment.aDir
-		firstSegment.aT = currentSegment.aT
-	}
+	assert (!(in1 && in2), '!(in1 && in2) '+in1+' '+in2)
 	return segments
 }
 function getBlug(ps1, ps2, curve) {
@@ -1354,12 +1230,12 @@ function getBlug(ps1, ps2, curve) {
 		}
 //		console.log("as", a, b, in1, in2)
 		if (startP && !(in1 && in2)) {
-			segments.push(new StraightEdge(curve, startP, last.p, startT, last.t, null, startDir, last.insideDir))
+			segments.push(new StraightEdge(curve, startP, last.p, startT, last.t, null, startDir, last.insideDir && last.insideDir.negated()))
 			startP = undefined
 			last.used = true
 		} else if (in1 && in2) {
 			startP = last.p
-			startDir = last.insideDir && last.insideDir.negated()
+			startDir = last.insideDir
 			startT = last.t
 			last.used = true
 		}
@@ -1770,8 +1646,8 @@ function initB2() {
 	//wideBox = B2.box(5, 5, 5).flipped()
 	//var wideBox = new B2(extrusion.faces.slice(0, 1))
 
-	eyePos = V3(0, 500, 100)
-	eyeFocus = V3(0, 500, 0)
+	eyePos = V3(0, 100, 100)
+	eyeFocus = V3(0, 100, 0)
 	eyeUp = V3(0, 1, 0)
 	zoomFactor = 0.5
 	setupCamera()
@@ -1783,22 +1659,25 @@ function initB2() {
 		.rotateX(0.4)
 		.rotateY(-0.2)
 		//.translate(2,3,0)
-		.flipped()
+		//.flipped()
 	/*
 	bMesh.computeNormalLines(1)
 	bMesh.compile()
 	*/
-	var a = B2.box(20, 20, 5).translate(-10, -10, 0)
+	var a = B2.box(2, 20, 2)
+	.translate(0, -10, 2)
+	//.rotateX(0.1)
+	.flipped()
 	//a = new B2([a.faces[4]])
 	//b = new B2([new B2.PlaneFace(new PlaneSurface(P3.XY), verticesChain([V3(0, 0, 0), V3(8, 0, 0), V3(0, 8, 0)]),
 	//	[verticesChain([V3(1, 1, 0), V3(1, 5, 0), V3(5, 1, 0)])])])
 	//var b = B2.cylinder(4, 12)
-	var b = B2.rotateEdges(verticesChain([V3(5, 0, 0), V3(8, 0, 0), V3(8, 0, 6), V3(5, 0, 6)]), 2*PI, 3)
-		//.rotateZ(PI/2)
-		.rotateX(PI/2.2)
-		.translate(7, -0.2, 2)
+	var b = B2.rotateEdges(verticesChain([V3(0, 0, 0), V3(6, 0, 0), V3(6, 0, 5), V3(0, 0, 5)]), 2*PI, 3)
+		//.rotateX(PI/4)
+		//.rotateZ(0.1)
+		//.translate(7.2, 4,3.9)
 		//.flipped()
-	//b = new B2([b.faces[3]])
+	//b = new B2([b.faces[1]])
 	console.log(b.ss)
 	bMesh = b.toMesh()
 	//var b = B2.puckman(10, PI/2 -0.1, 12, 'puckman').translate(-4, -1, 1)
@@ -1807,10 +1686,11 @@ function initB2() {
 	var c
 	paintScreen2()
 	c = a.intersection(b, true, true)
+	//c = new B2([c.faces[0]])
 	cMesh = c && c.toMesh()
+	console.log(c.toSource())
 	paintScreen2()
 	//dMesh = wideBox.intersection(tallBox, false, true).flipped().toMesh()
-	//console.log(c.toSource())
 	/*
 	 var cyl = new CylinderSurface(L3.Z, 5)
 	 bMesh = cyl.toMesh(0, 50)
@@ -1878,17 +1758,6 @@ function paintScreen2() {
 		lightingShader.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
 			camPos: eyePos }).draw(cMesh)
 
-		cMesh.curve1 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
-			.drawBuffers({gl_Vertex: cMesh.vertexBuffers.curve1}, null, gl.LINES)
-		cMesh.curve2 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
-			.drawBuffers({gl_Vertex: cMesh.vertexBuffers.curve2}, null, gl.LINES)
-
-		gl.translate(60, -30, 0)
-		cMesh.curve3 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
-			.drawBuffers({gl_Vertex: cMesh.vertexBuffers.curve3}, null, gl.LINES)
-		gl.translate(0, 30, 0)
-		cMesh.curve4 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
-			.drawBuffers({gl_Vertex: cMesh.vertexBuffers.curve4}, null, gl.LINES)
 		gl.popMatrix()
 	}
 	if (dMesh) {
@@ -1899,6 +1768,17 @@ function paintScreen2() {
 		gl.projectionMatrix.m[11] += 1 / (1 << 23)
 		lightingShader.uniforms({ color: rgbToVec4(0xff0000),
 			camPos: eyePos }).draw(dMesh)
+		dMesh.curve1 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve1}, null, gl.LINES)
+		dMesh.curve2 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
+
+		gl.translate(60, -30, 0)
+		dMesh.curve3 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve3}, null, gl.LINES)
+		gl.translate(0, 30, 0)
+		dMesh.curve4 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve4}, null, gl.LINES)
 		gl.popMatrix()
 	}
 

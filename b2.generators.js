@@ -81,9 +81,9 @@ function addGenerator() {
 			var ipp = (i + 1) % edgeCount
 			var faceEdges = [
 				edge.flipped(),
-				!NLA.isZero(edge.b.x) && ribs[i],
+				!NLA.isZero(edge.a.x) && ribs[i],
 				endEdges[i],
-				!NLA.isZero(edge.a.x) && ribs[ipp].flipped()].filter(x => x)
+				!NLA.isZero(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
 			var surface
 			var curve = edge.curve;
 			if (edge instanceof StraightEdge) {
