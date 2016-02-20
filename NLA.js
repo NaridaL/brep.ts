@@ -350,9 +350,10 @@ var ARRAY_UTILITIES = {
 		return Math.max.apply(null, this);
 	},
 	indexWithMax: function (f) {
+		if (this.length == 0) { return 0 }
 		var i = this.length, result = -1, maxVal = -Infinity
 		while (i--) {
-			var val = f(this[i])
+			var val = f(this[i], i)
 			if (val > maxVal) {
 				maxVal = val
 				result = i
@@ -750,7 +751,7 @@ NLA.defineClass = function (name, parent, constructor, props, statics) {
 	NLA.addOwnProperties(constructor, statics)
 	return constructor
 }
-NLA.defaultRoundFunction = x => x.toFixed(2)//Math.round10(x, 2)
+NLA.defaultRoundFunction = x => x//.toFixed(2)//Math.round10(x, 2)
 
 NLA.defineObject = function (prot, props) {
 	var o = Object.create(prot || NLA.baseObject)

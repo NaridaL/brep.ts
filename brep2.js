@@ -39,7 +39,10 @@ var B2 = NLA.defineClass('B2', null,
 				this.faces.every((face) => brep.faces.some((face2) => face.equals(face2)))
 		},
 		toString: function () {
-			return `new B2([\n${this.faces.join('\n').replace(/^/gm, '\t')}])`
+			return `new B2([\n${this.faces.join(',\n').replace(/^/gm, '\t')}])`
+		},
+		toSource: function () {
+			return `new B2([\n${this.faces.map(face => face.toSource()).join(',\n').replace(/^/gm, '\t')}])`
 		},
 		assembleFacesFromLoops: function (newFaces, loops, oldFace) {
 			var surface = oldFace.surface
@@ -109,6 +112,11 @@ var B2 = NLA.defineClass('B2', null,
 					console.log('looseEdges\n', looseEdges.map(e=>e.toString()).join('\n'))
 					var loops = []
 					var currentEdge
+					var edgeCond = face instanceof B2.PlaneFace
+						? (edge => edge.a.like(currentEdge.b))
+						: (edge => (edge.curve == currentEdge.curve
+										? NLA.equals(edge.aT, currentEdge.bT)
+										: edge.a.like(currentEdge.b)))
 					while (currentEdge = looseEdges.find(edge => !edge.visited)) {
 						currentEdge.visited = true
 						var startEdge = currentEdge, edges = [], i = 0
@@ -116,24 +124,29 @@ var B2 = NLA.defineClass('B2', null,
 						do {
 							console.log('currentEdge', currentEdge.b.ss, currentEdge.toSource())
 							edges.push(currentEdge)
-							var possibleLooseEdges = looseEdges.filter(edge => edge.a.like(currentEdge.b))
+							// find next edge
+							var possibleLooseEdges = looseEdges.filter(edge => edgeCond(edge)), looseSegments
+							var possibleLooseEdgesCount = possibleLooseEdges.length
+							allOldFaceEdges.forEach(edge => (looseSegments = edgeLooseSegments.get(edge)) && looseSegments.forEach(
+									edge => edgeCond(edge) && possibleLooseEdges.push(edge)))
+							var noSegments = false
+							if (possibleLooseEdgesCount == possibleLooseEdges.length) {
+								allOldFaceEdges.forEach(edge => edgeCond(edge) && possibleLooseEdges.push(edge))
+								noSegments = true
+							}
+							var index = possibleLooseEdges.indexWithMax((edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, face.surface.normalAt(currentEdge.b)) + (index < possibleLooseEdgesCount ? NLA.PRECISION : 0))
+							//console.log('possibleLooseEdges\n', possibleLooseEdges.map(e=>e.toString()).join('\n'), allOldFaceEdges.find(edge => edgeCond(edge)), index, possibleLooseEdges[index])
 							// TODO assert(possibleLooseEdges.length < 2)
-							if (possibleLooseEdges.length != 0) {
-								currentEdge = possibleLooseEdges[0]
-								possibleLooseEdges.forEach(possibleLooseEdges => possibleLooseEdges.isCoEdge(currentEdge) && (possibleLooseEdges.visited = true))
+							currentEdge = possibleLooseEdges[index]
+							if (index < possibleLooseEdgesCount) {
+								possibleLooseEdges.forEach(possibleLooseEdge => possibleLooseEdge.isCoEdge(currentEdge) && (possibleLooseEdge.visited = true))
 							} else {
 								looseLoop = false
-								var looseSegments, edge2
-								var found = allOldFaceEdges.some(
-									edge => (looseSegments = edgeLooseSegments.get(edge)) && looseSegments.some(
-										edge => edge.a.like(currentEdge.b) && (currentEdge = edge)))
-								if (!found) {
-									currentEdge = allOldFaceEdges.find(edge => edge.a.like(currentEdge.b))
-									insideEdges.push(currentEdge)
-								}
+								noSegments && insideEdges.push(currentEdge)
 							}
-						} while (i++ < 20 && currentEdge != startEdge)
-						if (20 == i) {
+							assert(currentEdge)
+						} while (++i < 10 && currentEdge != startEdge)
+						if (10 == i) {
 							assert(false, "too many")
 						}
 						console.log('finished loop')
@@ -195,11 +208,10 @@ var B2 = NLA.defineClass('B2', null,
 				} else {
 					pointInfos.sort((a, b) => b.edgeT - a.edgeT)
 				}
-				console.log('pointInfos', baseEdge.reversed, baseEdge.ss, pointInfos.map(pi => '\n'+pi.toSource()).join())
 				var startP = baseEdge.a, startDir = baseEdge.aDir, startT = baseEdge.aT
 				for (var i = 0; i < pointInfos.length; i++) {
 					var info = pointInfos[i]
-					if (info.edgeT == baseEdge.bT || info.edgeT == baseEdge.aT || info.edgeT == startT) {
+					if (NLA.equals(info.edgeT, baseEdge.bT) || NLA.equals(info.edgeT, baseEdge.aT) || NLA.equals(info.edgeT, startT)) {
 						continue
 					}
 					var pDir = baseEdge.tangentAt(info.edgeT)
@@ -209,7 +221,10 @@ var B2 = NLA.defineClass('B2', null,
 					startDir = pDir
 				}
 				looseSegments.push(new baseEdge.constructor(baseEdge.curve, startP, baseEdge.b, startT, baseEdge.bT, null, startDir, baseEdge.bDir))
-
+				if (baseEdge.b.like(V3(0, 4, 1))) {
+					console.log('pointInfos', baseEdge.reversed, baseEdge.ss, pointInfos.map(pi => '\n'+pi.toSource()).join())
+					console.log(looseSegments)
+				}
 				edgeLooseSegments.set(baseEdge, looseSegments)
 			})
 
@@ -258,8 +273,11 @@ B2.Face.prototype = NLA.defineObject(null, {
 		return new this.constructor(this.surface.flipped(), newEdges, newHoles)
 	},
 	toString: function () {
-		return `new ${this.name}(${this.surface}, ${this.id} [${this.edges.map(e => '\n\t' + e).join()}]`
+		return `new ${this.name}(${this.surface}, [${this.edges.map(e => '\n\t' + e).join()}]`
 			+`${this.holes.map(hole => '\n\t\thole: ' + hole.join())})`
+	},
+	toSource: function () {
+		return `new ${this.name}(${this.surface.toSource()}, [${this.edges.map(e => '\n\t' + e.toSource()).join(',')}])`
 	},
 	equals: function (face) {
 		var edgeCount = this.edges.length
@@ -297,7 +315,7 @@ Object.prototype.getIntersectionsWithPlane= function (p) {
 B2.Edge = function () {}
 B2.Edge.prototype = NLA.defineObject(null, {
 	toString: function (f) {
-		return `new ${this.name}(${this.curve.toString(f)}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT})${this.id}`
+		return `new ${this.name}(${this.curve.toString(f)}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, null, ${this.aDir}, ${this.bDir})`
 	},
 	getIntersectionsWithPlane: function (p) {
 		assert(false, this.name + '.getIntersectionsWithPlane')
@@ -313,6 +331,7 @@ B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 			var mvl = mesh.vertices.length
 			var normal = this.surface.plane.normal
 			var vertices = this.edges.map(edge => edge.getVerticesNo0()).concatenated()
+			console.log(vertices.map(V3.ss).join())
 			for (var i = 0; i < vertices.length; i++) { mesh.lines.push(mvl + i, mvl + (i + 1) % vertices.length) }
 			var holeStarts = []
 			this.holes.forEach(hole => {
@@ -775,7 +794,7 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 				hint = this.surface.baseEllipse.f1.times(this.surface.normalDir).cross(edge.bDir)
 			}
 			edge.getVerticesNo0().forEach(p => vs.push(reverseFkt(p, hint)))
-			//console.log(edge.ss, edge.getVerticesNo0().map(p => reverseFkt(p, hint)).join())
+			console.log(edge.ss, "\n", edge.getVerticesNo0().map(p => reverseFkt(p, hint)).join())
 		})
 		return vs
 	},
@@ -822,6 +841,7 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 					ribs[j].right.binaryInsert(interpolated)
 				}
 				ribs[index1].left.binaryInsert(v1.y)
+				console.log(ribs.map(r=>r.toSource()).join('\n'))
 			})
 		})
 		var vertices = [], triangles = [], normals = []
@@ -908,6 +928,13 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 		Array.prototype.push.apply(mesh.normals, normals)
 		//this.addEdgeLines(mesh)
 
+	},
+	doo: function (face) {
+		if (face.surface instanceof PlaneSurface) {
+			face.doo.apply(face, [this].concat(Array.from(arguments).slice(1)))
+		} else {
+			B2.PlaneFace.prototype.doo.apply(this, arguments)
+		}
 	}
 })
 function pushQuad(triangles, flipped, a, b, c, d) {
@@ -925,6 +952,8 @@ B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 		assertVectors(a, b, aDir, bDir)
 		assert(curve instanceof L3 || curve instanceof EllipseCurve, curve)
 		assert(!curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
+		assert(curve.at(aT).like(a))
+		assert(curve.at(bT).like(b))
 		this.curve = curve
 		this.a = a
 		this.b = b
@@ -1018,7 +1047,8 @@ B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 		},
 		isCoEdge: function (edge) {
 			// TODO: optimization with flippedOf etc
-			return this.curve.isColinearTo(edge.curve) && (
+			return this == edge ||
+				this.curve.isColinearTo(edge.curve) && (
 					this.a.like(edge.a) && this.b.like(edge.b)
 					|| this.a.like(edge.b) && this.b.like(edge.a)
 				)
@@ -1047,8 +1077,8 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 	},
 	{
 
-		toString2: function () {
-			return `StraighEdge ${this.a} --> ${this.b}`
+		toSource: function () {
+			return `StraightEdge.throughPoints(${this.a}, ${this.b})`
 		},
 		getVerticesNo0: function () {
 			return [this.b]
@@ -1221,10 +1251,10 @@ function getBlug(ps1, ps2, curve) {
 			last = a
 			in1 = !in1
 			in2 = !in2
-			if (in1 == in2) {
+			//if (in1 == in2) {
 				a.used = true
 				b.used = true
-			}
+			//}
 			i++
 			j++
 		}
@@ -1375,6 +1405,9 @@ PlaneSurface.prototype = NLA.defineObject(null, {
 	},
 	toString: function () {
 		return this.plane.toString()
+	},
+	toSource: function () {
+		return `new PlaneSurface(${this.plane})`
 	},
 	equalsSurface: function (surface) {
 		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
@@ -1566,10 +1599,11 @@ function cylinderImplicit(l3Axis, radius) {
 		return 1 - radiusLC
 	}
 }
-function newtonIterate2d(f1, f2, startS, startT) {
+function newtonIterate2d(f1, f2, startS, startT, iterations) {
+	iterations = iterations || 4
 	var s = startS, t = startT
 	var eps = 1e-5
-	for (var i = 0; i < 4; i++) {
+	do {
 		/*
 			| a b |-1                   |  d -b |
 			| c d |   = 1 / (ad - bc) * | -c  a |
@@ -1586,8 +1620,14 @@ function newtonIterate2d(f1, f2, startS, startT) {
 		var df1s = (f1(s + eps, t) - f1ts), df1t = (f1(s, t + eps) - f1ts),
 			df2s = (f2(s + eps, t) - f2ts), df2t = (f2(s, t + eps) - f2ts)
 		var det = (df1s * df2t - df1t * df2s) / eps
-		s = s - ( df2t * f1ts - df1t * f2ts) / det
-		t = t - (-df2s * f1ts + df1s * f2ts) / det
+		var ds = ( df2t * f1ts - df1t * f2ts) / det
+		var dt = (-df2s * f1ts + df1s * f2ts) / det
+		s -= ds
+		t -= dt
+	} while (--iterations && f1ts * f1ts + f2ts * f2ts > NLA.PRECISION)
+	if (!iterations) {
+		//console.log(f1ts * f1ts + f2ts * f2ts)
+		return null
 	}
 	return V3(s, t, 0)
 }
@@ -1638,27 +1678,37 @@ function cassini(a, c) {
 var drPs = []
 addGenerator()
 function initB2() {
+	/*
+	var c1 = EllipseCurve.circle(5), c2 = EllipseCurve.circle(5, V3(3, 0))
+	var test = new EllipseCurve(V3(6, 1, 0), V3(3, 1, 0), V3(4, 0, 0))
+	dMesh = new GL.Mesh()
+	var cyl = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 5, 0)), V3.Z, 1)
+	var ell = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 2, 0)), V3.Z, 1).rotateX(PI/3)
 
-	var face = B2.PlaneFace.forVertices(new PlaneSurface(P3.XY), [V3(0, 0, 0), V3(10, 0, 0),V3(10, 10, 0), V3(4, 4,0), V3(0, 10, 0)])
-	var extrusion = B2.extrudeVertices([V3(0, 0, 0), V3(10, 0, 0),V3(10, 10, 0), V3(4, 4,0), V3(0, 10, 0)], P3.XY, V3(0, 0, 4), "ex0")
-	var wideBox = B2.box(10, 10, 5).flipped()
-	//wideBox = new B2(wideBox.faces.slice(2, 3))
-	//wideBox = B2.box(5, 5, 5).flipped()
-	//var wideBox = new B2(extrusion.faces.slice(0, 1))
-
+	aMesh = cyl.toMesh()
+	bMesh = ell.toMesh()
+	c1.intersectWithEllipse(test)
+	dMesh.compile()
+	*/
 	eyePos = V3(0, 100, 100)
 	eyeFocus = V3(0, 100, 0)
 	eyeUp = V3(0, 1, 0)
 	zoomFactor = 0.5
 	setupCamera()
 	paintScreen2()
+
+	var face = B2.PlaneFace.forVertices(new PlaneSurface(P3.XY), [V3(0, 0, 0), V3(10, 0, 0),V3(10, 10, 0), V3(4, 4,0), V3(0, 10, 0)])
+	var extrusion = B2.extrudeVertices([V3(0, 0, 0), V3(10, 0, 0),V3(10, 10, 0), V3(4, 4,0), V3(0, 10, 0)], P3.XY, V3(0, 0, 4), "ex0")
+	var wideBox = B2.box(10, 10, 5)
+	//wideBox = new B2(wideBox.faces.slice(2, 3))
+	//wideBox = B2.box(5, 5, 5).flipped()
+	//var wideBox = new B2(extrusion.faces.slice(0, 1))
+
 	// top.addToMesh(new GL.Mesh({normals: true}));bottom.addToMesh(new GL.Mesh({normals: true}))
 	//tallBox = B2.box(5, 5, 10).translate(0, -5, 0).rotateX(-0.2).translate(0, 3, 0).rotateZ(-0.2)
 	var tallBox = B2.box(5, 5, 10).translate(0,-1,1).flipped()
-	tallBox = B2.extrudeVertices([V3(0,0),V3(0, 3), V3(5, 5), V3(5,0)], P3.XY.flipped(), V3(0, 0, 10), 'lol')
-		.rotateX(0.4)
-		.rotateY(-0.2)
-		//.translate(2,3,0)
+	tallBox = B2.extrudeVertices([V3(0,0),V3(1, 3), V3(3, 1)], P3.XY.flipped(), V3(0, 0, 10), 'lol')
+		.translate(1,0,-1)
 		//.flipped()
 	/*
 	bMesh.computeNormalLines(1)
@@ -1667,6 +1717,13 @@ function initB2() {
 	var a = B2.box(2, 20, 2)
 	.translate(0, -10, 2)
 	//.rotateX(0.1)
+	.flipped()
+	var curve = new EllipseCurve(V3.ZERO, V3(3, 0, 0), V3(0, 6, 0))
+	a = B2.extrudeEdges([
+		new B2.PCurveEdge(curve, V3(-3, 0, 0), curve.at(-3), PI, -3, null, V3.Y, curve.tangentAt(-3).negated()),
+		StraightEdge.throughPoints(curve.at(-3), V3.ZERO),
+		StraightEdge.throughPoints(V3.ZERO, V3(-3, 0, 0))], P3.XY.flipped(), V3(0, 0, 6))
+	.translate(2, 2, 2)
 	.flipped()
 	//a = new B2([a.faces[4]])
 	//b = new B2([new B2.PlaneFace(new PlaneSurface(P3.XY), verticesChain([V3(0, 0, 0), V3(8, 0, 0), V3(0, 8, 0)]),
@@ -1678,6 +1735,8 @@ function initB2() {
 		//.translate(7.2, 4,3.9)
 		//.flipped()
 	//b = new B2([b.faces[1]])
+	a  = wideBox
+	b = tallBox.flipped()
 	console.log(b.ss)
 	bMesh = b.toMesh()
 	//var b = B2.puckman(10, PI/2 -0.1, 12, 'puckman').translate(-4, -1, 1)
@@ -1685,9 +1744,10 @@ function initB2() {
 	aMesh = a.toMesh()
 	var c
 	paintScreen2()
-	c = a.intersection(b, true, true)
+	c = a.intersection(b, true, false)
 	//c = new B2([c.faces[0]])
 	cMesh = c && c.toMesh()
+	//dMesh = a.minus(b).toMesh()
 	console.log(c.toSource())
 	paintScreen2()
 	//dMesh = wideBox.intersection(tallBox, false, true).flipped().toMesh()
@@ -1762,22 +1822,21 @@ function paintScreen2() {
 	}
 	if (dMesh) {
 		gl.pushMatrix()
-		//gl.translate(45, 0, 0)
-		gl.projectionMatrix.m[11] -= 1 / (1 << 23) // prevent Z-fighting
+		gl.translate(45, 0, 0)
+		//gl.scale(10, 10, 10)
+		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
 		dMesh.lines && singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES');
-		gl.projectionMatrix.m[11] += 1 / (1 << 23)
-		lightingShader.uniforms({ color: rgbToVec4(0xff0000),
+		gl.projectionMatrix.m[11] += 1 / (1 << 20)
+		lightingShader.uniforms({ color: rgbToVec4(0xffFF00),
 			camPos: eyePos }).draw(dMesh)
 		dMesh.curve1 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
 			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve1}, null, gl.LINES)
-		dMesh.curve2 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+		dMesh.curve2 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
 			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
 
-		gl.translate(60, -30, 0)
-		dMesh.curve3 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+		dMesh.curve3 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) })
 			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve3}, null, gl.LINES)
-		gl.translate(0, 30, 0)
-		dMesh.curve4 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+		dMesh.curve4 && singleColorShader.uniforms({ color: rgbToVec4(0x00ff00) })
 			.drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve4}, null, gl.LINES)
 		gl.popMatrix()
 	}

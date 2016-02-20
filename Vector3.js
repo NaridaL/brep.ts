@@ -259,6 +259,15 @@ if (!NLA) {
             assert(!vector.isZero(), "!vector.isZero()")
             return NLA.isZero(this.dot(vector))
         },
+	    isReverseDirTo: function (vector) {
+		    assert(vector instanceof V3, "vector instanceof V3")
+		    assert(!this.isZero())
+		    assert(!vector.isZero())
+		    // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+		    // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
+		    var dot = this.dot(vector)
+		    return NLA.equals(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), dot)
+	    },
 	    /**
 	     Returns the length of this NLA.Vector, i.e. the euclidean norm.
 	     */

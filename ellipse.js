@@ -20,7 +20,7 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		},
 		isValidT: (t) => -PI <= t && t <= PI,
 		asklkjas: function (aT, bT, a, b, reversed, includeFirst) {
-			var split = 4 * 17, inc = 2 * PI / split
+			var split = 4 * 20, inc = 2 * PI / split
 			var verts = []
 			if (includeFirst) verts.push(a)
 			console.log("revrs", reversed)
@@ -151,6 +151,9 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		getIntersectionsWithSurface: function (surface) {
 			if (surface instanceof PlaneSurface) {
 				return this.getIntersectionsWithPlane(surface.plane)
+			} else if(surface instanceof CylinderSurface) {
+				var ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir))
+				return this.intersectWithEllipse(ellipseProjected).map(p => this.pointLambda(p))
 			} else {
 				assert (false)
 			}
@@ -200,17 +203,76 @@ var EllipseCurve = NLA.defineClass('EllipseCurve', null,
 		},
 		intersectWithEllipse: function (ellipse) {
 			if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
-				// ellipses are coplanar
-				var localEllipse = ellipse.transform(this.inverseMatrix)
 
+				// ellipses are coplanar
+				var localEllipse = ellipse.transform(this.inverseMatrix).rightAngled()
+				//new EllipseCurve(V3.ZERO, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
+				console.log(localEllipse, localEllipse.ss)
+				//localEllipse.debugToMesh(dMesh, 'curve3')
+				var angle = localEllipse.f1.angleXY()
+				console.log('angle', angle)
+				var aSqr = localEllipse.f1.lengthSquared(), bSqr = localEllipse.f2.lengthSquared()
+				var a = sqrt(aSqr), b = sqrt(bSqr)
+				var {x: centerX, y: centerY} = localEllipse.center
+				var rotCenterX = centerX * cos(-angle) + centerY * -sin(-angle)
+				var rotCenterY = centerX * sin(-angle) + centerY * cos(-angle)
+				var rotCenter = V3(rotCenterX, rotCenterY)
+				var f = t => { var lex = cos(t) - rotCenterX, ley = sin(t) - rotCenterY; return lex * lex / aSqr + ley * ley / bSqr - 1}
+				var uc = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
+				//uc.debugToMesh(dMesh, 'curve4')
+				var f2 = (x, y) => 200 * (x *x + y * y - 1)
+				var f3 = (x, y) => 200 * ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1)
+				var results = []
+				var resetMatrix = this.matrix.times(M4.rotationZ(angle))
+				for (var da = PI / 4; da < 2 * PI; da+= PI / 2) {
+					var startP = uc.at(da)
+					var p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)
+					if (p && !results.some(r => r.like(p))) {
+						results.push(p)
+						drPs.push(p)
+					}
+				}
+				var rotEl = new EllipseCurve(rotCenter, V3(a, 0, 0), V3(0, b, 0))
+				//var rotEl = localEllipse.transform(resetMatrix)
+				console.log(rotEl, rotEl.ss)
+				//rotEl.debugToMesh(dMesh, 'curve2')
+				return results.map(p => resetMatrix.transformPoint(p))
+				/*
+				// new rel center
+				var mat = M4.forSys(localEllipse.f1.normalized(), localEllipse.f2.normalized(), V3.Z, localEllipse.center).inversed()
+				console.log(mat.toString())
+				var newCenter = mat.transformPoint(V3.ZERO)
+				var x0 = newCenter.x, y0 = newCenter.y
+				var c = (1 - bSqr / aSqr) / 2/ y0, d = -x0 / y0, e = (bSqr + x0 * x0 + y0 * y0) / 2 / y0
+
+				var ff = x => c*c*x*x*x*x+ 2*c*d*x*x*x+ (2*c*e+d*d+bSqr/aSqr)*x*x+2*d*e*x+e*e-bSqr
+				var newx1 = newtonIterate(ff, x0 - 1)
+				var newx2 = newtonIterate(ff, x0)
+				var f1 = (x, y) => 2 * x - y
+				var f2 = (x, y) => 2 * ((x - x0) * (x - x0) + (y - y0) * (y - y0) - 1)
+				var f3 = (x, y) => 2 * (x * x / aSqr + y * y / bSqr - 1)
+				localEllipse = localEllipse.transform(mat)
+				for (var a = PI / 4; a < 2 * PI; a+= PI / 2) {
+					var startP = circle.at(a)
+					//drPs.push(startP)
+					var p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)
+					p && drPs.push(p)
+					p && console.log(p.ss, p.minus(V3(x0, y0)).length())
+				}
+				circle.debugToMesh(dMesh, 'curve1')
+				localEllipse.debugToMesh(dMesh, 'curve2')
+			*/
 			} else {
 				assert(false)
 			}
 		}
 	},
 	{
-		forAB: function (a, b) {
-			return new EllipseCurve(V3.ZERO, V3(a, 0, 0), V3(0, b, 0))
+		forAB: function (a, b, center) {
+			return new EllipseCurve(center || V3.ZERO, V3(a, 0, 0), V3(0, b, 0))
+		},
+		circle: function (radius, center) {
+			return new EllipseCurve(center || V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0))
 		}
 	}
 )
@@ -251,7 +313,7 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 				//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 				if (colinearSegments[i]) {
 					// edge colinear to intersection
-					var outVector = edge.bDir.cross(plane.normal)
+					var outVector = edge.bDir.cross(this.normalAt(edge.b))
 					var insideNext = outVector.dot(nextEdge.aDir) > 0
 					if (colinearSegmentsInside[i] != insideNext) {
 						logIS(edge.b)
@@ -303,11 +365,11 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 				V3.create(x1, y1, az + localLambda1 * dz),
 				V3.create(x2, y2, az + localLambda2 * dz)])
 		},
-		coplanarTo: function (surface) {
+		isCoplanarTo: function (surface) {
 			return this == surface ||
 				surface instanceof CylinderSurface
-				&& this.containsEllipse(surface.baseEllipse)
 				&& this.dir.isParallelTo(surface.dir)
+				&& this.containsEllipse(surface.baseEllipse)
 		},
 		containsEllipse: function (ellipse) {
 			var ellipseProjected = ellipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
@@ -338,16 +400,16 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 				-this.normalDir)
 		},
 		toMesh: function (zStart, zEnd) {
-			zStart = zStart || -100
-			zEnd = zEnd || 100
+			zStart = zStart || -30
+			zEnd = zEnd || 30
 			var mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
 			var pF = this.parametricFunction(), pN = this.parametricNormal()
-			var split = 4 * 3, inc = 2 * PI / split
+			var split = 4 * 10, inc = 2 * PI / split
 			var c = split * 2
 			for (var i = 0; i < split; i++) {
 				var v = pF(i * inc, zStart)
 				mesh.vertices.push(pF(i * inc, zStart), pF(i * inc, zEnd))
-				pushQuad(mesh.triangles, 2 * i, (2 * i + 2) % c, (2 * i + 1), (2 * i + 3) % c)
+				pushQuad(mesh.triangles, -1 == this.normalDir, 2 * i, (2 * i + 2) % c, (2 * i + 1), (2 * i + 3) % c)
 				var normal = pN(i * inc, 0)
 				mesh.normals.push(normal, normal)
 			}
@@ -398,7 +460,19 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		getIntersectionsWithSurface: function (surface2) {
 			if (surface2 instanceof PlaneSurface) {
 				return this.getIntersectionsWithPlane(surface2.plane)
+			} else if (surface2 instanceof CylinderSurface) {
+				if (surface2.dir.isParallelTo(this.dir)) {
+					var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
+					return this.baseEllipse.intersectWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
+				} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+
+				} else {
+					assert (false)
+				}
 			}
+		},
+		getCenterLine: function () {
+			return L3(this.baseEllipse.center, this.dir)
 		},
 		getIntersectionsWithPlane: function (plane) {
 			assert(plane instanceof P3)
@@ -410,16 +484,12 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 			}
 		},
 		edgeLoopCCW: function (contour) {
-			if (contour.length < 3) {
+			if (contour.length < 56) {
 				var totalAngle = 0
 				for (var i = 0; i < contour.length; i++) {
 					var ipp = (i + 1) % contour.length
 					var edge = contour[i], nextEdge = contour[ipp]
-					if (edge.curve instanceof EllipseCurve) {
-						totalAngle += edge.rotViaPlane(this.plane.normal)
-						console.log(edge.toString(), edge.rotViaPlane(this.plane.normal))
-					}
-					totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal)
+					totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
 				}
 				return totalAngle > 0
 			} else {
@@ -434,3 +504,4 @@ var CylinderSurface = NLA.defineClass('CylinderSurface', null,
 		}
 	}
 )
+NLA.addTransformationMethods(CylinderSurface.prototype)

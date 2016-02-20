@@ -215,6 +215,83 @@ QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 5))", functio
 		B2.PlaneFace.forVertices(P3(V3(-1, 0, 0), -1), [V3(1, 1, 0),V3(1, 0, 0),V3(1, 0, 5),V3(1, 1, 5)])])
 	assert.B2equals(a.minus(b), result)
 });
+QUnit.test( "B2 edge/face intersection", function( assert ) {
+	var wideBox = B2.box(10, 10, 5)
+	var extrusion = B2.extrudeVertices([V3(1,0),V3(0, 3), V3(-2, 5), V3(5, 5)], P3.XY.flipped(), V3(0, 0, 10), 'lol')
+		.translate(0,1,1)
+	var result = new B2([
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, 0, 1), 5)), [
+			StraightEdge.throughPoints(V3(0, 3.999999999999999, 5), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(10, 0, 5)),
+			StraightEdge.throughPoints(V3(10, 0, 5), V3(10, 10, 5)),
+			StraightEdge.throughPoints(V3(10, 10, 5), V3(0, 10, 5)),
+			StraightEdge.throughPoints(V3(0, 10, 5), V3(0, 6, 5)),
+			StraightEdge.throughPoints(V3(0, 6, 5), V3(5, 6, 5)),
+			StraightEdge.throughPoints(V3(5, 6, 5), V3(1, 1, 5)),
+			StraightEdge.throughPoints(V3(1, 1, 5), V3(0, 3.999999999999999, 5))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(-1, 0, 0), 0)), [
+			StraightEdge.throughPoints(V3(0, 6, 1), V3(0, 6, 5)),
+			StraightEdge.throughPoints(V3(0, 6, 5), V3(0, 10, 5)),
+			StraightEdge.throughPoints(V3(0, 10, 5), V3(0, 10, 0)),
+			StraightEdge.throughPoints(V3(0, 10, 0), V3(0, 0, 0)),
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(0, 4.000000000000002, 5)),
+			StraightEdge.throughPoints(V3(0, 3.999999999999999, 5), V3(0, 4, 1)),
+			StraightEdge.throughPoints(V3(0, 4, 1), V3(0, 6, 1))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, 0, -1), 0)), [
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(0, 10, 0)),
+			StraightEdge.throughPoints(V3(0, 10, 0), V3(10, 10, 0)),
+			StraightEdge.throughPoints(V3(10, 10, 0), V3(10, 0, 0)),
+			StraightEdge.throughPoints(V3(10, 0, 0), V3(0, 0, 0))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, 1, 0), 10)), [
+			StraightEdge.throughPoints(V3(10, 10, 0), V3(0, 10, 0)),
+			StraightEdge.throughPoints(V3(0, 10, 0), V3(0, 10, 5)),
+			StraightEdge.throughPoints(V3(0, 10, 5), V3(10, 10, 5)),
+			StraightEdge.throughPoints(V3(10, 10, 5), V3(10, 10, 0))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(1, 0, 0), 10)), [
+			StraightEdge.throughPoints(V3(10, 0, 0), V3(10, 10, 0)),
+			StraightEdge.throughPoints(V3(10, 10, 0), V3(10, 10, 5)),
+			StraightEdge.throughPoints(V3(10, 10, 5), V3(10, 0, 5)),
+			StraightEdge.throughPoints(V3(10, 0, 5), V3(10, 0, 0))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, -1, 0), 0)), [
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(10, 0, 0)),
+			StraightEdge.throughPoints(V3(10, 0, 0), V3(10, 0, 5)),
+			StraightEdge.throughPoints(V3(10, 0, 5), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(0, 0, 0))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, 0, -1), -1)), [
+			StraightEdge.throughPoints(V3(0, 4, 1), V3(-2, 6, 1)),
+			StraightEdge.throughPoints(V3(-2, 6, 1), V3(0, 6, 1)),
+			StraightEdge.throughPoints(V3(0, 6, 1), V3(0, 4, 1))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(-0.9486832980505139, -0.316227766016838, 0), -1.2649110640673518)), [
+			StraightEdge.throughPoints(V3(1, 1, 5), V3(1, 1, 11)),
+			StraightEdge.throughPoints(V3(1, 1, 11), V3(0, 4, 11)),
+			StraightEdge.throughPoints(V3(0, 4, 11), V3(0, 4, 5)),
+			StraightEdge.throughPoints(V3(0, 3.999999999999999, 5), V3(1, 1, 5))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(-0.7071067811865477, -0.7071067811865472, 0), -2.8284271247461894)), [
+			StraightEdge.throughPoints(V3(0, 4, 5), V3(0, 4, 11)),
+			StraightEdge.throughPoints(V3(0, 4, 11), V3(-2, 6, 11)),
+			StraightEdge.throughPoints(V3(-2, 6, 11), V3(-2, 6, 1)),
+			StraightEdge.throughPoints(V3(-2, 6, 1), V3(0, 4, 1)),
+			StraightEdge.throughPoints(V3(0, 4, 1), V3(0, 4.000000000000002, 5))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, 1, 0), 6)), [
+			StraightEdge.throughPoints(V3(0, 6, 5), V3(0, 6, 1)),
+			StraightEdge.throughPoints(V3(0, 6, 1), V3(-2, 6, 1)),
+			StraightEdge.throughPoints(V3(-2, 6, 1), V3(-2, 6, 11)),
+			StraightEdge.throughPoints(V3(-2, 6, 11), V3(5, 6, 11)),
+			StraightEdge.throughPoints(V3(5, 6, 11), V3(5, 6, 5)),
+			StraightEdge.throughPoints(V3(5, 6, 5), V3(0, 6, 5))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0.7808688094430303, -0.6246950475544244, 0), 0.15617376188860604)), [
+			StraightEdge.throughPoints(V3(5, 6, 5), V3(5, 6, 11)),
+			StraightEdge.throughPoints(V3(5, 6, 11), V3(1, 1, 11)),
+			StraightEdge.throughPoints(V3(1, 1, 11), V3(1, 1, 5)),
+			StraightEdge.throughPoints(V3(1, 1, 5), V3(5, 6, 5))]),
+		new B2.PlaneFace(new PlaneSurface(P3(V3(0, 0, 1), 11)), [
+			StraightEdge.throughPoints(V3(5, 6, 11), V3(-2, 6, 11)),
+			StraightEdge.throughPoints(V3(-2, 6, 11), V3(0, 4, 11)),
+			StraightEdge.throughPoints(V3(0, 4, 11), V3(1, 1, 11)),
+			StraightEdge.throughPoints(V3(1, 1, 11), V3(5, 6, 11))])])
+	assert.B2equals(wideBox.plus(extrusion), result)
+});
 QUnit.test( "EllipseCurve", function( assert ) {
 	var a = B2.box(5, 5, 5)
 	var b = B2.box(1, 1, 5)
@@ -265,4 +342,33 @@ QUnit.test( "CylinderSurface.intersectionLine 2", function( assert ) {
 
 	assert.ok(line.containsPoint(isPoints[0]), line.distanceToPoint(isPoints[0]))
 	assert.ok(line.containsPoint(isPoints[1]), line.distanceToPoint(isPoints[1]))
+});
+function testEllipseIntersections(assert, e1, e2, count) {
+	var intersections = e1.intersectWithEllipse(e2)
+	assert.ok(intersections.length == count, `intersections.length == count: ${intersections.length} == ${count}`)
+	intersections.forEach((is, i) => {
+		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.ss+' is not unique '+intersections)
+		assert.ok(e1.containsPoint(is), `e1.containsPoint(is): ${e1.toSource()}.containsPoint(${is.ss})`)
+		assert.ok(e2.containsPoint(is), `e2.containsPoint(is): ${e1.toSource()}.containsPoint(${is.ss})`)
+	})
+}
+QUnit.test( "Ellipse.intersectWithEllipse", function( assert ) {
+	var c1 = EllipseCurve.circle(5), c2 = EllipseCurve.circle(5, V3(3, 0))
+	testEllipseIntersections(assert, c1, c2, 2)
+	var verticalEllipse = new EllipseCurve(V3(2, 0), V3(1, 1), V3(1, 10))
+	testEllipseIntersections(assert, c1, verticalEllipse, 4)
+	var verticalEllipse2 = new EllipseCurve(V3(10, 2), V3(1, 1), V3(1, 10))
+	testEllipseIntersections(assert, c1, verticalEllipse2, 0)
+	var smallEllipse = EllipseCurve.forAB(2, 3)
+	testEllipseIntersections(assert, c1, smallEllipse, 0)
+	var test = new EllipseCurve(V3(6, 1, 0), V3(3, 1, 0), V3(4, 0, 0))
+	testEllipseIntersections(assert, c1, test, 2)
+});
+QUnit.test( "cyl surface inss", function( assert ) {
+	var cyl = CylinderSurface.cyl(5)
+	var ell = new CylinderSurface(new EllipseCurve(V3(6, 1, 4), V3(3, 1, 4), V3(4, 0, 0)), V3.Z, 1)
+	var iss = cyl.getIntersectionsWithSurface(ell)
+	assert.ok(iss.length == 2)
+	assert.ok(cyl.containsPoint(iss[0].anchor))
+	assert.ok(ell.containsPoint(iss[0].anchor), ell.implicitFunction()(iss[0].anchor))
 });

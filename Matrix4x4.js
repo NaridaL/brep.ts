@@ -172,6 +172,10 @@ if (!NLA.Vector3) {
 
 	        return this.determinant() < 0
         },
+	    getTranslation: function () {
+		    var m = this.m, w = m[15]
+		    return V3.create(m[3] / w, m[7] / w, m[11] / w)
+	    },
 
 	    /**
 	     * Returns if the matrix has the following form (within NLA.PRECISION):
