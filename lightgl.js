@@ -14,15 +14,13 @@ var GL = (function() {
 	var V3 = NLA.Vector3, M4 = NLA.Matrix4x4
 
 	var GL = {
-		// ### Initialization
-		//
-		// `GL.create()` creates a new WebGL context and augments it with more
-		// methods. The alpha channel is disabled by default because it usually causes
-		// unintended transparencies in the canvas.
 		/**
+		 * `GL.create()` creates a new WebGL context and augments it with more methods. The alpha channel is disabled
+		 * by default because it usually causes unintended transparencies in the canvas.
 		 *
-		 * @param options
-		 * @returns {WebGLRenderingContext}
+		 * @param {Object} options
+		 * @param {Element=} options.canvas Canvas to use. A new one will be created if undefined.
+		 * @param {boolean=} options.alpha
 		 */
 		create: function(options) {
 			options = options || {};
@@ -32,7 +30,7 @@ var GL = (function() {
 				canvas.height = 600;
 			}
 			if (!('alpha' in options)) options.alpha = false;
-			try { gl = canvas.getContext('webgl', options); } catch (e) {}
+			try { gl = canvas.getContext('webgl', options); } catch (e) { console.log(e)}
 			try { gl = gl || canvas.getContext('experimental-webgl', options); } catch (e) {}
 			if (!gl) throw new Error('WebGL not supported');
 			gl.HALF_FLOAT_OES = 0x8D61;
@@ -48,11 +46,9 @@ var GL = (function() {
 		keys: {},
 
 		// Export all external classes.
-		Indexer: Indexer,
 		Buffer: Buffer,
-			Mesh: Mesh,
+		Mesh: Mesh,
 		HitTest: HitTest,
-		Raytracer: Raytracer,
 		Shader: Shader,
 		Texture: Texture,
 	};
@@ -65,9 +61,9 @@ var GL = (function() {
 	function addMatrixStack() {
 		gl.MODELVIEW = ENUM | 1;
 		gl.PROJECTION = ENUM | 2;
-		var tempMatrix = M4();
+		var tempMatrix = M4()
 		var resultMatrix = M4();
-		gl.modelviewMatrix = M4();
+		gl.modelViewMatrix = M4();
 		gl.projectionMatrix = M4();
 		var modelviewStack = [];
 		var projectionStack = [];
@@ -75,7 +71,7 @@ var GL = (function() {
 		gl.matrixMode = function(mode) {
 			switch (mode) {
 				case gl.MODELVIEW:
-					matrix = 'modelviewMatrix';
+					matrix = 'modelViewMatrix';
 					stack = modelviewStack;
 					break;
 				case gl.PROJECTION:
@@ -133,7 +129,7 @@ var GL = (function() {
 			gl[matrix] = stack.pop()
 		};
 		gl.project = function(objX, objY, objZ, modelview, projection, viewport) {
-			modelview = modelview || gl.modelviewMatrix;
+			modelview = modelview || gl.modelViewMatrix;
 			projection = projection || gl.projectionMatrix;
 			viewport = viewport || gl.getParameter(gl.VIEWPORT);
 			var point = projection.transformPoint(modelview.transformPoint(V3(objX, objY, objZ)));
@@ -144,7 +140,7 @@ var GL = (function() {
 			);
 		};
 		gl.unProject = function(winX, winY, winZ, modelview, projection, viewport) {
-			modelview = modelview || gl.modelviewMatrix;
+			modelview = modelview || gl.modelViewMatrix;
 			projection = projection || gl.projectionMatrix;
 			viewport = viewport || gl.getParameter(gl.VIEWPORT);
 			var point = V3(
@@ -179,9 +175,9 @@ uniform float pointSize;
 varying vec4 color;
 varying vec4 coord;
 void main() {
-	color = gl_Color;
-	coord = gl_TexCoord;
-	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	color = LGL_Color;
+	coord = LGL_TexCoord;
+	gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	gl_PointSize = pointSize;
 }`, `
 uniform sampler2D texture;
@@ -413,24 +409,35 @@ void main() {
 			update();
 		};
 
-		// ### Fullscreen
-		//
-		// Provide an easy way to get a fullscreen app running, including an
-		// automatic 3D perspective projection matrix by default. This should be
-		// called once.
-		//
-		// Just fullscreen, no automatic camera:
-		//
-		//     gl.fullscreen({ camera: false });
-		//
-		// Adjusting field of view, near plane distance, and far plane distance:
-		//
-		//     gl.fullscreen({ fov: 45, near: 0.1, far: 1000 });
-		//
-		// Adding padding from the edge of the window:
-		//
-		//     gl.fullscreen({ paddingLeft: 250, paddingBottom: 60 });
-		//
+		/**
+		 * Provide an easy way to get a fullscreen app running, including an
+		 * automatic 3D perspective projection matrix by default. This should be
+		 * called once.
+		 *
+		 * Just fullscreen, no automatic camera:
+		 *
+		 *     gl.fullscreen({ camera: false });
+		 *
+		 * Adjusting field of view, near plane distance, and far plane distance:
+		 *
+		 *     gl.fullscreen({ fov: 45, near: 0.1, far: 1000 });
+		 *
+		 * Adding padding from the edge of the window:
+		 *
+		 *     gl.fullscreen({ paddingLeft: 250, paddingBottom: 60 });
+		 *
+		 * @param {object=} options
+		 * @param {number=} options.paddingTop
+		 * @param {number=} options.paddingLeft
+		 * @param {number=} options.paddingRight
+		 * @param {number=} options.paddingBottom
+		 *
+		 * @param {boolean=} options.camera
+		 * @param {number=} options.fov
+		 * @param {number=} options.near
+		 * @param {number=} options.far
+		 *
+		 */
 		gl.fullscreen = function(options) {
 			options = options || {};
 			var top = options.paddingTop || 0;
@@ -459,7 +466,7 @@ void main() {
 				}
 				if (gl.ondraw) gl.ondraw();
 			}
-			on(window, 'resize', resize);
+			window.addEventListener('resize', resize)
 			resize();
 		};
 	}
@@ -468,16 +475,88 @@ void main() {
 // standard WebGL enums.
 	var ENUM = 0x12340000;
 
-// src/matrix.js
-// Represents a 4x4 matrix stored in row-major order that uses Float32Arrays
-// when available. Matrix operations can either be done using convenient
-// methods that return a new matrix for the result or optimized methods
-// that store the result in an existing matrix to avoid generating garbage.
 
-	var hasFloat32Array = (typeof Float32Array != 'undefined');
+	/**
+	 * Provides a simple method of uploading data to a GPU buffer. Example usage:
+	 *
+	 *     var vertices = new GL.Buffer(gl.ARRAY_BUFFER, Float32Array);
+	 *     vertices.data = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]];
+	 *     vertices.compile();
+	 *
+	 *     var indices = new GL.Buffer(gl.ELEMENT_ARRAY_BUFFER, Uint16Array);
+	 *     indices.data = [[0, 1, 2], [2, 1, 3]];
+	 *     indices.compile();
+	 *
+	 * @param {number} target
+	 * Specifies the target to which the buffer object is bound.
+	 * The symbolic constant must be GL_ARRAY_BUFFER or GL_ELEMENT_ARRAY_BUFFER.
+	 * @param type Float32Array or Uint16Array
+	 *
+	 * @property {WebGLBuffer} buffer
+	 * @constructor
+	 */
+	function Buffer(target, type) {
+		assert(target == gl.ARRAY_BUFFER || target == gl.ELEMENT_ARRAY_BUFFER, 'target == gl.ARRAY_BUFFER || target == gl.ELEMENT_ARRAY_BUFFER')
+		assert(type == Float32Array || type == Uint16Array, 'type == Float32Array || type == Uint16Array')
+		this.buffer = null
+		this.target = target
+		this.type = type
+		this.data = []
+		/**
+		 * Number of elements in buffer. 2 V3s is still 2, not 6.
+ 		 * @type {number}
+		 */
+		this.count = 0
+		/**
+		 * Space between elements in buffer. 3 for V3s.
+		 * @type {number}
+		 */
+		this.spacing = 0
+		this.hasBeenCompiled = false
+	}
 
-// ### new GL.Matrix([elements])
-//
+	Buffer.prototype = {
+		/**
+		 * Upload the contents of `data` to the GPU in preparation for rendering. The data must be a list of lists
+		 * where each inner list has the same length. For example, each element of data for vertex normals would be a
+		 * list of length three. This will remember the data length and element length for later use by shaders.
+		 *
+		 * This could have used `[].concat.apply([], this.data)` to flatten the array but Google
+		 * Chrome has a maximum number of arguments so the concatenations are chunked to avoid that limit.
+		 *
+		 * @param {number} type Either `gl.STATIC_DRAW` or `gl.DYNAMIC_DRAW`. Defaults to `gl.STATIC_DRAW`
+		 */
+		compile: function(type) {
+			assert('undefined' == typeof type || gl.STATIC_DRAW == type || gl.DYNAMIC_DRAW == type, 'gl.STATIC_DRAW == type || gl.DYNAMIC_DRAW == type')
+			this.buffer = this.buffer || gl.createBuffer();
+			var buffer
+			if (this.data.length == 0) {
+				console.warn("empty buffer " + this.name)
+				//console.trace()
+			}
+			if (this.data.length == 0 || this.data[0] instanceof V3) {
+				buffer = V3.flattenV3Array(this.data) // asserts that all elements are V3s
+				this.spacing = 3
+				this.count = this.data.length
+			} else {
+				var data = [];
+				for (var i = 0, chunk = 10000; i < this.data.length; i += chunk) {
+					data = Array.prototype.concat.apply(data, this.data.slice(i, i + chunk));
+				}
+				buffer = new this.type(data)
+				var spacing = this.data.length ? data.length / this.data.length : 0;
+				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
+				assert(data.every(v => 'number' == typeof v), () => "data.every(v => 'number' == typeof v)" + data.toSource())
+				if (NLA.DEBUG) { this.maxValue = data.max() }
+				this.spacing = spacing
+				this.count = data.length
+			}
+			gl.bindBuffer(this.target, this.buffer)
+			gl.bufferData(this.target, buffer, type || gl.STATIC_DRAW)
+			this.hasBeenCompiled = true
+		}
+	};
+
 // src/mesh.js
 // Represents indexed triangle geometry with arbitrary additional attributes.
 // You need a shader to draw a mesh; meshes can't draw themselves.
@@ -515,94 +594,6 @@ void main() {
 //
 //     // Upload provided data to GPU memory
 //     mesh.compile();
-
-// ### new GL.Indexer()
-//
-// Generates indices into a list of unique objects from a stream of objects
-// that may contain duplicates. This is useful for generating compact indexed
-// meshes from unindexed data.
-	function Indexer() {
-		this.unique = [];
-		this.indices = [];
-		this.map = {};
-	}
-
-	Indexer.prototype = {
-		// ### .add(v)
-		//
-		// Adds the object `obj` to `unique` if it hasn't already been added. Returns
-		// the index of `obj` in `unique`.
-		add: function(obj) {
-			var key = JSON.stringify(obj);
-			if (!(key in this.map)) {
-				this.map[key] = this.unique.length;
-				this.unique.push(obj);
-			}
-			return this.map[key];
-		}
-	};
-
-// ### new GL.Buffer(target, type)
-//
-// Provides a simple method of uploading data to a GPU buffer. Example usage:
-//
-//     var vertices = new GL.Buffer(gl.ARRAY_BUFFER, Float32Array);
-//     var indices = new GL.Buffer(gl.ELEMENT_ARRAY_BUFFER, Uint16Array);
-//     vertices.data = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]];
-//     indices.data = [[0, 1, 2], [2, 1, 3]];
-//     vertices.compile();
-//     indices.compile();
-//
-	function Buffer(target, type) {
-		this.buffer = null;
-		this.target = target;
-		this.type = type;
-		this.data = [];
-	}
-
-	Buffer.prototype = {
-		// ### .compile(type)
-		//
-		// Upload the contents of `data` to the GPU in preparation for rendering. The
-		// data must be a list of lists where each inner list has the same length. For
-		// example, each element of data for vertex normals would be a list of length three.
-		// This will remember the data length and element length for later use by shaders.
-		// The type can be either `gl.STATIC_DRAW` or `gl.DYNAMIC_DRAW`, and defaults to
-		// `gl.STATIC_DRAW`.
-		//
-		// This could have used `[].concat.apply([], this.data)` to flatten
-		// the array but Google Chrome has a maximum number of arguments so the
-		// concatenations are chunked to avoid that limit.
-		compile: function(type) {
-			this.buffer = this.buffer || gl.createBuffer();
-			if (this.data.length == 0) {
-				console.warn("empty buffer " + this.name)
-				//console.trace()
-			}
-			if (this.data.length == 0 || this.data[0] instanceof V3) {
-				var buffer = V3.flattenV3Array(this.data) // asserts that all elements are V3s
-				this.buffer.length = this.data.length
-				this.buffer.spacing = 3
-				this.buffer.count = this.data.length
-			} else {
-				var data = [];
-				for (var i = 0, chunk = 10000; i < this.data.length; i += chunk) {
-					data = Array.prototype.concat.apply(data, this.data.slice(i, i + chunk));
-				}
-				var buffer = new this.type(data)
-				var spacing = this.data.length ? data.length / this.data.length : 0;
-				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
-				assert(data.every(v => 'number' == typeof v), () => "data.every(v => 'number' == typeof v)" + data.toSource())
-				this.buffer.length = data.length
-				if (NLA.DEBUG) { this.maxValue = data.max() }
-				this.buffer.spacing = spacing
-				this.buffer.count = data.length / spacing
-			}
-			gl.bindBuffer(this.target, this.buffer)
-			gl.bufferData(this.target, buffer, type || gl.STATIC_DRAW);
-		}
-	};
-
 // ### new GL.Mesh([options])
 //
 // Represents a collection of vertex buffers and index buffers. Each vertex
@@ -617,30 +608,39 @@ void main() {
 // initially enabled.
 	/**
 	 *
-	 * @param options
+	 * @param {Object} options
+	 * @param {boolean=} options.coords
+	 * @param {boolean=} options.normals
+	 * @param {boolean=} options.colors
+	 * @param {boolean=} options.lines
+	 * @param {boolean=} options.triangles
 	 * @constructor
+	 * @alias GL.Mesh
 	 */
 	function Mesh(options) {
 		options = options || {};
 		this.hasBeenCompiled = false
-		this.vertexBuffers = {}
-		this.indexBuffers = {}
-		this.addVertexBuffer('vertices', 'gl_Vertex');
-		if (options.coords) this.addVertexBuffer('coords', 'gl_TexCoord')
-		if (options.normals) this.addVertexBuffer('normals', 'gl_Normal')
-		if (options.colors) this.addVertexBuffer('colors', 'gl_Color')
+		/** @dict */ this.vertexBuffers = {}
+		/** @dict */ this.indexBuffers = {}
+		this.addVertexBuffer('vertices', 'LGL_Vertex');
+		if (options.coords) this.addVertexBuffer('coords', 'LGL_TexCoord')
+		if (options.normals) this.addVertexBuffer('normals', 'LGL_Normal')
+		if (options.colors) this.addVertexBuffer('colors', 'LGL_Color')
 		if (!('triangles' in options) || options.triangles) this.addIndexBuffer('TRIANGLES')
 		if (options.lines) this.addIndexBuffer('LINES')
 	}
 
-	Mesh.prototype = {
-		// ### .addVertexBuffer(name, attribute)
-		//
-		// Add a new vertex buffer with a list as a property called `name` on this object
-		// and map it to the attribute called `attribute` in all shaders that draw this mesh.
+
+	Mesh.prototype = /** @lends GL.Mesh */ {
+		/**
+		 * Add a new vertex buffer with a list as a property called `name` on this object and map it to
+		 * the attribute called `attribute` in all shaders that draw this mesh.
+		 * @param {string} name
+		 * @param {string} attribute
+		 */
 		addVertexBuffer: function(name, attribute) {
 			assert(!this.vertexBuffers[attribute])
-			assert(!this[name])
+			//assert(!this[name])
 			this.hasBeenCompiled = false
 			assert('string' == typeof name)
 			assert('string' == typeof attribute)
@@ -649,101 +649,110 @@ void main() {
 			this[name] = [];
 		},
 
-		// ### .addIndexBuffer(name)
-		//
-		// Add a new index buffer with a list as a property called `name` on this object.
+		/**
+		 * Add a new index buffer.
+		 * @param {string} name
+		 */
 		addIndexBuffer: function(name) {
 			this.hasBeenCompiled = false
 			var buffer = this.indexBuffers[name] = new Buffer(gl.ELEMENT_ARRAY_BUFFER, Uint16Array);
 			buffer.name = name;
-			this[name.toLowerCase()] = [];
+			this[name.toLowerCase()] = []
 		},
 
-		// ### .compile()
-		//
-		// Upload all attached buffers to the GPU in preparation for rendering. This
-		// doesn't need to be called every frame, only needs to be done when the data
-		// changes.
+
+		// /** @returns {number[]} */ get triangles() { return this.indexBuffers['TRIANGLES'].data },
+		// /** @returns {number[]} */ get lines() { return this.indexBuffers['LINES'].data },
+		// /** @returns {V3[]} */ get vertices() { return this.vertexBuffers['LGL_Vertex'].data },
+		// /** @returns {V3[]} */ get normals() { return this.vertexBuffers['LGL_Normal'].data },
+
+		/**
+		 * Upload all attached buffers to the GPU in preparation for rendering. This doesn't need to be called every
+		 * frame, only needs to be done when the data changes.
+		 *
+		 * Sets `this.hasBeenCompiled` to true.
+		 */
 		compile: function() {
-			// TODO: ensure element buffer indexes are in bounds
-			var minVSize = Infinity
-			var minBufferName
+			// figure out shortest vertex buffer to make sure indexBuffers are in bounds
+			let minVertexBufferLength = Infinity, minBufferName
 			for (var attribute in this.vertexBuffers) {
-				var buffer = this.vertexBuffers[attribute]
+				let buffer = this.vertexBuffers[attribute]
 				buffer.data = this[buffer.name]
 				buffer.compile()
-				if (this[buffer.name].length < minVSize) {
+				if (this[buffer.name].length < minVertexBufferLength) {
 					minBufferName = attribute
-					minVSize = this[buffer.name].length
+					minVertexBufferLength = this[buffer.name].length
 				}
 			}
 
 			for (var name in this.indexBuffers) {
-				var buffer = this.indexBuffers[name];
+				let buffer = this.indexBuffers[name];
 				buffer.data = this[name.toLowerCase()];
 				buffer.compile();
-				if (NLA.DEBUG && buffer.maxValue >= minVSize) {
+				if (NLA.DEBUG && buffer.maxValue >= minVertexBufferLength) {
 					throw new Error(`max index value for buffer ${name}
-					is too large ${buffer.maxValue} min Vbuffer size: ${minVSize} ${minBufferName}`)
+					is too large ${buffer.maxValue} min Vbuffer size: ${minVertexBufferLength} ${minBufferName}`)
 				}
 			}
 			this.hasBeenCompiled = true
 		},
 
-		// ### .transform(matrix)
-		//
-		// Transform all vertices by `matrix` and all normals by the inverse transpose
-		// of `matrix`.
+		/**
+		 * Transform all vertices by `matrix` and all normals by the inverse transpose of `matrix`.
+		 * @param {M4} m4
+		 * @returns {GL.Mesh}
+		 */
 		transform: function(m4) {
 			var mesh = new GL.Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
-				var invTrans = m4.inverse().transpose();
-				this.normals = this.normals.map(n => invTrans.transformVector(n).normalized())
+				var invTrans = m4.inversed().transpose();
+				this.vertexBuffers['LGL_Normal'].data = this.normals.map(n => invTrans.transformVector(n).normalized())
 			}
 			mesh.triangles = this.triangles
 			mesh.compile()
 			return mesh
 		},
 
-		// ### .computeNormals()
-		//
-		// Computes a new normal for each vertex from the average normal of the
-		// neighboring triangles. This means adjacent triangles must share vertices
-		// for the resulting normals to be smooth.
+		/**
+		 * Computes a new normal for each vertex from the average normal of the neighboring triangles. This means
+		 * adjacent triangles must share vertices for the resulting normals to be smooth.
+		 * @returns {GL.Mesh}
+		 */
 		computeNormals: function() {
-			if (!this.normals) this.addVertexBuffer('normals', 'gl_Normal')
-			this.normals = Array.fromFunction(this.vertices.length, i => V3.ZERO)
+			if (!this.normals) this.addVertexBuffer('normals', 'LGL_Normal')
+			this.vertexBuffers['LGL_Normal'].data = Array.fromFunction(this.vertices.length, i => V3.ZERO)
 
-			for (var i = 0; i < this.triangles.length; i++) {
-				var t = this.triangles[i]
-				var a = this.vertices[t[0]]
-				var b = this.vertices[t[1]]
-				var c = this.vertices[t[2]]
-				var normal = b.minus(a).cross(c.minus(a)).normalized();
-				this.normals[t[0]] = this.normals[t[0]].plus(normal);
-				this.normals[t[1]] = this.normals[t[1]].plus(normal);
-				this.normals[t[2]] = this.normals[t[2]].plus(normal);
+			let {triangles, vertices, normals} = this
+			for (let i = 0; i < triangles.length; i++) {
+				let t = triangles[i]
+				let a = vertices[t[0]]
+				let b = vertices[t[1]]
+				let c = vertices[t[2]]
+				let normal = b.minus(a).cross(c.minus(a)).normalized();
+				normals[t[0]] = normals[t[0]].plus(normal);
+				normals[t[1]] = normals[t[1]].plus(normal);
+				normals[t[2]] = normals[t[2]].plus(normal);
 			}
-			for (var i = 0; i < this.vertices.length; i++) {
-				this.normals[i] = this.normals[i].normalized()
+			for (let i = 0; i < vertices.length; i++) {
+				normals[i] = normals[i].normalized()
 			}
 			return this
 		},
 
-		// ### .computeWireframe()
-		//
-		// Populate the `lines` index buffer from the `triangles` index buffer.
+		/**
+		 * Populate the `lines` index buffer from the `triangles` index buffer.
+		 * @returns {GL.Mesh}
+		 */
 		computeWireframe: function() {
-			assert(false)
 			var canonEdges = new Set()
 			function canonEdge(i0, i1) {
 				var iMin = min(i0, i1), iMax = max(i0, i1)
 				return (iMin << 16) | iMax
 			}
-			function uncanonEdge(key) {
-				return [key >> 16, key & 0xffff]
-			}
+			// function uncanonEdge(key) {
+			// 	return [key >> 16, key & 0xffff]
+			// }
 			for (var i = 0; i < this.triangles.length; i++) {
 				var t = this.triangles[i]
 				canonEdges.add(canonEdge(t[0], t[1]))
@@ -760,9 +769,9 @@ void main() {
 				var iMin = min(i0, i1), iMax = max(i0, i1)
 				return (iMin << 16) | iMax
 			}
-			function uncanonEdge(key) {
-				return [key >> 16, key & 0xffff]
-			}
+			// function uncanonEdge(key) {
+			// 	return [key >> 16, key & 0xffff]
+			// }
 			var t = this.triangles
 			for (var i = 0; i < this.triangles.length; i += 3) {
 				canonEdges.add(canonEdge(t[i + 0], t[i + 1]))
@@ -820,6 +829,14 @@ void main() {
 //     var mesh2 = GL.Mesh.plane({ detail: 5 });
 //     var mesh3 = GL.Mesh.plane({ detailX: 20, detailY: 40 });
 //
+	/**
+	 * 
+	 * @param {Object} options
+	 * @param {number} options.detail
+	 * @param {number} options.detailX
+	 * @param {number} options.detailY
+	 * @returns {GL.Mesh}
+	 */
 	Mesh.plane = function(options) {
 		options = options || {};
 		var mesh = new Mesh(options);
@@ -855,7 +872,10 @@ void main() {
 	];
 
 	function pickOctant(i) {
-		return V3((i & 1) * 2 - 1, (i & 2) - 1, (i & 4) / 2 - 1);
+		return V3(
+			((i & 1) << 1) - 1,
+			(i & 2) - 1,
+			((i & 4) >> 1) - 1)
 	}
 
 // ### GL.Mesh.cube([options])
@@ -871,78 +891,24 @@ void main() {
 				var d = data[j];
 				mesh.vertices.push(pickOctant(d).toArray());
 				if (mesh.coords) mesh.coords.push([j & 1, (j & 2) / 2]);
-				if (mesh.normals) mesh.normals.push(data.slice(4, 7));
+				if (options && options.normals) mesh.normals.push(data.slice(4, 7));
 			}
-			mesh.triangles.push([v, v + 1, v + 2]);
-			mesh.triangles.push([v + 2, v + 1, v + 3]);
+			mesh.triangles.push(
+				v, v + 1, v + 2,
+				v + 2, v + 1, v + 3)
 		}
 
 		mesh.compile();
 		return mesh;
 	};
 
-// ### GL.Mesh.sphere([options])
-//
-// Generates a geodesic sphere of radius 1. The `options` argument specifies
-// options to pass to the mesh constructor in addition to the `detail` option,
-// which controls the tesselation level. The detail is `6` by default.
-// Example usage:
-//
-//     var mesh1 = GL.Mesh.sphere();
-//     var mesh2 = GL.Mesh.sphere({ detail: 2 });
-//
-	Mesh.sphere = function(options) {
-		function tri(a, b, c) { return flip ? [a, c, b] : [a, b, c]; }
-		function fix(x) { return x + (x - x * x) / 2; }
-		options = options || {};
-		var mesh = new Mesh(options);
-		var indexer = new Indexer();
-		var detail = options.detail || 6;
-
-		for (var octant = 0; octant < 8; octant++) {
-			var scale = pickOctant(octant);
-			var flip = scale.x * scale.y * scale.z > 0;
-			var data = [];
-			for (var i = 0; i <= detail; i++) {
-				// Generate a row of vertices on the surface of the sphere
-				// using barycentric coordinates.
-				for (var j = 0; i + j <= detail; j++) {
-					var a = i / detail;
-					var b = j / detail;
-					var c = (detail - i - j) / detail;
-					var vertex = { vertex: V3(fix(a), fix(b), fix(c)).normalized().multiply(scale).toArray() };
-					if (mesh.coords) vertex.coord = scale.y > 0 ? [1 - a, c] : [c, 1 - a];
-					data.push(indexer.add(vertex));
-				}
-
-				// Generate triangles from this row and the previous row.
-				if (i > 0) {
-					for (var j = 0; i + j <= detail; j++) {
-						var a = (i - 1) * (detail + 1) + ((i - 1) - (i - 1) * (i - 1)) / 2 + j;
-						var b = i * (detail + 1) + (i - i * i) / 2 + j;
-						mesh.triangles.push(tri(data[a], data[a + 1], data[b]));
-						if (i + j < detail) {
-							mesh.triangles.push(tri(data[b], data[a + 1], data[b + 1]));
-						}
-					}
-				}
-			}
-		}
-
-		// Reconstruct the geometry from the indexer.
-		mesh.vertices = indexer.unique.map(function(v) { return v.vertex; });
-		if (mesh.coords) mesh.coords = indexer.unique.map(function(v) { return v.coord; });
-		if (mesh.normals) mesh.normals = mesh.vertices;
-		mesh.compile();
-		return mesh;
-	};
 	/**
-	 * Returns a sphere mesh with radius 1 created by subdividing the faces of a dodecahedron (20-sided)
+	 * Returns a sphere mesh with radius 1 created by subdividing the faces of a dodecahedron (20-sided) recursively
 	 * The sphere is positioned at the origin
 	 * @param subdivisions
 	 *      How many recursive divisions to do. A subdivision divides a triangle into 4,
 	 *      so the total number of triangles is 20 * 4^subdivisions
-	 * @returns {Mesh}
+	 * @returns {GL.Mesh}
 	 *      Contains vertex and normal buffers and index buffers for triangles and lines
 	 */
 	Mesh.sphere2 = function (subdivisions) {
@@ -1019,6 +985,7 @@ void main() {
 				// subdivide the triangle abc into 4 by adding a vertex (with the correct distance from the origin)
 				// between each segment ab, bc and cd, then calling the function recursively
 				var abMid1 = a.plus(b).toLength(1), bcMid1 = b.plus(c).toLength(1), caMid1 = c.plus(a).toLength(1)
+				// indexes of new vertices:
 				var iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
 				vertices.push(abMid1, bcMid1, caMid1)
 				tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, iabm, ibcm, icam, lines)
@@ -1042,17 +1009,19 @@ void main() {
 
 	}
 
-// ### GL.Mesh.load(json[, options])
-//
-// Creates a mesh from the JSON generated by the `convert/convert.py` script.
-// Example usage:
-//
-//     var data = {
-//       vertices: [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
-//       triangles: [[0, 1, 2]]
-//     };
-//     var mesh = GL.Mesh.load(data);
-//
+	/**
+	 * Creates a mesh from the JSON generated by the `convert/convert.py` script.
+	 * Example usage:
+	 *      var data = {
+	 *          vertices: [[0, 0, 0], [1, 0, 0], [0, 1, 0]],
+	 *          triangles: [[0, 1, 2]]
+	 *      }
+	 *      var mesh = GL.Mesh.load(data)
+	 *
+	 * @param {Object} json
+	 * @param {Object} options
+	 * @returns {GL.Mesh}
+	 */
 	Mesh.load = function(json, options) {
 		options = options || {};
 		if (!('coords' in options)) options.coords = !!json.coords;
@@ -1112,151 +1081,149 @@ void main() {
 //       gl.canvas.height / 2);
 //     var result = GL.Raytracer.hitTestSphere(
 //       tracer.eye, ray, new GL.Vector(0, 0, 0), 1);
-	function Raytracer() {
-		var v = gl.getParameter(gl.VIEWPORT);
-		var m = gl.modelviewMatrix.m;
-
-		var axisX = V3(m[0], m[4], m[8]);
-		var axisY = V3(m[1], m[5], m[9]);
-		var axisZ = V3(m[2], m[6], m[10]);
-		var offset = V3(m[3], m[7], m[11]);
-		this.eye = V3(-offset.dot(axisX), -offset.dot(axisY), -offset.dot(axisZ));
-
-		var minX = v[0], maxX = minX + v[2];
-		var minY = v[1], maxY = minY + v[3];
-		this.ray00 = gl.unProject(minX, minY, 1).minus(this.eye);
-		this.ray10 = gl.unProject(maxX, minY, 1).minus(this.eye);
-		this.ray01 = gl.unProject(minX, maxY, 1).minus(this.eye);
-		this.ray11 = gl.unProject(maxX, maxY, 1).minus(this.eye);
-		this.viewport = v;
-	}
-
-	Raytracer.prototype = {
-		// ### .getRayForPixel(x, y)
-		//
-		// Returns the ray originating from the camera and traveling through the pixel `x, y`.
-		getRayForPixel: function(x, y) {
-			x = (x - this.viewport[0]) / this.viewport[2];
-			y = 1 - (y - this.viewport[1]) / this.viewport[3];
-			var ray0 = Vector.lerp(this.ray00, this.ray10, x);
-			var ray1 = Vector.lerp(this.ray01, this.ray11, x);
-			return Vector.lerp(ray0, ray1, y).normalized();
-		}
-	};
-
-// ### GL.Raytracer.hitTestBox(origin, ray, min, max)
+// 	function Raytracer() {
+// 		var v = gl.getParameter(gl.VIEWPORT);
+// 		var m = gl.modelViewMatrix.m;
 //
-// Traces the ray starting from `origin` along `ray` against the axis-aligned box
-// whose coordinates extend from `min` to `max`. Returns a `HitTest` with the
-// information or `null` for no intersection.
+// 		var axisX = V3(m[0], m[4], m[8]);
+// 		var axisY = V3(m[1], m[5], m[9]);
+// 		var axisZ = V3(m[2], m[6], m[10]);
+// 		var offset = V3(m[3], m[7], m[11]);
+// 		this.eye = V3(-offset.dot(axisX), -offset.dot(axisY), -offset.dot(axisZ));
 //
-// This implementation uses the [slab intersection method](http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm).
-	Raytracer.hitTestBox = function(origin, ray, min, max) {
-		var tMin = min.minus(origin).divide(ray);
-		var tMax = max.minus(origin).divide(ray);
-		var t1 = Vector.min(tMin, tMax);
-		var t2 = Vector.max(tMin, tMax);
-		var tNear = t1.max();
-		var tFar = t2.min();
-
-		if (tNear > 0 && tNear < tFar) {
-			var epsilon = 1.0e-6, hit = origin.add(ray.multiply(tNear));
-			min = min.add(epsilon);
-			max = max.minus(epsilon);
-			return new HitTest(tNear, hit, V3(
-				(hit.x > max.x) - (hit.x < min.x),
-				(hit.y > max.y) - (hit.y < min.y),
-				(hit.z > max.z) - (hit.z < min.z)
-			));
-		}
-
-		return null;
-	};
-
-// ### GL.Raytracer.hitTestSphere(origin, ray, center, radius)
+// 		var minX = v[0], maxX = minX + v[2];
+// 		var minY = v[1], maxY = minY + v[3];
+// 		this.ray00 = gl.unProject(minX, minY, 1).minus(this.eye);
+// 		this.ray10 = gl.unProject(maxX, minY, 1).minus(this.eye);
+// 		this.ray01 = gl.unProject(minX, maxY, 1).minus(this.eye);
+// 		this.ray11 = gl.unProject(maxX, maxY, 1).minus(this.eye);
+// 		this.viewport = v;
+// 	}
 //
-// Traces the ray starting from `origin` along `ray` against the sphere defined
-// by `center` and `radius`. Returns a `HitTest` with the information or `null`
-// for no intersection.
-	Raytracer.hitTestSphere = function(origin, ray, center, radius) {
-		var offset = origin.minus(center);
-		var a = ray.dot(ray);
-		var b = 2 * ray.dot(offset);
-		var c = offset.dot(offset) - radius * radius;
-		var discriminant = b * b - 4 * a * c;
-
-		if (discriminant > 0) {
-			var t = (-b - Math.sqrt(discriminant)) / (2 * a), hit = origin.add(ray.multiply(t));
-			return new HitTest(t, hit, hit.minus(center).divide(radius));
-		}
-
-		return null;
-	};
-
-// ### GL.Raytracer.hitTestTriangle(origin, ray, a, b, c)
+// 	Raytracer.prototype = {
+// 		// ### .getRayForPixel(x, y)
+// 		//
+// 		// Returns the ray originating from the camera and traveling through the pixel `x, y`.
+// 		getRayForPixel: function(x, y) {
+// 			x = (x - this.viewport[0]) / this.viewport[2];
+// 			y = 1 - (y - this.viewport[1]) / this.viewport[3];
+// 			var ray0 = Vector.lerp(this.ray00, this.ray10, x);
+// 			var ray1 = Vector.lerp(this.ray01, this.ray11, x);
+// 			return Vector.lerp(ray0, ray1, y).normalized();
+// 		}
+// 	};
 //
-// Traces the ray starting from `origin` along `ray` against the triangle defined
-// by the points `a`, `b`, and `c`. Returns a `HitTest` with the information or
-// `null` for no intersection.
-	Raytracer.hitTestTriangle = function(origin, ray, a, b, c) {
-		var ab = b.minus(a);
-		var ac = c.minus(a);
-		var normal = ab.cross(ac).normalized();
-		var t = normal.dot(a.minus(origin)) / normal.dot(ray);
-
-		if (t > 0) {
-			var hit = origin.add(ray.multiply(t));
-			var toHit = hit.minus(a);
-			var dot00 = ac.dot(ac);
-			var dot01 = ac.dot(ab);
-			var dot02 = ac.dot(toHit);
-			var dot11 = ab.dot(ab);
-			var dot12 = ab.dot(toHit);
-			var divide = dot00 * dot11 - dot01 * dot01;
-			var u = (dot11 * dot02 - dot01 * dot12) / divide;
-			var v = (dot00 * dot12 - dot01 * dot02) / divide;
-			if (u >= 0 && v >= 0 && u + v <= 1) return new HitTest(t, hit, normal);
-		}
-
-		return null;
-	};
-
-// src/shader.js
-// Provides a convenient wrapper for WebGL shaders. A few uniforms and attributes,
-// prefixed with `gl_`, are automatically added to all shader sources to make
-// simple shaders easier to write.
+// // ### GL.Raytracer.hitTestBox(origin, ray, min, max)
+// //
+// // Traces the ray starting from `origin` along `ray` against the axis-aligned box
+// // whose coordinates extend from `min` to `max`. Returns a `HitTest` with the
+// // information or `null` for no intersection.
+// //
+// // This implementation uses the [slab intersection method](http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm).
+// 	Raytracer.hitTestBox = function(origin, ray, min, max) {
+// 		var tMin = min.minus(origin).divide(ray);
+// 		var tMax = max.minus(origin).divide(ray);
+// 		var t1 = Vector.min(tMin, tMax);
+// 		var t2 = Vector.max(tMin, tMax);
+// 		var tNear = t1.max();
+// 		var tFar = t2.min();
 //
-// Example usage:
+// 		if (tNear > 0 && tNear < tFar) {
+// 			var epsilon = 1.0e-6, hit = origin.add(ray.multiply(tNear));
+// 			min = min.add(epsilon);
+// 			max = max.minus(epsilon);
+// 			return new HitTest(tNear, hit, V3(
+// 				(hit.x > max.x) - (hit.x < min.x),
+// 				(hit.y > max.y) - (hit.y < min.y),
+// 				(hit.z > max.z) - (hit.z < min.z)
+// 			));
+// 		}
 //
-//     var shader = new GL.Shader('\
-//       void main() {\
-//         gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
-//       }\
-//     ', '\
-//       uniform vec4 color;\
-//       void main() {\
-//         gl_FragColor = color;\
-//       }\
-//     ');
+// 		return null;
+// 	};
 //
-//     shader.uniforms({
-//       color: [1, 0, 0, 1]
-//     }).draw(mesh);
-
-	function regexMap(regex, text, callback) {
-		var result;
-		while ((result = regex.exec(text)) != null) {
-			callback(result);
-		}
-	}
-
-// Non-standard names beginning with `gl_` must be mangled because they will
-// otherwise cause a compiler error.
-	var LIGHTGL_PREFIX = 'LIGHTGL';
-
-// ### new GL.Shader(vertexSource, fragmentSource)
+// // ### GL.Raytracer.hitTestSphere(origin, ray, center, radius)
+// //
+// // Traces the ray starting from `origin` along `ray` against the sphere defined
+// // by `center` and `radius`. Returns a `HitTest` with the information or `null`
+// // for no intersection.
+// 	Raytracer.hitTestSphere = function(origin, ray, center, radius) {
+// 		var offset = origin.minus(center);
+// 		var a = ray.dot(ray);
+// 		var b = 2 * ray.dot(offset);
+// 		var c = offset.dot(offset) - radius * radius;
+// 		var discriminant = b * b - 4 * a * c;
 //
-// Compiles a shader program using the provided vertex and fragment shaders.
+// 		if (discriminant > 0) {
+// 			var t = (-b - Math.sqrt(discriminant)) / (2 * a), hit = origin.add(ray.multiply(t));
+// 			return new HitTest(t, hit, hit.minus(center).divide(radius));
+// 		}
+//
+// 		return null;
+// 	};
+//
+// // ### GL.Raytracer.hitTestTriangle(origin, ray, a, b, c)
+// //
+// // Traces the ray starting from `origin` along `ray` against the triangle defined
+// // by the points `a`, `b`, and `c`. Returns a `HitTest` with the information or
+// // `null` for no intersection.
+// 	Raytracer.hitTestTriangle = function(origin, ray, a, b, c) {
+// 		var ab = b.minus(a);
+// 		var ac = c.minus(a);
+// 		var normal = ab.cross(ac).normalized();
+// 		var t = normal.dot(a.minus(origin)) / normal.dot(ray);
+//
+// 		if (t > 0) {
+// 			var hit = origin.add(ray.multiply(t));
+// 			var toHit = hit.minus(a);
+// 			var dot00 = ac.dot(ac);
+// 			var dot01 = ac.dot(ab);
+// 			var dot02 = ac.dot(toHit);
+// 			var dot11 = ab.dot(ab);
+// 			var dot12 = ab.dot(toHit);
+// 			var divide = dot00 * dot11 - dot01 * dot01;
+// 			var u = (dot11 * dot02 - dot01 * dot12) / divide;
+// 			var v = (dot00 * dot12 - dot01 * dot02) / divide;
+// 			if (u >= 0 && v >= 0 && u + v <= 1) return new HitTest(t, hit, normal);
+// 		}
+//
+// 		return null;
+// 	};
+
+
+	/**
+	 * Provides a convenient wrapper for WebGL shaders. A few uniforms and attributes,
+	 * prefixed with `gl_`, are automatically added to all shader sources to make
+	 * simple shaders easier to write.
+	 * Headers for the following variables are automatically prepended to the passed source. The correct variables are
+	 * also automatically passed to the shader when drawing.
+	 *
+	 * For vertex and fragment shaders:
+			 uniform mat3 LGL_NormalMatrix;
+			 uniform mat4 LGL_ModelViewMatrix;
+			 uniform mat4 LGL_ProjectionMatrix;
+			 uniform mat4 LGL_ModelViewProjectionMatrix;
+			 uniform mat4 LGL_ModelViewMatrixInverse;
+			 uniform mat4 LGL_ProjectionMatrixInverse;
+			 uniform mat4 LGL_ModelViewProjectionMatrixInverse;
+
+	 *
+	 *
+	 * Example usage:
+	 *
+	 *  const shader = new GL.Shader(
+	 *      `void main() { gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex; }`,
+	 *      `uniform vec4 color; void main() { gl_FragColor = color; }`)
+	 *
+	 *  shader.uniforms({ color: [1, 0, 0, 1] }).draw(mesh)
+	 *
+	 * Compiles a shader program using the provided vertex and fragment shaders.
+	 *
+	 * @param vertexSource
+	 * @param fragmentSource
+	 * @alias GL.Shader
+	 * @constructor
+	 */
 	function Shader(vertexSource, fragmentSource) {
 		// Allow passing in the id of an HTML script tag with the source
 		function followScriptTagById(id) {
@@ -1268,71 +1235,40 @@ void main() {
 
 		// Headers are prepended to the sources to provide some automatic functionality.
 		var header = `
-	uniform mat3 gl_NormalMatrix;
-	uniform mat4 gl_ModelViewMatrix;
-	uniform mat4 gl_ProjectionMatrix;
-	uniform mat4 gl_ModelViewProjectionMatrix;
-	uniform mat4 gl_ModelViewMatrixInverse;
-	uniform mat4 gl_ProjectionMatrixInverse;
-	uniform mat4 gl_ModelViewProjectionMatrixInverse;
+	uniform mat3 LGL_NormalMatrix;
+	uniform mat4 LGL_ModelViewMatrix;
+	uniform mat4 LGL_ProjectionMatrix;
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	uniform mat4 LGL_ModelViewMatrixInverse;
+	uniform mat4 LGL_ProjectionMatrixInverse;
+	uniform mat4 LGL_ModelViewProjectionMatrixInverse;
 `
 		var vertexHeader = header + `
-	attribute vec4 gl_Vertex;
-	attribute vec4 gl_TexCoord;
-	attribute vec3 gl_Normal;
-	attribute vec4 gl_Color;
+	attribute vec4 LGL_Vertex;
+	attribute vec4 LGL_TexCoord;
+	attribute vec3 LGL_Normal;
+	attribute vec4 LGL_Color;
 	vec4 ftransform() {
-		return gl_ModelViewProjectionMatrix * gl_Vertex;
+		return LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
 		var fragmentHeader = `  precision highp float;` + header;
 
-		// Check for the use of built-in matrices that require expensive matrix
-		// multiplications to compute, and record these in `usedMatrices`.
-		var source = vertexSource + fragmentSource;
-		var usedMatrices = {};
-		regexMap(/\b(gl_[^;]*)\b;/g, header, function(groups) {
-			var name = groups[1];
-			if (source.indexOf(name) != -1) {
-				var capitalLetters = name.replace(/[a-z_]/g, '');
-				usedMatrices[capitalLetters] = LIGHTGL_PREFIX + name;
-			}
-		});
-		if (source.indexOf('ftransform') != -1) usedMatrices.MVPM = LIGHTGL_PREFIX + 'gl_ModelViewProjectionMatrix';
-		this.usedMatrices = usedMatrices;
-
-		// The `gl_` prefix must be substituted for something else to avoid compile
-		// errors, since it's a reserved prefix. This prefixes all reserved names with
-		// `_`. The header is inserted after any extensions, since those must come
-		// first.
-		function fix(header, source) {
-			var replaced = {};
-			var match = /^((\s*\/\/.*\n|\s*#extension.*\n)+)[^]*$/.exec(source);
-			source = match ? match[1] + header + source.substr(match[1].length) : header + source;
-			regexMap(/\bgl_\w+\b/g, header, function(result) {
-				if (!(result in replaced)) {
-					source = source.replace(new RegExp('\\b' + result + '\\b', 'g'), LIGHTGL_PREFIX + result);
-					replaced[result] = true;
-				}
-			});
-			return source;
-		}
-		vertexSource = fix(vertexHeader, vertexSource);
-		fragmentSource = fix(fragmentHeader, fragmentSource);
+		const matrixNames = header.match(/\bLGL_\w+/g)
 
 		// Compile and link errors are thrown as strings.
 		function compileSource(type, source) {
-			var shader = gl.createShader(type);
-			gl.shaderSource(shader, source);
-			gl.compileShader(shader);
+			const shader = gl.createShader(type)
+			gl.shaderSource(shader, source)
+			gl.compileShader(shader)
 			if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-				throw new Error('compile error: ' + gl.getShaderInfoLog(shader));
+				throw new Error('compile error: ' + gl.getShaderInfoLog(shader))
 			}
-			return shader;
+			return shader
 		}
 		this.program = gl.createProgram();
-		gl.attachShader(this.program, compileSource(gl.VERTEX_SHADER, vertexSource));
-		gl.attachShader(this.program, compileSource(gl.FRAGMENT_SHADER, fragmentSource));
+		gl.attachShader(this.program, compileSource(gl.VERTEX_SHADER, vertexHeader + vertexSource));
+		gl.attachShader(this.program, compileSource(gl.FRAGMENT_SHADER, fragmentHeader + fragmentSource));
 		gl.linkProgram(this.program);
 		if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
 			throw new Error('link error: ' + gl.getProgramInfoLog(this.program));
@@ -1341,14 +1277,26 @@ void main() {
 		this.uniformLocations = {};
 
 		// Sampler uniforms need to be uploaded using `gl.uniform1i()` instead of `gl.uniform1f()`.
-		// To do this automatically, we detect and remember all uniform samplers in the source code.
-		var isSampler = {};
-		regexMap(/uniform\s+sampler(1D|2D|3D|Cube)\s+(\w+)\s*;/g, vertexSource + fragmentSource, function(groups) {
-			isSampler[groups[2]] = 1;
-		});
-		this.isSampler = isSampler;
+		// To do this automatically, we detect and remember all uniform samplers
+		this.isSampler = {}
+		for (let i = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS); i-- > 0;) {
+			let uniformInfo = gl.getActiveUniform(this.program, i)
+			let ut = uniformInfo.type
+			if (gl.SAMPLER_2D == ut || gl.SAMPLER_CUBE == ut) {
+				this.isSampler[uniformInfo.name] = 1
+			}
+		}
 
-		if (NLA.DEBUG) {
+		// Check for the use of built-in matrices that require expensive matrix
+		// multiplications to compute, and record these in `activeMatrices`.
+		this.activeMatrices = {};
+		matrixNames.forEach(name => {
+			if (gl.getUniformLocation(this.program, name)) {
+				this.activeMatrices[name] = true
+			}
+		})
+
+		if (NLA_DEBUG) {
 			this.uniformInfo = {}
 			for (var i = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS); i-- > 0;) {
 				var info = gl.getActiveUniform(this.program, i)
@@ -1358,9 +1306,7 @@ void main() {
 	}
 
 	function isArray(obj) {
-		var type = typeof obj
-		//console.log(type, type.toString(), obj.toString(), obj, Object.prototype.toString.apply(obj))
-		return obj.constructor == Array || Float32Array == obj.constructor || Float64Array == obj.constructor
+		return Array == obj.constructor || Float32Array == obj.constructor || Float64Array == obj.constructor
 	}
 
 	function isNumber(obj) {
@@ -1368,24 +1314,23 @@ void main() {
 		return str == '[object Number]' || str == '[object Boolean]';
 	}
 
-	var tempMatrix = M4();
-	var resultMatrix = M4();
-
 	Shader.prototype = {
-		// ### .uniforms(uniforms)
-		//
-		// Set a uniform for each property of `uniforms`. The correct `gl.uniform*()` method is
-		// inferred from the value types and from the stored uniform sampler flags.
+		/**
+		 * Set a uniform for each property of `uniforms`. The correct `gl.uniform*()` method is inferred from the value
+		 * types and from the stored uniform sampler flags.
+		 *
+		 * @param {Object} uniforms
+		 * @returns {GL.Shader}
+		 */
 		uniforms: function(uniforms) {
 			gl.useProgram(this.program);
 
 			for (var name in uniforms) {
-				var types = ["FLOAT", "FLOAT_MAT2", "FLOAT_MAT3", "FLOAT_MAT4", "FLOAT_VEC2", "FLOAT_VEC3", "FLOAT_VEC4", "INT", "INT_VEC2", "INT_VEC3", "INT_VEC4", "UNSIGNED_INT"]
 				var location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name);
 				assert(!!location, name)
 				if (!location) continue;
 				this.uniformLocations[name] = location;
-				var value = uniforms[name];
+				let value = uniforms[name];
 				if (NLA.DEBUG) {
 					var info = this.uniformInfo[name]
 					assert(info.type != gl.FLOAT || "number" == typeof value)
@@ -1430,124 +1375,155 @@ void main() {
 			return this;
 		},
 
-		// ### .draw(mesh[, mode])
-		//
-		// Sets all uniform matrix attributes, binds all relevant buffers, and draws the
-		// mesh geometry as indexed triangles or indexed lines. Set `mode` to `gl.LINES`
-		// (and either add indices to `lines` or call `computeWireframe()`) to draw the
-		// mesh in wireframe.
+		/**
+		 * Sets all uniform matrix attributes, binds all relevant buffers, and draws the mesh geometry as indexed
+		 * triangles or indexed lines. Set `mode` to `gl.LINES` (and either add indices to `lines` or call
+		 * `computeWireframe()`) to draw the mesh in wireframe.
+		 *
+		 * @param {GL.Mesh} mesh
+		 * @param {string} mode Defaults to 'TRIANGLES'. Must be passed as string so the correct index buffer can be
+		 *     automatically drawn.
+		 * @param {number=} start int
+		 * @param {number=} count int
+		 */
 		draw: function(mesh, mode, start, count) {
 			assert(mesh.hasBeenCompiled, 'mesh.hasBeenCompiled')
 			mode = mode || 'TRIANGLES'
-			assert(GL.drawModes.includes(mode), 'GL.drawModes.includes(mode) ' + mode)
+			assert(GL.DRAW_MODES.includes(mode), 'GL.DRAW_MODES.includes(mode) ' + mode)
 			this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[mode], gl[mode], start, count);
 		},
 
-		// ### .drawBuffers(vertexBuffers, indexBuffer, mode)
-		//
-		// Sets all uniform matrix attributes, binds all relevant buffers, and draws the
-		// indexed mesh geometry. The `vertexBuffers` argument is a map from attribute
-		// names to `Buffer` objects of type `gl.ARRAY_BUFFER`, `indexBuffer` is a `Buffer`
-		// object of type `gl.ELEMENT_ARRAY_BUFFER`, and `mode` is a WebGL primitive mode
-		// like `gl.TRIANGLES` or `gl.LINES`. This method automatically creates and caches
-		// vertex attribute pointers for attributes as needed.
+		/**
+		 * Sets all uniform matrix attributes, binds all relevant buffers, and draws the
+		 * indexed mesh geometry. The `vertexBuffers` argument is a map from attribute
+		 * names to `Buffer` objects of type `gl.ARRAY_BUFFER`, `indexBuffer` is a `Buffer`
+		 * object of type `gl.ELEMENT_ARRAY_BUFFER`, and `mode` is a WebGL primitive mode
+		 * like `gl.TRIANGLES` or `gl.LINES`. This method automatically creates and caches
+		 * vertex attribute pointers for attributes as needed.
+		 *
+		 * @param {Object} vertexBuffers
+		 * @param {Buffer} indexBuffer
+		 * @param {number} mode
+		 * @param {number=} start
+		 * @param {number=} count
+		 * @returns {Shader} this
+		 */
 		drawBuffers: function(vertexBuffers, indexBuffer, mode, start, count) {
-			assert(GL.drawModes.map(m => gl[m]).includes(mode), 'GL.drawModes.map(m => gl[m]).includes(mode) ' + mode)
-			// Only construct up the built-in matrices we need for this shader.
-			var used = this.usedMatrices;
-			var MVM = gl.modelviewMatrix;
-			var PM = gl.projectionMatrix;
-			var MVMI = (used.MVMI || used.NM) ? MVM.inversed() : null;
-			var PMI = (used.PMI) ? PM.inversed() : null;
-			var MVPM = (used.MVPM || used.MVPMI) ? PM.times(MVM) : null;
-			var matrices = {};
-			if (used.MVM) matrices[used.MVM] = MVM;
-			if (used.MVMI) matrices[used.MVMI] = MVMI;
-			if (used.PM) matrices[used.PM] = PM;
-			if (used.PMI) matrices[used.PMI] = PMI;
-			if (used.MVPM) matrices[used.MVPM] = MVPM;
-			if (used.MVPMI) matrices[used.MVPMI] = MVPM.inversed();
-			if (used.NM) {
-				var m = MVMI.m;
+			assert(GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode), 'GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode) ' + mode)
+
+			// Only construct up the built-in matrices that are active in the shader
+			const on = this.activeMatrices
+			let modelViewMatrixInverse = (on['LGL_ModelViewMatrixInverse'] || on['LGL_NormalMatrix'])
+				&& gl.modelViewMatrix.inversed()
+			let projectionMatrixInverse = on['LGL_ProjectionMatrixInverse'] && gl.projectionMatrix.inversed()
+			let modelViewProjectionMatrix = (on['LGL_ModelViewProjectionMatrix'] || on['LGL_ModelViewProjectionMatrixInverse'])
+				&& gl.projectionMatrix.times(gl.modelViewMatrix)
+
+			let /** @dict */ uni = {} // Uniform Matrices
+			on['LGL_ModelViewMatrix'] && (uni['LGL_ModelViewMatrix'] = gl.modelViewMatrix)
+			on['LGL_ModelViewMatrixInverse'] && (uni['LGL_ModelViewMatrixInverse'] = modelViewMatrixInverse)
+			on['LGL_ProjectionMatrix'] && (uni['LGL_ProjectionMatrix'] = gl.projectionMatrix)
+			on['LGL_ProjectionMatrixInverse'] && (uni['LGL_ProjectionMatrixInverse'] = projectionMatrixInverse)
+			on['LGL_ModelViewProjectionMatrix'] && (uni['LGL_ModelViewProjectionMatrix'] = modelViewProjectionMatrix)
+			on['LGL_ModelViewProjectionMatrixInverse'] && (uni['LGL_ModelViewProjectionMatrixInverse'] = modelViewProjectionMatrix.inversed())
+			if (on['LGL_NormalMatrix']) {
+				const m = modelViewMatrixInverse.m;
 				// transpose normal matrix
-				matrices[used.NM] = [m[0], m[4], m[8], m[1], m[5], m[9], m[2], m[6], m[10]];
+				uni['LGL_NormalMatrix'] = [m[0], m[4], m[8], m[1], m[5], m[9], m[2], m[6], m[10]];
 			}
-			this.uniforms(matrices);
+			this.uniforms(uni);
 
 			// Create and enable attribute pointers as necessary.
-			var length = 0;
-			for (var attribute in vertexBuffers) {
+			let minVertexBufferLength = Infinity
+			for (let attribute in vertexBuffers) {
 				var buffer = vertexBuffers[attribute];
-				var location = this.attributes[attribute] ||
-					gl.getAttribLocation(this.program, attribute.replace(/^(gl_.*)$/, LIGHTGL_PREFIX + '$1'));
-				if (location == -1 || !buffer.buffer) continue;
+				var location = this.attributes[attribute] || gl.getAttribLocation(this.program, attribute)
+				if (location == -1 || !buffer.buffer) {
+					//console.warn(`Vertex buffer ${attribute} was not bound because the attribute is not active.`)
+					continue
+				}
 				this.attributes[attribute] = location;
-				gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer, buffer.buffer.spacing, buffer.buffer.length);
+				gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer)
 				gl.enableVertexAttribArray(location);
 				//console.log(attribute)
-				try {
-					gl.vertexAttribPointer(location, buffer.buffer.spacing, gl.FLOAT, false, 0, 0);
-				} catch (e) {
-					console.log("caught")
-				}
 
-				// TODO: uuuh
-				length = buffer.buffer.count
+				gl.vertexAttribPointer(location, buffer.spacing, gl.FLOAT, false, 0, 0);
+
+				minVertexBufferLength = Math.min(minVertexBufferLength, buffer.count)
 			}
 
 			// Disable unused attribute pointers.
-			for (var attribute in this.attributes) {
+			for (let attribute in this.attributes) {
 				if (!(attribute in vertexBuffers)) {
 					gl.disableVertexAttribArray(this.attributes[attribute]);
 				}
 			}
 
 			// Draw the geometry.
-			if (length && (!indexBuffer || indexBuffer.buffer)) {
+			if (minVertexBufferLength && (!indexBuffer || indexBuffer.buffer)) {
 				if (indexBuffer) {
-					if (start + count > indexBuffer.buffer.length) {
+					if (start + count > indexBuffer.count) {
 						throw new Error("Buffer not long enough for passed parameters start/length/buffer length" +" "+ start +" "+ count + " "+ indexBuffer.buffer.length)
 					}
 					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
-					gl.drawElements(mode, count || indexBuffer.buffer.length, gl.UNSIGNED_SHORT, 2 * (start || 0));
+					gl.drawElements(mode, count || indexBuffer.count, gl.UNSIGNED_SHORT, start || 0)
 				} else {
-					if (start + count > length) {
+					if (start + count > minVertexBufferLength) {
 						throw new Error("invalid")
 					}
-					//console.log("drawArrays", mode, start || 0, count || length);
-					gl.drawArrays(mode, start || 0, count || length)
+					gl.drawArrays(mode, start || 0, count || minVertexBufferLength)
 				}
 			}
 
 			return this;
 		}
 	};
-	GL.drawModes = ['POINTS', 'LINES', 'LINE_STRIP', 'LINE_LOOP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN']
-// src/texture.js
-// Provides a simple wrapper around WebGL textures that supports render-to-texture.
+	/**
+	 * These are all the draw modes usable in OpenGL ES
+	 * @type {string[]}
+	 */
+	GL.DRAW_MODES = ['POINTS', 'LINES', 'LINE_STRIP', 'LINE_LOOP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN']
+	GL.SHADER_VAR_TYPES = ['FLOAT', 'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4', 'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4', 'UNSIGNED_INT']
 
-// ### new GL.Texture(width, height[, options])
-//
-// The arguments `width` and `height` give the size of the texture in texels.
-// WebGL texture dimensions must be powers of two unless `filter` is set to
-// either `gl.NEAREST` or `gl.LINEAR` and `wrap` is set to `gl.CLAMP_TO_EDGE`
-// (which they are by default).
-//
-// Texture parameters can be passed in via the `options` argument.
-// Example usage:
-//
-//     var t = new GL.Texture(256, 256, {
-//       // Defaults to gl.LINEAR, set both at once with "filter"
-//       magFilter: gl.NEAREST,
-//       minFilter: gl.LINEAR,
-//
-//       // Defaults to gl.CLAMP_TO_EDGE, set both at once with "wrap"
-//       wrapS: gl.REPEAT,
-//       wrapT: gl.REPEAT,
-//
-//       format: gl.RGB, // Defaults to gl.RGBA
-//       type: gl.FLOAT // Defaults to gl.UNSIGNED_BYTE
-//     });
+	/**
+	 * Provides a simple wrapper around WebGL textures that supports render-to-texture.
+	 *
+	 * The arguments `width` and `height` give the size of the texture in texels.
+	 * WebGL texture dimensions must be powers of two unless `filter` is set to
+	 * either `gl.NEAREST` or `gl.LINEAR` and `wrap` is set to `gl.CLAMP_TO_EDGE`
+	 * (which they are by default).
+	 *
+	 * Texture parameters can be passed in via the `options` argument.
+	 * Example usage:
+	 *
+	 *      let tex = new GL.Texture(256, 256, {
+	 *       magFilter: gl.NEAREST,
+	 *       minFilter: gl.LINEAR,
+	 *
+	 *       wrapS: gl.REPEAT,
+	 *       wrapT: gl.REPEAT,
+	 *
+	 *       format: gl.RGB, // Defaults to gl.RGBA
+	 *       type: gl.FLOAT // Defaults to gl.UNSIGNED_BYTE
+	 *     })
+	 *
+	 * @param {number} width
+	 * @param {number} height
+	 * @param {Object} options
+	 *
+	 * @param {number=} options.wrap Defaults to gl.CLAMP_TO_EDGE, or set wrapS and wrapT individually.
+	 * @param {number=} options.wrapS
+	 * @param {number=} options.wrapT
+	 *
+	 * @param {number=} options.filter Defaults to gl.LINEAR, or set minFilter and magFilter individually.
+	 * @param {number=} options.minFilter
+	 * @param {number=} options.magFilter
+	 *
+	 * @param {number=} options.format Defaults to gl.RGBA.
+	 * @param {number=} options.type Defaults to gl.UNSIGNED_BYTE.
+	 * @constructor
+	 * @alias GL.Texture
+	 */
 	function Texture(width, height, options) {
 		options = options || {};
 		this.id = gl.createTexture();
@@ -1699,6 +1675,7 @@ void main() {
 				c.canvas.width = c.canvas.height = 128;
 				for (var y = 0; y < c.canvas.height; y += 16) {
 					for (var x = 0; x < c.canvas.width; x += 16) {
+						//noinspection JSBitwiseOperatorUsage
 						c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD';
 						c.fillRect(x, y, 16, 16);
 					}
@@ -1762,34 +1739,36 @@ function createRectangleMesh(x0, y0, x1, y1) {
 		V3.create(x1, y1, 0)
 	);
 	mesh.triangles.push(
-		[0, 1, 2],
-		[3, 2, 1]
-	);
+		0, 1, 2,
+		3, 2, 1
+	)
 	mesh.compile();
 	return mesh;
 }
-function rotationMesh(vertices, lineAxis, totalAngle, count, close, normals) {
+GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close, normals) {
 	var mesh = new GL.Mesh({normals: !!normals})
 	var vc = vertices.length, vTotal = vc * count
 
-	for (var i = 0; i < count; i++) {
-		var angle = totalAngle / count * i
-		var m = M4()
-		M4.rotationLine(lineAxis.anchor, lineAxis.dir1, angle, m)
-		Array.prototype.push.apply(mesh.vertices, m.transformedPoints(vertices))
-		normals && Array.prototype.push.apply(mesh.normals, m.transformedVectors(normals))
-
+	const rotMat = M4()
+	const /** @type {number[]} */ triangles = mesh.triangles
+	for (let i = 0; i < count; i++) {
 		// add triangles
-		for (var j = 0; j < vc - 1; j++) {
-			mesh.triangles.push([i * vc + j + 1, i * vc + j, (i + 1) * vc + j].map(x => x % vTotal))
-			mesh.triangles.push([i * vc + j + 1, (i + 1) * vc + j, (i + 1) * vc + j + 1].map(x => x % vTotal))
+		var angle = totalAngle / count * i
+		M4.rotationLine(lineAxis.anchor, lineAxis.dir1, angle, rotMat)
+		Array.prototype.push.apply(mesh.vertices, rotMat.transformedPoints(vertices))
+
+		normals && Array.prototype.push.apply(mesh.normals, rotMat.transformedVectors(normals))
+		for (let j = 0; j < vc - 1; j++) {
+			pushQuad(triangles, false,
+				i * vc + j + 1, i * vc + j,
+				((i + 1) * vc + j) % vTotal, ((i + 1) * vc + j + 1) % vTotal)
 		}
 	}
 
-	//TODO: make sure normals dont need to be adjusted
 	mesh.compile()
 	return mesh
 }
+
 /**
  *
  * @param {Array.<number>} triangles
@@ -1815,23 +1794,26 @@ function pushQuad(triangles, flipped, a, b, c, d) {
  * @param {boolean} close
  * @param {Array.<V3>} normals
  */
-function offsetMesh(vertices, offset, close, normals) {
+GL.Mesh.offsetVertices = function(vertices, offset, close, normals) {
 	assertVectors.apply(undefined, vertices)
 	assertVectors(offset)
 
 	let mesh = new GL.Mesh({normals: !!normals})
 	mesh.vertices = vertices.concat(vertices.map(v => v.plus(offset)))
 
+	let triangles = mesh.triangles
 	for (let i = 0; i < vertices.length - 1; i++) {
-		pushQuad(mesh.triangles, false,
+		pushQuad(triangles, false,
 			i, i + 1,
 			vertices.length + i, vertices.length + i + 1)
 	}
 	if (close) {
-		pushQuad(mesh.triangles, false, vertices.length - 1, vertices.length, vertices.length * 2 - 1)
+		pushQuad(triangles, false, 0, vertices.length - 1, vertices.length, vertices.length * 2 - 1)
 	}
 	if (normals) {
 		mesh.normals = normals.concat(normals)
 	}
+	mesh.compile()
 	return mesh
 }
+
