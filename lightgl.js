@@ -19,6 +19,11 @@ var GL = (function() {
 		// `GL.create()` creates a new WebGL context and augments it with more
 		// methods. The alpha channel is disabled by default because it usually causes
 		// unintended transparencies in the canvas.
+		/**
+		 *
+		 * @param options
+		 * @returns {WebGLRenderingContext}
+		 */
 		create: function(options) {
 			options = options || {};
 			var canvas = options.canvas || document.createElement('canvas');
@@ -45,7 +50,7 @@ var GL = (function() {
 		// Export all external classes.
 		Indexer: Indexer,
 		Buffer: Buffer,
-		Mesh: Mesh,
+			Mesh: Mesh,
 		HitTest: HitTest,
 		Raytracer: Raytracer,
 		Shader: Shader,
@@ -118,6 +123,9 @@ var GL = (function() {
 		gl.lookAt = function(eye, center, up) {
 			gl.multMatrix(M4.lookAt(eye, center, up, tempMatrix));
 		};
+		/**
+		 * Test
+		 */
 		gl.pushMatrix = function() {
 			stack.push(M4.copy(gl[matrix]));
 		};
@@ -166,27 +174,25 @@ var GL = (function() {
 			coord: [0, 0, 0, 0],
 			color: [1, 1, 1, 1],
 			pointSize: 1,
-			shader: new Shader('\
-      uniform float pointSize;\
-      varying vec4 color;\
-      varying vec4 coord;\
-      void main() {\
-        color = gl_Color;\
-        coord = gl_TexCoord;\
-        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
-        gl_PointSize = pointSize;\
-      }\
-    ', '\
-      uniform sampler2D texture;\
-      uniform float pointSize;\
-      uniform bool useTexture;\
-      varying vec4 color;\
-      varying vec4 coord;\
-      void main() {\
-        gl_FragColor = color;\
-        if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);\
-      }\
-    ')
+			shader: new Shader(`
+uniform float pointSize;
+varying vec4 color;
+varying vec4 coord;
+void main() {
+	color = gl_Color;
+	coord = gl_TexCoord;
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	gl_PointSize = pointSize;
+}`, `
+uniform sampler2D texture;
+uniform float pointSize;
+uniform bool useTexture;
+varying vec4 color;
+varying vec4 coord;
+void main() {
+	gl_FragColor = color;
+	if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);
+}`)
 		};
 		gl.pointSize = function(pointSize) {
 			immediateMode.shader.uniforms({ pointSize: pointSize });
@@ -586,7 +592,7 @@ var GL = (function() {
 				var buffer = new this.type(data)
 				var spacing = this.data.length ? data.length / this.data.length : 0;
 				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
-				assert(data.every(v => 'number' == typeof v), "data.every(v => 'number' == typeof v)" + data.toSource())
+				assert(data.every(v => 'number' == typeof v), () => "data.every(v => 'number' == typeof v)" + data.toSource())
 				this.buffer.length = data.length
 				if (NLA.DEBUG) { this.maxValue = data.max() }
 				this.buffer.spacing = spacing
@@ -609,6 +615,11 @@ var GL = (function() {
 // `gl.TRIANGLES` and `gl.LINES`, respectively. Only `triangles` is enabled by
 // default, although `computeWireframe()` will add a normal buffer if it wasn't
 // initially enabled.
+	/**
+	 *
+	 * @param options
+	 * @constructor
+	 */
 	function Mesh(options) {
 		options = options || {};
 		this.hasBeenCompiled = false
@@ -628,9 +639,11 @@ var GL = (function() {
 		// Add a new vertex buffer with a list as a property called `name` on this object
 		// and map it to the attribute called `attribute` in all shaders that draw this mesh.
 		addVertexBuffer: function(name, attribute) {
+			assert(!this.vertexBuffers[attribute])
+			assert(!this[name])
 			this.hasBeenCompiled = false
-			assert(name )
-			assert(attribute)
+			assert('string' == typeof name)
+			assert('string' == typeof attribute)
 			var buffer = this.vertexBuffers[attribute] = new Buffer(gl.ARRAY_BUFFER, Float32Array);
 			buffer.name = name;
 			this[name] = [];
@@ -669,8 +682,8 @@ var GL = (function() {
 				var buffer = this.indexBuffers[name];
 				buffer.data = this[name.toLowerCase()];
 				buffer.compile();
-				if (false && NLA.DEBUG && buffer.maxValue >= minVSize) {
-					throw new Error(`max index value for buffer ${name} \
+				if (NLA.DEBUG && buffer.maxValue >= minVSize) {
+					throw new Error(`max index value for buffer ${name}
 					is too large ${buffer.maxValue} min Vbuffer size: ${minVSize} ${minBufferName}`)
 				}
 			}
@@ -682,14 +695,15 @@ var GL = (function() {
 		// Transform all vertices by `matrix` and all normals by the inverse transpose
 		// of `matrix`.
 		transform: function(m4) {
-			var mesh = new GL.mesh({vertices: this.vertices, normals: this.normals})
+			var mesh = new GL.Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
 				var invTrans = m4.inverse().transpose();
 				this.normals = this.normals.map(n => invTrans.transformVector(n).normalized())
 			}
+			mesh.triangles = this.triangles
 			mesh.compile()
-			return this
+			return mesh
 		},
 
 		// ### .computeNormals()
@@ -1368,17 +1382,17 @@ var GL = (function() {
 			for (var name in uniforms) {
 				var types = ["FLOAT", "FLOAT_MAT2", "FLOAT_MAT3", "FLOAT_MAT4", "FLOAT_VEC2", "FLOAT_VEC3", "FLOAT_VEC4", "INT", "INT_VEC2", "INT_VEC3", "INT_VEC4", "UNSIGNED_INT"]
 				var location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name);
-				NLA.assert(!!location )
+				assert(!!location, name)
 				if (!location) continue;
 				this.uniformLocations[name] = location;
 				var value = uniforms[name];
 				if (NLA.DEBUG) {
 					var info = this.uniformInfo[name]
-					NLA.assert(info.type != gl.FLOAT || "number" == typeof value)
-					NLA.assert(info.type != gl.INT || "number" == typeof value && value % 1 == 0)
-					NLA.assert(info.type != gl.FLOAT_VEC3 || value instanceof NLA.Vector3)
-					NLA.assert(info.type != gl.FLOAT_MAT4 || value instanceof NLA.Matrix4x4, value.toSource())
-					NLA.assert(info.type != gl.FLOAT_MAT3 || value.length == 9)
+					assert(info.type != gl.FLOAT || "number" == typeof value)
+					assert(info.type != gl.INT || "number" == typeof value && value % 1 == 0)
+					assert(info.type != gl.FLOAT_VEC3 || value instanceof NLA.Vector3)
+					assert(info.type != gl.FLOAT_MAT4 || value instanceof NLA.Matrix4x4, () => value.toSource())
+					assert(info.type != gl.FLOAT_MAT3 || value.length == 9)
 				}
 				if (value instanceof V3) {
 					value = value.toArray()
@@ -1492,7 +1506,7 @@ var GL = (function() {
 			if (length && (!indexBuffer || indexBuffer.buffer)) {
 				if (indexBuffer) {
 					if (start + count > indexBuffer.buffer.length) {
-						throw new Error("invalid" +" "+ start +" "+ count + " "+ indexBuffer.buffer.length)
+						throw new Error("Buffer not long enough for passed parameters start/length/buffer length" +" "+ start +" "+ count + " "+ indexBuffer.buffer.length)
 					}
 					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
 					gl.drawElements(mode, count || indexBuffer.buffer.length, gl.UNSIGNED_SHORT, 2 * (start || 0));
@@ -1739,3 +1753,85 @@ var GL = (function() {
 
 	return GL;
 })();
+function createRectangleMesh(x0, y0, x1, y1) {
+	var mesh = new GL.Mesh({});
+	mesh.vertices.push(
+		V3.create(x0, y0, 0),
+		V3.create(x1, y0, 0),
+		V3.create(x0, y1, 0),
+		V3.create(x1, y1, 0)
+	);
+	mesh.triangles.push(
+		[0, 1, 2],
+		[3, 2, 1]
+	);
+	mesh.compile();
+	return mesh;
+}
+function rotationMesh(vertices, lineAxis, totalAngle, count, close, normals) {
+	var mesh = new GL.Mesh({normals: !!normals})
+	var vc = vertices.length, vTotal = vc * count
+
+	for (var i = 0; i < count; i++) {
+		var angle = totalAngle / count * i
+		var m = M4()
+		M4.rotationLine(lineAxis.anchor, lineAxis.dir1, angle, m)
+		Array.prototype.push.apply(mesh.vertices, m.transformedPoints(vertices))
+		normals && Array.prototype.push.apply(mesh.normals, m.transformedVectors(normals))
+
+		// add triangles
+		for (var j = 0; j < vc - 1; j++) {
+			mesh.triangles.push([i * vc + j + 1, i * vc + j, (i + 1) * vc + j].map(x => x % vTotal))
+			mesh.triangles.push([i * vc + j + 1, (i + 1) * vc + j, (i + 1) * vc + j + 1].map(x => x % vTotal))
+		}
+	}
+
+	//TODO: make sure normals dont need to be adjusted
+	mesh.compile()
+	return mesh
+}
+/**
+ *
+ * @param {Array.<number>} triangles
+ * @param {boolean} flipped
+ * @param {number} a
+ * @param {number} b
+ * @param {number} c
+ * @param {number} d
+ */
+function pushQuad(triangles, flipped, a, b, c, d) {
+	if (flipped) {
+		triangles.push(a, c, b,
+			b, c, d)
+	} else {
+		triangles.push(a, b, c,
+			b, d, c)
+	}
+}
+/**
+ *
+ * @param {Array.<V3>} vertices
+ * @param {V3} offset
+ * @param {boolean} close
+ * @param {Array.<V3>} normals
+ */
+function offsetMesh(vertices, offset, close, normals) {
+	assertVectors.apply(undefined, vertices)
+	assertVectors(offset)
+
+	let mesh = new GL.Mesh({normals: !!normals})
+	mesh.vertices = vertices.concat(vertices.map(v => v.plus(offset)))
+
+	for (let i = 0; i < vertices.length - 1; i++) {
+		pushQuad(mesh.triangles, false,
+			i, i + 1,
+			vertices.length + i, vertices.length + i + 1)
+	}
+	if (close) {
+		pushQuad(mesh.triangles, false, vertices.length - 1, vertices.length, vertices.length * 2 - 1)
+	}
+	if (normals) {
+		mesh.normals = normals.concat(normals)
+	}
+	return mesh
+}
