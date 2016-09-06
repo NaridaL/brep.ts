@@ -44,7 +44,7 @@ BREP.Face = function(vertices, plane, name) {
 	this.name = name
 	// this.aabb
 	this.plane = plane ? plane : P3.throughPoints(vertices[0], vertices[1], vertices[2])
-//	console.log(vertices.map(v => v.ss), plane && plane.toString())
+//	console.log(vertices.map(v => v.$), plane && plane.toString())
 //	console.log(plane && vertices.map(v=> plane.distanceToPointSigned(v)))
 	assert(!plane || vertices.every((v) => plane.containsPoint(v)), "all vertices must be contained within the plane")
 	assert(Array.from(BREP.Face.segmentsIterator(vertices)).every((seg) => !seg[0].like(seg[1])), "no degenerate segments"+vertices.map(v=>v.ss).join(","))
@@ -95,7 +95,7 @@ BREP.Face.prototype = {
 	constructor: BREP.Face,
 	containsPoint: function (point) {
 		// TODO: problem if the ray hits a corner exactly
-		assert(point instanceof V3, "point was"+ point.toString())
+		assertVectors(point)
 		assert(this.plane.containsPoint(point), "this.plane.containsPoint(point)" + this.plane.distanceToPointSigned(point))
 		var vs = this.vertices
 		var direction = vs[0].minus(vs[vs.length - 1])
@@ -112,7 +112,7 @@ BREP.Face.prototype = {
 		return inside
 	},
 	containsPoint2: function (point, includeBorder) {
-		assert(point instanceof V3, "point was"+ point.toString())
+		assertVectors(point)
 		assert(this.plane.containsPoint(point))
 		var vs = this.vertices.map(v => v.minus(point))
 		if (vs[0].isZero()) return includeBorder // point lies on first vertex
@@ -148,7 +148,7 @@ BREP.Face.prototype = {
 		return new BREP.Face(this.vertices.slice().reverse(), this.plane.flipped(), this.name + "flipped")
 	},
 	intersectsLine: function (line) {
-		assert(line instanceof L3)
+		assertInst(L3, line)
 		var lambda = line.intersectWithPlaneLambda(this.plane)
 		if (!Number.isFinite(lambda)) {
 			return NaN
@@ -356,16 +356,6 @@ BREP.extrude = function(baseVertices, baseFacePlane, offset, name) {
 BREP.prototype.union = function (brep2) {
 
 }
-function arrayFilterMap(arr, f) {
-	var result = []
-	for (var i = 0; i < arr.length; i++) {
-		var v = f(arr[i])
-		if (undefined !== v) {
-			result.push(v)
-		}
-	}
-	return result
-}
 function outsideVector(edgeArray, normal) {
 	return edgeArray[1].minus(edgeArray[0]).cross(normal)
 }
@@ -385,7 +375,7 @@ function facesWithEdge(edge, faces) {
 function segmentVector(edgeArray) {
 	return edgeArray[1].minus(edgeArray[0])
 }
-function splitsVolumeEnclosingFaces(brep, segment, dir, faceNormal, removeCoplanarSame, removeCoplanarOpposite) {
+function splitsVolumeEnclosingFacesOld(brep, segment, dir, faceNormal, removeCoplanarSame, removeCoplanarOpposite) {
 	var ab1 = segmentVector(segment).normalized()
 	var relFaces = facesWithEdge(segment, brep.faces)
 	var ff = relFaces.map((face) => {
@@ -987,30 +977,6 @@ function testBREP() {
 
 
 
-function triangulateVertices(normal, vertices, holeStarts) {
-	var absMaxDim = normal.absMaxDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
-	var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
-	var contour = new Array(vertices.length * 2)
-	var i = vertices.length
-	while (i--) {
-		contour[i * 2    ] = vertices[i][coord0] * factor
-		contour[i * 2 + 1] = vertices[i][coord1]
-	}
-	return earcut(contour, holeStarts)
-}
-function isCCW(vertices, normal) {
-	assert(!normal.isZero(),'!normal.isZero()')
-	var maxDim = normal.absMaxDim()
-	// order is important, coord0 and coord1 must be set so that coord0, coord1 and maxDim span a right-hand coordinate system
-	var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
-	var doubleSignedArea = vertices.map((v0, i, vertices) => {
-		var v1 = vertices[(i + 1) % vertices.length]
-		return (v1[coord0] - v0[coord0]) * (v1[coord1] + v0[coord1])
-	}).reduce((a, b) => a + b)
-	assert(!NLA.isZero(doubleSignedArea))
-	return doubleSignedArea * Math.sign(normal.e(maxDim)) < 0
-}
-
 
 
 //var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
@@ -1114,8 +1080,7 @@ window.loadup = function () {
 	xyLinePlaneMesh.vertices = [[0, 0], [0, 1], [1, 1], [1, 0]];
 	xyLinePlaneMesh.lines = [[0, 1], [1, 2], [2, 3], [3, 0]];
 	xyLinePlaneMesh.compile();
-	vectorMesh = rotationMesh([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, false)
-
+	vectorMesh = GL.Mesh.rotation([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, false, normals)
 	singleColorShader = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
 	singleColorShaderHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight);
 	textureColorShader = new GL.Shader(vertexShaderTextureColor, fragmentShaderTextureColor);
