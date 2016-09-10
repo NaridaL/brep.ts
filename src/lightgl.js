@@ -8,10 +8,29 @@
 "use strict"
 var GL = (function() {
 
-// src/main.js
-// The internal `gl` variable holds the current WebGL context.
-	var gl;
-	var V3 = NLA.Vector3, M4 = NLA.Matrix4x4
+
+	/**
+	 * never called, used so IDE type checker doesn't pick a fit
+	 *
+	 * @name LightGLContext
+	 * @class
+	 * @property matrixMode
+	 * @augments WebGLRenderingContext
+	 */
+	function LightGLContext() {
+		this.modelViewMatrix = M4()
+		this.projectionMatrix = M4()
+		this.onupdate = null
+		this.ondraw = null
+		this.onclick = null
+		this.onmousemove = null
+		this.onmouseup = null
+		this.onmousedown = null
+	}
+	LightGLContext.MODELVIEW = {}
+	LightGLContext.PROJECTION = {}
+
+	var gl
 
 	var GL = {
 		/**
@@ -19,8 +38,9 @@ var GL = (function() {
 		 * by default because it usually causes unintended transparencies in the canvas.
 		 *
 		 * @param {Object} options
-		 * @param {Element=} options.canvas Canvas to use. A new one will be created if undefined.
+		 * @param {HTMLCanvasElement=} options.canvas Canvas to use. A new one will be created if undefined.
 		 * @param {boolean=} options.alpha
+		 * @return {LightGLContext}
 		 */
 		create: function(options) {
 			options = options || {};
@@ -34,10 +54,10 @@ var GL = (function() {
 			try { gl = gl || canvas.getContext('experimental-webgl', options); } catch (e) {}
 			if (!gl) throw new Error('WebGL not supported');
 			gl.HALF_FLOAT_OES = 0x8D61;
-			addMatrixStack();
-			addImmediateMode();
-			addEventListeners();
-			addOtherMethods();
+			addMatrixStack(gl);
+			addImmediateMode(gl);
+			addEventListeners(gl);
+			addOtherMethods(gl);
 			return gl;
 		},
 
@@ -48,110 +68,122 @@ var GL = (function() {
 		// Export all external classes.
 		Buffer: Buffer,
 		Mesh: Mesh,
-		HitTest: HitTest,
 		Shader: Shader,
 		Texture: Texture,
 	};
 
-// ### Matrix stack
-//
-// Implement the OpenGL modelview and projection matrix stacks, along with some
-// other useful GLU matrix functions.
-
-	function addMatrixStack() {
-		gl.MODELVIEW = ENUM | 1;
-		gl.PROJECTION = ENUM | 2;
+	/**
+	 * Implement the OpenGL modelview and projection matrix stacks, along with some other useful GLU matrix functions.
+	 * @param {LightGLContext} gl
+	 */
+	function addMatrixStack(gl) {
 		var tempMatrix = M4()
 		var resultMatrix = M4();
 		gl.modelViewMatrix = M4();
 		gl.projectionMatrix = M4();
-		var modelviewStack = [];
+		var modelViewStack = [];
 		var projectionStack = [];
 		var matrix, stack;
-		gl.matrixMode = function(mode) {
-			switch (mode) {
-				case gl.MODELVIEW:
-					matrix = 'modelViewMatrix';
-					stack = modelviewStack;
-					break;
-				case gl.PROJECTION:
-					matrix = 'projectionMatrix';
-					stack = projectionStack;
-					break;
-				default:
-					throw new Error('invalid matrix mode ' + mode);
-			}
-		};
-		gl.loadIdentity = function() {
-			M4.identity(gl[matrix]);
-		};
-		gl.loadMatrix = function(m4) {
-			M4.copy(m4, gl[matrix])
-		}
-		gl.multMatrix = function(m) {
-			M4.multiply(gl[matrix], m, resultMatrix);
-			var temp = resultMatrix
-			resultMatrix = gl[matrix]
-			gl[matrix] = temp
-		};
-		gl.perspective = function(fov, aspect, near, far) {
-			gl.multMatrix(M4.perspective(fov, aspect, near, far, tempMatrix));
-		};
-		gl.frustum = function(l, r, b, t, n, f) {
-			gl.multMatrix(M4.frustum(l, r, b, t, n, f, tempMatrix));
-		};
-		gl.ortho = function(l, r, b, t, n, f) {
-			gl.multMatrix(M4.ortho(l, r, b, t, n, f, tempMatrix));
-		};
-		gl.scale = function(x, y, z) {
-			gl.multMatrix(M4.scaling(x, y, z, tempMatrix));
-		};
-		gl.translate = function(x, y, z) {
-			if (undefined !== y) {
-				gl.multMatrix(M4.translation(x, y, z, tempMatrix));
-			} else {
-				gl.multMatrix(M4.translation(x, tempMatrix));
-			}
-		};
-		gl.rotate = function(a, x, y, z) {
-			gl.multMatrix(M4.rotation(a, x, y, z, tempMatrix));
-		};
-		gl.lookAt = function(eye, center, up) {
-			gl.multMatrix(M4.lookAt(eye, center, up, tempMatrix));
-		};
-		/**
-		 * Test
-		 */
-		gl.pushMatrix = function() {
-			stack.push(M4.copy(gl[matrix]));
-		};
-		gl.popMatrix = function() {
-			gl[matrix] = stack.pop()
-		};
-		gl.project = function(objX, objY, objZ, modelview, projection, viewport) {
-			modelview = modelview || gl.modelViewMatrix;
-			projection = projection || gl.projectionMatrix;
-			viewport = viewport || gl.getParameter(gl.VIEWPORT);
-			var point = projection.transformPoint(modelview.transformPoint(V3(objX, objY, objZ)));
-			return V3(
-				viewport[0] + viewport[2] * (point.x * 0.5 + 0.5),
-				viewport[1] + viewport[3] * (point.y * 0.5 + 0.5),
-				point.z * 0.5 + 0.5
-			);
-		};
-		gl.unProject = function(winX, winY, winZ, modelview, projection, viewport) {
-			modelview = modelview || gl.modelViewMatrix;
-			projection = projection || gl.projectionMatrix;
-			viewport = viewport || gl.getParameter(gl.VIEWPORT);
-			var point = V3(
-				(winX - viewport[0]) / viewport[2] * 2 - 1,
-				(winY - viewport[1]) / viewport[3] * 2 - 1,
-				winZ * 2 - 1
-			);
-			return M4.inverse(M4.multiply(projection, modelview, tempMatrix), resultMatrix).transformPoint(point);
-		};
+
+
+		NLA.addOwnProperties(gl, /** @lends LightGLContext */ {
+			MODELVIEW: LightGLContext.MODELVIEW,
+			PROJECTION: LightGLContext.PROJECTION,
+			matrixMode: function(mode) {
+				switch (mode) {
+					case this.MODELVIEW:
+						matrix = 'modelViewMatrix';
+						stack = modelViewStack;
+						break;
+					case this.PROJECTION:
+						matrix = 'projectionMatrix';
+						stack = projectionStack;
+						break;
+					default:
+						throw new Error('invalid matrix mode ' + mode);
+				}
+			},
+			modelViewMode: function () {
+				Object.defineProperty(gl, 'currentMatrix', {
+					get: function () { return this.modelViewMatrix },
+					set: function (val) { this.modelViewMatrix = val},
+					writable: true})
+				matrix = 'modelViewMatrix'
+				stack = modelViewStack
+			},
+			projectionMode: function () {
+				matrix = 'projectionMatrix'
+				stack = projectionStack
+			},
+			loadIdentity: function() {
+				M4.identity(gl[matrix]);
+			},
+			loadMatrix: function(m4) {
+				M4.copy(m4, gl[matrix])
+			},
+			multMatrix: function(m) {
+				M4.multiply(gl[matrix], m, resultMatrix);
+				var temp = resultMatrix
+				resultMatrix = gl[matrix]
+				gl[matrix] = temp
+			},
+			perspective: function(fov, aspect, near, far) {
+				this.multMatrix(M4.perspective(fov, aspect, near, far, tempMatrix));
+			},
+			frustum: function(l, r, b, t, n, f) {
+				this.multMatrix(M4.frustum(l, r, b, t, n, f, tempMatrix));
+			},
+			ortho: function(l, r, b, t, n, f) {
+				this.multMatrix(M4.ortho(l, r, b, t, n, f, tempMatrix));
+			},
+			scale: function(x, y, z) {
+				this.multMatrix(M4.scaling(x, y, z, tempMatrix));
+			},
+			translate: function(x, y, z) {
+				if (undefined !== y) {
+					this.multMatrix(M4.translation(x, y, z, tempMatrix));
+				} else {
+					this.multMatrix(M4.translation(x, tempMatrix));
+				}
+			},
+			rotate: function(a, x, y, z) {
+				this.multMatrix(M4.rotation(a, x, y, z, tempMatrix));
+			},
+			lookAt: function(eye, center, up) {
+				this.multMatrix(M4.lookAt(eye, center, up, tempMatrix));
+			},
+			pushMatrix: function() {
+				stack.push(M4.copy(gl[matrix]));
+			},
+			popMatrix: function() {
+				gl[matrix] = stack.pop()
+			},
+			project: function(objX, objY, objZ, modelview, projection, viewport) {
+				modelview = modelview || this.modelViewMatrix;
+				projection = projection || this.projectionMatrix;
+				viewport = viewport || this.getParameter(this.VIEWPORT);
+				var point = projection.transformPoint(modelview.transformPoint(V3(objX, objY, objZ)));
+				return V3(
+					viewport[0] + viewport[2] * (point.x * 0.5 + 0.5),
+					viewport[1] + viewport[3] * (point.y * 0.5 + 0.5),
+					point.z * 0.5 + 0.5
+				);
+			},
+			unProject: function(winX, winY, winZ, modelview, projection, viewport) {
+				modelview = modelview || this.modelViewMatrix;
+				projection = projection || this.projectionMatrix;
+				viewport = viewport || this.getParameter(this.VIEWPORT);
+				var point = V3(
+					(winX - viewport[0]) / viewport[2] * 2 - 1,
+					(winY - viewport[1]) / viewport[3] * 2 - 1,
+					winZ * 2 - 1
+				);
+				return M4.inverse(M4.multiply(projection, modelview, tempMatrix), resultMatrix).transformPoint(point);
+			},
+		})
 		gl.matrixMode(gl.MODELVIEW);
 	}
+
 
 // ### Immediate mode
 //
@@ -163,7 +195,7 @@ var GL = (function() {
 // debugging. This intentionally doesn't implement fixed-function lighting
 // because it's only meant for quick debugging tasks.
 
-	function addImmediateMode() {
+	function addImmediateMode(gl) {
 		var immediateMode = {
 			mesh: new Mesh({ coords: true, colors: true, triangles: false }),
 			mode: -1,
@@ -190,36 +222,38 @@ void main() {
 	if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);
 }`)
 		};
-		gl.pointSize = function(pointSize) {
-			immediateMode.shader.uniforms({ pointSize: pointSize });
-		};
-		gl.begin = function(mode) {
-			if (immediateMode.mode != -1) throw new Error('mismatched gl.begin() and gl.end() calls');
-			immediateMode.mode = mode;
-			immediateMode.mesh.colors = [];
-			immediateMode.mesh.coords = [];
-			immediateMode.mesh.vertices = [];
-		};
-		gl.color = function(r, g, b, a) {
-			immediateMode.color = (arguments.length == 1) ? r.toArray().concat(1) : [r, g, b, a || 1];
-		};
-		gl.texCoord = function(s, t) {
-			immediateMode.coord = (arguments.length == 1) ? s.toArray(2) : [s, t];
-		};
-		gl.vertex = function(x, y, z) {
-			immediateMode.mesh.colors.push(immediateMode.color);
-			immediateMode.mesh.coords.push(immediateMode.coord);
-			immediateMode.mesh.vertices.push(arguments.length == 1 ? x.toArray() : [x, y, z]);
-		};
-		gl.end = function() {
-			if (immediateMode.mode == -1) throw new Error('mismatched gl.begin() and gl.end() calls');
-			console.log(immediateMode.mesh.toSource())
-			immediateMode.mesh.compile();
-			immediateMode.shader.uniforms({
-				useTexture: !!gl.getParameter(gl.TEXTURE_BINDING_2D)
-			}).draw(immediateMode.mesh, immediateMode.mode);
-			immediateMode.mode = -1;
-		};
+		NLA.addOwnProperties(gl, /** @lends LightGLContext */ {
+			pointSize: function(pointSize) {
+				immediateMode.shader.uniforms({ pointSize: pointSize });
+			},
+			begin: function(mode) {
+				if (immediateMode.mode != -1) throw new Error('mismatched gl.begin() and gl.end() calls');
+				immediateMode.mode = mode;
+				immediateMode.mesh.colors = [];
+				immediateMode.mesh.coords = [];
+				immediateMode.mesh.vertices = [];
+			},
+			color: function(r, g, b, a) {
+				immediateMode.color = (arguments.length == 1) ? r.toArray().concat(1) : [r, g, b, a || 1];
+			},
+			texCoord: function(s, t) {
+				immediateMode.coord = (arguments.length == 1) ? s.toArray(2) : [s, t];
+			},
+			vertex: function(x, y, z) {
+				immediateMode.mesh.colors.push(immediateMode.color);
+				immediateMode.mesh.coords.push(immediateMode.coord);
+				immediateMode.mesh.vertices.push(arguments.length == 1 ? x.toArray() : [x, y, z]);
+			},
+			end: function() {
+				if (immediateMode.mode == -1) throw new Error('mismatched gl.begin() and gl.end() calls');
+				console.log(immediateMode.mesh.toSource())
+				immediateMode.mesh.compile();
+				immediateMode.shader.uniforms({
+					useTexture: !!gl.getParameter(gl.TEXTURE_BINDING_2D)
+				}).draw(immediateMode.mesh, immediateMode.mode);
+				immediateMode.mode = -1;
+			}
+		})
 	}
 
 // ### Improved mouse events
@@ -228,15 +262,15 @@ void main() {
 // `gl.onmousedown()`, `gl.onmousemove()`, and `gl.onmouseup()` with an
 // augmented event object. The event object also has the properties `x`, `y`,
 // `deltaX`, `deltaY`, and `dragging`.
-	function addEventListeners() {
-		var context = gl, oldX = 0, oldY = 0, buttons = {}, hasOld = false;
+	function addEventListeners(gl) {
+		var oldX = 0, oldY = 0, buttons = {}, hasOld = false;
 		function isDragging() {
 			for (var b in buttons) {
 				if (b in buttons && buttons[b]) return true;
 			}
 			return false;
 		}
-		function augment(original) {
+		function augmented(original) {
 			// Make a copy of original, a native `MouseEvent`, so we can overwrite
 			// WebKit's non-standard read-only `x` and `y` properties (which are just
 			// duplicates of `pageX` and `pageY`). We can't just use
@@ -276,37 +310,21 @@ void main() {
 			e.stopPropagation = e.original.stopPropagation
 			return e;
 		}
-		function mousedown(e) {
-			gl = context;
-			if (!isDragging()) {
-				// Expand the event handlers to the document to handle dragging off canvas.
-				on(document, 'mousemove', mousemove);
-				on(document, 'mouseup', mouseup);
-				off(gl.canvas, 'mousemove', mousemove);
-				off(gl.canvas, 'mouseup', mouseup);
-			}
-			buttons[e.which] = true;
-			e = augment(e);
-			if (gl.onmousedown) gl.onmousedown(e);
-			e.preventDefault();
-		}
 		function mousemove(e) {
-			gl = context;
-			e = augment(e);
+			e = augmented(e);
 			if (gl.onmousemove) gl.onmousemove(e);
 			e.preventDefault();
 		}
 		function mouseup(e) {
-			gl = context;
 			buttons[e.which] = false;
 			if (!isDragging()) {
 				// Shrink the event handlers back to the canvas when dragging ends.
-				off(document, 'mousemove', mousemove);
-				off(document, 'mouseup', mouseup);
-				on(gl.canvas, 'mousemove', mousemove);
-				on(gl.canvas, 'mouseup', mouseup);
+				document.removeEventListener('mousemove', mousemove);
+				document.removeEventListener('mouseup', mouseup);
+				gl.canvas.addEventListener('mousemove', mousemove);
+				gl.canvas.addEventListener('mouseup', mouseup);
 			}
-			e = augment(e);
+			e = augmented(e);
 			if (gl.onmouseup) gl.onmouseup(e);
 			e.preventDefault();
 		}
@@ -317,12 +335,24 @@ void main() {
 			buttons = {};
 			hasOld = false;
 		}
-		on(gl.canvas, 'mousedown', mousedown);
-		on(gl.canvas, 'mousemove', mousemove);
-		on(gl.canvas, 'mouseup', mouseup);
-		on(gl.canvas, 'mouseover', reset);
-		on(gl.canvas, 'mouseout', reset);
-		on(document, 'contextmenu', resetAll);
+		gl.canvas.addEventListener('mousedown', function (e) {
+			if (!isDragging()) {
+				// Expand the event handlers to the document to handle dragging off canvas.
+				document.addEventListener('mousemove', mousemove)
+				document.addEventListener('mouseup', mouseup)
+				gl.canvas.removeEventListener('mousemove', mousemove)
+				gl.canvas.removeEventListener('mouseup', mouseup)
+			}
+			buttons[e.which] = true;
+			e = augmented(e);
+			if (gl.onmousedown) gl.onmousedown(e);
+			e.preventDefault();
+		})
+		gl.canvas.addEventListener('mousemove', mousemove)
+		gl.canvas.addEventListener('mouseup', mouseup)
+		gl.canvas.addEventListener('mouseover', reset)
+		gl.canvas.addEventListener('mouseout', reset)
+		document.addEventListener('contextmenu', resetAll)
 	}
 
 // ### Automatic keyboard state
@@ -351,59 +381,49 @@ void main() {
 		return named[code] || (code >= 65 && code <= 90 ? String.fromCharCode(code) : null);
 	}
 
-	function on(element, name, callback) {
-		element.addEventListener(name, callback);
-	}
-
-	function off(element, name, callback) {
-		element.removeEventListener(name, callback);
-	}
-
-	on(document, 'keydown', function(e) {
+	document.addEventListener('keydown', function (e) {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 			var key = mapKeyCode(e.keyCode);
 			if (key) GL.keys[key] = true;
 			GL.keys[e.keyCode] = true;
 		}
 	});
-
-	on(document, 'keyup', function(e) {
+	document.addEventListener('keyup', function (e) {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 			var key = mapKeyCode(e.keyCode);
 			if (key) GL.keys[key] = false;
 			GL.keys[e.keyCode] = false;
 		}
 	});
+	function addOtherMethods(_gl) {
+		/**
+		 * @memberOf LightGLContext
+		 */
+		_gl.makeCurrent = function () {
+			gl = this
+		}
 
-	function addOtherMethods() {
-		// ### Multiple contexts
-		//
-		// When using multiple contexts in one web page, `gl.makeCurrent()` must be
-		// called before issuing commands to a different context.
-		(function(context) {
-			gl.makeCurrent = function() {
-				gl = context;
-			};
-		})(gl);
+
 
 		// ### Animation
 		//
 		// Call `gl.animate()` to provide an animation loop that repeatedly calls
 		// `gl.onupdate()` and `gl.ondraw()`.
-		gl.animate = function() {
-			var post =
+		/**
+		 * @memberOf LightGLContext
+		 */
+		_gl.animate = function() {
+			var raf =
 				window.requestAnimationFrame ||
 				window.mozRequestAnimationFrame ||
 				window.webkitRequestAnimationFrame ||
 				function(callback) { setTimeout(callback, 1000 / 60); };
 			var time = new Date().getTime();
-			var context = gl;
 			function update() {
-				gl = context;
 				var now = new Date().getTime();
-				if (gl.onupdate) gl.onupdate((now - time) / 1000);
-				if (gl.ondraw) gl.ondraw();
-				post(update);
+				if (_gl.onupdate) _gl.onupdate((now - time) / 1000);
+				if (_gl.ondraw) _gl.ondraw();
+				raf(update);
 				time = now;
 			}
 			update();
@@ -437,8 +457,11 @@ void main() {
 		 * @param {number=} options.near
 		 * @param {number=} options.far
 		 *
+		 * @memberOf LightGLContext.prototype
+		 * @this LightGLContext
+		 *
 		 */
-		gl.fullscreen = function(options) {
+		_gl.fullscreen = function(options) {
 			options = options || {};
 			var top = options.paddingTop || 0;
 			var left = options.paddingLeft || 0;
@@ -448,12 +471,13 @@ void main() {
 				throw new Error('document.body doesn\'t exist yet (call gl.fullscreen() from ' +
 					'window.onload() or from inside the <body> tag)');
 			}
-			document.body.appendChild(gl.canvas);
+			document.body.appendChild(this.canvas);
 			document.body.style.overflow = 'hidden';
-			gl.canvas.style.position = 'absolute';
-			gl.canvas.style.left = left + 'px';
-			gl.canvas.style.top = top + 'px';
-			function resize() {
+			this.canvas.style.position = 'absolute';
+			this.canvas.style.left = left + 'px';
+			this.canvas.style.top = top + 'px';
+			const gl = this
+			function windowOnResize() {
 				gl.canvas.width = window.innerWidth - left - right;
 				gl.canvas.height = window.innerHeight - top - bottom;
 				gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -466,15 +490,10 @@ void main() {
 				}
 				if (gl.ondraw) gl.ondraw();
 			}
-			window.addEventListener('resize', resize)
-			resize();
+			window.addEventListener('resize', windowOnResize)
+			windowOnResize();
 		};
 	}
-
-// A value to bitwise-or with new enums to make them distinguishable from the
-// standard WebGL enums.
-	var ENUM = 0x12340000;
-
 
 	/**
 	 * Provides a simple method of uploading data to a GPU buffer. Example usage:
@@ -496,7 +515,7 @@ void main() {
 	 * @constructor
 	 */
 	function Buffer(target, type) {
-		assert(target == gl.ARRAY_BUFFER || target == gl.ELEMENT_ARRAY_BUFFER, 'target == gl.ARRAY_BUFFER || target == gl.ELEMENT_ARRAY_BUFFER')
+		assert(target == WebGLRenderingContext.ARRAY_BUFFER || target == WebGLRenderingContext.ELEMENT_ARRAY_BUFFER, 'target == gl.ARRAY_BUFFER || target == gl.ELEMENT_ARRAY_BUFFER')
 		assert(type == Float32Array || type == Uint16Array, 'type == Float32Array || type == Uint16Array')
 		this.buffer = null
 		this.target = target
@@ -504,7 +523,7 @@ void main() {
 		this.data = []
 		/**
 		 * Number of elements in buffer. 2 V3s is still 2, not 6.
- 		 * @type {number}
+		 * @type {number}
 		 */
 		this.count = 0
 		/**
@@ -547,7 +566,7 @@ void main() {
 				var spacing = this.data.length ? data.length / this.data.length : 0;
 				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
 				assert(data.every(v => 'number' == typeof v), () => "data.every(v => 'number' == typeof v)" + data.toSource())
-				if (NLA.DEBUG) { this.maxValue = data.max() }
+				if (NLA_DEBUG) { this.maxValue = data.max() }
 				this.spacing = spacing
 				this.count = data.length
 			}
@@ -616,6 +635,10 @@ void main() {
 	 * @param {boolean=} options.triangles
 	 * @constructor
 	 * @alias GL.Mesh
+	 * @property {number[]} triangles
+	 * @property {number[]} lines
+	 * @property {V3[]} normals
+	 * @property {V3[]} vertices
 	 */
 	function Mesh(options) {
 		options = options || {};
@@ -644,7 +667,7 @@ void main() {
 			this.hasBeenCompiled = false
 			assert('string' == typeof name)
 			assert('string' == typeof attribute)
-			var buffer = this.vertexBuffers[attribute] = new Buffer(gl.ARRAY_BUFFER, Float32Array);
+			var buffer = this.vertexBuffers[attribute] = new Buffer(WebGLRenderingContext.ARRAY_BUFFER, Float32Array);
 			buffer.name = name;
 			this[name] = [];
 		},
@@ -689,7 +712,7 @@ void main() {
 				let buffer = this.indexBuffers[name];
 				buffer.data = this[name.toLowerCase()];
 				buffer.compile();
-				if (NLA.DEBUG && buffer.maxValue >= minVertexBufferLength) {
+				if (NLA_DEBUG && buffer.maxValue >= minVertexBufferLength) {
 					throw new Error(`max index value for buffer ${name}
 					is too large ${buffer.maxValue} min Vbuffer size: ${minVertexBufferLength} ${minBufferName}`)
 				}
@@ -706,8 +729,8 @@ void main() {
 			var mesh = new GL.Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
-				var invTrans = m4.inversed().transpose();
-				this.vertexBuffers['LGL_Normal'].data = this.normals.map(n => invTrans.transformVector(n).normalized())
+				let invTrans = m4.inversed().transposed();
+				mesh.normals = this.normals.map(n => invTrans.transformVector(n).normalized())
 			}
 			mesh.triangles = this.triangles
 			mesh.compile()
@@ -761,6 +784,7 @@ void main() {
 			}
 			if (!this.lines) this.addIndexBuffer('LINES');
 			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
+			this.hasBeenCompiled = false
 			return this
 		},
 		computeWireframeFromFlatTriangles: function() {
@@ -781,6 +805,7 @@ void main() {
 			if (!this.lines) this.addIndexBuffer('LINES');
 			//this.lines = new Array(canonEdges.size)
 			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
+			this.hasBeenCompiled = false
 			return this
 		},
 		computeNormalLines: function (length) {
@@ -792,6 +817,7 @@ void main() {
 				vs[si + i] = vs[i].plus(this.normals[i].times(length))
 				this.lines.push(si + i, i)
 			}
+			this.hasBeenCompiled = false
 		},
 
 		// ### .getAABB()
@@ -830,7 +856,7 @@ void main() {
 //     var mesh3 = GL.Mesh.plane({ detailX: 20, detailY: 40 });
 //
 	/**
-	 * 
+	 *
 	 * @param {Object} options
 	 * @param {number} options.detail
 	 * @param {number} options.detailX
@@ -905,13 +931,13 @@ void main() {
 	/**
 	 * Returns a sphere mesh with radius 1 created by subdividing the faces of a dodecahedron (20-sided) recursively
 	 * The sphere is positioned at the origin
-	 * @param subdivisions
+	 * @param {number=} subdivisions
 	 *      How many recursive divisions to do. A subdivision divides a triangle into 4,
 	 *      so the total number of triangles is 20 * 4^subdivisions
 	 * @returns {GL.Mesh}
 	 *      Contains vertex and normal buffers and index buffers for triangles and lines
 	 */
-	Mesh.sphere2 = function (subdivisions) {
+	Mesh.sphere = function (subdivisions) {
 		var golden = (1 + Math.sqrt(5)) / 2, u = V3(1, golden, 0).normalized(), s = u.x, t = u.y
 		// base vertices of dodecahedron
 		var vertices = [
@@ -977,7 +1003,7 @@ void main() {
 		 */
 		function tesselateRecursively(a, b, c, res, vertices, triangles, ia, ib, ic, lines) {
 			if (0 == res) {
-				triangles.push([ia, ib, ic])
+				triangles.push(ia, ib, ic)
 				if (ia < ib) lines.push(ia, ib)
 				if (ib < ic) lines.push(ib, ic)
 				if (ic < ia) lines.push(ic, ia)
@@ -1000,7 +1026,7 @@ void main() {
 		mesh.vertices.pushAll(vertices)
 		for (var i = 0; i < 20; i++) {
 			var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
-			tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
+			tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions || 4, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
 		}
 
 		mesh.normals = mesh.vertices
@@ -1040,157 +1066,6 @@ void main() {
 		return mesh;
 	};
 
-// src/raytracer.js
-// Provides a convenient raytracing interface.
-
-// ### new GL.HitTest([t, hit, normal])
-//
-// This is the object used to return hit test results. If there are no
-// arguments, the constructed argument represents a hit infinitely far
-// away.
-	function HitTest(t, hit, normal) {
-		this.t = arguments.length ? t : Number.MAX_VALUE;
-		this.hit = hit;
-		this.normal = normal;
-	}
-
-// ### .mergeWith(other)
-//
-// Changes this object to be the closer of the two hit test results.
-	HitTest.prototype = {
-		mergeWith: function(other) {
-			if (other.t > 0 && other.t < this.t) {
-				this.t = other.t;
-				this.hit = other.hit;
-				this.normal = other.normal;
-			}
-		}
-	};
-
-// ### new GL.Raytracer()
-//
-// This will read the current modelview matrix, projection matrix, and viewport,
-// reconstruct the eye position, and store enough information to later generate
-// per-pixel rays using `getRayForPixel()`.
-//
-// Example usage:
-//
-//     var tracer = new GL.Raytracer();
-//     var ray = tracer.getRayForPixel(
-//       gl.canvas.width / 2,
-//       gl.canvas.height / 2);
-//     var result = GL.Raytracer.hitTestSphere(
-//       tracer.eye, ray, new GL.Vector(0, 0, 0), 1);
-// 	function Raytracer() {
-// 		var v = gl.getParameter(gl.VIEWPORT);
-// 		var m = gl.modelViewMatrix.m;
-//
-// 		var axisX = V3(m[0], m[4], m[8]);
-// 		var axisY = V3(m[1], m[5], m[9]);
-// 		var axisZ = V3(m[2], m[6], m[10]);
-// 		var offset = V3(m[3], m[7], m[11]);
-// 		this.eye = V3(-offset.dot(axisX), -offset.dot(axisY), -offset.dot(axisZ));
-//
-// 		var minX = v[0], maxX = minX + v[2];
-// 		var minY = v[1], maxY = minY + v[3];
-// 		this.ray00 = gl.unProject(minX, minY, 1).minus(this.eye);
-// 		this.ray10 = gl.unProject(maxX, minY, 1).minus(this.eye);
-// 		this.ray01 = gl.unProject(minX, maxY, 1).minus(this.eye);
-// 		this.ray11 = gl.unProject(maxX, maxY, 1).minus(this.eye);
-// 		this.viewport = v;
-// 	}
-//
-// 	Raytracer.prototype = {
-// 		// ### .getRayForPixel(x, y)
-// 		//
-// 		// Returns the ray originating from the camera and traveling through the pixel `x, y`.
-// 		getRayForPixel: function(x, y) {
-// 			x = (x - this.viewport[0]) / this.viewport[2];
-// 			y = 1 - (y - this.viewport[1]) / this.viewport[3];
-// 			var ray0 = Vector.lerp(this.ray00, this.ray10, x);
-// 			var ray1 = Vector.lerp(this.ray01, this.ray11, x);
-// 			return Vector.lerp(ray0, ray1, y).normalized();
-// 		}
-// 	};
-//
-// // ### GL.Raytracer.hitTestBox(origin, ray, min, max)
-// //
-// // Traces the ray starting from `origin` along `ray` against the axis-aligned box
-// // whose coordinates extend from `min` to `max`. Returns a `HitTest` with the
-// // information or `null` for no intersection.
-// //
-// // This implementation uses the [slab intersection method](http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm).
-// 	Raytracer.hitTestBox = function(origin, ray, min, max) {
-// 		var tMin = min.minus(origin).divide(ray);
-// 		var tMax = max.minus(origin).divide(ray);
-// 		var t1 = Vector.min(tMin, tMax);
-// 		var t2 = Vector.max(tMin, tMax);
-// 		var tNear = t1.max();
-// 		var tFar = t2.min();
-//
-// 		if (tNear > 0 && tNear < tFar) {
-// 			var epsilon = 1.0e-6, hit = origin.add(ray.multiply(tNear));
-// 			min = min.add(epsilon);
-// 			max = max.minus(epsilon);
-// 			return new HitTest(tNear, hit, V3(
-// 				(hit.x > max.x) - (hit.x < min.x),
-// 				(hit.y > max.y) - (hit.y < min.y),
-// 				(hit.z > max.z) - (hit.z < min.z)
-// 			));
-// 		}
-//
-// 		return null;
-// 	};
-//
-// // ### GL.Raytracer.hitTestSphere(origin, ray, center, radius)
-// //
-// // Traces the ray starting from `origin` along `ray` against the sphere defined
-// // by `center` and `radius`. Returns a `HitTest` with the information or `null`
-// // for no intersection.
-// 	Raytracer.hitTestSphere = function(origin, ray, center, radius) {
-// 		var offset = origin.minus(center);
-// 		var a = ray.dot(ray);
-// 		var b = 2 * ray.dot(offset);
-// 		var c = offset.dot(offset) - radius * radius;
-// 		var discriminant = b * b - 4 * a * c;
-//
-// 		if (discriminant > 0) {
-// 			var t = (-b - Math.sqrt(discriminant)) / (2 * a), hit = origin.add(ray.multiply(t));
-// 			return new HitTest(t, hit, hit.minus(center).divide(radius));
-// 		}
-//
-// 		return null;
-// 	};
-//
-// // ### GL.Raytracer.hitTestTriangle(origin, ray, a, b, c)
-// //
-// // Traces the ray starting from `origin` along `ray` against the triangle defined
-// // by the points `a`, `b`, and `c`. Returns a `HitTest` with the information or
-// // `null` for no intersection.
-// 	Raytracer.hitTestTriangle = function(origin, ray, a, b, c) {
-// 		var ab = b.minus(a);
-// 		var ac = c.minus(a);
-// 		var normal = ab.cross(ac).normalized();
-// 		var t = normal.dot(a.minus(origin)) / normal.dot(ray);
-//
-// 		if (t > 0) {
-// 			var hit = origin.add(ray.multiply(t));
-// 			var toHit = hit.minus(a);
-// 			var dot00 = ac.dot(ac);
-// 			var dot01 = ac.dot(ab);
-// 			var dot02 = ac.dot(toHit);
-// 			var dot11 = ab.dot(ab);
-// 			var dot12 = ab.dot(toHit);
-// 			var divide = dot00 * dot11 - dot01 * dot01;
-// 			var u = (dot11 * dot02 - dot01 * dot12) / divide;
-// 			var v = (dot00 * dot12 - dot01 * dot02) / divide;
-// 			if (u >= 0 && v >= 0 && u + v <= 1) return new HitTest(t, hit, normal);
-// 		}
-//
-// 		return null;
-// 	};
-
-
 	/**
 	 * Provides a convenient wrapper for WebGL shaders. A few uniforms and attributes,
 	 * prefixed with `gl_`, are automatically added to all shader sources to make
@@ -1199,13 +1074,13 @@ void main() {
 	 * also automatically passed to the shader when drawing.
 	 *
 	 * For vertex and fragment shaders:
-			 uniform mat3 LGL_NormalMatrix;
-			 uniform mat4 LGL_ModelViewMatrix;
-			 uniform mat4 LGL_ProjectionMatrix;
-			 uniform mat4 LGL_ModelViewProjectionMatrix;
-			 uniform mat4 LGL_ModelViewMatrixInverse;
-			 uniform mat4 LGL_ProjectionMatrixInverse;
-			 uniform mat4 LGL_ModelViewProjectionMatrixInverse;
+	 uniform mat3 LGL_NormalMatrix;
+	 uniform mat4 LGL_ModelViewMatrix;
+	 uniform mat4 LGL_ProjectionMatrix;
+	 uniform mat4 LGL_ModelViewProjectionMatrix;
+	 uniform mat4 LGL_ModelViewMatrixInverse;
+	 uniform mat4 LGL_ProjectionMatrixInverse;
+	 uniform mat4 LGL_ModelViewProjectionMatrixInverse;
 
 	 *
 	 *
@@ -1267,10 +1142,10 @@ void main() {
 			return shader
 		}
 		this.program = gl.createProgram();
-		gl.attachShader(this.program, compileSource(gl.VERTEX_SHADER, vertexHeader + vertexSource));
-		gl.attachShader(this.program, compileSource(gl.FRAGMENT_SHADER, fragmentHeader + fragmentSource));
+		gl.attachShader(this.program, compileSource(WebGLRenderingContext.VERTEX_SHADER, vertexHeader + vertexSource));
+		gl.attachShader(this.program, compileSource(WebGLRenderingContext.FRAGMENT_SHADER, fragmentHeader + fragmentSource));
 		gl.linkProgram(this.program);
-		if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+		if (!gl.getProgramParameter(this.program, WebGLRenderingContext.LINK_STATUS)) {
 			throw new Error('link error: ' + gl.getProgramInfoLog(this.program));
 		}
 		this.attributes = {};
@@ -1279,7 +1154,7 @@ void main() {
 		// Sampler uniforms need to be uploaded using `gl.uniform1i()` instead of `gl.uniform1f()`.
 		// To do this automatically, we detect and remember all uniform samplers
 		this.isSampler = {}
-		for (let i = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS); i-- > 0;) {
+		for (let i = gl.getProgramParameter(this.program, WebGLRenderingContext.ACTIVE_UNIFORMS); i-- > 0;) {
 			let uniformInfo = gl.getActiveUniform(this.program, i)
 			let ut = uniformInfo.type
 			if (gl.SAMPLER_2D == ut || gl.SAMPLER_CUBE == ut) {
@@ -1331,12 +1206,12 @@ void main() {
 				if (!location) continue;
 				this.uniformLocations[name] = location;
 				let value = uniforms[name];
-				if (NLA.DEBUG) {
+				if (NLA_DEBUG) {
 					var info = this.uniformInfo[name]
 					assert(info.type != gl.FLOAT || "number" == typeof value)
 					assert(info.type != gl.INT || "number" == typeof value && value % 1 == 0)
-					assert(info.type != gl.FLOAT_VEC3 || value instanceof NLA.Vector3)
-					assert(info.type != gl.FLOAT_MAT4 || value instanceof NLA.Matrix4x4, () => value.toSource())
+					assert(info.type != gl.FLOAT_VEC3 || value instanceof V3)
+					assert(info.type != gl.FLOAT_MAT4 || value instanceof M4, () => value.toSource())
 					assert(info.type != gl.FLOAT_MAT3 || value.length == 9)
 				}
 				if (value instanceof V3) {
@@ -1381,7 +1256,7 @@ void main() {
 		 * `computeWireframe()`) to draw the mesh in wireframe.
 		 *
 		 * @param {GL.Mesh} mesh
-		 * @param {string} mode Defaults to 'TRIANGLES'. Must be passed as string so the correct index buffer can be
+		 * @param {string=} mode Defaults to 'TRIANGLES'. Must be passed as string so the correct index buffer can be
 		 *     automatically drawn.
 		 * @param {number=} start int
 		 * @param {number=} count int
@@ -1462,11 +1337,14 @@ void main() {
 			// Draw the geometry.
 			if (minVertexBufferLength && (!indexBuffer || indexBuffer.buffer)) {
 				if (indexBuffer) {
+					assert((count || minVertexBufferLength) % indexBuffer.spacing == 0)
+					assert((start || 0) % indexBuffer.spacing == 0)
 					if (start + count > indexBuffer.count) {
 						throw new Error("Buffer not long enough for passed parameters start/length/buffer length" +" "+ start +" "+ count + " "+ indexBuffer.buffer.length)
 					}
 					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
-					gl.drawElements(mode, count || indexBuffer.count, gl.UNSIGNED_SHORT, start || 0)
+					// start parameter has to be multiple of sizeof(gl.UNSIGNED_SHORT)
+					gl.drawElements(mode, count || indexBuffer.count, WebGLRenderingContext.UNSIGNED_SHORT, 2 * start || 0)
 				} else {
 					if (start + count > minVertexBufferLength) {
 						throw new Error("invalid")
@@ -1643,9 +1521,13 @@ void main() {
 		}
 	};
 
-// ### GL.Texture.fromImage(image[, options])
-//
-// Return a new image created from `image`, an `<img>` tag.
+	/**
+	 * Return a new texture created from `image`, an `<img>` tag.
+	 *
+	 * @param {HTMLImageElement} image <img> element
+	 * @param {Object} options See {@link Texture} for option descriptions.
+	 * @returns {GL.Texture}
+	 */
 	Texture.fromImage = function(image, options) {
 		options = options || {};
 		var texture = new Texture(image.width, image.height, options);
@@ -1665,10 +1547,13 @@ void main() {
 		return texture;
 	};
 
-// ### GL.Texture.fromURL(url[, options])
-//
-// Returns a checkerboard texture that will switch to the correct texture when
-// it loads.
+	/**
+	 * Returns a checkerboard texture that will switch to the correct texture when it loads.
+	 *
+	 * @param {string} url
+	 * @param {Object} options Passed to {@link Texture.fromImage}
+	 * @returns {GL.Texture}
+	 */
 	Texture.fromURL = function(url, options) {
 		checkerboardCanvas = checkerboardCanvas || (function() {
 				var c = document.createElement('canvas').getContext('2d');
@@ -1745,12 +1630,23 @@ function createRectangleMesh(x0, y0, x1, y1) {
 	mesh.compile();
 	return mesh;
 }
+
+/**
+ *
+ * @param {V3[]} vertices
+ * @param {L3} lineAxis
+ * @param {number} totalAngle in radians
+ * @param {number} count
+ * @param {boolean} close
+ * @param {V3[]=} normals
+ * @returns {GL.Mesh}
+ */
 GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close, normals) {
 	var mesh = new GL.Mesh({normals: !!normals})
 	var vc = vertices.length, vTotal = vc * count
 
 	const rotMat = M4()
-	const /** @type {number[]} */ triangles = mesh.triangles
+	const /** @type {!number[]} */ triangles = mesh.triangles
 	for (let i = 0; i < count; i++) {
 		// add triangles
 		var angle = totalAngle / count * i
@@ -1761,7 +1657,7 @@ GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close, normal
 		for (let j = 0; j < vc - 1; j++) {
 			pushQuad(triangles, false,
 				i * vc + j + 1, i * vc + j,
-				((i + 1) * vc + j) % vTotal, ((i + 1) * vc + j + 1) % vTotal)
+				((i + 1) * vc + j + 1) % vTotal, ((i + 1) * vc + j) % vTotal)
 		}
 	}
 

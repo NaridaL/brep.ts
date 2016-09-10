@@ -1,7 +1,7 @@
 /**
  * Created by aval on 08/02/2016.
  */
-var Tutorial = NLA.defineClass(null,
+var Tutorial = NLA.degineClass(null,
 	function (name, init) {
 		this.name = name
 		this.actions = []

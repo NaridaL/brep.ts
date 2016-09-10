@@ -1,11 +1,14 @@
-
-"use strict";
+"use strict"
+/**
+ * @namespace
+ */
 var NLA = {}
+window['NLA'] = NLA
 
-NLA.assertVectors = function () {
-	if (NLA.DEBUG) {
+var assertVectors = NLA.assertVectors = function () {
+	if (NLA_DEBUG) {
 		for (var i = 0; i < arguments.length; i++) {
-			if (!(arguments[i] instanceof NLA.Vector3 || arguments[i] instanceof NLA.Vector)) {
+			if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
 				// Arrays.prototype.slice.call is inefficient, but it doesn't matter here
 				throw new Error("NLA.assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i]);
 			}
@@ -13,15 +16,62 @@ NLA.assertVectors = function () {
 	}
 	return true
 }
-NLA.PRECISION = 1 / (1 << 25)
-console.log("NLA.PRECISION", NLA.PRECISION)
+var assertInst = NLA.assertInst = function (what, ...objs) {
+	if (NLA_DEBUG) {
+		for (var i = 0; i < objs.length; i++) {
+			if (!(objs[i] instanceof what)) {
+				throw new Error("assertInst objs[" + (i) + "] is not a "+what.prototype.constructor.name+". " + objs[i].constructor.name + objs[i])
+			}
+		}
+	}
+	return true
+}
+var assertNumbers = NLA.assertNumbers = function (...numbers) {
+	if (NLA_DEBUG) {
+		for (var i = 0; i < numbers.length; i++) {
+			if (typeof numbers[i] !== 'number') {
+				// Arrays.prototype.slice.call is inefficient, but it doesn't matter here
+				throw new Error("NLA.assertNumbers arguments[" + (i) + "] is not a number. " + typeof numbers[i] + " == typeof " + numbers[i]);
+			}
+		}
+	}
+	return true
+}
 /**
  *
- * @type {boolean}
- * @const
- * @define {boolean}
+ * @param value
+ * @param {string} [message]
+ * @returns {boolean}
  */
-NLA.DEBUG = true
+var assert = NLA.assert = function (value, message) {
+	if (NLA_DEBUG && !value) {
+		throw new Error("NLA.assert failed: " + ('function' == typeof message ? message() : message))
+	}
+	return true
+}
+
+var assertf = NLA.assertf = function (f, message) {
+	if (!f()) {
+		throw new Error("NLA.assertf failed: " + f.toString() + ('function' == typeof message ? message() : (message ? message : '')))
+	}
+}
+NLA.CLASSES = []
+NLA.registerClass = function (clazz) {
+	NLA.CLASSES.push(clazz)
+}
+
+/** @const */
+NLA.PRECISION = 1 / (1 << 26)
+
+console.log("NLA.PRECISION", NLA.PRECISION)
+
+/** @define {boolean} */
+var NLA_DEBUG = true
+/**
+ *
+ * @param {number} x
+ * @returns {boolean}
+ */
 NLA.isZero = (x) => Math.abs(x) < NLA.PRECISION
 NLA.isZero2 = (x, precision) => Math.abs(x) < precision
 NLA.equals = (x, y) => Math.abs(x - y) <= NLA.PRECISION
@@ -34,6 +84,7 @@ NLA.eqAngle = (x, y) => NLA.zeroAngle(x - y)
 NLA.zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA.PRECISION) % (2 * Math.PI) < 2 * NLA.PRECISION
 NLA.snapTo = (x, to) => Math.abs(x - to) <= NLA.PRECISION ? to : x
 NLA.canonAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+
 var COLORS = {
 	RD_FILL:0x9EDBF9,
 	RD_STROKE:0x77B0E0,
@@ -42,6 +93,7 @@ var COLORS = {
 	PP_FILL:0xF3B6CF,
 	PP_STROKE:0xEB81B4,
 }
+var DEG = .017453292519943295
 function deg2rad(angle) {
 	//  discuss at: http://phpjs.org/functions/deg2rad/
 	// original by: Enrique Gonzalez
@@ -49,7 +101,7 @@ function deg2rad(angle) {
 	//   example 1: deg2rad(45);
 	//   returns 1: 0.7853981633974483
 
-	return angle * .017453292519943295; // (angle / 180) * Math.PI;
+	return angle * .017453292519943295 // (angle / 180) * Math.PI;
 }
 function rad2deg(rad) {
 	//  discuss at: http://phpjs.org/functions/deg2rad/
@@ -58,7 +110,7 @@ function rad2deg(rad) {
 	//   example 1: deg2rad(45);
 	//   returns 1: 0.7853981633974483
 
-	return rad / .017453292519943295; // (angle / 180) * Math.PI;
+	return rad / .017453292519943295 // (angle / 180) * Math.PI;
 }
 NLA.repeatString = function(count, str) {
 	if (count == 0) {
@@ -75,23 +127,6 @@ NLA.repeatString = function(count, str) {
 	// use substring to hit the precise length target without
 	// using extra memory
 	return result + result.substring(0, count - result.length)
-}
-NLA.assertNumbers = function () {
-    if (NLA.DEBUG) {
-        for (var i = 0; i < arguments.length; i++) {
-            if (typeof arguments[i] !== 'number') {
-                // Arrays.prototype.slice.call is inefficient, but it doesn't matter here
-                throw new Error("NLA.assertNumbers arguments[" + (i) + "] is not a number. " + typeof arguments[i] + " == typeof " + arguments[i]);
-            }
-        }
-    }
-	return true
-}
-NLA.assert = function (value, message) {
-	if (NLA.DEBUG && !value) {
-		throw new Error("NLA.assert failed: " + message);
-	}
-	return true
 }
 NLA.mod = function (a, b) {
 	return ((a % b) + b) % b
@@ -112,6 +147,11 @@ NLA.clamp = function (val, min, max) {
 	NLA.assertNumbers(val, min, max)
 	return Math.max(min, Math.min(max, val))
 }
+/**
+ *
+ * @param iterable
+ * @constructor
+ */
 NLA.CustomSet = function (iterable) {
 	this._map = new Map()
 	this._size = 0
@@ -215,6 +255,10 @@ NLA.CustomSet.prototype = {
 		return this._size
 	}
 }
+/**
+ *
+ * @constructor
+ */
 NLA.CustomMap = function () {
 
 }
@@ -312,12 +356,12 @@ NLA.mapAdd = function (map, key, val) {
 }
 // Add several convenience methods to the classes that support a transform() method:
 NLA.addTransformationMethods = function (obj) {
-	NLA.addOwnProperties(obj, NLA.tranformablePrototype)
+	NLA.addOwnProperties(obj, NLA.Transformable.prototype)
 }
 String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
-var ARRAY_UTILITIES = {
+var ARRAY_UTILITIES = /** @lends Array.prototype */ {
 	pushAll: function (arr) {
 		Array.prototype.push.apply(this, arr)
 	},
@@ -340,6 +384,11 @@ var ARRAY_UTILITIES = {
 		}
 		return result;
 	},
+
+	/**
+	 *
+	 * @returns {Array} Array.prototype.concat.apply([], this)
+	 */
 	concatenated: function () {
 		return Array.prototype.concat.apply([], this);
 	},
@@ -424,6 +473,15 @@ var ARRAY_UTILITIES = {
 			this.push(o)
 		}
 	},
+
+	/**
+	 * @template T
+	 * @template S
+	 * @this {T[]}
+	 * @param {S} searchElement
+	 * @param {function (T, S): number} cmp
+	 * @returns {number}
+	 */
 	binaryIndexOf: function(searchElement, cmp) {
 
 		var minIndex = 0;
@@ -467,10 +525,13 @@ var ARRAY_UTILITIES = {
 		}
 
 		this.splice(minIndex, 0, el)
-	}
+	},
+	last: function () {
+		return this[this.length - 1]
+	},
 }
 NLA.minus = (a, b) => a - b
-for (var key in ARRAY_UTILITIES) {
+for (let key in ARRAY_UTILITIES) {
 	NLA["array" + key.capitalizeFirstLetter()] = function (arr, ...rest) {
 		ARRAY_UTILITIES[key].apply(arr, rest)
 	}
@@ -489,7 +550,7 @@ NLA.arrayCopyBlocks = function (src,sstart,sstep, dst,dstart,dstep,blockSize, bl
 }
 NLA.arrayRange = function (start, end, step) {
 	NLA.assertNumbers(start, step)
-	console.log(Math.ceil((end - start) / step))
+	//console.log(Math.ceil((end - start) / step))
 	var result = new Array(Math.ceil((end - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
 	var index = 0
 	for (var i = 0; i < end; i += step) {
@@ -499,7 +560,7 @@ NLA.arrayRange = function (start, end, step) {
 }
 NLA.arrayFromFunction = function(length, f) {
 	NLA.assertNumbers(length)
-	NLA.assert("function" == typeof f)
+	assert("function" == typeof f)
 	var a = new Array(length)
 	var elIndex = length;
 	while (elIndex--) {
@@ -507,20 +568,15 @@ NLA.arrayFromFunction = function(length, f) {
 	}
 	return a
 }
-function arrayEquals(arr1, arr2) {
-	if (arr1.length != arr2.length) return false;
-	
-	var i = arr1.length
-	while (i--) {
-		//if (arr1[i] != (arr2.result = Math.max(result, arr[i])))
-	}
-	return result
-}
 
 
-///////// VECTOR
+/**
+ *
+ * @param v
+ * @constructor
+ */
 NLA.Vector = function (v) {
-	if (NLA.DEBUG && !(v instanceof Float64Array)) {
+	if (NLA_DEBUG && !(v instanceof Float64Array)) {
 		throw new Error("!!");
 	}
 	this.v = v;
@@ -537,10 +593,10 @@ NLA.Vector.fromFunction = function(dim, f) {
 NLA.Vector.random = function (dim) {
 	return NLA.Vector.fromFunction(dim, (i) => Math.random())
 }
-NLA.Vector.fromArguments = function () {
-	assert (arguments[0] instanceof Float64Array || arguments.every(a => 'number' == typeof a),
-	"arguments[0] instanceof Float64Array || arguments.every(a => 'number' == typeof a)")
-	return new NLA.Vector(arguments[0] instanceof Float64Array ? arguments[0] : Float64Array.from(arguments))
+NLA.Vector.fromArguments = function (...args) {
+	assert (args[0] instanceof Float64Array || args.every(a => 'number' == typeof a),
+	"args[0] instanceof Float64Array || args.every(a => 'number' == typeof a)")
+	return new NLA.Vector(args[0] instanceof Float64Array ? args[0] : Float64Array.from(args))
 }
 NLA.V = NLA.Vector.fromArguments
 NLA.Vector.prototype = {
@@ -560,7 +616,7 @@ NLA.Vector.prototype = {
 		}
 		return new NLA.Vector(n)
 	},
-	minus: function (vector) {
+	minus: function (/** V3 */ vector) {
 		var u = this.v, v = vector.v
 		var n = new Float64Array(u.length)
 		var i = u.length
@@ -579,7 +635,7 @@ NLA.Vector.prototype = {
 		return new NLA.Vector(n)
 	},
 	dot: function (vector) {
-		NLA.assert(this.dim == vector.dim, "passed vector must have the same dim")
+		assert(this.dim == vector.dim, "passed vector must have the same dim")
 		var result = 0;
 		var u = this.v, v = vector.v
 		var i = u.length
@@ -598,7 +654,7 @@ NLA.Vector.prototype = {
 		return new NLA.Vector(n)
 	},
 	cross: function(vector) {
-		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assertInst(NLA.Vector, vector)
 		var n = new Float64Array(3)
 		n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1]
 		n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2]
@@ -628,6 +684,7 @@ NLA.Vector.prototype = {
 		roundFunction = roundFunction || ((v) => +v.toFixed(6))
 		return "NLA.Vector(" + this.v.map(roundFunction).join(", ") + ")"
 	},
+	/*
 	get x() {
 		return this.v[0]
 	},
@@ -640,8 +697,9 @@ NLA.Vector.prototype = {
 	get w() {
 		return this.v[3]
 	},
+	*/
 	angleTo: function (vector) {
-		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assertInst(NLA.Vector, vector)
 		assert(!this.isZero(), "!this.isZero()")
 		assert(!vector.isZero(), "!vector.isZero()")
 		return Math.acos(this.dot(vector) / this.length() / vector.length())
@@ -654,7 +712,7 @@ NLA.Vector.prototype = {
 			if vector has a length of 0
 	*/
 	isParallelTo: function (vector) {
-		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assertInst(NLA.Vector, vector)
 		assert(!this.isZero(), "!this.isZero()")
 		assert(!vector.isZero(), "!vector.isZero()")
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
@@ -662,7 +720,7 @@ NLA.Vector.prototype = {
 		return NLA.equals(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)))
 	},
 	isPerpendicularTo: function (vector) {
-		assert (vector instanceof NLA.Vector, "vector instanceof NLA.Vector")
+		assertInst(NLA.Vector, vector)
 		assert(!this.isZero(), "!this.isZero()")
 		assert(!vector.isZero(), "!vector.isZero()")
 		return NLA.isZero(this.dot(vector))
@@ -689,7 +747,7 @@ NLA.Vector.prototype = {
 	},
 	/**
 		Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector.
-		Throws a NLA.DebugError if this has a length of 0.
+		Throws a NLA_DEBUGError if this has a length of 0.
 	*/
 	normalized: function () {
 		var length = this.length()
@@ -714,12 +772,12 @@ NLA.Vector.prototype = {
 			NLA.V(3, 4).projectedOn(NLA.V(1, 1)) // returns
 	*/
 	projectedOn: function (b) {
-		assert (b instanceof NLA.Vector, "b instanceof NLA.Vector")
+		assertInst(NLA.Vector, b)
 		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
 		return b.times(this.dot(b) / b.dot(b))
 	},
 	rejectedOn: function (b) {
-		assert (b instanceof NLA.Vector, "b instanceof NLA.Vector")
+		assertInst(NLA.Vector, b)
 		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
 		return this.minus(b.times(this.dot(b) / b.dot(b)))
 	},
@@ -732,40 +790,44 @@ NLA.Vector.prototype = {
 		NLA.assertNumbers(length)
 		return NLA.equals(length, this.length())
 	},
+	V3: function () {
+		//assert(this.dim() == 3)
+		return V3.create(this.v[0], this.v[1], this.v[2])
+	}
 };
 NLA.addOwnProperties = function (target, props) {
-	for (var key in props) {
-		if (props.hasOwnProperty(key)) {
-			if (target.hasOwnProperty(key)) {
-				console.warn("target ", target, " already has property ", key)
-			}
-			Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(props, key))
+	Object.getOwnPropertyNames(props).forEach(key => {
+		//console.log(props, key)
+		if (target.hasOwnProperty(key)) {
+			console.warn("target ", target, " already has property ", key)
 		}
-	}
+		Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(props, key))
+	})
 }
-NLA.defineClass = function (name, parent, constructor, props, statics) {
-	NLA.assert('function' == typeof constructor, "'function' == typeof constructor")
+
+NLA.degineClass = function (name, parent, constructor, props, statics) {
+	assert('function' == typeof constructor, "'function' == typeof constructor")
 	constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
 	constructor.prototype.constructor = constructor
-	constructor.prototype.name = name
-	NLA.addOwnProperties(constructor, statics)
+	Object.defineProperty(constructor.prototype, 'name', {value: name})
+	statics && NLA.addOwnProperties(constructor, statics)
 	return constructor
 }
-NLA.defaultRoundFunction = x => x//.toFixed(2)//Math.round10(x, 2)
+NLA.defaultRoundFunction = x => x // Math.round10(x, -4)
 
 NLA.defineObject = function (prot, props) {
-	var o = Object.create(prot || NLA.baseObject)
+	var o = Object.create(prot || NLA.BaseObject)
 	NLA.addOwnProperties(o, props)
 	return o
 }
-NLA.baseObject = NLA.defineObject(Object.prototype, {
-	toSource: function () {
+NLA.BaseObject = class extends Object {
+	toSource() {
 		return this.toString == Object.prototype.toString ? Object.prototype.toSource.apply(this) : this.toString()
-	},
-	get ss() {
+	}
+	get $() {
 		return this.toSource()
 	}
-})
+}
 NLA.forceFinite = function(val) {
 	val = parseFloat(val.replace(',', '.').replace(/^[^0-9,\.\-]/, ''))
 	return Number.isFinite(val) ? val : 0
@@ -776,9 +838,9 @@ NLA.forceFinite = function(val) {
 	 * Decimal adjustment of a number.
 	 *
 	 * @param {String}  type  The type of adjustment.
-	 * @param {Number}  value The number.
-	 * @param {Integer} exp   The exponent (the 10 logarithm of the adjustment base).
-	 * @returns {Number} The adjusted value.
+	 * @param {number}  value The number.
+	 * @param {number} exp   The exponent (the 10 logarithm of the adjustment base).
+	 * @returns {number} The adjusted value.
 	 */
 	function decimalAdjust(type, value, exp) {
 		// If the exp is undefined or zero...
@@ -820,13 +882,16 @@ NLA.forceFinite = function(val) {
 })();
 
 
-
-
-
-
-/// MATRIX
+/**
+ *
+ * @param width
+ * @param height
+ * @param m
+ * @constructor
+ * @property {Float64Array} m
+ */
 NLA.Matrix = function (width, height, m) {
-	NLA.assert(width * height == m.length, "uhm...")
+	assert(width * height == m.length, "width * height == m.length", width, height, m.length)
 	this.m = m;
 	this.width = width;
 	this.height = height;
@@ -847,7 +912,7 @@ NLA.Matrix.fromFunction = function(width, height, f) {
 NLA.Matrix.identity = function(dim) {
 	NLA.assertNumbers(dim);
 	var m = new Float64Array(dim * dim)
-	// Float64Array are init to 0
+	// Float64Arrays are init to 0
 	var elIndex = dim * (dim + 1);
 	while (elIndex) {
 		elIndex -= (dim + 1)
@@ -914,20 +979,20 @@ NLA.Matrix.fromColArrays = function(colArrays) {
 NLA.Matrix.prototype = {
     e: function (rowIndex, colIndex) {
         NLA.assertNumbers(rowIndex, colIndex)
-        if (NLA.DEBUG && (rowIndex >= this.height || colIndex >= this.width)) {
+        if (NLA_DEBUG && (rowIndex >= this.height || colIndex >= this.width)) {
             throw new Error("index " + rowIndex + ", " + colIndex + " is out of bounds (" + this.width + " x " + this.height + ")")
         }
         return this.m[rowIndex * this.width + colIndex]
     },
 	setEl: function (rowIndex, colIndex, val) {
 		NLA.assertNumbers(rowIndex, colIndex)
-		NLA.assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex)
-		NLA.assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex)
+		assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex)
+		assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex)
 		this.m[rowIndex * this.width + colIndex] = val
 	},
 	toString: function (f) {
 		f = f || ((v) => v.toFixed(3))
-		NLA.assert(typeof f(0) == "string", "" + typeof f(0))
+		assert(typeof f(0) == "string", "" + typeof f(0))
 		var rounded = Array.prototype.slice.call(this.m).map(f);
 		var colWidths = NLA.arrayFromFunction(this.width,
 			(colIndex) => rounded.sliceStep(colIndex, this.width).map((x) => x.length).max())
@@ -984,46 +1049,103 @@ NLA.Matrix.prototype = {
         return this.isSquare() && this.transposed().times(this).equalsMatrix(NLA.Matrix.identity(this.width))
     },
     luDecomposition: function() {
-        NLA.assert(this.isSquare())
-        var resultRowArrays = this.asRowArrays(Float64Array)
+        assertf(() => this.isSquare(), this.dim().toSource())
+        var uRowArrays = this.asRowArrays(Float64Array)
         var dim = this.width
         var lRowArrays = NLA.arrayFromFunction(dim, (row) => new Float64Array(dim))
         var pRowArrays = NLA.Matrix.identity(dim).asRowArrays(Float64Array)
-        for (var colIndex = 0; colIndex < dim; colIndex++) {
+	    let currentRowIndex = 0
+        for (let colIndex = 0; colIndex < dim; colIndex++) {
             // find largest value in colIndex
-            var maxAbsValue = 0
-            var rowIndex = dim
-            var pivotRowIndex = colIndex
-            while (--rowIndex >= colIndex) {
-                if (Math.abs(resultRowArrays[rowIndex][colIndex]) >= maxAbsValue) { // TODO: ">" ?
-                    maxAbsValue = Math.abs(resultRowArrays[rowIndex][colIndex])
+            let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows = 0
+            for (let rowIndex = currentRowIndex; rowIndex < dim; rowIndex++) {
+	            var el = uRowArrays[rowIndex][colIndex]
+	            numberOfNonZeroRows += (0 != el) | 0
+	            if (Math.abs(el) > maxAbsValue) {
+                    maxAbsValue = Math.abs(el)
                     pivotRowIndex = rowIndex
                 }
             }
-            // swap row
-			NLA.arraySwap(resultRowArrays, colIndex, pivotRowIndex)
-			NLA.arraySwap(lRowArrays, colIndex, pivotRowIndex)
-            NLA.arraySwap(pRowArrays, colIndex, pivotRowIndex)
-            // subtract pivot row from all below it
-            lRowArrays[colIndex][colIndex] = 1
-            for (var rowIndex = colIndex + 1; rowIndex < dim; rowIndex++) {
-                var l = resultRowArrays[rowIndex][colIndex] / resultRowArrays[colIndex][colIndex]
+            // TODO: check with NLA.isZero
+            if (0 == maxAbsValue) {
+            	// column contains only zeros
+	            continue
+            }
+	        assert(undefined !== pivotRowIndex)
+            // swap rows
+			NLA.arraySwap(uRowArrays, currentRowIndex, pivotRowIndex)
+			NLA.arraySwap(lRowArrays, currentRowIndex, pivotRowIndex)
+            NLA.arraySwap(pRowArrays, currentRowIndex, pivotRowIndex)
+	        lRowArrays[currentRowIndex][colIndex] = 1
+
+	        if (1 == numberOfNonZeroRows) {
+            	continue
+	        }
+            // subtract pivot (now current) row from all below it
+            for (let rowIndex = currentRowIndex + 1; rowIndex < dim; rowIndex++) {
+                let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
                 lRowArrays[rowIndex][colIndex] = l
                 // subtract pivot row * l from row "rowIndex"
-                for (var colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
-                    resultRowArrays[rowIndex][colIndex2] -= l * resultRowArrays[colIndex][colIndex2]
+                for (let colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
+                    uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
                 }
             }
+            currentRowIndex++ // this doesn't increase if pivot was zero
         }
-        return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(resultRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
+        return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(uRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
+    },
+    gauss: function() {
+        var uRowArrays = this.asRowArrays(Float64Array)
+        var w = this.width, h = this.height
+        var lRowArrays = NLA.arrayFromFunction(h, (row) => new Float64Array(w))
+        var pRowArrays = NLA.Matrix.identity(h).asRowArrays(Float64Array)
+	    let currentRowIndex = 0
+        for (let colIndex = 0; colIndex < w; colIndex++) {
+            // find largest value in colIndex
+            let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows = 0
+            for (let rowIndex = currentRowIndex; rowIndex < h; rowIndex++) {
+	            var el = uRowArrays[rowIndex][colIndex]
+	            numberOfNonZeroRows += (0 != el) | 0
+	            if (Math.abs(el) > maxAbsValue) {
+                    maxAbsValue = Math.abs(el)
+                    pivotRowIndex = rowIndex
+                }
+            }
+            // TODO: check with NLA.isZero
+            if (0 == maxAbsValue) {
+            	// column contains only zeros
+	            continue
+            }
+	        assert(undefined !== pivotRowIndex)
+            // swap rows
+			NLA.arraySwap(uRowArrays, currentRowIndex, pivotRowIndex)
+			NLA.arraySwap(lRowArrays, currentRowIndex, pivotRowIndex)
+            NLA.arraySwap(pRowArrays, currentRowIndex, pivotRowIndex)
+	        lRowArrays[currentRowIndex][colIndex] = 1
+
+	        if (1 == numberOfNonZeroRows) {
+            	continue
+	        }
+            // subtract pivot (now current) row from all below it
+            for (let rowIndex = currentRowIndex + 1; rowIndex < h; rowIndex++) {
+                let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
+                lRowArrays[rowIndex][colIndex] = l
+                // subtract pivot row * l from row "rowIndex"
+                for (let colIndex2 = colIndex; colIndex2 < w; colIndex2++) {
+                    uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
+                }
+            }
+            currentRowIndex++ // this doesn't increase if pivot was zero
+        }
+        return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(uRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
     },
 	qrDecompositionGivensRotation: function () {
 		function sigma (c, s) {
 			if ( 0 == c) {
-				return 1;
+				return 1
 			}
 			if ( Math.abs(s) < Math.abs(c)) {
-				return 0.5 * Math.sign(c) * s;
+				return 0.5 * Math.sign(c) * s
 			}
 			return 2 * Math.sign (s) / c;
 		}
@@ -1039,8 +1161,6 @@ NLA.Matrix.prototype = {
 		var qTransposed = NLA.Matrix.identity(this.height)
 		for (var colIndex = 0; colIndex < this.width; colIndex++) {
 			// find largest value in colIndex
-			var maxAbsValue = 0
-			var pivotRowIndex = colIndex
 			for (var rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
 				//console.log("row ", rowIndex, "col ", colIndex);
 				var xi = this.e(colIndex, colIndex)
@@ -1093,7 +1213,7 @@ NLA.Matrix.prototype = {
     /**
      * Returns x, so that this * x = b
 	 * More efficient than calculating the inverse for few (~ <= this.height) values
-     * @param y
+     * @param b
      */
     solveLinearSystem: function (b) {
         var lup = this.luDecomposition()
@@ -1127,8 +1247,8 @@ NLA.Matrix.prototype = {
     },
     solveBackwards: function (x) {
         NLA.assertVectors(x)
-        NLA.assert(this.height == x.dim(), "this.height == x.dim()")
-        NLA.assert(this.isUpperTriangular(), "this.isUpperTriangular()")
+        assert(this.height == x.dim(), "this.height == x.dim()")
+        assert(this.isUpperTriangular(), "this.isUpperTriangular()")
         var v = new Float64Array(this.width)
         var rowIndex = this.height
         while (rowIndex--) {
@@ -1158,8 +1278,8 @@ NLA.Matrix.prototype = {
     },
     solveForwards: function (x) {
         NLA.assertVectors(x)
-        NLA.assert(this.height == x.dim(), "°°")
-        NLA.assert(this.isLowerTriangular(), "°°")
+        assert(this.height == x.dim(), "°°")
+        assert(this.isLowerTriangular(), "°°")
         var v = new Float64Array(this.width)
         for (var rowIndex = 0; rowIndex < this.height; rowIndex++) {
             var temp = x.v[rowIndex]
@@ -1170,19 +1290,27 @@ NLA.Matrix.prototype = {
         }
         return new NLA.Vector(v)
     },
+
+	/**
+	 * Calculates rank of matrix.
+	 * Number of linearly independant row/column vectors.
+	 * Is equal to the unmber of dimensions the image of the affine transformation represented this matrix has.
+	 *
+	 * @returns {number} integer
+	 */
 	rank: function () {
-		var {Q, R} = this.qrDecompositionGivensRotation()
+		let U = this.gauss().U
 		//console.log(R.toString())
 		var rowIndex = this.height
-		while (rowIndex-- && R.row(rowIndex).isZero()) {}
+		while (rowIndex-- && U.row(rowIndex).isZero()) {
+			console.log("RANK" + U.row(rowIndex).toString() + U.row(rowIndex).isZero())}
 		return rowIndex + 1
 	},
 	rowsIndependent: function () {
 		return this.height == this.rank()
 	},
 	colsIndependent: function () {
-		var cols = NLA.arrayFromFunction(this.width, this.col.bind(this))
-		return Array.from(NLA.combinations(this.width)).every(({i, j}) => i == j || !cols[i].isParallelTo(rows[j]))
+		return this.width == this.rank()
 	},
     asRowArrays: function (arrayConstructor) {
         arrayConstructor = arrayConstructor || Float64Array
@@ -1227,9 +1355,10 @@ NLA.Matrix.prototype = {
     },
 
     dimEquals: function (matrix) {
-        NLA.assert(matrix instanceof NLA.Matrix, "matrix is not a NLA.Matrix")
-        return this.width == matrix.width && this.height == height;
+        assertInst(NLA.Matrix, matrix)
+        return this.width == matrix.width && this.height == matrix.height
     },
+
     inversed: function () {
         var lup = this.luDecomposition()
         var y = lup.L.solveForwardsMatrix(lup.P)
@@ -1237,12 +1366,12 @@ NLA.Matrix.prototype = {
         return inverse
     },
     canMultiply: function (matrix) {
-        NLA.assert(matrix instanceof NLA.Matrix, "matrix is not a NLA.Matrix" + matrix)
+        assertInst(NLA.Matrix, matrix)
         return this.width == matrix.height
     },
     times: function (matrix) {
-	    NLA.assert(matrix instanceof NLA.Matrix)
-        NLA.assert(this.canMultiply(matrix), `Cannot multiply this {this.dimString()} by matrix {matrix.dimString()}`)
+	    assertInst(NLA.Matrix, matrix)
+        assert(this.canMultiply(matrix), `Cannot multiply this {this.dimString()} by matrix {matrix.dimString()}`)
         var nWidth = matrix.width, nHeight = this.height, n = this.width
         var nM = new Float64Array(nWidth * nHeight)
         var nRowIndex = nHeight
@@ -1261,7 +1390,7 @@ NLA.Matrix.prototype = {
     },
     timesVector: function (vector) {
         NLA.assertVectors(vector)
-        NLA.assert(this.width == vector.dim())
+        assert(this.width == vector.dim())
         var nHeight = this.height, n = this.width
         var nM = new Float64Array(nHeight)
         var nRowIndex = nHeight
@@ -1362,7 +1491,8 @@ NLA.Matrix.prototype = {
 		return product
 	},
 	/**
-	 * Calculates the determinant by first calculating the LU decomposition. If you already have that, use U.getTriangularDeterminant()
+	 * Calculates the determinant by first calculating the LU decomposition. If you already have that, use
+	 * U.getTriangularDeterminant()
 	 * @returns {*}
 	 */
 	getDeterminant: function () {
@@ -1403,162 +1533,228 @@ NLA.combinations = function* (n) {
 		}
 	}
 }
-
-NLA.Line = function (anchor, dir1) {
-	NLA.assertVectors(anchor, dir1)
-    console.log("sadjlkasjd", dir1)
-    try {
-        if (!dir1.hasLength(1)) {
-            throw new Error("dir must be normalized");
-        }
-    } catch (e) {
-        console.log(e)
-    }
-    this.anchor = anchor
-	this.dir1 = dir1
+function isCCW(vertices, normal) {
+	var dsa = doubleSignedArea(vertices, normal)
+	assert(0 != dsa)
+	return dsa < 0
 }
-NLA.Line.throughPoints = (anchor, b) => new NLA.Line(anchor, b.minus(anchor).normalized())
-NLA.Line.anchorDirection = (anchor, direction) => new NLA.Line(anchor, direction.normalized())
-NLA.Line.prototype = {
-	containsPoint: function () {
-	},
-	equals: function (line) {
-		NLA.assert(line instanceof NLA.Line);
-        // we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than isParallelTo()
-		return this.contains(line.anchor) && NLA.equals(1, Math.abs(this.dir1.dot(line.dir1)))
-	},
-	distanceToPoint: function (x) {
-		NLA.assertVectors(x)
-		"use strict";
-		// See http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-		var t = x.minus(this.anchor).dot(this.dir1)
-		return this.at(t).minus(x).length()
+function triangulateVertices(normal, vertices, holeStarts) {
+	var absMaxDim = normal.absMaxDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
+	var contour = new Array(vertices.length * 2)
+	var i = vertices.length
+	/*
+	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
+	 while (i--) {
+	 contour[i * 2    ] = vertices[i][coord0] * factor
+	 contour[i * 2 + 1] = vertices[i][coord1]
+	 }
+	 */
 
-		//return x.minus(this.anchor).cross(x.minus(this.anchor.plus(this.dir1))).length()
-	},
-    /**
-     * Every point x on this line is described by the equation x = this.anchor + lambda * this.dir1
-     * This function returns lambda for a given point x
-     * @param x
-     */
-    pointLambda: function (x) {
-        "use strict";
-        NLA.assertVectors(x)
-        var t = x.minus(this.anchor).dot(this.dir1)
-    },
-    isParallelToLine: function (line) {
-        "use strict";
-        NLA.assert(line instanceof NLA.Line)
-        // we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than isParallelTo()
-        return NLA.equals(1, Math.abs(this.dir1.dot(line.dir1)))
-    },
-    angleToLine:  function (line) {
-        "use strict";
-        NLA.assert(line instanceof NLA.Line)
-        return this.dir1.angleTo(line.dir1)
-    },
-	/**
-	 *
-	 * @param t
-	 * @returns `this.anchor.plus(this.dir1.times(t))`
-     */
-	at: function (t) {
-        NLA.assertNumbers(t)
-		"use strict";
-		return this.anchor.plus(this.dir1.times(t))
-	},
-	pointClosestTo2: function(obj) {
-		if (obj.direction) {
-			/*
-			 line = a + s*b
-			 this = c + t*d
-
-			 (this - line) * b = 0
-			 (this - line) * d = 0
-
-			 (a + s*b - c - t*d) * b = 0
-			 (a + s*b - c - t*d) * d = 0
-
-			 (a - c + s*b - t*d) * b = 0
-			 (a - c + s*b - t*d) * d = 0
-
-			 (a - c)*b + (s*b - t*d)*b = 0
-			 (a - c)*d + (s*b - t*d)*d = 0
-
-			 (a - c)*b + s*(b*b) - t*(d*b) = 0
-			 (a - c)*d + s*(b*d) - t*(d*d) = 0
-
-			 s = (t*(d*b) - (a - c)*b) / (b*b)
-			 =>
-			 (a - c)*d + (t*(d*b) - (a - c)*b) / (b*b)*(b*d) - t*(d*d) = 0 | * (b*b)
-			 (a - c)*d * (b*b) + (t*(d*b) - (a - c)*b)*(b*d) - t*(d*d) * (b*b) = 0
-			 (a - c)*d * (b*b) + t*(d*b)*(b*d) - (a - c)*b*(b*d) - t*(d*d) * (b*b) = 0
-			 t = ((a - c)*b*(b*d) - (a - c)*d * (b*b)) / ((d*b)*(b*d) - (d*d) * (b*b))
-			 */
-			// obj is a line
-			if (this.intersects(obj)) { return this.intersectionWith(obj); }
-			if (this.isParallelTo(obj)) { return {t: NaN, s:NaN, closest: null, distance: this.distanceTo(obj)}; }
-			var a = obj.anchor, b = obj.direction, c = this.anchor, d = this.direction;
-			var bd = b.dot(d), bb = b.dot(b), dd = d.dot(d), amc = a.subtract(c), divisor = bd*bd - dd * bb;
-			var t = (amc.dot(b)*bd - amc.dot(d)*bb) / divisor;
-			var s = (amc.dot(b)*dd - amc.dot(d)*bd) / divisor;
-			return {t: t, s:s, closest: this.at(t), closest2: obj.at(s), distance: this.at(t).subtract(obj.at(s)).modulus()};
-		} else {
-			// obj is a point
-			var P = obj.elements || obj;
-			if (this.contains(P)) { return Vector.create(P); }
-			var A = this.anchor.elements, D = this.direction.elements;
-			var D1 = D[0], D2 = D[1], D3 = D[2], A1 = A[0], A2 = A[1], A3 = A[2];
-			var x = D1 * (P[1]-A2) - D2 * (P[0]-A1), y = D2 * ((P[2] || 0) - A3) - D3 * (P[1]-A2),
-					z = D3 * (P[0]-A1) - D1 * ((P[2] || 0) - A3);
-			var V = Vector.create([D2 * x - D3 * z, D3 * y - D1 * x, D1 * z - D2 * y]);
-			var k = this.distanceTo(P) / V.modulus();
-			return Vector.create([
-				P[0] + V.elements[0] * k,
-				P[1] + V.elements[1] * k,
-				(P[2] || 0) + V.elements[2] * k
-			]);
+	while (i--) {
+		// unroll disambiguation instead of accessing elements by string name ([coord0] etc)
+		// as it confuses google closure
+		switch (absMaxDim) {
+			case 0:
+				contour[i * 2    ] = vertices[i].y * factor
+				contour[i * 2 + 1] = vertices[i].z
+				break
+			case 1:
+				contour[i * 2    ] = vertices[i].z * factor
+				contour[i * 2 + 1] = vertices[i].x
+				break
+			case 2:
+				contour[i * 2    ] = vertices[i].x * factor
+				contour[i * 2 + 1] = vertices[i].y
+				break
 		}
-	},
+	}
+	return earcut(contour, holeStarts)
 }
-NLA.tranformablePrototype = (function() {
-	var prot = {}
-	prot.mirrored = function(plane) {
-		return this.transform(NLA.Matrix4x4.mirroring(plane));
+
+function arrayFilterMap(arr, f) {
+	var result = []
+	for (var i = 0; i < arr.length; i++) {
+		var v = f(arr[i])
+		if (undefined !== v) {
+			result.push(v)
+		}
 	}
-	prot.mirroredX = function() {
-		return this.mirrored(P3.YZ)
+	return result
+}
+
+
+function doubleSignedArea(vertices, normal) {
+	assert(!normal.isZero(),'!normal.isZero()')
+	var absMaxDim = normal.absMaxDim()
+	// order is important, coord0 and coord1 must be set so that coord0, coord1 and maxDim span a right-hand coordinate system
+	//var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
+	var doubleSignedArea = vertices.map((v0, i, vertices) => {
+		var v1 = vertices[(i + 1) % vertices.length]
+		//return (v1[coord0] - v0[coord0]) * (v1[coord1] + v0[coord1])
+		switch (absMaxDim) {
+			case 0:
+				return (v1.y - v0.y) * (v1.z + v0.z)
+			case 1:
+				return (v1.z - v0.z) * (v1.x + v0.x)
+			case 2:
+				return (v1.x - v0.x) * (v1.y + v0.y)
+		}
+	}).reduce((a, b) => a + b)
+	return NLA.snapTo(doubleSignedArea * Math.sign(normal.e(absMaxDim)), 0)
+}
+
+/**
+ * solves x² + px + q = 0
+ *
+ * @param {number} p
+ * @param {number} q
+ * @returns {Array.<number>}
+ */
+function pqFormula(p, q) {
+	// 4 times the discriminant:in
+	var discriminantX4 = p * p / 4 - q
+	if (discriminantX4 < -NLA.PRECISION) {
+		return []
+	} else if (discriminantX4 <= NLA.PRECISION) {
+		return [-p/2]
+	} else {
+		var root = Math.sqrt(discriminantX4)
+		return [-p/2 - root, -p/2 + root]
 	}
-	prot.mirroredY = function() {
-		return this.mirrored(P3.ZX)
+}
+
+/**
+ * solves ax³ + bx² + cx + d = 0
+ *
+ * @param {number} a
+ * @param {number} b
+ * @param {number} c
+ * @param {number} d
+ * @returns {number[]} with 0-3 entries
+ */
+function solveCubicReal2(a, b, c, d) {
+	if (NLA.isZero(a)) {
+		if (NLA.isZero(b)) {
+			return [-d/c]
+		} else {
+			return pqFormula(c / b, d / b)
+		}
 	}
-	prot.mirroredZ = function() {
-		return this.mirrored(P3.XY)
+	var div = a
+	a = b/div
+	b = c/div
+	c = d/div
+	var p = (3*b - a*a)/3,
+		pDiv3 = p/3,
+		pDiv3Pow3 = pDiv3 * pDiv3 * pDiv3,
+		q = (2*a*a*a - 9*a*b + 27*c)/27,
+		qDiv2 = q/2,
+		discriminant = qDiv2*qDiv2 + pDiv3Pow3,
+		u1,v1,x1,x2,x3
+	// 18abcd - 4b³d + b²c² - 4ac³ - 27a²d²
+	if (discriminant < -NLA.PRECISION) {
+		var r = Math.sqrt(-pDiv3Pow3),
+			t = -q/(2*r),
+			cosphi = t<-1 ? -1 : t>1 ? 1 : t, // clamp t to [-1;1]
+			phi = Math.acos(cosphi),
+			t1 = 2 * Math.cbrt(r)
+		x1 = t1 * Math.cos(phi/3) - a/3
+		x2 = t1 * Math.cos((phi+2*Math.PI)/3) - a/3
+		x3 = t1 * Math.cos((phi+4*Math.PI)/3) - a/3
+		return [x1, x2, x3]
+	} else if(discriminant <= NLA.PRECISION) {
+		if (0 == qDiv2) {
+			// TODO: compare with NLA.isZero?
+			return [-a/3]
+		}
+		u1 = Math.cbrt(Math.abs(qDiv2))
+		x1 = 2*u1 - a/3
+		x2 = -u1 - a/3
+		return [x1,x2]
+	} else {
+		var sd = Math.sqrt(discriminant)
+		u1 = Math.cbrt(-qDiv2+sd)
+		v1 = Math.cbrt(qDiv2+sd)
+		return [u1-v1-a/3]
 	}
-	prot.translate = function(x, y, z) {
-		return this.transform(NLA.Matrix4x4.translation(x, y, z))
+}
+NLA.Transformable =
+
+	/**
+	 * @template T
+	 * @constructor
+	 * @class NLA.Transformable
+	 */
+	class extends NLA.BaseObject {
+	mirrored(plane) {
+		return this.transform(M4.mirroring(plane));
 	}
-	prot.scale = function(f) {
-		return this.transform(NLA.Matrix4x4.scaling(f))
+	mirroredX() {
+		return this.mirrored(NLA.Plane3.YZ)
 	}
-	prot.rotateX = function(radians) {
-		return this.transform(NLA.Matrix4x4.rotationX(radians))
+	mirroredY() {
+		return this.mirrored(NLA.Plane3.ZX)
 	}
-	prot.rotateY = function(radians) {
-		return this.transform(NLA.Matrix4x4.rotationY(radians))
+	mirroredZ() {
+		return this.mirrored(NLA.Plane3.XY)
 	}
-	prot.rotateZ = function(radians) {
-		return this.transform(NLA.Matrix4x4.rotationZ(radians))
+	translate(x, y, z) {
+		return this.transform(M4.translation(x, y, z), `.translate(${x}, ${y}, ${z})`)
 	}
-	prot.rotate = function(rotationCenter, rotationAxis, radians) {
-		return this.transform(NLA.Matrix4x4.rotation(rotationCenter, rotationAxis, radians))
+	scale(x, y, z) {
+		return this.transform(M4.scaling(x, y, z))
 	}
-	prot.eulerZXZ = function(alpha, beta, gamma) {
-		return this.transform(NLA.Matrix4x4.eulerZXZ(alpha, beta, gamma))
+	rotateX(radians) {
+		return this.transform(M4.rotationX(radians), `.rotateX(${radians})`)
 	}
-	prot.project = function(plane) {
-		return this.transform(NLA.Matrix4x4.projection(plane))
+	rotateY(radians) {
+		return this.transform(M4.rotationY(radians), `.rotateY(${radians})`)
 	}
-	return prot
-})();
+	rotateZ(radians) {
+		return this.transform(M4.rotationZ(radians), `.rotateZ(${radians})`)
+	}
+	rotate(rotationCenter, rotationAxis, radians) {
+		return this.transform(M4.rotation(rotationCenter, rotationAxis, radians))
+	}
+	eulerZXZ(alpha, beta, gamma) {
+		return this.transform(M4.eulerZXZ(alpha, beta, gamma))
+	}
+	project(plane) {
+		return this.transform(M4.projection(plane))
+	}
+	projXY() {
+		return this.transform(M4.projection(NLA.Plane3.XY))
+	}
+	projYZ() {
+		return this.transform(M4.projection(NLA.Plane3.YZ))
+	}
+	projZX() {
+		return this.transform(M4.projection(NLA.Plane3.ZX))
+	}
+	shearedX (y, z) {
+		return this.transform(M4([
+			1, y, z, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1]))
+	}
+	foo () {
+		return this.transform(M4.FOO)
+	}
+	bar () {
+		return this.transform(M4.BAR)
+	}
+
+	/**
+	 * @abstract
+	 * @param {M4} m4
+	 * @returns {T}
+	 * @name transform
+	 * @method
+	 * Don't uncomment as it overwrites the implemented function when addTransformationMethods is called.
+	 */
+	// transform (m4) {
+	// 	assert(false, "Not implemented on " + this.toSource())
+	// }
+}
 NLA.addOwnProperties(Array.prototype, ARRAY_UTILITIES)

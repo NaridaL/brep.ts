@@ -1,4 +1,6 @@
 
+QUnit.module('brep')
+
 QUnit.test( "BREP.Face.equals", function( assert ) {
 	var a =new BREP.Face([V3(0, 0, 0),V3(10, 0, 0),V3(10, 10, 0),V3(0, 10, 0)], P3(V3(0, 0, 1), 0))
 	var b =new BREP.Face([V3(0, 10, 0), V3(0, 0, 0),V3(10, 0, 0),V3(10, 10, 0)], P3(V3(0, 0, 1), 0))
@@ -252,13 +254,13 @@ QUnit.test( "angleRelativeNormal", function( assert ) {
 QUnit.test( "splitsVolumeEnclosingFaces", function( assert ) {
 	var brep = BREP.tetrahedron(V3(0, 0,0),V3(10,0,0),V3(0,10,0),V3(0,0,10))
 	// pointing into tetrahedon
-	assert.ok(splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,1,1), V3(0,-1,1)))
-	assert.ok(splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,1,1), V3(0,1,-1)))
+	assert.ok(INSIDE == splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,1,1), V3(0,-1,1)))
+	assert.ok(INSIDE == splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,1,1), V3(0,1,-1)))
 	// pointing out of tetrahedon
-	assert.notOk(splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,-1,0), V3(0,1,1)))
+	assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,-1,0), V3(0,1,1)))
 
-	assert.notOk(splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,-1,-1), V3(0,-1,1)))
-	assert.notOk(splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,-1,-1), V3(0,1,-1)))
+	assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,-1,-1), V3(0,-1,1)))
+	assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, [V3(0, 0,0),V3(10,0,0)], V3(0,-1,-1), V3(0,1,-1)))
 });
 
 

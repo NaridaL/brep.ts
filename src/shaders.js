@@ -1,7 +1,7 @@
 /**
  * Created by aval on 15/01/2016.
  */
-var fragmentShaderLighting= `
+var fragmentShaderLighting = `
 	uniform vec4 color;
 	uniform vec3 camPos;
 	varying vec3 normal;
@@ -23,9 +23,9 @@ var vertexShaderLighting = `
 	varying vec3 normal;
 	varying vec4 vPosition;
 	void main() {
-		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-        vPosition = gl_ModelViewMatrix * gl_Vertex;
-		normal = gl_NormalMatrix * gl_Normal;
+		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+       vPosition = LGL_ModelViewMatrix * LGL_Vertex;
+		normal = LGL_NormalMatrix * LGL_Normal;
 	}
 `
 var vertexShader = `
@@ -37,7 +37,7 @@ var vertexShader = `
 			vec4(position,1.0);
 	}
 `
-var fragmentShader= `
+var fragmentShader = `
 	uniform vec3 color;
 	varying vec4 pos;
 	void main() {
@@ -66,39 +66,55 @@ var fragmentShader= `
 	 }
 	 */
 `
-var vertexShaderBasic= `
+var vertexShaderBasic = `
 	void main() {
-		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
-var vertexShaderArc= `
+var vertexShaderArc = `
 	uniform float step, offset;
 	uniform float innerRadius, outerRadius;
 	void main() {
-		float radius = gl_Vertex.x == 1.0 ? outerRadius : innerRadius, angle = offset + gl_Vertex.y * step;
+		float radius = LGL_Vertex.x == 1.0 ? outerRadius : innerRadius, angle = offset + LGL_Vertex.y * step;
 		vec4 p = vec4(radius * cos(angle), radius * sin(angle), 0, 1);
-		gl_Position = gl_ModelViewProjectionMatrix * p;
+		gl_Position = LGL_ModelViewProjectionMatrix * p;
 }
 `
-var vertexShaderRing= `
+var vertexShaderBezier = `
+    // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
+	uniform float width, startT, endT;
+	uniform vec3 p0, p1, p2, p3;
+	void main() {
+		// LGL_Vertex.y is in [0, 1]
+		float t = (endT - startT) * LGL_Vertex.y + startT, s = 1.0 - t;
+		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
+		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
+		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
+		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
+		vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
+		vec4 p = vec4(pPos + (LGL_Vertex.x - 0.5) * width * pNormal, 1);
+		gl_Position = LGL_ModelViewProjectionMatrix * p;
+	}
+`
+var vertexShaderRing = `
 	#define M_PI 3.1415926535897932384626433832795
 	uniform float step;
 	uniform float innerRadius, outerRadius;
 	attribute float index;
 	void main() {
-		gl_Position = gl_ModelViewProjectionMatrix * vec4(index, index, index, 1);
-		float id = atan(gl_Vertex.x, gl_Vertex.y) / M_PI  * 32.0;
+		gl_Position = LGL_ModelViewProjectionMatrix * vec4(index, index, index, 1);
+		float id = atan(LGL_Vertex.x, LGL_Vertex.y) / M_PI  * 32.0;
 		float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
-		gl_Position = gl_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
+		gl_Position = LGL_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
 	}
 `
-var fragmentShaderColor= `
+var fragmentShaderColor = `
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
 	}
 `
-var fragmentShaderColorHighlight= `
+var fragmentShaderColorHighlight = `
 	uniform vec4 color;
 	void main() {
 		float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
@@ -110,18 +126,25 @@ var fragmentShaderColorHighlight= `
 		}
 	}
 `
-var vertexShaderTextureColor= `
+var vertexShaderTexture = `
 	varying vec2 texturePos;
 	void main() {
-		texturePos = gl_Vertex.xy;
-		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+		texturePos = LGL_Vertex.xy;
+		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
-var fragmentShaderTextureColor= `
+var fragmentShaderTextureColor = `
 	varying vec2 texturePos;
 	uniform vec4 color;
 	uniform sampler2D texture;
 	void main() {
 		gl_FragColor = texture2D(texture, texturePos) * color;
+	}
+`
+var fragmentShaderTexture = `
+	varying vec2 texturePos;
+	uniform sampler2D texture;
+	void main() {
+		gl_FragColor = texture2D(texture, texturePos);
 	}
 `

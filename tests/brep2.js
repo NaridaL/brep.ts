@@ -1,14 +1,17 @@
-QUnit.assert.B2equals = function(actual, expected, message) {
-	if (!(actual instanceof B2)) {
-		this.push(false, actual, null, "actual is not a B2")
-		return
-	}
-	console.log(actual)
-	this.push(actual.equals(expected), actual.toString(), expected.toString(), message)
+
+
+
+QUnit.assert.doTest = function (a, b, actual, expected) {
+
+	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+						href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'>link</a>`)
+	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+						href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>link</a>`)
+	this.B2equals(actual, expected)
 }
-QUnit.assert.fuzzyEquals = function(actual, expected, message) {
-	this.push(NLA.equals(actual, expected), actual, expected, message)
-}
+
+
+QUnit.module('brep2')
 
 
 QUnit.test( "B2.Face.equals", function( assert ) {
@@ -116,43 +119,52 @@ QUnit.test( "angleRelativeNormal", function( assert ) {
 	assert.fuzzyEquals(V3.X.angleRelativeNormal(V3.Y, V3.Z), Math.PI / 2 )
 	assert.fuzzyEquals(V3.Y.angleRelativeNormal(V3(32, Math.sqrt(2), -Math.sqrt(2)), V3.X), -Math.PI / 4 )
 	assert.fuzzyEquals(V3(-0.1, 1, 0).angleRelativeNormal(V3(0.0, 0, -1), V3.X), -Math.PI / 2)
+	assert.fuzzyEquals(V3(-0, 1, 0).angleRelativeNormal(V3(2, 0, -1), V3.X), -Math.PI / 2)
 });
 
 QUnit.test( "splitsVolumeEnclosingFaces", function( assert ) {
 	var brep = B2.tetrahedron(V3(0, 0,0),V3(10,0,0),V3(0,10,0),V3(0,0,10))
 	// pointing into tetrahedon
 	var edge = StraightEdge.throughPoints
-	assert.ok(splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,1,1), V3(0,-1,1)))
-	assert.ok(splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,1,1), V3(0,1,-1)))
+	assert.ok(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,1,1), V3(0,-1,1)))
+	assert.ok(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,1,1), V3(0,1,-1)))
 	// pointing out of tetrahedon
-	assert.notOk(splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,-1,0), V3(0,1,1)))
+	assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,-1,0), V3(0,1,1)))
 
-	assert.notOk(splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,-1,-1), V3(0,-1,1)))
-	assert.notOk(splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,-1,-1), V3(0,1,-1)))
+	assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,-1,-1), V3(0,-1,1)))
+	assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V3(0, 0,0),V3(10,0,0)), V3(0,-1,-1), V3(0,1,-1)))
 });
 
 
 QUnit.test( "splitsVolumeEnclosingFaces 2", function( assert ) {
 	var brep = B2.tetrahedron(V3(0, 0,0),V3(10,0,0),V3(0,10,0),V3(0,0,10))
 	// pointing out of tetrahedon
-	assert.ok(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 0,0),V3(10,0,0)), V3(0,1,0), V3(0,0,1), false, true))
-	assert.notOk(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 0,0),V3(10,0,0)), V3(0,1,0), V3(0,0,-1), false, true))
-	assert.ok(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 0,0),V3(10,0,0)), V3(0,0,1), V3(0,1,0), false, true))
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 0,0),V3(10,0,0)), V3(0,1,0), V3(0,0,1)), COPLANAR_OPPOSITE)
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 0,0),V3(10,0,0)), V3(0,1,0), V3(0,0,-1)), COPLANAR_SAME)
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 0,0),V3(10,0,0)), V3(0,0,1), V3(0,1,0)), COPLANAR_OPPOSITE)
 });
 QUnit.test( "splitsVolumeEnclosingFaces 3", function( assert ) {
 	var brep = B2.box(5, 5, 5).flipped()
 	console.log(brep.ss)
-	// pointing out of tetrahedon
-	assert.ok(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 5,0),V3(0,0,0)), V3(0,0,-1), V3(1,0,0)))
-	assert.ok(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,-1), V3(1,0,0)))
 
-	assert.ok(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,1), V3(-1,0,0), false, true))
-	assert.notOk(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,1), V3(1,0,0), false, true))
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 5,0),V3(0,0,0)), V3(0,0,-1), V3(1,0,0)), INSIDE)
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,-1), V3(1,0,0)), INSIDE)
+
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,1), V3(-1,0,0)), COPLANAR_OPPOSITE)
+	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,1), V3(1,0,0)), COPLANAR_SAME)
+});
+QUnit.test( "splitsVolumeEnclosingCone", function( assert ) {
+	var brep = B2.box(5, 5, 5)
+
+	assert.equal(splitsVolumeEnclosingCone(brep, V3.ZERO, V3(1, 1, 1)), INSIDE)
+	assert.equal(splitsVolumeEnclosingCone(brep, V3.ZERO, V3(-1, 1, 1)), OUTSIDE)
+	assert.equal(splitsVolumeEnclosingCone(brep, V3.ZERO, V3.X), ALONG_EDGE_OR_PLANE)
+	assert.equal(splitsVolumeEnclosingCone(brep, V3.ZERO, V3(1, 1, 0)), ALONG_EDGE_OR_PLANE)
 });
 
 QUnit.test( "pointsToInside", function( assert ) {
 	var face = B2.PlaneFace.forVertices(P3(V3(0, 0, 1), 0), [V3(0, 0, 0), V3(10, 0, 0), V3(10, 10, 0), V3(0, 10, 0)])
-	var v = face.vertices[2]
+	var v = V3(10, 10, 0)
 	assert.ok(face.pointsToInside(v, V3(-1, -1, 0)))
 	assert.notOk(face.pointsToInside(v, V3(1, 1, 0)))
 	assert.notOk(face.pointsToInside(v, V3(-1, 0, 0)))
@@ -199,7 +211,7 @@ QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 6))", functio
 		B2.PlaneFace.forVertices(P3(V3(0, -1, 0), 0), [V3(1, 0, 0),V3(5, 0, 0),V3(5, 0, 5),V3(1, 0, 5)]),
 		B2.PlaneFace.forVertices(P3(V3(0, -1, 0), -1), [V3(0, 1, 0),V3(1, 1, 0),V3(1, 1, 5),V3(0, 1, 5)]),
 		B2.PlaneFace.forVertices(P3(V3(-1, 0, 0), -1), [V3(1, 1, 0),V3(1, 0, 0),V3(1, 0, 5),V3(1, 1, 5)])])
-	assert.B2equals(a.minus(b), result)
+	assert.doTest(a, b, a.minus(b), result)
 });
 QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 5))", function( assert ) {
 	var a = B2.box(5, 5, 5)
@@ -213,7 +225,7 @@ QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 5))", functio
 		B2.PlaneFace.forVertices(P3(V3(0, -1, 0), 0), [V3(1, 0, 0),V3(5, 0, 0),V3(5, 0, 5),V3(1, 0, 5)]),
 		B2.PlaneFace.forVertices(P3(V3(0, -1, 0), -1), [V3(0, 1, 0),V3(1, 1, 0),V3(1, 1, 5),V3(0, 1, 5)]),
 		B2.PlaneFace.forVertices(P3(V3(-1, 0, 0), -1), [V3(1, 1, 0),V3(1, 0, 0),V3(1, 0, 5),V3(1, 1, 5)])])
-	assert.B2equals(a.minus(b), result)
+	assert.doTest(a, b, a.minus(b), result)
 });
 QUnit.test( "B2 edge/face intersection", function( assert ) {
 	var wideBox = B2.box(10, 10, 5)
@@ -290,7 +302,7 @@ QUnit.test( "B2 edge/face intersection", function( assert ) {
 			StraightEdge.throughPoints(V3(-2, 6, 11), V3(0, 4, 11)),
 			StraightEdge.throughPoints(V3(0, 4, 11), V3(1, 1, 11)),
 			StraightEdge.throughPoints(V3(1, 1, 11), V3(5, 6, 11))])])
-	assert.B2equals(wideBox.plus(extrusion), result)
+	assert.doTest(wideBox, extrusion, wideBox.plus(extrusion), result)
 });
 QUnit.test( "EllipseCurve", function( assert ) {
 	var a = B2.box(5, 5, 5)
@@ -317,7 +329,7 @@ QUnit.test( "intersectionCircleLine", function( assert ) {
 QUnit.test( "CylinderSurface.intersectionLine", function( assert ) {
 	var cylSurface = CylinderSurface.cyl(5)
 	var line = L3.throughPoints(V3(10, 0, 0), V3(-10, 2, 10))
-	var isPoints = cylSurface.intersectionWithLine(line)
+	var isPoints = cylSurface.isPointsWithLine(line)
 	console.log(isPoints.toSource())
 	assert.equal(isPoints.length, 2, 'no of points')
 	assert.notOk(isPoints[0].like(isPoints[1]))
@@ -332,7 +344,7 @@ QUnit.test( "CylinderSurface.intersectionLine", function( assert ) {
 QUnit.test( "CylinderSurface.intersectionLine 2", function( assert ) {
 	var cylSurface = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(8, 0, 0), V3(0, 5, 0)), V3.Z, 1)
 	var line = L3.throughPoints(V3(10, 0, 0), V3(-10, 2, 10))
-	var isPoints = cylSurface.intersectionWithLine(line)
+	var isPoints = cylSurface.isPointsWithLine(line)
 	console.log(isPoints.toSource())
 	assert.equal(isPoints.length, 2, 'no of points')
 	assert.notOk(isPoints[0].like(isPoints[1]))
@@ -367,8 +379,49 @@ QUnit.test( "Ellipse.intersectWithEllipse", function( assert ) {
 QUnit.test( "cyl surface inss", function( assert ) {
 	var cyl = CylinderSurface.cyl(5)
 	var ell = new CylinderSurface(new EllipseCurve(V3(6, 1, 4), V3(3, 1, 4), V3(4, 0, 0)), V3.Z, 1)
-	var iss = cyl.getIntersectionsWithSurface(ell)
+	var iss = cyl.isCurvesWithSurface(ell)
 	assert.ok(iss.length == 2)
 	assert.ok(cyl.containsPoint(iss[0].anchor))
 	assert.ok(ell.containsPoint(iss[0].anchor), ell.implicitFunction()(iss[0].anchor))
+});
+QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(0, 0, 5) touching coplanar faces; result contains both", function( assert ) {
+	var box = B2.box(10, 10, 5)
+	assert.doTest(box, box.translate(0, 0, 5), box.plus(box.translate(0, 0, 5)), B2.box(10, 10, 10))
+});
+QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 5, 5).translate(0, 0, 5) + B2.box(5, 5, 5).translate(5, 5, 5)", function( assert ) {
+	var box = B2.box(10, 10, 5), box2 = B2.box(10, 5, 5), box3 = B2.box(5, 5, 5)
+	assert.doTest(box.plus(box2.translate(0, 0, 5)), box3.translate(5, 5, 5), box.plus(box2.translate(0, 0, 5)).plus(box3.translate(5, 5, 5)),
+		B2.box(10, 10, 10).minus(box3.translate(0, 5, 5)))
+});
+
+QUnit.test( "B2.box(10, 10, 5) && B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces; result contains intersection of faces", function( assert ) {
+	let box = B2.box(10, 10, 5)
+	assert.doTest(box, box.translate(3, 3, 0), box.intersection(box.translate(3, 3, 0), true, true), B2.box(7, 7, 5).translate(3, 3, 0))
+});
+QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces; result contains union of faces", function( assert ) {
+	let box = B2.box(10, 10, 5)
+	assert.doTest(box, box.translate(3, 3, 0), box.plus(box.translate(3, 3, 0), true, true), B2.box(10, 10, 10))
+});
+
+
+QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces; result contains union of faces", function( assert ) {
+	let box = B2.box(10, 10, 5), box2 = B2.box(4, 10, 2).translate(2, 0, 3)
+	assert.doTest(box, box2, box.minus(box2), box)
+});
+
+
+QUnit.test( "serialization", function( assert ) {
+	let a = {a: 2, b: 3}
+	assert.equal(unserialize(serialize(a)).toString(), a.toString())
+
+	a.c = a
+
+	let a2 = unserialize(serialize(a))
+	assert.equal(a2.a, 2)
+	assert.equal(a2.b, 3)
+	assert.equal(a2.c, a2)
+
+
+	a = [1, 2, 3]
+	assert.equal(unserialize(serialize(a)).toString(), a.toString())
 });

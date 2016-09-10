@@ -7,18 +7,28 @@
 						console.log(errorMsg, url, lineNumber, column, errorObj);
 					}
 			</script>
-		<script type="text/javascript" src="NLA.js"></script>
-		<script type="text/javascript" src="shaders.js"></script>
-		<script type="text/javascript" src="Vector3.js"></script>
-		<script type="text/javascript" src="Matrix4x4.js"></script>
-		<script type="text/javascript" src="Plane3.js"></script>
-		<script type="text/javascript" src="Line3.js"></script>
-		<script type="text/javascript" src="lightgl.js"></script>
+		<script type="text/javascript" src="src/NLA.js"></script>
+		<script type="text/javascript" src="src/shaders.js"></script>
+		<script type="text/javascript" src="src/Vector3.js"></script>
+		<script type="text/javascript" src="src/Matrix4x4.js"></script>
+		<script type="text/javascript" src="src/Plane3.js"></script>
+		<script type="text/javascript" src="src/Line3.js"></script>
+
+		<script type="text/javascript" src="src/js3d.js"></script>
+		<script type="text/javascript" src="src/modes.js"></script>
+		<script type="text/javascript" src="src/SketchBezier.js"></script>
+		<script type="text/javascript" src="src/lightgl.js"></script>
 		<script type="text/javascript" src="MooTools-Core-1.6.0.js"></script>
 		<script type="text/javascript" src="earcut.dev.js"></script>
+		<script type="text/javascript" src="src/Curve.js"></script>
+		<script type="text/javascript" src="src/Surface.js"></script>
+		<script type="text/javascript" src="src/EllipseCurve.js"></script>
+		<script type="text/javascript" src="src/ProjectedCurveSurface.js"></script>
+		<script type="text/javascript" src="src/BezierCurve.js"></script>
+		<script type="text/javascript" src="src/EllipsoidSurface.js"></script>
+		<script type="text/javascript" src="src/brep2.js"></script>
+		<script type="text/javascript" src="src/b2.generators.js"></script>
 
-		<script type="text/javascript" src="brep.js"></script>
-		<script type="text/javascript" src="js3d.js"></script>
 		<script type="text/javascript">window.onload = main</script>
 
 		<script id="template" type="x-template">
@@ -54,9 +64,10 @@
 			<div>
 				<span style="width: 8em; display: inline-block">$what</span>
 				<span style="width: 8em; display: inline-block;color: purple;">$name</span>
-				<a href="#" class="featureDelete icon-link" name="delete">&#x274C;</a>
-				<a href="#" class="featureEdit icon-link" name="edit">&#x1f589;</a>
-				<a href="#" class="featureHide icon-link" name="toggleHide">&#x1f441;</a></div>
+				<a class="featureDelete icon-link" name="delete">&#x274C;</a>
+				<a class="featureEdit icon-link" name="edit">&#x1f589;</a>
+				<a class="featureHide icon-link" name="toggleHide">&#x1f441;</a>
+				<span style="cursor:help; display:none; color:red; font-weight: bold" name="error">⚠</span></div>
 		</script>
 
 		<style type="text/css">
@@ -126,6 +137,18 @@
 			<div id="selectedConstraints"></div>
 		</div>
 
+		<div id="saveLoad" class="editorBox" style="display: block;">
+			<div>
+				<input type="text" id="saveNameInput" />
+				<button id="saveButton">Save</button>
+			</div>
+			<select id="loadSelect">
+				<option>Choose save to load</option>
+			</select>
+		</div>
+		<div id="modeBox" class="editorBox" style="display: block;">
+		</div>
+
 
 		<div id="planeDefiner" class="editorBox">
 			<span class="header">Define Plane</span>
@@ -172,21 +195,22 @@
 	<div id="buttonbar" style="position: absolute; top: 8px; left: 8px; z-index: 1000">
 		<button type="button" onclick="clicky()">Step</button>
 		<button type="button" id="clearmode">Clear Mode</button>
-		<button type="button" onclick="mode='addsegments';arcmode=0;">Add Segments</button>
-		<button type="button" onclick="mode='addarc';arcmode=0;">Add Arc</button>
-		<button type="button" onclick="addSketch()">Add Sketch</button>
-		<button type="button" onclick="addPlane()">Add Plane</button>
-		<button type="button" onclick="addExtrude()">Extrude</button>
-		<button type="button" onclick="mode='addPoints';">Add Points</button>
-		<button type="button" onclick="makeGroup('parallel');">Parallel</button>
-		<button type="button" onclick="makePerpendicular();">Perpendicular</button>
-		<button type="button" onclick="makeGroup('equalLength');">Equal Length</button>
-		<button type="button" onclick="makeSelCoincident();">Coincident</button>
-		<button type="button" onclick="selPointOnLine();">Point on Line</button>
-		<button type="button" onclick="makeGroup('colinear');">Colinear</button>
-		<button type="button" onclick="makeDistance()">Distance</button>
-		<button type="button" onclick="makeAngle();">Angle</button>
-		<button type="button" onclick="faceSketchPlane();">Face Sketch Plane</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchLineSeg);">Add Segments</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchArc);">Add Arc</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchBezier);">Add Curve</button>
+		<button type="button" onclick="modePush(MODES.SKETCH)">Add Sketch</button>
+		<button type="button" onclick="modePush(MODES.PLANE_DEFINITION)">Add Plane</button>
+		<button type="button" onclick="modePush(MODES.EXTRUDE)">Extrude</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_POINTS);">Add Points</button>
+		<button type="button" class="sketchControl" onclick="makeGroup('parallel');">Parallel</button>
+		<button type="button" class="sketchControl" onclick="makePerpendicular();">Perpendicular</button>
+		<button type="button" class="sketchControl" onclick="makeGroup('equalLength');">Equal Length</button>
+		<button type="button" class="sketchControl" onclick="makeSelCoincident();">Coincident</button>
+		<button type="button" class="sketchControl" onclick="selPointOnLine();">Point on Line</button>
+		<button type="button" class="sketchControl" onclick="makeGroup('colinear');">Colinear</button>
+		<button type="button" class="sketchControl" onclick="makeDistance()">Distance</button>
+		<button type="button" class="sketchControl" onclick="makeAngle();">Angle</button>
+		<button type="button" class="sketchControl" onclick="faceSketchPlane();">Face Sketch Plane</button>
 	</div>
 	</body>
 </html>

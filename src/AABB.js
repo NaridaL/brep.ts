@@ -1,14 +1,13 @@
 
-var V3 = NLA.Vector3, M4 = NLA.Matrix4x4
 function AABB(min = V3.INF, max = V3.INF.negated()) {
-	assert(min instanceof V3, "min instanceof V3" + min.toSource())
-	assert(max instanceof V3)
+	assertVectors(min)
+	assertVectors(max)
 	this.min = min
 	this.max = max
 }
 AABB.prototype = {
 	addPoint: function (p) {
-		assert(p instanceof V3)
+		assertVectors(p)
 		this.min = this.min.min(p)
 		this.max = this.max.max(p)
 		return this
@@ -18,7 +17,7 @@ AABB.prototype = {
 		return this
 	},
 	addAABB: function (aabb) {
-		assert(aabb instanceof AABB)
+		assertInst(AABB, aabb)
 		this.addPoint(aabb.min)
 		this.addPoint(aabb.max)
 	},
@@ -27,7 +26,7 @@ AABB.prototype = {
 	 * @param aabb
 	 */
 	withoutAABB: function (aabb) {
-		assert(aabb instanceof AABB)
+		assertInst(AABB, aabb)
 		var min, max
 		var volume = this.volume(), size = this.size()
 		var remainingVolume = -Infinity
@@ -46,33 +45,33 @@ AABB.prototype = {
 		return new AABB(min, max)
 	},
 	getIntersectionAABB: function (aabb) {
-		assert(aabb instanceof AABB)
+		assertInst(AABB, aabb)
 		return new AABB(this.min.max(aabb.min), this.max.min(aabb.max))
 	},
 	intersectsAABB: function (aabb) {
-		assert(aabb instanceof AABB)
+		assertInst(AABB, aabb)
 		return !(
 			this.min.x > aabb.max.x || this.max.x < aabb.min.x
 			|| this.min.y > aabb.max.y || this.max.y < aabb.min.y
 			|| this.min.z > aabb.max.z || this.max.z < aabb.min.z)
 	},
 	containsPoint: function (p) {
-		assert(p instanceof V3)
+		assertVectors(p)
 		return this.min.x <= p.x && this.min.y <= p.y && this.min.z <= p.z
 			 && this.max.x >= p.x && this.max.y >= p.y && this.max.z >= p.z
 	},
 	containsSphere: function (center, radius) {
-		assert(center instanceof V3)
+		assertVectors(center)
 		NLA.assertNumbers(radius)
 		return this.distanceToPoint(center) > radius
 	},
 	intersectsSphere: function (center, radius) {
-		assert(center instanceof V3)
+		assertVectors(center)
 		NLA.assertNumbers(radius)
 		return this.distanceToPoint(center) <= radius
 	},
 	distanceToPoint: function (p) {
-		assert(p instanceof V3)
+		assertVectors(p)
 		var x = p.x, y = p.y, z = p.z
 		var min = this.min, max = this.max
 		if (this.containsPoint(p)) {
@@ -87,15 +86,15 @@ AABB.prototype = {
 			NLA.clamp(z, min.z, max.z)))
 	},
 	containsAABB: function (aabb) {
-		assert(aabb instanceof AABB)
+		assertInst(AABB, aabb)
 		return this.containsPoint(aabb.min) && this.containsPoint(aabb.max)
 	},
 	likeAABB: function (aabb) {
-		assert(aabb instanceof AABB)
+		assertInst(AABB, aabb)
 		return this.min.like(aabb.min) && this.max.like(aabb.max)
 	},
 	intersectsLine: function (l3) {
-		assert (l3 instanceof L3)
+		assertInst(L3, l3)
 		var maxDim = l3.dir1.absMaxDim()
 		var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
 		var s0 = (this.min[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
@@ -125,7 +124,7 @@ AABB.prototype = {
 		return this.min.plus(this.max).div(2)
 	},
 	transform: function (m4) {
-		assert(m4 instanceof M4, "m4 instanceof M4")
+		assertInst(M4, m4)
 		assert(m4.isAxisAligned())
 		var aabb = new AABB()
 		aabb.addPoint(m4.transformPoint(this.min))
@@ -133,7 +132,7 @@ AABB.prototype = {
 		return aabb
 	},
 	ofTransformed: function (m4) {
-		assert(m4 instanceof M4, "m4 instanceof M4")
+		assertInst(M4, m4)
 		var aabb = new AABB()
 		aabb.addPoints(m4.transformedPoints(this.corners()))
 		return aabb
@@ -157,8 +156,11 @@ AABB.prototype = {
 		return "new AABB("+this.min.toString()+", "+this.max.toString()+")"
 	}
 
-	
+
 }
+NLA.addOwnProperties(AABB.prototype, NLA.Transformable.prototype)
+console.log(Object.getOwnPropertyNames(NLA.Transformable.prototype))
+
 function RangeTree(vals, start, end) {
 	start = start || 0
 	end = end || vals.length
@@ -314,6 +316,7 @@ RangeTree.prototype.toString = function (a) {
 		+ "\n" + NLA.repeatString(a + 1, "  ") + (Number.isFinite(this.left) ? this.left : this.left.toString(a + 1))
 		+ "\n" + NLA.repeatString(a + 1, "  ") + (Number.isFinite(this.right) ? this.right : this.right.toString(a + 1))
 }
+/*
 var rt = new RangeTree([-2, -1, 0,2,3,4,7-1,7]);
 rt.addInterval({left: -1, right: 6})
 rt.addInterval({left: -2, right: 3})
@@ -326,3 +329,4 @@ NLA.addTransformationMethods(AABB.prototype)
 AABB.intersections = function (aabbs) {
 
 }
+*/

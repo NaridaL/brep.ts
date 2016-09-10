@@ -1,34 +1,37 @@
 /**
  * Created by aval on 19/02/2016.
  */
-function CurvePI(parametricSurface, implicitSurface, startPoint) {
-	assert (parametricSurface.parametricFunction, 'parametricSurface.parametricFunction')
-	assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
-	this.parametricSurface = parametricSurface
-	this.implicitSurface = implicitSurface
-	if (!startPoint) {
-		var pmPoint = curvePoint(this.implicitCurve(), V3(1, 1, 0))
-		this.startPoint = this.parametricSurface.parametricFunction()(pmPoint.x, pmPoint.y)
-	} else {
-		this.startPoint = startPoint
-	}
-	this.isLoop = false
-	this.calcPoints(this.startPoint)
-}
 var STEP_SIZE = 1
-CurvePI.prototype = NLA.defineObject(null, {
-	implicitCurve: function () {
+class PICurve extends Curve {
+	constructor(parametricSurface, implicitSurface, startPoint) {
+		assert(parametricSurface.parametricFunction, 'parametricSurface.parametricFunction')
+		assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
+		this.parametricSurface = parametricSurface
+		this.implicitSurface = implicitSurface
+		if (!startPoint) {
+			var pmPoint = curvePoint(this.implicitCurve(), V3(1, 1, 0))
+			this.startPoint = this.parametricSurface.parametricFunction()(pmPoint.x, pmPoint.y)
+		} else {
+			this.startPoint = startPoint
+		}
+		this.isLoop = false
+		this.calcPoints(this.startPoint)
+	}
+
+	implicitCurve() {
 		var pF = this.parametricSurface.parametricFunction()
 		var iF = this.implicitSurface.implicitFunction()
 		return function (s, t) {
 			return iF(pF(s, t))
 		}
-	},
-	containsPoint: function (p) {
+	}
+
+	containsPoint(p) {
 		assertVectors(p)
-		return this.parametricSurface.containsPoint(p) && isZero(this.implicitSurface.implicitFunction()(p))
-	},
-	getVerticesNo0: function () {
+		return this.parametricSurface.containsPoint(p) && NLA.isZero(this.implicitSurface.implicitFunction()(p))
+	}
+
+	getVerticesNo0() {
 		function sliceCyclic(arr, start, end) {
 			if (start <= end) {
 				return arr.slice(start, end)
@@ -38,19 +41,23 @@ CurvePI.prototype = NLA.defineObject(null, {
 		}
 
 		// TODOOO
+		var start, end, arr
 		if (!this.canon) {
-			var start = floor(this.aT + 1), end = ceil(this.bT)
-			var arr = sliceCyclic(this.curve.points, start, end)
+			start = Math.floor(this.aT + 1)
+			end = ceil(this.bT)
+			arr = sliceCyclic(this.curve.points, start, end)
 		} else {
-			var start = floor(this.bT + 1), end = ceil(this.aT)
-			var arr = sliceCyclic(this.curve.points, start, end)
+			start = Math.floor(this.bT + 1)
+			end = ceil(this.aT)
+			arr = sliceCyclic(this.curve.points, start, end)
 			console.log("this.canon", !!this.canon, arr.length, start, end, this.aT)
 			arr.reverse()
 		}
 		arr.push(this.b)
 		return arr
-	},
-	calcPoints: function (curveStartPoint) {
+	}
+
+	calcPoints() {
 		if (!this.points) {
 			var pF = this.parametricSurface.parametricFunction()
 			var iF = this.implicitSurface.implicitFunction()
@@ -80,29 +87,32 @@ CurvePI.prototype = NLA.defineObject(null, {
 				this.pmTangentEndPoints = pmTangentEndPoints2.concat(this.pmTangentEndPoints)
 			}
 			this.points = this.pmPoints.map(({x: d, y: z}) => pF(d, z))
-			this.tangents = this.pmTangentEndPoints.map(
-				({x: d, y: z}, i, ps) => pF(d, z).minus(this.points[i]))
-			//console.log('this.points', this.points.map(v => v.ss).join(", "))
+			this.tangents = this.pmTangentEndPoints.map(({x: d, y: z}, i, ps) => pF(d, z).minus(this.points[i])
+		)
+			//console.log('this.points', this.points.map(v => v.$).join(", "))
 			this.startTangent = this.tangentAt(this.startT)
 		}
-	},
-	pointTangent: function (point) {
+	}
+
+	pointTangent(point) {
 		assertVectors(point)
-		assert(this.containsPoint(point), 'this.containsPoint(point)'+this.containsPoint(point))
+		assert(this.containsPoint(point), 'this.containsPoint(point)' + this.containsPoint(point))
 		this.calcPoints(point)
 		var pIndex = this.pointLambda(point)
 		return this.tangents[pIndex]
-	},
-	tangentAt: function (t) {
+	}
+
+	tangentAt(t) {
 		return this.tangents[Math.round(t)]
-	},
-	pointLambda: function (point) {
+	}
+
+	pointLambda(point) {
 		assertVectors(point)
 		assert(this.containsPoint(point), 'this.containsPoint(p)')
 		var pmPoint = this.parametricSurface.pointToParameterFunction()(point)
 		var ps = this.points, pmps = this.pmPoints, t = 0, prevDistance, pmDistance = pmPoint.distanceTo(pmps[0])
 		while (pmDistance > STEP_SIZE && t < ps.length - 1) { // TODO -1?
-			//console.log(t, pmps[t].ss, pmDistance)
+			//console.log(t, pmps[t].$, pmDistance)
 			t += Math.min(1, Math.round(pmDistance / STEP_SIZE / 2))
 			pmDistance = pmPoint.distanceTo(pmps[t])
 		}
@@ -118,27 +128,4 @@ CurvePI.prototype = NLA.defineObject(null, {
 			return t - 0.4
 		}
 	}
-})
-function CurvePILoop(curve, startPoint) {
-	assert(curve instanceof CurvePI)
-	this.curve = curve
-	assert(this.curve.isLoop)
-	this.a = this.b = this.startPoint = startPoint
 }
-CurvePILoop.prototype = NLA.defineObject(B2.Edge.prototype, {
-	getVerticesNo0: function () {
-		this.curve.calcPoints()
-		this.points = this.curve.points
-		return this.curve.points
-	},
-	getIntersectionsWithPSurface: function (pSurface) {
-		assert (pSurface.parametricFunction)
-	},
-	tangentAt: function (p) {
-		return this.curve.tangentAt(p)
-	},
-	isCCW: function (normal) {
-		var step = floor(this.points.length / 4), verts = NLA.arrayFromFunction(4, i => this.points[step * i])
-		return isCCW(verts, normal)
-	}
-})
