@@ -12,28 +12,27 @@
  * @param {V3} normal1 normalized plane normal
  * @param {number} w signed (rel to normal1) distance from the origin
  * @param {Object=} prototype object to set as prototype of the new Plane3 object. Defaults to Plane3.prototype
- * @alias NLA.Plane3
- * @constructor NLA.Plane3
- * @augments {NLA.Transformable}
+ * @constructor P3
+ * @augments {Transformable}
  * @property {V3} normal
  * @property {number} w
  */
-var P3 = function (normal1, w, prototype) {
+function P3(normal1, w, prototype) {
     NLA.assertVectors(normal1)
     NLA.assertNumbers(w)
-    assert(normal1.hasLength(1), "normal1.hasLength(1)")
+    assert(normal1.hasLength(1), "normal1.hasLength(1)" + normal1)
     var p = Object.create(prototype || P3.prototype)
     p.w = w
 	p.normal = normal1
 	return p
 }
 /**
- * @alias NLA.Plane3.throughPoints
+ * @alias P3.throughPoints
  * @param {V3} a
  * @param {V3} b
  * @param {V3} c
  * @param prototype
- * @returns {NLA.Plane3}
+ * @returns {P3}
  */
 P3.throughPoints = function (a, b, c, prototype) {
     NLA.assertVectors(a, b, c)
@@ -42,11 +41,11 @@ P3.throughPoints = function (a, b, c, prototype) {
 }
 
 /**
- * @alias NLA.Plane3.normalOnAnchor
+ * @alias P3.normalOnAnchor
  * @param normal
  * @param anchor
  * @param prototype
- * @returns {NLA.Plane3}
+ * @returns {P3}
  */
 P3.normalOnAnchor = function (normal, anchor, prototype) {
     NLA.assertVectors(normal, anchor)
@@ -54,26 +53,34 @@ P3.normalOnAnchor = function (normal, anchor, prototype) {
     return P3(n1, n1.dot(anchor), prototype)
 }
 
+/**
+ * x/x0 + y/y0 + y/y0 = 1
+ *
+ * @param {number} x0
+ * @param {number} y0
+ * @param {number} z0
+ */
 P3.forAxisIntercepts = function (x0, y0, z0) {
 	NLA.assertNumbers(x0, y0, z0)
-	return P3(V3.create(1/x0, 1/y0, 1/z0))
+	let normal = V3.create(1/x0, 1/y0, 1/z0)
+	return P3(normal.normalized(), normal.length())
 }
 
 /**
- * @alias NLA.Plane3.forAnchorAndPlaneVectors
+ * @alias P3.forAnchorAndPlaneVectors
  * @param anchor
  * @param v0
  * @param v1
  * @param prototype
- * @returns {NLA.Plane3}
+ * @returns {P3}
  */
 P3.forAnchorAndPlaneVectors = function (anchor, v0, v1, prototype) {
     NLA.assertVectors(anchor, v0, v1)
     return P3.normalOnAnchor(v0.cross(v1), anchor, prototype)
 }
 
-
-P3.prototype = /** @lends {NLA.Plane3.prototype} */ {
+P3.prototype = Object.create(Transformable.prototype)
+NLA.addOwnProperties(P3.prototype, /** @lends {P3.prototype} */ {
 	/**
 	 *
 	 * @returns {V3}
@@ -82,9 +89,14 @@ P3.prototype = /** @lends {NLA.Plane3.prototype} */ {
 		let w = this.w, n = this.normal
 		return V3.create(w / n.x, w / n.y, w / n.z)
 	},
+
+	/**
+	 * 	 * @returns {V3}
+	 */
     get anchor () {
         return this.normal.times(this.w)
     },
+
     // Returns true iff the plane occupies the same space as the argument
     isCoplanarToPlane: function (plane) {
         assertInst(P3, plane)
@@ -102,7 +114,7 @@ P3.prototype = /** @lends {NLA.Plane3.prototype} */ {
 	/**
 	 * True iff plane.normal is equal to this.normal or it's negation.
 	 *
-	 * @param {NLA.Plane3} plane
+	 * @param {P3} plane
 	 */
     isParallelToPlane: function (plane) {
         assertInst(P3, plane)
@@ -226,17 +238,15 @@ P3.prototype = /** @lends {NLA.Plane3.prototype} */ {
 
 	/**
 	 *
-	 * @returns {NLA.Plane3}
+	 * @returns {P3}
 	 */
     flipped: function () {
 	    return P3(this.normal.negated(), -this.w)
     }
 
-}
-NLA.addTransformationMethods(P3.prototype)
- // X-Y-Z planes
+})
+
+// X-Y-Z planes
 /** @const */ P3.YZ = P3(V3.X, 0)
 /** @const */ P3.ZX = P3(V3.Y, 0)
 /** @const */ P3.XY = P3(V3.Z, 0)
-
-NLA.Plane3 = P3

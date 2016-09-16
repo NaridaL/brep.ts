@@ -87,9 +87,9 @@ class RotationReqFofZ extends NLA.BaseObject {
 	isCurvesWithSurface(surface2) {
 		// prefer other surface to be the paramteric one
 		if (surface2.parametricFunction) {
-			return new CurvePI(surface2, this)
+			return new PICurve(surface2, this)
 		} else if (surface2.implicitFunction) {
-			return new CurvePI(this, surface2)
+			return new PICurve(this, surface2)
 		}
 	}
 }

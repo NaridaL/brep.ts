@@ -1,7 +1,8 @@
 /**
- *
+ * @template T
+ * @extends Transformable.<T>
  */
-class Curve extends NLA.Transformable {
+class Curve extends Transformable {
 
 	/**
 	 * Returns curve parameter t for point p on curve.
@@ -10,15 +11,6 @@ class Curve extends NLA.Transformable {
 	 * @returns {number}
 	 */
 	pointLambda(p) {
-		assert(false)
-	}
-
-	/**
-	 * @abstract
-	 * @param {M4} m4
-	 * @returns {Curve}
-	 */
-	transform(m4) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
@@ -43,7 +35,6 @@ class Curve extends NLA.Transformable {
 			assert(aT < bT)
 			let start = Math.ceil((aT + NLA.PRECISION) / inc)
 			let end = Math.floor((bT - NLA.PRECISION) / inc)
-			console.log(aT, bT, start, end, inc)
 			for (let i = start; i <= end; i++) {
 				verts.push(this.at(i * inc))
 			}
@@ -61,12 +52,31 @@ class Curve extends NLA.Transformable {
 
 	/**
 	 *
+	 * @param {V3} p
+	 * @returns {number}
+	 */
+	distanceToPoint(p) {
+		return this.at(this.closestTToPoint(p)).distanceTo(p)
+	}
+
+	/**
+	 *
+	 * @abstract
+	 * @param curve
+	 * @returns {{tThis:number, tOther:number, p:V3}[]}
+	 */
+	isInfosWithCurve(curve) {
+		assert(false, "Not implemented on " + this.constructor.name)
+	}
+
+	/**
+	 *
 	 * @abstract
 	 * @param {number} t
 	 * @returns {V3}
 	 */
 	at(t) {
-		assert(false)
+		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
@@ -76,7 +86,17 @@ class Curve extends NLA.Transformable {
 	 * @returns {V3}
 	 */
 	tangentAt(t) {
-		assert(false)
+		assert(false, "Not implemented on " + this.constructor.name)
+	}
+
+	/**
+	 * Derivative of tangentAt(t) for parameter t
+	 * @abstract
+	 * @param {number} t
+	 * @returns {V3}
+	 */
+	ddt(t) {
+		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
@@ -85,16 +105,7 @@ class Curve extends NLA.Transformable {
 	 * @returns {boolean}
 	 */
 	containsPoint(p) {
-		assert(false)
-	}
-
-	/**
-	 * @abstract
-	 * @param {Curve} curve
-	 * @returns {boolean}
-	 */
-	likeCurve(curve) {
-		assert(false)
+		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
@@ -104,7 +115,7 @@ class Curve extends NLA.Transformable {
 	 * @returns {number[]}
 	 */
 	isTsWithSurface(surface) {
-		assert(false)
+		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
@@ -114,9 +125,14 @@ class Curve extends NLA.Transformable {
 	 * @returns {number[]}
 	 */
 	isTsWithPlane(plane) {
-		assert(false)
+		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
+	/**
+	 * Should really be abstract, but it works for all teh conic is curves, so it's here.
+	 * @param mesh
+	 * @param bufferName
+	 */
 	debugToMesh(mesh, bufferName) {
 		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
 		for (var t = -Math.PI; t < Math.PI; t += 0.1) {
@@ -136,11 +152,31 @@ class Curve extends NLA.Transformable {
 	}
 
 	/**
+	 *
+	 * iff for any t, this.at(t) == curve.at(t)
+	 *
+	 * @abstract
+	 * @param {Curve} curve
+	 * @returns {boolean}
+	 */
+	likeCurve(curve) {
+		assert(false, "Not implemented on " + this.constructor.name)
+	}
+
+	/**
+	 * Return whether the curves occupy the same points in space. They do
+	 * not necessarily need to share the same parameter values.
+	 *
+	 *
+	 * iff for every t, there is an s so that this.at(t) == curve.at(s)
+	 * and for every s, there is a t so that curve.at(s) == this.a(t)
+	 *
 	 * @abstract
 	 * @param {Curve} curve
 	 * @returns {boolean}
 	 */
 	isColinearTo(curve) {
-		assert(false)
+		assert(false, "Not implemented on " + this.constructor.name)
 	}
 }
+Curve.hlol = 0

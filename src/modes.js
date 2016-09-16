@@ -67,6 +67,7 @@ MODES.SKETCH = {
 		hoverHighlight = getHovering(mouseLine, 'sketchElements', 'planes', 'faces')
 
 		// drag elements
+		//noinspection JSBitwiseOperatorUsage
 		if (e.buttons & 1) {
 			let intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
 

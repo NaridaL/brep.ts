@@ -1,8 +1,17 @@
 /**
  * Created by aval on 29.02.2016.
  */
+/**
+ *
+ * @param re
+ * @param im
+ * @returns {Z}
+ * @constructor Z
+ * @property {number} re
+ * @property {number} im
+ */
 function Z(re, im) {
-	return Object.create(Z.prototype, {re: {value: re}, im: {value: im}})
+	return Object.create(Z.prototype, {/**@type number */ re:  {value: re}, /**@type number */ im: {value: im}})
 }
 Z.prototype = {
 	cbrt0: function () {
@@ -44,11 +53,8 @@ Z.prototype = {
 		return `(${roundFunction(this.re)} ${this.im < 0 ? '-' : '+'} ${Math.abs(roundFunction(this.im))} i)`
 	},
 	sqr: function () {
-
+		return Z(this.re * this.re - this.im * this.im, 2 * this.im * this.re)
 	},
-	get ss() {
-		return this.toString()
-	}
 }
 Z.sqrt = function (real) {
 	return real < 0 ? Z(0, Math.sqrt(-real)) : Z(Math.sqrt(real), 0)

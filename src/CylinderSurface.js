@@ -209,7 +209,7 @@ class CylinderSurface extends Surface {
 		} else if (surface2 instanceof CylinderSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-				return this.baseEllipse.intersectWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
+				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
 			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 
 			} else {

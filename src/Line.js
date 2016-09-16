@@ -11,13 +11,7 @@
 NLA.Line = function (anchor, dir1) {
 	NLA.assertVectors(anchor, dir1)
 	console.log("sadjlkasjd", dir1)
-	try {
-		if (!dir1.hasLength(1)) {
-			throw new Error("dir must be normalized");
-		}
-	} catch (e) {
-		console.log(e)
-	}
+	assert(dir1.hasLength(1), "dir must be normalized")
 	this.anchor = anchor
 	this.dir1 = dir1
 }

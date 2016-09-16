@@ -22,6 +22,10 @@ class ProjectedCurveSurface extends Surface {
 		return `new ProjectedCurveSurface(${this.baseCurve}, ${this.dir1}, ${this.tMin}, ${this.tMax})`
 	}
 
+	toString() {
+		return this.toSource()
+	}
+
 	toMesh(tStart, tEnd, zStart, zEnd, count) {
 		tStart = tStart || this.tMin
 		tEnd = tEnd || this.tMax
@@ -84,9 +88,10 @@ class ProjectedCurveSurface extends Surface {
 		let projPlane = P3(this.dir1, 0)
 		let dir1 = this.dir1, baseCurve = this.baseCurve
 		let projBaseCurve = baseCurve.project(projPlane)
+		let _this = this
 		return function (pWC) {
 			let projPoint = projPlane.projectedPoint(pWC)
-			let t = projBaseCurve.closestTToPoint(projPoint)
+			let t = projBaseCurve.pointLambda(projPoint)
 			let z = pWC.minus(baseCurve.at(t)).dot(dir1)
 			return V3.create(t, z, 0)
 		}
@@ -109,9 +114,9 @@ class ProjectedCurveSurface extends Surface {
 	isCurvesWithSurface(surface) {
 		// prefer other surface to be the paramteric one
 		if (surface.parametricFunction) {
-			return new CurvePI(surface, this)
+			return new PICurve(surface, this)
 		} else if (surface.implicitFunction) {
-			return new CurvePI(this, surface)
+			return new PICurve(this, surface)
 		}
 	}
 
@@ -120,7 +125,6 @@ class ProjectedCurveSurface extends Surface {
 	 */
 	containsPoint(p) {
 		let pp = this.pointToParameterFunction()(p)
-		console.log(pp.ss, this.parametricFunction()(pp.x, pp.y).distanceTo(p))
 		return this.parametricFunction()(pp.x, pp.y).like(p)
 	}
 
@@ -128,25 +132,38 @@ class ProjectedCurveSurface extends Surface {
 	 * @inheritDoc
 	 */
 	containsCurve(curve) {
-		// project baseCurve and test curve onto a common plane and check if the curves are alike
-		let projectionPlane = P3(this.dir1, 0)
-		let baseCurveProjection = this.baseCurve.project(projectionPlane)
-		if (curve instanceof L3 && curve.dir1.isParallelTo(this.dir1)) {
-			// projection onto basePlane would be single point
-			return baseCurveProjection.containsPoint(projectionPlane.projectedPoint(curve.anchor))
+		if (curve instanceof BezierCurve) {
+			// project baseCurve and test curve onto a common plane and check if the curves are alike
+			let projectionPlane = P3(this.dir1, 0)
+			let baseCurveProjection = this.baseCurve.project(projectionPlane)
+			if (curve instanceof L3 && curve.dir1.isParallelTo(this.dir1)) {
+				// projection onto basePlane would be single point
+				return baseCurveProjection.containsPoint(projectionPlane.projectedPoint(curve.anchor))
+			}
+			let curveProjection = curve.project(projectionPlane)
+			return baseCurveProjection.likeCurve(curveProjection)
 		}
-		let curveProjection = curve.project(projectionPlane)
-		return baseCurveProjection.likeCurve(curveProjection)
+		if (curve instanceof L3) {
+			return this.dir1.isParallelTo(curve.dir1) && this.containsPoint(curve.anchor)
+		}
+		return false
+	}
+
+	isCoplanarTo(surface) {
+		return ProjectedCurveSurface == surface.constructor
+				&& this.dir1.isParallelTo(surface.dir1)
+				&& this.containsCurve(surface.curve)
 	}
 
 	edgeLoopContainsPoint(contour, p) {
 		// TODO: this is copied from CylinderSurface, mb create common super class?
 		assertVectors(p)
+		assert(isFinite(p.x), p.y, p.z)
 		var testLine = L3(p, this.dir1)
 		let ptpf = this.pointToParameterFunction()
 		let pp = ptpf(p)
 		// create plane that goes through cylinder seam
-		var intersectionLinePerpendicular = this.parametricNormal()(pp.x).cross(this.dir1)
+		var intersectionLinePerpendicular = this.baseCurve.tangentAt(pp.x).rejectedFrom(this.dir1)
 		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
 		var colinearSegments = contour.map((edge) => edge.colinearToLine(testLine))
 		var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir1) > 0)
@@ -158,7 +175,7 @@ class ProjectedCurveSurface extends Surface {
 			}
 		}
 
-		contour.forEach((edge, i, edges) => {
+		contour.forEach(function (/** @type {B2.Edge} */ edge, /** @type number */ i, /** @type Edge[] */ edges) {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
 			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 			if (colinearSegments[i]) {
@@ -220,14 +237,12 @@ class ProjectedCurveSurface extends Surface {
 	isPointsWithLine(line) {
 		assertInst(L3, line)
 		let projectionPlane = P3(this.dir1, 0)
-		let baseCurveProjection = this.baseCurve.project(projectionPlane)
-		// doing it with Object.create subverts the dir1.hasLength(1) constraint)
+		let projBaseCurve = this.baseCurve.project(projectionPlane)
 		let projAnchor = projectionPlane.projectedPoint(line.anchor)
 		let projDir = projectionPlane.projectedVector(line.dir1)
-		return baseCurveProjection
-			.isTsWithLine(projAnchor, projDir)
-			.filter(t => this.tMin <= t && t <= this.tMax) // TODO: consistent comparisons for t/tmin/tmax (< or <=)
-			.map(t => line.at(L3.pointLambdaNotNormalized(projAnchor, projDir, baseCurveProjection.at(t))))
+		return projBaseCurve
+			.isInfosWithLine(projAnchor, projDir)
+			.map(info => line.at(info.tOther))
 	}
 
 

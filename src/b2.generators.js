@@ -5,10 +5,11 @@
 /**
  * Create a list of StraightEdges from a list of vertices.
  * @param {Array.<V3>} vertices
- * @param {boolean} closed Wether to connect the first and last vertices.
+ * @param {boolean=} closed Whether to connect the first and last vertices. Defaults to true.
+ * @returns {StraightEdge[]}
  */
 function verticesChain(vertices, closed) {
-	closed = undefined != closed ? closed : true
+	closed = 'boolean' === typeof closed ? closed : true
 	var vc = vertices.length
 	return NLA.arrayFromFunction(closed ? vc : vc - 1,
 		i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]))
@@ -24,6 +25,15 @@ B2.box = function (w, h, d, name) {
 	]
 	return B2.extrudeVertices(baseVertices, P3.XY.flipped(), V3.create(0, 0, d), name)
 }
+
+/**
+ *
+ * @param {number} radius
+ * @param {number} rads
+ * @param {number} height
+ * @param {string} name
+ * @returns {B2}
+ */
 B2.puckman = function (radius, rads, height, name) {
 	// TODO: argument checking
 	var circleCurve = new EllipseCurve(V3.ZERO, V3.create(radius, 0, 0), V3.create(0, -radius, 0))
@@ -35,32 +45,50 @@ B2.puckman = function (radius, rads, height, name) {
 		new B2.PCurveEdge(circleCurve, b, a, -rads, 0, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))]
 	return B2.extrudeEdges(edges, P3.XY.flipped(), V3.create(0, 0, height), name)
 }
+
+/**
+ *
+ * @param {Edge[]} baseFaceEdges
+ * @param {P3} baseFacePlane
+ * @param {V3} offset
+ * @param {string} name
+ * @returns {B2}
+ */
 B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name) {
+	Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
+		assertf(() => !B2.Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce+baseFaceEdges[j].sce)
+	})
+	assertf(() => B2.Edge.isLoop(baseFaceEdges))
 	// TODO checks..
-	assert(new PlaneSurface(baseFacePlane).edgeLoopCCW(baseFaceEdges), "edges not CCW on baseFacePlane")
+	if (offset.dot(baseFacePlane.normal) > 0) {
+		baseFacePlane = baseFacePlane.flipped()
+	}
+	let basePlaneSurface = new PlaneSurface(baseFacePlane)
+	assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), "edges not CCW on baseFacePlane")
 	var translationMatrix = M4.translation(offset)
-	console.log(translationMatrix.toString())
 	var topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix))
 	var edgeCount = baseFaceEdges.length
-	var bottomFace = new B2.PlaneFace(new PlaneSurface(baseFacePlane), baseFaceEdges)
+	var bottomFace = new B2.PlaneFace(basePlaneSurface, baseFaceEdges)
 	var topFaceEdges = topEdges.map(edge => edge.flipped()).reverse()
 	var topFace = new B2.PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges)
+
 	var ribs = NLA.arrayFromFunction(edgeCount,
 		i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a))
+
 	var faces = baseFaceEdges.map((edge, i) => {
 		var j = (i + 1) % edgeCount
 		var faceEdges = [baseFaceEdges[i].flipped(), ribs[i], topEdges[i], ribs[j].flipped()]
-		var surface
 		var curve = edge.curve
 		if (edge instanceof StraightEdge) {
 			var surfaceNormal = offset.cross(edge.tangent).normalized()
-			surface = new PlaneSurface(P3.normalOnAnchor(surfaceNormal, edge.a))
+			let surface = new PlaneSurface(P3.normalOnAnchor(surfaceNormal, edge.a))
 			return new B2.PlaneFace(surface, faceEdges)
 		} else if (curve instanceof EllipseCurve) {
-			surface = new CylinderSurface(curve, offset.normalized(), -1)
+			let surface = new CylinderSurface(curve, offset.normalized(), -1)
 			return new B2.RotationFace(surface, faceEdges)
 		} else if (curve instanceof BezierCurve) {
-			surface = new ProjectedCurveSurface(curve, offset.normalized().negated(), 0, 1)
+			let curveDir = edge.reversed ? offset : offset.negated()
+			let surface = new ProjectedCurveSurface(curve, curveDir.normalized(), 0, 1)
 			return new B2.RotationFace(surface, faceEdges)
 		} else {
 			assert(false, edge)
@@ -72,9 +100,18 @@ B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name) {
 B2.cylinder = function (radius, height, rads) {
 	return B2.rotateEdges(verticesChain([V3(0, 0, 0), V3(radius, 0, 0), V3(radius, 0, height), V3(0, 0, height)]), rads || 2 * PI)
 }
-B2.torus = function () {
-
+B2.torus = function (rSmall, rLarge, rads) {
+	assertNumbers(rSmall, rLarge, rads)
+	assertf(() => rLarge > rSmall)
+	return B2.rotateEdges([EllipseCurve.circle(rSmall, V3.create(rLarge, 0, 0))], rads)
 }
+
+/**
+ *
+ * @param {Edge[]} edges
+ * @param {number} rads
+ * @returns {B2}
+ */
 B2.rotateEdges = function (edges, rads) {
 	var rotationMatrix = M4.rotationZ(rads)
 	var open = !NLA.equals(rads, 2 * PI)
@@ -102,12 +139,12 @@ B2.rotateEdges = function (edges, rads) {
 			var line = edge.curve
 			if (line.dir1.isParallelTo(V3.Z)) {
 				if (NLA.isZero(edge.a.x)) { return }
-				var flipped = edge.a.z > edge.b.z
-				var surface = new CylinderSurface(ribs[i].curve, V3.Z, !flipped ? 1 : -1)
+				let flipped = edge.a.z > edge.b.z
+				let surface = new CylinderSurface(ribs[i].curve, V3.Z, !flipped ? 1 : -1)
 				return new B2.RotationFace(surface, faceEdges)
 			} else if (line.dir1.isPerpendicularTo(V3.Z)) {
-				var flipped = edge.a.x > edge.b.x
-				var surface = new PlaneSurface(P3(V3.Z, edge.a.z))
+				let flipped = edge.a.x > edge.b.x
+				let surface = new PlaneSurface(P3(V3.Z, edge.a.z))
 				if (!flipped) surface = surface.flipped()
 				if (!open) {
 					var hole = flipped
@@ -118,11 +155,21 @@ B2.rotateEdges = function (edges, rads) {
 				return new B2.PlaneFace(surface, faceEdges)
 			} else {
 				// apex is intersection of segment with Z-axis
-				var a = edge.a, b = edge.b
-				var apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
-				var apex = V3(0, 0, apexZ)
-				var flipped = edge.a.z > edge.b.z
-				var surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve, !flipped ? 1 : -1)
+				let a = edge.a, b = edge.b
+				let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
+				let apex = V3(0, 0, apexZ)
+				let flipped = edge.a.z > edge.b.z
+				let surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve, !flipped ? 1 : -1)
+				return new B2.RotationFace(surface, faceEdges)
+			}
+		} if (edge.curve instanceof EllipseCurve) {
+			let flipped = undefined
+			let /** @type EllipseCurve */ ell = edge.curve.rightAngled()
+			let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
+			if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
+				let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
+				if (flipped) { f3length *= -1 }
+				let surface = new EllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
 				return new B2.RotationFace(surface, faceEdges)
 			}
 		} else {
@@ -131,8 +178,8 @@ B2.rotateEdges = function (edges, rads) {
 	}).filter(x =>x)
 	if (open) {
 		var endFaceEdges = endEdges.map(edge => edge.flipped()).reverse()
-		var endFace = new B2.PlaneFace(new PlaneSurface(P3.XZ.rotateZ(rads)), endFaceEdges)
-		faces.push(new B2.PlaneFace(new PlaneSurface(P3.XZ.flipped()), edges), endFace)
+		var endFace = new B2.PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)
+		faces.push(new B2.PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace)
 	}
 	return new B2(faces)
 }
@@ -232,25 +279,36 @@ B2.extrudeVertices = function (baseVertices, baseFacePlane, offset, name) {
 				[bottom.edges[i].flipped(), ribs[i], top.edges[m - j - 1].flipped(), ribs[j].flipped()], [], name + "wall" + i))
 	}
 	return new B2(faces, false,
-		`B2.extrudeVertices(${baseVertices.toSource()}, ${baseFacePlane.toString()}, ${offset.ss}, "${name}")`)
+		`B2.extrudeVertices(${baseVertices.toSource()}, ${baseFacePlane.toString()}, ${offset.sce}, "${name}")`)
 }
 
-// abcd can be in any order
+/**
+ * Returns a tetrahedron (3 sided pyramid).
+ * Faces will face outwards.
+ * abcd can be in any order. The only constraint is that abcd cannot be on a common plane.
+ *
+ * @param {V3} a
+ * @param {V3} b
+ * @param {V3} c
+ * @param {V3} d
+ * @returns {B2}
+ */
 B2.tetrahedron = function (a, b, c, d) {
-	var dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
+	assertVectors(a, b, c, d)
+	let dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
 	if (NLA.isZero(dDistance)) {
 		throw new Error("four points are coplanar")
 	}
 	if (dDistance > 0) {
 		[c, d] = [d, c]
 	}
-	var ab = StraightEdge.throughPoints(a, b)
-	var ac = StraightEdge.throughPoints(a, c)
-	var ad = StraightEdge.throughPoints(a, d)
-	var bc = StraightEdge.throughPoints(b, c)
-	var bd = StraightEdge.throughPoints(b, d)
-	var cd = StraightEdge.throughPoints(c, d)
-	var faces = [
+	let ab = StraightEdge.throughPoints(a, b)
+	let ac = StraightEdge.throughPoints(a, c)
+	let ad = StraightEdge.throughPoints(a, d)
+	let bc = StraightEdge.throughPoints(b, c)
+	let bd = StraightEdge.throughPoints(b, d)
+	let cd = StraightEdge.throughPoints(c, d)
+	let faces = [
 		new B2.PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()]),
 		new B2.PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()]),
 		new B2.PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()]),

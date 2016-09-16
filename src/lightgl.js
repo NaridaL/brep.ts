@@ -32,7 +32,7 @@ var GL = (function() {
 
 	var gl
 
-	var GL = {
+	var _GL = {
 		/**
 		 * `GL.create()` creates a new WebGL context and augments it with more methods. The alpha channel is disabled
 		 * by default because it usually causes unintended transparencies in the canvas.
@@ -126,6 +126,9 @@ var GL = (function() {
 				var temp = resultMatrix
 				resultMatrix = gl[matrix]
 				gl[matrix] = temp
+			},
+			scaleVector: function(x, y, z) {
+				this.multMatrix(M4.scaleVector(x, y, z));
 			},
 			perspective: function(fov, aspect, near, far) {
 				this.multMatrix(M4.perspective(fov, aspect, near, far, tempMatrix));
@@ -384,15 +387,15 @@ void main() {
 	document.addEventListener('keydown', function (e) {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 			var key = mapKeyCode(e.keyCode);
-			if (key) GL.keys[key] = true;
-			GL.keys[e.keyCode] = true;
+			if (key) _GL.keys[key] = true;
+			_GL.keys[e.keyCode] = true;
 		}
 	});
 	document.addEventListener('keyup', function (e) {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey) {
 			var key = mapKeyCode(e.keyCode);
-			if (key) GL.keys[key] = false;
-			GL.keys[e.keyCode] = false;
+			if (key) _GL.keys[key] = false;
+			_GL.keys[e.keyCode] = false;
 		}
 	});
 	function addOtherMethods(_gl) {
@@ -558,6 +561,7 @@ void main() {
 				this.spacing = 3
 				this.count = this.data.length
 			} else {
+				assert(Array != this.data[0].constructor, this.name + this.data[0])
 				var data = [];
 				for (var i = 0, chunk = 10000; i < this.data.length; i += chunk) {
 					data = Array.prototype.concat.apply(data, this.data.slice(i, i + chunk));
@@ -628,13 +632,16 @@ void main() {
 	/**
 	 *
 	 * @param {Object} options
-	 * @param {boolean=} options.coords
+	 * @param {boolean=} options.coords Texture coordinates.
 	 * @param {boolean=} options.normals
 	 * @param {boolean=} options.colors
 	 * @param {boolean=} options.lines
 	 * @param {boolean=} options.triangles
 	 * @constructor
 	 * @alias GL.Mesh
+	 * @property {boolean} hasBeenCompiled
+	 * @property {Object.<string, GL.Buffer>} vertexBuffers
+	 * @property {Object.<string, GL.Buffer>} indexBuffers
 	 * @property {number[]} triangles
 	 * @property {number[]} lines
 	 * @property {V3[]} normals
@@ -679,7 +686,7 @@ void main() {
 		addIndexBuffer: function(name) {
 			this.hasBeenCompiled = false
 			var buffer = this.indexBuffers[name] = new Buffer(gl.ELEMENT_ARRAY_BUFFER, Uint16Array);
-			buffer.name = name;
+			buffer.name = name.toLowerCase()
 			this[name.toLowerCase()] = []
 		},
 
@@ -710,29 +717,35 @@ void main() {
 
 			for (var name in this.indexBuffers) {
 				let buffer = this.indexBuffers[name];
-				buffer.data = this[name.toLowerCase()];
+				buffer.data = this[buffer.name]
 				buffer.compile();
-				if (NLA_DEBUG && buffer.maxValue >= minVertexBufferLength) {
-					throw new Error(`max index value for buffer ${name}
-					is too large ${buffer.maxValue} min Vbuffer size: ${minVertexBufferLength} ${minBufferName}`)
-				}
+				// if (NLA_DEBUG && buffer.maxValue >= minVertexBufferLength) {
+				// 	throw new Error(`max index value for buffer ${name}
+				// 	is too large ${buffer.maxValue} min Vbuffer size: ${minVertexBufferLength} ${minBufferName}`)
+				// }
 			}
 			this.hasBeenCompiled = true
 		},
 
 		/**
 		 * Transform all vertices by `matrix` and all normals by the inverse transpose of `matrix`.
+		 *
+		 * Index buffer data is referenced.
+		 *
 		 * @param {M4} m4
 		 * @returns {GL.Mesh}
 		 */
 		transform: function(m4) {
-			var mesh = new GL.Mesh({vertices: this.vertices, normals: this.normals})
+			var mesh = new _GL.Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
-				let invTrans = m4.inversed().transposed();
-				mesh.normals = this.normals.map(n => invTrans.transformVector(n).normalized())
+				let invTrans = m4.as3x3().inversed().transposed().normalized();
+				mesh.normals = this.normals.map(n => invTrans.transformVector(n))
 			}
-			mesh.triangles = this.triangles
+			for (let name in this.indexBuffers) {
+				mesh.addIndexBuffer(name)
+				mesh[name.toLowerCase()] = this[name.toLowerCase()]
+			}
 			mesh.compile()
 			return mesh
 		},
@@ -744,7 +757,7 @@ void main() {
 		 */
 		computeNormals: function() {
 			if (!this.normals) this.addVertexBuffer('normals', 'LGL_Normal')
-			this.vertexBuffers['LGL_Normal'].data = Array.fromFunction(this.vertices.length, i => V3.ZERO)
+			this.vertexBuffers['LGL_Normal'].data = NLA.arrayFromFunction(this.vertices.length, i => V3.ZERO)
 
 			let {triangles, vertices, normals} = this
 			for (let i = 0; i < triangles.length; i++) {
@@ -805,6 +818,18 @@ void main() {
 			if (!this.lines) this.addIndexBuffer('LINES');
 			//this.lines = new Array(canonEdges.size)
 			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
+			this.hasBeenCompiled = false
+			return this
+		},
+		computeWireframeFromFlatTrianglesClosedMesh: function() {
+			if (!this.lines) this.addIndexBuffer('LINES');
+			let tris = this.triangles
+			let lines = this.lines
+			for (let i = 0; i < this.triangles.length; i += 3) {
+				if (tris[i + 0] < tris[i + 1]) lines.push(tris[i + 0], tris[i + 1])
+				if (tris[i + 1] < tris[i + 2]) lines.push(tris[i + 1], tris[i + 2])
+				if (tris[i + 2] < tris[i + 0]) lines.push(tris[i + 2], tris[i + 0])
+			}
 			this.hasBeenCompiled = false
 			return this
 		},
@@ -888,45 +913,73 @@ void main() {
 		return mesh;
 	};
 
-	var cubeData = [
-		[0, 4, 2, 6, -1, 0, 0], // -x
-		[1, 3, 5, 7, +1, 0, 0], // +x
-		[0, 1, 4, 5, 0, -1, 0], // -y
-		[2, 6, 3, 7, 0, +1, 0], // +y
-		[0, 2, 1, 3, 0, 0, -1], // -z
-		[4, 5, 6, 7, 0, 0, +1]  // +z
-	];
+	// unique corners of a unit cube. Used by Mesh.cube to generate a cube mesh.
+	const UNIT_CUBE_CORNERS = [
+		V3.ZERO,
+		V3(0, 0, 1),
+		V3(0, 1, 0),
+		V3(0, 1, 1),
 
-	function pickOctant(i) {
-		return V3(
-			((i & 1) << 1) - 1,
-			(i & 2) - 1,
-			((i & 4) >> 1) - 1)
-	}
+		V3(1, 0, 0),
+		V3(1, 0, 1),
+		V3(1, 1, 0),
+		V3.ONES
+	]
 
-// ### GL.Mesh.cube([options])
-//
-// Generates a 2x2x2 box centered at the origin. The `options` argument
-// specifies options to pass to the mesh constructor.
-	Mesh.cube = function(options) {
-		var mesh = new Mesh(options);
+	/**
+	 * Generates a unit cube (1x1x1) starting at the origin and extending into the (+ + +) octant.
+	 * I.e. box from V3.ZERO to V3(1,1,1)
+	 * Creates line, triangle, vertex and normal buffers.
+	 *
+	 * @returns {GL.Mesh}
+	 */
+	Mesh.cube = function() {
+		var mesh = new Mesh({lines: true, triangles: true, normals: true})
 
-		for (var i = 0; i < cubeData.length; i++) {
-			var data = cubeData[i], v = i * 4;
-			for (var j = 0; j < 4; j++) {
-				var d = data[j];
-				mesh.vertices.push(pickOctant(d).toArray());
-				if (mesh.coords) mesh.coords.push([j & 1, (j & 2) / 2]);
-				if (options && options.normals) mesh.normals.push(data.slice(4, 7));
-			}
-			mesh.triangles.push(
-				v, v + 1, v + 2,
-				v + 2, v + 1, v + 3)
+		// basically indexes for faces of the cube. vertices each need to be added 3 times,
+		// as they have different normals depending on the face being rendered
+		let VERTEX_CORNERS = [
+			0, 1, 2, 3, // X = 0
+			4, 5, 6, 7, // X = 1
+
+			0, 4, 1, 5, // Y = 0
+			2, 6, 3, 7, // Y = 1
+
+			2, 6, 0, 4, // Z = 0
+			3, 7, 1, 5, // Z = 1
+		]
+		mesh.vertices = VERTEX_CORNERS.map(i => UNIT_CUBE_CORNERS[i])
+		mesh.normals = [V3.X.negated(), V3.X, V3.Y.negated(), V3.Y, V3.Z.negated(), V3.Z].map(v => [v, v, v, v]).concatenated()
+		for (let i = 0; i < 6 * 4; i += 4) {
+			pushQuad(mesh.triangles, 0 != i % 8,
+				VERTEX_CORNERS[i], VERTEX_CORNERS[i+1], VERTEX_CORNERS[i+2], VERTEX_CORNERS[i+3])
 		}
+		// indexes of lines relative to UNIT_CUBE_CORNERS. Mapped to VERTEX_CORNERS.indexOf
+		// so they make sense in the context of the mesh
+		mesh.lines = [
+			0, 1,
+			0, 2,
+			1, 3,
+			2, 3,
 
-		mesh.compile();
-		return mesh;
+			0,4,
+			1,5,
+			2,6,
+			3,7,
+
+			4,5,
+			4,6,
+			5,7,
+			6,7,
+		].map(i => VERTEX_CORNERS.indexOf(i))
+
+		mesh.compile()
+		return mesh
 	};
+
+	Mesh.dodecahedron = function () {
+		return Mesh.sphere(0)
+	}
 
 	/**
 	 * Returns a sphere mesh with radius 1 created by subdividing the faces of a dodecahedron (20-sided) recursively
@@ -1021,16 +1074,17 @@ void main() {
 			}
 		}
 
-		var mesh = new GL.Mesh({normals: true, colors: false, lines: true});
-
+		var mesh = new _GL.Mesh({normals: true, colors: false, lines: true});
 		mesh.vertices.pushAll(vertices)
+		subdivisions = undefined == subdivisions ? 4 : subdivisions
 		for (var i = 0; i < 20; i++) {
 			var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
-			tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions || 4, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
+			tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
 		}
 
 		mesh.normals = mesh.vertices
 		mesh.compile()
+		console.log('mesh.lines', mesh.lines, mesh.indexBuffers)
 		return mesh
 
 	}
@@ -1195,7 +1249,7 @@ void main() {
 		 * types and from the stored uniform sampler flags.
 		 *
 		 * @param {Object} uniforms
-		 * @returns {GL.Shader}
+		 * @returns {_GL.Shader}
 		 */
 		uniforms: function(uniforms) {
 			gl.useProgram(this.program);
@@ -1264,7 +1318,8 @@ void main() {
 		draw: function(mesh, mode, start, count) {
 			assert(mesh.hasBeenCompiled, 'mesh.hasBeenCompiled')
 			mode = mode || 'TRIANGLES'
-			assert(GL.DRAW_MODES.includes(mode), 'GL.DRAW_MODES.includes(mode) ' + mode)
+			assert(_GL.DRAW_MODES.includes(mode), 'GL.DRAW_MODES.includes(mode) ' + mode)
+			assert(mesh.indexBuffers[mode], `The index buffer ${mode} doesn't exist!`)
 			this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[mode], gl[mode], start, count);
 		},
 
@@ -1276,15 +1331,17 @@ void main() {
 		 * like `gl.TRIANGLES` or `gl.LINES`. This method automatically creates and caches
 		 * vertex attribute pointers for attributes as needed.
 		 *
-		 * @param {Object} vertexBuffers
-		 * @param {Buffer} indexBuffer
+		 * @param {Object} vertexBuffers An object which maps shader attribute names to the buffer they should be bound to
+		 * @param {GL.Buffer|undefined} indexBuffer
 		 * @param {number} mode
 		 * @param {number=} start
 		 * @param {number=} count
 		 * @returns {Shader} this
 		 */
 		drawBuffers: function(vertexBuffers, indexBuffer, mode, start, count) {
-			assert(GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode), 'GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode) ' + mode)
+			assert(_GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode), 'GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode) ' + mode)
+			assertf(() => 1 <= Object.keys(vertexBuffers).length)
+			Object.keys(vertexBuffers).forEach(key => assertInst(Buffer, vertexBuffers[key]))
 
 			// Only construct up the built-in matrices that are active in the shader
 			const on = this.activeMatrices
@@ -1336,6 +1393,10 @@ void main() {
 
 			// Draw the geometry.
 			if (minVertexBufferLength && (!indexBuffer || indexBuffer.buffer)) {
+				count = count || (indexBuffer ? indexBuffer.count : minVertexBufferLength)
+				assert(_GL.DRAW_MODE_CHECKS[mode](count), 'count ' + count + ' doesn\'t fulfill requirement '
+					+ _GL.DRAW_MODE_CHECKS[mode].toSource() + ' for mode '+ _GL.DRAW_MODES.find(modeName => gl[modeName] == mode))
+
 				if (indexBuffer) {
 					assert((count || minVertexBufferLength) % indexBuffer.spacing == 0)
 					assert((start || 0) % indexBuffer.spacing == 0)
@@ -1344,12 +1405,12 @@ void main() {
 					}
 					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
 					// start parameter has to be multiple of sizeof(gl.UNSIGNED_SHORT)
-					gl.drawElements(mode, count || indexBuffer.count, WebGLRenderingContext.UNSIGNED_SHORT, 2 * start || 0)
+					gl.drawElements(mode, count, WebGLRenderingContext.UNSIGNED_SHORT, 2 * start || 0)
 				} else {
 					if (start + count > minVertexBufferLength) {
 						throw new Error("invalid")
 					}
-					gl.drawArrays(mode, start || 0, count || minVertexBufferLength)
+					gl.drawArrays(mode, start || 0, count)
 				}
 			}
 
@@ -1360,8 +1421,17 @@ void main() {
 	 * These are all the draw modes usable in OpenGL ES
 	 * @type {string[]}
 	 */
-	GL.DRAW_MODES = ['POINTS', 'LINES', 'LINE_STRIP', 'LINE_LOOP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN']
-	GL.SHADER_VAR_TYPES = ['FLOAT', 'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4', 'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4', 'UNSIGNED_INT']
+	_GL.DRAW_MODES = ['POINTS', 'LINES', 'LINE_STRIP', 'LINE_LOOP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN']
+	_GL.SHADER_VAR_TYPES = ['FLOAT', 'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4', 'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4', 'UNSIGNED_INT']
+	_GL.DRAW_MODE_CHECKS = {
+		POINTS: x => true,
+		LINES: x => 0 == x % 2, // divisible by 2
+		LINE_STRIP: x => x > 2, // need at least 2
+		LINE_LOOP: x => x > 2, // more like > 3, but oh well
+		TRIANGLES: x => 0 == x % 3, // divisible by 3
+		TRIANGLE_STRIP: x => x > 3,
+		TRIANGLE_FAN: x => x > 3 }
+	_GL.DRAW_MODES.forEach(modeName => _GL.DRAW_MODE_CHECKS[WebGLRenderingContext[modeName]] = _GL.DRAW_MODE_CHECKS[modeName])
 
 	/**
 	 * Provides a simple wrapper around WebGL textures that supports render-to-texture.
@@ -1526,7 +1596,7 @@ void main() {
 	 *
 	 * @param {HTMLImageElement} image <img> element
 	 * @param {Object} options See {@link Texture} for option descriptions.
-	 * @returns {GL.Texture}
+	 * @returns {_GL.Texture}
 	 */
 	Texture.fromImage = function(image, options) {
 		options = options || {};
@@ -1552,7 +1622,7 @@ void main() {
 	 *
 	 * @param {string} url
 	 * @param {Object} options Passed to {@link Texture.fromImage}
-	 * @returns {GL.Texture}
+	 * @returns {_GL.Texture}
 	 */
 	Texture.fromURL = function(url, options) {
 		checkerboardCanvas = checkerboardCanvas || (function() {
@@ -1613,7 +1683,7 @@ void main() {
 	};
 
 
-	return GL;
+	return _GL;
 })();
 function createRectangleMesh(x0, y0, x1, y1) {
 	var mesh = new GL.Mesh({});
@@ -1666,6 +1736,11 @@ GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close, normal
 }
 
 /**
+ *
+ * Push two triangles:
+ * c - d
+ * | \ |
+ * a - b
  *
  * @param {Array.<number>} triangles
  * @param {boolean} flipped

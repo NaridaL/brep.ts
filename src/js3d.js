@@ -1,9 +1,46 @@
 "use strict";
 window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-	console.log(errorMsg, url, lineNumber, column, errorObj);
+	// console.error(errorMsg, url, lineNumber, column, errorObj);
+	console.error("%c"+errorMsg, 'color: black')
+	if (errorObj) {
+		console.log(formatStack(errorObj.stack.replace(/^(.*NLA\.assert.*\r?\n?)+/, '')))
+		return true
+	} else {
+		return false
+	}
+}
+function formatStack(stack) {
+	let re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
+	let match, matches = []
+
+	let maxWidths = [0, 0, 0, 0]
+	while (match = re.exec(stack)) {
+		// console.log(match)
+		matches.push(match)
+		maxWidths = maxWidths.map((maxWidth, i) => max(maxWidth, match[i + 1].length))
+	}
+	let output = matches.map(match => {
+		return [
+			"\t",
+
+			match[1],
+			NLA.repeatString(maxWidths[0] + 2 - match[1].length, ' '),
+
+			match[2].replace('file:///C:/Users/aval/Desktop/cs', ''),
+			NLA.repeatString(maxWidths[1] + 2 - match[2].length, ' '),
+
+			NLA.repeatString(maxWidths[2] + 2 - match[3].length, ' '),
+			match[3],
+
+			NLA.repeatString(maxWidths[2] + 2 - match[3].length, ' '),
+			match[3]
+
+		].join('')
+	}).join('\n')
+	return output
 }
 
-// I'd use a loop but this kills the type checker.
+// I'd use a loop but it kills the type checker.
 const ceil = Math.ceil
 const floor = Math.floor
 const abs = Math.abs
@@ -19,8 +56,6 @@ const sqrt = Math.sqrt
 const pow = Math.pow
 const round = Math.round
 const log = Math.log
-var P3 = NLA.Plane3
-
 
 
 function distanceDiffForPointSquared(c) {
@@ -45,6 +80,7 @@ function Sketch(planeName) {
 	this.elements = []
 	this.constraints = []
 	this.name = "sketch"+(globalId++)
+	this.plane = null
 }
 Sketch.prototype = {
 	getConstraintsFor: function (el) {
@@ -221,15 +257,14 @@ Sketch.prototype = {
 	getLoopForSegment: function (segment) {
 		var startPoint = segment.b;
 		var currentPoint = startPoint;
-		var points = [];
+		var loop = [];
 		do {
 			let currentSegment = currentPoint.line
 			let edge = currentSegment.toBrepEdge()
 			if (currentSegment.b != currentPoint) {
-				console.log(currentSegment)
 				edge = edge.flipped()
 			}
-			points.push(edge);
+			loop.push(edge);
 			//console.log(currentPoint.coincidence.cs.filter(function (point) { point instanceof SegmentEndPoint && point != currentPoint; }));
 			var otherPointsInCoincidence = currentPoint.coincidence && currentPoint.coincidence.cs.filter(function (point) {
 					//console.log("point", point, point instanceof SegmentEndPoint, point != currentPoint);
@@ -241,7 +276,7 @@ Sketch.prototype = {
 			var nextSegment = nextSegmentCoincidencePoint.line
 			currentPoint = nextSegment.getOtherPoint(nextSegmentCoincidencePoint);
 		} while (startPoint.coincidence != currentPoint.coincidence);
-		return points
+		return loop
 	},
 	delete: function () {
 		$('sketchEditor').set('display', 'none')
@@ -423,12 +458,13 @@ SketchArc.prototype = {
 		assert(false)
 	},
 	toBrepEdge: function () {
-		let curve = EllipseCurve.circle(this.radiusA(), this.c.V3())
+		let ca = this.getVectorCA()
+		let curve = new EllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
 		return new B2.PCurveEdge(curve,
 			this.a.V3(), this.b.V3(),
-			this.angleA(), this.angleB(),
+			-PI, curve.pointLambda(this.b.V3()),
 			null,
-			curve.tangentAt(this.angleA()), curve.tangentAt(this.angleB()))
+			curve.tangentAt(-PI), curve.tangentAt(curve.pointLambda(this.b.V3())))
 	}
 }
 SketchArc.prototype.constructor = SketchArc
@@ -807,6 +843,16 @@ function paintArc(center, startAngle, endAngle, innerRadius, outerRadius, color)
 }
 function paintBezier(ps, width, color, startT, endT) {
 	shaders.bezier.uniforms({
+		color: rgbToVec4(0xdddddd),
+		width: width,
+		p0: ps[0],
+		p1: ps[2],
+		p2: ps[3],
+		p3: ps[1],
+		startT: -2,
+		endT: 3
+	}).draw(arcMesh);
+	shaders.bezier.uniforms({
 		color: rgbToVec4(color),
 		width: width,
 		p0: ps[0],
@@ -1041,7 +1087,7 @@ function paintConstraints(sketch) {
 				let p = cst.point.V3()
 				let sketchLineWC = sketch.plane.intersectionWithPlane(cst.other.plane)
 				let sketchLineSC = sketchLineWC.transform(sketch.worldToSketchMatrix)
-				let a = sketchLineSC.pointClosestTo(p)
+				let a = sketchLineSC.closestPointToPoint(p)
 				let ap = p.minus(a)
 				paintLineXY(a, p)
 				let textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
@@ -1139,7 +1185,7 @@ function load(key) {
 	$('saveNameInput').value = key
 	window.location.hash = key
 	console.log(localStorage.getItem(key))
-	console.log(unserialize(localStorage.getItem(key)))
+	// console.log(unserialize(localStorage.getItem(key)))
 	featureStack = unserialize(localStorage.getItem(key))
 	selected = []
 	hoverHighlight = null
@@ -1178,7 +1224,7 @@ function isSketchEl(el) {
 }
 
 //var sketchPlane = new CustomPlane(V3(0, 0,1), V3.X, V3.Y, -500, 500, -500, 500, 0xff00ff);
-var editingSketch, featureStack = []
+var /** @type Sketch */ editingSketch, /** @type Array */ featureStack = []
 function initModel() {
 
 
@@ -1272,11 +1318,11 @@ function rebuildModel() {
 					.find(sketch => sketch.elements.some(el => el.name == feature.segmentName))
 				let loopSegment = loopSketch.elements.find(el => el.name == feature.segmentName)
 				// opposite dir to plane normal:
-				let startOffset = loopSketch.plane.normal.times(-feature.start)
-				let lengthOffset = loopSketch.plane.normal.times(feature.start - feature.end)
+				let startOffset = loopSketch.plane.normal.times(-min(feature.start, feature.end))
+				let lengthOffset = loopSketch.plane.normal.times(-Math.abs(feature.start - feature.end))
 				let startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
-				console.log(loopSketch.getLoopForSegment(loopSegment))
 				let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
+				edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix))
 				// TODO: test for self-intersection of edgeloop
 				if (!new PlaneSurface(loopSketch.plane, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoop)) {
 					edgeLoop = edgeLoop.map(edge => edge.flipped()).reverse()
@@ -1319,6 +1365,7 @@ function rebuildModel() {
 				ediv.setStyle('display', 'inline')
 				ediv.title= error.toString() + '\n' + error.stack
 			}
+			console.log(error)
 			// TODO stop rebuild
 		}
 	})
@@ -1394,8 +1441,29 @@ function drawVectors() {
 	}).draw(vectorMesh);
 	gl.popMatrix();
 
+	drVs.forEach(vi => {
+		gl.pushMatrix()
+		let v2 = vi.dir.getPerpendicular()
+		gl.multMatrix(M4.forSys(vi.dir, v2, vi.dir.cross(v2), vi.anchor))
+		gl.scale(50, 50, 50)
+		shaders.singleColor.uniforms({
+			color: rgbToVec4(vi.color || 0x0000ff)
+		}).draw(vectorMesh);
+		gl.popMatrix()
+	})
 }
-var /**@type GL.Mesh */ sphere1, sphere2
+
+function drawPoints() {
+	drPs.forEach(p => {
+		gl.pushMatrix()
+		gl.translate(p)
+		gl.scale(5,5,5)
+		shaders.singleColor.uniforms({ color: rgbToVec4(0xcc0000)}).draw(meshes.sphere1)
+		gl.popMatrix()
+	})
+}
+var /**@type GL.Mesh */ mesh1, sphere2
+var /**@type {Object.<string, GL.Mesh>} */ meshes = {}
 function paintScreen () {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.loadIdentity();
@@ -1411,11 +1479,13 @@ function paintScreen () {
 	//renderColor(ringMesh, 0xffff00);
 	drawVectors()
 
+	drawPoints()
 
 
 
 
-// 	if (!sphere1) {
+
+// 	if (!mesh1) {
 // //		let pF = modelCSG.faces.filter(face => face.constructor == B2.RotationFace)[1]
 // 		let pf = new B2.RotationFace(
 // 			new ProjectedCurveSurface(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V3(161.78547089700214, -252.13248349581008, 0), V3(284.63214994898954, -163.59789158697575, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(0, 0, 1), 0, 1), [
@@ -1432,9 +1502,12 @@ function paintScreen () {
 // 	}
 
 	gl.pushMatrix()
-	gl.translate(100, 0 , 0)
-	shaders.singleColor.uniforms({color: rgbToVec4(0xff0000)}).draw(sphere1)
-	shaders.singleColor.uniforms({color: rgbToVec4(0x00ff00)}).draw(sphere1, 'LINES')
+	mesh1 && shaders.singleColor.uniforms({
+		color: rgbToVec4(0xff0000)
+	}).draw(mesh1, 'TRIANGLES')
+	sphere2 && shaders.singleColor.uniforms({
+		color: rgbToVec4(0x0ff000)
+	}).draw(sphere2, 'LINES')
 	gl.popMatrix()
 
 
@@ -1587,6 +1660,7 @@ function updateSelected() {
 			updateSelected()
 			paintScreen()
 		};
+		sel.toBrepEdge && newChild.append(new Element('span', {text: sel.toBrepEdge().curve.toSource(x => Math.round10(x, -3)), style: 'font-size: small;'}))
 		newChild.inject(div)
 	});
 	div = $('selectedConstraints')
@@ -1668,9 +1742,9 @@ NameRef.prototype.get = function () {
 NameRef.prototype.getPlane = function () {
 	return planes.find(plane => plane.name == this.ref) || modelCSG && modelCSG.faces.find(face => face.name == this.ref).plane
 }
-var main = function () {
+function main() {
 
-	new Request({url: 'src/testshader.glsl', async: false, onSuccess: console.log}).send()
+	// new Request({url: 'src/testshader.glsl', async: false, onSuccess: text => console.log(text)}).send()
 
 	modePush(MODES.DEFAULT)
 
@@ -1679,10 +1753,6 @@ var main = function () {
 	gl = GL.create({});
 	gl.fullscreen();
 	gl.canvas.oncontextmenu = () => false;
-
-	gl.scaleVector = function(x, y, z) {
-		gl.multMatrix(M4.scaleVector(x, y, z));
-	};
 
 	setupCamera();
 	//gl.cullFace(gl.FRONT_AND_BACK);
@@ -1695,11 +1765,25 @@ var main = function () {
 
 
 
-	sphere1 = EllipsoidSurface.forABC(100, 200, 300).flipped().toMesh()
-	//sphere1 = sphere1.transform(M4.FOO.as3x3())
-	//sphere1.computeNormalLines(10)
-	//sphere1.computeWireframeFromFlatTriangles()
-	sphere1.compile()
+	let face = new B2.RotationFace(new ProjectedCurveSurface(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V3(161.78547089700214, -252.13248349581008, 0), V3(284.63214994898954, -163.59789158697575, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(0, 0, 1), 0, 1), [
+		B2.PCurveEdge.forCurveAndTs(
+			new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V3(161.78547089700214, -252.13248349581008, 0), V3(284.63214994898954, -163.59789158697575, 0), V3(372.40411211189405, -210.3992206435476, 0)), 1, 0),
+		StraightEdge.throughPoints(V3(142.87578921496748, -191.46078243076332, 0), V3(142.87578921496748, -191.46078243076332, -100)),
+		B2.PCurveEdge.forCurveAndTs(new BezierCurve(V3(142.87578921496748, -191.46078243076332, -100), V3(161.78547089700214, -252.13248349581008, -100), V3(284.63214994898954, -163.59789158697575, -100), V3(372.40411211189405, -210.3992206435476, -100)), 0, 1),
+		StraightEdge.throughPoints(V3(372.40411211189405, -210.3992206435476, -100), V3(372.40411211189405, -210.3992206435476, 0))], []).foo()
+	mesh1 = face.inB2().toMesh()
+	let line = L3(V3(1241.5987, -1214.1894, 38.9886), V3(-0.6705, 0.7386, -0.0696).normalized()).foo()
+	let isp = face.surface.isPointsWithLine(line)
+	face.intersectsLine(line)
+	drPs.pushAll(isp)
+	const bez = new BezierCurve(V3(133, 205, 0), V3(33, 240, 0), V3(63, 168, 0), V3(151, 231, 0))
+	bez.debugToMesh(mesh1, 'EX3D')
+	console.log(mesh1)
+	mesh1.compile()
+	sphere2 = bez.getAABB().toMesh()
+	console.log(bez.getAABB().toSource())
+	console.log(sphere2)
+	//mesh1 = mesh1.transform(M4.FOO.as3x3())
 
 	let linksHaendig = M4.forSys(V3.X, V3.Y, V3.Z.negated())
 	let v0 = V3(2, 3, 4), v1 = V3(-2, 3, 5), v2 = v0.cross(v1)
@@ -1707,16 +1791,16 @@ var main = function () {
 	let v2s = linksHaendig.inversed().transposed().transformVector(v2)
 	console.log("ASKDKJALDS", v2t.dot(v2s), v2t.isParallelTo(v2s))
 
-	cubeMesh = GL.Mesh.cube();
+	meshes.sphere1 = GL.Mesh.sphere(2)
 	ringMesh = createRingMesh(8, 10, 16);
 	circleMesh = createCircleMesh(6, 16);
-	arcMesh = createArcMesh(0, 1.0, 63);
+	arcMesh = createArcMesh(0, 1.0, 512);
 	segmentMesh = createRectangleMesh(0, -1, 1, 1);
 	textMesh = createRectangleMesh(0, 0, 1, 1);
 	vectorMesh = GL.Mesh.rotation([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, true, false)
 	xyLinePlaneMesh = new GL.Mesh({lines: true, triangles: false});
-	xyLinePlaneMesh.vertices = [[0, 0], [0, 1], [1, 1], [1, 0]];
-	xyLinePlaneMesh.lines = [[0, 1], [1, 2], [2, 3], [3, 0]];
+	xyLinePlaneMesh.vertices = [[0, 0], [0, 1], [1, 1], [1, 0]].map(arr => V3(arr[0], arr[1], 0));
+	xyLinePlaneMesh.lines = [[0, 1], [1, 2], [2, 3], [3, 0]].concatenated();
 	xyLinePlaneMesh.compile();
 
 	shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
@@ -1742,6 +1826,8 @@ var main = function () {
 	updateFeatureDisplay()
 	rebuildModel() // so warning will show
 	initLoadSave()
+
+	console.log(featureStack[0].elements.map(e => e.toBrepEdge().curve.toSource()))
 
 	paintScreen();
 	window.onkeypress = function (e) {
@@ -1855,7 +1941,9 @@ function getHovering(mouseLine, ...consider) {
 
 				let closestElement = sketch.elements.concat(getAllPoints(sketch).map(p => p.canon()).unique())
 					.withMax(el => {
-						return -el.distanceToCoords(sketchCoords)
+						let d = el.distanceToCoords(sketchCoords)
+						if (el instanceof SegmentEndPoint) d -= 8
+						return -d
 					})
 
 				if (closestElement.distanceToCoords(sketchCoords) < 16) {
@@ -1974,7 +2062,7 @@ function setupSelectors(el, feature, mode) {
 		})
 		.addEvent('click', function (e) {
 			if (e.event.button == 1) {
-				this.set('value', this.getProperty('defaultvalue'))
+				this.set('value', this.dataset.defaultValue)
 				this.fireEvent('change')
 			}
 		})
@@ -2002,8 +2090,8 @@ function chainComparison(diff1, diff2) {
 }
 function reverse(sketch) {
 	sketch.varMap.forEach(function (pointIndex, point) {
-		point.x = sketch.x[pointIndex];
-		point.y = sketch.x[pointIndex + 1 ];
+		point.x = sketch.x[pointIndex]
+		point.y = sketch.x[pointIndex + 1]
 	});
 }
 function pointsFirst(a, b) {
@@ -2292,11 +2380,11 @@ function unserialize(string) {
 		}
 	}
 	let tree = JSON.decode(string, true)
-	console.log(tree)
+	// console.log(tree)
 	fixObjects(tree)
-	console.log(tree)
+	// console.log(tree)
 	linkReferences(tree)
-	console.log(tree)
+	// console.log(tree)
 	return tree[0]
 }
 
@@ -2385,13 +2473,12 @@ function createRingMesh(insideRadius, outsideRadius, cornerCount) {
 	var mesh = new GL.Mesh({});
 	for (var i = 0; i < cornerCount; i++) {
 		mesh.vertices.push(
-			[outsideRadius * cos(2 * PI * i / cornerCount), outsideRadius * sin(2 * PI * i / cornerCount), 0],
-			[insideRadius * cos(2 * PI * (i + 0.5) / cornerCount), insideRadius * sin(2 * PI * (i + 0.5) / cornerCount), 0]
-		);
-		mesh.triangles.push(
-			[0, 2, 1].map(function (offset) { return (2 * i + offset) % (2 * cornerCount); }),
-			[1, 2, 3].map(function (offset) { return (2 * i + offset) % (2 * cornerCount); })
-		);
+			outsideRadius * cos(2 * PI * i / cornerCount), outsideRadius * sin(2 * PI * i / cornerCount), 0,
+			insideRadius * cos(2 * PI * (i + 0.5) / cornerCount), insideRadius * sin(2 * PI * (i + 0.5) / cornerCount), 0
+		)
+		mesh.triangles.pushAll([
+			0, 2, 1,
+			1, 2, 3].map(offset=>(2 * i + offset) % (2 * cornerCount)))
 	}
 	mesh.compile();
 	return mesh;
@@ -2400,31 +2487,25 @@ function createArcMesh(insideRadius, outsideRadius, cornerCount) {
 	var mesh = new GL.Mesh({});
 	for (var i = 0; i < cornerCount; i++) {
 		mesh.vertices.push(
-			[outsideRadius, i / (cornerCount - 1), 0],
-			[insideRadius, i / (cornerCount - 1), 0]
-		);
+			V3(outsideRadius, i / (cornerCount - 1), 0),
+			V3(insideRadius, i / (cornerCount - 1), 0))
 		if (i == cornerCount - 1) break;
-		mesh.triangles.push(
-			[0, 2, 1].map(function (offset) { return (2 * i + offset) % (2 * cornerCount); }),
-			[1, 2, 3].map(function (offset) { return (2 * i + offset) % (2 * cornerCount); })
-		);
+		mesh.triangles.pushAll([
+			0, 2, 1,
+			1, 2, 3].map(offset=>(2 * i + offset) % (2 * cornerCount)))
 	}
 	mesh.compile();
 	return mesh;
 }
 function createCircleMesh(radius, cornerCount) {
-	var mesh = new GL.Mesh({});
-	mesh.vertices.push([0, 0, 0]);
+	var mesh = new GL.Mesh({})
+	mesh.vertices.push(V3.ZERO)
 	for (var i = 0; i < cornerCount; i++) {
-		mesh.vertices.push(
-			[radius * cos(2 * PI * i / cornerCount), radius * sin(2 * PI * i / cornerCount), 0]
-		);
-		mesh.triangles.push(
-			[0, 1 + i, 1 + (i + 1) % cornerCount]
-		);
+		mesh.vertices.push(V3.polar(radius, 2 * PI * i / cornerCount))
+		mesh.triangles.push(0, 1 + i, 1 + (i + 1) % cornerCount)
 	}
-	mesh.compile();
-	return mesh;
+	mesh.compile()
+	return mesh
 }
 function createIndexBuffer(count) {
 	var buffer = new GL.Buffer(gl.ARRAY_BUFFER, Float32Array);
@@ -2437,9 +2518,9 @@ function createIndexBuffer(count) {
 }
 
 function faceSketchPlane() {
-	var plane = editingSketch.plane;
+	var plane = editingSketch.plane
 	var viewLine = L3.throughPoints(eyePos, eyeFocus)
-	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointOnLine(V3.ZERO)
+	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.ZERO)
 	eyePos = eyeFocus.plus(plane.normal.times(100));
 	eyeUp = plane.up;
 	setupCamera();

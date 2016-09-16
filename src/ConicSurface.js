@@ -1,7 +1,7 @@
 class ConicSurface extends Surface {
 	constructor(baseEllipse, dir, normalDir) {
 		super()
-		console.log(baseEllipse.toString(), dir.ss, normalDir)
+		console.log(baseEllipse.toString(), dir.sce, normalDir)
 		assertVectors(dir)
 		assert(1 == normalDir || -1 == normalDir, "normalDir == 1 || normalDir == -1" + normalDir)
 		assertInst(EllipseCurve, baseEllipse)
@@ -122,7 +122,7 @@ class ConicSurface extends Surface {
 			return false
 		}
 		var {f1, f2} = localEllipse.mainAxes()
-		console.log(f1.ss, f2.ss)
+		console.log(f1.sce, f2.sce)
 		var p1 = localEllipse.center.plus(f1), p2 = localEllipse.center.plus(f2)
 		// check if both endpoints are on the cone's surface
 		// and that one main axis is perpendicular to the Z-axis
@@ -154,7 +154,7 @@ class ConicSurface extends Surface {
 			return false
 		}
 		var {center, f1, f2} = local.rightAngled()
-		console.log(f1.ss, f2.ss)
+		console.log(f1.sce, f2.sce)
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		// and that "y" axis is parallel to surface
@@ -266,7 +266,7 @@ class ConicSurface extends Surface {
 		} else if (surface2 instanceof ConicSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-				return this.baseEllipse.intersectWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
+				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
 			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 
 			} else {
@@ -425,7 +425,7 @@ class ConicSurface extends Surface {
 					}
 					// sqrt(cc - aa) flipped relative to ellipse case:
 					let p2 = V3.create(-a * d / (cc - aa), d / Math.sqrt(aa - cc), -d * c / (cc - aa))
-					console.log(center.ss, f1.ss, p2.ss)
+					console.log(center.sce, f1.sce, p2.sce)
 					return [new HyperbolaCurve(center, f1, p2.minus(center))]
 				}
 			}

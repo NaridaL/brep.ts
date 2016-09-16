@@ -17,9 +17,11 @@
  * @param b
  * @param {*=} c
  * @constructor
+ * @property {number} x
+ * @property {number} y
+ * @property {number} z
  */
 function V3(a, b, c) {
-	this.x = this.y = this.z = 0
     if (arguments.length == 3) {
         return V3.create(parseFloat(a), parseFloat(b), parseFloat(c))
     } else if (arguments.length == 2) {
@@ -62,13 +64,12 @@ V3.id = 0
 V3.create = function(x, y, z) {
     assert(arguments.length == 3)
     assertNumbers(x, y, z)
-    var result = Object.create(V3.prototype)
-    Object.defineProperties(result, {
+    var result = Object.create(V3.prototype, {
         x: { value: x },
         y: { value: y },
         z: { value: z },
         //id: {value: V3.id++}
-    })
+    } )
     /*
     if ([525, 659].contains(result.id)) {
 	    console.log("!!!!!!!!!CREATING V3 "+ result.id, result.hashCodes(), x, y, z, result.$)
@@ -219,6 +220,13 @@ V3.prototype = /** @lends V3.prototype */ {
 
 	/**
 	 *
+	 * The cross product is defined as:
+	 * a x b = |a| * |b| * sin(phi) * n
+	 * where |.| is the euclidean norm, phi is the angle between the vectors
+	 * and n is a unit vector perpendicular to both a and b.
+	 *
+	 * The cross product is zero for parallel vectors.
+	 *
 	 * @param {V3} v
 	 * @returns {V3}
 	 */
@@ -271,6 +279,10 @@ V3.prototype = /** @lends V3.prototype */ {
 	    return Math.hypot(this.x, this.y)
 	    //return Math.sqrt(this.x * this.x + this.y * this.y)
     },
+	lengthSquaredXY: function () {
+        return this.x * this.x + this.y * this.y
+	},
+
     /**
      * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
      * @param f function to apply to elements (number -> number)
@@ -282,12 +294,18 @@ V3.prototype = /** @lends V3.prototype */ {
         roundFunction = roundFunction || NLA.defaultRoundFunction
         return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")" //+ this.id
     },
-    angleTo: function (vector) {
+
+	/**
+	 *
+	 * @param {V3} v
+	 * @returns {number}
+	 */
+    angleTo: function (v) {
         assert(1 == arguments.length)
-        assertVectors(vector)
+        assertVectors(v)
         assert(!this.isZero())
-        assert(!vector.isZero())
-        return Math.acos(this.dot(vector) / this.length() / vector.length())
+        assert(!v.isZero())
+        return Math.acos(this.dot(v) / this.length() / v.length())
     },
 	/**
 	 *
@@ -306,7 +324,7 @@ V3.prototype = /** @lends V3.prototype */ {
 	    assert(2 == arguments.length)
 	    NLA.assertVectors (vector, normal1)
 	    assert (normal1.hasLength(1))
-	    assert (vector.isPerpendicularTo(normal1), "vector.isPerpendicularTo(normal1)")
+	    assert (vector.isPerpendicularTo(normal1), "vector.isPerpendicularTo(normal1)" +vector.sce+normal1.sce)
 	    assert (this.isPerpendicularTo(normal1), "this.isPerpendicularTo(normal1)" + this.dot(vector))
 	    return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector))
     },
@@ -392,6 +410,12 @@ V3.prototype = /** @lends V3.prototype */ {
 	    assert(!this.isZero(), "cannot normalize zero vector")
 	    return this.div(this.length())
     },
+
+	/**
+	 *
+	 * @param {number} newLength
+	 * @returns {V3}
+	 */
     toLength: function (newLength) {
 	    assertNumbers(newLength)
 	    return this.times(newLength / this.length())
@@ -498,9 +522,6 @@ V3.prototype = /** @lends V3.prototype */ {
 	    }
 	    return V3.create(this.x, this.y, el)
     },
-    get ss () {
-	    return this.toString()
-    },
     hashCode: function() {
 	    function floatHashCode(f) {
 		    return ~~(f * (1 << 28))
@@ -585,7 +606,6 @@ V3.fromAngles = function(theta, phi) {
 V3.fromFunction = function (f) {
     return V3.create(f(0), f(1), f(2))
 }
-V3.ss = p => p.ss
 V3.min = function(a, b) {
     return V3.create(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z))
 }
@@ -666,6 +686,7 @@ V3.areDisjoint = function (it) {
 	return true
 }
 /** @const */ V3.ZERO = V3.create(0, 0, 0)
+/** @const */ V3.ONES = V3.create(1, 1, 1)
 /** @const */ V3.X = V3.create(1, 0, 0)
 /** @const */ V3.Y = V3.create(0, 1, 0)
 /** @const */ V3.Z = V3.create(0, 0, 1)

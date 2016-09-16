@@ -1,9 +1,12 @@
 /**
  * @class Surface
  * @template T
- * @augments NLA.Transformable<T>
+ * @augments Transformable<T>
  */
-class Surface extends NLA.Transformable {
+class Surface extends Transformable {
+	toString() {
+		return this.toSource()
+	}
 	/**
 	 * @abstract
 	 */
@@ -44,7 +47,7 @@ class Surface extends NLA.Transformable {
 	/**
 	 *
 	 * @abstract
-	 * @param {Curve|L3} curve
+	 * @param {Curve} curve
 	 * @returns {boolean}
 	 */
 	containsCurve(curve) {
@@ -89,6 +92,7 @@ class Surface extends NLA.Transformable {
 	}
 
 	/**
+	 * Returns true iff the surfac occupies the same space as the argument (not necessarily same normal)
 	 * @abstract
 	 * @param {Surface} surface
 	 * @returns {boolean}

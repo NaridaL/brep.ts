@@ -27,7 +27,7 @@ class HyperbolaCurve extends Curve {
 		this.inverseMatrix = this.matrix.inversed()
 	}
 
-	toString() {
+	toSource() {
 		return `new HyperbolaCurve(${this.center} ${this.f1} ${this.f2})`
 	}
 
@@ -41,11 +41,16 @@ class HyperbolaCurve extends Curve {
 
 	tangentAt(t) {
 		assertNumbers(t)
-		return this.f1.times(Math.sinh(t)).plus(this.f2.times(Math.cosh(t))).normalized()
+		return this.f1.times(Math.sinh(t)).plus(this.f2.times(Math.cosh(t)))
+	}
+
+	ddt(t) {
+		assertNumbers(t)
+		return this.f1.times(Math.cosh(t)).plus(this.f2.times(Math.sinh(t)))
 	}
 
 	tangentAt2(xi, eta) {
-		return this.f1.times(eta).plus(this.f2.times(xi)).normalized()
+		return this.f1.times(eta).plus(this.f2.times(xi))
 	}
 
 	isCircular() {

@@ -5,11 +5,20 @@
 var NLA = {}
 window['NLA'] = NLA
 
+function SCE(o) {
+	return o.sce
+}
+function STR(o) {
+	return o.str
+}
+Object.defineProperty(Object.prototype, 'sce', {get: function () { return this.toSource() }})
+Object.defineProperty(Object.prototype, 'str', {get: function () { return this.toString() }})
+
+
 var assertVectors = NLA.assertVectors = function () {
 	if (NLA_DEBUG) {
 		for (var i = 0; i < arguments.length; i++) {
 			if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
-				// Arrays.prototype.slice.call is inefficient, but it doesn't matter here
 				throw new Error("NLA.assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i]);
 			}
 		}
@@ -30,7 +39,6 @@ var assertNumbers = NLA.assertNumbers = function (...numbers) {
 	if (NLA_DEBUG) {
 		for (var i = 0; i < numbers.length; i++) {
 			if (typeof numbers[i] !== 'number') {
-				// Arrays.prototype.slice.call is inefficient, but it doesn't matter here
 				throw new Error("NLA.assertNumbers arguments[" + (i) + "] is not a number. " + typeof numbers[i] + " == typeof " + numbers[i]);
 			}
 		}
@@ -355,13 +363,12 @@ NLA.mapAdd = function (map, key, val) {
 	}
 }
 // Add several convenience methods to the classes that support a transform() method:
-NLA.addTransformationMethods = function (obj) {
-	NLA.addOwnProperties(obj, NLA.Transformable.prototype)
-}
+
 String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
-var ARRAY_UTILITIES = /** @lends Array.prototype */ {
+var ARRAY_UTILITIES = /** @template T
+ @lends Array.<T>.prototype */ {
 	pushAll: function (arr) {
 		Array.prototype.push.apply(this, arr)
 	},
@@ -383,6 +390,25 @@ var ARRAY_UTILITIES = /** @lends Array.prototype */ {
 			}
 		}
 		return result;
+	},
+
+	/**
+	 * Semantically identical to .map(f).filter(v => v)
+	 * @template S
+	 * @param {function (T, number, Array.<T>):S} f
+	 * @returns {Array.<S>}
+	 */
+	mapFilter(f) {
+		let length = this.length, result = []
+		for (let i = 0; i < length; i++) {
+			if (i in this) {
+				let val = f(this[i], i, this)
+				if (val) {
+					result.push(val)
+				}
+			}
+		}
+		return result
 	},
 
 	/**
@@ -529,6 +555,14 @@ var ARRAY_UTILITIES = /** @lends Array.prototype */ {
 	last: function () {
 		return this[this.length - 1]
 	},
+	// forEachCall: function (f, ...args) {
+	// 	for (let i = 0; i < this.length; i++) {
+	// 		f.apply(this[i], args)
+	// 	}
+	// },
+	// mapCall: function (f, ...args) {
+	// 	return this.map(e => f.apply(e, args))
+	// }
 }
 NLA.minus = (a, b) => a - b
 for (let key in ARRAY_UTILITIES) {
@@ -558,6 +592,13 @@ NLA.arrayRange = function (start, end, step) {
 	}
 	return result;
 }
+
+/**
+ * @template T
+ * @param {number} length
+ * @param {function (number): T} f
+ * @returns {Array.<T>}
+ */
 NLA.arrayFromFunction = function(length, f) {
 	NLA.assertNumbers(length)
 	assert("function" == typeof f)
@@ -567,6 +608,47 @@ NLA.arrayFromFunction = function(length, f) {
 		a[elIndex] = f(elIndex);
 	}
 	return a
+}
+
+/**
+ * @param {number[]} vals
+ * @returns {number[]}
+ */
+NLA.fuzzyUniques = function (vals) {
+	let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
+	let map = new Map()
+	map.set(round(vals[0]), vals[0])
+	for (let i = 1; i < vals.length; i++) {
+		let val = vals[i], roundVal = round(val)
+		let key
+		if (!map.has(roundVal)
+			&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.equals(key, val))
+			&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.equals(key, val))) {
+			map.set(roundVal, val)
+		}
+	}
+	return Array.from(map.values())
+}
+
+/**
+ * @template T
+ * @param {T[]} vals
+ * @param {function(T):number} f
+ * @returns {T[]}
+ */
+NLA.fuzzyUniquesF = function (vals, f) {
+	let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
+	let map = new Map()
+	for (let i = 0; i < vals.length; i++) {
+		let val = vals[i], roundVal = round(f(val))
+		let key
+		if (!map.has(roundVal)
+			&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.equals(key, f(val)))
+			&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.equals(key, f(val)))) {
+			map.set(roundVal, val)
+		}
+	}
+	return Array.from(map.values())
 }
 
 
@@ -805,7 +887,7 @@ NLA.addOwnProperties = function (target, props) {
 	})
 }
 
-NLA.degineClass = function (name, parent, constructor, props, statics) {
+NLA.defineClass = function (name, parent, constructor, props, statics) {
 	assert('function' == typeof constructor, "'function' == typeof constructor")
 	constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
 	constructor.prototype.constructor = constructor
@@ -985,7 +1067,7 @@ NLA.Matrix.prototype = {
         return this.m[rowIndex * this.width + colIndex]
     },
 	setEl: function (rowIndex, colIndex, val) {
-		NLA.assertNumbers(rowIndex, colIndex)
+		NLA.assertNumbers(rowIndex, colIndex, val)
 		assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex)
 		assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex)
 		this.m[rowIndex * this.width + colIndex] = val
@@ -1078,18 +1160,17 @@ NLA.Matrix.prototype = {
             NLA.arraySwap(pRowArrays, currentRowIndex, pivotRowIndex)
 	        lRowArrays[currentRowIndex][colIndex] = 1
 
-	        if (1 == numberOfNonZeroRows) {
-            	continue
+	        if (1 < numberOfNonZeroRows) {
+		        // subtract pivot (now current) row from all below it
+		        for (let rowIndex = currentRowIndex + 1; rowIndex < dim; rowIndex++) {
+			        let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
+			        lRowArrays[rowIndex][colIndex] = l
+			        // subtract pivot row * l from row "rowIndex"
+			        for (let colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
+				        uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
+			        }
+		        }
 	        }
-            // subtract pivot (now current) row from all below it
-            for (let rowIndex = currentRowIndex + 1; rowIndex < dim; rowIndex++) {
-                let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
-                lRowArrays[rowIndex][colIndex] = l
-                // subtract pivot row * l from row "rowIndex"
-                for (let colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
-                    uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
-                }
-            }
             currentRowIndex++ // this doesn't increase if pivot was zero
         }
         return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(uRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
@@ -1101,6 +1182,7 @@ NLA.Matrix.prototype = {
         var pRowArrays = NLA.Matrix.identity(h).asRowArrays(Float64Array)
 	    let currentRowIndex = 0
         for (let colIndex = 0; colIndex < w; colIndex++) {
+        	// console.log('currentRowIndex', currentRowIndex)
             // find largest value in colIndex
             let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows = 0
             for (let rowIndex = currentRowIndex; rowIndex < h; rowIndex++) {
@@ -1123,19 +1205,18 @@ NLA.Matrix.prototype = {
             NLA.arraySwap(pRowArrays, currentRowIndex, pivotRowIndex)
 	        lRowArrays[currentRowIndex][colIndex] = 1
 
-	        if (1 == numberOfNonZeroRows) {
-            	continue
+	        if (1 < numberOfNonZeroRows) {
+		        // subtract pivot (now current) row from all below it
+		        for (let rowIndex = currentRowIndex + 1; rowIndex < h; rowIndex++) {
+			        let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
+			        lRowArrays[rowIndex][colIndex] = l
+			        // subtract pivot row * l from row "rowIndex"
+			        for (let colIndex2 = colIndex; colIndex2 < w; colIndex2++) {
+				        uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
+			        }
+		        }
 	        }
-            // subtract pivot (now current) row from all below it
-            for (let rowIndex = currentRowIndex + 1; rowIndex < h; rowIndex++) {
-                let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
-                lRowArrays[rowIndex][colIndex] = l
-                // subtract pivot row * l from row "rowIndex"
-                for (let colIndex2 = colIndex; colIndex2 < w; colIndex2++) {
-                    uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
-                }
-            }
-            currentRowIndex++ // this doesn't increase if pivot was zero
+	        currentRowIndex++ // this doesn't increase if pivot was zero
         }
         return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(uRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
     },
@@ -1190,10 +1271,13 @@ NLA.Matrix.prototype = {
     isPermutation: function () {
         if (!this.isSquare()) return false
         if (this.m.some((value) => !NLA.isZero(value) && !NLA.equals(1, value))) return false
+
         var rows = this.asRowArrays(Array)
         if (rows.some((row) => row.filter((value) => NLA.equals(1, value)).length != 1)) return false
+
         var cols = this.asColArrays(Array)
         if (cols.some((col) => col.filter((value) => NLA.equals(1, value)).length != 1)) return false
+
         return true
     },
 	isIdentity: function (precision) {
@@ -1221,6 +1305,12 @@ NLA.Matrix.prototype = {
         var x = lup.U.solveBackwards(y)
         return x
     },
+
+	/**
+	 *
+	 * @param {number=} precision
+	 * @returns {boolean}
+	 */
 	isLowerUnitriangular: function (precision) {
 		precision = "number" == typeof precision ? precision : NLA.PRECISION
 		if (!this.isSquare()) return false
@@ -1234,6 +1324,11 @@ NLA.Matrix.prototype = {
 		}
 		return true
 	},
+
+	/**
+	 *
+	 * @returns {boolean}
+	 */
     isLowerTriangular: function () {
         if (!this.isSquare()) return false
         for (var rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
@@ -1245,6 +1340,13 @@ NLA.Matrix.prototype = {
         }
         return true
     },
+
+
+	/**
+	 *
+	 * @param x
+	 * @returns {NLA.Vector}
+	 */
     solveBackwards: function (x) {
         NLA.assertVectors(x)
         assert(this.height == x.dim(), "this.height == x.dim()")
@@ -1290,6 +1392,8 @@ NLA.Matrix.prototype = {
         }
         return new NLA.Vector(v)
     },
+
+
 
 	/**
 	 * Calculates rank of matrix.
@@ -1365,6 +1469,45 @@ NLA.Matrix.prototype = {
         var inverse = lup.U.solveBackwardsMatrix(y)
         return inverse
     },
+
+	inversed3: function () {
+		assertf(() => 3 == this.width && 3 == this.height)
+		let result = new NLA.Matrix.forWidthHeight(3, 3), m = this.m, r = result.m
+
+		r[0] = m[4]*m[8] - m[5]*m[7]
+		r[1] = -m[1]*m[8] + m[2]*m[7]
+		r[2] = m[1]*m[5] - m[2]*m[4]
+
+		r[3] = -m[3]*m[8] + m[5]*m[6]
+		r[4] = m[0]*m[8] - m[2]*m[6]
+		r[5] = -m[0]*m[5] + m[2]*m[3]
+
+		r[6] = m[3]*m[7] - m[4]*m[6]
+		r[7] = -m[0]*m[7] + m[1]*m[6]
+		r[8] = m[0]*m[4] - m[1]*m[3]
+
+		let det = m[0]*r[0] + m[1]*r[3] + m[2]*r[6]
+		var i = 9
+		while (i--) { r[i] /= det }
+
+		return result
+	},
+
+	inversed2: function () {
+		assertf(() => 2 == this.width && 2 == this.height)
+		let result = new NLA.Matrix.forWidthHeight(2, 2), m = this.m, r = result.m
+
+		let det = m[0]*m[3] - m[1]*r[2]
+
+		r[0] = m[3] / det
+		r[1] = -m[2] / det
+
+		r[2] = -m[1] / det
+		r[3] = m[0] / det
+
+		return result
+	},
+
     canMultiply: function (matrix) {
         assertInst(NLA.Matrix, matrix)
         return this.width == matrix.height
@@ -1526,6 +1669,11 @@ NLA.Vector.Unit = function (dim, dir) {
 	return new NLA.Vector(n)
 }
 
+/**
+ * combinations(2) will generate
+ * [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
+ * @param n
+ */
 NLA.combinations = function* (n) {
 	for (var i = 0; i < n; i++) {
 		for (var j = i; j < n; j++) {
@@ -1652,7 +1800,7 @@ function solveCubicReal2(a, b, c, d) {
 		discriminant = qDiv2*qDiv2 + pDiv3Pow3,
 		u1,v1,x1,x2,x3
 	// 18abcd - 4b³d + b²c² - 4ac³ - 27a²d²
-	if (discriminant < -NLA.PRECISION) {
+	if (discriminant < -NLA.PRECISION / 8) {
 		var r = Math.sqrt(-pDiv3Pow3),
 			t = -q/(2*r),
 			cosphi = t<-1 ? -1 : t>1 ? 1 : t, // clamp t to [-1;1]
@@ -1662,7 +1810,7 @@ function solveCubicReal2(a, b, c, d) {
 		x2 = t1 * Math.cos((phi+2*Math.PI)/3) - a/3
 		x3 = t1 * Math.cos((phi+4*Math.PI)/3) - a/3
 		return [x1, x2, x3]
-	} else if(discriminant <= NLA.PRECISION) {
+	} else if(discriminant <= NLA.PRECISION / 8) {
 		if (0 == qDiv2) {
 			// TODO: compare with NLA.isZero?
 			return [-a/3]
@@ -1678,25 +1826,70 @@ function solveCubicReal2(a, b, c, d) {
 		return [u1-v1-a/3]
 	}
 }
-NLA.Transformable =
+// function solveCubicReal2(a, b, c, d) {
+// 	if (NLA.isZero(a)) {
+// 		if (NLA.isZero(b)) {
+// 			return [-d/c]
+// 		} else {
+// 			return pqFormula(c / b, d / b)
+// 		}
+// 	}
+// 	var div = a
+// 	a = b/div
+// 	b = c/div
+// 	c = d/div
+// 	var p = (3*b - a*a)/3,
+// 		p3 = p/3,
+// 		q = (2*a*a*a - 9*a*b + 27*c)/27,
+// 		q2 = q/2,
+// 		discriminant = q2*q2 + p3*p3*p3,
+// 		u1,v1,x1,x2,x3
+// 	// 18abcd - 4b³d + b²c² - 4ac³ - 27a²d²
+// 	if (discriminant < -NLA.PRECISION / 8) {
+// 		var mp3 = -p/3,
+// 			mp33 = mp3*mp3*mp3,
+// 			r = Math.sqrt( mp33 ),
+// 			t = -q/(2*r),
+// 			cosphi = t<-1 ? -1 : t>1 ? 1 : t,
+// 			phi = Math.acos(cosphi),
+// 			crtr = Math.cbrt(r),
+// 			t1 = 2*crtr
+// 		x1 = t1 * Math.cos(phi/3) - a/3
+// 		x2 = t1 * Math.cos((phi+2*Math.PI)/3) - a/3
+// 		x3 = t1 * Math.cos((phi+4*Math.PI)/3) - a/3
+// 		return [x1, x2, x3]
+// 	} else if(discriminant <= NLA.PRECISION / 8) {
+// 		if (0 == q2) {
+// 			// TODO: compare with NLA.isZero?
+// 			return [-a/3]
+// 		}
+// 		u1 = q2 < 0 ? Math.cbrt(-q2) : -Math.cbrt(q2)
+// 		x1 = 2*u1-a/3
+// 		x2 = -u1 - a/3
+// 		return [x1,x2]
+// 	} else {
+// 		var sd = Math.sqrt(discriminant)
+// 		u1 = Math.cbrt(-q2+sd)
+// 		v1 = Math.cbrt(q2+sd)
+// 		return [u1-v1-a/3]
+// 	}
+// }
 
-	/**
-	 * @template T
-	 * @constructor
-	 * @class NLA.Transformable
-	 */
-	class extends NLA.BaseObject {
+/**
+ * @template T
+ */
+class Transformable extends NLA.BaseObject {
 	mirrored(plane) {
 		return this.transform(M4.mirroring(plane));
 	}
 	mirroredX() {
-		return this.mirrored(NLA.Plane3.YZ)
+		return this.mirrored(P3.YZ)
 	}
 	mirroredY() {
-		return this.mirrored(NLA.Plane3.ZX)
+		return this.mirrored(P3.ZX)
 	}
 	mirroredZ() {
-		return this.mirrored(NLA.Plane3.XY)
+		return this.mirrored(P3.XY)
 	}
 	translate(x, y, z) {
 		return this.transform(M4.translation(x, y, z), `.translate(${x}, ${y}, ${z})`)
@@ -1723,13 +1916,13 @@ NLA.Transformable =
 		return this.transform(M4.projection(plane))
 	}
 	projXY() {
-		return this.transform(M4.projection(NLA.Plane3.XY))
+		return this.transform(M4.projection(P3.XY))
 	}
 	projYZ() {
-		return this.transform(M4.projection(NLA.Plane3.YZ))
+		return this.transform(M4.projection(P3.YZ))
 	}
 	projZX() {
-		return this.transform(M4.projection(NLA.Plane3.ZX))
+		return this.transform(M4.projection(P3.ZX))
 	}
 	shearedX (y, z) {
 		return this.transform(M4([
@@ -1749,12 +1942,7 @@ NLA.Transformable =
 	 * @abstract
 	 * @param {M4} m4
 	 * @returns {T}
-	 * @name transform
 	 * @method
-	 * Don't uncomment as it overwrites the implemented function when addTransformationMethods is called.
 	 */
-	// transform (m4) {
-	// 	assert(false, "Not implemented on " + this.toSource())
-	// }
 }
 NLA.addOwnProperties(Array.prototype, ARRAY_UTILITIES)

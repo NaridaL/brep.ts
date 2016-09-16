@@ -9,16 +9,20 @@
  * Created by aval on 21/12/2015.
  */
 
-var P3 = NLA.Plane3
-
 
 var eps = 1e-5
 /**
  * @constructor
- * @augments {NLA.Transformable}
+ * @augments {Transformable}
  * @returns {B2}
  */
-var B2 = NLA.degineClass('B2', NLA.Transformable,
+var B2 = NLA.defineClass('B2', Transformable,
+	/**
+	 *
+	 * @param {Face[]} faces
+	 * @param infiniteVolume
+	 * @param generator
+	 */
 	function (faces, infiniteVolume, generator) {
 		this.faces = faces
 		assert(faces.every(f => f instanceof B2.Face), () => 'faces.every(f => f instanceof B2.Face)\n' + this.toString())
@@ -115,7 +119,7 @@ var B2 = NLA.degineClass('B2', NLA.Transformable,
 				} else {
 					var sl = arr.find(subloop => {
 						var contains = surface.edgeLoopContainsPoint(subloop.edges, newLoop.edges[0].a)
-						console.log(newLoop.edges[0].a.ss, newLoop.ccw ? contains : !contains)
+						console.log(newLoop.edges[0].a.sce, newLoop.ccw ? contains : !contains)
 						return contains
 					})
 					console.log("here", sl)
@@ -202,7 +206,7 @@ var B2 = NLA.degineClass('B2', NLA.Transformable,
 						var looseLoop = true // uses only new segments edges
 						do {
 							currentEdge.visited = true
-							console.log('currentEdge', currentEdge.b.ss, currentEdge.toSource())
+							console.log('currentEdge', currentEdge.b.sce, currentEdge.toSource())
 							edges.push(currentEdge)
 							// find next edge
 							var possibleLooseEdges = newSegments.filter(edge => edgeCond(edge)), looseSegments
@@ -337,7 +341,7 @@ var B2 = NLA.degineClass('B2', NLA.Transformable,
 					looseSegments.push(new baseEdge.constructor(baseEdge.curve, startP, baseEdge.b, startT, baseEdge.bT, null, startDir, baseEdge.bDir))
 				}
 				if (baseEdge.b.like(V3(0, 4, 1))) {
-					console.log('pointInfos', baseEdge.reversed, baseEdge.ss, pointInfos.map(pi => '\n' + pi.toSource()).join())
+					console.log('pointInfos', baseEdge.reversed, baseEdge.sce, pointInfos.map(pi => '\n' + pi.toSource()).join())
 					console.log(looseSegments)
 				}
 				edgeLooseSegments.set(baseEdge, looseSegments)
@@ -447,16 +451,16 @@ var B2 = NLA.degineClass('B2', NLA.Transformable,
 )
 /**
  *
- * @param surface
- * @param contour
- * @param holes
+ * @param {Surface} surface
+ * @param {Edge[]} contour
+ * @param {Edge[][]=} holes
  * @constructor
  */
 B2.Face = function (surface, contour, holes) {
 	this.assertChain(contour)
 	//assert(surface.edgeLoopCCW(contour), surface.toString()+contour.join("\n"))
 	assert(contour.every(f => f instanceof B2.Edge), 'contour.every(f => f instanceof B2.Edge)' + contour.toSource())
-	contour.forEach(e => !surface.containsCurve(e.curve) && console.log("FAIL:"+surface.plane.distanceToPoint(e.curve.anchor)))
+	// contour.forEach(e => !surface.containsCurve(e.curve) && console.log("FAIL:"+surface.distanceToPoint(e.curve.anchor)))
 	contour.forEach(e => assert(surface.containsCurve(e.curve), e + surface))
 	holes && holes.forEach(hole => this.assertChain(hole))
 	//holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)))
@@ -467,7 +471,7 @@ B2.Face = function (surface, contour, holes) {
 	this.id = globalId++
 
 }
-B2.Face.prototype = NLA.defineObject(NLA.Transformable.prototype, {
+B2.Face.prototype = NLA.defineObject(Transformable.prototype, {
 	transform: function (m4) {
 		var newEdges = this.edges.map(e => e.transform(m4))
 		var newHoles = this.holes.map(hole => hole.map(e => e.transform(m4)))
@@ -476,7 +480,7 @@ B2.Face.prototype = NLA.defineObject(NLA.Transformable.prototype, {
 	assertChain: function (edges) {
 		edges.forEach((edge, i) => {
 			var j = (i + 1) % edges.length
-			assert(edge.b.like(edges[j].a), `edges[${i}].b != edges[${j}].a (${edges[i].b.ss} != ${edges[j].a.ss})`)
+			assert(edge.b.like(edges[j].a), `edges[${i}].b != edges[${j}].a (${edges[i].b.sce} != ${edges[j].a.sce})`)
 		})
 	},
 	flipped: function () {
@@ -553,17 +557,32 @@ B2.Face.prototype = NLA.defineObject(NLA.Transformable.prototype, {
 
 		return nearestPoint ? line.pointLambda(nearestPoint) : NaN
 	},
+	toMesh: function () {
+		let mesh = new GL.Mesh({triangles: true, normals: true, lines: true})
+		mesh.faceIndexes = new Map()
+		this.addToMesh(mesh)
+		mesh.compile()
+		return mesh
+	},
 	constructor: B2.Face
 })
 
 
 B2.Edge = function () {}
-B2.Edge.prototype = NLA.defineObject(null, {
+B2.Edge.prototype = NLA.defineObject(Transformable.prototype, {
 	toString: function (f) {
 		return `new ${this.name}(${this.curve.toString(f)}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, null, ${this.aDir}, ${this.bDir})`
 	},
 	getIntersectionsWithPlane: function (p) {
 		assert(false, this.name + '.isTsWithPlane')
+	},
+	colinearToLine: function (line) {
+		return this.curve instanceof L3 && this.curve.isColinearTo(line)
+	},
+	tValueInside: function (t) {
+		return this.aT < this.bT 
+			? NLA.lt(this.aT, t) && NLA.lt(t, this.bT)
+			: NLA.lt(this.bT, t) && NLA.lt(t, this.aT)
 	}
 })
 /**
@@ -572,10 +591,21 @@ B2.Edge.prototype = NLA.defineObject(null, {
  * @returns {boolean}
  */
 B2.Edge.isLoop = function (loop) {
-	loop.every((edge, i) => edge.b.like(loop[i + 1 % loop.length].a))
+	return loop.every((edge, i) => edge.b.like(loop[(i + 1) % loop.length].a))
+}
+B2.Edge.edgesIntersect = function (e1, e2) {
+	assertInst(B2.Edge, e1, e2)
+	if (e1.hlol > e2.hlol) {
+		[e2, e1] = [e1, e2]
+	}
+	let sts = e1.curve.isInfosWithCurve(e2.curve)
+	// console.log(sts.map(SCE), e1.aT, e1.bT, e2.aT, e2.bT)
+	return sts.some(
+		/// (  e1.aT < tThis < e1.bT  )  &&  (  e2.aT < tOther < e2.bT  )
+		({tThis, tOther}) => e1.tValueInside(tThis) && e2.tValueInside(tOther))
 }
 
-B2.PlaneFace = NLA.degineClass('B2.PlaneFace', B2.Face,
+B2.PlaneFace = NLA.defineClass('B2.PlaneFace', B2.Face,
 	function (planeSurface, contour, holes, name) {
 		B2.Face.call(this, planeSurface, contour, holes, name)
 		assertInst(PlaneSurface, planeSurface)
@@ -742,7 +772,7 @@ B2.PlaneFace = NLA.degineClass('B2.PlaneFace', B2.Face,
 						dMesh.compile()
 						console.log(dMesh)
 					}
-					console.log('iscurve', newCurve.toString(), newCurve.tangentAt(ps1[0].t).ss)
+					console.log('iscurve', newCurve.toString(), newCurve.tangentAt(ps1[0].t).sce)
 					console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
 					var segments = newCurve instanceof L3
 						? getBlug(ps1, ps2, newCurve)
@@ -824,7 +854,7 @@ B2.PlaneFace = NLA.degineClass('B2.PlaneFace', B2.Face,
 						NLA.mapAdd(edgeMap, col2, {edgeT: col2.curve.pointLambda(seg.a), p: seg.a})
 						NLA.mapAdd(edgeMap, col2, {edgeT: col2.curve.pointLambda(seg.b), p: seg.b})
 						let testVector = face2Plane.normal.negated().rejectedFrom(thisPlane.normal)
-						console.log("testVector", testVector.ss, face2Brep.ss, splitsVolumeEnclosingFaces(face2Brep, col2, testVector, thisPlane.normal) == INSIDE)
+						console.log("testVector", testVector.sce, face2Brep.sce, splitsVolumeEnclosingFaces(face2Brep, col2, testVector, thisPlane.normal) == INSIDE)
 						if (splitsVolumeEnclosingFaces(face2Brep, col2, testVector, thisPlane.normal) == INSIDE) {
 							NLA.mapAdd(faceMap, face, seg)
 						}
@@ -846,7 +876,7 @@ B2.PlaneFace = NLA.degineClass('B2.PlaneFace', B2.Face,
 					// faces are touching edge-edge
 					let testVector1 = col1.aDir.cross(thisPlane.normal).negated()
 					let testVector2 = col2.aDir.cross(face2Plane.normal).negated()
-					console.log("testVector", testVector1.ss, face2Brep.ss, splitsVolumeEnclosingFaces(face2Brep, col2, testVector1, thisPlane.normal) == INSIDE)
+					console.log("testVector", testVector1.sce, face2Brep.sce, splitsVolumeEnclosingFaces(face2Brep, col2, testVector1, thisPlane.normal) == INSIDE)
 					if (splitsVolumeEnclosingFaces(face2Brep, col2, testVector1, thisPlane.normal) == INSIDE
 						&& splitsVolumeEnclosingFaces(thisBrep, col1, testVector2, face2Plane.normal) == INSIDE) {
 						//NLA.mapAdd(faceMap, face2, seg.flipped())
@@ -1058,8 +1088,8 @@ function getFacePlaneIntersectionSs(brep, brepFace, line, plane2) {
 						// endpoint lies on intersection line
 						console.log('endpoint lies on intersection line',
 							intersectionLinePerpendicular.dot(edge.bDir) , intersectionLinePerpendicular.dot(nextEdge.aDir),
-							intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir), intersectionLinePerpendicular.ss,
-							edge.bDir.ss, nextEdge.aDir.ss)
+							intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir), intersectionLinePerpendicular.sce,
+							edge.bDir.sce, nextEdge.aDir.sce)
 						if (!colinearSegments[j] && intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
 							// next segment is not colinear and ends on different side
 							console.log("adding")
@@ -1134,8 +1164,8 @@ function getFacePlaneIntersectionSs2(brep, brepFace, isCurves, surface2, removeC
 					// endpoint lies on intersection isCurve
 					console.log('endpoint lies on intersection isCurve',
 						intersectionLinePerpendicular.dot(edge.bDir) , intersectionLinePerpendicular.dot(nextEdge.aDir),
-						intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir), intersectionLinePerpendicular.ss,
-						edge.bDir.ss, nextEdge.aDir.ss)
+						intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir), intersectionLinePerpendicular.sce,
+						edge.bDir.sce, nextEdge.aDir.sce)
 					if (colinearSegments[j]) {
 						// next segment is colinear
 						// we need to calculate if the section of the plane intersection isCurve BEFORE the colinear segment is
@@ -1166,9 +1196,9 @@ function getFacePlaneIntersectionSs2(brep, brepFace, isCurves, surface2, removeC
 					let onCurve = isCurves.length, isCurve
 					let p = edge.curve.at(edgeT)
 					while (--onCurve >= 0 && !(isCurve = isCurves[onCurve]).containsPoint(p)) {}
-					console.log('edgeT', edgeT, 'p', p.ss, edge, onCurve)
+					console.log('edgeT', edgeT, 'p', p.sce, edge, onCurve)
 					if (onCurve < 0) {
-						assert (false, p.ss)
+						assert (false, p.sce)
 					}
 					assert(isCurve.containsPoint(p))
 					let ov = edge.tangentAt(edgeT).cross(faceSurface.normalAt(p))
@@ -1181,7 +1211,7 @@ function getFacePlaneIntersectionSs2(brep, brepFace, isCurves, surface2, removeC
 			}
 		}
 	})
-	pss.forEach(ps => ps.sort((a, b) => a.t - b.t || assert(false, a.t + ' '+b.t+' '+a.p.ss)))
+	pss.forEach(ps => ps.sort((a, b) => a.t - b.t || assert(false, a.t + ' '+b.t+' '+a.p.sce)))
 	return pss
 }
 
@@ -1290,7 +1320,6 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 		return vs
 	},
 	addToMesh: function (mesh) {
-		console.log("mlsadkl")
 		var closed = false
 		var hSplit = 32, zSplit = 1
 		var ribs = []
@@ -1313,7 +1342,7 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 		vertexLoops.forEach(vertexLoop => {
 			vertexLoop.forEach((v0, i, vs) => {
 				var v1 = vs[(i + 1) % vs.length], dDiff = v1.x - v0.x
-				//console.log(v0.ss, v1.ss)
+				//console.log(v0.sce, v1.sce)
 				if (NLA.isZero(dDiff)) {
 					return
 				}
@@ -1432,15 +1461,15 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 B2.RotationFace.prototype.constructor = B2.RotationFace
 
 
-B2.PCurveEdge = NLA.degineClass('B2.PCurveEdge', B2.Edge,
+B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 	function (curve, a, b, aT, bT, flippedOf, aDir, bDir) {
 		assertNumbers(aT, bT)
 		assertVectors(a, b, aDir, bDir)
-		assert(curve instanceof L3 || curve instanceof Curve, curve)
-		assert(!curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
-		assert(curve.at(aT).like(a))
-		assert(curve.at(bT).like(b))
-		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), curve.tangentAt(aT).ss +' '+ aDir.ss)
+		assertf(() => curve instanceof L3 || curve instanceof Curve, curve)
+		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
+		assertf(() => curve.at(aT).like(a), curve.at(aT)+a)
+		assertf(() => curve.at(bT).like(b), curve.at(bT)+b)
+		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), curve.tangentAt(aT).sce +' '+ aDir.sce)
 		assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
 		this.curve = curve
 		this.a = a
@@ -1451,7 +1480,7 @@ B2.PCurveEdge = NLA.degineClass('B2.PCurveEdge', B2.Edge,
 		this.bDir = bDir
 		this.canon = flippedOf
 		this.reversed = this.aDir.dot(curve.tangentAt(aT)) < 0
-		assert(this.reversed != aT < bT, aT+' '+bT+' '+curve.constructor.name+' '+this.aDir.ss+' '+this.bDir.ss + ' '+curve.tangentAt(aT))
+		assert(this.reversed != aT < bT, aT+' '+bT+' '+curve.constructor.name+' '+this.aDir.sce+' '+this.bDir.sce + ' '+curve.tangentAt(aT))
 		this.id = globalId++
 	},
 	{
@@ -1527,9 +1556,6 @@ B2.PCurveEdge = NLA.degineClass('B2.PCurveEdge', B2.Edge,
 				null,
 				m4.transformVector(this.aDir), m4.transformVector(this.bDir))
 		},
-		colinearToLine: function (line) {
-			return this.curve instanceof L3 && this.curve.equals(line)
-		},
 		isCoEdge: function (edge) {
 			// TODO: optimization with flippedOf etc
 			return this == edge ||
@@ -1538,9 +1564,6 @@ B2.PCurveEdge = NLA.degineClass('B2.PCurveEdge', B2.Edge,
 					|| this.a.like(edge.b) && this.b.like(edge.a)
 				)
 		},
-		likeEdge: function (edge) {
-			return edge.constructor == StraightEdge && this.a.like(edge.a) && this.b.like(edge.b)
-		}
 	}
 )
 B2.PCurveEdge.forCurveAndTs = function (curve, aT, bT) {
@@ -1548,7 +1571,7 @@ B2.PCurveEdge.forCurveAndTs = function (curve, aT, bT) {
 		aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(),
 		aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated())
 }
-var StraightEdge = NLA.degineClass('StraightEdge', B2.Edge,
+var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 	function (line, a, b, aT, bT, flippedOf) {
 		assertNumbers(aT, bT)
 		assertVectors(a, b)
@@ -1607,9 +1630,6 @@ var StraightEdge = NLA.degineClass('StraightEdge', B2.Edge,
 		set bDir(x) {  },
 		transform: function (m4) {
 			return new StraightEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT, this.bT)
-		},
-		colinearToLine: function (line) {
-			return this.curve.equals(line)
 		},
 		isCoEdge: function (edge) {
 			// TODO: optimization with flippedOf etc
@@ -2131,11 +2151,19 @@ function asj(iCurve1, loopPoints1, iCurve2) {
 	}
 	return iss
 }
-
+/**
+ *
+ * @param {function (number, number):number} f1
+ * @param {function (number, number):number} f2
+ * @param {number} startS
+ * @param {number} startT
+ * @param {number=} iterations
+ * @returns {V3}
+ */
 function newtonIterate2d(f1, f2, startS, startT, iterations) {
 	iterations = iterations || 4
 	var s = startS, t = startT
-	var eps = 1e-5
+	var eps = 1e-6
 	do {
 		/*
 			| a b |-1                   |  d -b |
@@ -2160,7 +2188,32 @@ function newtonIterate2d(f1, f2, startS, startT, iterations) {
 	} while (--iterations && f1ts * f1ts + f2ts * f2ts > NLA.PRECISION)
 	if (!iterations) {
 		//console.log(f1ts * f1ts + f2ts * f2ts)
-		return null
+	 	return null
+	}
+	return V3(s, t, 0)
+}
+function newtonIterate2dWithDerivatives(f, g, startS, startT, iterations, dfds, dfdt, dgds, dgdt) {
+	iterations = iterations || 4
+	var s = startS, t = startT
+	var eps = 1e-6
+	do {
+		/*
+			| a b |-1                   |  d -b |
+			| c d |   = 1 / (ad - bc) * | -c  a |
+		 */
+		var f1ts = f(s, t), f2ts = g(s, t)
+		var df1s = dfds(s, t), df1t = dfdt(s, t),
+			df2s = dgds(s, t), df2t = dgdt(s, t)
+		// TODO: is this even more accurate?
+		var det = df1s * df2t - df1t * df2s
+		var ds = ( df2t * f1ts - df1t * f2ts) / det
+		var dt = (-df2s * f1ts + df1s * f2ts) / det
+		s -= ds
+		t -= dt
+	} while (--iterations && f1ts * f1ts + f2ts * f2ts > NLA.PRECISION / 32)
+	if (!iterations) {
+		//console.log(f1ts * f1ts + f2ts * f2ts)
+	 	return null
 	}
 	return V3(s, t, 0)
 }
@@ -2170,6 +2223,16 @@ function newtonIterate(f, startValue, steps) {
 	for (var i = 0; i < (steps || 4); i++) {
 		var ft = f(t)
 		var dft = (f(t + eps) - ft) / eps
+		//console.log("ft / dft", ft / dft)
+		t = t - ft / dft
+	}
+	return t
+}
+function newtonIterateWithDerivative(f, startValue, steps, df) {
+	var t = startValue
+	for (var i = 0; i < (steps || 4); i++) {
+		var ft = f(t)
+		var dft = df(t)
 		//console.log("ft / dft", ft / dft)
 		t = t - ft / dft
 	}
@@ -2209,7 +2272,7 @@ function cassini(a, c) {
 	return (x,y) => (x*x+y*y) * (x*x+y*y) - 2 * c * c * (x * x - y * y) - (a * a * a * a - c * c * c * c)
 }
 // TODO: V3.create instead of V3 where necessar
-var drPs = []
+var drPs = [], drVs = []
 function parseGetParams() {
 	var result = {}
 	window.location.search
@@ -2231,7 +2294,7 @@ function initB2() {
 
 	aMesh = cyl.toMesh()
 	bMesh = ell.toMesh()
-	c1.intersectWithEllipse(test)
+	c1.isPointsWithEllipse(test)
 	dMesh.compile()
 	*/
 	eyePos = V3(0, 100, 100)
@@ -2397,7 +2460,7 @@ CustomPlane.prototype.distanceTo = function (line) {
 		L3(this.anchor.plus(this.right.times(this.rightEnd)), this.up),
 		L3(this.anchor.plus(this.up.times(this.upStart)), this.right),
 		L3(this.anchor.plus(this.up.times(this.upEnd)), this.right)].map(function (line2, line2Index) {
-		var info = line2.pointClosestTo2(line);
+		var info = line2.infoClosestToLine(line);
 		if ((isNaN(info.t) // parallel lines
 			|| line2Index < 2 && this.upStart <= info.t && info.t <= this.upEnd
 			|| line2Index >= 2 && this.rightStart <= info.t && info.t <= this.rightEnd)
@@ -2485,7 +2548,6 @@ window.loadup = function () {
 	gl.depthFunc(gl.LEQUAL)
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // TODO ?!
 
-	cubeMesh = GL.Mesh.cube();
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.loadIdentity();
 	gl.scale(10, 10, 10);

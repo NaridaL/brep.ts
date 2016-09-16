@@ -33,12 +33,17 @@ class ParabolaCurve extends Curve {
 
 	tangentAt(t) {
 		assertNumbers(t)
-		return this.f1.plus(this.f2.times(2 * t)).normalized()
+		return this.f1.plus(this.f2.times(2 * t))
+	}
+
+	ddt(t) {
+		assertNumbers(t)
+		return this.f2.times(2)
 	}
 
 	tangentAt2(xi, eta) {
 		assertNumbers(xi, eta)
-		return this.f1.plus(this.f2.times(2 * eta)).normalized()
+		return this.f1.plus(this.f2.times(2 * eta))
 	}
 
 	isCircular() {
@@ -183,7 +188,7 @@ class ParabolaCurve extends Curve {
 	}
 
 	/**
-	 * @returns {NLA.Plane3}
+	 * @returns {P3}
 	 */
 	getPlane() {
 		return P3.normalOnAnchor(this.normal, this.center)

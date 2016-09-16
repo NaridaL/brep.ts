@@ -170,8 +170,8 @@ class EllipsoidSurface extends Surface {
 	}
 
 
-	toMesh(count) {
-		return GL.Mesh.sphere(3).transform(this.matrix)
+	toMesh(subdivisions) {
+		return GL.Mesh.sphere(subdivisions).transform(this.matrix)
 		// let mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
 		// let pf = this.parametricFunction()
 		// let pn = this.parametricNormal()
@@ -341,5 +341,9 @@ class EllipsoidSurface extends Surface {
 	 */
 	static forABC(a, b, c, center) {
 		return new EllipsoidSurface(center || V3.ZERO, V3.create(a, 0, 0), V3.create(0, b, 0), V3.create(0, 0, c))
+	}
+
+	volume() {
+		return 4 / 4 * Math.PI * this.f1.dot(this.f2.cross(this.f3))
 	}
 }

@@ -5,7 +5,7 @@
 if (!V3) {0
 	throw new Error("Define NLA.V3 first")
 }
-var P3 = NLA.Plane3;
+
 /**
  * This constructor takes 16 arguments in row-major order, which can be passed individually, as a list, or even as
  * four lists, one for each row. If the arguments are omitted then the identity matrix is constructed instead.
@@ -421,6 +421,16 @@ M4.prototype = NLA.defineObject(NLA.Matrix.prototype, /** @lends {M4.prototype} 
 	    var det = this.determinant()
 		return 1 == det ? this : this.divScalar(Math.sqrt(Math.sqrt(det)))
     },
+    /**
+     * Returns this matrix scaled so that the determinant is 1.
+     * det(c * A) = (c ** n) * det(A) for n x n matrices,
+     * so we need to divide by the 4th root of the determinant
+     * @returns {M4}
+     */
+    normalized2: function () {
+	    let div = this.m[15]
+		return 1 == div ? this : this.divScalar(Math.sqrt(Math.sqrt(div)))
+    },
 
     /**
      * Returns if the matrix has the following form (within NLA.PRECISION):
@@ -479,35 +489,39 @@ M4.inverse = function(matrix, result) {
     assertInst(M4, matrix)
     assert(!result || result instanceof M4, "!result || result instanceof M4")
     assert(matrix != result, "matrix != result")
-    result = result || M4();
-    var m = matrix.m, r = result.m;
+    result = result || M4()
+    var m = matrix.m, r = result.m
 
-    r[0] = m[5]*m[10]*m[15] - m[5]*m[14]*m[11] - m[6]*m[9]*m[15] + m[6]*m[13]*m[11] + m[7]*m[9]*m[14] - m[7]*m[13]*m[10];
-    r[1] = -m[1]*m[10]*m[15] + m[1]*m[14]*m[11] + m[2]*m[9]*m[15] - m[2]*m[13]*m[11] - m[3]*m[9]*m[14] + m[3]*m[13]*m[10];
-    r[2] = m[1]*m[6]*m[15] - m[1]*m[14]*m[7] - m[2]*m[5]*m[15] + m[2]*m[13]*m[7] + m[3]*m[5]*m[14] - m[3]*m[13]*m[6];
-    r[3] = -m[1]*m[6]*m[11] + m[1]*m[10]*m[7] + m[2]*m[5]*m[11] - m[2]*m[9]*m[7] - m[3]*m[5]*m[10] + m[3]*m[9]*m[6];
+	// first compute transposed cofactor matrix:
+	// cofactor of an element is the determinant of the 3x3 matrix gained by removing the column and row belonging to the element
+    r[0] = m[5]*m[10]*m[15] - m[5]*m[14]*m[11] - m[6]*m[9]*m[15] + m[6]*m[13]*m[11] + m[7]*m[9]*m[14] - m[7]*m[13]*m[10]
+    r[1] = -m[1]*m[10]*m[15] + m[1]*m[14]*m[11] + m[2]*m[9]*m[15] - m[2]*m[13]*m[11] - m[3]*m[9]*m[14] + m[3]*m[13]*m[10]
+    r[2] = m[1]*m[6]*m[15] - m[1]*m[14]*m[7] - m[2]*m[5]*m[15] + m[2]*m[13]*m[7] + m[3]*m[5]*m[14] - m[3]*m[13]*m[6]
+    r[3] = -m[1]*m[6]*m[11] + m[1]*m[10]*m[7] + m[2]*m[5]*m[11] - m[2]*m[9]*m[7] - m[3]*m[5]*m[10] + m[3]*m[9]*m[6]
 
-    r[4] = -m[4]*m[10]*m[15] + m[4]*m[14]*m[11] + m[6]*m[8]*m[15] - m[6]*m[12]*m[11] - m[7]*m[8]*m[14] + m[7]*m[12]*m[10];
-    r[5] = m[0]*m[10]*m[15] - m[0]*m[14]*m[11] - m[2]*m[8]*m[15] + m[2]*m[12]*m[11] + m[3]*m[8]*m[14] - m[3]*m[12]*m[10];
-    r[6] = -m[0]*m[6]*m[15] + m[0]*m[14]*m[7] + m[2]*m[4]*m[15] - m[2]*m[12]*m[7] - m[3]*m[4]*m[14] + m[3]*m[12]*m[6];
-    r[7] = m[0]*m[6]*m[11] - m[0]*m[10]*m[7] - m[2]*m[4]*m[11] + m[2]*m[8]*m[7] + m[3]*m[4]*m[10] - m[3]*m[8]*m[6];
+    r[4] = -m[4]*m[10]*m[15] + m[4]*m[14]*m[11] + m[6]*m[8]*m[15] - m[6]*m[12]*m[11] - m[7]*m[8]*m[14] + m[7]*m[12]*m[10]
+    r[5] = m[0]*m[10]*m[15] - m[0]*m[14]*m[11] - m[2]*m[8]*m[15] + m[2]*m[12]*m[11] + m[3]*m[8]*m[14] - m[3]*m[12]*m[10]
+    r[6] = -m[0]*m[6]*m[15] + m[0]*m[14]*m[7] + m[2]*m[4]*m[15] - m[2]*m[12]*m[7] - m[3]*m[4]*m[14] + m[3]*m[12]*m[6]
+    r[7] = m[0]*m[6]*m[11] - m[0]*m[10]*m[7] - m[2]*m[4]*m[11] + m[2]*m[8]*m[7] + m[3]*m[4]*m[10] - m[3]*m[8]*m[6]
 
-    r[8] = m[4]*m[9]*m[15] - m[4]*m[13]*m[11] - m[5]*m[8]*m[15] + m[5]*m[12]*m[11] + m[7]*m[8]*m[13] - m[7]*m[12]*m[9];
-    r[9] = -m[0]*m[9]*m[15] + m[0]*m[13]*m[11] + m[1]*m[8]*m[15] - m[1]*m[12]*m[11] - m[3]*m[8]*m[13] + m[3]*m[12]*m[9];
-    r[10] = m[0]*m[5]*m[15] - m[0]*m[13]*m[7] - m[1]*m[4]*m[15] + m[1]*m[12]*m[7] + m[3]*m[4]*m[13] - m[3]*m[12]*m[5];
-    r[11] = -m[0]*m[5]*m[11] + m[0]*m[9]*m[7] + m[1]*m[4]*m[11] - m[1]*m[8]*m[7] - m[3]*m[4]*m[9] + m[3]*m[8]*m[5];
+    r[8] = m[4]*m[9]*m[15] - m[4]*m[13]*m[11] - m[5]*m[8]*m[15] + m[5]*m[12]*m[11] + m[7]*m[8]*m[13] - m[7]*m[12]*m[9]
+    r[9] = -m[0]*m[9]*m[15] + m[0]*m[13]*m[11] + m[1]*m[8]*m[15] - m[1]*m[12]*m[11] - m[3]*m[8]*m[13] + m[3]*m[12]*m[9]
+    r[10] = m[0]*m[5]*m[15] - m[0]*m[13]*m[7] - m[1]*m[4]*m[15] + m[1]*m[12]*m[7] + m[3]*m[4]*m[13] - m[3]*m[12]*m[5]
+    r[11] = -m[0]*m[5]*m[11] + m[0]*m[9]*m[7] + m[1]*m[4]*m[11] - m[1]*m[8]*m[7] - m[3]*m[4]*m[9] + m[3]*m[8]*m[5]
 
-    r[12] = -m[4]*m[9]*m[14] + m[4]*m[13]*m[10] + m[5]*m[8]*m[14] - m[5]*m[12]*m[10] - m[6]*m[8]*m[13] + m[6]*m[12]*m[9];
-    r[13] = m[0]*m[9]*m[14] - m[0]*m[13]*m[10] - m[1]*m[8]*m[14] + m[1]*m[12]*m[10] + m[2]*m[8]*m[13] - m[2]*m[12]*m[9];
-    r[14] = -m[0]*m[5]*m[14] + m[0]*m[13]*m[6] + m[1]*m[4]*m[14] - m[1]*m[12]*m[6] - m[2]*m[4]*m[13] + m[2]*m[12]*m[5];
-    r[15] = m[0]*m[5]*m[10] - m[0]*m[9]*m[6] - m[1]*m[4]*m[10] + m[1]*m[8]*m[6] + m[2]*m[4]*m[9] - m[2]*m[8]*m[5];
+    r[12] = -m[4]*m[9]*m[14] + m[4]*m[13]*m[10] + m[5]*m[8]*m[14] - m[5]*m[12]*m[10] - m[6]*m[8]*m[13] + m[6]*m[12]*m[9]
+    r[13] = m[0]*m[9]*m[14] - m[0]*m[13]*m[10] - m[1]*m[8]*m[14] + m[1]*m[12]*m[10] + m[2]*m[8]*m[13] - m[2]*m[12]*m[9]
+    r[14] = -m[0]*m[5]*m[14] + m[0]*m[13]*m[6] + m[1]*m[4]*m[14] - m[1]*m[12]*m[6] - m[2]*m[4]*m[13] + m[2]*m[12]*m[5]
+    r[15] = m[0]*m[5]*m[10] - m[0]*m[9]*m[6] - m[1]*m[4]*m[10] + m[1]*m[8]*m[6] + m[2]*m[4]*m[9] - m[2]*m[8]*m[5]
 
-    var det = m[0]*r[0] + m[1]*r[4] + m[2]*r[8] + m[3]*r[12];
+	// calculate determinant using laplace expansion (cf https://en.wikipedia.org/wiki/Laplace_expansion),
+	// as we already have the cofactors. We multiply a column by a row as the cofactor matrix is transposed.
+    var det = m[0]*r[0] + m[1]*r[4] + m[2]*r[8] + m[3]*r[12]
    // assert(!NLA.isZero(det), "det may not be zero, i.e. the matrix is not invertible")
     var i = 16
     while (i--) { r[i] /= det }
-    return result;
-};
+    return result
+}
 
 /**
  * Returns `matrix`, exchanging columns for rows. You can optionally pass an
@@ -615,15 +629,18 @@ M4.forSys = function (e0, e1, e2, origin) {
  * @param {V3} n0
  * @param {V3} n1
  * @param {V3} n2
+ * @param {V3=} n3
  * @returns {M4}
  */
-M4.forRows = function (n0, n1, n2) {
+M4.forRows = function (n0, n1, n2, n3) {
     assertVectors(n0, n1, n2)
+	!n3 || assertVectors(n2)
+	n3 = n3 || V3.ZERO
     return M4(
 	    n0.x, n0.y, n0.z, 0,
 	    n1.x, n1.y, n1.z, 0,
 	    n2.x, n2.y, n2.z, 0,
-	    0,	     0,    0, 1);
+	    n3.x, n3.y, n3.z, 1);
 }
 
 /**
@@ -741,14 +758,14 @@ M4.frustum = function(l, r, b, t, n, f, result) {
  * Returns a new M4 representing the a projection through/towards a point onto a plane.
  *
  * @param {V3} p
- * @param {NLA.Plane3} plane
+ * @param {P3} plane
  * @param {M4=} result
  * @returns {M4}
  */
 M4.projectPlanePoint = function(p, plane, result) {
     assertVectors(p)
     assertInst(P3, plane)
-    console.log('p', p.ss, plane)
+    console.log('p', p.sce, plane)
     assert(!result || result instanceof M4, "!result || result instanceof M4")
     result = result || M4()
     var m = result.m
@@ -1322,26 +1339,30 @@ M4.temp2 = M4()
  * @type {M4}
  */
 M4.FOO = M4(
-	 0,  1,  1,  2,
-	 0.3,  0.4,  0.8, 13,
+	0, 1, 1, 2,
+	0.3, 0.4, 0.8, 13,
 	2.1, 3.4, 5.5, 8.9,
-	 0,  0,  0,  1)
+	0, 0, 0, 1)
+M4.FOO.name = 'M4.FOO'
 /**
  * Inverse of M4.FOO
  * @const
  * @type {M4}
  */
 M4.BAR = M4.FOO.inversed()
+M4.BAR.name = 'M4.BAR'
 
 /**
  * @const
  * @type {M4}
  */
 M4.IDENTITY = M4.identity()
+M4.IDENTITY.name = 'M4.IDENTITY'
 
 M4.IDENTITY3 = M4(
-	1,0,0,0,
-	0,1,0,0,
-	0,0,1,0,
-	0,0,0,0
+	1, 0, 0, 0,
+	0, 1, 0, 0,
+	0, 0, 1, 0,
+	0, 0, 0, 0
 )
+M4.IDENTITY3.name = 'M4.IDENTITY3'

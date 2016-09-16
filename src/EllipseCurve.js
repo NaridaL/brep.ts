@@ -31,11 +31,16 @@ class EllipseCurve extends Curve {
 
 	tangentAt(t) {
 		assertNumbers(t)
-		return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t))).normalized()
+		return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t)))
+	}
+
+	ddt(t) {
+		assertNumbers(t)
+		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t))).normalized()
 	}
 
 	tangentAt2(xi, eta) {
-		return this.f2.times(xi).minus(this.f1.times(eta)).normalized()
+		return this.f2.times(xi).minus(this.f1.times(eta))
 	}
 
 	isCircular() {
@@ -168,7 +173,7 @@ class EllipseCurve extends Curve {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof CylinderSurface) {
 			var ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir))
-			return this.intersectWithEllipse(ellipseProjected).map(p => this.pointLambda(p))
+			return this.isPointsWithEllipse(ellipseProjected).map(p => this.pointLambda(p))
 		} else {
 			assert(false)
 		}
@@ -223,13 +228,18 @@ class EllipseCurve extends Curve {
 		return NLA.equals(1, localP.lengthXY()) && NLA.isZero(localP.z)
 	}
 
-	intersectWithEllipse(ellipse) {
+	/**
+	 *
+	 * @param {EllipseCurve} ellipse
+	 * @returns {V3[]}
+	 */
+	isPointsWithEllipse(ellipse) {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
 			var localEllipse = ellipse.transform(this.inverseMatrix).rightAngled()
 			//new EllipseCurve(V3.ZERO, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
-			console.log(localEllipse, localEllipse.ss)
+			console.log(localEllipse, localEllipse.sce)
 			//localEllipse.debugToMesh(dMesh, 'curve3')
 			var angle = localEllipse.f1.angleXY()
 			console.log('angle', angle)
@@ -259,7 +269,7 @@ class EllipseCurve extends Curve {
 			}
 			var rotEl = new EllipseCurve(rotCenter, V3(a, 0, 0), V3(0, b, 0))
 			//var rotEl = localEllipse.transform(resetMatrix)
-			console.log(rotEl, rotEl.ss)
+			console.log(rotEl, rotEl.sce)
 			//rotEl.debugToMesh(dMesh, 'curve2')
 			return results.map(p => resetMatrix.transformPoint(p))
 			/*
@@ -292,19 +302,93 @@ class EllipseCurve extends Curve {
 		}
 	}
 
+	isPointsWithLine(line) {
+		let localAnchor = this.inverseMatrix.transformPoint(line.anchor)
+		let localDir = this.inverseMatrix.transformVector(line.dir1)
+		if (NLA.isZero(localDir.z)) {
+			// local line parallel to XY-plane
+			if (NLA.isZero(localAnchor.z)) {
+				// local line lies in XY-plane
+				// ell: x² + y² = 1 = p²
+				// line(t) = anchor + t dir
+				// anchor² - 1 + 2 t dir anchor + t² dir² = 0
+				let pqDiv = localDir.dot(localDir)
+				let lineTs = pqFormula(2 * localDir.dot(localAnchor) / pqDiv, (anchor.dot(anchor) - 1) / pqDiv)
+				return lineTs.map(t => line.at(t))
+			}
+		} else {
+			// if the line intersects the XY-plane in a single point, there can be an intersection there
+			// find point, then check if distance from circle = 1
+			let localLineISTWithXYPlane = localAnchor.z / localDir.z
+			let localLineISPointWithXYPlane = localDir.times(localLineISTWithXYPlane).plus(localAnchor)
+			if (NLA.equals(1, localLineISPointWithXYPlane.lengthXY())) {
+				// point lies on unit circle
+				return line.at(localLineISTWithXYPlane)
+			}
+		}
+		return []
+	}
+
+	/**
+	 *
+	 * @param {BezierCurve} bezier
+	 */
+	isPointsWithBezier(bezier) {
+		let localBezier = bezier.transform(this.inverseMatrix)
+		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
+			// up to 6 solutions possible
+			let f = t => localBezier.at(t).lengthSquaredXY() - 1
+			// f is polynome degree six, no explicit solutionis possble
+			let possibleTs = NLA.arrayFromFunction(16, i => newtonIterate(f, i / 15, 8)).filter(t => f(t) < NLA.PRECISION)
+			return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
+		} else {
+			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
+			return possibleISPoints.filter(p => NLA.equals(1, p.lengthXY())).m
+		}
+	}
+
+	closestTToPoint(p) {
+		// (at(t) - p) * tangentAt(t) = 0
+		// (xi f1 + eta f2 + q) * (xi f2 - eta f1) = 0
+		// xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
+		//  (xi² - eta²) f1 f2 + xi eta (f2^2-f1^2) + xi f2 q - eta f1 q = 0
+
+		// atan2 of p is a good first approximation for the searched t
+		let startT = this.inverseMatrix.transformPoint(p).angleXY()
+		let pRelCenter = p.minus(this.center)
+		let F = t => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
+		return newtonIterate(F, startT)
+	}
+
+	/**
+	 * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
+	 * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
+	 *
+	 * @param {number} a length of the axis parallel to X axis
+	 * @param {number} b length of the axis parallel to Y axis
+	 * @param {V3=} center Defaults to V3.ZERO
+	 * @returns {EllipseCurve}
+	 */
 	static forAB(a, b, center) {
 		return new EllipseCurve(center || V3.ZERO, V3(a, 0, 0), V3(0, b, 0))
 	}
 
 	/**
+	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
 	 *
 	 * @param {number} radius
-	 * @param {V3=} center
+	 * @param {V3=} center Defaults to V3.ZERO
 	 * @returns {EllipseCurve}
 	 */
 	static circle(radius, center) {
 		return new EllipseCurve(center || V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0))
 	}
+
+	area() {
+		// see https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
+		return Math.PI * this.f1.cross(this.f2).length()
+	}
 }
+EllipseCurve.prototype.hlol = Curve.hlol++
 EllipseCurve.UNIT = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
 EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 8)

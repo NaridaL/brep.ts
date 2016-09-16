@@ -48,12 +48,25 @@ AABB.prototype = {
 		assertInst(AABB, aabb)
 		return new AABB(this.min.max(aabb.min), this.max.min(aabb.max))
 	},
+	touchesAABB: function (aabb) {
+		assertInst(AABB, aabb)
+		return !(
+		this.min.x > aabb.max.x || this.max.x < aabb.min.x
+		|| this.min.y > aabb.max.y || this.max.y < aabb.min.y
+		|| this.min.z > aabb.max.z || this.max.z < aabb.min.z)
+	},
 	intersectsAABB: function (aabb) {
 		assertInst(AABB, aabb)
 		return !(
-			this.min.x > aabb.max.x || this.max.x < aabb.min.x
-			|| this.min.y > aabb.max.y || this.max.y < aabb.min.y
-			|| this.min.z > aabb.max.z || this.max.z < aabb.min.z)
+		this.min.x >= aabb.max.x || this.max.x <= aabb.min.x
+		|| this.min.y >= aabb.max.y || this.max.y <= aabb.min.y
+		|| this.min.z >= aabb.max.z || this.max.z <= aabb.min.z)
+	},
+	intersectsAABB2d: function (aabb) {
+		assertInst(AABB, aabb)
+		return !(
+		this.min.x >= aabb.max.x || this.max.x <= aabb.min.x
+		|| this.min.y >= aabb.max.y || this.max.y <= aabb.min.y)
 	},
 	containsPoint: function (p) {
 		assertVectors(p)
@@ -154,12 +167,29 @@ AABB.prototype = {
 
 	toString: function () {
 		return "new AABB("+this.min.toString()+", "+this.max.toString()+")"
+	},
+	toSource: function () {
+		return this.toString()
+	},
+
+	toMesh: function () {
+		let matrix = M4.multiplyMultiple(
+			M4.translation(this.min),
+			M4.scaling(this.size().max(V3(NLA.PRECISION, NLA.PRECISION, NLA.PRECISION))))
+		console.log(matrix.str)
+		console.log(matrix.inversed().transposed().str)
+		let mesh = GL.Mesh.cube()
+		console.log(mesh)
+		// mesh.vertices = this.corners()
+		mesh = mesh.transform(matrix)
+		console.log(matrix.transformedPoints(mesh.vertices))
+		mesh.compile()
+
+		return mesh
 	}
-
-
 }
-NLA.addOwnProperties(AABB.prototype, NLA.Transformable.prototype)
-console.log(Object.getOwnPropertyNames(NLA.Transformable.prototype))
+NLA.addOwnProperties(AABB.prototype, Transformable.prototype)
+console.log(Object.getOwnPropertyNames(Transformable.prototype))
 
 function RangeTree(vals, start, end) {
 	start = start || 0
