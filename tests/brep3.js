@@ -1,4 +1,3 @@
-var P3 = NLA.Plane3
 QUnit.module('brep3')
 
 QUnit.assert.doTest = function (face, brep2, resultEdges, resultPoints, desc) {

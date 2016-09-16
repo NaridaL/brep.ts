@@ -1,4 +1,3 @@
-var P3 = NLA.Plane3
 window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 	console.log(errorMsg, url, lineNumber, column, errorObj);
 }
@@ -6,7 +5,7 @@ QUnit.assert.matrixEquals = function(actual, expected, message, precision) {
 	this.push(actual.equalsMatrix(expected, precision), actual.toString(), expected.toString(), message)
 }
 QUnit.assert.matrixEquivalent = function(actual, expected, message, precision) {
-	this.push(actual.normalized().equalsMatrix(expected.normalized(), precision), actual.toString(), expected.toString(), message)
+	this.push(actual.normalized2().equalsMatrix(expected.normalized2(), precision), actual.toString(), expected.toString(), message)
 }
 QUnit.assert.V3equals = function(actual, expected, message, precision) {
 	this.push(false, actual.toString(), expected.toString(), message)
@@ -20,24 +19,19 @@ QUnit.module('NLA')
  *
  * @param name
  * @param {function (Object, M4)} test
- * @param {M4=} extra
+ * @param {...M4} what
  *
  */
-QUnit.testDifferentSystems = function (name, test, extra) {
+QUnit.testDifferentSystems = function (name, test, ...what) {
+	if (!what.length) {
+		what = [M4.IDENTITY, M4.FOO]
+	}
 	QUnit.test(name, assert => {
-		console.log(`TESTING '${name}' WITH M4.IDENTITY`)
-		assert.push(true,undefined,undefined, `TESTING '${name}' WITH IDENTITY.FOO`)
-		test(assert, M4.IDENTITY)
-
-		console.log(`TESTING '${name}' WITH M4.FOO`)
-		assert.push(true,undefined,undefined, `TESTING '${name}' WITH M4.FOO`)
-		test(assert, M4.FOO)
-
-		if (extra) {
-			console.log(`TESTING '${name}' WITH extra`)
-			assert.push(true, undefined, undefined, `TESTING '${name}' WITH extra`)
-			test(assert, extra)
-		}
+		what.forEach(m => {
+			console.log(`TESTING '${name}' WITH '${m.name || m.toString()}`)
+			assert.push(true,undefined,undefined, `TESTING '${name}' WITH '${m.name || m.toString()}'`)
+			test(assert, m)
+		})
 	})
 }
 QUnit.test( "Vector.isParallelTo", function( assert ) {
@@ -209,7 +203,7 @@ QUnit.test( "Matrix.prototype.qrDecompositionGivensRotation", function( assert )
 });
 
 QUnit.test( "Plane3.prototype.projectedVector", function( assert ) {
-	var p = NLA.Plane3(V3(0,0,1), 2)
+	var p = P3(V3(0,0,1), 2)
 	assert.ok(V3(1, 1, 0).like(p.projectedVector(V3(1,1,1))))
 });
 QUnit.test( "Line3.prototype.distanceToLine", function( assert ) {
@@ -217,7 +211,7 @@ QUnit.test( "Line3.prototype.distanceToLine", function( assert ) {
 	assert.equal(L3.X.distanceToLine(L3(V3.Z, V3.X)), 1)
 });
 QUnit.test( "Plane3.prototype.transformed", function( assert ) {
-	var p = NLA.Plane3(V3(0,0,1), 2)
+	var p = P3(V3(0,0,1), 2)
 	assert.ok(P3.XY.like(P3.XY.transform(M4.identity())))
 });
 QUnit.test( "Matrix4x4.prototype.isAxisAligned", function( assert ) {
@@ -242,19 +236,20 @@ QUnit.test( "Matrix4x4.multiplyMultiple", function( assert ) {
 	assert.matrixEquals(M4.multiplyMultiple(M4.rotationX(1), M4.rotationZ(1)), M4.rotationX(1).times(M4.rotationZ(1)))
 });
 QUnit.test( "Plane3.prototype.intersectionWithPlane", function( assert ) {
-	assert.ok(P3.XY.intersectionWithPlane(P3.ZX).equals(L3.X))
-	assert.ok(P3.ZX.intersectionWithPlane(P3.XY).equals(L3.X))
-	assert.notOk(P3.ZX.intersectionWithPlane(P3.XY).equals(L3.Y))
+	assert.ok(P3.XY.intersectionWithPlane(P3.ZX).isColinearTo(L3.X))
+	assert.ok(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.X))
+	assert.notOk(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.Y))
 });
 QUnit.test( "Line3.prototype.isPointsWithLine", function(assert ) {
-	console.log(L3.X.intersectionWithLine(L3(V3(1, 1, 0), V3.Y)).ss)
-	assert.ok(L3.X.intersectionWithLine(L3(V3(1, 1, 0), V3.Y)).equals(V3.X))
+	console.log(L3.X.isInfoWithLine(L3(V3(1, 1, 0), V3.Y)).sce)
+	assert.ok(L3.X.isInfoWithLine(L3(V3(1, 1, 0), V3.Y)).equals(V3.X))
 });
 QUnit.test( "V3.prototype.zip", function( assert ) {
 	var a = V3(1, 2, 3), b = V3(4, 5, 6)
 	assert.ok(V3.zip((a, b) => a + 3 * b, a, b).equals(a.plus(b.times(3))))
 });
 QUnit.test( "NLA.magic", function( assert ) {
+	assert.expect(0)
 	var a = V3(1, 2, 3), b = V3(4, 5, 6)
 	//assert.ok(NLA.magic("a b c s => abs(a) x b .. c + 3 + ")(a, b, c, 3).equals(a.abs().cross(b).dot(c) + 3))
 });
@@ -297,7 +292,7 @@ QUnit.test( "NLA.arrayBinaryIndexOf", function(assert ) {
 });
 QUnit.test( "newtonIterate2d", function (assert) {
 	var res = newtonIterate2d((s, t) => s - 2, (s, t) => t - 4, 5, 5)
-	assert.push(res.like(V3(2, 4)), res.ss, V3(2, 4).ss)
+	assert.push(res.like(V3(2, 4)), res.sce, V3(2, 4).sce)
 });
 
 QUnit.test( "NLA.M4.projection", function (assert) {
@@ -360,51 +355,49 @@ QUnit.test( "BezierCurve.distanceToPoint", function (assert) {
 	let p = V3(0.5, 0.2)
 	let closestT = curve2.closestTToPoint(p)
 	let pDist = curve2.at(closestT).distanceTo(p)
-	assert.push(pDist < curve2.at(closestT - 0.001).distanceTo(p), curve2.at(closestT - 0.001).distanceTo(p), "> " + pDist, "" + (pDist - curve2.at(closestT - 0.001).distanceTo(p)) + "larger")
-	assert.push(pDist < curve2.at(closestT + 0.001).distanceTo(p), curve2.at(closestT + 0.001).distanceTo(p), "> " + pDist)
+	const EPS = NLA.PRECISION
+	assert.push(pDist < curve2.at(closestT - EPS).distanceTo(p), curve2.at(closestT - EPS).distanceTo(p), "> " + pDist, "" + (pDist - curve2.at(closestT - EPS).distanceTo(p)) + "larger")
+	assert.push(pDist < curve2.at(closestT + EPS).distanceTo(p), curve2.at(closestT + EPS).distanceTo(p), "> " + pDist)
 
 	let curve3 = BezierCurve.graphXY(2,-3,-3,2).scale(100, 100, 100)
 	let p3 = V3(71, -65, 0)
 	let closestT3 = curve3.closestTToPoint(p3)
 	let pDist3 = curve3.at(closestT3).distanceTo(p3)
-	assert.push(pDist3 < curve3.at(closestT3 - 0.001).distanceTo(p3), curve3.at(closestT3 - 0.001).distanceTo(p3), "> " + pDist3, "" + (pDist3 - curve3.at(closestT3 - 0.001).distanceTo(p3)) + "larger")
-	assert.push(pDist3 < curve3.at(closestT3 + 0.001).distanceTo(p3), curve3.at(closestT3 + 0.001).distanceTo(p3), "> " + pDist3)
+	assert.push(pDist3 < curve3.at(closestT3 - EPS).distanceTo(p3), curve3.at(closestT3 - EPS).distanceTo(p3), "> " + pDist3, "" + (pDist3 - curve3.at(closestT3 - EPS).distanceTo(p3)) + "larger")
+	assert.push(pDist3 < curve3.at(closestT3 + EPS).distanceTo(p3), curve3.at(closestT3 + EPS).distanceTo(p3), "> " + pDist3)
 
 });
-QUnit.test( "BezierCurve.isPointsWithLine", function (assert) {
+QUnit.test( "EllipseCurve.distanceToPoint", function (assert) {
+	let curve = EllipseCurve.forAB(10, 15)
+	let p = V3(12, 12)
+	let closestT = curve.closestTToPoint(p)
+	let pDist = curve.at(closestT).distanceTo(p)
+	const EPS = 0.001
+	assert.push(pDist < curve.at(closestT - EPS).distanceTo(p), curve.at(closestT - EPS).distanceTo(p), "> " + pDist, "" + (pDist - curve.at(closestT - EPS).distanceTo(p)) + "larger")
+	assert.push(pDist < curve.at(closestT + EPS).distanceTo(p), curve.at(closestT + EPS).distanceTo(p), "> " + pDist)
+});
+QUnit.test( "BezierCurve.isInfosWithLine", function (assert) {
 	console.log(solveCubicReal2(1, 0, 0, 0))
 	let curve = BezierCurve.graphXY(2,-3,-3,2)
 	let line = L3(V3.Y, V3.X)
-	let isPoints = curve.isPointsWithLine(line)
-	console.log(isPoints)
-	assert.equal(isPoints.length, 3)
-	isPoints.forEach(p => {
+	let isInfos = curve.isInfosWithLine(line.anchor, line.dir1)
+	assert.equal(isInfos.length, 3)
+	isInfos.forEach(info => {
+		let p = info.p
 		assert.ok(line.containsPoint(p))
 		assert.ok(curve.containsPoint(p))
 	})
 
 
 	let line2 = L3(V3(0, 2, 1), V3.Z)
-	let isPoints2 = curve.isPointsWithLine(line2)
-	console.log(isPoints2)
-	assert.equal(isPoints2.length, 1)
-	assert.ok(V3(0, 2, 0).like(isPoints2[0]))
+	let isInfos2 = curve.isInfosWithLine(line2.anchor, line2.dir1)
+	assert.equal(isInfos2.length, 1)
+	assert.ok(V3(0, 2, 0).like(isInfos2[0].p))
 
 
 	let line3 = L3(V3.Z, V3.X)
-	assert.equal(curve.isPointsWithLine(line3).length, 0)
+	assert.equal(curve.isInfosWithLine(line3.anchor, line3.dir1).length, 0)
 
-	let df = t => curve.tangentAt(t).length()
-	let last0 = 0, last1 = 0
-	console.log("should be", "4.1246674172501227247060156659")
-	for (let i = 10000; i < 10003; i++) {
-		// 4999 4.124667416843331
-		let x0 = curve.arcLength(0.5, 0.77, i),
-			x1 = curveLengthByDerivative(df, 0.5, 0.77, i)
-		console.log(i, x0, x0 - last0, x1, x1 - last1)
-		last0 = x0
-		last1 = x1
-	}
 });
 QUnit.test( "BezierCurve.isTsWithPlane", function (assert) {
 	let curve = BezierCurve.graphXY(2,-3,-3,2)
@@ -461,11 +454,11 @@ QUnit.test( "ConicSurface.coplanar", function (assert) {
 });
 QUnit.test( "ConicSurface.containsParabola", function (assert) {
 	var unitCone = ConicSurface.UNIT
-	var pb = unitCone.isCurvesWithPlane(NLA.Plane3(V3(1,0,1).normalized(), 4))[0]
+	var pb = unitCone.isCurvesWithPlane(P3(V3(1,0,1).normalized(), 4))[0]
 	assert.ok(unitCone.containsParabola(pb))
 
 	var c2 = unitCone.shearedX(2, 3)
-	var pb2 = c2.isCurvesWithPlane(NLA.Plane3(V3(1,0,1).normalized(), 4).shearedX(2, 3))[0]
+	var pb2 = c2.isCurvesWithPlane(P3(V3(1,0,1).normalized(), 4).shearedX(2, 3))[0]
 	assert.ok(c2.containsParabola(pb2))
 });
 QUnit.test( "Hyperbola", function (assert) {
@@ -484,7 +477,7 @@ QUnit.testDifferentSystems( "ProjectedCurveSurface", function (assert, m4) {
 	let curve = BezierCurve.graphXY(2,-3,-3,2)
 	let pcs = new ProjectedCurveSurface(curve, V3.Z).transform(m4)
 	let p = pcs.parametricFunction()(pp.x, pp.y)
-	console.log(p.ss, pcs.pointToParameterFunction()(p))
+	console.log(p.sce, pcs.pointToParameterFunction()(p))
 	assert.V3like(pcs.pointToParameterFunction()(p), pp, "ptpf(pcs.pf(pp)) == pp")
 });
 QUnit.testDifferentSystems( "ProjectedCurveSurface Face line intersection test", function (assert, m4) {
@@ -510,9 +503,9 @@ QUnit.test( "ProjectedCurveSurface Face containsPoint", function (assert, m4) {
 		StraightEdge.throughPoints(V3(372.40411211189405, -210.3992206435476, -100), V3(372.40411211189405, -210.3992206435476, 0))], [])
 	let line = L3(V3(1241.5987, -1214.1894, 38.9886), V3(-0.6705, 0.7386, -0.0696).normalized())
 	let isp = face.surface.isPointsWithLine(line)
-	assert.equal(isp.length, 1)
+	assert.equal(isp.length, 3)
 	isp.forEach(p => {
-		console.log(p.ss)
+		console.log(p.sce)
 		assert.ok(line.containsPoint(p))
 		assert.ok(face.surface.containsPoint(p))
 	})
@@ -540,4 +533,84 @@ QUnit.testDifferentSystems( "Matrix4x4 eigenValues and eigenVectors", function (
 	2,0,2,0,
 	4,2,3,0,
 	0,0,0,1));
+
+QUnit.testDifferentSystems( "EllipseCurve.isPointsWithBezier()", function (assert, /** M4*/ m4) {
+	let ell = new EllipseCurve(V3(-223.34900663163222, -176.63214006755936, 0), V3(-169.5891804980124, -35.54247345835796, 0), V3(35.54247345835796, -169.5891804980124, 0))
+	let bez = new BezierCurve(V3(-267.6481190901419, -368.37017217006473, 0), V3(563.959389388763, 94.96018577817034, 0), V3(-1110.7787051488917, -95.8394860073627, 0), V3(-59.14331799274822, -299.7830665459221, 0))
+	let isPoints = ell.isPointsWithBezier(bez)
+	assert.equal(isPoints.length, 6)
+	console.log(isPoints.join())
+	isPoints.forEach(p => {
+		assert.ok(ell.containsPoint(p), `ell.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`)
+		assert.ok(bez.containsPoint(p), `bez.distanceToPoint(${p}) = ${bez.distanceToPoint(p)}`)
+	})
+})
+
+QUnit.test( "BezierCurve.isPointsWithBezier()", function (assert, /** M4*/ m4) {
+	let curve1 = BezierCurve.graphXY(2,-3,-3,2, -2, 3)
+	let curve2 = curve1.transform(M4.rotationLine(V3(0.5, 0), V3.Z, PI/2))
+	let isInfos = curve1.isInfosWithBezier(curve2)
+	assert.equal(isInfos.length, 9)
+	console.log(isInfos.map(SCE))
+	isInfos.forEach(info => {
+		let p = info.p
+		assert.ok(curve1.containsPoint(p), `curve1.distanceToPoint(${p}) = ${curve1.distanceToPoint(p, -2, 3)}`)
+		assert.ok(curve2.containsPoint(p), `curve2.distanceToPoint(${p}) = ${curve2.distanceToPoint(p, -2, 3)}`)
+	})
+
+	;[new BezierCurve(V3(133, 205, 0), V3(33, 240, 0), V3(63, 168, 0), V3(151, 231, 0)),
+		new BezierCurve(V3.ZERO, V3(10, 10), V3(-9, 10), V3.X)].forEach(curve => {
+		assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
+		let isInfos = curve.isInfosWithBezier(curve, 0,1,0,1)
+		assert.equal(isInfos.length, 1)
+		console.log(isInfos.map(SCE))
+		isInfos.forEach(info => {
+			let p = info.p
+			assert.ok(NLA.isZero(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
+		})
+	})
+})
+
+QUnit.test( 'B2.Edge.edgesIntersects' , function (assert) {
+	let curve1 = BezierCurve.graphXY(2,-3,-3,2, -2, 3)
+	let curve2 = curve1.transform(M4.rotationLine(V3(0.5, 0), V3.Z, PI/2))
+	let edge1 = B2.PCurveEdge.forCurveAndTs(curve1, 0, 1)
+	let edge2 = B2.PCurveEdge.forCurveAndTs(curve2, 0, 1)
+	assert.ok(B2.Edge.edgesIntersect(edge1, edge2))
+	assert.notOk(B2.Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0)))
+	assert.notOk(B2.Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
+
+
+})
+
+QUnit.test( 'BezierCurve.pointLambda' , function (assert) {
+	let curve = new BezierCurve(
+		V3( 92.48132002394416, 253.35277539335377, 0),
+		V3( 99.18055157018783, 225.4322156490681, 0),
+		V3( 63.52151476563836, 168.59279980361327, 0),
+		V3(151.89049176954802, 231.21343792479922, 0))
+	let p = V3(90.8280915025532, 214.7764313721318, 0)
+	assert.ok(NLA.isZero(curve.distanceToPoint(p)))
+	assert.ok(isFinite(curve.pointLambda(p)))
+
+
+})
+
+QUnit.test( 'M4.gauss' , function (assert) {
+	let m = M4(
+		0, 0, 1, -1,
+		2, -3, -3, 4,
+		0, 0, 0, 0,
+		0, 0, 0, 1
+	)
+	let mGauss = M4(
+		2, -3, -3, 4,
+		0, 0, 1, -1,
+		0, 0, 0, 1,
+		0, 0, 0, 0
+	)
+	assert.matrixEquals(m.gauss().U, mGauss)
+
+	console.log(M4.FOO.gauss().U.str)
+})
 

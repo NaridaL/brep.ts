@@ -1,16 +1,3 @@
-
-
-
-QUnit.assert.doTest = function (a, b, actual, expected) {
-
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'>link</a>`)
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>link</a>`)
-	this.B2equals(actual, expected)
-}
-
-
 QUnit.module('brep2')
 
 
@@ -45,7 +32,7 @@ QUnit.test( "B2.equals", function( assert ) {
 	assert.notOk(b.equals(c))
 	assert.notOk(c.equals(b))
 });
-QUnit.test( "B2.tetrahedon", function( assert ) {
+QUnit.test( "B2.tetrahedron", function( assert ) {
 	var result = new B2([
 		B2.PlaneFace.forVertices(P3(V3(0.8320502943378437, -0.5547001962252291, 0), 1.386750490563073), [V3(5, 5, 5), V3(5, 5, -5), V3(9, 11, 1)]),
 		B2.PlaneFace.forVertices(P3(V3(-0.7071067811865475, -0.7071067811865475, 0), -7.071067811865475), [V3(5, 5, 5), V3(1, 9, 0), V3(5, 5, -5)]),
@@ -145,7 +132,7 @@ QUnit.test( "splitsVolumeEnclosingFaces 2", function( assert ) {
 });
 QUnit.test( "splitsVolumeEnclosingFaces 3", function( assert ) {
 	var brep = B2.box(5, 5, 5).flipped()
-	console.log(brep.ss)
+	console.log(brep.sce)
 
 	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0, 5,0),V3(0,0,0)), V3(0,0,-1), V3(1,0,0)), INSIDE)
 	assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V3(0,0,0),V3(0, 5,0)), V3(0,0,-1), V3(1,0,0)), INSIDE)
@@ -211,7 +198,7 @@ QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 6))", functio
 		B2.PlaneFace.forVertices(P3(V3(0, -1, 0), 0), [V3(1, 0, 0),V3(5, 0, 0),V3(5, 0, 5),V3(1, 0, 5)]),
 		B2.PlaneFace.forVertices(P3(V3(0, -1, 0), -1), [V3(0, 1, 0),V3(1, 1, 0),V3(1, 1, 5),V3(0, 1, 5)]),
 		B2.PlaneFace.forVertices(P3(V3(-1, 0, 0), -1), [V3(1, 1, 0),V3(1, 0, 0),V3(1, 0, 5),V3(1, 1, 5)])])
-	assert.doTest(a, b, a.minus(b), result)
+	assert.b2Equal(a, b, a.minus(b), result)
 });
 QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 5))", function( assert ) {
 	var a = B2.box(5, 5, 5)
@@ -356,15 +343,15 @@ QUnit.test( "CylinderSurface.intersectionLine 2", function( assert ) {
 	assert.ok(line.containsPoint(isPoints[1]), line.distanceToPoint(isPoints[1]))
 });
 function testEllipseIntersections(assert, e1, e2, count) {
-	var intersections = e1.intersectWithEllipse(e2)
+	var intersections = e1.isPointsWithEllipse(e2)
 	assert.ok(intersections.length == count, `intersections.length == count: ${intersections.length} == ${count}`)
 	intersections.forEach((is, i) => {
-		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.ss+' is not unique '+intersections)
-		assert.ok(e1.containsPoint(is), `e1.containsPoint(is): ${e1.toSource()}.containsPoint(${is.ss})`)
-		assert.ok(e2.containsPoint(is), `e2.containsPoint(is): ${e1.toSource()}.containsPoint(${is.ss})`)
+		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce+' is not unique '+intersections)
+		assert.ok(e1.containsPoint(is), `e1.containsPoint(is): ${e1.toSource()}.containsPoint(${is.sce})`)
+		assert.ok(e2.containsPoint(is), `e2.containsPoint(is): ${e1.toSource()}.containsPoint(${is.sce})`)
 	})
 }
-QUnit.test( "Ellipse.intersectWithEllipse", function( assert ) {
+QUnit.test( "Ellipse.isPointsWithEllipse", function(assert ) {
 	var c1 = EllipseCurve.circle(5), c2 = EllipseCurve.circle(5, V3(3, 0))
 	testEllipseIntersections(assert, c1, c2, 2)
 	var verticalEllipse = new EllipseCurve(V3(2, 0), V3(1, 1), V3(1, 10))
@@ -386,27 +373,27 @@ QUnit.test( "cyl surface inss", function( assert ) {
 });
 QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(0, 0, 5) touching coplanar faces; result contains both", function( assert ) {
 	var box = B2.box(10, 10, 5)
-	assert.doTest(box, box.translate(0, 0, 5), box.plus(box.translate(0, 0, 5)), B2.box(10, 10, 10))
+	assert.b2Equal(box, box.translate(0, 0, 5), box.plus(box.translate(0, 0, 5)), B2.box(10, 10, 10))
 });
 QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 5, 5).translate(0, 0, 5) + B2.box(5, 5, 5).translate(5, 5, 5)", function( assert ) {
 	var box = B2.box(10, 10, 5), box2 = B2.box(10, 5, 5), box3 = B2.box(5, 5, 5)
-	assert.doTest(box.plus(box2.translate(0, 0, 5)), box3.translate(5, 5, 5), box.plus(box2.translate(0, 0, 5)).plus(box3.translate(5, 5, 5)),
+	assert.b2Equal(box.plus(box2.translate(0, 0, 5)), box3.translate(5, 5, 5), box.plus(box2.translate(0, 0, 5)).plus(box3.translate(5, 5, 5)),
 		B2.box(10, 10, 10).minus(box3.translate(0, 5, 5)))
 });
 
 QUnit.test( "B2.box(10, 10, 5) && B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces; result contains intersection of faces", function( assert ) {
 	let box = B2.box(10, 10, 5)
-	assert.doTest(box, box.translate(3, 3, 0), box.intersection(box.translate(3, 3, 0), true, true), B2.box(7, 7, 5).translate(3, 3, 0))
+	assert.b2Equal(box, box.translate(3, 3, 0), box.intersection(box.translate(3, 3, 0), true, true), B2.box(7, 7, 5).translate(3, 3, 0))
 });
 QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces; result contains union of faces", function( assert ) {
 	let box = B2.box(10, 10, 5)
-	assert.doTest(box, box.translate(3, 3, 0), box.plus(box.translate(3, 3, 0), true, true), B2.box(10, 10, 10))
+	assert.b2Equal(box, box.translate(3, 3, 0), box.plus(box.translate(3, 3, 0), true, true), B2.box(10, 10, 10))
 });
 
 
 QUnit.test( "B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces; result contains union of faces", function( assert ) {
 	let box = B2.box(10, 10, 5), box2 = B2.box(4, 10, 2).translate(2, 0, 3)
-	assert.doTest(box, box2, box.minus(box2), box)
+	assert.b2Equal(box, box2, box.minus(box2), box)
 });
 
 
