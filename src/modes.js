@@ -13,7 +13,7 @@ MODES.DEFAULT = {
 }
 MODES.SKETCH = {
 	relPoss: null, // positions of sketch elements relative to mouse coords, used for DnD
-	draggingElements: true,
+	draggingElements: false,
 	before: function () {
 		modeEnd(MODES.SKETCH)
 		modeEnd(MODES.PLANE_DEFINITION)
@@ -49,8 +49,9 @@ MODES.SKETCH = {
 	},
 	mouseup: function (/** MouseEvent */ e, mouseLine) {
 		console.log('MOUSEUP', this.draggingElements, this)
+		console.log(this.draggingElements, e.shiftKey)
 		if (this.draggingElements) {
-			console.log('beenSketchDragging')
+			console.log('draggingElements')
 			rebuildModel()
 		} else {
 			if (e.shiftKey) {
@@ -91,6 +92,7 @@ MODES.SKETCH = {
 	},
 	mousedown: function (e, mouseLine) {
 		// TODO: select sketch elements
+		this.draggingElements = false
 		this.relPoss = new Map()
 		if(hoverHighlight != null) {
 			let intersection = mouseLine.intersectionWithPlane(editingSketch.plane)

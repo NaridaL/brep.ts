@@ -52,9 +52,10 @@ B2.puckman = function (radius, rads, height, name) {
  * @param {P3} baseFacePlane
  * @param {V3} offset
  * @param {string} name
+ * @param {string=} source
  * @returns {B2}
  */
-B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name) {
+B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name, source) {
 	Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
 		assertf(() => !B2.Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce+baseFaceEdges[j].sce)
 	})
@@ -73,7 +74,7 @@ B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name) {
 	var topFace = new B2.PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges)
 
 	var ribs = NLA.arrayFromFunction(edgeCount,
-		i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a))
+		i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i))
 
 	var faces = baseFaceEdges.map((edge, i) => {
 		var j = (i + 1) % edgeCount
@@ -95,7 +96,8 @@ B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name) {
 		}
 	})
 	faces.push(bottomFace, topFace)
-	return new B2(faces)
+	source = source || `B2.extrudeEdges(${baseFaceEdges.sce}, ${baseFacePlane.sce}, ${offset.sce}, "${name}")` // todo proper escaping
+	return new B2(faces, false, source)
 }
 B2.cylinder = function (radius, height, rads) {
 	return B2.rotateEdges(verticesChain([V3(0, 0, 0), V3(radius, 0, 0), V3(radius, 0, height), V3(0, 0, height)]), rads || 2 * PI)
@@ -255,7 +257,7 @@ B2.rotStep = function (edges, rads, count) {
 	return new B2(faces)
 }
 
-B2.extrudeVertices = function (baseVertices, baseFacePlane, offset, name) {
+B2.extrudeVertices = function (baseVertices, baseFacePlane, offset, name, source) {
 	assert(baseVertices.every(v => v instanceof V3), "baseVertices.every(v => v instanceof V3)")
 	assertInst(P3, baseFacePlane)
 	assertVectors(offset)
@@ -278,8 +280,9 @@ B2.extrudeVertices = function (baseVertices, baseFacePlane, offset, name) {
 				PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
 				[bottom.edges[i].flipped(), ribs[i], top.edges[m - j - 1].flipped(), ribs[j].flipped()], [], name + "wall" + i))
 	}
-	return new B2(faces, false,
-		`B2.extrudeVertices(${baseVertices.toSource()}, ${baseFacePlane.toString()}, ${offset.sce}, "${name}")`)
+	let edges = verticesChain(baseVertices, true)
+	source = source || `B2.extrudeVertices(${baseVertices.sce}, ${baseFacePlane.sce}, ${offset.sce}, "${name}")`
+	return B2.extrudeEdges(edges, baseFacePlane, offset, name, source)
 }
 
 /**

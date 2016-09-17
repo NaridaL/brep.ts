@@ -594,8 +594,9 @@ B2.Edge.isLoop = function (loop) {
 	return loop.every((edge, i) => edge.b.like(loop[(i + 1) % loop.length].a))
 }
 B2.Edge.edgesIntersect = function (e1, e2) {
+	assertNumbers(e1.curve.hlol, e2.curve.hlol)
 	assertInst(B2.Edge, e1, e2)
-	if (e1.hlol > e2.hlol) {
+	if (e1.curve.hlol < e2.curve.hlol) {
 		[e2, e1] = [e1, e2]
 	}
 	let sts = e1.curve.isInfosWithCurve(e2.curve)
@@ -1548,7 +1549,7 @@ B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 			return !this.reversed ? this.curve.tangentAt(t) : this.curve.tangentAt(t).negated()
 		},
 		flipped: function () {
-			return new B2.PCurveEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.bDir.negated(), this.aDir.negated())
+			return this.flippedOf || (this.flippedOf = new B2.PCurveEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.bDir.negated(), this.aDir.negated(), this.name))
 		},
 		transform: function (m4) {
 			return new B2.PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b),
@@ -1557,8 +1558,7 @@ B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 				m4.transformVector(this.aDir), m4.transformVector(this.bDir))
 		},
 		isCoEdge: function (edge) {
-			// TODO: optimization with flippedOf etc
-			return this == edge ||
+			return this == edge || this == edge.flippedOf ||
 				this.curve.isColinearTo(edge.curve) && (
 					this.a.like(edge.a) && this.b.like(edge.b)
 					|| this.a.like(edge.b) && this.b.like(edge.a)
@@ -1622,18 +1622,15 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 			return this.tangent
 		},
 		flipped: function () {
-			return new StraightEdge(this.curve, this.b, this.a, this.bT, this.aT, this)
+			return this.flippedOf || (this.flippedOf = new StraightEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.name))
 		},
 		get aDir() { return this.tangent },
 		get bDir() { return this.tangent },
-		set aDir(x) {  },
-		set bDir(x) {  },
-		transform: function (m4) {
+		transform: function (m4, desc) {
 			return new StraightEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT, this.bT)
 		},
 		isCoEdge: function (edge) {
-			// TODO: optimization with flippedOf etc
-			return edge.constructor == StraightEdge && (
+			return this == edge || this == edge.flippedOf || edge.constructor == StraightEdge && (
 					this.a.like(edge.a) && this.b.like(edge.b)
 					|| this.a.like(edge.b) && this.b.like(edge.a)
 				)
@@ -1655,8 +1652,8 @@ var StraightEdge = NLA.defineClass('StraightEdge', B2.Edge,
 		}
 	}
 )
-StraightEdge.throughPoints = function (a, b) {
-	return new StraightEdge(L3.throughPoints(a, b), a, b, 0, b.minus(a).length())
+StraightEdge.throughPoints = function (a, b, name) {
+	return new StraightEdge(L3.throughPoints(a, b), a, b, 0, b.minus(a).length(), name)
 }
 
 /**

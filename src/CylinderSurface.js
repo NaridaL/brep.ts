@@ -89,8 +89,12 @@ class CylinderSurface extends Surface {
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
-		var localAnchor = this.inverseMatrix.transformPoint(line.anchor)
 		var localDir = this.inverseMatrix.transformVector(line.dir1)
+		if (localDir.like(V3.Z)) {
+			// line is parallel to this.dir
+			return []
+		}
+		var localAnchor = this.inverseMatrix.transformPoint(line.anchor)
 		return CylinderSurface.unitISLineTs(localAnchor, localDir).map(t => line.at(t))
 	}
 

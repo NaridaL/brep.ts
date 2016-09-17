@@ -162,7 +162,10 @@ class ProjectedCurveSurface extends Surface {
 		var testLine = L3(p, this.dir1)
 		let ptpf = this.pointToParameterFunction()
 		let pp = ptpf(p)
-		// create plane that goes through cylinder seam
+		if (isNaN(pp.x)) {
+			console.log(this.sce, p.sce)
+			assert(false)
+		}
 		var intersectionLinePerpendicular = this.baseCurve.tangentAt(pp.x).rejectedFrom(this.dir1)
 		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
 		var colinearSegments = contour.map((edge) => edge.colinearToLine(testLine))
@@ -237,9 +240,13 @@ class ProjectedCurveSurface extends Surface {
 	isPointsWithLine(line) {
 		assertInst(L3, line)
 		let projectionPlane = P3(this.dir1, 0)
-		let projBaseCurve = this.baseCurve.project(projectionPlane)
-		let projAnchor = projectionPlane.projectedPoint(line.anchor)
 		let projDir = projectionPlane.projectedVector(line.dir1)
+		if (projDir.isZero()) {
+			// line is parallel to this.dir
+			return []
+		}
+		let projAnchor = projectionPlane.projectedPoint(line.anchor)
+		let projBaseCurve = this.baseCurve.project(projectionPlane)
 		return projBaseCurve
 			.isInfosWithLine(projAnchor, projDir)
 			.map(info => line.at(info.tOther))

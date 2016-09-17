@@ -16,7 +16,7 @@
 function L3(anchor, dir1) {
     NLA.assertVectors(anchor, dir1)
     assert(dir1.hasLength(1), "dir must be normalized" + dir1)
-	assert(!Number.isNaN(anchor.x))
+	assertf(() => !Number.isNaN(anchor.x))
     var l = Object.create(L3.prototype)
     l.dir1 = dir1
 	l.anchor = anchor
@@ -345,6 +345,8 @@ NLA.addOwnProperties(L3.prototype, /** @lends L3.prototype */ {
     }
 
 })
+
+L3.prototype.hlol = Curve.hlol++
 
 L3.pointLambdaNotNormalized = function (anchor, dir, x) {
 	NLA.assertVectors(anchor, dir, x)

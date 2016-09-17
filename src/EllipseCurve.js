@@ -160,6 +160,10 @@ class EllipseCurve extends Curve {
 		return new EllipseCurve(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2))
 	}
 
+	/**
+	 *
+	 * @returns {EllipseCurve}
+	 */
 	rightAngled() {
 		var {f1, f2} = this.mainAxes()
 		return new EllipseCurve(this.center, f1, f2)
@@ -233,7 +237,7 @@ class EllipseCurve extends Curve {
 	 * @param {EllipseCurve} ellipse
 	 * @returns {V3[]}
 	 */
-	isPointsWithEllipse(ellipse) {
+	isInfosWithEllipse(ellipse) {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
@@ -302,7 +306,7 @@ class EllipseCurve extends Curve {
 		}
 	}
 
-	isPointsWithLine(line) {
+	isInfosWithLine(line) {
 		let localAnchor = this.inverseMatrix.transformPoint(line.anchor)
 		let localDir = this.inverseMatrix.transformVector(line.dir1)
 		if (NLA.isZero(localDir.z)) {
@@ -313,8 +317,11 @@ class EllipseCurve extends Curve {
 				// line(t) = anchor + t dir
 				// anchor² - 1 + 2 t dir anchor + t² dir² = 0
 				let pqDiv = localDir.dot(localDir)
-				let lineTs = pqFormula(2 * localDir.dot(localAnchor) / pqDiv, (anchor.dot(anchor) - 1) / pqDiv)
-				return lineTs.map(t => line.at(t))
+				let lineTs = pqFormula(2 * localDir.dot(localAnchor) / pqDiv, (localAnchor.dot(localAnchor) - 1) / pqDiv)
+				return lineTs.map(tOther => ({
+					tThis: Math.atan2(localAnchor.y + tOther * localDir.y, localAnchor.x + tOther * localDir.x),
+					tOther: tOther,
+					p: line.at(tOther)}))
 			}
 		} else {
 			// if the line intersects the XY-plane in a single point, there can be an intersection there
@@ -323,10 +330,26 @@ class EllipseCurve extends Curve {
 			let localLineISPointWithXYPlane = localDir.times(localLineISTWithXYPlane).plus(localAnchor)
 			if (NLA.equals(1, localLineISPointWithXYPlane.lengthXY())) {
 				// point lies on unit circle
-				return line.at(localLineISTWithXYPlane)
+				return [{
+					tThis: localLineISPointWithXYPlane.angleXY(),
+					tOther: localLineISTWithXYPlane,
+					p: line.at(localLineISTWithXYPlane)}]
 			}
 		}
 		return []
+	}
+
+	isInfosWithCurve(curve) {
+		if (curve instanceof L3) {
+			return this.isInfosWithLine(curve)
+		}
+		if (curve instanceof BezierCurve) {
+			return this.isInfosWithBezier(curve)
+		}
+		if (curve instanceof EllipseCurve) {
+			return this.isInfosWithEllipse(curve)
+		}
+		assert(false)
 	}
 
 	/**
@@ -345,6 +368,101 @@ class EllipseCurve extends Curve {
 			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
 			return possibleISPoints.filter(p => NLA.equals(1, p.lengthXY())).m
 		}
+	}
+	/**
+	 *
+	 * @param {BezierCurve} bezier
+	 */
+	isInfosWithBezier(bezier) {
+		let localBezier = bezier.transform(this.inverseMatrix)
+		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
+			return this.isInfosWithBezier2D(bezier)
+		} else {
+			let infos = localBezier.isTsWithPlane(P3.XY).mapFilter(tOther => {
+				let localP = localBezier.at(tOther)
+				if (NLA.equals(1, localP.lengthXY())) {
+					return {tOther: tOther, p: bezier.at(tOther), tThis: localP.angleXY()}
+				}})
+			return infos
+		}
+	}
+
+	/**
+	 *
+	 * @param {BezierCurve} bezier
+	 * @param {number=} sMin
+	 * @param {number=} sMax
+	 * @returns {{tThis: number, tOther: number, p: V3}[]}
+	 */
+	isInfosWithBezier2D(bezier, sMin, sMax) {
+		// the recursive function finds good approximates for the intersection points
+		// this function uses newton iteration to improve the result as much as possible
+		// is declared as an arrow function so this will be bound correctly
+		const handleStartTS = (startT, startS) => {
+			if (!result.some(info => NLA.equals(info.tThis, startT) && NLA.equals(info.tOther, startS))) {
+				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
+				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
+				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
+				let dfdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).lengthSquared())
+				let dfdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
+				let ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
+					dfdt1.bind(undefined, this, bezier), dfdt2.bind(undefined, this, bezier),
+					(t, s) => -dfdt2(bezier, this, s, t), (t, s) => -dfdt1(bezier, this, s, t))
+				if (ni == null) console.log(startT, startS, this.sce, bezier.sce)
+				result.push({tThis: ni.x, tOther: ni.y, p: this.at(ni.x)})
+			}
+		}
+
+		// is declared as an arrow function so this will be bound correctly
+		// returns whether an intersection was immediately found (i.e. without further recursion)
+		// is declared as an arrow function so this will be bound correctly
+		const findRecursive = (tMin, tMax, sMin, sMax, thisAABB, otherAABB) => {
+			const EPS = NLA.PRECISION
+			if (thisAABB.touchesAABB(otherAABB)) {
+				let tMid = (tMin + tMax) / 2
+				let sMid = (sMin + sMax) / 2
+				if (tMax - tMin < EPS || sMax - sMin < EPS) {
+					handleStartTS(tMid, sMid)
+					return true
+				} else {
+					let thisAABBleft = this.getAABB(tMin, tMid), thisAABBright
+					let bezierAABBleft = bezier.getAABB(sMin, sMid), bezierAABBright
+					// if one of the following calls immediately finds an intersection, we don't want to call the others
+					// as that will lead to the same intersection being output multiple times
+					findRecursive(tMin, tMid, sMin, sMid, thisAABBleft, bezierAABBleft)
+					|| findRecursive(tMin, tMid, sMid, sMax, thisAABBleft, bezierAABBright = bezier.getAABB(sMid, sMax))
+					|| findRecursive(tMid, tMax, sMin, sMid, thisAABBright = this.getAABB(tMid, tMax), bezierAABBleft)
+					|| findRecursive(tMid, tMax, sMid, sMax, thisAABBright, bezierAABBright)
+					return false
+				}
+			}
+			return false
+		}
+
+		let tMin = -Math.PI
+		let tMax = Math.PI
+		sMin = isFinite(sMin) ? sMin : bezier.tMin
+		sMax = isFinite(sMax) ? sMax : bezier.tMax
+		assertf(() => tMin < tMax)
+		assertf(() => sMin < sMax)
+		let result = []
+
+		findRecursive(tMin, tMax, sMin, sMax, this.getAABB(tMin, tMax), bezier.getAABB(sMin, sMax))
+
+		return result
+	}
+
+
+	roots() {
+		// tangent(t) = f2 cos t - f1 sin t
+		// solve for each dimension separately
+		// tangent(eta, xi) = f2 eta - f1 xi
+
+		return NLA.arrayFromFunction(3, dim => {
+			let a = this.f2.e(dim), b = -this.f1.e(dim)
+			let {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
+			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]
+		})
 	}
 
 	closestTToPoint(p) {

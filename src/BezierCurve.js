@@ -93,7 +93,7 @@ class BezierCurve extends Curve {
 	normalAt(t) {
 		var tangent = this.tangentAt(t)
 		var rot = tangent.cross(this.ddt(t))
-		return M4.rotation(Math.PI / 2, rot).transformVector(tangent)
+		return rot.cross(tangent)
 	}
 
 	/**
@@ -309,27 +309,6 @@ class BezierCurve extends Curve {
 		return NLA.arrayFromFunction(3, dim => solveCubicReal2(0, a.e(dim), b.e(dim), c.e(dim)))
 	}
 
-	getAABB(tMin, tMax) {
-		tMin = isFinite(tMin) ? tMin : this.tMin
-		tMax = isFinite(tMax) ? tMax : this.tMax
-		let tMinAt = this.at(tMin), tMaxAt = this.at(tMax)
-		let roots = this.roots()
-		let mins = new Array(3), maxs = new Array(3)
-		for (let dim = 0; dim < 3; dim++) {
-			let tRoots = roots[dim]
-			mins[dim] = Math.min(tMinAt.e(dim), tMaxAt.e(dim))
-			maxs[dim] = Math.max(tMinAt.e(dim), tMaxAt.e(dim))
-			for (let j = 0; j < tRoots.length; j++) {
-				let tRoot = tRoots[j]
-				if (tMin < tRoot && tRoot < tMax) {
-					mins[dim] = Math.min(mins[dim], this.at(tRoot).e(dim))
-					maxs[dim] = Math.max(maxs[dim], this.at(tRoot).e(dim))
-				}
-			}
-		}
-		return new AABB(V3(mins), V3(maxs))
-
-	}
 
 	/**
 	 *
@@ -519,6 +498,7 @@ class BezierCurve extends Curve {
 
 		// is declared as an arrow function so this will be bound correctly
 		// returns whether an intersection was immediately found (i.e. without further recursion)
+		// is declared as an arrow function so this will be bound correctly
 		const findRecursive = (tMin, tMax, sMin, sMax, thisAABB, otherAABB) => {
 			const EPS = NLA.PRECISION
 			if (thisAABB.touchesAABB(otherAABB)) {

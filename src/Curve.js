@@ -178,5 +178,27 @@ class Curve extends Transformable {
 	isColinearTo(curve) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
+
+
+	getAABB(tMin, tMax) {
+		tMin = isFinite(tMin) ? tMin : this.tMin
+		tMax = isFinite(tMax) ? tMax : this.tMax
+		let tMinAt = this.at(tMin), tMaxAt = this.at(tMax)
+		let roots = this.roots()
+		let mins = new Array(3), maxs = new Array(3)
+		for (let dim = 0; dim < 3; dim++) {
+			let tRoots = roots[dim]
+			mins[dim] = Math.min(tMinAt.e(dim), tMaxAt.e(dim))
+			maxs[dim] = Math.max(tMinAt.e(dim), tMaxAt.e(dim))
+			for (let j = 0; j < tRoots.length; j++) {
+				let tRoot = tRoots[j]
+				if (tMin < tRoot && tRoot < tMax) {
+					mins[dim] = Math.min(mins[dim], this.at(tRoot).e(dim))
+					maxs[dim] = Math.max(maxs[dim], this.at(tRoot).e(dim))
+				}
+			}
+		}
+		return new AABB(V3(mins), V3(maxs))
+	}
 }
 Curve.hlol = 0

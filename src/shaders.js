@@ -73,10 +73,12 @@ var vertexShaderBasic = `
 `
 var vertexShaderArc = `
 	uniform float step, offset;
-	uniform float innerRadius, outerRadius;
+	uniform float radius, width;
 	void main() {
-		float radius = LGL_Vertex.x == 1.0 ? outerRadius : innerRadius, angle = offset + LGL_Vertex.y * step;
-		vec4 p = vec4(radius * cos(angle), radius * sin(angle), 0, 1);
+		float r = radius;
+		float t = offset + LGL_Vertex.x * step;
+		float pRadius = r - LGL_Vertex.y * width;
+		vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
 		gl_Position = LGL_ModelViewProjectionMatrix * p;
 }
 `
@@ -86,13 +88,13 @@ var vertexShaderBezier = `
 	uniform vec3 p0, p1, p2, p3;
 	void main() {
 		// LGL_Vertex.y is in [0, 1]
-		float t = (endT - startT) * LGL_Vertex.y + startT, s = 1.0 - t;
+		float t = startT + LGL_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
 		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
-		vec4 p = vec4(pPos + (LGL_Vertex.x - 0.5) * width * pNormal, 1);
+		vec4 p = vec4(pPos - LGL_Vertex.y * width * pNormal, 1);
 		gl_Position = LGL_ModelViewProjectionMatrix * p;
 	}
 `

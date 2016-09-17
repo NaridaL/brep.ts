@@ -86,7 +86,7 @@ var GL = (function() {
 		var matrix, stack;
 
 
-		NLA.addOwnProperties(gl, /** @lends LightGLContext */ {
+		NLA.addOwnProperties(gl, /** @lends LightGLContext.prototype */ {
 			MODELVIEW: LightGLContext.MODELVIEW,
 			PROJECTION: LightGLContext.PROJECTION,
 			matrixMode: function(mode) {
@@ -225,7 +225,7 @@ void main() {
 	if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);
 }`)
 		};
-		NLA.addOwnProperties(gl, /** @lends LightGLContext */ {
+		NLA.addOwnProperties(gl, /** @lends LightGLContext.prototype */ {
 			pointSize: function(pointSize) {
 				immediateMode.shader.uniforms({ pointSize: pointSize });
 			},
@@ -400,7 +400,7 @@ void main() {
 	});
 	function addOtherMethods(_gl) {
 		/**
-		 * @memberOf LightGLContext
+		 * @memberOf LightGLContext.prototype
 		 */
 		_gl.makeCurrent = function () {
 			gl = this
@@ -631,7 +631,7 @@ void main() {
 // initially enabled.
 	/**
 	 *
-	 * @param {Object} options
+	 * @param {Object=} options
 	 * @param {boolean=} options.coords Texture coordinates.
 	 * @param {boolean=} options.normals
 	 * @param {boolean=} options.colors
@@ -661,7 +661,7 @@ void main() {
 	}
 
 
-	Mesh.prototype = /** @lends GL.Mesh */ {
+	Mesh.prototype = /** @lends GL.Mesh.prototype */ {
 		/**
 		 * Add a new vertex buffer with a list as a property called `name` on this object and map it to
 		 * the attribute called `attribute` in all shaders that draw this mesh.
@@ -881,36 +881,59 @@ void main() {
 //     var mesh3 = GL.Mesh.plane({ detailX: 20, detailY: 40 });
 //
 	/**
+	 * Generates a square mesh in the XY plane.
+	 * Texture coordinates (buffer "coords") are set to go from 0 to 1 in either direction.
 	 *
-	 * @param {Object} options
-	 * @param {number} options.detail
-	 * @param {number} options.detailX
-	 * @param {number} options.detailY
+	 *
+	 * @param {Object=} options
+	 * @param {number=} options.detail Defaults to 1
+	 * @param {number=} options.detailX Defaults to options.detail. Number of subdivisions in X direction.
+	 * @param {number=} options.detailY Defaults to options.detail. Number of subdivisions in Y direction.j
+	 * @param {number=} options.width defaults to 1
+	 * @param {number=} options.height defaults to 1
+	 * @param {number=} options.startX defaults to 0
+	 * @param {number=} options.startY defaults to 0
+	 *
 	 * @returns {GL.Mesh}
+	 * @alias GL.Mesh.plane
 	 */
 	Mesh.plane = function(options) {
-		options = options || {};
-		var mesh = new Mesh(options);
-		var detailX = options.detailX || options.detail || 1;
-		var detailY = options.detailY || options.detail || 1;
+		options = options || {}
+		let detailX = options.detailX || options.detail || 1
+		let detailY = options.detailY || options.detail || 1
+		let startX = options.startX || 0
+		let startY = options.startY || 0
+		let width = options.width || 1
+		let height = options.height || 1
+		let mesh = new Mesh({lines: true, normals: true, coords: true, triangles: true})
 
-		for (var y = 0; y <= detailY; y++) {
-			var t = y / detailY;
-			for (var x = 0; x <= detailX; x++) {
-				var s = x / detailX;
-				mesh.vertices.push([2 * s - 1, 2 * t - 1, 0]);
-				if (mesh.coords) mesh.coords.push([s, t]);
-				if (mesh.normals) mesh.normals.push([0, 0, 1]);
-				if (x < detailX && y < detailY) {
-					var i = x + y * (detailX + 1);
-					mesh.triangles.push([i, i + 1, i + detailX + 1]);
-					mesh.triangles.push([i + detailX + 1, i + 1, i + detailX + 2]);
+		for (let j = 0; j <= detailY; j++) {
+			let t = j / detailY
+			for (let i = 0; i <= detailX; i++) {
+				let s = i / detailX
+				mesh.vertices.push(V3.create(startX + s * width, startY + t * height, 0))
+				mesh.coords.push(s, t)
+				mesh.normals.push(V3.Z)
+				if (i < detailX && j < detailY) {
+					let offset = i + j * (detailX + 1)
+					mesh.triangles.push(
+						offset, offset + 1, offset + detailX + 1,
+						offset + detailX + 1, offset + 1, offset + detailX + 2)
 				}
 			}
 		}
 
-		mesh.compile();
-		return mesh;
+		for (let i = 0; i < detailX; i++) {
+			mesh.lines.push(i, i + 1)
+			mesh.lines.push((detailX + 1) * detailY + i, (detailX + 1) * detailY + i + 1)
+		}
+		for (let j = 0; j < detailY; j++) {
+			mesh.lines.push(detailX * j, detailX * (j + 1) + 1)
+			mesh.lines.push(detailX * (j + 1), detailX * (j + 2) + 1)
+		}
+
+		mesh.compile()
+		return mesh
 	};
 
 	// unique corners of a unit cube. Used by Mesh.cube to generate a cube mesh.
