@@ -91,7 +91,7 @@ Sketch.prototype = {
 		var px = this.varMap.get(point), py = px + 1;
 		var lineA_SC = this.worldToSketchMatrix.transformPoint(lineWC.anchor);
 		var lineB_SC = lineA_SC.plus(this.worldToSketchMatrix.transformVector(lineWC.dir1));
-		console.log(lineA_SC, lineB_SC);
+		// console.log(lineA_SC, lineB_SC);
 		if (NLA.isZero(distance)) {
 			this.F.push(x => distanceLinePointSigned(lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]))
 		} else {
@@ -843,7 +843,9 @@ function paintArc(center, radius, width, color, startAngle, endAngle) {
 	}).draw(meshes.segment)
 	gl.popMatrix()
 }
+
 function paintBezier(ps, width, color, startT, endT) {
+	// TODO PS AREN'T IN THE ORDER YOU EXPECT THEM TO BE!!!
 	assertVectors.apply(undefined, ps)
 	shaders.bezier.uniforms({
 		color: rgbToVec4(color),
@@ -906,11 +908,12 @@ function paintSegments(sketch) {
 		function drawPoint(p) {
 			paintArc(p.V3(), 1.5, 3, colorFor(highlighted.contains(p) || hoverHighlight == p, selected.contains(p)))
 		}
+		let color = colorFor(highlighted.contains(seg) || hoverHighlight == seg, selected.contains(seg))
 		if (seg instanceof SketchLineSeg) {
 			//console.log("seg", seg);
 			//console.log("hoverHighlight.length", hoverHighlight.length);
 			//ctx.beginPath();
-			paintLineXY(seg.a.V3(), seg.b.V3(), colorFor(highlighted.contains(seg) || hoverHighlight == seg, selected.contains(seg)))
+			paintLineXY(seg.a.V3(), seg.b.V3(), color)
 
 
 			//console.log(seg.a);
@@ -918,13 +921,11 @@ function paintSegments(sketch) {
 			drawPoint(seg.b)
 		} else if (seg instanceof SketchArc) {
 			var radius = seg.radiusA()
-			var color = colorFor(highlighted.contains(seg) || hoverHighlight == seg, selected.contains(seg))
 			var angleA = seg.angleA(), angleB = seg.angleB()
 			if (angleB <= angleA) { angleB += Math.PI * 2 }
 			paintArc(seg.c.V3(), radius, 2, color, angleA, angleB)
 			drawPoint(seg.c)
 		} else if (seg instanceof SketchBezier) {
-			let color = colorFor(highlighted.contains(seg) || hoverHighlight == seg, selected.contains(seg))
 			// paintBezier(seg.points.map(p => p.V3()), 2, 0xdddddd, -2, 3)
 			paintBezier(seg.points.map(p => p.V3()), 2, color, 0, 1)
 			seg.points.forEach(drawPoint)
@@ -1342,8 +1343,8 @@ function rebuildModel() {
 					modelCSG = brep;
 				}
 				brepMesh = modelCSG.toMesh()
-				brepMesh.computeWireframeFromFlatTriangles()
-				brepMesh.compile()
+				// brepMesh.computeWireframeFromFlatTriangles()
+				// brepMesh.compile()
 			} else if (feature.type && "planeDefinition" == feature.type) {
 				if ("face" == feature.planeType && feature.faceName) {
 					let face = modelCSG.faces.find(face => face.name == feature.faceName)
@@ -1472,15 +1473,9 @@ var /**@type GL.Mesh */ mesh1, mesh2
 var meshes = {}
 function paintScreen () {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	gl.loadIdentity();
-	gl.scale(10, 10, 10);
 
 
 	gl.loadIdentity();
-	gl.pushMatrix()
-	// renderColor(meshes.segment, 0x00ff00)
-	paintBezier(BezierCurve.EX2D.scale(100, 100, 100).points, 0.5, 0x0ff000, -2, 4)
-	gl.popMatrix()
 	drawPlanes();
 	/*
 	 gl.translate(0, 0, -5);
@@ -1518,6 +1513,9 @@ function paintScreen () {
 	mesh1 && mesh1.curve1 && shaders.singleColor.uniforms({
 		color: rgbToVec4(0xff0000)
 	}).drawBuffers({LGL_Vertex: mesh1.vertexBuffers.curve1}, undefined, gl.LINES)
+	mesh1 && mesh1.lines && shaders.singleColor.uniforms({
+		color: rgbToVec4(0x0000ff)
+	}).draw(mesh1, 'LINES')
 	mesh2 && shaders.singleColor.uniforms({
 		color: rgbToVec4(0x0ff000)
 	}).draw(mesh2, 'LINES')
@@ -1674,6 +1672,7 @@ function updateSelected() {
 			paintScreen()
 		};
 		sel.toBrepEdge && newChild.append(new Element('span', {text: sel.toBrepEdge().curve.toSource(x => Math.round10(x, -3)), style: 'font-size: small;'}))
+		sel.surface && newChild.append(new Element('textarea', {text: sel.sce, style: 'font-size: xx-small;display:block;width:100%;'}))
 		newChild.inject(div)
 	});
 	div = $('selectedConstraints')
@@ -1777,13 +1776,21 @@ function main() {
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // TODO ?!
 
 
-	mesh1 = new GL.Mesh()
+	// mesh1 = new GL.Mesh()
 	const curve = BezierCurve.EX2D.scale(100, 100, 100)
+	let face = new B2.RotationFace(new CylinderSurface(new EllipseCurve(V3(334.5253118315583, -158.9800492838025, 0), V3(-37.878800280335724, 51.41917135974512, 0), V3(-51.41917135974512, -37.878800280335724, 0)), V3(0, 0, 1)), [
+		new B2.PCurveEdge(new EllipseCurve(V3(334.5253118315583, -158.9800492838025, 0), V3(-37.878800280335724, 51.41917135974512, 0), V3(-51.41917135974512, -37.878800280335724, 0)), V3(304.8979437003642, -102.40307736395602, 0), V3(372.40411211189405, -210.3992206435476, 0), -0.15251344036514203, -3.141592653589793, null, V3(56.57697191984648, 29.627368131194142, 0), V3(-51.419171359745114, -37.87880028033573, 0)),
+		StraightEdge.throughPoints(V3(372.40411211189405, -210.3992206435476, 0), V3(372.40411211189405, -210.3992206435476, -100)),
+		new B2.PCurveEdge(new EllipseCurve(V3(334.5253118315583, -158.9800492838025, -100), V3(-37.878800280335724, 51.41917135974512, 0), V3(-51.41917135974512, -37.878800280335724, 0)), V3(372.40411211189405, -210.3992206435476, -100), V3(304.8979437003642, -102.40307736395602, -100), -3.141592653589793, -0.15251344036514203, null, V3(51.419171359745114, 37.87880028033573, 0), V3(-56.57697191984648, -29.627368131194142, 0)),
+		StraightEdge.throughPoints(V3(304.8979437003642, -102.40307736395602, -100), V3(304.8979437003642, -102.40307736395602, 0))], [])
+	// mesh1 = face.inB2().toMesh()
+	// mesh1.computeWireframeFromFlatTriangles()
+	// mesh1.compile()
 	// let mint = -2, maxt = 2
 	// drPs.push(curve.at(mint), curve.at(maxt))
-	curve.debugToMesh(mesh1, 'curve1')
+	// curve.debugToMesh(mesh1, 'curve1')
 	// console.log(mesh1)
-	mesh1.compile()
+	// mesh1.compile()
 	// mesh2 = curve.getAABB(mint, maxt).toMesh()
 	// console.log(curve.getAABB().toSource())
 	// console.log(mesh2)
@@ -1824,6 +1831,9 @@ function main() {
 	updateFeatureDisplay()
 	rebuildModel() // so warning will show
 	initLoadSave()
+
+	let b = editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
+	console.log("BBB", b)
 
 	paintScreen();
 	window.onkeypress = function (e) {
@@ -1929,7 +1939,7 @@ function getHovering(mouseLine, ...consider) {
 	}
 	if (consider.contains('sketchElements')) {
 		featureStack.filter(f => f instanceof Sketch).forEach(sketch => {
-			if (sketch.plane && sketch.plane.normal.dot(mouseLine.dir1) < -0.1) {
+			if (!sketch.hide && sketch.plane && sketch.plane.normal.dot(mouseLine.dir1) < -0.1) {
 				// sketch plane is facing user; ensures there is an intersection
 
 				let mouseLineIS = mouseLine.intersectionWithPlane(sketch.plane)
@@ -1942,7 +1952,7 @@ function getHovering(mouseLine, ...consider) {
 						return -d
 					})
 
-				if (closestElement.distanceToCoords(sketchCoords) < 16) {
+				if (closestElement && closestElement.distanceToCoords(sketchCoords) < 16) {
 					// subtract 0.001 so that sketch elements have priority over things in same plane
 					checkEl(closestElement, mouseLine.pointLambda(mouseLineIS) - 0.001)
 				}

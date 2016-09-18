@@ -1225,7 +1225,7 @@ NLA.Matrix.prototype = {
 			if ( 0 == c) {
 				return 1
 			}
-			if ( Math.abs(s) < Math.abs(c)) {
+			if (Math.abs(s) < Math.abs(c)) {
 				return 0.5 * Math.sign(c) * s
 			}
 			return 2 * Math.sign (s) / c;

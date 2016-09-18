@@ -1,20 +1,19 @@
 class CylinderSurface extends Surface {
-	constructor(baseEllipse, dir, normalDir) {
+	constructor(baseEllipse, dir) {
 		super()
+		assert(2 == arguments.length)
 		assertVectors(dir)
-		assert(1 == normalDir || -1 == normalDir, "normalDir == 1 || normalDir == -1" + normalDir)
 		assertInst(EllipseCurve, baseEllipse)
 		//assert(!baseEllipse.normal.isPerpendicularTo(dir), !baseEllipse.normal.isPerpendicularTo(dir))
 		assert(dir.hasLength(1))
 		this.baseEllipse = baseEllipse
 		this.dir = dir
-		this.normalDir = normalDir
 		this.matrix = M4.forSys(baseEllipse.f1, baseEllipse.f2, dir, baseEllipse.center)
 		this.inverseMatrix = this.matrix.inversed()
 	}
 
 	toSource() {
-		return `new CylinderSurface(${this.baseEllipse.toSource()}, ${this.dir.toSource()}, ${this.normalDir}`
+		return `new CylinderSurface(${this.baseEllipse.toSource()}, ${this.dir.toSource()})`
 	}
 
 	edgeLoopContainsPoint(contour, p) {
@@ -52,13 +51,14 @@ class CylinderSurface extends Surface {
 						// endpoint lies on intersection line
 						if (colinearSegments[j]) {
 							// next segment is colinear
-							// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
-							// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
-							// point in the same direction (dot > 0)
+							// we need to calculate if the section of the plane intersection line BEFORE the colinear
+							// segment is inside or outside the face. It is inside when the colinear segment out vector
+							// and the current segment vector point in the same direction (dot > 0)
 							var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
 							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
 							// if the "inside-ness" changes, add intersection point
-							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
+							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear !=
+							// colinearSegmentInsideFace, nextSegmentOutsideVector)
 							if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
 								logIS(edge.b)
 							}
@@ -76,10 +76,6 @@ class CylinderSurface extends Surface {
 
 	}
 
-	toString() {
-		return "CylinderSurface"
-	}
-
 	/**
 	 *
 	 * @param {L3} line
@@ -90,11 +86,12 @@ class CylinderSurface extends Surface {
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
 		var localDir = this.inverseMatrix.transformVector(line.dir1)
-		if (localDir.like(V3.Z)) {
+		if (localDir.isParallelTo(V3.Z)) {
 			// line is parallel to this.dir
 			return []
 		}
 		var localAnchor = this.inverseMatrix.transformPoint(line.anchor)
+		assert(!CylinderSurface.unitISLineTs(localAnchor, localDir).length || !isNaN(CylinderSurface.unitISLineTs(localAnchor, localDir)[0]), 'sad ' +localDir)
 		return CylinderSurface.unitISLineTs(localAnchor, localDir).map(t => line.at(t))
 	}
 
@@ -130,15 +127,13 @@ class CylinderSurface extends Surface {
 	transform(m4) {
 		return new CylinderSurface(
 			this.baseEllipse.transform(m4),
-			m4.transformVector(this.dir),
-			this.normalDir)
+			m4.transformVector(this.dir))
 	}
 
 	flipped() {
 		return new CylinderSurface(
 			this.baseEllipse,
-			this.dir,
-			-this.normalDir)
+			this.dir.negated())
 	}
 
 	toMesh(zStart, zEnd) {
@@ -151,7 +146,7 @@ class CylinderSurface extends Surface {
 		for (var i = 0; i < split; i++) {
 			var v = pF(i * inc, zStart)
 			mesh.vertices.push(pF(i * inc, zStart), pF(i * inc, zEnd))
-			pushQuad(mesh.triangles, -1 == this.normalDir, 2 * i, (2 * i + 2) % c, (2 * i + 1), (2 * i + 3) % c)
+			pushQuad(mesh.triangles, false, 2 * i, (2 * i + 2) % c, (2 * i + 1), (2 * i + 3) % c)
 			var normal = pN(i * inc, 0)
 			mesh.normals.push(normal, normal)
 		}
@@ -163,7 +158,7 @@ class CylinderSurface extends Surface {
 
 	parametricNormal() {
 		return (d, z) => {
-			return this.baseEllipse.normalAt(d).rejectedFrom(this.dir).toLength(this.normalDir)
+			return this.baseEllipse.tangentAt(d).cross(this.dir).normalized()
 		}
 	}
 
@@ -182,7 +177,8 @@ class CylinderSurface extends Surface {
 		return (pWC) => {
 			var p = this.inverseMatrix.transformPoint(pWC)
 			var radiusLC = p.lengthXY()
-			return this.normalDir * (1 - radiusLC)
+			const normalDir = Math.sign(this.baseEllipse.normal.dot(this.dir))
+			return normalDir * (1 - radiusLC)
 		}
 	}
 
@@ -199,9 +195,7 @@ class CylinderSurface extends Surface {
 			var pLC = this.inverseMatrix.transformPoint(pWC)
 			var angle = pLC.angleXY()
 			if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
-				angle = hint.dot(this.baseEllipse.f2) < 0
-					? Math.PI
-					: -Math.PI
+				angle = Math.sign(hint) * Math.PI
 			}
 			return V3.create(angle, pLC.z, 0)
 		}
@@ -213,9 +207,9 @@ class CylinderSurface extends Surface {
 		} else if (surface2 instanceof CylinderSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
+				return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => L3(info.p, this.dir))
 			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
-
+				assert(false)
 			} else {
 				assert(false)
 			}
@@ -250,7 +244,7 @@ class CylinderSurface extends Surface {
 			return totalAngle > 0
 		} else {
 			var ptpF = this.pointToParameterFunction()
-			return isCCW(contour.map(e => ptpF(e.a)), V3.create(0, 0, this.normalDir))
+			return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
 		}
 	}
 
@@ -260,7 +254,7 @@ class CylinderSurface extends Surface {
 	 * @returns {CylinderSurface}
 	 */
 	static cyl(radius) {
-		return new CylinderSurface(new EllipseCurve(V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0)), V3.Z, 1)
+		return new CylinderSurface(new EllipseCurve(V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0)), V3.Z)
 	}
 
 	/**
@@ -286,4 +280,4 @@ class CylinderSurface extends Surface {
 		return pqFormula(b / a, c / a)
 	}
 }
-CylinderSurface.UNIT = new CylinderSurface(EllipseCurve.UNIT, V3.Z, 1)
+CylinderSurface.UNIT = new CylinderSurface(EllipseCurve.UNIT, V3.Z)

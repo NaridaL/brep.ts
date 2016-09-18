@@ -6,7 +6,7 @@
  */
 class ProjectedCurveSurface extends Surface {
 
-	constructor(baseCurve, dir1, tMin=0, tMax=1) {
+	constructor(baseCurve, dir1, tMin=baseCurve.tMin, tMax=baseCurve.tMax) {
 		super()
 		assertInst(Curve, baseCurve)
 		assertInst(V3, dir1)

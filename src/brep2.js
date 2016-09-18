@@ -530,6 +530,10 @@ B2.Face.prototype = NLA.defineObject(Transformable.prototype, {
 
 		}
 	},
+
+	/**
+	 * @returns {B2}
+	 */
 	inB2: function () {
 		return new B2([this])
 	},
@@ -594,13 +598,14 @@ B2.Edge.isLoop = function (loop) {
 	return loop.every((edge, i) => edge.b.like(loop[(i + 1) % loop.length].a))
 }
 B2.Edge.edgesIntersect = function (e1, e2) {
+	// TODO: still getting some NaNs here..
 	assertNumbers(e1.curve.hlol, e2.curve.hlol)
 	assertInst(B2.Edge, e1, e2)
 	if (e1.curve.hlol < e2.curve.hlol) {
 		[e2, e1] = [e1, e2]
 	}
 	let sts = e1.curve.isInfosWithCurve(e2.curve)
-	// console.log(sts.map(SCE), e1.aT, e1.bT, e2.aT, e2.bT)
+	console.log('isInfos', sts.map(SCE), e1.aT, e1.bT, e2.aT, e2.bT)
 	return sts.some(
 		/// (  e1.aT < tThis < e1.bT  )  &&  (  e2.aT < tOther < e2.bT  )
 		({tThis, tOther}) => e1.tValueInside(tThis) && e2.tValueInside(tOther))
@@ -1309,15 +1314,35 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 	name: 'B2.RotationFace',
 	unrollLoop: function (edgeLoop) {
 		var vs = []
-		edgeLoop.forEach((edge, e) => {
-			var reverseFunc = this.surface.pointToParameterFunction()
-			var hint = edge.bDir
-			if (edge instanceof StraightEdge && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
-				hint = this.surface.normalAt(edge.b).cross(edge.bDir)
+		var reverseFunc = this.surface.pointToParameterFunction()
+		let verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0())
+		let startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !NLA.equals(reverseFunc(edgeVertices[0], Math.PI), Math.PI))
+		assert(-1 != startEdgeIndex)
+		// console.log(startEdgeIndex)
+		let hint = Math.PI
+		for (let i = 0; i < edgeLoop.length; i++) {
+			let edgeIndex = (i + startEdgeIndex) % edgeLoop.length
+			for (let j = 0; j < verticesNo0s[edgeIndex].length; j++) {
+				let p = verticesNo0s[edgeIndex][j]
+				let localP = reverseFunc(p, hint)
+				if (Math.abs(localP.x) < Math.PI - NLA.PRECISION) {
+					// update hint
+					hint = localP.x
+				}
+				// console.log(hint, p.sce, localP.sce)
+				vs.push(localP)
 			}
-			edge.getVerticesNo0().forEach(p => vs.push(reverseFunc(p, hint)))
-		})
-		//console.log("e2\n", vs.join("\n"), vs.length)
+		}
+		// edgeLoop.forEach((edge, e) => {
+		// 	var hint = edge.bDir
+		// 	if (edge instanceof StraightEdge && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
+		// 		hint = this.surface.normalAt(edge.b).cross(edge.bDir)
+		// 	}
+		// 	edge.getVerticesNo0().forEach(p => {
+		// 		vs.push(reverseFunc(p, hint))
+		// 	})
+		// })
+		// console.log("vs\n", vs.join("\n"), vs.length)
 		return vs
 	},
 	addToMesh: function (mesh) {
@@ -1362,7 +1387,7 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 					ribs[j].right.binaryInsert(interpolated)
 				}
 				ribs[index1].left.binaryInsert(v1.y)
-				//console.log(ribs.map(r=>r.toSource()).join('\n'))
+				// console.log(ribs.map(r=>r.toSource()).join('\n'))
 			})
 		})
 		var vertices = [], triangles = [], normals = []
@@ -1385,10 +1410,10 @@ B2.RotationFace.prototype = NLA.defineObject(B2.Face.prototype, {
 				normals.push(normalF(d, detailZs[j]))
 			}
 		}
-		//console.log('detailVerticesStart', detailVerticesStart, 'vl', vertices.length, vertices.length - detailVerticesStart, ribs.length)
+		// console.log('detailVerticesStart', detailVerticesStart, 'vl', vertices.length, vertices.length - detailVerticesStart, ribs.length)
 		// finally, fill in the ribs
 		var vsStart = 0
-		var flipped2 = this.surface instanceof ProjectedCurveSurface ? true : this.surface.normalDir == 1
+		var flipped2 = true
 		//for (var i = 0; i < 1; i++) {
 		var end = closed ? ribs.length : ribs.length - 1
 		for (let i = 0; i < end; i++) {
@@ -1485,9 +1510,6 @@ B2.PCurveEdge = NLA.defineClass('B2.PCurveEdge', B2.Edge,
 		this.id = globalId++
 	},
 	{
-		toSource: function() {
-			return `new B2.PCurveEdge(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, ${this.canon}, ${this.aDir}, ${this.bDir})`
-		},
 		getVerticesNo0: function () {
 			return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, false)
 		},

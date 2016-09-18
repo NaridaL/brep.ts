@@ -177,7 +177,7 @@ class EllipseCurve extends Curve {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof CylinderSurface) {
 			var ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir))
-			return this.isPointsWithEllipse(ellipseProjected).map(p => this.pointLambda(p))
+			return this.isInfosWithEllipse(ellipseProjected).map(info => info.tThis)
 		} else {
 			assert(false)
 		}
@@ -421,7 +421,7 @@ class EllipseCurve extends Curve {
 			if (thisAABB.touchesAABB(otherAABB)) {
 				let tMid = (tMin + tMax) / 2
 				let sMid = (sMin + sMax) / 2
-				if (tMax - tMin < EPS || sMax - sMin < EPS) {
+				if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
 					handleStartTS(tMid, sMid)
 					return true
 				} else {
@@ -446,7 +446,6 @@ class EllipseCurve extends Curve {
 		assertf(() => tMin < tMax)
 		assertf(() => sMin < sMax)
 		let result = []
-
 		findRecursive(tMin, tMax, sMin, sMax, this.getAABB(tMin, tMax), bezier.getAABB(sMin, sMax))
 
 		return result
@@ -509,4 +508,4 @@ class EllipseCurve extends Curve {
 }
 EllipseCurve.prototype.hlol = Curve.hlol++
 EllipseCurve.UNIT = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
-EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 8)
+EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 16)

@@ -24,8 +24,8 @@ class BezierCurve extends Curve {
 		this.p1 = p1
 		this.p2 = p2
 		this.p3 = p3
-		this.tMin = isFinite(tMin) ? tMin : 0
-		this.tMax = isFinite(tMax) ? tMax : 1
+		this.tMin = isFinite(tMin) ? tMin : -0.1
+		this.tMax = isFinite(tMax) ? tMax : 1.1
 	}
 
 	/**
@@ -37,7 +37,7 @@ class BezierCurve extends Curve {
 	}
 
 	toString(f) {
-		return `new BezierCurve(${this.p0}, ${this.p1}, ${this.p2}, ${this.p3})`
+		return `new BezierCurve(${this.p0}, ${this.p1}, ${this.p2}, ${this.p3}, ${this.tMin}, ${this.tMax})`
 	}
 
 	/**
@@ -193,10 +193,9 @@ class BezierCurve extends Curve {
 
 
 		let matrix = M4.forSys(a, b, c, d) // B(t) = matrix * V3(1, t, t², t³)
-		let gauss = matrix.gauss().U
-		const $ = gauss.m
-		let pqp = $[6] / $[5], q = $[7] / $[5]
-		let results = solveCubicReal2(0, $[5], $[6], $[7]).filter(t => NLA.isZero(t * t * $[1] + t * $[2] + $[3] + $[0] * t * t * t))
+		const g = matrix.gauss().U.m
+		let pqp = g[6] / g[5], q = g[7] / g[5]
+		let results = solveCubicReal2(0, g[5], g[6], g[7]).filter(t => NLA.isZero(t * t * g[1] + t * g[2] + g[3] + g[0] * t * t * t))
 		if (0 == results.length) return NaN
 		if (1 == results.length) return results[0]
 		assert(false, 'multiple intersection ' + this.toString() + p.sce)
@@ -394,14 +393,15 @@ class BezierCurve extends Curve {
 		let z = (d.e(coord0) - anchor.e(coord0)) * dir.e(coord1) - (d.e(coord1) - anchor.e(coord1)) * dir.e(coord0)
 
 		// we ignored a dimension in the previous step, so we need to check it too
-		return solveCubicReal2(w, x, y, z).reduce((arr, t) => {
-			let p = this.at(t)
-			// console.log(t*t*t*w+t*t*x+t*y+z, dir.length())
-			let s = p.minus(anchor).dot(dir) / dir.dot(dir)
-			let lineAtS = dir.times(s).plus(anchor)
-			lineAtS.like(p) && arr.push({tThis: t, tOther: s, p: p})
-			return arr
-		}, [])
+		return solveCubicReal2(w, x, y, z).mapFilter(tThis => {
+			if (this.tMin <= tThis && tThis <= this.tMax) {
+				let p = this.at(tThis)
+				// console.log(t*t*t*w+t*t*x+t*y+z, dir.length())
+				let s = p.minus(anchor).dot(dir) / dir.dot(dir)
+				let lineAtS = dir.times(s).plus(anchor)
+				if (lineAtS.like(p)) return {tThis: tThis, tOther: s, p: p}
+			}
+		})
 	}
 
 	/**
@@ -504,7 +504,8 @@ class BezierCurve extends Curve {
 			if (thisAABB.touchesAABB(otherAABB)) {
 				let tMid = (tMin + tMax) / 2
 				let sMid = (sMin + sMax) / 2
-				if (tMax - tMin < EPS || sMax - sMin < EPS) {
+				if (Math.abs(tMax - tMin) < EPS && Math.abs(sMax - sMin) < EPS) {
+					// console.log("AAAAAABBSSS", thisAABB, otherAABB, tMax, tMin, sMax, sMin)
 					handleStartTS(tMid, sMid)
 					return true
 				} else {
@@ -540,12 +541,12 @@ class BezierCurve extends Curve {
 			}
 			tMin = Math.min(tMin, sMin)
 			tMax = Math.max(tMax, sMax)
-			let splits = NLA.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort()
-			// console.log('splits', splits, this.roots().concatenated())
+			let splits = NLA.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(NLA.minus)
+			console.log('splits', splits, this.roots().concatenated())
 			let aabbs = NLA.arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
 			Array.from(NLA.combinations(splits.length - 1)).forEach(({i, j}) => {
-				if (Math.abs(i - j) > 1) {
-					// adjacent curves can't intersect
+				// adjacent curves can't intersect
+				if (Math.abs(i - j) > 2) {
 					// console.log(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
 					findRecursive(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
 				}
@@ -602,4 +603,4 @@ class BezierCurve extends Curve {
 BezierCurve.EX2D = BezierCurve.graphXY(2,-3,-3,2)
 BezierCurve.EX3D = new BezierCurve(V3.ZERO, V3(-0.1, -1, 1), V3(1.1, 1, 1), V3.X)
 BezierCurve.prototype.hlol = Curve.hlol++
-BezierCurve.prototype.tIncrement = 1 / (16)
+BezierCurve.prototype.tIncrement = 1 / (64)

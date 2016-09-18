@@ -52,10 +52,10 @@ B2.puckman = function (radius, rads, height, name) {
  * @param {P3} baseFacePlane
  * @param {V3} offset
  * @param {string} name
- * @param {string=} source
+ * @param {string=} gen
  * @returns {B2}
  */
-B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name, source) {
+B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name, gen) {
 	Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
 		assertf(() => !B2.Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce+baseFaceEdges[j].sce)
 	})
@@ -76,29 +76,42 @@ B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name, source) 
 	var ribs = NLA.arrayFromFunction(edgeCount,
 		i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i))
 
-	var faces = baseFaceEdges.map((edge, i) => {
-		var j = (i + 1) % edgeCount
-		var faceEdges = [baseFaceEdges[i].flipped(), ribs[i], topEdges[i], ribs[j].flipped()]
-		var curve = edge.curve
+	let faces = baseFaceEdges.map((edge, i) => {
+		let j = (i + 1) % edgeCount
+		let faceEdges = [baseFaceEdges[i].flipped(), ribs[i], topEdges[i], ribs[j].flipped()]
+		let curve = edge.curve
+		let surface = projectCurve(curve, offset, edge.reversed)
 		if (edge instanceof StraightEdge) {
-			var surfaceNormal = offset.cross(edge.tangent).normalized()
-			let surface = new PlaneSurface(P3.normalOnAnchor(surfaceNormal, edge.a))
 			return new B2.PlaneFace(surface, faceEdges)
 		} else if (curve instanceof EllipseCurve) {
-			let surface = new CylinderSurface(curve, offset.normalized(), -1)
 			return new B2.RotationFace(surface, faceEdges)
 		} else if (curve instanceof BezierCurve) {
-			let curveDir = edge.reversed ? offset : offset.negated()
-			let surface = new ProjectedCurveSurface(curve, curveDir.normalized(), 0, 1)
 			return new B2.RotationFace(surface, faceEdges)
 		} else {
 			assert(false, edge)
 		}
 	})
 	faces.push(bottomFace, topFace)
-	source = source || `B2.extrudeEdges(${baseFaceEdges.sce}, ${baseFacePlane.sce}, ${offset.sce}, "${name}")` // todo proper escaping
-	return new B2(faces, false, source)
+	gen = gen || `B2.extrudeEdges(${baseFaceEdges.sce}, ${baseFacePlane.sce}, ${offset.sce}, ${JSON.stringify(name)})`
+	return new B2(faces, false, gen)
 }
+
+function projectCurve(curve, offset, flipped) {
+	if (curve instanceof L3) {
+		var surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
+		return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor))
+	}
+	if (curve instanceof EllipseCurve) {
+		let curveDir = flipped ? offset : offset.negated()
+		return new CylinderSurface(curve, curveDir.normalized())
+	}
+	if (curve instanceof BezierCurve) {
+		let curveDir = flipped ? offset : offset.negated()
+		return new ProjectedCurveSurface(curve, curveDir.normalized(), 0, 1)
+	}
+	assert(false, curve)
+}
+
 B2.cylinder = function (radius, height, rads) {
 	return B2.rotateEdges(verticesChain([V3(0, 0, 0), V3(radius, 0, 0), V3(radius, 0, height), V3(0, 0, height)]), rads || 2 * PI)
 }
@@ -135,14 +148,13 @@ B2.rotateEdges = function (edges, rads) {
 			!NLA.isZero(edge.a.x) && ribs[i],
 			endEdges[i],
 			!NLA.isZero(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
-		var surface
 		var curve = edge.curve;
 		if (edge instanceof StraightEdge) {
 			var line = edge.curve
 			if (line.dir1.isParallelTo(V3.Z)) {
 				if (NLA.isZero(edge.a.x)) { return }
 				let flipped = edge.a.z > edge.b.z
-				let surface = new CylinderSurface(ribs[i].curve, V3.Z, !flipped ? 1 : -1)
+				let surface = new CylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated())
 				return new B2.RotationFace(surface, faceEdges)
 			} else if (line.dir1.isPerpendicularTo(V3.Z)) {
 				let flipped = edge.a.x > edge.b.x
@@ -317,5 +329,6 @@ B2.tetrahedron = function (a, b, c, d) {
 		new B2.PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()]),
 		new B2.PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac])
 	]
-	return new B2(faces)
+	let gen = `B2.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
+	return new B2(faces, false, gen)
 }
