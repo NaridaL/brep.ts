@@ -49,7 +49,10 @@ SketchBezier = class SketchBezier {
 		assert(false)
 	}
 	distanceTo(x, y) {
-		return this.getBezierCurve().distanceToPoint(V3.create(x, y, 0))
+		let p = V3.create(x, y, 0)
+		const curve = this.getBezierCurve()
+		let t = NLA.clamp(curve.closestTToPoint(p), 0, 1)
+		return curve.at(t).distanceTo(p)
 	}
 	getClosestPoint(x, y) {
 		assert(false)
@@ -69,11 +72,11 @@ SketchBezier = class SketchBezier {
 
 	toBrepEdge() {
 		let curve = this.getBezierCurve()
-		return new B2.PCurveEdge(curve,
+		return new PCurveEdge(curve,
 			this.a.V3(), this.b.V3(),
 			0, 1,
 			null,
-			curve.tangentAt(0), curve.tangentAt(1))
+			curve.tangentAt(0), curve.tangentAt(1), this.name)
 	}
 }
 

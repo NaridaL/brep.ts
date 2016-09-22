@@ -109,4 +109,12 @@ class Surface extends Transformable {
 	transform(m4) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
+
+	/**
+	 * @abstract
+	 * @returns {function (V3):V3}
+	 */
+	pointToParameterFunction() {
+		assert(false, "Not implemented on " + this.constructor.name)
+	}
 }

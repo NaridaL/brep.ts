@@ -4,6 +4,7 @@
 var STEP_SIZE = 1
 class PICurve extends Curve {
 	constructor(parametricSurface, implicitSurface, startPoint) {
+		super()
 		assert(parametricSurface.parametricFunction, 'parametricSurface.parametricFunction')
 		assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
 		this.parametricSurface = parametricSurface

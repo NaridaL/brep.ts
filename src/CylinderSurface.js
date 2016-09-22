@@ -27,13 +27,13 @@ class CylinderSurface extends Surface {
 		var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir) > 0)
 		var inside = false
 
-		function logIS(p) {
-			if (line.pointLambda(p) > 0) {
+		const logIS = (p) => {
+			if (line.pointLambda(p) > 0 && line.containsPoint(p)) {
 				inside = !inside
 			}
 		}
 
-		contour.forEach((edge, i, edges) => {
+		contour.forEach((/** Edge= */ edge, /** number */ i, /** Array.<Edge> */ edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
 			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 			if (colinearSegments[i]) {

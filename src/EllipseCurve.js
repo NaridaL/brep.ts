@@ -43,6 +43,9 @@ class EllipseCurve extends Curve {
 		return this.f2.times(xi).minus(this.f1.times(eta))
 	}
 
+	/**
+	 *
+	 */
 	isCircular() {
 		return NLA.equals(this.f1.length(), this.f2.length())
 	}
@@ -62,16 +65,17 @@ class EllipseCurve extends Curve {
 		if (curve.constructor != EllipseCurve) {
 			return false
 		}
-		if (!this.center.like(curve.center)) {
+		let ell = /** @type {EllipseCurve} */ curve
+		if (!this.center.like(ell.center)) {
 			return false
 		}
-		if (this == curve) {
+		if (this == ell) {
 			return true
 		}
 		if (this.isCircular()) {
-			return curve.isCircular() && NLA.equals(this.f1.length(), curve.f1.length())
+			return ell.isCircular() && NLA.equals(this.f1.length(), ell.f1.length())
 		} else {
-			var {f1: f1, f2: f2} = this.mainAxes(), {f1: c1, f2: c2} = curve.mainAxes()
+			var {f1: f1, f2: f2} = this.mainAxes(), {f1: c1, f2: c2} = ell.mainAxes()
 			return NLA.equals(f1.lengthSquared(), abs(f1.dot(c1)))
 				&& NLA.equals(f2.lengthSquared(), abs(f2.dot(c2)))
 		}
@@ -84,7 +88,7 @@ class EllipseCurve extends Curve {
 	/**
 	 *
 	 * @param {V3} p
-	 * @param {V3} hint TODO document hint
+	 * @param {number=} hint TODO document hint
 	 * @returns {*}
 	 */
 	pointLambda(p, hint) {
@@ -92,9 +96,7 @@ class EllipseCurve extends Curve {
 		var p2 = this.inverseMatrix.transformPoint(p)
 		var angle = p2.angleXY()
 		if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
-			return hint.dot(this.f2) < 0
-				? Math.PI
-				: -Math.PI
+			return Math.sign(hint) * Math.PI
 		}
 		return angle
 	}
@@ -242,6 +244,12 @@ class EllipseCurve extends Curve {
 
 			// ellipses are coplanar
 			var localEllipse = ellipse.transform(this.inverseMatrix).rightAngled()
+
+			// check if colinear
+			if (localEllipse.f1.hasLength(1) && localEllipse.f2.hasLength(1) && localEllipse.center.isZero()) {
+				return []
+			}
+
 			//new EllipseCurve(V3.ZERO, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
 			console.log(localEllipse, localEllipse.sce)
 			//localEllipse.debugToMesh(dMesh, 'curve3')
@@ -285,8 +293,8 @@ class EllipseCurve extends Curve {
 			 var c = (1 - bSqr / aSqr) / 2/ y0, d = -x0 / y0, e = (bSqr + x0 * x0 + y0 * y0) / 2 / y0
 
 			 var ff = x => c*c*x*x*x*x+ 2*c*d*x*x*x+ (2*c*e+d*d+bSqr/aSqr)*x*x+2*d*e*x+e*e-bSqr
-			 var newx1 = newtonIterate(ff, x0 - 1)
-			 var newx2 = newtonIterate(ff, x0)
+			 var newx1 = newtonIterate1d(ff, x0 - 1)
+			 var newx2 = newtonIterate1d(ff, x0)
 			 var f1 = (x, y) => 2 * x - y
 			 var f2 = (x, y) => 2 * ((x - x0) * (x - x0) + (y - y0) * (y - y0) - 1)
 			 var f3 = (x, y) => 2 * (x * x / aSqr + y * y / bSqr - 1)
@@ -362,7 +370,7 @@ class EllipseCurve extends Curve {
 			// up to 6 solutions possible
 			let f = t => localBezier.at(t).lengthSquaredXY() - 1
 			// f is polynome degree six, no explicit solutionis possble
-			let possibleTs = NLA.arrayFromFunction(16, i => newtonIterate(f, i / 15, 8)).filter(t => f(t) < NLA.PRECISION)
+			let possibleTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8)).filter(t => f(t) < NLA.PRECISION)
 			return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
 		} else {
 			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
@@ -474,7 +482,7 @@ class EllipseCurve extends Curve {
 		let startT = this.inverseMatrix.transformPoint(p).angleXY()
 		let pRelCenter = p.minus(this.center)
 		let F = t => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
-		return newtonIterate(F, startT)
+		return newtonIterate1d(F, startT)
 	}
 
 	/**

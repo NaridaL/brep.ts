@@ -1,9 +1,10 @@
-/**
- * @template T
- * @class Curve.<T>
- * @extends Transformable.<T>
- */
-class Curve extends Transformable {
+class ProjectionCurve extends Curve {
+	constructor(originalCurve, projDir, targetSurface, isIndex) {
+		this.originalCurve = originalCurve
+		this.projDir = projDir
+		this.targetSurface = targetSurface
+		this.isIndex = isIndex
+	}
 
 	/**
 	 * Returns curve parameter t for point p on curve.
@@ -27,9 +28,7 @@ class Curve extends Transformable {
 	 * @abstract
 	 * @param {V3} p
 	 */
-	closestTToPoint(p) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	closestTToPoint(p) {}
 
 	/**
 	 * So different edges on the same curve do not have different vertices, they are always generated
@@ -146,7 +145,7 @@ class Curve extends Transformable {
 	}
 
 	/**
-	 * Should really be abstract, but it works for all the conic is curves, so it's here.
+	 * Should really be abstract, but it works for all teh conic is curves, so it's here.
 	 * @param mesh
 	 * @param bufferName
 	 */
@@ -218,4 +217,3 @@ class Curve extends Transformable {
 		return new AABB(V3(mins), V3(maxs))
 	}
 }
-Curve.hlol = 0

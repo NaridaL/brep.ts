@@ -6,6 +6,14 @@
  */
 class ProjectedCurveSurface extends Surface {
 
+	/**
+	 * @param baseCurve
+	 * @param dir1
+	 * @param tMin
+	 * @param tMax
+	 *
+	 * @property {BezierCurve} baseCurve
+	 */
 	constructor(baseCurve, dir1, tMin=baseCurve.tMin, tMax=baseCurve.tMax) {
 		super()
 		assertInst(Curve, baseCurve)
@@ -26,12 +34,13 @@ class ProjectedCurveSurface extends Surface {
 		return this.toSource()
 	}
 
+
 	toMesh(tStart, tEnd, zStart, zEnd, count) {
 		tStart = tStart || this.tMin
 		tEnd = tEnd || this.tMax
-		zStart = zStart || -30
-		zEnd = zEnd || 30
-		count = count || 16
+		zStart = zStart || -400
+		zEnd = zEnd || 400
+		count = count || 128
 
 		let tInterval = tEnd - tStart, tStep = tInterval / (count - 1)
 		let baseVertices =
@@ -64,15 +73,7 @@ class ProjectedCurveSurface extends Surface {
 	}
 
 	implicitFunction() {
-		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
-		var matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
-		var matrixInverse = matrix.inversed()
-		var f = this.FofR
-		return function (pWC) {
-			var p = matrixInverse.transformPoint(pWC)
-			var radiusLC = Math.sqrt(p.x * p.x + p.y * p.y)
-			return f(p.z) - radiusLC
-		}
+
 	}
 
 	boundsFunction() {
@@ -82,6 +83,15 @@ class ProjectedCurveSurface extends Surface {
 			let pointParameterT = ptpf(pWC).x
 			return tMin <= pointParameterT && pointParameterT <= tMax
 		}
+	}
+
+	footParameters(pWC, ss, st) {
+		let basePlane = P3(this.dir1, 0)
+		let projCurve = this.baseCurve.project(basePlane)
+		let projPoint = basePlane.projectedPoint(pWC)
+		let t = projCurve.closestTToPoint(projPoint, undefined, undefined, ss)
+		let z = pWC.minus(this.baseCurve.at(t)).dot(this.dir1)
+		return V3.create(t, z, 0)
 	}
 
 	pointToParameterFunction() {
@@ -102,7 +112,7 @@ class ProjectedCurveSurface extends Surface {
 		// 	let iterationFunc = t => {let d = baseCurve.at(t).minus(pWC); return d.dot(dir1) + d.length() }
 		// 	let startT = NLA.arrayFromFunction(16, i => tMin + (tMax - tMin) * i / 15)
 		// 		.withMax(t => -abs(iterationFunc(t)))
-		// 	let t = newtonIterate(iterationFunc, startT, 16)
+		// 	let t = newtonIterate1d(iterationFunc, startT, 16)
 		// 	let z = pWC.minus(baseCurve.at(t)).dot(dir1)
 		// 	return V3.create(t, z, 0)
 		// }
@@ -112,7 +122,42 @@ class ProjectedCurveSurface extends Surface {
 	 * @inheritDoc
 	 */
 	isCurvesWithSurface(surface) {
-		// prefer other surface to be the paramteric one
+		if (surface instanceof PlaneSurface) {
+			let plane = surface.plane
+			if (this.dir1.isPerpendicularTo(plane.normal)) {
+
+				let ts = this.baseCurve.isTsWithPlane(plane)
+				return ts.map(t => L3(this.baseCurve.at(t), this.dir1))
+			} else {
+				return [this.baseCurve.project(plane)]
+			}
+		}
+		if (surface instanceof ProjectedCurveSurface || surface instanceof CylinderSurface) {
+			let dir1 = surface instanceof ProjectedCurveSurface ? surface.dir1 : surface.dir.normalized()
+			if (this.dir1.isParallelTo(dir1)) {
+				let otherCurve = surface instanceof ProjectedCurveSurface ? surface.baseCurve : surface.baseEllipse
+				let infos = this.baseCurve.isInfosWithCurve(otherCurve)
+				return infos.map(info => L3(info.p, dir1))
+			}
+			if (surface instanceof ProjectedCurveSurface) {
+				const startPoint = surface.isPointsWithLine(L3(this.baseCurve.at(0.5), this.dir1))[0]
+				drVs.push({anchor: this.baseCurve.at(0.5), dir: this.dir1})
+				console.log(startPoint)
+				return [new PPCurve(this, surface, startPoint)]
+				// let testVector = this.dir1.cross(surface.dir1).normalized()
+				// // look for points on surface.baseCurve where tangent DOT testVector == 0
+				// let abcd1 = surface.baseCurve.tangentCoefficients().map(c => c.dot(testVector))
+				// let ts1 = solveCubicReal2.apply(undefined, abcd1).concat(surface.tMin, surface.tMax)
+				// let abcd2 = this.baseCurve.tangentCoefficients().map(c => c.dot(testVector))
+				// let ts2 = solveCubicReal2.apply(undefined, abcd2)
+				// let tt1 = ts1.map(t => surface.baseCurve.at(t).dot(testVector))
+				// let tt2 = ts1.map(t => surface.baseCurve.at(t).dot(testVector))
+				// console.log(ts1, ts2, tt1, tt2)
+				// ts1.forEach(t => drPs.push(surface.baseCurve.at(t)))
+				// ts2.forEach(t => drPs.push(this.baseCurve.at(t)))
+				// return
+			}
+		}
 		if (surface.parametricFunction) {
 			return new PICurve(surface, this)
 		} else if (surface.implicitFunction) {
@@ -173,12 +218,12 @@ class ProjectedCurveSurface extends Surface {
 		var inside = false
 
 		function logIS(p) {
-			if (testLine.pointLambda(p) > 0) {
+			if (testLine.pointLambda(p) > 0 && testLine.containsPoint(p)) {
 				inside = !inside
 			}
 		}
 
-		contour.forEach(function (/** @type {B2.Edge} */ edge, /** @type number */ i, /** @type Edge[] */ edges) {
+		contour.forEach(function (/** @type Edge */ edge, /** @type number */ i, /** @type Edge[] */ edges) {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
 			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 			if (colinearSegments[i]) {
@@ -248,7 +293,7 @@ class ProjectedCurveSurface extends Surface {
 		let projAnchor = projectionPlane.projectedPoint(line.anchor)
 		let projBaseCurve = this.baseCurve.project(projectionPlane)
 		return projBaseCurve
-			.isInfosWithLine(projAnchor, projDir)
+			.isInfosWithLine(projAnchor, projDir, this.tMin, this.tMax)
 			.map(info => line.at(info.tOther))
 	}
 

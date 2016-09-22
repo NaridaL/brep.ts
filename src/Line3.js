@@ -172,6 +172,10 @@ NLA.addOwnProperties(L3.prototype, /** @lends L3.prototype */ {
 
 		let dirCross = this.dir1.cross(line.dir1)
 		let div = dirCross.lengthSquared()
+		if (NLA.isZero(div)) {
+			// lines are parallel
+			return []
+		}
 		let anchorDiff = line.anchor.minus(this.anchor)
 		if (NLA.isZero(anchorDiff.dot(dirCross))) {
 			let tThis = anchorDiff.cross(this.dir1).dot(dirCross) / div
@@ -229,17 +233,13 @@ NLA.addOwnProperties(L3.prototype, /** @lends L3.prototype */ {
 	    return "L3("+this.anchor.toString(roundFunction) + ", "+this.dir1.toString(roundFunction) +")"
     },
 
-	/**
-	 * Returns the point on the line that is closest to the given point.
-	 *
-	 * @param {V3} p
-	 * @returns {V3}
-	 */
-    closestPointToPoint: function (p) {
+
+
+	closestTToPoint: function (p) {
 		// similar logic as pointLambda; we project the vector (anchor -> p) onto dir1, then add anchor back to it
 		let nearestT = p.minus(this.anchor).dot(this.dir1)
-		return this.at(nearestT)
-    },
+		return nearestT
+	},
 
 	/**
 	 *
@@ -341,7 +341,7 @@ NLA.addOwnProperties(L3.prototype, /** @lends L3.prototype */ {
 
     debugToMesh: function(mesh, bufferName) {
 	    mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
-	    mesh[bufferName].push(this.at(-100), this.at(100))
+	    mesh[bufferName].push(this.at(-1000), this.at(2000))
     }
 
 })

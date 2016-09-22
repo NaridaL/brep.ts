@@ -42,13 +42,20 @@ B2.puckman = function (radius, rads, height, name) {
 	var edges = [
 		StraightEdge.throughPoints(a, V3.ZERO),
 		StraightEdge.throughPoints(V3.ZERO, b),
-		new B2.PCurveEdge(circleCurve, b, a, -rads, 0, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))]
+		new PCurveEdge(circleCurve, b, a, -rads, 0, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))]
 	return B2.extrudeEdges(edges, P3.XY.flipped(), V3.create(0, 0, height), name)
+}
+
+B2.registerVertexName = function (map, name, p) {
+	// TODO
+	if (!Array.from(map.keys()).some(p2 => p2.like(p))) {
+		map.set(p, name)
+	}
 }
 
 /**
  *
- * @param {Edge[]} baseFaceEdges
+ * @param {Array.<Edge>} baseFaceEdges
  * @param {P3} baseFacePlane
  * @param {V3} offset
  * @param {string} name
@@ -57,43 +64,49 @@ B2.puckman = function (radius, rads, height, name) {
  */
 B2.extrudeEdges = function (baseFaceEdges, baseFacePlane, offset, name, gen) {
 	Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
-		assertf(() => !B2.Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce+baseFaceEdges[j].sce)
+		assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce+baseFaceEdges[j].sce)
 	})
-	assertf(() => B2.Edge.isLoop(baseFaceEdges))
+	assertf(() => Edge.isLoop(baseFaceEdges))
 	// TODO checks..
 	if (offset.dot(baseFacePlane.normal) > 0) {
 		baseFacePlane = baseFacePlane.flipped()
 	}
+	let vertexNames = new Map()
 	let basePlaneSurface = new PlaneSurface(baseFacePlane)
 	assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), "edges not CCW on baseFacePlane")
 	var translationMatrix = M4.translation(offset)
-	var topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix))
+	var topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix, 'top'))
 	var edgeCount = baseFaceEdges.length
-	var bottomFace = new B2.PlaneFace(basePlaneSurface, baseFaceEdges)
+	var bottomFace = new PlaneFace(basePlaneSurface, baseFaceEdges, [], name + 'Bottom')
 	var topFaceEdges = topEdges.map(edge => edge.flipped()).reverse()
-	var topFace = new B2.PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges)
+	var topFace = new PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges, [], name + 'Top')
+
+
+	baseFaceEdges.forEach(edge => B2.registerVertexName(vertexNames, edge.name + 'A', edge.a))
+	topFaceEdges.forEach(edge => B2.registerVertexName(vertexNames, edge.name + 'A', edge.a))
 
 	var ribs = NLA.arrayFromFunction(edgeCount,
 		i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i))
 
 	let faces = baseFaceEdges.map((edge, i) => {
+		let faceName = name + 'Wall' + i
 		let j = (i + 1) % edgeCount
 		let faceEdges = [baseFaceEdges[i].flipped(), ribs[i], topEdges[i], ribs[j].flipped()]
 		let curve = edge.curve
 		let surface = projectCurve(curve, offset, edge.reversed)
 		if (edge instanceof StraightEdge) {
-			return new B2.PlaneFace(surface, faceEdges)
+			return new PlaneFace(surface, faceEdges, undefined, faceName)
 		} else if (curve instanceof EllipseCurve) {
-			return new B2.RotationFace(surface, faceEdges)
+			return new RotationFace(surface, faceEdges, undefined, faceName)
 		} else if (curve instanceof BezierCurve) {
-			return new B2.RotationFace(surface, faceEdges)
+			return new RotationFace(surface, faceEdges, undefined, faceName)
 		} else {
 			assert(false, edge)
 		}
 	})
 	faces.push(bottomFace, topFace)
 	gen = gen || `B2.extrudeEdges(${baseFaceEdges.sce}, ${baseFacePlane.sce}, ${offset.sce}, ${JSON.stringify(name)})`
-	return new B2(faces, false, gen)
+	return new B2(faces, false, gen, vertexNames)
 }
 
 function projectCurve(curve, offset, flipped) {
@@ -138,7 +151,7 @@ B2.rotateEdges = function (edges, rads) {
 		if (!NLA.isZero(radius)) {
 			var curve = new EllipseCurve(V3.create(0, 0, a.z), V3.create(-radius, 0, 0), V3.create(0, -radius, 0))
 			var aT = -PI, bT = -PI + rads
-			return new B2.PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT))
+			return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT))
 		}
 	})
 	var faces = edges.map((edge, i) => {
@@ -155,7 +168,7 @@ B2.rotateEdges = function (edges, rads) {
 				if (NLA.isZero(edge.a.x)) { return }
 				let flipped = edge.a.z > edge.b.z
 				let surface = new CylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated())
-				return new B2.RotationFace(surface, faceEdges)
+				return new RotationFace(surface, faceEdges)
 			} else if (line.dir1.isPerpendicularTo(V3.Z)) {
 				let flipped = edge.a.x > edge.b.x
 				let surface = new PlaneSurface(P3(V3.Z, edge.a.z))
@@ -164,9 +177,9 @@ B2.rotateEdges = function (edges, rads) {
 					var hole = flipped
 						? !NLA.isZero(edge.b.x) && ribs[ipp].flipped()
 						: !NLA.isZero(edge.a.x) && ribs[i]
-					return new B2.PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
+					return new PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
 				}
-				return new B2.PlaneFace(surface, faceEdges)
+				return new PlaneFace(surface, faceEdges)
 			} else {
 				// apex is intersection of segment with Z-axis
 				let a = edge.a, b = edge.b
@@ -174,7 +187,7 @@ B2.rotateEdges = function (edges, rads) {
 				let apex = V3(0, 0, apexZ)
 				let flipped = edge.a.z > edge.b.z
 				let surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve, !flipped ? 1 : -1)
-				return new B2.RotationFace(surface, faceEdges)
+				return new RotationFace(surface, faceEdges)
 			}
 		} if (edge.curve instanceof EllipseCurve) {
 			let flipped = undefined
@@ -184,7 +197,7 @@ B2.rotateEdges = function (edges, rads) {
 				let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
 				if (flipped) { f3length *= -1 }
 				let surface = new EllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
-				return new B2.RotationFace(surface, faceEdges)
+				return new RotationFace(surface, faceEdges)
 			}
 		} else {
 			assert (false, edge)
@@ -192,8 +205,8 @@ B2.rotateEdges = function (edges, rads) {
 	}).filter(x =>x)
 	if (open) {
 		var endFaceEdges = endEdges.map(edge => edge.flipped()).reverse()
-		var endFace = new B2.PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)
-		faces.push(new B2.PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace)
+		var endFace = new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)
+		faces.push(new PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace)
 	}
 	return new B2(faces)
 }
@@ -230,7 +243,7 @@ B2.rotStep = function (edges, rads, count) {
 					newEdges.pushAll(NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped()))
 				}
 				newEdges.push(edge.flipped())
-				face = new B2.PlaneFace(surface, newEdges)
+				face = new PlaneFace(surface, newEdges)
 			} else {
 				var contour = flipped
 					? NLA.arrayFromFunction(count, j => hs[j][i])
@@ -241,7 +254,7 @@ B2.rotStep = function (edges, rads, count) {
 				} else if (!flipped && !NLA.isZero(edge.a.x)) {
 					hole = NLA.arrayFromFunction(count, j => hs[j][i])
 				}
-				face = new B2.PlaneFace(surface, contour, hole ? [hole] : [])
+				face = new PlaneFace(surface, contour, hole ? [hole] : [])
 			}
 			faces.push(face)
 			return
@@ -255,7 +268,7 @@ B2.rotStep = function (edges, rads, count) {
 			var faceEdges = [ribs[r][i].flipped(), hs[r][i], ribs[rpp][i], hs[r][ipp] && hs[r][ipp].flipped()].filter(x => x)
 			if (edge instanceof StraightEdge) {
 				var surface = new PlaneSurface(P3.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a))
-				faces.push(new B2.PlaneFace(surface, faceEdges))
+				faces.push(new PlaneFace(surface, faceEdges))
 			} else {
 				assert(false, edge.toString())
 			}
@@ -263,8 +276,8 @@ B2.rotStep = function (edges, rads, count) {
 	})
 	if (open) {
 		var endFaceEdges = ribs[count].map(edge => edge.flipped()).reverse()
-		var endFace = new B2.PlaneFace(new PlaneSurface(P3.XZ.rotateZ(rads)), endFaceEdges)
-		faces.push(new B2.PlaneFace(new PlaneSurface(P3.XZ.flipped()), edges), endFace)
+		var endFace = new PlaneFace(new PlaneSurface(P3.XZ.rotateZ(rads)), endFaceEdges)
+		faces.push(new PlaneFace(new PlaneSurface(P3.XZ.flipped()), edges), endFace)
 	}
 	return new B2(faces)
 }
@@ -281,14 +294,14 @@ B2.extrudeVertices = function (baseVertices, baseFacePlane, offset, name, source
 	//var topPlane = basePlane.translated(offset)
 	var top, bottom
 	var faces = [
-		bottom = B2.PlaneFace.forVertices(new PlaneSurface(baseFacePlane), baseVertices),
-		top = B2.PlaneFace.forVertices(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topVertices)]
+		bottom = PlaneFace.forVertices(new PlaneSurface(baseFacePlane), baseVertices),
+		top = PlaneFace.forVertices(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topVertices)]
 	var m = baseVertices.length
 	var ribs = NLA.arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
 	for (var i = 0; i < m; i++) {
 		var j = (i + 1) % m
 		faces.push(
-			new B2.PlaneFace(
+			new PlaneFace(
 				PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
 				[bottom.edges[i].flipped(), ribs[i], top.edges[m - j - 1].flipped(), ribs[j].flipped()], [], name + "wall" + i))
 	}
@@ -324,10 +337,10 @@ B2.tetrahedron = function (a, b, c, d) {
 	let bd = StraightEdge.throughPoints(b, d)
 	let cd = StraightEdge.throughPoints(c, d)
 	let faces = [
-		new B2.PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()]),
-		new B2.PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()]),
-		new B2.PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()]),
-		new B2.PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac])
+		new PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()]),
+		new PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()]),
+		new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()]),
+		new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac])
 	]
 	let gen = `B2.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
 	return new B2(faces, false, gen)

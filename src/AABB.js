@@ -189,14 +189,13 @@ AABB.prototype = {
 	}
 }
 NLA.addOwnProperties(AABB.prototype, Transformable.prototype)
-console.log(Object.getOwnPropertyNames(Transformable.prototype))
 
 function RangeTree(vals, start, end) {
 	start = start || 0
 	end = end || vals.length
 	var m = (end - start)
 	if (m == 1) {
-		return new Number(vals[start])
+		return Number(vals[start])
 	} else {
 		var p = start + Math.floor(m / 2), s = (vals[p-1] + vals[p]) / 2
 		this.s = s

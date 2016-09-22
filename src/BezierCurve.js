@@ -173,6 +173,31 @@ class BezierCurve extends Curve {
 	reversed4() {
 		return new BezierCurve(this.p3, this.p2, this.p1, this.p0)
 	}
+	
+	getCoefficients() {
+		let {p0, p1, p2, p3} = this
+		// calculate cubic equation coefficients
+		// a t³ + b t² + c t + d = 0
+		// multiplying out the cubic Bézier curve equation gives:
+		// a = -p0 + 3 p1 - 3 p2 + p3
+		// b = 3 p0 - 6 p1 + 3 p2
+		// c = -3 p0 + 3 p1
+		// d = p0 - p
+		let a = p1.minus(p2).times(3).minus(p0).plus(p3)
+		let b = p0.plus(p2).times(3).minus(p1.times(6))
+		let c = p1.minus(p0).times(3)
+		let d = p0
+		return [a, b, c, d]
+	}
+	
+	tangentCoefficients() {
+		let {p0, p1, p2, p3} = this
+		let p01 = p1.minus(p0), p12 = p2.minus(p1), p23 = p3.minus(p2)
+		let a = p01.plus(p23).times(3).minus(p12.times(6))
+		let b = p12.minus(p01).times(6)
+		let c = p01.times(3)
+		return [V3.ZERO, a, b, c]
+	}
 
 	pointLambda(p) {
 		var {p0, p1, p2, p3} = this
@@ -317,7 +342,7 @@ class BezierCurve extends Curve {
 	 * @param {number=} tMax
 	 * @returns {number}
 	 */
-	closestTToPoint(p, tMin, tMax) {
+	closestTToPoint(p, tMin, tMax, tStart) {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
 
@@ -331,8 +356,10 @@ class BezierCurve extends Curve {
 		let df = t => this.tangentAt(t).lengthSquared() + (this.at(t).minus(p).dot(this.ddt(t)))
 
 		const STEPS = 32
-		let startT = NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
-			.withMax(t => -this.at(t).distanceTo(p))
+		let startT = 'undefined' === typeof tStart
+			? NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
+					.withMax(t => -this.at(t).distanceTo(p))
+			: tStart
 
 		return newtonIterateWithDerivative(f, startT, 16, df)
 	}
@@ -362,7 +389,7 @@ class BezierCurve extends Curve {
 	 * @param {V3} dir
 	 * @returns {{tThis: number, tOther: number, p: V3}[]}
 	 */
-	isInfosWithLine(anchor, dir) {
+	isInfosWithLine(anchor, dir, tMin, tMax) {
 		// looking for this.at(t) == line.at(s)
 		// this.at(t).x == anchor.x + dir.x * s
 		// (this.at(t).x - anchor.x) / dir.x == s (analogue for y and z) (1x, 1y, 1z)
@@ -392,9 +419,12 @@ class BezierCurve extends Curve {
 		let y = c.e(coord0) * dir.e(coord1) - c.e(coord1) * dir.e(coord0)
 		let z = (d.e(coord0) - anchor.e(coord0)) * dir.e(coord1) - (d.e(coord1) - anchor.e(coord1)) * dir.e(coord0)
 
+		tMin = isFinite(tMin) ? tMin : this.tMin
+		tMax = isFinite(tMax) ? tMax : this.tMax
+
 		// we ignored a dimension in the previous step, so we need to check it too
 		return solveCubicReal2(w, x, y, z).mapFilter(tThis => {
-			if (this.tMin <= tThis && tThis <= this.tMax) {
+			if (tMin <= tThis && tThis <= tMax) {
 				let p = this.at(tThis)
 				// console.log(t*t*t*w+t*t*x+t*y+z, dir.length())
 				let s = p.minus(anchor).dot(dir) / dir.dot(dir)
@@ -402,6 +432,32 @@ class BezierCurve extends Curve {
 				if (lineAtS.like(p)) return {tThis: tThis, tOther: s, p: p}
 			}
 		})
+	}
+
+	closestPointToLine(line, tMin, tMax) {
+		// (this(t)-line(s)) * line.dir == 0 (1)
+		// (this(t)-line(s)) * this.tangentAt(t) == 0 (2)
+		// this(t) * line.dir - line(s) * line.dir == 0
+		// this(t) * line.dir - line.anchor * line.dir - s line.dir * line.dir == 0
+		// this(t) * line.dir - line.anchor * line.dir == s (3)
+		// insert (3) in (2)
+		// (this(t)-line(this(t) * line.dir - line.anchor * line.dir)) * this.tangentAt(t) == 0 (4)
+		// (4) is a 5th degree polynomial, solve numerically
+
+		tMin = isFinite(tMin) ? tMin : this.tMin
+		tMax = isFinite(tMax) ? tMax : this.tMax
+
+		let anchorDotDir1 = line.anchor.dot(line.dir1)
+		let f = t => {
+			let atT = this.at(t);
+			return (atT.minus(line.at(atT.dot(line.dir1) - anchorDotDir1))).dot(this.tangentAt(t)) }
+
+		const STEPS = 32
+		let startT = NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
+
+		return newtonIterateWithDerivative(f, startT, 8, df)
+
+
 	}
 
 	/**

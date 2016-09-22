@@ -705,7 +705,7 @@ void main() {
 		compile: function() {
 			// figure out shortest vertex buffer to make sure indexBuffers are in bounds
 			let minVertexBufferLength = Infinity, minBufferName
-			for (var attribute in this.vertexBuffers) {
+			Object.getOwnPropertyNames(this.vertexBuffers).forEach(attribute => {
 				let buffer = this.vertexBuffers[attribute]
 				buffer.data = this[buffer.name]
 				buffer.compile()
@@ -713,7 +713,7 @@ void main() {
 					minBufferName = attribute
 					minVertexBufferLength = this[buffer.name].length
 				}
-			}
+			})
 
 			for (var name in this.indexBuffers) {
 				let buffer = this.indexBuffers[name];
@@ -974,7 +974,7 @@ void main() {
 		mesh.vertices = VERTEX_CORNERS.map(i => UNIT_CUBE_CORNERS[i])
 		mesh.normals = [V3.X.negated(), V3.X, V3.Y.negated(), V3.Y, V3.Z.negated(), V3.Z].map(v => [v, v, v, v]).concatenated()
 		for (let i = 0; i < 6 * 4; i += 4) {
-			pushQuad(mesh.triangles, 0 != i % 8,
+			pushQuad(/** @type {number[]} */ mesh.triangles, 0 != i % 8,
 				VERTEX_CORNERS[i], VERTEX_CORNERS[i+1], VERTEX_CORNERS[i+2], VERTEX_CORNERS[i+3])
 		}
 		// indexes of lines relative to UNIT_CUBE_CORNERS. Mapped to VERTEX_CORNERS.indexOf
@@ -1279,29 +1279,35 @@ void main() {
 
 			for (var name in uniforms) {
 				var location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name);
-				assert(!!location, name)
+				assert(!!location, name + ' uniform is not used in shader')
 				if (!location) continue;
 				this.uniformLocations[name] = location;
 				let value = uniforms[name];
 				if (NLA_DEBUG) {
 					var info = this.uniformInfo[name]
-					assert(info.type != gl.FLOAT || "number" == typeof value)
-					assert(info.type != gl.INT || "number" == typeof value && value % 1 == 0)
-					assert(info.type != gl.FLOAT_VEC3 || value instanceof V3)
+					assert(info.type != gl.FLOAT ||
+						(1 == info.size && "number" == typeof value || isArray(value) && info.size == value.length && assertNumbers.apply(undefined, value)))
+					assert(info.type != gl.INT ||
+						(1 == info.size && "number" == typeof value && value % 1 == 0 ||
+						isArray(value) && info.size == value.length && assertNumbers.apply(undefined, value) && value.every(x => x % 1 == 0)))
+					assert(info.type != gl.FLOAT_VEC3 ||
+						(1 == info.size && value instanceof V3 ||
+						isArray(value) && info.size == value.length && assertVectors.apply(undefined, value)))
+					assert(info.type != gl.FLOAT_VEC4 || isArray(value) && value.length == 4)
 					assert(info.type != gl.FLOAT_MAT4 || value instanceof M4, () => value.toSource())
 					assert(info.type != gl.FLOAT_MAT3 || value.length == 9)
 				}
 				if (value instanceof V3) {
 					value = value.toArray()
 				} else if (value instanceof M4) {
-					value = value.m;
+					value = value.m
 				}
 				if (isArray(value)) {
 					switch (value.length) {
-						case 1: gl.uniform1fv(location, new Float32Array(value)); break;
-						case 2: gl.uniform2fv(location, new Float32Array(value)); break;
-						case 3: gl.uniform3fv(location, new Float32Array(value)); break;
-						case 4: gl.uniform4fv(location, new Float32Array(value)); break;
+						case 1: gl.uniform1fv(location, value); break;
+						case 2: gl.uniform2fv(location, value); break;
+						case 3: gl.uniform3fv(location, value); break;
+						case 4: gl.uniform4fv(location, value); break;
 						// Matrices are automatically transposed, since WebGL uses column-major
 						// indices instead of row-major indices.
 						case 9: gl.uniformMatrix3fv(location, false, new Float32Array([
@@ -1734,12 +1740,12 @@ function createRectangleMesh(x0, y0, x1, y1) {
  * @param {V3[]=} normals
  * @returns {GL.Mesh}
  */
-GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close, normals) {
+GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close=true, normals) {
 	var mesh = new GL.Mesh({normals: !!normals})
 	var vc = vertices.length, vTotal = vc * count
 
 	const rotMat = M4()
-	const /** @type {!number[]} */ triangles = mesh.triangles
+	const triangles = /** @type {number[]} */ mesh.triangles
 	for (let i = 0; i < count; i++) {
 		// add triangles
 		var angle = totalAngle / count * i
@@ -1787,8 +1793,10 @@ function pushQuad(triangles, flipped, a, b, c, d) {
  * @param {V3} offset
  * @param {boolean} close
  * @param {Array.<V3>} normals
+ * @param {number=} steps
+ * @returns GL.Mesh
  */
-GL.Mesh.offsetVertices = function(vertices, offset, close, normals) {
+GL.Mesh.offsetVertices = function(vertices, offset, close, normals, steps) {
 	assertVectors.apply(undefined, vertices)
 	assertVectors(offset)
 
