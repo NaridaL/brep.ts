@@ -1,5 +1,13 @@
 QUnit.module('brep3')
 
+/**
+ *
+ * @param {Face} face
+ * @param {B2} brep2
+ * @param {Edge[]} resultEdges
+ * @param {V3[]} resultPoints
+ * @param {string=} desc
+ */
 QUnit.assert.doTest = function (face, brep2, resultEdges, resultPoints, desc) {
 	if (brep2 instanceof Face) {
 		brep2 = new B2([brep2])

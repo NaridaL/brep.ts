@@ -145,7 +145,7 @@ NLA.Matrix.prototype = {
 		}
 	},
 	equalsMatrix: function (matrix, precision) {
-		precision = precision || NLA.PRECISION
+		precision = precision || NLA_PRECISION
 		if (!(matrix instanceof NLA.Matrix)) throw new Error("not a matrix");
 		if (this.width != matrix.width || this.height != matrix.height) return false;
 		var elIndex = this.m.length;
@@ -366,7 +366,7 @@ NLA.Matrix.prototype = {
 	 * @returns {boolean}
 	 */
 	isLowerUnitriangular: function (precision) {
-		precision = "number" == typeof precision ? precision : NLA.PRECISION
+		precision = "number" == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
 		for (var rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
 			for (var colIndex = rowIndex; colIndex < this.width; colIndex++) {

@@ -164,7 +164,7 @@ NLA.addOwnProperties(L3.prototype, /** @lends L3.prototype */ {
 	 * @returns {boolean} If the distance between the lines is zero
 	 */
     intersectsLine: function (line) {
-        return this.distanceToLine(line) <= NLA.PRECISION;
+        return this.distanceToLine(line) <= NLA_PRECISION;
     },
 
 	isInfosWithCurve: function (line) {
@@ -178,8 +178,8 @@ NLA.addOwnProperties(L3.prototype, /** @lends L3.prototype */ {
 		}
 		let anchorDiff = line.anchor.minus(this.anchor)
 		if (NLA.isZero(anchorDiff.dot(dirCross))) {
-			let tThis = anchorDiff.cross(this.dir1).dot(dirCross) / div
-			let tOther = anchorDiff.cross(line.dir1).dot(dirCross) / div
+			let tThis = anchorDiff.cross(line.dir1).dot(dirCross) / div
+			let tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
 			let p = this.at(tThis)
 			return [{tThis: tThis, tOther: tOther, p: p}]
 		}

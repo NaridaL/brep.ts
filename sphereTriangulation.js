@@ -1,7 +1,3 @@
-/**
- * Created by aval on 21/12/2015.
- */
-var P3 = NLA.Plane3
 
 var goldenRatio = (1 + Math.sqrt(5)) / 2, u = V3(1, goldenRatio, 0).normalized(), s = u.x, t = u.y
 var icosahedronVertices = [

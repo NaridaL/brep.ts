@@ -179,16 +179,12 @@ QUnit.test( "planeFaceEdgeISPsWithPlane", function(assert ) {
 	 assert.deepEqual(result, [])*/
 	console.log(brep.faces[2].toSource())
 	let line = L3.X.translate(0, 0, -1)
-	var result = planeFaceEdgeISPsWithPlane(brep, brep.faces[2], L3.X.translate(0, 0, -1), P3.XY.translate(0, 0, -1), true, true, new NLA.CustomSet()).map(is => is.p)
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${new B2([brep.faces[2]]).toSource()}
-						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
-						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
-	assert.compareV3arraysLike(result, [V3(0, 0, -1), V3(10, 0, -1)])
-	var result = planeFaceEdgeISPsWithPlane(brep, brep.faces[2], L3.X, P3.XY, true, true, new NLA.CustomSet()).map(is => is.p)
-	assert.compareV3arraysLike(result, [V3(0, 0, 0), V3(10, 0, 0)])
-	var result = planeFaceEdgeISPsWithPlane(brep.translate(0, 0, 10), brep.translate(0, 0, 10).faces[2], L3.X.translate(0, 0, 6), P3.XY.translate(0, 0, 6), true, true, new NLA.CustomSet()).map(is => is.p)
-	assert.compareV3arraysLike(result, [V3(0, 0, 6), V3(10, 0, 6)])
+	var result = planeFaceEdgeISPsWithPlane(brep, brep.faces[2], L3.Y.translate(0, 0, -1), P3.XY.translate(0, 0, -1), true, true, new NLA.CustomSet()).map(is => is.p)
+	assert.compareV3arraysLike(result, [V3(0, 0, -1), V3(0, 10, -1)])
+	var result = planeFaceEdgeISPsWithPlane(brep, brep.faces[2], L3.Y, P3.XY, true, true, new NLA.CustomSet()).map(is => is.p)
+	assert.compareV3arraysLike(result, [V3(0, 0, 0), V3(0, 10, 0)])
+	var result = planeFaceEdgeISPsWithPlane(brep.translate(0, 0, 10), brep.translate(0, 0, 10).faces[2], L3.Y.translate(0, 0, 6), P3.XY.translate(0, 0, 6), true, true, new NLA.CustomSet()).map(is => is.p)
+	assert.compareV3arraysLike(result, [V3(0, 0, 6), V3(0, 10, 6)])
 });
 
 QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 6))", function( assert ) {
@@ -217,7 +213,7 @@ QUnit.test( "B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 5))", functio
 		PlaneFace.forVertices(P3(V3(0, -1, 0), 0), [V3(1, 0, 0),V3(5, 0, 0),V3(5, 0, 5),V3(1, 0, 5)]),
 		PlaneFace.forVertices(P3(V3(0, -1, 0), -1), [V3(0, 1, 0),V3(1, 1, 0),V3(1, 1, 5),V3(0, 1, 5)]),
 		PlaneFace.forVertices(P3(V3(-1, 0, 0), -1), [V3(1, 1, 0),V3(1, 0, 0),V3(1, 0, 5),V3(1, 1, 5)])])
-	assert.doTest(a, b, a.minus(b), result)
+	assert.b2Equal(a, b, a.minus(b), result)
 });
 QUnit.test( "B2 edge/face intersection", function( assert ) {
 	var wideBox = B2.box(10, 10, 5)
@@ -294,7 +290,7 @@ QUnit.test( "B2 edge/face intersection", function( assert ) {
 			StraightEdge.throughPoints(V3(-2, 6, 11), V3(0, 4, 11)),
 			StraightEdge.throughPoints(V3(0, 4, 11), V3(1, 1, 11)),
 			StraightEdge.throughPoints(V3(1, 1, 11), V3(5, 6, 11))])])
-	assert.doTest(wideBox, extrusion, wideBox.plus(extrusion), result)
+	assert.b2Equal(wideBox, extrusion, wideBox.plus(extrusion), result)
 });
 QUnit.test( "EllipseCurve", function( assert ) {
 	var a = B2.box(5, 5, 5)
@@ -321,8 +317,8 @@ QUnit.test( "intersectionCircleLine", function( assert ) {
 QUnit.test( "CylinderSurface.intersectionLine", function( assert ) {
 	var cylSurface = CylinderSurface.cylinder(5)
 	var line = L3.throughPoints(V3(10, 0, 0), V3(-10, 2, 10))
-	var isPoints = cylSurface.isTsForLine(line)
-	console.log(isPoints.toSource())
+	let isPoints = cylSurface.isTsForLine(line).map(line.at, line)
+
 	assert.equal(isPoints.length, 2, 'no of points')
 	assert.notOk(isPoints[0].like(isPoints[1]))
 
@@ -336,7 +332,7 @@ QUnit.test( "CylinderSurface.intersectionLine", function( assert ) {
 QUnit.test( "CylinderSurface.intersectionLine 2", function( assert ) {
 	var cylSurface = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(8, 0, 0), V3(0, 5, 0)), V3.Z)
 	var line = L3.throughPoints(V3(10, 0, 0), V3(-10, 2, 10))
-	var isPoints = cylSurface.isTsForLine(line)
+	var isPoints = cylSurface.isTsForLine(line).map(line.at, line)
 	console.log(isPoints.toSource())
 	assert.equal(isPoints.length, 2, 'no of points')
 	assert.notOk(isPoints[0].like(isPoints[1]))
@@ -348,7 +344,7 @@ QUnit.test( "CylinderSurface.intersectionLine 2", function( assert ) {
 	assert.ok(line.containsPoint(isPoints[1]), line.distanceToPoint(isPoints[1]))
 });
 function testEllipseIntersections(assert, e1, e2, count) {
-	var intersections = e1.isPointsWithEllipse(e2)
+	var intersections = e1.isInfosWithEllipse(e2).map(info => info.p)
 	assert.ok(intersections.length == count, `intersections.length == count: ${intersections.length} == ${count}`)
 	intersections.forEach((is, i) => {
 		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce+' is not unique '+intersections)

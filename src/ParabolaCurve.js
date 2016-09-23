@@ -177,9 +177,9 @@ class ParabolaCurve extends Curve {
 		var p = g1 / g2, q = -g3 / g2
 		var discriminant4 = p * p / 4 - q
 		console.log('pq', p, q, discriminant4)
-		if (discriminant4 < -NLA.PRECISION) {
+		if (discriminant4 < -NLA_PRECISION) {
 			return []
-		} else if (discriminant4 <= NLA.PRECISION) {
+		} else if (discriminant4 <= NLA_PRECISION) {
 			return [-p / 2]
 		} else {
 			var root = Math.sqrt(discriminant4)

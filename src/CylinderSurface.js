@@ -192,7 +192,7 @@ class CylinderSurface extends Surface {
 		return (pWC, hint) => {
 			var pLC = this.inverseMatrix.transformPoint(pWC)
 			var angle = pLC.angleXY()
-			if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
+			if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
 				angle = Math.sign(hint) * Math.PI
 			}
 			return V3.create(angle, pLC.z, 0)
@@ -227,7 +227,12 @@ class CylinderSurface extends Surface {
 			var eTs = this.baseEllipse.isTsWithPlane(plane)
 			return eTs.map(t => L3(this.baseEllipse.at(t), this.dir))
 		} else {
-			return [this.baseEllipse.transform(M4.projection(plane, this.dir))]
+			let projEllipse = this.baseEllipse.transform(M4.projection(plane, this.dir))
+			if (this.dir.dot(plane.normal) > 0) {
+				// we need to flip the ellipse so the tangent is correct
+				projEllipse = new EllipseCurve(projEllipse.center, projEllipse.f1, projEllipse.f2.negated())
+			}
+			return [projEllipse]
 		}
 	}
 

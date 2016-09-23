@@ -35,6 +35,11 @@ class Surface extends Transformable {
 	}
 
 	/**
+	 * IMPORTANT: The tangents of the resulting curves need to be equal to the cross product of this and surface in the point.
+	 * I.e.: for every point p p on a returned curve: curve.tangentAt(curve.pointLambda(p)) == this.normalAt(p) X surface.normalAt(p)
+	 *
+	 * Cross product is not commutative, so curve.tangentAt(curve.pointLambda(p)) == surface.normalAt(p) X this.normalAt(p)
+	 * is not valid.
 	 *
 	 * @abstract
 	 * @param {Surface} surface

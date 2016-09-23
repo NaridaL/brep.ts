@@ -1,33 +1,46 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<title>NCAD</title>
 		<meta charset="UTF-8">
-		<script type="text/javascript">
-			window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-						console.log(errorMsg, url, lineNumber, column, errorObj);
-					}
-			</script>
+
+		<script type="text/javascript" src="toSource.js"></script>
+
 		<script type="text/javascript" src="src/NLA.js"></script>
+		<script type="text/javascript" src="src/Surface.js"></script>
 		<script type="text/javascript" src="src/shaders.js"></script>
+		<script type="text/javascript" src="src/Vector.js"></script>
 		<script type="text/javascript" src="src/Vector3.js"></script>
+		<script type="text/javascript" src="src/Matrix.js"></script>
 		<script type="text/javascript" src="src/Matrix4x4.js"></script>
+		<script type="text/javascript" src="src/AABB.js"></script>
+
+
+		<script type="text/javascript" src="src/Curve.js"></script>
 		<script type="text/javascript" src="src/Plane3.js"></script>
 		<script type="text/javascript" src="src/Line3.js"></script>
 
+		<script type="text/javascript" src="src/PICurve.js"></script>
+		<script type="text/javascript" src="src/PPCurve.js"></script>
+		<script type="text/javascript" src="src/BezierCurve.js"></script>
+		<script type="text/javascript" src="src/EllipseCurve.js"></script>
+
+		<script type="text/javascript" src="src/PlaneSurface.js"></script>
+		<script type="text/javascript" src="src/ProjectedCurveSurface.js"></script>
+		<script type="text/javascript" src="src/CylinderSurface.js"></script>
+		<script type="text/javascript" src="src/EllipsoidSurface.js"></script>
+
+		<script type="text/javascript" src="src/Edge.js"></script>
+		<script type="text/javascript" src="src/brep2.js"></script>
+		<script type="text/javascript" src="src/b2.generators.js"></script>
+
+		<script type="text/javascript" src="MooTools-Core-1.6.0.js"></script>
+		<script type="text/javascript" src="MooTools-More-1.6.0.js"></script>
+		<script type="text/javascript" src="src/lightgl.js"></script>
 		<script type="text/javascript" src="src/js3d.js"></script>
 		<script type="text/javascript" src="src/modes.js"></script>
 		<script type="text/javascript" src="src/SketchBezier.js"></script>
-		<script type="text/javascript" src="src/lightgl.js"></script>
-		<script type="text/javascript" src="MooTools-Core-1.6.0.js"></script>
 		<script type="text/javascript" src="earcut.dev.js"></script>
-		<script type="text/javascript" src="src/Curve.js"></script>
-		<script type="text/javascript" src="src/Surface.js"></script>
-		<script type="text/javascript" src="src/EllipseCurve.js"></script>
-		<script type="text/javascript" src="src/ProjectedCurveSurface.js"></script>
-		<script type="text/javascript" src="src/BezierCurve.js"></script>
-		<script type="text/javascript" src="src/EllipsoidSurface.js"></script>
-		<script type="text/javascript" src="src/brep2.js"></script>
-		<script type="text/javascript" src="src/b2.generators.js"></script>
 
 		<script type="text/javascript">window.onload = main</script>
 
@@ -72,7 +85,7 @@
 
 		<style type="text/css">
 			body {
-				font-family: Verdana;
+				font-family: Verdana,sans-serif;
 			}
 			.selector {
 				border: 1px solid black;
@@ -109,6 +122,32 @@
 				text-decoration: line-through;
 				color: darkgrey;
 			}
+
+			#tip-wrap {
+				z-index: 3000;
+			}
+			#tip {
+				position: relative;
+				color: #fcffd2;
+				min-width: 250px;
+				max-width: 512px;
+				height: 120px;
+				padding: 8px;
+				background: #61bbff;
+				font-size: small;
+			}
+
+			#tip-arrow
+			{
+				position: absolute;
+				border-style: solid;
+				border-color: #61bbff transparent;
+				display: block;
+				width: 0;
+				z-index: 1;
+				top: -16px;
+				left: 16px;
+			}
 		</style>
 	</head>
 	<body>
@@ -122,9 +161,9 @@
 	<div style="position: absolute; top: 20px; right: 8px; z-index: 1000;width: 20%; ">
 		<div id="sketchEditor" class="editorBox">
 			Edit Sketch
-			<input type="text" name="name" id="sketchEditorSketchName" class="string-id-input" />
+			<input type="text" data-feature-property="name" id="sketchEditorSketchName" class="string-id-input" />
 			<label><span>On Plane</span>
-			<div id="sketchEditorPlaneName" class="plane-select selector" name="planeName">&nbsp;</div></label>
+			<span id="sketchEditorPlaneName" class="plane-select selector" data-feature-property="planeName">nbsp;</span></label>
 
 			<button name="done">Done</button>
 			<button name="delete">Delete</button>
@@ -152,22 +191,23 @@
 
 		<div id="planeDefiner" class="editorBox">
 			<span class="header">Define Plane</span>
-			<input type="text" id="planeDefinerPlaneId" class="string-id-input" name="planeId"/>
+			<input type="text" id="planeDefinerPlaneId" class="string-id-input" data-feature-property="planeId"/>
 			<select name="planeType" class="select-select">
 				<option value="face">Face</option>
 				<option value="points">Through Points</option>
 				<option value="anchorNormal">Anchor & Normal</option>
 				<option value="immediate">Immediate</option>
 			</select>
-			<div name="">
-				<label>
+			<div>
 				<span>Select face</span>
-				<div id="planeDefinerFaceId" class="face-select selector" name="faceName">&nbsp;</div></label>
-				<label><span>Offset</span>
-					<input type="" class="dimension-input" id="planeDefinerOffset" defaultValue="0" name="offset" /></label>
+				<label data-tooltip="Angle blah blub" title="ARFHAKJ"><span>Offset</span>
+					<input class="dimension-input" data-default-value="0" data-feature-property="offset" /></label>
+				<label><span>Angle</span>
+					<input class="dimension-input" data-default-value="0" data-feature-property="angle" /></label>
+
 
 			</div>
-			<div name="">
+			<div>
 				Input
 				<input class="select-text" name="source" />
 			</div>
@@ -177,13 +217,13 @@
 
 		<div id="extrudeEditor" class="editorBox">
 			<span class="header">Extrude</span>
-			<input type="text" name="name" class="plane-id string-id-input" />
+			<input type="text" data-feature-property="name" class="plane-id string-id-input" />
 			<label>
 				<span>Select Loop</span>
-				<div class="segment-select selector" name="segmentName">&nbsp;</div></label>
-			<label><span>Start</span> <input type="text" class="dimension-input" name="start" defaultValue="0" /></label>
-			<label><span>End</span> <input type="text" class="dimension-input" name="end" defaultValue="0" /></label>
-			<select name="operation" class="select-select">
+				<div class="segment-select selector" data-feature-property="segmentName">&nbsp;</div></label>
+			<label><span>Start</span> <input type="text" class="dimension-input" data-feature-property="start" data-default-value="0" /></label>
+			<label><span>End</span> <input type="text" class="dimension-input" data-feature-property="end" data-default-value="0" /></label>
+			<select data-feature-property="operation" class="select-select">
 				<option value="minus">Difference</option>
 				<option value="plus">Union</option>
 				<option value="and">Intersection</option>
@@ -211,6 +251,10 @@
 		<button type="button" class="sketchControl" onclick="makeDistance()">Distance</button>
 		<button type="button" class="sketchControl" onclick="makeAngle();">Angle</button>
 		<button type="button" class="sketchControl" onclick="faceSketchPlane();">Face Sketch Plane</button>
+	</div>
+	<div id="tip-wrap" style="position: absolute;z-index: 6000; left: 100px; top:100px; color:red;">
+		<div id="tip">This should be visitble.</div>
+		<div id="tip-arrow"></div>
 	</div>
 	</body>
 </html>

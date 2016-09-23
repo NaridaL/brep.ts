@@ -433,7 +433,7 @@ M4.prototype = NLA.defineObject(NLA.Matrix.prototype, /** @lends {M4.prototype} 
     },
 
     /**
-     * Returns if the matrix has the following form (within NLA.PRECISION):
+     * Returns if the matrix has the following form (within NLA_PRECISION):
      * a b c 0
      * c d e 0
      * f g h 0

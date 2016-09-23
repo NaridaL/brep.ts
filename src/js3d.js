@@ -69,7 +69,6 @@ function distanceDiffForPointSquared(c) {
 	}
 }
 
-var globalId = 0;
 function Point(x, y) {
 	this.x = x;
 	this.y = y;
@@ -762,7 +761,7 @@ function recalculate(sketch) {
 	}
 	for (var count = 0; count < 100; count++) {
 		var lastDiffs = sketch.gaussNewtonStep(), lastSize = lastDiffs.length()
-		if (lastSize < NLA.PRECISION / 1000) {
+		if (lastSize < NLA_PRECISION / 1000) {
 			break;
 		}
 	}
@@ -1317,7 +1316,9 @@ function rebuildModel() {
 				//console.log("polypoints", polygonPoints, polygonPoints.toSource(), loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
 				let brep = B2.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
 				if (modelBREP) {
-					modelBREP = modelBREP[feature.operation](brep)
+					isEdges = modelBREP.getIntersectionEdges(brep)
+					drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
+					// modelBREP = modelBREP[feature.operation](brep)
 				} else {
 					modelBREP = brep;
 				}
@@ -1377,7 +1378,7 @@ function rebuildModel() {
 var faces = []
 var highlighted = [], selected = [], paintDefaultColor = 0x000000
 var /** @type LightGLContext */ gl;
-var modelBREP, brepMesh, brepPoints, planes, brepEdges
+var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges
 var drPs = [], drVs = []
 var oldConsole = undefined;
 var eyePos = V3(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z
@@ -1475,7 +1476,8 @@ CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse, color, s
 		color: rgbToVec4(color),
 		startT: startT,
 		endT: endT,
-		scale: width
+		scale: width,
+		mode: 0 // ellipse
 	}).draw(meshes.pipe)
 }
 CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve, color, startT, endT, width = 2, normal = V3.Z) {
@@ -1584,6 +1586,12 @@ function paintScreen () {
 
 		// paint edges
 		brepEdges.forEach(edge => {
+			const startT = min(edge.aT, edge.bT)
+			const endT = max(edge.aT, edge.bT)
+			const color = hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000)
+			CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, startT, endT, 2)
+		})
+		isEdges.forEach(edge => {
 			const startT = min(edge.aT, edge.bT)
 			const endT = max(edge.aT, edge.bT)
 			const color = hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000)
@@ -1839,6 +1847,26 @@ function initTips() {
 		fixed: true
 			})
 }
+function initMeshes() {
+	meshes.sphere1 = GL.Mesh.sphere(2)
+	meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
+	meshes.text = GL.Mesh.plane()
+	meshes.vector = GL.Mesh.rotation([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, true)
+	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => V3.create(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
+	meshes.xyLinePlane = GL.Mesh.plane()
+}
+function initShaders() {
+	shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
+	shaders.singleColorHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight)
+	shaders.textureColor = new GL.Shader(vertexShaderTexture, fragmentShaderTextureColor)
+	shaders.arc = new GL.Shader(vertexShaderRing, fragmentShaderColor)
+	shaders.arc2 = new GL.Shader(vertexShaderArc, fragmentShaderColor)
+	shaders.ellipse3d = new GL.Shader(vertexShaderConic3d, fragmentShaderColor)
+	shaders.bezier3d = new GL.Shader(vertexShaderBezier3d, fragmentShaderColor)
+	shaders.bezier = new GL.Shader(vertexShaderBezier, fragmentShaderColor)
+	shaders.lighting = new GL.Shader(vertexShaderLighting, fragmentShaderLighting)
+	shaders.waves = new GL.Shader(vertexShaderWaves, fragmentShaderLighting)
+}
 function main() {
 	 let o = {
 
@@ -1880,7 +1908,7 @@ function main() {
 	// let line = L3(V3(-1560.8950828838565, 716.07295580975, 249.61382611323648), V3(0.9130103135570956, -0.36545647611595106, -0.18125598308272678))
 	// isc.debugToMesh(mesh1, 'curve1')
 	// console.log(mesh1)
-	// mesh1.compile()
+	mesh1.compile()
 	// drPs.pushAll(isc.rootPoints().concatenated())
 	// mesh2 = curve.getAABB(mint, maxt).toMesh()
 	// console.log(curve.getAABB().toSource())
@@ -1892,28 +1920,8 @@ function main() {
 	let v2t = linksHaendig.transformVector(v0).cross(linksHaendig.transformVector(v1))
 	let v2s = linksHaendig.inversed().transposed().transformVector(v2)
 	console.log("ASKDKJALDS", v2t.dot(v2s), v2t.isParallelTo(v2s))
-
-	meshes.sphere1 = GL.Mesh.sphere(2)
-	meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
-	meshes.text = GL.Mesh.plane()
-	meshes.vector = GL.Mesh.rotation([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, true)
-	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => V3.create(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
-	meshes.xyLinePlane = GL.Mesh.plane()
-
-	shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
-	/**
-	 * a desc
-	 * @type {Shader}
-	 */
-	shaders.singleColorHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight)
-	shaders.textureColor = new GL.Shader(vertexShaderTexture, fragmentShaderTextureColor)
-	shaders.arc = new GL.Shader(vertexShaderRing, fragmentShaderColor)
-	shaders.arc2 = new GL.Shader(vertexShaderArc, fragmentShaderColor)
-	shaders.ellipse3d = new GL.Shader(vertexShaderArc3d, fragmentShaderColor)
-	shaders.bezier3d = new GL.Shader(vertexShaderBezier3d, fragmentShaderColor)
-	shaders.bezier = new GL.Shader(vertexShaderBezier, fragmentShaderColor)
-	shaders.lighting = new GL.Shader(vertexShaderLighting, fragmentShaderLighting)
-	shaders.waves = new GL.Shader(vertexShaderWaves, fragmentShaderLighting)
+	initMeshes()
+	initShaders()
 	//	console.log(mesh.vertices)
 	if (window.location.hash && window.location.hash.length > 1) {
 		var key = window.location.hash.substr(1)

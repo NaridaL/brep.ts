@@ -46,7 +46,7 @@ function initB2() {
 	if (gets['edges']) {
 		console.log("edges from GET")
 		dMesh = new GL.Mesh({triangles: false})
-		dMesh.addVertexBuffer('curve1', 'curve1')
+		edges && dMesh.addVertexBuffer('curve1', 'curve1')
 		var edges = eval(gets['edges'])
 		edges.forEach(edge => {
 			var points = edge.points
@@ -79,22 +79,22 @@ function paintScreen2() {
 
     if (aMesh) {
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        aMesh.lines && singleColorShader.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(aMesh, 'LINES');
+        aMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(aMesh, 'LINES');
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        lightingShader.uniforms({ color: rgbToVec4(COLORS.PP_FILL),
+        shaders.lighting.uniforms({ color: rgbToVec4(COLORS.PP_FILL),
             camPos: eyePos }).draw(aMesh);
     }
     if (bMesh) {
         gl.pushMatrix()
         //gl.translate(15, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        bMesh.lines && singleColorShader.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(bMesh, 'LINES');
+        bMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(bMesh, 'LINES');
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        lightingShader.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
+        shaders.lighting.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
             camPos: eyePos }).draw(bMesh);
-        bMesh.edgeTangents && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
+        bMesh.edgeTangents && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
             .drawBuffers({gl_Vertex: bMesh.vertexBuffers.edgeTangents}, null, gl.LINES)
-        bMesh.edgeTangents2 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
+        bMesh.edgeTangents2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
             .drawBuffers({gl_Vertex: bMesh.vertexBuffers.edgeTangents2}, null, gl.LINES)
         gl.popMatrix()
     }
@@ -102,9 +102,9 @@ function paintScreen2() {
         gl.pushMatrix()
         //gl.translate(30, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        cMesh.lines && singleColorShader.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES');
+        cMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES');
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        lightingShader.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
+        shaders.lighting.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
             camPos: eyePos }).draw(cMesh)
 
         gl.popMatrix()
@@ -114,19 +114,19 @@ function paintScreen2() {
         gl.translate(20, 0, 0)
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        dMesh.lines && singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES');
+        dMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES');
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        lightingShader.uniforms({ color: rgbToVec4(0xffFF00),
+        dMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
             camPos: eyePos }).draw(dMesh)
 
-        dMesh.curve1 && singleColorShader.uniforms({ color: rgbToVec4(0xff00000) })
+        dMesh.curve1 && shaders.singleColor.uniforms({ color: rgbToVec4(0xff00000) })
             .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve1}, null, gl.LINES)
-        dMesh.curve2 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
+        dMesh.curve2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
             .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
 
-        dMesh.curve3 && singleColorShader.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) })
+        dMesh.curve3 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) })
             .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve3}, null, gl.LINES)
-        dMesh.curve4 && singleColorShader.uniforms({ color: rgbToVec4(0x00ff00) })
+        dMesh.curve4 && shaders.singleColor.uniforms({ color: rgbToVec4(0x00ff00) })
             .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve4}, null, gl.LINES)
         gl.popMatrix()
     }
@@ -135,8 +135,8 @@ function paintScreen2() {
         gl.pushMatrix()
         gl.translate(v)
         gl.scale(0.3,0.3,0.3)
-        lightingShader.uniforms({color: rgbToVec4(0xabcdef)}).draw(sMesh)
-        //singleColorShader.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES')
+        shaders.lighting.uniforms({color: rgbToVec4(0x000000)}).draw(meshes.sphere1)
+        //shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES')
         gl.popMatrix()
     })
     drawPlanes();
@@ -168,7 +168,6 @@ var planes = [
     //	sketchPlane
 ];
 
-var singleColorShader, textureColorShader, singleColorShaderHighlight, arcShader, arcShader2,xyLinePlaneMesh,gl,cubeMesh,lightingShader, vectorMesh
 
 var sMesh
 
@@ -208,6 +207,9 @@ window.loadup = function () {
 
     gl.loadIdentity();
 
+
+	initMeshes()
+	initShaders()
     gl.onmousemove = function (e) {
         if (e.dragging) {
             if (0x4 & e.buttons) {
@@ -237,19 +239,6 @@ window.loadup = function () {
             }
         }
     }
-    xyLinePlaneMesh = new GL.Mesh({lines: true, triangles: false});
-    xyLinePlaneMesh.vertices = [[0, 0], [0, 1], [1, 1], [1, 0]];
-    xyLinePlaneMesh.lines = [[0, 1], [1, 2], [2, 3], [3, 0]];
-    xyLinePlaneMesh.compile();
-    vectorMesh = GL.Mesh.rotation([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, false, normals)
-    sMesh = GL.Mesh.sphere(2)
-
-    singleColorShader = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
-    singleColorShaderHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight);
-    //textureColorShader = new GL.Shader(vertexShaderTextureColor, fragmentShaderTextureColor);
-    arcShader = new GL.Shader(vertexShaderRing, fragmentShaderColor);
-    arcShader2 = new GL.Shader(vertexShaderArc, fragmentShaderColor);
-    lightingShader = new GL.Shader(vertexShaderLighting, fragmentShaderLighting);
 
     $(gl.canvas).addEvent('mousewheel', function (e) {
         //console.log(e);

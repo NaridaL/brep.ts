@@ -95,7 +95,7 @@ class EllipseCurve extends Curve {
 		assertVectors(p)
 		var p2 = this.inverseMatrix.transformPoint(p)
 		var angle = p2.angleXY()
-		if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
+		if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
 			// assert(isFinite(hint))
 			return Math.sign(hint) * Math.PI
 		}
@@ -238,7 +238,7 @@ class EllipseCurve extends Curve {
 	/**
 	 *
 	 * @param {EllipseCurve} ellipse
-	 * @returns {V3[]}
+	 * @returns {{tThis: number, tOther: number, p: V3}[]}
 	 */
 	isInfosWithEllipse(ellipse) {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
@@ -284,7 +284,7 @@ class EllipseCurve extends Curve {
 			//var rotEl = localEllipse.transform(resetMatrix)
 			console.log(rotEl, rotEl.sce)
 			//rotEl.debugToMesh(dMesh, 'curve2')
-			return results.map(p => resetMatrix.transformPoint(p))
+			return results.map(localP => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(localP)}))
 			/*
 			 // new rel center
 			 var mat = M4.forSys(localEllipse.f1.normalized(), localEllipse.f2.normalized(), V3.Z, localEllipse.center).inversed()
@@ -371,7 +371,7 @@ class EllipseCurve extends Curve {
 			// up to 6 solutions possible
 			let f = t => localBezier.at(t).lengthSquaredXY() - 1
 			// f is polynome degree six, no explicit solutionis possble
-			let possibleTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8)).filter(t => f(t) < NLA.PRECISION)
+			let possibleTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8)).filter(t => f(t) < NLA_PRECISION)
 			return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
 		} else {
 			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
@@ -381,6 +381,7 @@ class EllipseCurve extends Curve {
 	/**
 	 *
 	 * @param {BezierCurve} bezier
+	 * @returns {{tThis: number, tOther: number, p: V3}[]}
 	 */
 	isInfosWithBezier(bezier) {
 		let localBezier = bezier.transform(this.inverseMatrix)
@@ -426,7 +427,7 @@ class EllipseCurve extends Curve {
 		// returns whether an intersection was immediately found (i.e. without further recursion)
 		// is declared as an arrow function so this will be bound correctly
 		const findRecursive = (tMin, tMax, sMin, sMax, thisAABB, otherAABB) => {
-			const EPS = NLA.PRECISION
+			const EPS = NLA_PRECISION
 			if (thisAABB.touchesAABB(otherAABB)) {
 				let tMid = (tMin + tMax) / 2
 				let sMid = (sMin + sMax) / 2

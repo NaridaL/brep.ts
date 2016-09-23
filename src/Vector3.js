@@ -80,7 +80,7 @@ V3.create = function(x, y, z) {
 
 V3.prototype = /** @lends V3.prototype */ {
 	perturbed: function (v, delta) {
-		delta = delta || NLA.PRECISION * 0.8
+		delta = delta || NLA_PRECISION * 0.8
 		return this.map(x => x + (Math.random() - 0.5) * delta)
 	},
     e: function (index) {
@@ -535,7 +535,7 @@ V3.prototype = /** @lends V3.prototype */ {
 	    }
 	    // compare hashCode.floatHashCode
 	    // the following ops are equivalent to
-	    // floatHashCode((el - NLA.PRECISION) % (2 * NLA.PRECISION))
+	    // floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
 	    // this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
 	    // the other 7 can be calculated by adding constants
 	    var xHC = ~~(this.x * (1 << 28) - 0.5),

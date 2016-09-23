@@ -1321,7 +1321,7 @@ void main() {
 						default: throw new Error('don\'t know how to load uniform "' + name + '" of length ' + value.length);
 					}
 				} else if (isNumber(value)) {
-					(this.isSampler[name] ? gl.uniform1i : gl.uniform1f).call(gl, location, value);
+					(this.isSampler[name] || info.type == gl.INT ? gl.uniform1i : gl.uniform1f).call(gl, location, value);
 				} else {
 					throw new Error('attempted to set uniform "' + name + '" to invalid value ' + value);
 				}

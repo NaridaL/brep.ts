@@ -248,7 +248,7 @@ class ConicSurface extends Surface {
 		return (pWC, hint) => {
 			var p2 = this.inverseMatrix.transformPoint(pWC)
 			var angle = p2.angleXY()
-			if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
+			if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
 				angle = hint.dot(this.baseEllipse.f2) < 0
 					? Math.PI
 					: -Math.PI

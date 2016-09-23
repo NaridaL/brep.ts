@@ -221,7 +221,7 @@ class B2 extends Transformable {
 							allOldFaceEdges.forEach(edge => edgeCond(edge) && possibleLooseEdges.push(edge))
 							noSegments = true
 						}
-						var index = possibleLooseEdges.indexWithMax((edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, face.surface.normalAt(currentEdge.b)) + (index < possibleLooseEdgesCount) * NLA.PRECISION)
+						var index = possibleLooseEdges.indexWithMax((edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, face.surface.normalAt(currentEdge.b)) + (index < possibleLooseEdgesCount) * NLA_PRECISION)
 						//console.log('possibleLooseEdges\n', possibleLooseEdges.map(e=>e.toString()).join('\n'), allOldFaceEdges.find(edge => edgeCond(edge)), index, possibleLooseEdges[index])
 						// TODO assert(possibleLooseEdges.length < 2)
 						currentEdge = possibleLooseEdges[index]
@@ -387,6 +387,23 @@ class B2 extends Transformable {
 			edgeLooseSegments.set(baseEdge, looseSegments)
 		})
 		return edgeLooseSegments;
+	}
+
+	getIntersectionEdges (brep2) {
+		var faceMap = new Map(), edgeMap = new Map()
+
+		let likeSurfaceFaces = []
+
+		this.faces.forEach(face => {
+			//console.log('face', face.toString())
+			brep2.faces.forEach(face2 => {
+				//console.log('face2', face2.toString())
+				face.doo(face2, this, brep2, faceMap, edgeMap, likeSurfaceFaces)
+			})
+		})
+
+		return Array.from(faceMap.values()).concatenated()
+
 	}
 
 	/**
@@ -574,9 +591,8 @@ class Face extends Transformable {
 		assertInst(L3, line)
 		let containedIntersectionsTs = this.surface.isTsForLine(line).filter(t => this.containsPoint(line.at(t)))
 		let nearestPointT = containedIntersectionsTs.withMax(t => -t)
-		let nearestPoint = line.at(nearestPointT)
 
-		return nearestPoint ? line.pointLambda(nearestPoint) : NaN
+		return nearestPointT || NaN
 	}
 
 	toMesh() {
@@ -874,7 +890,7 @@ class RotationFace extends Face {
 			for (let j = 0; j < verticesNo0s[edgeIndex].length; j++) {
 				let p = verticesNo0s[edgeIndex][j]
 				let localP = reverseFunc(p, hint)
-				if (Math.abs(localP.x) < Math.PI - NLA.PRECISION) {
+				if (Math.abs(localP.x) < Math.PI - NLA_PRECISION) {
 					// update hint
 					hint = localP.x
 				}
@@ -1217,6 +1233,7 @@ class RotationFace extends Face {
 
 		isCurves.forEach((isCurve, isCurveIndex) => {
 			let ps1 = pss1[isCurveIndex], ps2 = pss2[isCurveIndex]
+			// !! start in does depend on insidedir... TODO
 			let in1 = false, in2 = false, colinear1 = false, colinear2 = false
 			let i = 0, j = 0, last, segments = []
 			let startP, startDir, startT
@@ -1311,12 +1328,13 @@ function facesWithEdge(edge, faces) {
  * @returns {Array}
  * p: intersection point
  * insideDir: currently not needed
+ *
  * t: param on intersection line
  * edge: face edge doing the intersection
  * edgeT: !!
  * colinear: whether edge is colinear to intersection line
  */
-function planeFaceEdgeISPsWithPlane(brep:B2, brepFace:Face, isLine:L3, plane2:Plane3) {
+function planeFaceEdgeISPsWithPlane(brep, brepFace, isLine, plane2) {
 	assert(brepFace.surface.plane.containsLine(isLine))
 	assert(plane2.containsLine(isLine))
 	var facePlane = brepFace.surface.plane
@@ -1403,6 +1421,7 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 			let j = (i + 1) % edges.length, nextEdge = edges[j]
 			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 			if (colinearEdges[i]) {
+				assert(false)
 				// edge colinear to intersection line
 				var h = (i + edges.length - 1) % edges.length, prevEdge = edges[h]
 				var colinearOutside = edge.aDir.cross(facePlane.normal)
@@ -1425,6 +1444,7 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 				for (var k = 0; k < edgeTs.length; k++) {
 					var edgeT = edgeTs[k]
 					if (edgeT == edge.bT) {
+						assert(false)
 						// endpoint lies on intersection line
 						console.log('endpoint lies on intersection line',
 							intersectionLinePerpendicular.dot(edge.bDir) , intersectionLinePerpendicular.dot(nextEdge.aDir),
@@ -1473,7 +1493,9 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 	// duplicate 't's are ok, as sometimes a segment needs to stop and start again
 	// should be sorted so that back facing ones are first
 	pss.forEach((ps, isCurveIndex) => ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isCurves[isCurveIndex].tangentAt(a.t))))
-
+	if (isCurves[0] instanceof EllipseCurve) {
+		drPs.pushAll(pss[0].map(info => info.p))
+	}
 	return pss
 
 	//console.log(colinearSegments, colinearSegmentsInside)
@@ -1594,7 +1616,7 @@ function splitsVolumeEnclosingFaces(brep, edge, dirAtEdgeA, faceNormal) {
 				? faceInfo.edge.aDir
 				: faceInfo.edge.bDir
 		faceInfo.outsideVector = faceInfo.edgeDirAtEdgeA.cross(faceInfo.normalAtEdgeA)
-		faceInfo.angle = (dirAtEdgeA.angleRelativeNormal(faceInfo.outsideVector.negated(), ab1) + 2 * Math.PI + NLA.PRECISION / 2) % (2 * Math.PI)
+		faceInfo.angle = (dirAtEdgeA.angleRelativeNormal(faceInfo.outsideVector.negated(), ab1) + 2 * Math.PI + NLA_PRECISION / 2) % (2 * Math.PI)
 	})
 	assert(relFaces.length != 0, edge.toSource())
 	relFaces.sort((a, b) => a.angle - b.angle)
@@ -1624,7 +1646,7 @@ function splitsVolumeEnclosingCone(brep, point, dir) {
 				var out = a.p.like(point)
 				if (out || b.p.like(point)) {
 					var dir2 = out ? intersectionLine.dir1 : intersectionLine.dir1.negated()
-					var angle = (dir.angleRelativeNormal(dir2, testPlane.normal) + 2 * Math.PI + NLA.PRECISION / 2) % (2 * Math.PI)
+					var angle = (dir.angleRelativeNormal(dir2, testPlane.normal) + 2 * Math.PI + NLA_PRECISION / 2) % (2 * Math.PI)
 					rays.push({angle: angle, out: out})
 				}
 			}

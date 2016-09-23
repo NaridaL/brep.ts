@@ -5,6 +5,7 @@
 var NLA = {}
 window['NLA'] = NLA
 
+var globalId = 0;
 
 /** @define {boolean} */
 const NLA_DEBUG = true
@@ -76,26 +77,26 @@ NLA.registerClass = function (clazz) {
 }
 
 /** @const */
-NLA.PRECISION = 1 / (1 << 26)
+const NLA_PRECISION = 1 / (1 << 26)
 
-console.log("NLA.PRECISION", NLA.PRECISION)
+console.log("NLA_PRECISION", NLA_PRECISION)
 
 /**
  *
  * @param {number} x
  * @returns {boolean}
  */
-NLA.isZero = (x) => Math.abs(x) < NLA.PRECISION
+NLA.isZero = (x) => Math.abs(x) < NLA_PRECISION
 NLA.isZero2 = (x, precision) => Math.abs(x) < precision
-NLA.equals = (x, y) => Math.abs(x - y) <= NLA.PRECISION
-NLA.lt = (x, y) => x + NLA.PRECISION < y
-NLA.gt = (x, y) => x > y + NLA.PRECISION
-NLA.le = (x, y) => x <= y + NLA.PRECISION
-NLA.ge = (x, y) => x + NLA.PRECISION >= y
+NLA.equals = (x, y) => Math.abs(x - y) <= NLA_PRECISION
+NLA.lt = (x, y) => x + NLA_PRECISION < y
+NLA.gt = (x, y) => x > y + NLA_PRECISION
+NLA.le = (x, y) => x <= y + NLA_PRECISION
+NLA.ge = (x, y) => x + NLA_PRECISION >= y
 NLA.equals2 = (x, y, precision) => Math.abs(x - y) < precision
 NLA.eqAngle = (x, y) => NLA.zeroAngle(x - y)
-NLA.zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA.PRECISION) % (2 * Math.PI) < 2 * NLA.PRECISION
-NLA.snapTo = (x, to) => Math.abs(x - to) <= NLA.PRECISION ? to : x
+NLA.zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
+NLA.snapTo = (x, to) => Math.abs(x - to) <= NLA_PRECISION ? to : x
 NLA.canonAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 
 var COLORS = {
@@ -832,9 +833,9 @@ function doubleSignedArea(vertices, normal) {
 function pqFormula(p, q) {
 	// 4 times the discriminant:in
 	var discriminantX4 = p * p / 4 - q
-	if (discriminantX4 < -NLA.PRECISION) {
+	if (discriminantX4 < -NLA_PRECISION) {
 		return []
-	} else if (discriminantX4 <= NLA.PRECISION) {
+	} else if (discriminantX4 <= NLA_PRECISION) {
 		return [-p/2]
 	} else {
 		var root = Math.sqrt(discriminantX4)
@@ -871,7 +872,7 @@ function solveCubicReal2(a, b, c, d) {
 		discriminant = qDiv2*qDiv2 + pDiv3Pow3,
 		u1,v1,x1,x2,x3
 	// 18abcd - 4b³d + b²c² - 4ac³ - 27a²d²
-	if (discriminant < -NLA.PRECISION / 8) {
+	if (discriminant < -NLA_PRECISION / 8) {
 		var r = Math.sqrt(-pDiv3Pow3),
 			t = -q/(2*r),
 			cosphi = t<-1 ? -1 : t>1 ? 1 : t, // clamp t to [-1;1]
@@ -881,7 +882,7 @@ function solveCubicReal2(a, b, c, d) {
 		x2 = t1 * Math.cos((phi+2*Math.PI)/3) - a/3
 		x3 = t1 * Math.cos((phi+4*Math.PI)/3) - a/3
 		return [x1, x2, x3]
-	} else if(discriminant <= NLA.PRECISION / 8) {
+	} else if(discriminant <= NLA_PRECISION / 8) {
 		if (0 == qDiv2) {
 			// TODO: compare with NLA.isZero?
 			return [-a/3]
@@ -1074,7 +1075,7 @@ function newtonIterate2d(f1, f2, sStart, tStart, steps) {
 		let dt = (-df2s * f1ts + df1s * f2ts) / det
 		s -= ds
 		t -= dt
-	} while (--steps && f1ts * f1ts + f2ts * f2ts > NLA.PRECISION)
+	} while (--steps && f1ts * f1ts + f2ts * f2ts > NLA_PRECISION)
 	if (!steps) {
 		//console.log(f1ts * f1ts + f2ts * f2ts)
 		return null
@@ -1099,7 +1100,7 @@ function newtonIterate2dWithDerivatives(f, g, sStart, tStart, steps, dfds, dfdt,
 		let dt = (-df2s * f1ts + df1s * f2ts) / det
 		s -= ds
 		t -= dt
-	} while (--steps && f1ts * f1ts + f2ts * f2ts > NLA.PRECISION / 32)
+	} while (--steps && f1ts * f1ts + f2ts * f2ts > NLA_PRECISION / 32)
 	if (!steps) {
 		//console.log(f1ts * f1ts + f2ts * f2ts)
 		return null

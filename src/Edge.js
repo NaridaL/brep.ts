@@ -89,9 +89,11 @@ Edge.edgesIntersect = function (e1, e2) {
     	console.log(e2.sce)
     	assert(false)
     }
-    return sts.some(
+	return sts.some(
         /// (  e1.aT < tThis < e1.bT  )  &&  (  e2.aT < tOther < e2.bT  )
-        ({tThis, tOther}) => e1.tValueInside(tThis) && e2.tValueInside(tOther))
+        ({tThis, tOther}) => {
+        	return e1.tValueInside(tThis) && e2.tValueInside(tOther)
+        })
 }
 
 

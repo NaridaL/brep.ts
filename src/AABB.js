@@ -175,7 +175,7 @@ AABB.prototype = {
 	toMesh: function () {
 		let matrix = M4.multiplyMultiple(
 			M4.translation(this.min),
-			M4.scaling(this.size().max(V3(NLA.PRECISION, NLA.PRECISION, NLA.PRECISION))))
+			M4.scaling(this.size().max(V3(NLA_PRECISION, NLA_PRECISION, NLA_PRECISION))))
 		console.log(matrix.str)
 		console.log(matrix.inversed().transposed().str)
 		let mesh = GL.Mesh.cube()

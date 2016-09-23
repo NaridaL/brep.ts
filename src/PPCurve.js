@@ -153,7 +153,7 @@ class PPCurve extends Curve {
 						abNormalsCross.times(abNormalsCross.dot(Q))).div(abNormalsCross.lengthSquared())
 
 
-				} while (--i && a.minus(b).length() > NLA.PRECISION)
+				} while (--i && a.minus(b).length() > NLA_PRECISION)
 				// console.log("ended on" + i)
 				assert(this.parametricSurface1.containsPoint(Q))
 				assert(this.parametricSurface2.containsPoint(Q))

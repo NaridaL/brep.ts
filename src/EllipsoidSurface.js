@@ -263,7 +263,7 @@ class EllipsoidSurface extends Surface {
 		return (pWC, hint) => {
 			var pLC = this.inverseMatrix.transformPoint(pWC)
 			let a = pLC.angleXY()
-			if (a < -Math.PI + NLA.PRECISION || a > Math.PI - NLA.PRECISION) {
+			if (a < -Math.PI + NLA_PRECISION || a > Math.PI - NLA_PRECISION) {
 				a = hint.dot(this.baseEllipse.f2) < 0 // TODO: no base ellipse
 					? Math.PI
 					: -Math.PI

@@ -49,15 +49,15 @@ class ProjectionCurve extends Curve {
 		if (includeFirst) verts.push(a)
 		if (!reversed) {
 			assert(aT < bT)
-			let start = Math.ceil((aT + NLA.PRECISION) / inc)
-			let end = Math.floor((bT - NLA.PRECISION) / inc)
+			let start = Math.ceil((aT + NLA_PRECISION) / inc)
+			let end = Math.floor((bT - NLA_PRECISION) / inc)
 			for (let i = start; i <= end; i++) {
 				verts.push(this.at(i * inc))
 			}
 		} else {
 			assert(bT < aT)
-			let start = Math.floor((aT - NLA.PRECISION) / inc)
-			let end = ceil((bT + NLA.PRECISION) / inc)
+			let start = Math.floor((aT - NLA_PRECISION) / inc)
+			let end = ceil((bT + NLA_PRECISION) / inc)
 			for (let i = start; i >= end; i--) {
 				verts.push(this.at(i * inc))
 			}

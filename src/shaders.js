@@ -94,16 +94,30 @@ var vertexShaderArc = `
 		gl_Position = LGL_ModelViewProjectionMatrix * p;
 }
 `
-var vertexShaderArc3d = `
+var vertexShaderConic3d = `
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
+	uniform int mode;
+	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0 ; }
+	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0 ; }
 	void main() {
 		float t = startT + LGL_Vertex.x * (endT - startT);
 		
 		vec3 normal = normalize(cross(f1, f2));
 		
-		vec3 p = center + f1 * cos(t) + f2 * sin(t);
-		vec3 tangent = f1 * -sin(t) + f2 * cos(t);
+		vec3 p, tangent;
+		if (0 == mode) { // ellipse
+			p = center + f1 * cos(t) + f2 * sin(t);
+			tangent = f1 * -sin(t) + f2 * cos(t);
+		}
+		if (1 == mode) { // parabola
+			p = center + f1 * t + f2 * t * t;
+			tangent = f1 + f2 * t;
+		}
+		if (2 == mode) { // hyperbola
+			p = center + f1 * cosh(t) + f2 * sinh(t); 
+			tangent = f1 * sinh(t) + f2 * cosh(t);
+		}
 		vec3 outDir = normalize(cross(normal, tangent));
 		vec3 p2 = p + scale * (outDir * LGL_Vertex.y + normal * LGL_Vertex.z);
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);

@@ -570,7 +570,7 @@ class BezierCurve extends Curve {
 		// returns whether an intersection was immediately found (i.e. without further recursion)
 		// is declared as an arrow function so this will be bound correctly
 		const findRecursive = (tMin, tMax, sMin, sMax, thisAABB, otherAABB) => {
-			const EPS = NLA.PRECISION
+			const EPS = NLA_PRECISION
 			if (thisAABB.touchesAABB(otherAABB)) {
 				let tMid = (tMin + tMax) / 2
 				let sMid = (sMin + sMax) / 2
