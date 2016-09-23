@@ -53,6 +53,15 @@ class Edge extends Transformable {
     }
 }
 
+Edge.create = function (curve, a, b, aT, bT, flippedOf, aDir, bDir, name) {
+	if (curve instanceof L3) {
+		return new StraightEdge(curve, a, b, aT, bT, flippedOf, name)
+	} else {
+		return new PCurveEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name)
+	}
+
+}
+
 /**
  *
  * @param {Array.<Edge>} loop
@@ -231,13 +240,16 @@ class StraightEdge extends Edge {
     edgeISTsWithSurface(surface) {
         if (surface instanceof PlaneSurface) {
             return this.edgeISTsWithPlane(surface.plane)
-        } else if (surface instanceof CylinderSurface) {
-            var minT = min(this.aT, this.bT), maxT = max(this.aT, this.bT)
-            return surface.isPointsWithLine(/** @type {L3} */ this.curve)
-                .map(p => this.curve.pointLambda(p))
-                .filter(edgeT => minT <= edgeT && edgeT <= maxT)
         } else {
-            assert(false)
+            var minT = min(this.aT, this.bT), maxT = max(this.aT, this.bT)
+            return surface.isTsForLine(/** @type {L3} */ this.curve)
+                .mapFilter(edgeT => {
+	                edgeT = NLA.snapTo(edgeT, this.aT)
+	                edgeT = NLA.snapTo(edgeT, this.bT)
+                    if (minT <= edgeT && edgeT <= maxT) {
+	                    return edgeT
+                    }
+                })
         }
     }
 

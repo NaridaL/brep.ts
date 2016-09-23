@@ -377,13 +377,13 @@ class B2 extends Transformable {
 					continue
 				}
 				var pDir = baseEdge.tangentAt(info.edgeT)
-				looseSegments.push(new baseEdge.constructor(baseEdge.curve, startP, info.p, startT, info.edgeT, null, startDir, pDir))
+				looseSegments.push(Edge.create(baseEdge.curve, startP, info.p, startT, info.edgeT, null, startDir, pDir, 'looseSegment' + globalId++))
 				startP = info.p
 				startT = info.edgeT
 				startInfo = info
 				startDir = pDir
 			}
-			looseSegments.push(new baseEdge.constructor(baseEdge.curve, startP, baseEdge.b, startT, baseEdge.bT, null, startDir, baseEdge.bDir))
+			looseSegments.push(Edge.create(baseEdge.curve, startP, baseEdge.b, startT, baseEdge.bT, null, startDir, baseEdge.bDir, 'looseSegment' + globalId++))
 			edgeLooseSegments.set(baseEdge, looseSegments)
 		})
 		return edgeLooseSegments;
@@ -572,8 +572,9 @@ class Face extends Transformable {
 	 */
 	intersectsLine(line) {
 		assertInst(L3, line)
-		let containedIntersections = this.surface.isPointsWithLine(line).filter(p => this.containsPoint(p))
-		let nearestPoint = containedIntersections.withMax(p => -line.pointLambda(p))
+		let containedIntersectionsTs = this.surface.isTsForLine(line).filter(t => this.containsPoint(line.at(t)))
+		let nearestPointT = containedIntersectionsTs.withMax(t => -t)
+		let nearestPoint = line.at(nearestPointT)
 
 		return nearestPoint ? line.pointLambda(nearestPoint) : NaN
 	}
@@ -1095,8 +1096,8 @@ class RotationFace extends Face {
 		// get intersections of newCurve with other edges of face and face2
 		var pss1 = faceEdgeISPsWithSurface(thisBrep, this, isCurves, face2.surface)
 		var pss2 = faceEdgeISPsWithSurface(face2Brep, face2, isCurves, this.surface)
-		console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
-		if (ps1.length == 0 || ps2.length == 0) {
+		console.log('pss1\n', pss1.map(m => m.toSource()).join('\n'), '\npss2\n', pss2.map(m => m.toSource()).join('\n'))
+		if (pss1.every(ps => ps.length == 0) || pss2.every(ps => ps.length == 0)) {
 			// faces to not intersect
 			return
 		}
@@ -1214,52 +1215,56 @@ class RotationFace extends Face {
 			}
 		}
 
-		let in1 = false, in2 = false, colinear1 = false, colinear2 = false
-		let i = 0, j = 0, last, segments = []
-		let startP, startDir, startT
-		while (i < ps1.length || j < ps2.length) {
-			let a = ps1[i], b = ps2[j]
-			if (j >= ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
-				last = a
-				in1 = !in1
-				// ": colinear1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
-				colinear1 = in1 ? a.colinear && a.edge : colinear1
-				i++
-			} else if (i >= ps1.length || NLA.gt(a.t, b.t)) {
-				last = b
-				in2 = !in2
-				colinear2 = in2 ? b.colinear && b.edge : colinear2
-				j++
-			} else {
-				last = a
-				in1 = !in1
-				in2 = !in2
-				//if (in1 == in2) {
-				a.used = true
-				b.used = true
-				colinear1 = in1 ? a.colinear && a.edge : colinear1
-				colinear2 = in2 ? b.colinear && b.edge : colinear2
-				//}
-				i++
-				j++
+		isCurves.forEach((isCurve, isCurveIndex) => {
+			let ps1 = pss1[isCurveIndex], ps2 = pss2[isCurveIndex]
+			let in1 = false, in2 = false, colinear1 = false, colinear2 = false
+			let i = 0, j = 0, last, segments = []
+			let startP, startDir, startT
+			while (i < ps1.length || j < ps2.length) {
+				let a = ps1[i], b = ps2[j]
+				if (j >= ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
+					last = a
+					in1 = !in1
+					// ": colinear1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
+					colinear1 = in1 ? a.colinear && a.edge : colinear1
+					i++
+				} else if (i >= ps1.length || NLA.gt(a.t, b.t)) {
+					last = b
+					in2 = !in2
+					colinear2 = in2 ? b.colinear && b.edge : colinear2
+					j++
+				} else {
+					last = a
+					in1 = !in1
+					in2 = !in2
+					//if (in1 == in2) {
+					a.used = true
+					b.used = true
+					colinear1 = in1 ? a.colinear && a.edge : colinear1
+					colinear2 = in2 ? b.colinear && b.edge : colinear2
+					//}
+					i++
+					j++
+				}
+				console.log("as", a, b, in1, in2)
+				if (startP && !(in1 && in2)) {
+					// segment end
+					handleGeneratedSegment(Edge.create(isCurve, startP, last.p, startT, last.t, null, isCurve.tangentAt(startT), isCurve.tangentAt(last.t)), colinear1, colinear2, in1, in2, a, b)
+					startP = undefined
+					last.used = true
+					handlePoint(a, b, colinear1 || !!a.used, colinear2 || !!b.used)
+				} else if (in1 && in2) {
+					// new segment just started
+					startP = last.p
+					startDir = last.insideDir
+					startT = last.t
+					last.used = true
+					handlePoint(a, b, colinear1 || !!a.used, colinear2 || !!b.used)
+				}
 			}
-			console.log("as", a, b, in1, in2)
-			if (startP && !(in1 && in2)) {
-				// segment end
-				handleGeneratedSegment(new StraightEdge(intersectionLine, startP, last.p, startT, last.t, null, startDir, last.insideDir && last.insideDir.negated()), colinear1, colinear2, in1, in2, a, b)
-				startP = undefined
-				last.used = true
-				handlePoint(a, b, colinear1 || !!a.used, colinear2 || !!b.used)
-			} else if (in1 && in2) {
-				// new segment just started
-				startP = last.p
-				startDir = last.insideDir
-				startT = last.t
-				last.used = true
-				handlePoint(a, b, colinear1 || !!a.used, colinear2 || !!b.used)
-			}
-		}
+		})
 	}
+
 
 }
 
@@ -1290,7 +1295,7 @@ function addLikeSurfaceFaces(likeSurfaceFaces, face1, face2) {
 }
 
 function facesWithEdge(edge, faces) {
-	return NLA.arrayMapFilter(faces, (face) => {
+	return faces.mapFilter((face) => {
 		var matchingEdge = face.getAllEdges().find(e => e.isCoEdge(edge))
 		if (matchingEdge) {
 			return {face: face, reversed: !edge.a.like(matchingEdge.a), angle: NaN, normalAtEdgeA: null, edge: matchingEdge}
@@ -1301,7 +1306,7 @@ function facesWithEdge(edge, faces) {
  *
  * @param brep
  * @param brepFace
- * @param line
+ * @param isLine
  * @param plane2
  * @returns {Array}
  * p: intersection point
@@ -1311,13 +1316,15 @@ function facesWithEdge(edge, faces) {
  * edgeT: !!
  * colinear: whether edge is colinear to intersection line
  */
-function planeFaceEdgeISPsWithPlane(brep, brepFace, line, plane2) {
+function planeFaceEdgeISPsWithPlane(brep:B2, brepFace:Face, isLine:L3, plane2:Plane3) {
+	assert(brepFace.surface.plane.containsLine(isLine))
+	assert(plane2.containsLine(isLine))
 	var facePlane = brepFace.surface.plane
 	var ps = []
 	var loops = brepFace.holes.concat([brepFace.edges])
 	loops.forEach(loop => {
-		var colinearSegments = loop.map((edge) => edge.colinearToLine(line))
-		var intersectionLinePerpendicular = line.dir1.cross(facePlane.normal)
+		var colinearSegments = loop.map((edge) => edge.colinearToLine(isLine))
+		var intersectionLinePerpendicular = isLine.dir1.cross(facePlane.normal)
 
 		loop.forEach((edge, i, edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
@@ -1327,21 +1334,22 @@ function planeFaceEdgeISPsWithPlane(brep, brepFace, line, plane2) {
 				var h = (i + edges.length - 1) % edges.length, prevEdge = edges[h]
 				var colinearOutside = edge.aDir.cross(facePlane.normal)
 				if (prevEdge.bDir.dot(colinearOutside) < 0) {
-					ps.push({p: prevEdge.b, insideDir: edge.aDir.negated(), t: line.pointLambda(prevEdge.b), edge: prevEdge, edgeT: prevEdge.bT,
+					ps.push({p: prevEdge.b, insideDir: edge.aDir.negated(), t: isLine.pointLambda(prevEdge.b), edge: prevEdge, edgeT: prevEdge.bT,
 						colinear: false})
 				}
 				ps.push(
-					{p: edge.a, insideDir: edge.aDir, t: line.pointLambda(edge.a), edge: edge, edgeT: edge.aT,
+					{p: edge.a, insideDir: edge.aDir, t: isLine.pointLambda(edge.a), edge: edge, edgeT: edge.aT,
 						colinear: true},
-					{p: edge.b, insideDir: edge.bDir.negated(), t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT,
+					{p: edge.b, insideDir: edge.bDir.negated(), t: isLine.pointLambda(edge.b), edge: edge, edgeT: edge.bT,
 						colinear: true})
 				if (nextEdge.aDir.dot(colinearOutside) > 0) {
-					ps.push({p: edge.b, insideDir: edge.bDir, t: line.pointLambda(edge.b), edge: edge, edgeT: prevEdge.bT,
+					ps.push({p: edge.b, insideDir: edge.bDir, t: isLine.pointLambda(edge.b), edge: edge, edgeT: prevEdge.bT,
 						colinear: false})
 				}
 			} else {
 				// not necessarily a straight edge, so multiple intersections are possible
 				var edgeTs = edge.edgeISTsWithPlane(plane2)
+				assert(edgeTs.every(t => plane2.containsPoint(edge.curve.at(t))), edgeTs)
 				for (var k = 0; k < edgeTs.length; k++) {
 					var edgeT = edgeTs[k]
 					if (edgeT == edge.bT) {
@@ -1353,15 +1361,16 @@ function planeFaceEdgeISPsWithPlane(brep, brepFace, line, plane2) {
 						if (!colinearSegments[j] && intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
 							// next segment is not colinear and ends on different side
 							console.log("adding")
-							ps.push({p: edge.b, insideDir: plane2.normal.negated(), t: line.pointLambda(edge.b), edge: edge, edgeT: edge.bT, colinear: false})
+							ps.push({p: edge.b, insideDir: plane2.normal.negated(), t: isLine.pointLambda(edge.b), edge: edge, edgeT: edge.bT, colinear: false})
 							//console.log('end on line, next other side')
 						}
 					} else if (edgeT != edge.aT) {
 						// edge crosses intersection line, neither starts nor ends on it
 						var p = edge.curve.at(edgeT)
-						assert(line.containsPoint(p), edge.toString() + p+edgeT)
+						assert(plane2.containsPoint(p), edge.toString(), p, edgeT, plane2.distanceToPoint(p))
+						assert(isLine.containsPoint(p), edge.toString(), p, edgeT, isLine.distanceToPoint(p))
 						var insideDir = plane2.normal.negated()
-						ps.push({p: p, insideDir: insideDir, t: line.pointLambda(p), edge: edge, edgeT: edgeT, colinear: false})
+						ps.push({p: p, insideDir: insideDir, t: isLine.pointLambda(p), edge: edge, edgeT: edgeT, colinear: false})
 						console.log('middle')
 					}
 				}
@@ -1370,10 +1379,18 @@ function planeFaceEdgeISPsWithPlane(brep, brepFace, line, plane2) {
 	})
 	// duplicate 't's are ok, as sometimes a segment needs to stop and start again
 	// should be sorted so that back facing ones are first
-	ps.sort((a, b) => a.t - b.t || a.insideDir.dot(line.dir1))
+	ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isLine.dir1))
 	return ps
 }
 
+/**
+ *
+ * @param brep
+ * @param {Face} brepFace
+ * @param {Curve[]} isCurves
+ * @param {Surface} surface2
+ * @returns {Array.<Array>}
+ */
 function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 	let faceSurface = brepFace.surface
 	let pss = NLA.arrayFromFunction(isCurves.length, i => [])
@@ -1420,11 +1437,33 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 							//console.log('end on line, next other side')
 						}
 					} else if (edgeT != edge.aT) {
-						// edge crosses intersection line, neither starts nor ends on it
+						// edge crosses an intersection curve, neither starts nor ends on it
 						let p = edge.curve.at(edgeT)
-						assert(isCurves.some(isCurve => isCurve.containsPoint(p), edge.toString() + p+edgeT))
-						let insideDir = plane2.normal.negated()
-						ps.push({p: p, insideDir: insideDir, t: line.pointLambda(p), edge: edge, edgeT: edgeT, colinear: false})
+						if (!isCurves.some(isCurve => isCurve.containsPoint(p), edge.toString() + p+edgeT)) {
+							console.log(isCurves)
+							isCurves.forEach(isCurve => isCurve.debugToMesh(mesh1, 'curve1'))
+							drPs.push(p)
+							assert(false)
+						}
+						let isCurveIndex
+						if (1 == isCurves.length) {
+							isCurveIndex = 0
+						} else {
+							isCurveIndex = isCurves.findIndex(isCurve => isCurve.containsPoint(p))
+							assert(isCurves.slice(isCurveIndex + 1).every(isCurve => !isCurve.containsPoint(p)))
+						}
+						let t = isCurves[0].pointLambda(p)
+						if (isNaN(t)) {
+							if (isCurves[0] instanceof EllipseCurve) {
+								let hint = edge.curve.tangentAt(edgeT).cross(isCurves[0].f1).dot(isCurves[0].f2)
+								t = isCurves[0].pointLambda(p, hint)
+							} else {
+								assert(false)
+							}
+						}
+						assert(!isNaN(t))
+						let insideDir = surface2.normalAt(p).negated()
+						pss[isCurveIndex].push({p: p, insideDir: insideDir, t: t, edge: edge, edgeT: edgeT, colinear: false})
 						console.log('middle')
 					}
 				}
@@ -1433,8 +1472,9 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 	})
 	// duplicate 't's are ok, as sometimes a segment needs to stop and start again
 	// should be sorted so that back facing ones are first
-	ps.sort((a, b) => a.t - b.t || a.insideDir.dot(line.dir1))
-	return ps
+	pss.forEach((ps, isCurveIndex) => ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isCurves[isCurveIndex].tangentAt(a.t))))
+
+	return pss
 
 	//console.log(colinearSegments, colinearSegmentsInside)
 	brepFace.edges.forEach((edge, i, edges) => {
@@ -1847,175 +1887,6 @@ function getBlug(ps1, ps2, curve) {
 	assert (!in1 && !in2, '!in1 && !in2 '+in1+' '+in2)
 	return segments
 }
-/**
- *
- * @param {P3} plane
- * @param {V3=} right
- * @param {V3=} up
- * @constructor
- * @extends {Surface}
- */
-function PlaneSurface(plane, right, up) {
-	assertInst(P3, plane)
-	this.plane = plane
-	this.up = up || plane.normal.getPerpendicular().normalized()
-	this.right = right || this.up.cross(this.plane.normal).normalized()
-	assert(this.right.cross(this.up).like(this.plane.normal))
-}
-PlaneSurface.throughPoints = function (a, b, c) {
-	return new PlaneSurface(P3.throughPoints(a, b, c))
-}
-PlaneSurface.prototype = NLA.defineObject(Surface.prototype, /** @lends PlaneSurface.prototype */ {
-	isCoplanarTo: function (surface) {
-		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
-	},
-	parametricFunction: function () {
-		var matrix = M4.forSys(this.right, this.up, this.normal, this.plane.anchor)
-		return function (s, t) {
-			return matrix.transformPoint(V3.create(s, t, 0))
-		}
-	},
-	implicitFunction: function () {
-		return p => this.plane.distanceToPointSigned(p)
-	},
-	isCurvesWithISurface: function (implicitSurface) {
-		assert (implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
-		return new CurvePI(this, implicitSurface)
-	},
-
-	/**
-	 * @inheritDoc
-	 */
-	isCurvesWithSurface: function (surface2) {
-		// prefer other surface to be the paramteric one
-		if (surface2.implicitFunction) {
-			return new CurvePI(this, surface2)
-		} else if (surface2.parametricFunction) {
-			return new CurvePI(surface2, this)
-		}
-	},
-	/**
-	 *
-	 * @param {Array.<Edge>} contour
-	 * @returns {boolean}
-	 */
-	edgeLoopCCW: function (contour) {
-		var totalAngle = 0
-		for (var i = 0; i < contour.length; i++) {
-			var ipp = (i + 1) % contour.length
-			var edge = contour[i], nextEdge = contour[ipp]
-			assert(edge.b.like(nextEdge.a), "edges dont form a loop")
-			if (edge.curve instanceof EllipseCurve) {
-				totalAngle += edge.rotViaPlane(this.plane.normal)
-				// console.log(edge.toString(), edge.rotViaPlane(this.plane.normal))
-			}
-			totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal)
-		}
-		return totalAngle > 0
-	},
-
-	/**
-	 *
-	 * @param {Array.<Edge>} contour
-	 * @param {V3} p
-	 * @returns {boolean}
-	 */
-	edgeLoopContainsPoint: function (contour, p) {
-		assert(contour)
-		assertVectors (p)
-		var dir = this.right.plus(this.up.times(0.123)).normalized()
-		var line = L3(p, dir)
-		var plane = this.plane
-		var intersectionLinePerpendicular = dir.cross(plane.normal)
-		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
-		var colinearSegments = contour.map((edge) => edge.colinearToLine(line))
-		var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(dir) > 0)
-		var inside = false
-		function logIS(p) {
-			if (line.pointLambda(p) > 0) {
-				inside = !inside
-			}
-		}
-		contour.forEach((/** Edge= */ edge, i, edges) => {
-			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
-			if (colinearSegments[i]) {
-				// edge colinear to intersection
-				var outVector = edge.bDir.cross(plane.normal)
-				var insideNext = outVector.dot(nextEdge.aDir) > 0
-				if (colinearSegmentsInside[i] != insideNext) {
-					logIS(edge.b)
-				}
-			} else {
-				var edgeTs = edge.edgeISTsWithPlane(plane2)
-				for (var k = 0; k < edgeTs.length; k++) {
-					var edgeT = edgeTs[k]
-					if (edgeT == edge.bT) {
-						// endpoint lies on intersection line
-						if (colinearSegments[j]) {
-							// next segment is colinear
-							// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
-							// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
-							// point in the same direction (dot > 0)
-							var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
-							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
-							// if the "inside-ness" changes, add intersection point
-							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
-							if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
-								logIS(edge.b)
-							}
-						} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
-							logIS(edge.b)
-						}
-					} else if (edgeT != edge.aT) {
-						// edge crosses line, neither starts nor ends on it
-						logIS(edge.curve.at(edgeT))
-					}
-				}
-			}
-		})
-		return inside
-
-	},
-	pointToParameterFunction: function () {
-		var matrix = M4.forSys(this.right, this.up, this.normal, this.plane.anchor)
-		var matrixInverse = matrix.inversed()
-		return function (pWC) {
-			return matrixInverse.transformPoint(pWC)
-		}
-	},
-	normalAt: function (p) {
-		return this.plane.normal
-	},
-	containsPoint: function (p) { return this.plane.containsPoint(p) },
-	containsCurve: function (curve) {
-		if (curve instanceof L3) {
-			return this.plane.containsLine(curve)
-		} else if (curve instanceof EllipseCurve) {
-			return this.plane.containsPoint(curve.center) && this.plane.normal.isParallelTo(curve.normal)
-		} else if (curve instanceof BezierCurve) {
-			return curve.points.every(p => this.plane.containsPoint(p))
-		} else {
-			assert(false, edge.toString())
-		}
-	},
-	transform: function (m4) {
-		return new PlaneSurface(this.plane.transform(m4))
-	},
-	flipped: function () {
-		return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated())
-	},
-	toString: function () {
-		return this.plane.toString()
-	},
-	toSource: function () {
-		return `new PlaneSurface(${this.plane})`
-	},
-	equalsSurface: function (surface) {
-		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
-	}
-})
-PlaneSurface.prototype.constructor = PlaneSurface
 
 
 function curvePoint(implicitCurve, startPoint) {
@@ -2055,7 +1926,7 @@ function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, start
 		prevp = p
 		p = curvePoint(implicitCurve, tangentEndPoint)
 	} while (i++ < 100 && (i < 4 || prevp.distanceTo(endPoint) > 1.1 * stepLength) && boundsFunction(p.x, p.x))
-	// TODO gleichm¨aßige Verteilung der Punkte
+	// TODO gleichmäßige Verteilung der Punkte
 	return points
 }
 // both curves must be in the same s-t coordinates for this to make sense
@@ -2083,7 +1954,7 @@ function intersectionICurveICurve(pCurve1, startParams1, endParams1, startDir, s
 	return vertices
 
 }
-function asj(iCurve1, loopPoints1, iCurve2) {
+function intersectionICurveICurve(iCurve1, loopPoints1, iCurve2) {
 	var p = loopPoints1[0], val = iCurve2(p.x, p.y), lastVal
 	var iss = []
 	for (var i = 0; i < loopPoints1.length; i++) {
@@ -2112,20 +1983,6 @@ function intersectionPCurveISurface(parametricCurve, searchStart, searchEnd, sea
 }
 function intersectionICurvePSurface(f0, f1, parametricSurface) {
 
-}
-function blugh(f, df, ddf, start, end, da) {
-	var t = start, res = []
-	while (t < end) {
-		res.push(t)
-		var cx = t, cy = f(t),
-			dcx = 1, dcy = df(t),
-			ddcx = 0, ddcy = ddf(t),
-			div = Math.max(0.3, Math.abs(ddcy)),
-			dt = da * (1 + dcy * dcy) / div
-//		console.log(t, div, dt)
-		t += dt
-	}
-	return res
 }
 function cassini(a, c) {
 	return (x,y) => (x*x+y*y) * (x*x+y*y) - 2 * c * c * (x * x - y * y) - (a * a * a * a - c * c * c * c)

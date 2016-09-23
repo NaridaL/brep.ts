@@ -96,6 +96,7 @@ class EllipseCurve extends Curve {
 		var p2 = this.inverseMatrix.transformPoint(p)
 		var angle = p2.angleXY()
 		if (angle < -Math.PI + NLA.PRECISION || angle > Math.PI - NLA.PRECISION) {
+			// assert(isFinite(hint))
 			return Math.sign(hint) * Math.PI
 		}
 		return angle

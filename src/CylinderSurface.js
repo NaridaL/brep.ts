@@ -77,11 +77,9 @@ class CylinderSurface extends Surface {
 	}
 
 	/**
-	 *
-	 * @param {L3} line
-	 * @returns {Array.<V3>}
+	 * @inheritDoc
 	 */
-	isPointsWithLine(line) {
+	isTsForLine(line) {
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
@@ -92,7 +90,7 @@ class CylinderSurface extends Surface {
 		}
 		var localAnchor = this.inverseMatrix.transformPoint(line.anchor)
 		assert(!CylinderSurface.unitISLineTs(localAnchor, localDir).length || !isNaN(CylinderSurface.unitISLineTs(localAnchor, localDir)[0]), 'sad ' +localDir)
-		return CylinderSurface.unitISLineTs(localAnchor, localDir).map(t => line.at(t))
+		return CylinderSurface.unitISLineTs(localAnchor, localDir)
 	}
 
 	isCoplanarTo(surface) {
@@ -127,7 +125,7 @@ class CylinderSurface extends Surface {
 	transform(m4) {
 		return new CylinderSurface(
 			this.baseEllipse.transform(m4),
-			m4.transformVector(this.dir))
+			m4.transformVector(this.dir).normalized())
 	}
 
 	flipped() {
@@ -203,7 +201,7 @@ class CylinderSurface extends Surface {
 
 	isCurvesWithSurface(surface2) {
 		if (surface2 instanceof PlaneSurface) {
-			return this.isTsWithPlane(surface2.plane)
+			return this.isCurvesWithPlane(surface2.plane)
 		} else if (surface2 instanceof CylinderSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
@@ -253,7 +251,7 @@ class CylinderSurface extends Surface {
 	 * @param {number} radius
 	 * @returns {CylinderSurface}
 	 */
-	static cyl(radius) {
+	static cylinder(radius) {
 		return new CylinderSurface(new EllipseCurve(V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0)), V3.Z)
 	}
 

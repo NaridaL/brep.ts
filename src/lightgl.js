@@ -1200,9 +1200,6 @@ void main() {
 	attribute vec4 LGL_TexCoord;
 	attribute vec3 LGL_Normal;
 	attribute vec4 LGL_Color;
-	vec4 ftransform() {
-		return LGL_ModelViewProjectionMatrix * LGL_Vertex;
-	}
 `
 		var fragmentHeader = `  precision highp float;` + header;
 
@@ -1390,7 +1387,7 @@ void main() {
 			if (on['LGL_NormalMatrix']) {
 				const m = modelViewMatrixInverse.m;
 				// transpose normal matrix
-				uni['LGL_NormalMatrix'] = [m[0], m[4], m[8], m[1], m[5], m[9], m[2], m[6], m[10]];
+				uni['LGL_NormalMatrix'] = new Float32Array([m[0], m[4], m[8], m[1], m[5], m[9], m[2], m[6], m[10]])
 			}
 			this.uniforms(uni);
 

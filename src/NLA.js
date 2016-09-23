@@ -58,9 +58,9 @@ var assertNumbers = NLA.assertNumbers = function (...numbers) {
  * @param {string} [message]
  * @returns {boolean}
  */
-var assert = NLA.assert = function (value, message) {
+var assert = NLA.assert = function (value, ...messages) {
 	if (NLA_DEBUG && !value) {
-		throw new Error("NLA.assert failed: " + ('function' == typeof message ? message() : message))
+		throw new Error("NLA.assert failed: " + messages.map(message => ('function' == typeof message ? message() : message)).join('\n'))
 	}
 	return true
 }
@@ -754,7 +754,8 @@ NLA.forceFinite = function(val) {
 /**
  * combinations(2) will generate
  * [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
- * @param n
+ * @param {number} n
+ * @returns {{i: number, j: number}}
  */
 NLA.combinations = function* (n) {
 	for (var i = 0; i < n; i++) {
@@ -896,54 +897,6 @@ function solveCubicReal2(a, b, c, d) {
 		return [u1-v1-a/3]
 	}
 }
-// function solveCubicReal2(a, b, c, d) {
-// 	if (NLA.isZero(a)) {
-// 		if (NLA.isZero(b)) {
-// 			return [-d/c]
-// 		} else {
-// 			return pqFormula(c / b, d / b)
-// 		}
-// 	}
-// 	var div = a
-// 	a = b/div
-// 	b = c/div
-// 	c = d/div
-// 	var p = (3*b - a*a)/3,
-// 		p3 = p/3,
-// 		q = (2*a*a*a - 9*a*b + 27*c)/27,
-// 		q2 = q/2,
-// 		discriminant = q2*q2 + p3*p3*p3,
-// 		u1,v1,x1,x2,x3
-// 	// 18abcd - 4b³d + b²c² - 4ac³ - 27a²d²
-// 	if (discriminant < -NLA.PRECISION / 8) {
-// 		var mp3 = -p/3,
-// 			mp33 = mp3*mp3*mp3,
-// 			r = Math.sqrt( mp33 ),
-// 			t = -q/(2*r),
-// 			cosphi = t<-1 ? -1 : t>1 ? 1 : t,
-// 			phi = Math.acos(cosphi),
-// 			crtr = Math.cbrt(r),
-// 			t1 = 2*crtr
-// 		x1 = t1 * Math.cos(phi/3) - a/3
-// 		x2 = t1 * Math.cos((phi+2*Math.PI)/3) - a/3
-// 		x3 = t1 * Math.cos((phi+4*Math.PI)/3) - a/3
-// 		return [x1, x2, x3]
-// 	} else if(discriminant <= NLA.PRECISION / 8) {
-// 		if (0 == q2) {
-// 			// TODO: compare with NLA.isZero?
-// 			return [-a/3]
-// 		}
-// 		u1 = q2 < 0 ? Math.cbrt(-q2) : -Math.cbrt(q2)
-// 		x1 = 2*u1-a/3
-// 		x2 = -u1 - a/3
-// 		return [x1,x2]
-// 	} else {
-// 		var sd = Math.sqrt(discriminant)
-// 		u1 = Math.cbrt(-q2+sd)
-// 		v1 = Math.cbrt(q2+sd)
-// 		return [u1-v1-a/3]
-// 	}
-// }
 
 /**
  * @template T
@@ -1013,7 +966,7 @@ class Transformable extends NLA.BaseObject {
 	 * @abstract
 	 * @param {M4} m4
 	 * @returns {T}
-	 * @method tr
+	 * @method transform
 	 */
 }
 NLA.addOwnProperties(Array.prototype, ARRAY_UTILITIES)
@@ -1105,18 +1058,18 @@ function newtonIterate2d(f1, f2, sStart, tStart, steps) {
 		 | a b |-1                   |  d -b |
 		 | c d |   = 1 / (ad - bc) * | -c  a |
 		 */
-		let f1ts = f1(s, t), f2ts = f2(s, t)
+		var f1ts = f1(s, t), f2ts = f2(s, t)
 		/*
-		 let df1s = (f1(s + eps, t) - f1ts) / eps, df1t = (f1(s, t + eps) - f1ts) / eps,
-		 df2s = (f2(s + eps, t) - f2ts) / eps, df2t = (f2(s, t + eps) - f2ts) / eps
+		 let df1s = (f1(s + EPSILON, t) - f1ts) / EPSILON, df1t = (f1(s, t + EPSILON) - f1ts) / EPSILON,
+		 df2s = (f2(s + EPSILON, t) - f2ts) / EPSILON, df2t = (f2(s, t + EPSILON) - f2ts) / EPSILON
 		 let det = df1s * df2t - df1t * df2s
 		 s = s - ( df2t * f1ts - df1t * f2ts) / det
 		 t = t - (-df2s * f1ts + df1s * f2ts) / det
 		 */
 		// TODO: is this even more accurate?
-		var df1s = (f1(s + eps, t) - f1ts), df1t = (f1(s, t + eps) - f1ts),
-			df2s = (f2(s + eps, t) - f2ts), df2t = (f2(s, t + eps) - f2ts)
-		let det = (df1s * df2t - df1t * df2s) / eps
+		let df1s = (f1(s + EPSILON, t) - f1ts), df1t = (f1(s, t + EPSILON) - f1ts),
+			df2s = (f2(s + EPSILON, t) - f2ts), df2t = (f2(s, t + EPSILON) - f2ts)
+		let det = (df1s * df2t - df1t * df2s) / EPSILON
 		let ds = ( df2t * f1ts - df1t * f2ts) / det
 		let dt = (-df2s * f1ts + df1s * f2ts) / det
 		s -= ds

@@ -119,6 +119,19 @@ class BezierCurve extends Curve {
 		return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - plane.w)
 	}
 
+	isTsWithSurface(surface) {
+		if (surface instanceof PlaneSurface) {
+			return this.isTsWithPlane(surface.plane)
+		}
+		if (surface instanceof CylinderSurface) {
+			let projPlane = P3(surface.dir.normalized(), 0)
+			let projThis = this.project(projPlane)
+			let projEllipse = surface.baseEllipse.project(projPlane)
+			return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
+		}
+		assert(false)
+	}
+
 	/**
 	 * @inheritDoc
 	 */
@@ -139,6 +152,7 @@ class BezierCurve extends Curve {
 	 */
 	isColinearTo(curve) {
 		if (curve == this) return true
+		if (!(curve instanceof BezierCurve)) return false
 		// first, find out where/if curve.p0 and curve.p3 are on this
 		// then split this at curve.p0 --> curve.p3 to compare points p1 and p2
 		var curveP0T, curveP3T

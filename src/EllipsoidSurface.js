@@ -93,17 +93,15 @@ class EllipsoidSurface extends Surface {
 	}
 
 	/**
-	 *
-	 * @param {L3} line
-	 * @returns {Array.<V3>}
+	 * @inheritDoc
 	 */
-	isPointsWithLine(line) {
+	isTsForLine(line) {
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
 		var localAnchor = this.inverseMatrix.transformPoint(line.anchor)
 		var localDir = this.inverseMatrix.transformVector(line.dir1)
-		return EllipsoidSurface.unitISTsWithLine(localAnchor, localDir).map(t => line.at(t))
+		return EllipsoidSurface.unitISTsWithLine(localAnchor, localDir)
 	}
 
 	isCoplanarTo(surface) {

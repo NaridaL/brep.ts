@@ -382,6 +382,7 @@ function deleteCoincidence(coincidence, sketch) {
 }
 /**
  * Arc goes CCW from a to b
+ * @param sketch
  * @param ax
  * @param ay
  * @param bx
@@ -1170,7 +1171,7 @@ function load(key) {
 	editingSketch = null
 	updateSelected()
 	updateFeatureDisplay()
-	rebuildModel()
+	// rebuildModel()
 	// let lastSketch = featureStack.slice().reverse().find(f => f instanceof Sketch)
 	// lastSketch && modePush(MODES.SKETCH, lastSketch)
 	let lastPlane = featureStack.slice().reverse().find(f => f instanceof PlaneDefinition)
@@ -1466,7 +1467,7 @@ function drawPoints() {
 	})
 }
 const CURVE_PAINTERS = {}
-CURVE_PAINTERS[EllipseCurve] = function paintEllipseCurve(ellipse, color, startT, endT, width = 2) {
+CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse, color, startT, endT, width = 2) {
 	shaders.ellipse3d.uniforms({
 		f1: ellipse.f1,
 		f2: ellipse.f2,
@@ -1477,7 +1478,7 @@ CURVE_PAINTERS[EllipseCurve] = function paintEllipseCurve(ellipse, color, startT
 		scale: width
 	}).draw(meshes.pipe)
 }
-CURVE_PAINTERS[BezierCurve] = function paintBezierCurve(curve, color, startT, endT, width = 2, normal = V3.Z) {
+CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve, color, startT, endT, width = 2, normal = V3.Z) {
 	shaders.bezier3d.uniforms({
 		p0: curve.p0,
 		p1: curve.p1,
@@ -1490,7 +1491,7 @@ CURVE_PAINTERS[BezierCurve] = function paintBezierCurve(curve, color, startT, en
 		normal: normal
 	}).draw(meshes.pipe)
 }
-CURVE_PAINTERS[L3] = function (curve, color, startT, endT, width = 2, normal = V3.Z) {
+CURVE_PAINTERS[L3.name] = function (curve, color, startT, endT, width = 2, normal = V3.Z) {
 	gl.pushMatrix()
 	let a = curve.at(startT), b = curve.at(endT)
 	let ab = b.minus(a), abT = ab.getPerpendicular().normalized()
@@ -1586,7 +1587,7 @@ function paintScreen () {
 			const startT = min(edge.aT, edge.bT)
 			const endT = max(edge.aT, edge.bT)
 			const color = hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000)
-			CURVE_PAINTERS[edge.curve.constructor](edge.curve, color, startT, endT, 2)
+			CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, startT, endT, 2)
 		})
 
 		gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
@@ -1829,7 +1830,6 @@ NameRef.forObject = function (o) {
 		assert(o.name)
 		return new NameRef(o.name)
 	}
-	assert(false, o)
 }
 function initTips() {
 	console.log($$('[data-tooltip]'))
@@ -1840,7 +1840,11 @@ function initTips() {
 			})
 }
 function main() {
+	 let o = {
 
+	 }
+	 o[EllipseCurve.name] = "a"
+	console.log(Object.keys(o))
 
 	// initTips()
 	// new Request({url: 'src/testshader.glsl', async: false, onSuccess: text => console.log(text)}).send()
@@ -1863,21 +1867,21 @@ function main() {
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // TODO ?!
 
 
-	let s1 = new ProjectedCurveSurface(BezierCurve.EX3D.scale(100, 100, 100).project(P3.XY), V3.Z, -1, 2)
-	let s2 = new ProjectedCurveSurface(BezierCurve.EX2D.scale(100, 100, 100), V3.Z, -1, 2).rotateY(Math.PI/2).translate(0, 150, 0)
-	mesh1 = s1.toMesh()
+	// let s1 = new ProjectedCurveSurface(BezierCurve.EX3D.scale(100, 100, 100).project(P3.XY), V3.Z, -1, 2)
+	// let s2 = new ProjectedCurveSurface(BezierCurve.EX2D.scale(100, 100, 100), V3.Z, -1, 2).rotateY(Math.PI/2).translate(0, 260, 0)
+	mesh1 = new GL.Mesh()
 	// mesh2 = s2.toMesh()
-	let isc = s2.isCurvesWithSurface(s1)[0]
+	// let isc = s2.isCurvesWithSurface(s1)[0]
 	// mesh1 = face.inB2().toMesh()
 	// mesh1.computeWireframeFromFlatTriangles()
 	// mesh1.compile()
 	// let mint = -2, maxt = 2
 	// drPs.push(curve.at(mint), curve.at(maxt))
-	let line = L3(V3(-1560.8950828838565, 716.07295580975, 249.61382611323648), V3(0.9130103135570956, -0.36545647611595106, -0.18125598308272678))
-	isc.debugToMesh(mesh1, 'curve1')
+	// let line = L3(V3(-1560.8950828838565, 716.07295580975, 249.61382611323648), V3(0.9130103135570956, -0.36545647611595106, -0.18125598308272678))
+	// isc.debugToMesh(mesh1, 'curve1')
 	// console.log(mesh1)
-	mesh1.compile()
-	drPs.pushAll(isc.rootPoints().concatenated())
+	// mesh1.compile()
+	// drPs.pushAll(isc.rootPoints().concatenated())
 	// mesh2 = curve.getAABB(mint, maxt).toMesh()
 	// console.log(curve.getAABB().toSource())
 	// console.log(mesh2)
@@ -1918,15 +1922,9 @@ function main() {
 	} else {
 		initModel()
 	}
-	rebuildModel() // necessary to init planes
-	updateFeatureDisplay()
-	rebuildModel() // so warning will show
-	initLoadSave()
-
 	let b = editingSketch && editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
 	console.log("BBB", b)
 
-	paintScreen();
 	window.onkeypress = function (e) {
 		if ("Delete" == e.key) {
 			selected.map((x) => x instanceof SegmentEndPoint ? x.line : x).unique().forEach((x) => x.removeFromSketch(editingSketch))
@@ -2029,6 +2027,17 @@ function main() {
 		paintScreen()
 	})
 	$("clearmode").onclick = modePop
+
+
+
+		rebuildModel() // necessary to init planes
+		updateFeatureDisplay()
+		rebuildModel() // so warning will show
+		initLoadSave()
+
+	mesh1.compile()
+	paintScreen();
+
 }
 
 /**

@@ -26,6 +26,12 @@ class ProjectedCurveSurface extends Surface {
 		this.tMax = tMax
 	}
 
+	boundsFunction() {
+		return (t, z) => {
+			return this.tMin <= t && t <= this.tMax
+		}
+	}
+
 	toSource() {
 		return `new ProjectedCurveSurface(${this.baseCurve}, ${this.dir1}, ${this.tMin}, ${this.tMax})`
 	}
@@ -129,7 +135,7 @@ class ProjectedCurveSurface extends Surface {
 				let ts = this.baseCurve.isTsWithPlane(plane)
 				return ts.map(t => L3(this.baseCurve.at(t), this.dir1))
 			} else {
-				return [this.baseCurve.project(plane)]
+				return [this.baseCurve.transform(M4.projection(plane, this.dir1))]
 			}
 		}
 		if (surface instanceof ProjectedCurveSurface || surface instanceof CylinderSurface) {
@@ -140,7 +146,8 @@ class ProjectedCurveSurface extends Surface {
 				return infos.map(info => L3(info.p, dir1))
 			}
 			if (surface instanceof ProjectedCurveSurface) {
-				const startPoint = surface.isPointsWithLine(L3(this.baseCurve.at(0.5), this.dir1))[0]
+				const line = L3(this.baseCurve.at(0.5), this.dir1)
+				const startPoint = line.at(surface.isTsForLine(line)[0])
 				drVs.push({anchor: this.baseCurve.at(0.5), dir: this.dir1})
 				console.log(startPoint)
 				return [new PPCurve(this, surface, startPoint)]
@@ -282,7 +289,7 @@ class ProjectedCurveSurface extends Surface {
 	/**
 	 * @inheritDoc
 	 */
-	isPointsWithLine(line) {
+	isTsForLine(line) {
 		assertInst(L3, line)
 		let projectionPlane = P3(this.dir1, 0)
 		let projDir = projectionPlane.projectedVector(line.dir1)
@@ -294,7 +301,7 @@ class ProjectedCurveSurface extends Surface {
 		let projBaseCurve = this.baseCurve.project(projectionPlane)
 		return projBaseCurve
 			.isInfosWithLine(projAnchor, projDir, this.tMin, this.tMax)
-			.map(info => line.at(info.tOther))
+			.map(info => info.tOther)
 	}
 
 

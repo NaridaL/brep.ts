@@ -18,9 +18,9 @@ class Surface extends Transformable {
 	 *
 	 * @abstract
 	 * @param {L3} line
-	 * @returns {Array.<V3>}
+	 * @returns {number[]}
 	 */
-	isPointsWithLine(line) {
+	isTsForLine(line) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
