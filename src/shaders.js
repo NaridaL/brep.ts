@@ -98,8 +98,8 @@ var vertexShaderConic3d = `
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
 	uniform int mode;
-	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0 ; }
-	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0 ; }
+	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
+	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
 	void main() {
 		float t = startT + LGL_Vertex.x * (endT - startT);
 		

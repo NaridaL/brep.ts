@@ -9,6 +9,8 @@ class Edge extends Transformable {
 	 * @property {number} bT
 	 * @property {V3} a
 	 * @property {V3} b
+	 * @property {V3} aDir
+	 * @property {V3} bDir
 	 * @property {Curve} curve
 	 */
 	constructor(curve, a, b, aT, bT, flippedOf, name) {
@@ -28,7 +30,12 @@ class Edge extends Transformable {
         return `new ${this.constructor.name}(${this.curve.toString(f)}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, null, ${this.aDir}, ${this.bDir})`
     }
 
-    edgeISTsWithSurface(surface) {
+	/**
+	 *
+	 * @param {Surface} surface
+	 * @returns {number[]}
+	 */
+	edgeISTsWithSurface(surface) {
         assert(false, this.constructor.name)
     }
 

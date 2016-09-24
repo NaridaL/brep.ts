@@ -61,14 +61,14 @@ var assertNumbers = NLA.assertNumbers = function (...numbers) {
  */
 var assert = NLA.assert = function (value, ...messages) {
 	if (NLA_DEBUG && !value) {
-		throw new Error("NLA.assert failed: " + messages.map(message => ('function' == typeof message ? message() : message)).join('\n'))
+		throw new Error("NLA.assert failed: " + messages.map(message => ('function' == typeof message ? message() : message || '')).join('\n'))
 	}
 	return true
 }
 
 var assertf = NLA.assertf = function (f, message) {
 	if (!f()) {
-		throw new Error("NLA.assertf failed: " + f.toString() + ('function' == typeof message ? message() : (message ? message : '')))
+		throw new Error("NLA.assertf failed: " + f.toString() + ('function' == typeof message ? message() : (message || '')))
 	}
 }
 NLA.CLASSES = []

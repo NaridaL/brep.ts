@@ -1173,8 +1173,6 @@ function load(key) {
 	// rebuildModel()
 	// let lastSketch = featureStack.slice().reverse().find(f => f instanceof Sketch)
 	// lastSketch && modePush(MODES.SKETCH, lastSketch)
-	let lastPlane = featureStack.slice().reverse().find(f => f instanceof PlaneDefinition)
-	lastPlane && modePush(MODES.PLANE_DEFINITION, lastPlane)
 }
 function initLoadSave() {
 	let loadSelect = $('loadSelect')
@@ -1293,42 +1291,47 @@ function rebuildModel() {
 			if (feature instanceof Sketch) {
 				feature.plane = planes.find(p => p.name == feature.planeName);
 				//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(), feature.plane.normal.length())
-				feature.sketchToWorldMatrix =
-					M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal, feature.plane.anchor)
-				feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed();
-				recalculate(feature)
+				if (feature.plane) {
+					feature.sketchToWorldMatrix =
+						M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal, feature.plane.anchor)
+					feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed();
+					recalculate(feature)
+				}
 			} else if (feature.type && feature.type == "extrude") {
 				let loopSketch = featureStack.filter(f => f instanceof Sketch)
 					.find(sketch => sketch.elements.some(el => el.name == feature.segmentName))
-				let loopSegment = loopSketch.elements.find(el => el.name == feature.segmentName)
-				// opposite dir to plane normal:
-				let startOffset = loopSketch.plane.normal.times(-min(feature.start, feature.end))
-				let lengthOffset = loopSketch.plane.normal.times(-Math.abs(feature.start - feature.end))
-				let startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
-				let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
-				edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix, ''))
-				// TODO: test for self-intersection of edgeloop
-				if (!new PlaneSurface(loopSketch.plane, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoop)) {
-					edgeLoop = edgeLoop.map(edge => edge.flipped()).reverse()
+				if (loopSketch.plane) {
+					let loopSegment = loopSketch.elements.find(el => el.name == feature.segmentName)
+					// opposite dir to plane normal:
+					let startOffset = loopSketch.plane.normal.times(-min(feature.start, feature.end))
+					let lengthOffset = loopSketch.plane.normal.times(-Math.abs(feature.start - feature.end))
+					let startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
+					let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
+					edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix, ''))
+					// TODO: test for self-intersection of edgeloop
+					if (!new PlaneSurface(loopSketch.plane, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoop)) {
+						edgeLoop = edgeLoop.map(edge => edge.flipped()).reverse()
+					}
+					//console.log(polygonPoints.map(v =>v.$))
+					let length = feature.end - feature.start
+					//console.log("polypoints", polygonPoints, polygonPoints.toSource(), loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
+					let brep = B2.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
+					if (modelBREP) {
+						isEdges = modelBREP.getIntersectionEdges(brep)
+						// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
+						// modelBREP = modelBREP[feature.operation](brep)
+					} else {
+						modelBREP = brep;
+					}
+					brepMesh = modelBREP.toMesh()
+					modelBREP.faces.forEach(face =>
+						brepEdges.pushAll(face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id)))
+					// brepEdges.pushAll(isEdges)
+					brepPoints = Array.from(modelBREP.vertexNames.keys())
+					console.log(modelBREP.vertexNames)
+					// brepMesh.computeWireframeFromFlatTriangles()
+					// brepMesh.compile()
 				}
-				//console.log(polygonPoints.map(v =>v.$))
-				let length = feature.end - feature.start
-				//console.log("polypoints", polygonPoints, polygonPoints.toSource(), loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
-				let brep = B2.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
-				if (modelBREP) {
-					isEdges = modelBREP.getIntersectionEdges(brep)
-					drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
-					// modelBREP = modelBREP[feature.operation](brep)
-				} else {
-					modelBREP = brep;
-				}
-				brepMesh = modelBREP.toMesh()
-				modelBREP.faces.forEach(face =>
-					brepEdges.pushAll(face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id)))
-				brepPoints = Array.from(modelBREP.vertexNames.keys())
-				console.log(modelBREP.vertexNames)
-				// brepMesh.computeWireframeFromFlatTriangles()
-				// brepMesh.compile()
 			} else if (feature.type && "planeDefinition" == feature.type) {
 					let face = modelBREP.faces.find(face => face.name == feature.faceName)
 					let sel = feature.whats.map(w => w.get())
@@ -2045,6 +2048,8 @@ function main() {
 
 	mesh1.compile()
 	paintScreen();
+	let lastPlane = featureStack.slice().reverse().find(f => f instanceof PlaneDefinition)
+	lastPlane && modePush(MODES.PLANE_DEFINITION, lastPlane)
 
 }
 

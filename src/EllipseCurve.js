@@ -8,9 +8,20 @@ class EllipseCurve extends Curve {
 		this.center = center
 		this.f1 = f1
 		this.f2 = f2
-		this.normal = f1.cross(f2).normalized()
-		this.matrix = M4.forSys(f1, f2, this.normal, center)
-		this.inverseMatrix = this.matrix.inversed()
+		this.normal = f1.cross(f2)
+		if (!this.normal.isZero()) {
+			this.normal = this.normal.normalized()
+			this.matrix = M4.forSys(f1, f2, this.normal, center)
+			this.inverseMatrix = this.matrix.inversed()
+		} else {
+			this.matrix = M4.forSys(f1, f2, f1.normalized(), center)
+			let f1p = f1.getPerpendicular()
+			this.inverseMatrix = M4(
+				1,0,0,0,
+				0,0,0,0,
+				0,0,0,0,
+				0,0,0,1).times(M4.forSys(f1, f1p, f1.cross(f1p), center).inversed())
+		}
 	}
 
 	toString(f) {

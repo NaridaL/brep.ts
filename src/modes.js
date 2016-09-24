@@ -209,11 +209,13 @@ MODES.PLANE_DEFINITION = {
 	init: function (feature) {
 		if (feature) {
 			assertInst(PlaneDefinition, feature)
+			selected = feature.whats
 		} else {
 			feature = new PlaneDefinition('plane' + globalId++)
 			featureStack.push(feature)
 			updateFeatureDisplay()
 		}
+		updateSelected()
 		this.feature = feature
 		var div = $('planeDefiner')
 		div.setStyle('display', 'block')

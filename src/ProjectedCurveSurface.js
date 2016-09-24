@@ -230,7 +230,7 @@ class ProjectedCurveSurface extends Surface {
 			}
 		}
 
-		contour.forEach(function (/** @type Edge */ edge, /** @type number */ i, /** @type Edge[] */ edges) {
+		contour.forEach((/** @type Edge */ edge, /** @type number */ i, /** @type Edge[] */ edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
 			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 			if (colinearSegments[i]) {
