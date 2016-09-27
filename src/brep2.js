@@ -1,14 +1,4 @@
 "use strict";
-["min", "max", "PI", "sqrt","pow","round"].forEach(function (propertyName) {
-	/*if (window[propertyName]) {
-	 throw new Error("already exists"+propertyName)
-	 }*/
-	window[propertyName] = Math[propertyName];
-});
-/**
- * Created by aval on 21/12/2015.
- */
-
 
 var eps = 1e-5
 
@@ -113,9 +103,6 @@ class B2 extends Transformable {
 	 * @returns {boolean}
 	 */
 	assembleFacesFromLoops(newFaces, loops, oldFace) {
-		var surface = oldFace.surface
-		console.log(loops.map(loop=> loop.join('\n')).join('\n\n'))
-		var topLevelLoops = []
 		function placeRecursively(newLoop, arr) {
 			if (arr.length == 0) {
 				arr.push(newLoop)
@@ -129,7 +116,7 @@ class B2 extends Transformable {
 				if (sl) {
 					placeRecursively(newLoop, sl.subloops)
 				} else {
-					// newLoop isnt contained by any other newLoop
+					// newLoop isnt contained by any other subloop
 					for (var i = arr.length; --i >= 0; ) {
 						var subloop = arr[i]
 						//console.log("cheving subloop", surface.edgeLoopContainsPoint(newLoop.edges, subloop.edges[0].a))
@@ -142,12 +129,17 @@ class B2 extends Transformable {
 				}
 			}
 		}
+
 		function newFacesRecursive(loop) {
 			var face = new oldFace.constructor(oldFace.surface, loop.edges, loop.subloops.map(sl => sl.edges))
 			loop.subloops.forEach(sl => sl.subloops.forEach(tlLoop => newFacesRecursive(tlLoop)))
 			console.log(face.toString(), face.holes.toString())
 			newFaces.push(face)
 		}
+
+		var surface = oldFace.surface
+		console.log(loops.map(loop=> loop.join('\n')).join('\n\n'))
+		var topLevelLoops = []
 		loops.forEach(loop => {
 			var ccw = surface.edgeLoopCCW(loop)
 			console.log('CCW', ccw)
@@ -155,10 +147,14 @@ class B2 extends Transformable {
 			console.log(topLevelLoops)
 		})
 		if (topLevelLoops[0].ccw) {
-			topLevelLoops.forEach(tlLoop => newFacesRecursive(tlLoop))
+			let firstSubLoop = topLevelLoops[0].subloops[0]
+			if (firstSubLoop && firstSubLoop.ccw) {
+				newFacesRecursive(firstSubLoop)
+			} else {
+				topLevelLoops.forEach(tlLoop => newFacesRecursive(tlLoop))
+			}
 			return false
 		} else {
-			assert(false)
 			newFacesRecursive({edges: oldFace.edges, ccw: true, subloops: topLevelLoops})
 			return true
 		}
@@ -174,7 +170,7 @@ class B2 extends Transformable {
 	 * New segments will always be part left-er than exisiting ones, so no special check is required.
 	 *
 	 * @param oldFaces
-	 * @param edgeLooseSegments
+	 * @param {Map} edgeLooseSegments
 	 * @param faceMap
 	 * @param newFaces
 	 */
@@ -184,6 +180,7 @@ class B2 extends Transformable {
 		oldFaces.forEach(face => {
 			var allOldFaceEdges = face.getAllEdges()
 			console.log('reconstituting face', face.toString())
+			var faceLooseSegments = face.getAllEdges().map(edge => edgeLooseSegments.get(edge)).filter(x=>x).concatenated()
 			var els = face.edges.map(edge => edgeLooseSegments.get(edge) && edgeLooseSegments.get(edge).join('\n')).map(s => '\n\n'+s).join()
 			console.log('edgeLooseSegments', els)
 			var newSegments = faceMap.get(face)
@@ -200,36 +197,37 @@ class B2 extends Transformable {
 					? NLA.equals(edge.aT, currentEdge.bT)
 					: edge.a.like(currentEdge.b)))
 				var getNextStart = function () {
-					return newSegments.find(edge => !edge.visited) || allOldFaceEdges.find(edge => !edge.visited)
+					return newSegments.find(edge => !edge.visited)
 				}
 				allOldFaceEdges.forEach(edge => edge.visited = false)
 				while (currentEdge = getNextStart()) {
 					var cancelLoop = false
 					var startEdge = currentEdge, edges = [], i = 0
-					var looseLoop = true // uses only new segments edges
+					// wether only new edges are used (can include looseSegments)
+					var looseLoop = true
 					do {
 						currentEdge.visited = true
 						console.log('currentEdge', currentEdge.b.sce, currentEdge.toSource())
 						edges.push(currentEdge)
 						// find next edge
 						var possibleLooseEdges = newSegments.filter(edge => edgeCond(edge)), looseSegments
-						var possibleLooseEdgesCount = possibleLooseEdges.length
-						allOldFaceEdges.forEach(edge => (looseSegments = edgeLooseSegments.get(edge)) && looseSegments.forEach(
-							edge => edgeCond(edge) && possibleLooseEdges.push(edge)))
+						var possibleNewEdgesCount = possibleLooseEdges.length
+						possibleLooseEdges.pushAll(faceLooseSegments.filter(edgeCond))
 						var noSegments = false
-						if (possibleLooseEdgesCount == possibleLooseEdges.length) {
-							allOldFaceEdges.forEach(edge => edgeCond(edge) && possibleLooseEdges.push(edge))
+						if (possibleNewEdgesCount == possibleLooseEdges.length) {
+							possibleLooseEdges.pushAll(allOldFaceEdges.filter(edgeCond))
 							noSegments = true
 						}
-						var index = possibleLooseEdges.indexWithMax((edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, face.surface.normalAt(currentEdge.b)) + (index < possibleLooseEdgesCount) * NLA_PRECISION)
+						var index = possibleLooseEdges.indexWithMax((edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, face.surface.normalAt(currentEdge.b)) + (index < possibleNewEdgesCount) * NLA_PRECISION)
 						//console.log('possibleLooseEdges\n', possibleLooseEdges.map(e=>e.toString()).join('\n'), allOldFaceEdges.find(edge => edgeCond(edge)), index, possibleLooseEdges[index])
 						// TODO assert(possibleLooseEdges.length < 2)
+						assert(0 < possibleLooseEdges.length)
 						currentEdge = possibleLooseEdges[index]
 						if (currentEdge.visited) {
 							console.log("breaking")
 							break
 						}
-						if (index < possibleLooseEdgesCount) {
+						if (index < possibleNewEdgesCount) {
 							possibleLooseEdges.forEach(possibleLooseEdge => possibleLooseEdge.isCoEdge(currentEdge) && (possibleLooseEdge.visited = true))
 						} else {
 							looseLoop = false
@@ -238,7 +236,7 @@ class B2 extends Transformable {
 						assert(currentEdge)
 						assert(currentEdge != startEdge)
 					} while (++i < 200)
-					if (20 == i) {
+					if (200 == i) {
 						assert(false, "too many")
 					}
 					if (currentEdge == startEdge) {
@@ -248,6 +246,7 @@ class B2 extends Transformable {
 						insideEdges.removeAll(edges)
 					}
 				}
+
 				if (this.assembleFacesFromLoops(newFaces, loops, face)) {
 					insideEdges.pushAll(face.edges)
 				}
@@ -398,7 +397,7 @@ class B2 extends Transformable {
 			//console.log('face', face.toString())
 			brep2.faces.forEach(face2 => {
 				//console.log('face2', face2.toString())
-				face.doo(face2, this, brep2, faceMap, edgeMap, likeSurfaceFaces)
+				face.intersectFace(face2, this, brep2, faceMap, edgeMap, likeSurfaceFaces)
 			})
 		})
 
@@ -421,7 +420,7 @@ class B2 extends Transformable {
 			//console.log('face', face.toString())
 			brep2.faces.forEach(face2 => {
 				//console.log('face2', face2.toString())
-				face.doo(face2, this, brep2, faceMap, edgeMap, likeSurfaceFaces)
+				face.intersectFace(face2, this, brep2, faceMap, edgeMap, likeSurfaceFaces)
 			})
 		})
 		var newFaces = []
@@ -445,11 +444,8 @@ class B2 extends Transformable {
 		buildThis && this.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces, brep2.infiniteVolume)
 		buildBREP2 && this.reconstituteFaces(brep2.faces, edgeLooseSegments, faceMap, newFaces, this.infiniteVolume)
 		//buildCoplanar && this.reconstituteCoplanarFaces(likeSurfaceFaces, edgeLooseSegments, faceMap, newFaces, this.infiniteVolume, brep2.infiniteVolume)
-		if (0 == newFaces.length) {
-			return null
-		} else {
-			return new B2(newFaces, this.infiniteVolume && brep2.infiniteVolume)
-		}
+
+		return new B2(newFaces, this.infiniteVolume && brep2.infiniteVolume)
 	}
 
 	/**
@@ -540,11 +536,11 @@ class Face extends Transformable {
 		function loopsLike(a, b) {
 			return a.length == b.length &&
 				NLA.arrayRange(0, a.length, 1)
-					.some(offset => a.every((edge, i) => edge.likeEdge(b[(offset + i) % a.length])))
+					.some(offset => a.every((edge, i) => edge.like(b[(offset + i) % a.length])))
 
 		}
 		assertInst(Face, face2)
-		return this.surface.equalsSurface(face2.surface)
+		return this.surface.like(face2.surface)
 			&& this.holes.length == face2.holes.length
 			&& loopsLike(this.edges, face2.edges)
 			&& this.holes.every(hole => face2.holes.some(hole2 => loopsLike(hole, hole2)))
@@ -604,7 +600,7 @@ class Face extends Transformable {
 	}
 }
 
-class PlaneFace extends Face {
+var PlaneFace = class PlaneFace extends Face {
 	constructor(planeSurface, contour, holes, name) {
 		assertInst(PlaneSurface, planeSurface)
 		super(planeSurface, contour, holes, name)
@@ -625,7 +621,7 @@ class PlaneFace extends Face {
 			vertices.pushAll(hole.map(edge => edge.getVerticesNo0()).concatenated())
 		})
 		var triangles = triangulateVertices(normal, vertices, holeStarts).map(index => index + mvl)
-		mesh.faceIndexes.set(this, {start: mesh.triangles.length, count: triangles.length})
+		mesh.faceIndexes && mesh.faceIndexes.set(this, {start: mesh.triangles.length, count: triangles.length})
 		Array.prototype.push.apply(mesh.vertices, vertices)
 		Array.prototype.push.apply(mesh.triangles, triangles)
 		Array.prototype.push.apply(mesh.normals, NLA.arrayFromFunction(vertices.length, i => normal))
@@ -651,13 +647,16 @@ class PlaneFace extends Face {
 		return new PlaneFace(this.surface, this.edges, [holeEdges])
 	}
 
-	doo(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces) {
+	intersectFace(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces) {
 		if (face2 instanceof PlaneFace) {
-			this.dooPlaneFace(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces)
+			this.intersectPlaneFace(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces)
+			return
 		}
 		if (face2 instanceof RotationFace) {
-			face2.doo(this, face2Brep, thisBrep, faceMap, edgeMap, likeSurfaceFaces)
+			face2.intersectFace(this, face2Brep, thisBrep, faceMap, edgeMap, likeSurfaceFaces)
+			return
 		}
+		assert(false)
 	}
 
 	/**
@@ -669,7 +668,7 @@ class PlaneFace extends Face {
 	 * @param edgeMap
 	 * @param likeSurfaceFaces
 	 */
-	dooPlaneFace(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces) {
+	intersectPlaneFace(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces) {
 		assertInst(PlaneFace, face2)
 		let face = this
 		// get intersection
@@ -856,6 +855,7 @@ class PlaneFace extends Face {
 		}
 	}
 }
+
 PlaneFace.forVertices = function (planeSurface, vs, ...holeVs) {
 	if (planeSurface instanceof P3) {
 		planeSurface = new PlaneSurface(planeSurface)
@@ -1046,53 +1046,6 @@ class RotationFace extends Face {
 
 	}
 
-	dooOld() {
-
-		if (this.surface.isCoplanarTo(face2.surface)) { return }
-
-		// get intersections
-		var newCurves = face2.surface.isTsWithSurface(this.surface)
-
-		console.log(newCurves)
-		if (newCurves.length == 0) {
-			return
-		}
-
-		// get intersections of newCurves with other edges of face and face2
-
-		newCurves.forEach((newCurve, i) => {
-			var ps1 = pss1[i], ps2 = pss2[i]
-			if (ps1.length == 0 || ps2.length == 0) { return }
-
-			var ps = ps1.length != 0 ? ps1[0] : ps2[0]
-			var thisDir = !(face2.surface.normalAt(ps.p).cross(this.surface.normalAt(ps.p)).dot(newCurve.tangentAt(ps.t)) > 0)
-
-			var in1 = ps1[0].insideDir.dot(newCurve.tangentAt(ps1[0].t)) < 0
-			var in2 = ps2[0].insideDir.dot(newCurve.tangentAt(ps2[0].t)) < 0
-			if(newCurve.debugToMesh) {
-				dMesh = new GL.Mesh()
-				newCurve.debugToMesh(dMesh, 'curve2')
-				dMesh.compile()
-				console.log(dMesh)
-			}
-			console.log('iscurve', newCurve.toString(), newCurve.tangentAt(ps1[0].t).sce)
-			console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
-			var segments = newCurve instanceof L3
-				? getBlug(ps1, ps2, newCurve)
-				: getIntersectionSegments(ps1, ps2, in1, in2, PCurveEdge, newCurve)
-			// TODO: getCanon() TODO TODO TODO
-			console.log('segments', segments.toSource())
-			ps1.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
-			ps2.forEach(ps => ps.used && mapAdd(edgeMap, ps.edge, ps))
-			segments.forEach(segment => {
-				console.log('segment', segment.toString())
-				mapAdd(faceMap, this, thisDir ? segment : segment.flipped())
-				mapAdd(faceMap, face2, thisDir ? segment.flipped() : segment)
-			})
-		})
-		console.log('faceMap', faceMap)
-	}
-
 	/**
 	 *
 	 * @param {Face} face2
@@ -1102,7 +1055,7 @@ class RotationFace extends Face {
 	 * @param {Map.<Face, Array>} edgeMap
 	 * @param likeSurfaceFaces
 	 */
-	doo(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces) {
+	intersectFace(face2, thisBrep, face2Brep, faceMap, edgeMap, likeSurfaceFaces) {
 
 		/**
 		 * @param seg generated segment
@@ -1437,10 +1390,9 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 			let j = (i + 1) % edges.length, nextEdge = edges[j]
 			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
 			if (colinearEdges[i]) {
-				assert(false)
 				// edge colinear to intersection line
 				var h = (i + edges.length - 1) % edges.length, prevEdge = edges[h]
-				var colinearOutside = edge.aDir.cross(facePlane.normal)
+				var colinearOutside = edge.aDir.cross(faceSurface.normalAt(edge.a))
 				if (prevEdge.bDir.dot(colinearOutside) < 0) {
 					ps.push({p: prevEdge.b, insideDir: edge.aDir.negated(), t: line.pointLambda(prevEdge.b), edge: prevEdge, edgeT: prevEdge.bT,
 						colinear: false})
@@ -1476,10 +1428,10 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 						// edge crosses an intersection curve, neither starts nor ends on it
 						let p = edge.curve.at(edgeT)
 						if (!isCurves.some(isCurve => isCurve.containsPoint(p), edge.toString() + p+edgeT)) {
-							console.log(isCurves)
-							isCurves.forEach(isCurve => isCurve.debugToMesh(mesh1, 'curve1'))
-							// drPs.push(p)
-							assert(false)
+							console.log(isCurves, isCurves[0].sce, p.sce, edge.sce, surface2.sce, brepFace.surface.sce)
+							isCurves.forEach(isCurve => (isCurve.debugToMesh(mesh1, 'curve1')))
+							drPs.push({p:p, text:'This is the problematic point'})
+							assert(false, isCurves.map(isc => isc.distanceToPoint(p)).join(' '))
 						}
 						let isCurveIndex
 						if (1 == isCurves.length) {
@@ -1593,23 +1545,6 @@ function faceEdgeISPsWithSurface(brep, brepFace, isCurves, surface2) {
 	})
 	pss.forEach(ps => ps.sort((a, b) => a.t - b.t || assert(false, a.t + ' '+b.t+' '+a.p.sce)))
 	return pss
-}
-
-
-function segmentSegmentIntersectionST(a, b, c, d) {
-	var ab = b.minus(a)
-	var cd = d.minus(c)
-	var abXcd = ab.cross(cd)
-	var div = abXcd.lengthSquared()
-	var ac = c.minus(a)
-	var s = ac.cross(cd).dot(abXcd) / div
-	var t = ac.cross(ab).dot(abXcd) / div
-	return {s: s, t: t}
-}
-function segmentsTouchOrIntersect(a, b, c, d) {
-	var {s, t} = segmentSegmentIntersectionST(a, b, c, d)
-	return (NLA.equals(s, 0) || NLA.equals(s, 1) || (s > 0 && s < 1))
-		&& (NLA.equals(t, 0) || NLA.equals(t, 1) || (t > 0 && t < 1))
 }
 
 
@@ -1842,91 +1777,6 @@ function curveLengthByDerivative(df, startT, endT, steps) {
 	return length
 }
 
-function getIntersectionSegments (ps1, ps2, in1, in2, constructor, curve) {
-	var currentSegment
-	assert (!(in1 && in2), '!(in1 && in2) '+in1+' '+in2)
-	console.log('in', in1, in2)
-	// generate overlapping segments
-	var i = 0, j = 0, last, segments = []
-	var startP, startDir, startT
-	while (i < ps1.length || j < ps2.length) {
-		var a = ps1[i], b = ps2[j]
-		if (j >= ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
-			last = a
-			in1 = !in1
-			i++
-		} else if (i >= ps1.length || NLA.gt(a.t, b.t)) {
-			last = b
-			in2 = !in2
-			j++
-		} else {
-			last = a
-			in1 = !in1
-			in2 = !in2
-			if (in1 == in2) {
-				a.used = true
-				b.used = true
-			}
-			i++
-			j++
-		}
-//		console.log("as", a, b, in1, in2)
-		if (startP && !(in1 && in2)) {
-			segments.push(new constructor(curve, startP, last.p, startT, last.t, null, startDir, last.insideDir.negated()))
-			startP = undefined
-			last.used = true
-		} else if (in1 && in2) {
-			startP = last.p
-			startDir = last.insideDir
-			startT = last.t
-			last.used = true
-		}
-	}
-	assert (!(in1 && in2), '!(in1 && in2) '+in1+' '+in2)
-	return segments
-}
-function getBlug(ps1, ps2, curve) {
-	// generate overlapping segments
-	var in1 = false, in2 = false
-	var i = 0, j = 0, last, segments = []
-	var startP, startDir, startT
-	// TODO : skip -><-
-	while (i < ps1.length || j < ps2.length) {
-		var a = ps1[i], b = ps2[j]
-		if (j >= ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
-			last = a
-			in1 = !in1
-			i++
-		} else if (i >= ps1.length || NLA.gt(a.t, b.t)) {
-			last = b
-			in2 = !in2
-			j++
-		} else {
-			last = a
-			in1 = !in1
-			in2 = !in2
-			//if (in1 == in2) {
-				a.used = true
-				b.used = true
-			//}
-			i++
-			j++
-		}
-//		console.log("as", a, b, in1, in2)
-		if (startP && !(in1 && in2)) {
-			segments.push(new StraightEdge(curve, startP, last.p, startT, last.t, null, startDir, last.insideDir && last.insideDir.negated()))
-			startP = undefined
-			last.used = true
-		} else if (in1 && in2) {
-			startP = last.p
-			startDir = last.insideDir
-			startT = last.t
-			last.used = true
-		}
-	}
-	assert (!in1 && !in2, '!in1 && !in2 '+in1+' '+in2)
-	return segments
-}
 
 
 function curvePoint(implicitCurve, startPoint) {
@@ -2029,70 +1879,6 @@ function cassini(a, c) {
 }
 
 
-/**
- *
- * @param anchor2
- * @param right
- * @param up
- * @param upStart
- * @param upEnd
- * @param rightStart
- * @param rightEnd
- * @param color
- * @param name
- * @returns {P3}
- * @constructor
- */
-function CustomPlane(anchor2, right, up, upStart, upEnd, rightStart, rightEnd, color, name) {
-	var p = P3.forAnchorAndPlaneVectors(anchor2, right, up, CustomPlane.prototype)
-	p.up = up
-	p.right = right
-	p.upStart = upStart
-	p.upEnd = upEnd
-	p.rightStart = rightStart
-	p.rightEnd = rightEnd
-	p.color = color
-	p.id = globalId++
-	p.name = name
-	return p
-}
-CustomPlane.prototype = Object.create(P3.prototype);
-CustomPlane.prototype.constructor = CustomPlane;
-Object.defineProperty(CustomPlane.prototype, "plane", { get: function () { return this } });
-CustomPlane.prototype.toString = function() {
-	return "Plane #" + this.id;
-}
-CustomPlane.prototype.what ="Plane"
-CustomPlane.prototype.distanceTo = function (line) {
-	return [
-		L3(this.anchor.plus(this.right.times(this.rightStart)), this.up),
-		L3(this.anchor.plus(this.right.times(this.rightEnd)), this.up),
-		L3(this.anchor.plus(this.up.times(this.upStart)), this.right),
-		L3(this.anchor.plus(this.up.times(this.upEnd)), this.right)].map(function (line2, line2Index) {
-		var info = line2.infoClosestToLine(line);
-		if ((isNaN(info.t) // parallel lines
-			|| line2Index < 2 && this.upStart <= info.t && info.t <= this.upEnd
-			|| line2Index >= 2 && this.rightStart <= info.t && info.t <= this.rightEnd)
-			&& info.distance <= 16) {
-			return info.s;
-		} else {
-			return Infinity;
-		}
-	}, this).min();
-}
-CustomPlane.forPlane = function (plane, color, name) {
-	var p = P3(plane.normal, plane.w, CustomPlane.prototype)
-	p.up = plane.normal.getPerpendicular().normalized()
-	p.right = p.up.cross(p.normal)
-	p.upStart = -500
-	p.upEnd = 500
-	p.rightStart = -500
-	p.rightEnd = 500
-	p.color = color || NLA.randomColor()
-	p.id = globalId++
-	p.name = name
-	return p;
-}
 
 
-
+B2.EMPTY = new B2([], false, 'B2.EMPTY')

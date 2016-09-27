@@ -12,6 +12,7 @@ MODES.DEFAULT = {
 	mousedown: function (e) {}
 }
 MODES.SKETCH = {
+	modeEditsFeatureAndRequiresRollback: true,
 	relPoss: null, // positions of sketch elements relative to mouse coords, used for DnD
 	draggingElements: false,
 	before: function () {
@@ -34,18 +35,22 @@ MODES.SKETCH = {
 		selected = []
 		updateSelected()
 		div.setStyle('display', 'block')
-		setupSelectors(div, feature)
+		setupSelectors(div, feature, this)
+
+
 
 		$$('.sketchControl').set('disabled', false)
 
 
-		if (!feature.planeName) {
-			div.getElement('[data-feature-property=planeName]').fireEvent('click')
+		if (NameRef.UNASSIGNED == feature.planeRef) {
+			div.getElement('[data-feature-property=planeRef]').fireEvent('click')
 		}
 	},
 	end: function () {
 		editingSketch = null
 		$$('.sketchControl').set('disabled', true)
+		let div = $('sketchEditor')
+		div.setStyle('display', 'none')
 	},
 	mouseup: function (/** MouseEvent */ e, mouseLine) {
 		console.log('MOUSEUP', 'buttons', e.buttons, 'button', e.button, 'which', e.which)
@@ -83,12 +88,6 @@ MODES.SKETCH = {
 			}
 		}
 	},
-	deleteFeature: function () {
-		featureStack.remove(this.feature)
-		updateFeatureDisplay()
-		rebuildModel()
-		modeEnd(this)
-	},
 	mousedown: function (e, mouseLine) {
 		console.log('mousedown', 'buttons', e.buttons, 'button', e.button, 'which', e.which)
 		// TODO: select sketch elements
@@ -115,6 +114,7 @@ MODES.SKETCH = {
 }
 const BUTTONS = {LEFT: 0, MIDDLE: 1, RIGHT: 2, BACK: 3, FORWARD: 4}
 MODES.EXTRUDE = {
+	modeEditsFeatureAndRequiresRollback: true,
 	feature: undefined,
 	before: function () {
 		modeEnd(MODES.SKETCH)
@@ -133,15 +133,9 @@ MODES.EXTRUDE = {
 		let div = $('extrudeEditor')
 		div.setStyle('display', 'block')
 		setupSelectors(div, feature, this)
-		if (!feature.segmentName) {
+		if (NameRef.UNASSIGNED == feature.segmentName) {
 			div.getElement('[data-feature-property=segmentName]').fireEvent('click')
 		}
-	},
-	deleteFeature: function () {
-		featureStack.remove(this.feature)
-		updateFeatureDisplay()
-		rebuildModel()
-		modeEnd(this)
 	},
 	end: function () {
 		let div = $('extrudeEditor')
@@ -152,6 +146,7 @@ MODES.EXTRUDE = {
 
 }
 MODES.PLANE_DEFINITION = {
+	modeEditsFeatureAndRequiresRollback: true,
 	magic: function (sel, rads) {
 		const CLASS_ORDER = [V3, Curve, Edge, Surface, Face]
 		const sortMap = o => CLASS_ORDER.findIndex(clazz => o instanceof clazz)
@@ -258,8 +253,9 @@ MODES.PLANE_SELECT = {
 	},
 	mousedown: function (e) {
 		if (null == hoverHighlight) return
+		let customPlane
 		if (hoverHighlight instanceof CustomPlane) {
-			this.callback(hoverHighlight)
+			customPlane = hoverHighlight
 		} else {
 			// TODO: create plane on face
 			let planeDefinition = new PlaneDefinition()
@@ -268,6 +264,7 @@ MODES.PLANE_SELECT = {
 			featureStack.push(planeDefinition)
 			this.callback(planeDefinition)
 		}
+		this.callback(NameRef.forObject(customPlane))
 	}
 }
 MODES.SELECT_SEGMENT = {
@@ -280,7 +277,7 @@ MODES.SELECT_SEGMENT = {
 		paintScreen()
 	},
 	mousedown: function (e) {
-		this.callback(hoverHighlight)
+		this.callback(NameRef.forObject(hoverHighlight))
 	}
 }
 MODES.ADD_SEGMENT = {
@@ -344,6 +341,10 @@ MODES.ADD_SEGMENT = {
 		if (this.arcmode == this.currentAddingSegment.points.length) {
 			// finished adding the current segment
 			this.currentAddingSegment = null
+			if (SketchLineSeg == this.constructor) {
+				this.mousemove(e, mouseLine)
+				this.mousedown(e, mouseLine)
+			}
 		}
 	}
 }

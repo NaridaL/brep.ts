@@ -1,4 +1,4 @@
-class PlaneSurface extends Surface {
+var PlaneSurface = class PlaneSurface extends Surface {
 	/**
 	 *
 	 * @param {P3} plane
@@ -18,6 +18,10 @@ class PlaneSurface extends Surface {
 
 	isCoplanarTo(surface) {
 		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
+	}
+
+	like(surface) {
+		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
 	}
 
 	parametricFunction() {
@@ -167,10 +171,6 @@ class PlaneSurface extends Surface {
 
 	toSource() {
 		return `new PlaneSurface(${this.plane})`
-	}
-
-	equalsSurface(surface) {
-		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
 	}
 }
 PlaneSurface.throughPoints = function (a, b, c) {

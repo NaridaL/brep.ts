@@ -18,13 +18,13 @@ QUnit.assert.doTest = function (face, brep2, resultEdges, resultPoints, desc) {
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
 	var faceMap = new Map(), edgeMap = new Map()
 	brep2.faces.forEach(face2 => {
-		face.dooPlaneFace(face2, new B2([face]), brep2, faceMap, edgeMap)
+		face.intersectPlaneFace(face2, new B2([face]), brep2, faceMap, edgeMap)
 	})
 	var edges = faceMap.get(face) || []
 	console.log(faceMap)
 	this.equal(edges.length, resultEdges.length, 'resultEdges.length == edges.length'+edges.toSource())
 	resultEdges.forEach(edge => {
-		this.ok(edges.some(edge2 => edge.likeEdge(edge2)), `edges.some(edge2 => edge.likeEdge(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
+		this.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
 	})
 	var uniquePoints = []
 	face.edges.forEach(edge => {
@@ -33,7 +33,7 @@ QUnit.assert.doTest = function (face, brep2, resultEdges, resultPoints, desc) {
 	})
 	this.equal(uniquePoints.length, resultPoints.length, 'points.length == resultPoints.length'+uniquePoints.toSource())
 	resultPoints.forEach(p => {
-		this.ok(uniquePoints.some(up => up.like(p)), `edges.some(edge2 => edge.likeEdge(edge2)) [${uniquePoints.toSource()}]`)
+		this.ok(uniquePoints.some(up => up.like(p)), `edges.some(edge2 => edge.like(edge2)) [${uniquePoints.toSource()}]`)
 	})
 }
 QUnit.assert.doTestWithBrep = function (face, faceBrep, brep2, resultEdges, resultPoints, desc) {
@@ -46,13 +46,13 @@ QUnit.assert.doTestWithBrep = function (face, faceBrep, brep2, resultEdges, resu
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
 	var faceMap = new Map(), edgeMap = new Map()
 	brep2.faces.forEach(face2 => {
-		face.dooPlaneFace(face2, faceBrep, brep2, faceMap, edgeMap)
+		face.intersectPlaneFace(face2, faceBrep, brep2, faceMap, edgeMap)
 	})
 	var edges = faceMap.get(face) || []
 	console.log(faceMap)
 	this.equal(edges.length, resultEdges.length, 'resultEdges.length == edges.length'+edges.toSource())
 	resultEdges.forEach(edge => {
-		this.ok(edges.some(edge2 => edge.likeEdge(edge2)), `edges.some(edge2 => edge.likeEdge(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
+		this.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
 	})
 	var uniquePoints = []
 	face.edges.forEach(edge => {
@@ -75,7 +75,7 @@ QUnit.assert.doTest2 = function (face, brep, resultFaces, desc) {
 	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	brep.faces.forEach(face2 => {
-		face.dooPlaneFace(face2, faceBrep, brep, faceMap, edgeMap)
+		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap)
 	})
 	console.log('faceMap', faceMap)
 	var edgeLooseSegments = B2.prototype.getLooseEdgeSegments(edgeMap)
@@ -397,5 +397,134 @@ QUnit.test( "test assembly holes", function( assert ) {
 	var result14 = [PlaneFace.forVertices(P3.XY, [V3(10, 0), V3(10, 10), V3(0, 10), V3(0, 0)], [V3(5, 5), V3(5, 1), V3(1, 1), V3(1, 5)])]
 	assert.doTest2(baseFace14, extrude14, result14, "extending an existing hole")
 });
-/*
- */
+QUnit.test( "B2.prototype.minus remove half of a half-pie", function( assert ) {
+	let pie = B2.puckman(8, 180*DEG, 5, 'pie/2')
+	let boxKnife = B2.box(11, 10, 7, 'knife').translate(-10, -1, -1)
+
+	let resultTopPoint = V3(1,8*Math.sin(Math.acos(1/8)), 0)
+	let result = B2.extrudeEdges([
+			StraightEdge.throughPoints(V3(8, 0, 0), V3(1, 0, 0)),
+			StraightEdge.throughPoints(V3(1, 0, 0), resultTopPoint),
+			PCurveEdge.forCurveAndTs(EllipseCurve.circle(8), Math.acos(1/8), 0)],
+		P3.XY.flipped(), V3(0,0,5), 'pie/4')
+	assert.b2Equal(pie, boxKnife, pie.minus(boxKnife), result)
+
+	assert.b2Equal(pie, boxKnife, pie.minus(boxKnife.translate(-1, 0, 0)), B2.puckman(8, 90*DEG, 5, 'pie/4'))
+});
+QUnit.test( "B2.prototype.minus cut hole through side of pie", function( assert ) {
+	let pie = B2.puckman(8, 180*DEG, 5, 'pie/2')
+	let punch = B2.box(5, 10, 3, 'knife').translate(1, -1, 1)
+	let result = new B2([
+		new PlaneFace(new PlaneSurface(P3(V3(0, -1, 0), 0)), [
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(8, 0, 0)),
+			StraightEdge.throughPoints(V3(8, 0, 0), V3(8, 0, 5)),
+			StraightEdge.throughPoints(V3(8, 0, 5), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(0, 0, 0))], [[
+			StraightEdge.throughPoints(V3(1, 0, 1), V3(1, 0, 4)),
+			StraightEdge.throughPoints(V3(1, 0, 4), V3(6, 0, 4)),
+			StraightEdge.throughPoints(V3(6, 0, 4), V3(6, 0, 1)),
+			StraightEdge.throughPoints(V3(6, 0, 1), V3(1, 0, 1))]]),
+		new RotationFace(new CylinderSurface(new EllipseCurve(V3(0, 0, 0), V3(8, 0, 0), V3(0, -8, 0)), V3(0, 0, -1)), [
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 0), V3(8, 0, 0), V3(0, -8, 0)), V3(8, 0, 0), V3(-8, 9.797174393178826e-16, 0), 0, -3.141592653589793, null, V3(0, 8, 0), V3(-9.797174393178826e-16, -8, 0)),
+			StraightEdge.throughPoints(V3(-8, 9.797174393178826e-16, 0), V3(-8, 9.797174393178826e-16, 5)),
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 5), V3(8, 0, 0), V3(0, -8, 0)), V3(-8, 9.797174393178826e-16, 5), V3(8, 0, 5), -3.141592653589793, 0, null, V3(9.797174393178826e-16, 8, 0), V3(0, -8, 0)),
+			StraightEdge.throughPoints(V3(8, 0, 5), V3(8, 0, 0))], [[
+			StraightEdge.throughPoints(V3(1, 7.937253933193773, 4), V3(1, 7.937253933193773, 1)),
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 1), V3(8, 0, 0), V3(0, -8, 0)), V3(1, 7.937253933193773, 1), V3(6, 5.291502622129181, 1), -1.4454684956268313, -0.7227342478134156, null, V3(7.937253933193772, -0.9999999999999991, 0), V3(5.2915026221291805, -6, 0)),
+			StraightEdge.throughPoints(V3(6, 5.291502622129181, 1), V3(6, 5.291502622129181, 4)),
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 4), V3(8, 0, 0), V3(0, 8, 0)), V3(6, 5.291502622129181, 4), V3(1, 7.937253933193773, 4), 0.7227342478134156, 1.4454684956268313, null, V3(-5.2915026221291805, 6, 0), V3(-7.937253933193772, 0.9999999999999991, 0))]]),
+		new PlaneFace(new PlaneSurface(P3(V3(-1.2246467991473532e-16, -1, 0), 0)), [
+			StraightEdge.throughPoints(V3(-8, 9.797174393178826e-16, 0), V3(0, 0, 0)),
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(-8, 9.797174393178826e-16, 5)),
+			StraightEdge.throughPoints(V3(-8, 9.797174393178826e-16, 5), V3(-8, 9.797174393178826e-16, 0))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, -1), 0)), [
+			StraightEdge.throughPoints(V3(8, 0, 0), V3(0, 0, 0)),
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(-8, 9.797174393178826e-16, 0)),
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 0), V3(8, 0, 0), V3(0, -8, 0)), V3(-8, 9.797174393178826e-16, 0), V3(8, 0, 0), -3.141592653589793, 0, null, V3(9.797174393178826e-16, 8, 0), V3(0, -8, 0))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, 1), 5)), [
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 5), V3(8, 0, 0), V3(0, -8, 0)), V3(8, 0, 5), V3(-8, 9.797174393178826e-16, 5), 0, -3.141592653589793, null, V3(0, 8, 0), V3(-9.797174393178826e-16, -8, 0)),
+			StraightEdge.throughPoints(V3(-8, 9.797174393178826e-16, 5), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(8, 0, 5))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(1, 0, 0), 1)), [
+			StraightEdge.throughPoints(V3(1, 0, 4), V3(1, 0, 1)),
+			StraightEdge.throughPoints(V3(1, 0, 1), V3(1, 7.937253933193773, 1)),
+			StraightEdge.throughPoints(V3(1, 7.937253933193773, 1), V3(1, 7.937253933193773, 4)),
+			StraightEdge.throughPoints(V3(1, 7.937253933193773, 4), V3(1, 0, 4))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(-1, 0, 0), -6)), [
+			StraightEdge.throughPoints(V3(6, 0, 1), V3(6, 0, 4)),
+			StraightEdge.throughPoints(V3(6, 0, 4), V3(6, 5.291502622129181, 4)),
+			StraightEdge.throughPoints(V3(6, 5.291502622129181, 4), V3(6, 5.291502622129181, 1)),
+			StraightEdge.throughPoints(V3(6, 5.291502622129181, 1), V3(6, 0, 1))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, 1), 1)), [
+			StraightEdge.throughPoints(V3(1, 0, 1), V3(6, 0, 1)),
+			StraightEdge.throughPoints(V3(6, 0, 1), V3(6, 5.291502622129181, 1)),
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 1), V3(8, 0, 0), V3(0, -8, 0)), V3(6, 5.291502622129181, 1), V3(1, 7.937253933193773, 1), -0.7227342478134156, -1.4454684956268313, null, V3(-5.2915026221291805, 6, 0), V3(-7.937253933193772, 0.9999999999999991, 0)),
+			StraightEdge.throughPoints(V3(1, 7.937253933193773, 1), V3(1, 0, 1))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, -1), -4)), [
+			StraightEdge.throughPoints(V3(6, 0, 4), V3(1, 0, 4)),
+			StraightEdge.throughPoints(V3(1, 0, 4), V3(1, 7.937253933193773, 4)),
+			new PCurveEdge(new EllipseCurve(V3(0, 0, 4), V3(8, 0, 0), V3(0, 8, 0)), V3(1, 7.937253933193773, 4), V3(6, 5.291502622129181, 4), 1.4454684956268313, 0.7227342478134156, null, V3(7.937253933193772, -0.9999999999999991, 0), V3(5.2915026221291805, -6, 0)),
+			StraightEdge.throughPoints(V3(6, 5.291502622129181, 4), V3(6, 0, 4))], [])])
+
+	assert.b2Equal(pie, punch, pie.minus(punch), result)
+	console.log(pie.minus(punch).sce)
+});
+
+QUnit.test( "B2.prototype.minus including ProjectedCurveSurface", function( assert ) {
+	let s1 = new ProjectedCurveSurface(new BezierCurve(V3(0, 0, 0), V3(-5, 5, 0), V3(15, 5, 0), V3(10, 0, 0), -0.1, 1.1), V3(0, 0, -1), 0, 1)
+	let s2 = new ProjectedCurveSurface(new BezierCurve(V3(0, 0, 0), V3(-5, 5, 0), V3(15, 5, 0), V3(10, 0, 0), -0.1, 1.1), V3(0, 0, -1), 0, 1)
+	let a = B2.extrudeEdges([
+			StraightEdge.throughPoints(V3(10, 0, 0), V3(0, 0, 0)),
+			PCurveEdge.forCurveAndTs(new BezierCurve(V3.ZERO, V3(-5, 5, 0), V3(15, 5, 0), V3(10, 0, 0)), 0, 1)],
+		P3.XY.flipped(), V3(0,0,5), 'a/4')
+	let punch = B2.box(5, 10, 3, 'knife').translate(1, -1, 1)
+
+	let result = new B2([
+		new PlaneFace(new PlaneSurface(P3(V3(0, -1, 0), 0)), [
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(10, 0, 0)),
+			StraightEdge.throughPoints(V3(10, 0, 0), V3(10, 0, 5)),
+			StraightEdge.throughPoints(V3(10, 0, 5), V3(0, 0, 5)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(0, 0, 0))], [[
+			StraightEdge.throughPoints(V3(1, 0, 1), V3(1, 0, 4)),
+			StraightEdge.throughPoints(V3(1, 0, 4), V3(6, 0, 4)),
+			StraightEdge.throughPoints(V3(6, 0, 4), V3(6, 0, 1)),
+			StraightEdge.throughPoints(V3(6, 0, 1), V3(1, 0, 1))]]),
+		new RotationFace(new ProjectedCurveSurface(new BezierCurve(V3(0, 0, 0), V3(-5, 5, 0), V3(15, 5, 0), V3(10, 0, 0), -0.1, 1.1), V3(0, 0, -1), 0, 1), [
+			new PCurveEdge(new BezierCurve(V3(0, 0, 0), V3(-5, 5, 0), V3(15, 5, 0), V3(10, 0, 0), -0.1, 1.1), V3(10, 0, 0), V3(0, 0, 0), 1, 0, null, V3(15, 15, 0), V3(15, -15, 0)),
+			StraightEdge.throughPoints(V3(0, 0, 0), V3(0, 0, 5)),
+			new PCurveEdge(new BezierCurve(V3(0, 0, 5), V3(-5, 5, 5), V3(15, 5, 5), V3(10, 0, 5), -0.1, 1.1), V3(0, 0, 5), V3(10, 0, 5), 0, 1, null, V3(-15, 15, 0), V3(-15, -15, 0)),
+			StraightEdge.throughPoints(V3(10, 0, 5), V3(10, 0, 0))], [[
+			StraightEdge.throughPoints(V3(1, 3.185436104380006, 4), V3(1, 3.185436104380006, 1)),
+			new PCurveEdge(new BezierCurve(V3(0, 0, 1), V3(-5, 5, 1), V3(15, 5, 1), V3(10, 0, 1), -0.1, 1.1), V3(1, 3.185436104380006, 1), V3(6, 3.720106174228432, 1), 0.3059958942668147, 0.5446421518086273, null, V3(16.85436104380006, 5.820123171995558, 0), V3(22.201061742284324, -1.3392645542588184, 0)),
+			StraightEdge.throughPoints(V3(6, 3.720106174228432, 1), V3(6, 3.720106174228432, 4)),
+			new PCurveEdge(new BezierCurve(V3(10, 0, 4), V3(15, 5, 4), V3(-5, 5, 4), V3(0, 0, 4), -1.1, 0.1), V3(6, 3.720106174228432, 4), V3(1, 3.185436104380006, 4), 0.45535784819137265, 0.6940041057331853, null, V3(-22.201061742284324, 1.3392645542588197, 0), V3(-16.85436104380006, -5.820123171995558, 0))]]),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, -1), 0)), [
+			StraightEdge.throughPoints(V3(10, 0, 0), V3(0, 0, 0)),
+			new PCurveEdge(new BezierCurve(V3(0, 0, 0), V3(-5, 5, 0), V3(15, 5, 0), V3(10, 0, 0), -0.1, 1.1), V3(0, 0, 0), V3(10, 0, 0), 0, 1, null, V3(-15, 15, 0), V3(-15, -15, 0))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, 1), 5)), [
+			new PCurveEdge(new BezierCurve(V3(0, 0, 5), V3(-5, 5, 5), V3(15, 5, 5), V3(10, 0, 5), -0.1, 1.1), V3(10, 0, 5), V3(0, 0, 5), 1, 0, null, V3(15, 15, 0), V3(15, -15, 0)),
+			StraightEdge.throughPoints(V3(0, 0, 5), V3(10, 0, 5))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(1, 0, 0), 1)), [
+			StraightEdge.throughPoints(V3(1, 0, 4), V3(1, 0, 1)),
+			StraightEdge.throughPoints(V3(1, 0, 1), V3(1, 3.185436104380006, 1)),
+			StraightEdge.throughPoints(V3(1, 3.185436104380006, 1), V3(1, 3.185436104380006, 4)),
+			StraightEdge.throughPoints(V3(1, 3.185436104380006, 4), V3(1, 0, 4))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(-1, 0, 0), -6)), [
+			StraightEdge.throughPoints(V3(6, 0, 1), V3(6, 0, 4)),
+			StraightEdge.throughPoints(V3(6, 0, 4), V3(6, 3.720106174228432, 4)),
+			StraightEdge.throughPoints(V3(6, 3.720106174228432, 4), V3(6, 3.720106174228432, 1)),
+			StraightEdge.throughPoints(V3(6, 3.720106174228432, 1), V3(6, 0, 1))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, 1), 1)), [
+			StraightEdge.throughPoints(V3(1, 0, 1), V3(6, 0, 1)),
+			StraightEdge.throughPoints(V3(6, 0, 1), V3(6, 3.720106174228432, 1)),
+			new PCurveEdge(new BezierCurve(V3(0, 0, 1), V3(-5, 5, 1), V3(15, 5, 1), V3(10, 0, 1), -0.1, 1.1), V3(6, 3.720106174228432, 1), V3(1, 3.185436104380006, 1), 0.5446421518086273, 0.3059958942668147, null, V3(-22.201061742284324, 1.3392645542588184, 0), V3(-16.85436104380006, -5.820123171995558, 0)),
+			StraightEdge.throughPoints(V3(1, 3.185436104380006, 1), V3(1, 0, 1))], []),
+		new PlaneFace(new PlaneSurface(P3(V3(0, 0, -1), -4)), [
+			StraightEdge.throughPoints(V3(6, 0, 4), V3(1, 0, 4)),
+			StraightEdge.throughPoints(V3(1, 0, 4), V3(1, 3.185436104380006, 4)),
+			new PCurveEdge(new BezierCurve(V3(10, 0, 4), V3(15, 5, 4), V3(-5, 5, 4), V3(0, 0, 4), -1.1, 0.1), V3(1, 3.185436104380006, 4), V3(6, 3.720106174228432, 4), 0.6940041057331853, 0.45535784819137265, null, V3(16.85436104380006, 5.820123171995558, 0), V3(22.201061742284324, -1.3392645542588197, 0)),
+			StraightEdge.throughPoints(V3(6, 3.720106174228432, 4), V3(6, 0, 4))], [])])
+
+	assert.b2Equal(a, punch, a.minus(punch), result)
+});

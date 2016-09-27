@@ -198,13 +198,23 @@ class PCurveEdge extends Edge {
             m4.transformVector(this.aDir), m4.transformVector(this.bDir), this.name + desc)
     }
 
-    isCoEdge(edge) {
-        return this == edge || this == edge.flippedOf ||
-            this.curve.isColinearTo(edge.curve) && (
-                this.a.like(edge.a) && this.b.like(edge.b)
-                || this.a.like(edge.b) && this.b.like(edge.a)
-            )
-    }
+
+
+	isCoEdge(edge) {
+		return this == edge || this == edge.flippedOf ||
+			this.curve.isColinearTo(edge.curve) && (
+				this.a.like(edge.a) && this.b.like(edge.b)
+				|| this.a.like(edge.b) && this.b.like(edge.a)
+			)
+	}
+
+	like(edge) {
+		// TODO this breaks on colinear edges
+		return this == edge ||
+			edge instanceof Edge &&
+			this.curve.isColinearTo(edge.curve) &&
+			this.a.like(edge.a) && this.b.like(edge.b)
+	}
 }
 PCurveEdge.forCurveAndTs = function (curve, aT, bT) {
     return new PCurveEdge(curve, curve.at(aT), curve.at(bT), aT, bT, undefined,
@@ -213,7 +223,7 @@ PCurveEdge.forCurveAndTs = function (curve, aT, bT) {
 }
 
 
-class StraightEdge extends Edge {
+var StraightEdge = class StraightEdge extends Edge {
     constructor(line, a, b, aT, bT, flippedOf, name) {
         assertInst(L3, line)
         assertNumbers(aT, bT)
@@ -285,7 +295,7 @@ class StraightEdge extends Edge {
             )
     }
 
-    likeEdge(edge) {
+    like(edge) {
         return edge.constructor == StraightEdge && this.a.like(edge.a) && this.b.like(edge.b)
     }
 

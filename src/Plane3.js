@@ -80,6 +80,7 @@ P3.forAnchorAndPlaneVectors = function (anchor, v0, v1, prototype) {
 }
 
 P3.prototype = Object.create(Transformable.prototype)
+P3.prototype.constructor = P3
 NLA.addOwnProperties(P3.prototype, /** @lends {P3.prototype} */ {
 	/**
 	 *

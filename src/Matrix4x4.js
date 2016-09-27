@@ -1186,9 +1186,14 @@ M4.mirroring = function(plane, result) {
 M4.projection = function (plane, dir, result) {
 	// TODO: doc
 	/**
+	 * plane.normal DOT (p + lambda * dir) = w (1)
+	 * extract lambda:
+	 * plane.normal DOT p + lambda * plane.normal DOT dir = w
+	 * lambda = (w - plane.normal DOT p) / plane.normal DOT dir
+	 * result = p + lambda * dir
+	 * result = p + dir * (w - plane.normal DOT p) / plane.normal DOT dir
+	 * result =  w * dir / (plane.normal DOT dir) + p - plane.normal DOT p * dir / (plane.normal DOT dir) *
 	 *
-	 var lambda = (plane.w - plane.normal.dot(this.anchor)) / plane.normal.dot(this.dir1);
-	 var point = this.anchor.plus(this.dir1.times(lambda));
 
 	 a + d * (w - n . a) / (nd)
 	 a + dw - d * na

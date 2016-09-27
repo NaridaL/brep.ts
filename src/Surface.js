@@ -108,6 +108,14 @@ class Surface extends Transformable {
 
 	/**
 	 * @abstract
+	 * @returns {boolean}
+	 */
+	like(object) {
+		assert(false, "Not implemented on " + this.constructor.name)
+	}
+
+	/**
+	 * @abstract
 	 * @param {M4} m4
 	 * @returns {T}
 	 */

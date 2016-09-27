@@ -75,13 +75,16 @@ function Point(x, y) {
 }
 function Sketch(planeName) {
 	// elements in 2D coordinates on x-y plane
-	this.planeName = planeName
+	this.planeRef = NameRef.UNASSIGNED
 	this.elements = []
 	this.constraints = []
 	this.name = "sketch"+(globalId++)
 	this.plane = null
 }
 Sketch.prototype = {
+	dependentOnNames: function () {
+		return this.constraints.map(constraint => constraint.cs.filter(c => c instanceof NameRef)).concatenated()
+	},
 	getConstraintsFor: function (el) {
 		return this.constraints.filter((constraint) => constraint.constrains(el))
 	},
@@ -277,7 +280,7 @@ Sketch.prototype = {
 	},
 	toSource: function () {
 		return `(function () {
-			let sketch = new Sketch('${this.planeName}')
+			let sketch = new Sketch('${this.planeRef.ref}')
 			let els = sketch.elements = [${this.elements.map(el => el.toSource()).join(',')}]
 			sketch.constraints = [${this.constraints.map(el => el.serialize(this.elements)).join(',')}]
 			return sketch
@@ -861,9 +864,10 @@ function getTextureForString(str) {
 	return texture
 }
 var zoomFactor = 1;
-function paintSegments(sketch) {
+function paintSketch(sketch) {
 
-	if (!sketch.plane) return
+	if (!sketch.plane || !sketch.sketchToWorldMatrix || !sketch.sketchToWorldMatrix.m) return
+	if (-1 != rebuildLimit && rebuildLimit <= featureStack.indexOf(sketch)) return
 	//console.log("painting segments", sketch.elements.length);
 	/*ctx.clearRect (0, 0, ctx.canvas.width, ctx.canvas.height);
 	 ctx.fillStyle="rgb(100, 100, 255)";
@@ -1145,12 +1149,8 @@ var PlaneDefinition = class PlaneDefinition {
 		return `new PlaneDefinition()`
 	}
 
-	delete(line) {
-		$('planeDefiner').set('display', 'none')
-		featureStack.remove(this)
-
-		rebuildModel()
-		updateFeatureDisplay()
+	dependentOnNames() {
+		return this.whats
 	}
 }
 
@@ -1274,114 +1274,136 @@ function directionObjectToVector(dirObj) {
 }
 function rebuildModel() {
 	let DISABLE_CONSOLE = false
+	DISABLE_CONSOLE && disableConsole()
 	console.log("rebuilding model")
 	//NLA.DEBUG = false
-	DISABLE_CONSOLE && disableConsole()
-	planes = [
-		CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
-		CustomPlane(V3.ZERO, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
-		CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
-	];
+
+
+	namesPublishedBy = new Map()
+	publishedObjects = new Map()
+	function publish(name, object) {
+		if (!namesPublishedBy.has(name)) {
+			namesPublishedBy.set(name, feature)
+			publishedObjects.set(name, object)
+		}
+
+	}
+
+
 	modelBREP = undefined
 	brepMesh = undefined
 	brepPoints = []
 	brepEdges = []
-	featureStack.forEach((feature) => {
-		// try {
-			if (feature instanceof Sketch) {
-				feature.plane = planes.find(p => p.name == feature.planeName);
-				//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(), feature.plane.normal.length())
-				if (feature.plane) {
-					feature.sketchToWorldMatrix =
-						M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal, feature.plane.anchor)
-					feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed();
-					recalculate(feature)
-				}
-			} else if (feature.type && feature.type == "extrude") {
-				let loopSketch = featureStack.filter(f => f instanceof Sketch)
-					.find(sketch => sketch.elements.some(el => el.name == feature.segmentName))
-				if (loopSketch.plane) {
-					let loopSegment = loopSketch.elements.find(el => el.name == feature.segmentName)
-					// opposite dir to plane normal:
-					let startOffset = loopSketch.plane.normal.times(-min(feature.start, feature.end))
-					let lengthOffset = loopSketch.plane.normal.times(-Math.abs(feature.start - feature.end))
-					let startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
-					let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
-					edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix, ''))
-					// TODO: test for self-intersection of edgeloop
-					if (!new PlaneSurface(loopSketch.plane, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoop)) {
-						edgeLoop = edgeLoop.map(edge => edge.flipped()).reverse()
-					}
-					//console.log(polygonPoints.map(v =>v.$))
-					let length = feature.end - feature.start
-					//console.log("polypoints", polygonPoints, polygonPoints.toSource(), loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
-					let brep = B2.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
-					if (modelBREP) {
-						isEdges = modelBREP.getIntersectionEdges(brep)
-						// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
-						// modelBREP = modelBREP[feature.operation](brep)
-					} else {
-						modelBREP = brep;
-					}
-					brepMesh = modelBREP.toMesh()
-					modelBREP.faces.forEach(face =>
-						brepEdges.pushAll(face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id)))
-					// brepEdges.pushAll(isEdges)
-					brepPoints = Array.from(modelBREP.vertexNames.keys())
-					console.log(modelBREP.vertexNames)
-					// brepMesh.computeWireframeFromFlatTriangles()
-					// brepMesh.compile()
-				}
-			} else if (feature.type && "planeDefinition" == feature.type) {
-					let face = modelBREP.faces.find(face => face.name == feature.faceName)
-					let sel = feature.whats.map(w => w.get())
-					let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
-					console.log('PLANE', plane, feature.whats.sce, sel.sce, feature.whats.length, sel.length)
-					if (plane) {
-						let right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
 
-						var cp
-						planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal.times(feature.offset)),
-							right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
-					}
+	planes = [
+		CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
+		CustomPlane(V3.ZERO, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
+		CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
+	]
+	planes.forEach(customPlane => publish(customPlane.name, customPlane))
+
+	let loopEnd = -1 == rebuildLimit ? featureStack.length : min(rebuildLimit, featureStack.length)
+	for (var featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
+		var feature = featureStack[featureIndex]
+		try {
+			if (feature instanceof Sketch) {
+				feature.plane = feature.planeRef.getOrThrow()
+				//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(), feature.plane.normal.length())
+				feature.sketchToWorldMatrix =
+					M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal, feature.plane.anchor)
+				feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed()
+				recalculate(feature)
+				feature.elements.forEach(el => publish(el.name, el))
+			} else if (feature.type && feature.type == "extrude") {
+
+				let loopSegment = feature.segmentName.getOrThrow()
+				let loopSketch = loopSegment.sketch
+				// opposite dir to plane normal:
+				let startOffset = loopSketch.plane.normal.times(-min(feature.start, feature.end))
+				let lengthOffset = loopSketch.plane.normal.times(-Math.abs(feature.start - feature.end))
+				let startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
+				let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
+				edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix, ''))
+				// TODO: test for self-intersection of edgeloop
+				if (!new PlaneSurface(loopSketch.plane, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoop)) {
+					edgeLoop = edgeLoop.map(edge => edge.flipped()).reverse()
+				}
+				//console.log(polygonPoints.map(v =>v.$))
+				let length = feature.end - feature.start
+				//console.log("polypoints", polygonPoints, polygonPoints.toSource(), loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
+				let brep = B2.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
+				if (modelBREP) {
+					// isEdges = modelBREP.getIntersectionEdges(brep)
+					// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
+					modelBREP = modelBREP[feature.operation](brep)
+				} else {
+					modelBREP = brep
+				}
+
+				modelBREP.faces.forEach(face => publish(face.name, face))
+				modelBREP.faces.map(face => face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id).forEach(edge => publish(edge.name, edge)))
+				if (modelBREP.vertexNames) for (let entry of modelBREP.vertexNames.entries()) { publish(entry[0], entry[1]) }
+			} else if (feature.type && "planeDefinition" == feature.type) {
+				let sel = feature.whats.map(w => w.getOrThrow())
+				let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
+				console.log('PLANE', plane, feature.whats.sce, sel.sce, feature.whats.length, sel.length)
+				if (plane) {
+					let right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
+
+					var cp
+					planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal.times(feature.offset)),
+						right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
+				}
 				if ("immediate" == feature.planeType) {
 					let plane = eval(feature.source), right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
 
 					planes.push(new CustomPlane(plane.anchor,
 						right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 				}
+				publish(feature.planeId, cp)
 			} else {
 				//noinspection ExceptionCaughtLocallyJS
 				throw new Error("unknown feature");
 			}
+		// brepMesh.computeWireframeFromFlatTriangles()
+		// brepMesh.compile()
 
-		// } catch (error) {
-		// 	let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
-		//
-		// 	if (featureDiv) {
-		// 		let ediv = featureDiv.getElement('[name=error]')
-		// 		ediv.setStyle('display', 'inline')
-		// 		ediv.title= error.toString() + '\n' + error.stack
-		// 	}
-		// 	throw error
-		// 	console.log(error)
-		// 	// TODO stop rebuild
-		// }
-	})
-	if (brepMesh) {
+		} catch (error) {
+			let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
+
+			if (featureDiv) {
+				let ediv = featureDiv.getElement('[name=error]')
+				ediv.setStyle('display', 'inline')
+				ediv.title= error.toString() + '\n' + error.stack
+			}
+			console.error(error)
+			// throw error
+			break
+		}
+	}
+	if (modelBREP) {
+		brepMesh = modelBREP.toMesh()
+		modelBREP.faces.forEach(face =>
+			brepEdges.pushAll(face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id)))
+		// brepEdges.pushAll(isEdges)
+		modelBREP.vertexNames && (brepPoints = Array.from(modelBREP.vertexNames.keys()))
+		console.log(modelBREP.vertexNames)
 		brepMesh.computeNormalLines(10)
 		//brepMesh.computeWireframeFromFlatTriangles()
 		brepMesh.compile()
 	}
+	updateSelected()
 	paintScreen()
 	DISABLE_CONSOLE && enableConsole()
 }
 // DECLARATIONS
 // GLOBALS
+var missingEls = [], namesPublishedBy, publishedObjects
 var faces = []
 var highlighted = [], selected = [], paintDefaultColor = 0x000000
 var /** @type LightGLContext */ gl;
-var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges
+var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges = []
+var rebuildLimit = -1
 var drPs = [], drVs = []
 var oldConsole = undefined;
 var eyePos = V3(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z
@@ -1416,59 +1438,35 @@ function renderText(string, color) {
 	}).draw(meshes.text);
 	gl.popMatrix();
 }
+function drawVector(vector, anchor, color = 0x0000ff, size=50) {
+	gl.pushMatrix()
+	let v2 = vector.getPerpendicular()
+	gl.multMatrix(M4.forSys(vector, v2, vector.cross(v2), anchor))
+	gl.scale(size, size, size)
+	shaders.singleColor.uniforms({
+		color: rgbToVec4(color)
+	}).draw(meshes.vector)
+	gl.popMatrix()
+}
 function drawVectors() {
-	gl.pushMatrix();
-	gl.scale(50, 50, 50)
-	shaders.singleColor.uniforms({
-		color: rgbToVec4(0xff0000)
-	}).draw(meshes.vector);
-	gl.popMatrix();
+	drawVector(V3.X, V3.ZERO, 0xff0000)
+	drawVector(V3.Y, V3.ZERO, 0x00ff00)
+	drawVector(V3.Z, V3.ZERO, 0x0000ff)
 
-	gl.pushMatrix();
-	gl.multMatrix(M4.forSys(V3.Y, V3.Z, V3.X))
-	gl.scale(50, 50, 50)
-	shaders.singleColor.uniforms({
-		color: rgbToVec4(0x00ff00)
-	}).draw(meshes.vector);
-	gl.popMatrix();
-
-	gl.pushMatrix();
-	gl.multMatrix(M4.forSys(V3.Z, V3.X, V3.Y))
-	gl.scale(50, 50, 50)
-	shaders.singleColor.uniforms({
-		color: rgbToVec4(0x0000ff)
-	}).draw(meshes.vector);
-	gl.popMatrix();
-
-	drVs.forEach(vi => {
-		gl.pushMatrix()
-		let v2 = vi.dir.getPerpendicular()
-		gl.multMatrix(M4.forSys(vi.dir, v2, vi.dir.cross(v2), vi.anchor))
-		gl.scale(50, 50, 50)
-		shaders.singleColor.uniforms({
-			color: rgbToVec4(vi.color || 0x0000ff)
-		}).draw(meshes.vector);
-		gl.popMatrix()
-	})
+	drVs.forEach(vi => drawVector(vi.dir, vi.anchor, vi.color))
 }
 
+function drawPoint(p, color=0x000000, size=5) {
+	gl.pushMatrix()
+	gl.translate(p)
+	gl.scale(size, size, size)
+	shaders.singleColor.uniforms({ color: rgbToVec4(color)}).draw(meshes.sphere1)
+	gl.popMatrix()
+}
 function drawPoints() {
-	drPs.forEach(info => {
-		let p = info.p || info
-		gl.pushMatrix()
-		gl.translate(p)
-		gl.scale(5,5,5)
-		shaders.singleColor.uniforms({ color: rgbToVec4(0xcc0000)}).draw(meshes.sphere1)
-		gl.popMatrix()
-	})
-	brepPoints && brepPoints.forEach(p => {
-		const color = hoverHighlight == p ? 0x0adfdf : (selected.contains(p) ? 0xff0000 : 0xcccc00)
-		gl.pushMatrix()
-		gl.translate(p)
-		gl.scale(2,2,2)
-		shaders.singleColor.uniforms({ color: rgbToVec4(color)}).draw(meshes.sphere1)
-		gl.popMatrix()
-	})
+	drPs.forEach(info => drawPoint(info.p || p, 0xcc0000, 5))
+	brepPoints && brepPoints.forEach(p =>
+		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.contains(p) ? 0xff0000 : 0xcccc00), 2))
 }
 const CURVE_PAINTERS = {}
 CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse, color, startT, endT, width = 2) {
@@ -1509,14 +1507,45 @@ CURVE_PAINTERS[L3.name] = function (curve, color, startT, endT, width = 2, norma
 
 	gl.popMatrix()
 }
+
+function drawEdge(edge, color = 0x000000, width = 2) {
+	const startT = min(edge.aT, edge.bT)
+	const endT = max(edge.aT, edge.bT)
+	CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, startT, endT, width)
+}
+var cachedMeshes = new Map()
+function drawFace(face, color) {
+	let mesh = cachedMeshes.get(face)
+	if (!mesh) {
+		mesh = new GL.Mesh({triangles: true, lines: true, normals: true})
+		face.addToMesh(mesh)
+		mesh.compile()
+		cachedMeshes.set(face, mesh)
+	}
+	shaders.singleColor.uniforms({ color: rgbToVec4(color) }).draw(mesh)
+}
 var /**@type GL.Mesh */ mesh1, mesh2
 var meshes = {}
+var ZERO_EL = {}
+function drawEl(el, color) {
+	if (el instanceof V3) {
+		drawPoint(el, color)
+	} else if (el instanceof Edge) {
+		drawEdge(el, color)
+	} else if (el instanceof Face) {
+		drawFace(el, color)
+	} else if (el instanceof CustomPlane) {
+		drawPlane(el, color)
+	} else if (el == ZERO_EL) {} else {
+		assert(false)
+	}
+}
 function paintScreen () {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
 	gl.loadIdentity();
-	drawPlanes();
+	planes.forEach(plane => drawPlane(plane, plane.color))
 	/*
 	 gl.translate(0, 0, -5);
 	 gl.rotate(30, 1, 0, 0);
@@ -1526,7 +1555,7 @@ function paintScreen () {
 
 	drawPoints()
 
-
+	missingEls.forEach(el => drawEl(el, 0xff0000))
 	// paintEllipseCurve(EllipseCurve.forAB(200, 300), COLORS.RD_FILL, 0, 2 * Math.PI)
 	// paintBezierCurve(BezierCurve.EX3D.scale(100, 100, 100), COLORS.PP_STROKE, -2, 3)
 
@@ -1550,6 +1579,7 @@ function paintScreen () {
 
 
 	gl.pushMatrix()
+	!mesh1.hasBeenCompiled && mesh1.compile()
 	mesh1 && (mesh1.normals ? shaders.lighting : shaders.singleColor).uniforms({
 		color: rgbToVec4(0xff0000)
 	}).draw(mesh1)
@@ -1588,18 +1618,8 @@ function paintScreen () {
 		}
 
 		// paint edges
-		brepEdges.forEach(edge => {
-			const startT = min(edge.aT, edge.bT)
-			const endT = max(edge.aT, edge.bT)
-			const color = hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000)
-			CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, startT, endT, 2)
-		})
-		isEdges.forEach(edge => {
-			const startT = min(edge.aT, edge.bT)
-			const endT = max(edge.aT, edge.bT)
-			const color = hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000)
-			CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, startT, endT, 2)
-		})
+		isEdges.forEach(edge => drawEdge(edge, hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000), 2))
+		brepEdges.forEach(edge => drawEdge(edge, hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : COLORS.RD_STROKE), 2))
 
 		gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
 		shaders.singleColor.uniforms({
@@ -1613,7 +1633,7 @@ function paintScreen () {
 	gl.projectionMatrix.m[11] -= DZ // prevent Z-fighting
 	featureStack.filter(f => f instanceof Sketch && !f.hide).forEach(s => {
 		gl.pushMatrix()
-		paintSegments(s)
+		paintSketch(s)
 		gl.popMatrix()
 	})
 	gl.projectionMatrix.m[11] += DZ
@@ -1639,21 +1659,17 @@ function setupCamera() {
 	gl.lookAt(eyePos, eyeFocus, eyeUp)
 	gl.matrixMode(gl.MODELVIEW)
 }
-function drawPlanes() {
-	planes.forEach(function (plane) {
-		gl.pushMatrix();
-		gl.multMatrix(M4.forSys(plane.right, plane.up, plane.normal));
-		gl.translate(plane.rightStart, plane.upStart, plane.w);
-		gl.scale(plane.rightEnd - plane.rightStart, plane.upEnd - plane.upStart, 1);
+function drawPlane(customPlane, color) {
+	gl.pushMatrix()
+	gl.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal))
+	gl.translate(customPlane.rightStart, customPlane.upStart, customPlane.w)
+	gl.scale(customPlane.rightEnd - customPlane.rightStart, customPlane.upEnd - customPlane.upStart, 1)
 
-		let shader = hoverHighlight == plane ? shaders.singleColorHighlight : shaders.singleColor;
+	let shader = hoverHighlight == customPlane ? shaders.singleColorHighlight : shaders.singleColor
 
-		shader.uniforms({
-			color: rgbToVec4(plane.color)
-		}).draw(meshes.xyLinePlane, 'LINES')
+	shader.uniforms({ color: rgbToVec4(color) }).draw(meshes.xyLinePlane, 'LINES')
 
-		gl.popMatrix()
-	})
+	gl.popMatrix()
 }
 
 function segmentIntersectsRay(a, b, p, dir) {
@@ -1677,7 +1693,10 @@ function template(templateName, map) {
 function updateFeatureDisplay() {
 	var div = $('featureDisplay')
 	div.erase('text')
-	featureStack.forEach(function (feature) {
+	featureStack.forEach(function (feature, featureIndex) {
+		if (rebuildLimit == featureIndex) {
+			div.adopt(new Element('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
+		}
 		var newChild
 		if (feature.type == "extrude") {
 			newChild = template('templateFeatureExtrude', {what: "EXTRUDE", name: feature.name})
@@ -1700,12 +1719,18 @@ function updateFeatureDisplay() {
 		}
 		newChild.inject(div);
 		newChild.getElement('[name=delete]').onclick = function () {
-			featureStack.remove(feature)
-			let correspondingMode = modeStack.find(mode => mode.feature && mode.feature == feature)
-			correspondingMode && modeEnd(correspondingMode)
-			updateFeatureDisplay()
+			featureDelete(feature)
 		}
 		newChild.featureLink = feature
+		newChild.onmouseover = function (e) {
+			const dependencies = featureDependencies(feature)
+			const dependents = featureDependents(feature)
+			div.getChildren().filter(subDiv => dependencies.contains(subDiv.featureLink)).addClass('isDependedOn')
+			div.getChildren().filter(subDiv => dependents.contains(subDiv.featureLink)).addClass('hasDependents')
+		}
+		newChild.onmouseout = function (e) {
+			div.getChildren().removeClass('isDependedOn').removeClass('hasDependents')
+		}
 		newChild.getElement('[name=toggleHide]').onclick = function () {
 			feature.hide = !feature.hide
 			this.toggleClass('hidden', feature.hide)
@@ -1718,20 +1743,37 @@ function updateSelected() {
 	div.erase('text')
 	selected.forEach(function (sel) {
 		// TODO, if only necessary part of model is rebuilt, this probably wont be necessary:
-		assert(!sel.get || sel.get(), sel)
-		if (sel instanceof NameRef) sel = sel.get()
-		let name = sel.name || modelBREP && modelBREP.vertexNames && modelBREP.vertexNames.get(sel)
-		var newChild = template("template", {what: sel.constructor.name, name: name});
+		let target, name
+		if (sel instanceof NameRef) {
+			target = sel.get()
+			name = sel.ref
+		} else {
+			target = sel
+			name = sel.name || modelBREP && modelBREP.vertexNames && modelBREP.vertexNames.get(sel)
+		}
+		var newChild = template("template", {what: sel.constructor.name, name: name})
+		if (!target) {
+			newChild.addClass('notfound')
+		}
 		newChild.onmouseover = function (e) {
-			hoverHighlight = sel;
-			paintScreen();
+			if (target) {
+				hoverHighlight = target
+			} else {
+				// lookup missing
+				missingEls.push(sel.lastHit)
+			}
+			paintScreen()
 		};
 		newChild.onmouseout = function (e) {
-			hoverHighlight = null
-			paintScreen();
+			if (target) {
+				hoverHighlight = null
+			} else {
+				missingEls.remove(sel.lastHit)
+			}
+			paintScreen()
 		};
 		newChild.getElement(".remove").onclick = function (e) {
-			(sel instanceof SegmentEndPoint ? sel.line : sel).removeFromSketch(editingSketch)
+			(target instanceof SegmentEndPoint ? target.line : target).removeFromSketch(editingSketch)
 			updateSelected()
 			paintScreen()
 		};
@@ -1807,21 +1849,32 @@ function updateSelected() {
 		newChild.inject(div);
 	});
 }
-function NameRef(name) {
+function NameRef(name, lastHit) {
 	var x
 	if (x = NameRef.pool.get(name)) return x
 	this.ref = name
+	this.lastHit = lastHit
 }
 Object.defineProperty(NameRef.prototype, "what", { get: function () { return this.get() instanceof Face ? "face" : "plane" } });
-Object.defineProperty(NameRef.prototype, "name", { get: function () { return this.get().name } });
+Object.defineProperty(NameRef.prototype, "name", { get: function () { let hit = this.get(); return hit && hit.name } });
 Object.defineProperty(NameRef.prototype, "plane", { get: function () { return this.getPlane() } });
 NameRef.pool = new Map()
 NameRef.prototype.isRef = true
 NameRef.prototype.get = function () {
-	return planes.find(plane => plane.name == this.ref)
-		|| modelBREP && modelBREP.faces.find(face => face.name == this.ref)
-		|| modelBREP && modelBREP.faces.firstMatch(face => face.getAllEdges().find(edge => edge.name == this.ref))
-		|| modelBREP && mapReverse(modelBREP.vertexNames, this.ref)
+	let hit = publishedObjects.get(this.ref)
+	// let hit = planes.find(plane => plane.name == this.ref)
+	// 	|| modelBREP && modelBREP.faces.find(face => face.name == this.ref)
+	// 	|| modelBREP && modelBREP.faces.firstMatch(face => face.getAllEdges().find(edge => edge.name == this.ref))
+	// 	|| modelBREP && modelBREP.vertexNames && mapReverse(modelBREP.vertexNames, this.ref)
+	if (hit) this.lastHit = hit
+	return hit
+}
+NameRef.prototype.getOrThrow = function () {
+	let hit = this.get()
+	if (!hit) {
+		throw new Error(`could not find ${this.lastHit.constructor.name} ${this.ref}`)
+	}
+	return hit
 }
 NameRef.prototype.getPlane = function () {
 	return planes.find(plane => plane.name == this.ref) || modelBREP && modelBREP.faces.find(face => face.name == this.ref).plane
@@ -1836,12 +1889,15 @@ function mapReverse(map, value) {
 }
 NameRef.forObject = function (o) {
 	if (o instanceof V3) {
-		return new NameRef(modelBREP.vertexNames.get(o))
+		return new NameRef(modelBREP.vertexNames.get(o), o)
 	} else {
 		assert(o.name)
-		return new NameRef(o.name)
+		return new NameRef(o.name, o)
 	}
 }
+NameRef.UNASSIGNED = new NameRef('UNASSIGNED', ZERO_EL)
+NameRef.UNASSIGNED.get = function () { return undefined }
+NameRef.UNASSIGNED.getOrThrow = function () { throw new Error('this nameref has never been assigned a value') }
 function initTips() {
 	console.log($$('[data-tooltip]'))
 	let tips = new Tips($$('[data-tooltip]'), {
@@ -1859,7 +1915,7 @@ function initMeshes() {
 	meshes.xyLinePlane = GL.Mesh.plane()
 }
 function initShaders() {
-	shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor);
+	shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor)
 	shaders.singleColorHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight)
 	shaders.textureColor = new GL.Shader(vertexShaderTexture, fragmentShaderTextureColor)
 	shaders.arc = new GL.Shader(vertexShaderRing, fragmentShaderColor)
@@ -1871,12 +1927,23 @@ function initShaders() {
 	shaders.waves = new GL.Shader(vertexShaderWaves, fragmentShaderLighting)
 }
 function main() {
-	 let o = {
 
-	 }
-	 o[EllipseCurve.name] = "a"
-	console.log(Object.keys(o))
+	let isc = new BezierCurve(V3(298.87639221507385, 162.667841424329, -146.8113588066827), V3(280.8890230060535, -48.7184401564907, 33.452468065317454), V3(252.7320514162261, 103.59114067551941, -90.1057675126865), V3(203.7658849214215, -21.316596978802774, 22.31079548556537), -0.1, 1.1)
+	let po = V3(291.2967892977242, 108.30752763303609, -100)
+	let pce = new PCurveEdge(new BezierCurve(V3(321.4663967541227, 285.941889389124, -100), V3(275.74165967136094, -76.80769146745264, -100), V3(266.59671225480844, 179.25083619601324, -100), V3(200.3329014289632, -40.05044765068365, -100), -0.1, 1.1), V3(200.3329014289632, -40.05044765068365, -100), V3(321.4663967541227, 285.941889389124, -100), 1, 0, null, V3(198.79143247753572, 657.9038515400907, 0), V3(137.17421124828525, 1088.24874256973, 0))
+	let ps = new PlaneSurface(P3(V3(0.11702878916613137, 0.6386281394494563, 0.760564502201907), 27.20189517996009))
+	let ps2 = new ProjectedCurveSurface(new BezierCurve(V3(321.4663967541227, 285.941889389124, 0), V3(275.74165967136094, -76.80769146745264, 0), V3(266.59671225480844, 179.25083619601324, 0), V3(200.3329014289632, -40.05044765068365, 0), -0.1, 1.1), V3(0, 0, -1), 0, 1)
+	console.log(ps2.dir1.sce)
+	console.log(M4.projection(ps.plane, ps2.dir1).str)
+	let iscactual = ps2.isCurvesWithSurface(ps)[0]
+	let t = pce.edgeISTsWithSurface(ps)[0], p = pce.curve.at(t)
 
+	assert(ps.containsCurve(iscactual))
+	assert(ps2.containsCurve(iscactual))
+	assert(ps2.containsPoint(p))
+	assert(ps.containsPoint(p))
+	assert(pce.curve.containsPoint(p))
+	assert(iscactual.containsPoint(p), iscactual.distanceToPoint(p))
 	// initTips()
 	// new Request({url: 'src/testshader.glsl', async: false, onSuccess: text => console.log(text)}).send()
 
@@ -1942,18 +2009,16 @@ function main() {
 			paintScreen()
 		}
 	}
-	gl.onclick = function (e) {
-		//noinspection JSBitwiseOperatorUsage
-		if (1 == e.button) {
-			modePop()
-		}
-	}
 	gl.onmouseup = function (e) {
 		// don't put modeGetCurrent().mouseup in local var as 'this' won't be bound correctly
 		modeGetCurrent().mouseup && modeGetCurrent().mouseup(e, getMouseLine(e))
 		paintScreen()
 	}
 	gl.onmousedown = function (e) {
+		if (1 == e.button) {
+			modePop()
+			return false
+		}
 		//noinspection JSBitwiseOperatorUsage
 		if (!(e.buttons & 1)) {
 			return
@@ -2162,66 +2227,73 @@ function getMouseLine(pos) {
 
 function setupSelectors(el, feature, mode) {
 
-	el.getElements('.face-select')
+	el.getElements('.face-select, .plane-select, .segment-select')
 		.removeEvents()
-		.addEvent('click', function (e) {
-			var el = this
-			this.addClass('selecting')
-			el.set('text', 'Click on a face')
-			modePush(MODES.SELECT_FACE, function (face) {
-				el.removeClass('selecting')
-				el.set('text', face.name)
-
-				feature[el.dataset.featureProperty] = face.name
-				rebuildModel()
-			})
-		})
-		.each(el => el.innerHTML = feature[el.dataset.featureProperty])
 		.removeClass('selecting')
-
-	el.getElements('.plane-select')
-		.removeEvents()
-		.addEvent('click', function (e) {
-			var el = this
-			this.addClass('selecting')
-			el.set('text', 'Click on a plane')
-			modePush(MODES.PLANE_SELECT, function (plane) {
-				console.log("plane-select callback", plane)
-				el.removeClass('selecting')
-				el.set('text', plane.name)
-
-				feature[el.dataset.featureProperty] = plane.name
-				rebuildModel()
-			})
-		})
-		.each(el => el.innerHTML = feature[el.dataset.featureProperty])
-		.removeClass('selecting')
-
-	el.getElements('.segment-select')
-		.removeEvents()
-		.addEvent('click', function (e) {
-			var el = this
-			this.addClass('selecting')
-			el.set('text', 'Click on a sketch segment')
-			modePush(MODES.SELECT_SEGMENT, function (segment) {
-				el.removeClass('selecting')
-				el.set('text', segment.name)
-				el.segment = segment
-
-				feature[el.dataset.featureProperty] = segment.name
-				rebuildModel()
-			})
+		.addEvents(tooltipEvents)
+		.each(el => {
+			el.set('text', feature[el.dataset.featureProperty].ref)
+			el.linkRef = feature[el.dataset.featureProperty].ref
 		})
 		.addEvent('mouseover', function (e) {
-			if (el.segment) {
-				hoverHighlight = segment
-				paintScreen()
+			let target = this.linkRef.get()
+			if (target) {
+				hoverHighlight = target
+			} else {
+				missingEls.push(this.linkRef.lastHit)
 			}
+			paintScreen()
 		})
-		.each(function (el) {
-			el.set('text', feature[el.dataset.featureProperty])
+		.addEvent('mouseout', function (e) {
+			hoverHighlight = null
+			missingEls.remove(this.linkRef.lastHit)
+			paintScreen()
 		})
-		.removeClass('selecting')
+
+	el.getElements('.face-select')
+		.addEvent('click', function (e) {
+			const selector = this
+			this.addClass('selecting')
+			selector.set('text', 'Click on a face')
+			modePush(MODES.SELECT_FACE, function (face) {
+				selector.removeClass('selecting')
+				selector.set('text', face.name)
+
+				feature[selector.dataset.featureProperty] = face.name
+				rebuildModel()
+			})
+		})
+
+	el.getElements('.plane-select')
+		.addEvent('click', function (e) {
+			const selector = this
+			this.addClass('selecting')
+			selector.set('text', 'Click on a plane')
+			modePush(MODES.PLANE_SELECT, function (planeRef) {
+				console.log("plane-select callback", planeRef)
+				selector.removeClass('selecting')
+				selector.set('text', planeRef.ref)
+				selector.linkRef = planeRef
+
+				feature[selector.dataset.featureProperty] = planeRef
+				rebuildModel()
+			})
+		})
+
+	el.getElements('.segment-select')
+		.addEvent('click', function (e) {
+			const selector = this
+			this.addClass('selecting')
+			selector.set('text', 'Click on a sketch segment')
+			modePush(MODES.SELECT_SEGMENT, function (segmentRef) {
+				selector.removeClass('selecting')
+				selector.set('text', segmentRef.ref)
+				selector.linkRef = segmentRef
+
+				feature[selector.dataset.featureProperty] = segmentRef
+				rebuildModel()
+			})
+		})
 
 	el.getElements('.string-id-input, .select-text')
 		.removeEvents()
@@ -2271,12 +2343,39 @@ function setupSelectors(el, feature, mode) {
 	el.getElement('[name=delete]')
 		.removeEvents()
 		.addEvent('click', function () {
-			mode.deleteFeature()
+			featureDelete(feature)
 		})
 
 }
+function featureDelete(feature) {
+	let correspondingMode = modeStack.find(mode => mode.feature && mode.feature == feature)
+	correspondingMode && modeEnd(correspondingMode)
+
+	let featureIndex = featureStack.indexOf(feature)
+	featureStack.remove(feature)
+	if (-1 != featureIndex && featureIndex < rebuildLimit) {
+		rebuildLimit--
+	}
+	updateFeatureDisplay()
+	rebuildModel()
+}
+function featureDependents(feature) {
+	let featureIndex = featureStack.indexOf(feature)
+	return featureStack
+		.slice(featureIndex + 1)
+		.filter(followingFeature => featureDependencies(followingFeature).contains(feature))
+}
+function featureDependencies(feature) {
+	let result = new Set()
+	let featureNameDependecies = feature.dependentOnNames()
+	featureNameDependecies.forEach(nameRef => {
+		let dependentOnFeature = namesPublishedBy.get(nameRef.ref)
+		dependentOnFeature && result.add(dependentOnFeature)
+	})
+	return Array.from(result.values())
+}
 function chainComparison(diff1, diff2) {
-	return diff1 != 0 ? diff1 : diff2;
+	return diff1 != 0 ? diff1 : diff2
 }
 function reverse(sketch) {
 	sketch.varMap.forEach(function (pointIndex, point) {
@@ -2672,6 +2771,8 @@ function faceSketchPlane() {
 function Extrude(name, segmentName, start, end, operation) {
 	this.type = "extrude"
 	this.name = name || "extrude" + (globalId++)
+	segmentName = segmentName || NameRef.UNASSIGNED
+	assertInst(NameRef, segmentName)
 	this.segmentName = segmentName
 	this.start = start || 0
 	this.end = end || 100
@@ -2679,6 +2780,9 @@ function Extrude(name, segmentName, start, end, operation) {
 }
 Extrude.prototype = {}
 Extrude.prototype.constructor = Extrude
+Extrude.prototype.dependentOnNames = function () {
+	return [this.segmentName]
+}
 class Pattern {
 	constructor(name, features) {
 		this.name = name || 'pattern' + globalId
@@ -2711,6 +2815,8 @@ function addExtrude() {
 	modePush(MODES.EXTRUDE, feature)
 	updateFeatureDisplay()
 }
+
+
 function modeGetName(mode) {
 	return Object.getOwnPropertyNames(MODES).find(name => MODES[name] == mode)
 }
@@ -2720,6 +2826,12 @@ function modeUpdateDisplay() {
 function modePush(mode, ...args) {
 	assert(mode.init && mode.end && mode.mousemove && mode.mousedown)
 	mode.before && mode.before()
+	let feature = args[0]
+	if (mode.modeEditsFeatureAndRequiresRollback && feature) {
+		rebuildLimit = featureStack.indexOf(feature) + 1
+		updateFeatureDisplay()
+		rebuildModel()
+	}
 	modeStack.push(mode)
 	mode.init.apply(mode, args)
 	modeUpdateDisplay()
@@ -2729,11 +2841,17 @@ function modeEnd(mode) {
 		do {
 			var popped = modeStack.pop()
 			popped.end()
+			if (popped.modeEditsFeatureAndRequiresRollback) {
+				rebuildLimit = -1
+				updateFeatureDisplay()
+				rebuildModel()
+			}
 		} while (popped != mode)
 		modeUpdateDisplay()
 	}
 }
 function modePop() {
+	if (1 == modeStack.length) return
 	modeStack.pop().end()
 	modeUpdateDisplay()
 }
@@ -2803,3 +2921,4 @@ function tooltipHide() {
 	$('tip-wrap').setStyle('visibility', 'hidden')
 }
 
+let tooltipEvents = {}

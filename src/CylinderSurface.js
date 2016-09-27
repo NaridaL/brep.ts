@@ -54,7 +54,7 @@ class CylinderSurface extends Surface {
 							// we need to calculate if the section of the plane intersection line BEFORE the colinear
 							// segment is inside or outside the face. It is inside when the colinear segment out vector
 							// and the current segment vector point in the same direction (dot > 0)
-							var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
+							var colinearSegmentOutsideVector = nextEdge.aDir.cross(this.normalAt(nextEdge.a))
 							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
 							// if the "inside-ness" changes, add intersection point
 							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear !=
@@ -98,6 +98,17 @@ class CylinderSurface extends Surface {
 			surface instanceof CylinderSurface
 			&& this.dir.isParallelTo(surface.dir)
 			&& this.containsEllipse(surface.baseEllipse)
+	}
+
+	/**
+	 * @inheritDoc
+	 */
+	like(object) {
+		if (!this.isCoplanarTo(object)) return false
+		// normals need to point in the same direction (outwards or inwards) for both
+		let thisFacesOut = 0 < this.baseEllipse.normal.dot(this.dir)
+		let objectFacesOut = 0 < object.baseEllipse.normal.dot(object.dir)
+		return thisFacesOut == objectFacesOut
 	}
 
 	containsEllipse(ellipse) {
@@ -224,8 +235,13 @@ class CylinderSurface extends Surface {
 	isCurvesWithPlane(plane) {
 		assertInst(P3, plane)
 		if (this.dir.isPerpendicularTo(plane.normal)) {
-			var eTs = this.baseEllipse.isTsWithPlane(plane)
-			return eTs.map(t => L3(this.baseEllipse.at(t), this.dir))
+			var ellipseTs = this.baseEllipse.isTsWithPlane(plane)
+			return ellipseTs.map(t => {
+				let l3dir = 0 < this.baseEllipse.tangentAt(t).dot(plane.normal)
+					? this.dir
+					: this.dir.negated()
+				return L3(this.baseEllipse.at(t), l3dir)
+			})
 		} else {
 			let projEllipse = this.baseEllipse.transform(M4.projection(plane, this.dir))
 			if (this.dir.dot(plane.normal) > 0) {

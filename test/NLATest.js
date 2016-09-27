@@ -308,14 +308,17 @@ QUnit.test( "NLA.M4.projection", function (assert) {
 	assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
 });
 QUnit.test( "NLA.M4.projection 2", function (assert) {
-	var plane = P3(V3(1, 2, 3).normalized(), 5);
-	var dir = V3(1, 1, 1);
-	var proj = M4.projection(plane, dir)
-	var p2 = V3(3, 5, 22)
-	assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
-	assert.ok(plane.containsPoint(proj.transformPoint(p2)))
-	assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(dir))
-	assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
+	[V3(1, 1, 1), V3(0, 0, -1)].forEach(dir => {
+		var plane = P3(V3(1, 2, 3).normalized(), 5);
+		var proj = M4.projection(plane, dir)
+		var p2 = V3(3, 5, 22)
+		assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
+		assert.ok(plane.containsPoint(proj.transformPoint(p2)))
+		assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(dir))
+		assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
+		console.log(proj.transformPoint(p2).sce)
+		console.log(proj.str)
+	})
 });
 QUnit.test( "NLA.M4.isIdentity", function (assert) {
 	assert.ok(M4.identity().isIdentity())

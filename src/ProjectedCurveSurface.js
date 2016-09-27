@@ -123,20 +123,37 @@ class ProjectedCurveSurface extends Surface {
 		// 	return V3.create(t, z, 0)
 		// }
 	}
+	/**
+	 * @inheritDoc
+	 */
+	isCurvesWithPlane(plane) {
+		assertInst(P3, plane)
+		if (this.dir1.isPerpendicularTo(plane.normal)) {
+
+			let ts = this.baseCurve.isTsWithPlane(plane)
+			return ts.map(t => {
+				let l3dir = 0 < this.baseCurve.tangentAt(t).dot(plane.normal)
+					? this.dir1
+					: this.dir1.negated()
+				return L3(this.baseCurve.at(t), l3dir)
+			})
+		} else {
+			let projCurve = this.baseCurve.transform(M4.projection(plane, this.dir1))
+			if (this.dir1.dot(plane.normal) > 0) {
+				// we need to flip the ellipse so the tangent is correct
+				console.log("FLIPPING")
+				projCurve = projCurve.reversed()
+			}
+			return [projCurve]
+		}
+	}
 
 	/**
 	 * @inheritDoc
 	 */
 	isCurvesWithSurface(surface) {
 		if (surface instanceof PlaneSurface) {
-			let plane = surface.plane
-			if (this.dir1.isPerpendicularTo(plane.normal)) {
-
-				let ts = this.baseCurve.isTsWithPlane(plane)
-				return ts.map(t => L3(this.baseCurve.at(t), this.dir1))
-			} else {
-				return [this.baseCurve.transform(M4.projection(plane, this.dir1))]
-			}
+			return this.isCurvesWithPlane(surface.plane)
 		}
 		if (surface instanceof ProjectedCurveSurface || surface instanceof CylinderSurface) {
 			let dir1 = surface instanceof ProjectedCurveSurface ? surface.dir1 : surface.dir.normalized()
@@ -193,6 +210,7 @@ class ProjectedCurveSurface extends Surface {
 				return baseCurveProjection.containsPoint(projectionPlane.projectedPoint(curve.anchor))
 			}
 			let curveProjection = curve.project(projectionPlane)
+
 			return baseCurveProjection.likeCurve(curveProjection)
 		}
 		if (curve instanceof L3) {
@@ -202,9 +220,23 @@ class ProjectedCurveSurface extends Surface {
 	}
 
 	isCoplanarTo(surface) {
-		return ProjectedCurveSurface == surface.constructor
+		return this == surface ||
+			ProjectedCurveSurface == surface.constructor
 				&& this.dir1.isParallelTo(surface.dir1)
-				&& this.containsCurve(surface.curve)
+				&& this.containsCurve(surface.baseCurve)
+	}
+
+
+	/**
+	 * @inheritDoc
+	 */
+	like(object) {
+		if (!this.isCoplanarTo(object)) return false
+		// normals need to point in the same direction (outwards or inwards) for both
+		let p00 = this.parametricFunction()(0, 0)
+		let thisNormal = this.parametricNormal()(0, 0)
+		let otherNormal = object.normalAt(p00)
+		return 0 < thisNormal.dot(otherNormal)
 	}
 
 	edgeLoopContainsPoint(contour, p) {
@@ -256,7 +288,7 @@ class ProjectedCurveSurface extends Surface {
 							// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
 							// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
 							// point in the same direction (dot > 0)
-							var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
+							var colinearSegmentOutsideVector = nextEdge.aDir.cross(this.normalAt(nextEdge.a))
 							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
 							// if the "inside-ness" changes, add intersection point
 							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
@@ -276,6 +308,22 @@ class ProjectedCurveSurface extends Surface {
 		return inside
 	}
 
+
+
+	edgeLoopCCW(contour) {
+		if (contour.length < 56) {
+			var totalAngle = 0
+			for (var i = 0; i < contour.length; i++) {
+				var ipp = (i + 1) % contour.length
+				var edge = contour[i], nextEdge = contour[ipp]
+				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
+			}
+			return totalAngle > 0
+		} else {
+			var ptpF = this.pointToParameterFunction()
+			return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
+		}
+	}
 
 	/**
 	 *

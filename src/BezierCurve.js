@@ -184,8 +184,8 @@ class BezierCurve extends Curve {
 	/**
 	 * @returns {BezierCurve}
 	 */
-	reversed4() {
-		return new BezierCurve(this.p3, this.p2, this.p1, this.p0)
+	reversed() {
+		return new BezierCurve(this.p3, this.p2, this.p1, this.p0, -this.tMax, -this.tMin)
 	}
 	
 	getCoefficients() {

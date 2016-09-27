@@ -50,8 +50,8 @@ var GL = (function() {
 				canvas.height = 600;
 			}
 			if (!('alpha' in options)) options.alpha = false;
-			try { gl = canvas.getContext('webgl', options); } catch (e) { console.log(e)}
-			try { gl = gl || canvas.getContext('experimental-webgl', options); } catch (e) {}
+			try { gl = canvas.getContext('webgl', options); console.log("getting context") } catch (e) { console.log(e, gl) }
+			try { gl = gl || canvas.getContext('experimental-webgl', options); } catch (e) { console.log(e, gl) }
 			if (!gl) throw new Error('WebGL not supported');
 			gl.HALF_FLOAT_OES = 0x8D61;
 			addMatrixStack(gl);
@@ -348,8 +348,8 @@ void main() {
 			}
 			buttons[e.which] = true;
 			e = augmented(e);
-			if (gl.onmousedown) gl.onmousedown(e);
 			e.preventDefault();
+			if (gl.onmousedown) return gl.onmousedown(e)
 		})
 		gl.canvas.addEventListener('mousemove', mousemove)
 		gl.canvas.addEventListener('mouseup', mouseup)

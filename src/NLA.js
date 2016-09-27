@@ -9,6 +9,8 @@ var globalId = 0;
 
 /** @define {boolean} */
 const NLA_DEBUG = true
+const NLA_PRECISION = 1 / (1 << 26)
+console.log("NLA_PRECISION", NLA_PRECISION)
 
 function SCE(o) {
 	return o.sce
@@ -75,11 +77,6 @@ NLA.CLASSES = []
 NLA.registerClass = function (clazz) {
 	NLA.CLASSES.push(clazz)
 }
-
-/** @const */
-const NLA_PRECISION = 1 / (1 << 26)
-
-console.log("NLA_PRECISION", NLA_PRECISION)
 
 /**
  *
@@ -373,7 +370,7 @@ String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
 var ARRAY_UTILITIES = /** @template T
- @lends Array.<T>.prototype */ {
+ @lends Array.prototype */ {
 	pushAll: function (arr) {
 		Array.prototype.push.apply(this, arr)
 	},
