@@ -1,23 +1,12 @@
-/**
- * Created by aval on 23/02/2016.
- */
-
-/**
- * Blah
- *
- * @extends {Curve.<BezierCurve>}
- */
 class BezierCurve extends Curve {
-	/**
-	 *
-	 * @param {V3} p0
-	 * @param {V3} p1
-	 * @param {V3} p2
-	 * @param {V3} p3
-	 * @param {number=} tMin
-	 * @param {number=} tMax
-	 */
-	constructor(p0, p1, p2, p3, tMin, tMax) {
+	tMin: number
+	tMax: number
+	p0: V3
+	p1: V3
+	p2: V3
+	p3: V3
+
+	constructor(p0: V3, p1: V3, p2: V3, p3: V3, tMin?: number, tMax?: number) {
 		super()
 		assertVectors(p0, p1, p2, p3)
 		this.p0 = p0
@@ -36,7 +25,7 @@ class BezierCurve extends Curve {
 		return [this.p0, this.p1, this.p2, this.p3]
 	}
 
-	toString(f) {
+	toString(f?) {
 		return `new BezierCurve(${this.p0}, ${this.p1}, ${this.p2}, ${this.p3}, ${this.tMin}, ${this.tMax})`
 	}
 
@@ -47,11 +36,7 @@ class BezierCurve extends Curve {
 		assertNumbers(t)
 		var p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		var s = 1 - t, c0 = s * s * s, c1 = 3 * s * s * t, c2 = 3 * s * t * t, c3 = t * t * t
-		return V3.create(
-			p0.x * c0 + p1.x * c1 + p2.x * c2 + p3.x * c3,
-			p0.y * c0 + p1.y * c1 + p2.y * c2 + p3.y * c3,
-			p0.z * c0 + p1.z * c1 + p2.z * c2 + p3.z * c3
-		)
+		return new V3(p0.x * c0 + p1.x * c1 + p2.x * c2 + p3.x * c3, p0.y * c0 + p1.y * c1 + p2.y * c2 + p3.y * c3, p0.z * c0 + p1.z * c1 + p2.z * c2 + p3.z * c3)
 	}
 
 	/**
@@ -72,22 +57,14 @@ class BezierCurve extends Curve {
 		assertNumbers(t)
 		var p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		var s = 1 - t, c01 = 3 * s * s, c12 = 6 * s * t, c23 = 3 * t * t
-		return V3.create(
-			(p1.x - p0.x) * c01 + (p2.x - p1.x) * c12 + (p3.x - p2.x) * c23,
-			(p1.y - p0.y) * c01 + (p2.y - p1.y) * c12 + (p3.y - p2.y) * c23,
-			(p1.z - p0.z) * c01 + (p2.z - p1.z) * c12 + (p3.z - p2.z) * c23
-		)
+		return new V3((p1.x - p0.x) * c01 + (p2.x - p1.x) * c12 + (p3.x - p2.x) * c23, (p1.y - p0.y) * c01 + (p2.y - p1.y) * c12 + (p3.y - p2.y) * c23, (p1.z - p0.z) * c01 + (p2.z - p1.z) * c12 + (p3.z - p2.z) * c23)
 	}
 
 	ddt(t) {
 		assertNumbers(t)
 		var p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		var c012 = 6 * (1 - t), c123 = 6 * t
-		return V3.create(
-			(p2.x - 2 * p1.x + p0.x) * c012 + (p3.x - 2 * p2.x + p1.x) * c123,
-			(p2.y - 2 * p1.y + p0.y) * c012 + (p3.y - 2 * p2.y + p1.y) * c123,
-			(p2.z - 2 * p1.z + p0.z) * c012 + (p3.z - 2 * p2.z + p1.z) * c123
-		)
+		return new V3((p2.x - 2 * p1.x + p0.x) * c012 + (p3.x - 2 * p2.x + p1.x) * c123, (p2.y - 2 * p1.y + p0.y) * c012 + (p3.y - 2 * p2.y + p1.y) * c123, (p2.z - 2 * p1.z + p0.z) * c012 + (p3.z - 2 * p2.z + p1.z) * c123)
 	}
 
 	normalAt(t) {
@@ -124,7 +101,7 @@ class BezierCurve extends Curve {
 			return this.isTsWithPlane(surface.plane)
 		}
 		if (surface instanceof CylinderSurface) {
-			let projPlane = P3(surface.dir.normalized(), 0)
+			let projPlane = new P3(surface.dir.normalized(), 0)
 			let projThis = this.project(projPlane)
 			let projEllipse = surface.baseEllipse.project(projPlane)
 			return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
@@ -147,10 +124,10 @@ class BezierCurve extends Curve {
 	/**
 	 * Checks if this curve is colinear to the passed curve, i.e.
 	 * for every t:number there exists a s:number with this.at(t) = curve.at(s)
-	 * @param {BezierCurve} curve
+	 * @param curve
 	 * @returns {boolean}
 	 */
-	isColinearTo(curve) {
+	isColinearTo(curve:BezierCurve) {
 		if (curve == this) return true
 		if (!(curve instanceof BezierCurve)) return false
 		// first, find out where/if curve.p0 and curve.p3 are on this
@@ -167,7 +144,7 @@ class BezierCurve extends Curve {
 			// this.split(curveP3T): 0 --> curveP3T --> 1
 			// .right: curveP3T --> 1
 			// .reversed(): 1 --> curveP3T
-			thisSplit = this.split(curveP3T).right.reversed4()
+			thisSplit = this.split(curveP3T).right.reversed()
 		} else {
 			// curveP3T describes the point on this
 			// adjust it so it describes the same point on this.split(curveP0T).right
@@ -187,7 +164,7 @@ class BezierCurve extends Curve {
 	reversed() {
 		return new BezierCurve(this.p3, this.p2, this.p1, this.p0, -this.tMax, -this.tMin)
 	}
-	
+
 	getCoefficients() {
 		let {p0, p1, p2, p3} = this
 		// calculate cubic equation coefficients
@@ -203,7 +180,7 @@ class BezierCurve extends Curve {
 		let d = p0
 		return [a, b, c, d]
 	}
-	
+
 	tangentCoefficients() {
 		let {p0, p1, p2, p3} = this
 		let p01 = p1.minus(p0), p12 = p2.minus(p1), p23 = p3.minus(p2)
@@ -231,7 +208,7 @@ class BezierCurve extends Curve {
 		let [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim]
 
 
-		let matrix = M4.forSys(a, b, c, d) // B(t) = matrix * V3(1, t, t², t³)
+		let matrix = M4.forSys(a, b, c, d) // B(t) = matrix * V(1, t, t², t³)
 		const g = matrix.gauss().U.m
 		let pqp = g[6] / g[5], q = g[7] / g[5]
 		let results = solveCubicReal2(0, g[5], g[6], g[7]).filter(t => NLA.isZero(t * t * g[1] + t * g[2] + g[3] + g[0] * t * t * t))
@@ -316,10 +293,10 @@ class BezierCurve extends Curve {
 
 	/**
 	 *
-	 * @param {number} t
+	 * @param t
 	 * @returns {{left: BezierCurve, right: BezierCurve}}
 	 */
-	split(t) {
+	split(t:number) {
 		var s = (1 - t)
 		var {p0, p1, p2, p3} = this
 		var b01 = p0.times(s).plus(p1.times(t)), b11 = p1.times(s).plus(p2.times(t)), b21 = p2.times(s).plus(p3.times(t))
@@ -332,7 +309,7 @@ class BezierCurve extends Curve {
 		return isFinite(this.pointLambda(p))
 	}
 
-	roots() {
+	roots():number[] {
 		/**
 		 *            := (3 (p3 - p2) - 6 (p2 - p1) + 3 (p1 - p0)) t²*
 		 *                + (-6 (p1 - p0) + 6 (p2 - p1)) t
@@ -350,13 +327,13 @@ class BezierCurve extends Curve {
 
 	/**
 	 *
-	 * @param {V3} p
-	 * @param {number=} tMin Defines interval with tMax in which a start value for t will be searched.
+	 * @param p
+	 * @param tMin Defines interval with tMax in which a start value for t will be searched.
 	 * Result is not necessarily in this interval.
-	 * @param {number=} tMax
-	 * @returns {number}
+	 * @param tMax
+	 * @param tStart
 	 */
-	closestTToPoint(p, tMin, tMax, tStart) {
+	closestTToPoint(p:V3, tMin?:number, tMax?:number, tStart?:number):number {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
 
@@ -380,13 +357,13 @@ class BezierCurve extends Curve {
 
 	/**
 	 *
-	 * @param {V3} p
-	 * @param {number=} tStart Defines interval with tEnd in which a start value for t will be searched.
+	 * @param p
+	 * @param tStart Defines interval with tEnd in which a start value for t will be searched.
 	 * Result is not necessarily in this interval.
-	 * @param {number=} tEnd
+	 * @param tEnd
 	 * @returns {number}
 	 */
-	distanceToPoint(p, tStart, tEnd) {
+	distanceToPoint(p:V3, tStart?:number, tEnd?:number) {
 		let t = this.closestTToPoint(p, tStart, tEnd)
 		return this.at(t).distanceTo(p)
 	}
@@ -397,13 +374,7 @@ class BezierCurve extends Curve {
 		return this.at(t).distanceTo(p)
 	}
 
-	/**
-	 *
-	 * @param {V3} anchor
-	 * @param {V3} dir
-	 * @returns {{tThis: number, tOther: number, p: V3}[]}
-	 */
-	isInfosWithLine(anchor, dir, tMin, tMax) {
+	isInfosWithLine(anchor:V3, dir:V3, tMin?:number, tMax?:number):{tThis: number, tOther: number, p: V3}[] {
 		// looking for this.at(t) == line.at(s)
 		// this.at(t).x == anchor.x + dir.x * s
 		// (this.at(t).x - anchor.x) / dir.x == s (analogue for y and z) (1x, 1y, 1z)
@@ -469,21 +440,21 @@ class BezierCurve extends Curve {
 		const STEPS = 32
 		let startT = NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
 
-		return newtonIterateWithDerivative(f, startT, 8, df)
+		return newtonIterate1d(f, startT, 8)
 
 
 	}
 
 	/**
 	 *
-	 * @param {BezierCurve} bezier
-	 * @param {number=} tMin
-	 * @param {number=} tMax
-	 * @param {number=} sMin
+	 * @param bezier
+	 * @param tMin
+	 * @param tMax
+	 * @param sMin
 	 * @param {number=} sMax
 	 * @returns {{tThis: number, tOther: number, p: V3}[]}
 	 */
-	isInfosWithBezie3(bezier, tMin, tMax, sMin, sMax) {
+	isInfosWithBezie3(bezier:BezierCurve, tMin?:number, tMax?:number, sMin?:number, sMax?:number) {
 		const handleStartTS = (startT, startS) => {
 			if (!result.some(info => NLA.equals(info.tThis, startT) && NLA.equals(info.tOther, startS))) {
 				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
@@ -507,7 +478,7 @@ class BezierCurve extends Curve {
 		let indices = [tMin, tMax, sMin, sMax]
 		let tMid = (tMin + tMax) / 2
 		let sMid = (sMin + sMax) / 2
-		let aabbs = [this.getAABB(tMin, tMdid), this.getAABB(tMid, tMax), bezier.getAABB(sMin, sMin), bezier.getAABB(sMid, sMax)]
+		let aabbs = [this.getAABB(tMin, tMid), this.getAABB(tMid, tMax), bezier.getAABB(sMin, sMin), bezier.getAABB(sMid, sMax)]
 		let result = []
 		while (indices.length) {
 			let i = indices.length - 4
@@ -538,16 +509,8 @@ class BezierCurve extends Curve {
 
 		return result
 	}
-	/**
-	 *
-	 * @param {BezierCurve} bezier
-	 * @param {number=} tMin
-	 * @param {number=} tMax
-	 * @param {number=} sMin
-	 * @param {number=} sMax
-	 * @returns {{tThis: number, tOther: number, p: V3}[]}
-	 */
-	isInfosWithBezier(bezier, tMin, tMax, sMin, sMax) {
+
+	isInfosWithBezier(bezier:BezierCurve, tMin?:number, tMax?:number, sMin?:number, sMax?:number):{tThis: number, tOther: number, p: V3}[] {
 		// the recursive function finds good approximates for the intersection points
 		// this function uses newton iteration to improve the result as much as possible
 		// is declared as an arrow function so this will be bound correctly
@@ -644,17 +607,9 @@ class BezierCurve extends Curve {
 	}
 
 	/**
-	 * Returns a curve with curve.at(x) == V3(x, ax³ + bx² + cx + d, 0)
-	 * 
-	 * @param a
-	 * @param b
-	 * @param c
-	 * @param d
-	 * @param tMin
-	 * @param tMax
-	 * @returns {BezierCurve}
+	 * Returns a curve with curve.at(x) == V(x, ax³ + bx² + cx + d, 0)
 	 */
-	static graphXY(/** number */ a, /** number */ b, /** number */ c, /** number */ d, tMin, tMax) {
+	static graphXY(a:number, b:number, c:number, d:number, tMin?:number, tMax?:number) {
 		// d = p0y
 		// c = -3 p0y + 3 p1y => p1y = c/3 + p0y
 		// b = 3 p0y - 6 p1y + 3 p2y => p2y = b/3 - p0y + 2 p1y
@@ -663,14 +618,16 @@ class BezierCurve extends Curve {
 		let p1y = c / 3 + p0y
 		let p2y = b / 3 - p0y + 2 * p1y
 		let p3y = a + p0y - 3 * p1y + 3 * p2y
-		return new BezierCurve(V3(0, p0y), V3(1 / 3, p1y), V3(2 / 3, p2y), V3(1, p3y), tMin, tMax)
+		return new BezierCurve(V(0, p0y), V(1 / 3, p1y), V(2 / 3, p2y), V(1, p3y), tMin, tMax)
 	}
+
+
+	/**
+	 * https://en.wikipedia.org/wiki/Cubic_function#/media/File:Graph_of_cubic_polynomial.svg
+	 * @type {BezierCurve}
+	 */
+	static EX2D = BezierCurve.graphXY(2,-3,-3,2)
+	static EX3D = new BezierCurve(V3.ZERO, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X)
+	static tIncrement = 1 / (64)
 }
-/**
- * https://en.wikipedia.org/wiki/Cubic_function#/media/File:Graph_of_cubic_polynomial.svg
- * @type {BezierCurve}
- */
-BezierCurve.EX2D = BezierCurve.graphXY(2,-3,-3,2)
-BezierCurve.EX3D = new BezierCurve(V3.ZERO, V3(-0.1, -1, 1), V3(1.1, 1, 1), V3.X)
 BezierCurve.prototype.hlol = Curve.hlol++
-BezierCurve.prototype.tIncrement = 1 / (64)

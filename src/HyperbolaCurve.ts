@@ -1,22 +1,15 @@
 /**
  * x² - y² = 1
  *
- * @class HyperbolaCurve
- * @property {V3} center
- * @property {V3} f1
- * @property {V3} f2
- * @property {V3} normal
- * @property {M4} matrix
- * @property {M4} inverseMatrix
  */
 class HyperbolaCurve extends Curve {
 	/**
 	 *
-	 * @param {V3} center
-	 * @param {V3} f1
-	 * @param {V3} f2
+	 * @param center
+	 * @param f1
+	 * @param f2
 	 */
-	constructor(center, f1, f2) {
+	constructor(center:V3, f1:V3, f2:V3) {
 		super()
 		assertVectors(center, f1, f2)
 		this.center = center
@@ -66,10 +59,10 @@ class HyperbolaCurve extends Curve {
 
 	/**
 	 *
-	 * @param {Curve} curve
+	 * @param curve
 	 * @returns {boolean}
 	 */
-	isColinearTo(curve) {
+	isColinearTo(curve:Curve) {
 		if (curve.constructor != HyperbolaCurve) {
 			return false
 		}
@@ -128,17 +121,6 @@ class HyperbolaCurve extends Curve {
 		return Math.sqrt(1 + b * b / a / a)
 	}
 
-	isTsWithSurface(surface) {
-		assert(false)
-	}
-
-	/**
-	 * @inheritDoc
-	 */
-	isTsWithPlane(plane) {
-		assert(false)
-	}
-
 	getPlane() {
 		return P3.normalOnAnchor(this.normal, this.center)
 	}
@@ -149,8 +131,8 @@ class HyperbolaCurve extends Curve {
 	}
 
 	static forAB(a, b, center) {
-		return new HyperbolaCurve(center || V3.ZERO, V3(a, 0, 0), V3(0, b, 0))
+		return new HyperbolaCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
 	}
-}
 
-HyperbolaCurve.UNIT = new HyperbolaCurve(V3.ZERO, V3.X, V3.Y)
+	static UNIT = new HyperbolaCurve(V3.ZERO, V3.X, V3.Y)
+}

@@ -18,8 +18,8 @@ var GL = (function() {
 	 * @augments WebGLRenderingContext
 	 */
 	function LightGLContext() {
-		this.modelViewMatrix = M4()
-		this.projectionMatrix = M4()
+		this.modelViewMatrix = new M4()
+		this.projectionMatrix = new M4()
 		this.onupdate = null
 		this.ondraw = null
 		this.onclick = null
@@ -77,10 +77,10 @@ var GL = (function() {
 	 * @param {LightGLContext} gl
 	 */
 	function addMatrixStack(gl) {
-		var tempMatrix = M4()
-		var resultMatrix = M4();
-		gl.modelViewMatrix = M4();
-		gl.projectionMatrix = M4();
+		var tempMatrix = new M4()
+		var resultMatrix = new M4()
+		gl.modelViewMatrix = new M4()
+		gl.projectionMatrix = new M4()
 		var modelViewStack = [];
 		var projectionStack = [];
 		var matrix, stack;
@@ -911,7 +911,7 @@ void main() {
 			let t = j / detailY
 			for (let i = 0; i <= detailX; i++) {
 				let s = i / detailX
-				mesh.vertices.push(V3.create(startX + s * width, startY + t * height, 0))
+				mesh.vertices.push(new V3(startX + s * width, startY + t * height, 0))
 				mesh.coords.push(s, t)
 				mesh.normals.push(V3.Z)
 				if (i < detailX && j < detailY) {
@@ -939,13 +939,13 @@ void main() {
 	// unique corners of a unit cube. Used by Mesh.cube to generate a cube mesh.
 	const UNIT_CUBE_CORNERS = [
 		V3.ZERO,
-		V3(0, 0, 1),
-		V3(0, 1, 0),
-		V3(0, 1, 1),
+		new V3(0, 0, 1),
+		new V3(0, 1, 0),
+		new V3(0, 1, 1),
 
-		V3(1, 0, 0),
-		V3(1, 0, 1),
-		V3(1, 1, 0),
+		new V3(1, 0, 0),
+		new V3(1, 0, 1),
+		new V3(1, 1, 0),
 		V3.ONES
 	]
 
@@ -1014,23 +1014,23 @@ void main() {
 	 *      Contains vertex and normal buffers and index buffers for triangles and lines
 	 */
 	Mesh.sphere = function (subdivisions) {
-		var golden = (1 + Math.sqrt(5)) / 2, u = V3(1, golden, 0).normalized(), s = u.x, t = u.y
+		var golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).normalized(), s = u.x, t = u.y
 		// base vertices of dodecahedron
 		var vertices = [
-			V3(-s,  t,  0),
-			V3( s,  t,  0),
-			V3(-s, -t,  0),
-			V3( s, -t,  0),
+			new V3(-s,  t,  0),
+			new V3( s,  t,  0),
+			new V3(-s, -t,  0),
+			new V3( s, -t,  0),
 
-			V3( 0, -s,  t),
-			V3( 0,  s,  t),
-			V3( 0, -s, -t),
-			V3( 0,  s, -t),
+			new V3( 0, -s,  t),
+			new V3( 0,  s,  t),
+			new V3( 0, -s, -t),
+			new V3( 0,  s, -t),
 
-			V3( t,  0, -s),
-			V3( t,  0,  s),
-			V3(-t,  0, -s),
-			V3(-t,  0,  s),]
+			new V3( t,  0, -s),
+			new V3( t,  0,  s),
+			new V3(-t,  0, -s),
+			new V3(-t,  0,  s)]
 		// base triangles of dodecahedron
 		var triangles = [
 			0, 11, 5,
@@ -1714,10 +1714,10 @@ void main() {
 function createRectangleMesh(x0, y0, x1, y1) {
 	var mesh = new GL.Mesh({});
 	mesh.vertices.push(
-		V3.create(x0, y0, 0),
-		V3.create(x1, y0, 0),
-		V3.create(x0, y1, 0),
-		V3.create(x1, y1, 0)
+		new V3(x0, y0, 0),
+		new V3(x1, y0, 0),
+		new V3(x0, y1, 0),
+		new V3(x1, y1, 0)
 	);
 	mesh.triangles.push(
 		0, 1, 2,
@@ -1741,7 +1741,7 @@ GL.Mesh.rotation = function(vertices, lineAxis, totalAngle, count, close=true, n
 	var mesh = new GL.Mesh({normals: !!normals})
 	var vc = vertices.length, vTotal = vc * count
 
-	const rotMat = M4()
+	const rotMat = new M4()
 	const triangles = /** @type {number[]} */ mesh.triangles
 	for (let i = 0; i < count; i++) {
 		// add triangles

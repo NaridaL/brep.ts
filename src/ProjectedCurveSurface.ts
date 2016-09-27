@@ -5,15 +5,12 @@
  * Choose dir1 appropriately to select surface orientation.
  */
 class ProjectedCurveSurface extends Surface {
+	baseCurve:BezierCurve
+	dir1:V3
+	tMin:number
+	tMax:number
 
-	/**
-	 * @param baseCurve
-	 * @param dir1
-	 * @param tMin
-	 * @param tMax
-	 *
-	 * @property {BezierCurve} baseCurve
-	 */
+
 	constructor(baseCurve, dir1, tMin=baseCurve.tMin, tMax=baseCurve.tMax) {
 		super()
 		assertInst(Curve, baseCurve)
@@ -32,11 +29,11 @@ class ProjectedCurveSurface extends Surface {
 		}
 	}
 
-	toSource() {
+	toSource():string {
 		return `new ProjectedCurveSurface(${this.baseCurve}, ${this.dir1}, ${this.tMin}, ${this.tMax})`
 	}
 
-	toString() {
+	toString():string {
 		return this.toSource()
 	}
 
@@ -62,11 +59,11 @@ class ProjectedCurveSurface extends Surface {
 		return (
 			/**
 			 *
-			 * @param {number} t curve Parameter
-			 * @param {number} z projection factor
+			 * @param t curve Parameter
+			 * @param z projection factor
 			 * @returns {V3}
 			 */
-			function (t, z) {
+			function (t:number, z:number) {
 				return baseCurve.at(t).plus(dir1.times(z))
 			})
 	}
@@ -92,16 +89,16 @@ class ProjectedCurveSurface extends Surface {
 	}
 
 	footParameters(pWC, ss, st) {
-		let basePlane = P3(this.dir1, 0)
+		let basePlane = new P3(this.dir1, 0)
 		let projCurve = this.baseCurve.project(basePlane)
 		let projPoint = basePlane.projectedPoint(pWC)
 		let t = projCurve.closestTToPoint(projPoint, undefined, undefined, ss)
 		let z = pWC.minus(this.baseCurve.at(t)).dot(this.dir1)
-		return V3.create(t, z, 0)
+		return new V3(t, z, 0)
 	}
 
 	pointToParameterFunction() {
-		let projPlane = P3(this.dir1, 0)
+		let projPlane = new P3(this.dir1, 0)
 		let dir1 = this.dir1, baseCurve = this.baseCurve
 		let projBaseCurve = baseCurve.project(projPlane)
 		let _this = this
@@ -109,7 +106,7 @@ class ProjectedCurveSurface extends Surface {
 			let projPoint = projPlane.projectedPoint(pWC)
 			let t = projBaseCurve.pointLambda(projPoint)
 			let z = pWC.minus(baseCurve.at(t)).dot(dir1)
-			return V3.create(t, z, 0)
+			return new V3(t, z, 0)
 		}
 
 		// let baseCurve = this.baseCurve, dir1 = this.dir1
@@ -120,24 +117,24 @@ class ProjectedCurveSurface extends Surface {
 		// 		.withMax(t => -abs(iterationFunc(t)))
 		// 	let t = newtonIterate1d(iterationFunc, startT, 16)
 		// 	let z = pWC.minus(baseCurve.at(t)).dot(dir1)
-		// 	return V3.create(t, z, 0)
+		// 	return V(t, z, 0)
 		// }
 	}
 	/**
 	 * @inheritDoc
 	 */
-	isCurvesWithPlane(plane) {
+	isCurvesWithPlane(plane):Curve[] {
 		assertInst(P3, plane)
-		if (this.dir1.isPerpendicularTo(plane.normal)) {
+			if (this.dir1.isPerpendicularTo(plane.normal)) {
 
-			let ts = this.baseCurve.isTsWithPlane(plane)
+				let ts = this.baseCurve.isTsWithPlane(plane)
 			return ts.map(t => {
 				let l3dir = 0 < this.baseCurve.tangentAt(t).dot(plane.normal)
 					? this.dir1
 					: this.dir1.negated()
-				return L3(this.baseCurve.at(t), l3dir)
+				return new L3(this.baseCurve.at(t), l3dir)
 			})
-		} else {
+			} else {
 			let projCurve = this.baseCurve.transform(M4.projection(plane, this.dir1))
 			if (this.dir1.dot(plane.normal) > 0) {
 				// we need to flip the ellipse so the tangent is correct
@@ -160,10 +157,10 @@ class ProjectedCurveSurface extends Surface {
 			if (this.dir1.isParallelTo(dir1)) {
 				let otherCurve = surface instanceof ProjectedCurveSurface ? surface.baseCurve : surface.baseEllipse
 				let infos = this.baseCurve.isInfosWithCurve(otherCurve)
-				return infos.map(info => L3(info.p, dir1))
+				return infos.map(info => new L3(info.p, dir1))
 			}
 			if (surface instanceof ProjectedCurveSurface) {
-				const line = L3(this.baseCurve.at(0.5), this.dir1)
+				const line = new L3(this.baseCurve.at(0.5), this.dir1)
 				const startPoint = line.at(surface.isTsForLine(line)[0])
 				drVs.push({anchor: this.baseCurve.at(0.5), dir: this.dir1})
 				console.log(startPoint)
@@ -203,7 +200,7 @@ class ProjectedCurveSurface extends Surface {
 	containsCurve(curve) {
 		if (curve instanceof BezierCurve) {
 			// project baseCurve and test curve onto a common plane and check if the curves are alike
-			let projectionPlane = P3(this.dir1, 0)
+			let projectionPlane = new P3(this.dir1, 0)
 			let baseCurveProjection = this.baseCurve.project(projectionPlane)
 			if (curve instanceof L3 && curve.dir1.isParallelTo(this.dir1)) {
 				// projection onto basePlane would be single point
@@ -243,7 +240,7 @@ class ProjectedCurveSurface extends Surface {
 		// TODO: this is copied from CylinderSurface, mb create common super class?
 		assertVectors(p)
 		assert(isFinite(p.x), p.y, p.z)
-		var testLine = L3(p, this.dir1)
+		var testLine = new L3(p, this.dir1)
 		let ptpf = this.pointToParameterFunction()
 		let pp = ptpf(p)
 		if (isNaN(pp.x)) {
@@ -262,9 +259,9 @@ class ProjectedCurveSurface extends Surface {
 			}
 		}
 
-		contour.forEach((/** @type Edge */ edge, /** @type number */ i, /** @type Edge[] */ edges) => {
+		contour.forEach((edge, i, edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
+			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearSegments[i]) {
 				// edge colinear to intersection
 				var outVector = edge.bDir.cross(this.normalAt(edge.b))
@@ -327,10 +324,10 @@ class ProjectedCurveSurface extends Surface {
 
 	/**
 	 *
-	 * @param {M4} m4
+	 * @param m4
 	 * @returns {ProjectedCurveSurface}
 	 */
-	transform(m4) {
+	transform(m4:M4) {
 		return new ProjectedCurveSurface(this.baseCurve.transform(m4), m4.transformVector(this.dir1).normalized(), this.tMin, this.tMax)
 	}
 
@@ -339,7 +336,7 @@ class ProjectedCurveSurface extends Surface {
 	 */
 	isTsForLine(line) {
 		assertInst(L3, line)
-		let projectionPlane = P3(this.dir1, 0)
+		let projectionPlane = new P3(this.dir1, 0)
 		let projDir = projectionPlane.projectedVector(line.dir1)
 		if (projDir.isZero()) {
 			// line is parallel to this.dir

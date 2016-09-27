@@ -1,4 +1,4 @@
-// TODO: V3.create instead of V3 where necessar
+// TODO: V instead of V3 where necessar
 function parseGetParams() {
 	var result = {}
 	window.location.search

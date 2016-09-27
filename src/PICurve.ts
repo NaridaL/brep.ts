@@ -10,7 +10,7 @@ class PICurve extends Curve {
 		this.parametricSurface = parametricSurface
 		this.implicitSurface = implicitSurface
 		if (!startPoint) {
-			var pmPoint = curvePoint(this.implicitCurve(), V3(1, 1, 0))
+			var pmPoint = curvePoint(this.implicitCurve(), V(1, 1, 0))
 			this.startPoint = this.parametricSurface.parametricFunction()(pmPoint.x, pmPoint.y)
 		} else {
 			this.startPoint = startPoint

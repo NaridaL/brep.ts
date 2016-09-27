@@ -1,8 +1,14 @@
 /**
  * Rotation surface with r = f(z)
  */
-class RotationReqFofZ extends NLA.BaseObject {
+class RotationReqFofZ extends Surface {
+	l3axis: number
+	FofR: (r:number) => number
+	minZ: number
+	maxZ: number
+
 	constructor(l3Axis, FofR, minZ, maxZ) {
+		super()
 		assertInst(L3, l3Axis)
 		this.l3Axis = l3Axis
 		this.FofR = FofR
@@ -13,12 +19,15 @@ class RotationReqFofZ extends NLA.BaseObject {
 	toMesh(zStart, zEnd, count) {
 		let zInterval = zEnd - zStart, zStep = zInterval / (count - 1)
 		let vertices = NLA.arrayFromFunction(count,
-			i => { let z = zStart + i * zStep; return V3.create(this.FofR(z), 0, z) })
+			i => {
+				let z = zStart + i * zStep;
+				return new V3(this.FofR(z), 0, z)
+			})
 		let normals = NLA.arrayFromFunction(count, i => {
 			var z = zStart + i * zStep
 			var fz = this.FofR(z)
 			var dfz = (this.FofR(z + eps) - fz) / eps
-			return V3.create(1, 0, -dfz).normalized()
+			return new V3(1, 0, -dfz).normalized()
 		})
 		let z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
 		let matrix = M4.forSys(x, y, z, this.l3Axis.anchor);
@@ -33,7 +42,7 @@ class RotationReqFofZ extends NLA.BaseObject {
 		var f = this.FofR
 		return function (d, z) {
 			var radius = f(z)
-			return matrix.transformPoint(V3.create(radius * cos(d), radius * sin(d), z))
+			return matrix.transformPoint(new V3(radius * cos(d), radius * sin(d), z))
 		}
 	}
 
@@ -43,7 +52,7 @@ class RotationReqFofZ extends NLA.BaseObject {
 		return (d, z) => {
 			var fz = this.FofR(z)
 			var dfz = (this.FofR(z + eps) - fz) / eps
-			return matrix.transformVector(V3.create(cos(d), sin(d), -dfz)).normalized()
+			return matrix.transformVector(new V3(cos(d), sin(d), -dfz)).normalized()
 		}
 	}
 
@@ -77,7 +86,7 @@ class RotationReqFofZ extends NLA.BaseObject {
 		var f = this.FofR
 		return function (pWC) {
 			var p = matrixInverse.transformPoint(pWC)
-			return V3.create(atan2(p.y, p.x), p.z, 0)
+			return new V3(atan2(p.y, p.x), p.z, 0)
 		}
 	}
 

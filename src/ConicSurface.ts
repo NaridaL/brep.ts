@@ -1,4 +1,10 @@
 class ConicSurface extends Surface {
+	baseEllipse: EllipseCurve
+	dir:V3
+	normalDir:number
+	matrix:M4
+	inverseMatrix:M4
+
 	constructor(baseEllipse, dir, normalDir) {
 		super()
 		console.log(baseEllipse.toString(), dir.sce, normalDir)
@@ -39,7 +45,7 @@ class ConicSurface extends Surface {
 
 		contour.forEach((edge, i, edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
+			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearSegments[i]) {
 				// edge colinear to intersection
 				var outVector = edge.bDir.cross(this.normalAt(edge.b))
@@ -85,10 +91,10 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {L3} line
+	 * @param line
 	 * @returns {Array.<V3>}
 	 */
-	intersectionWithLine(line) {
+	intersectionWithLine(line:L3) {
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
 		var localAnchor = this.inverseMatrix.transformPoint(line.anchor)
@@ -112,10 +118,10 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {EllipseCurve} ellipse
+	 * @param ellipse
 	 * @returns {boolean}
 	 */
-	containsEllipse(ellipse) {
+	containsEllipse(ellipse:EllipseCurve) {
 		console.log(ellipse.toString())
 		var localEllipse = ellipse.transform(this.inverseMatrix)
 		if (localEllipse.center.z < 0) {
@@ -133,10 +139,10 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {L3} line
+	 * @param line
 	 * @returns {boolean}
 	 */
-	containsLine(line) {
+	containsLine(line:L3) {
 		var localLine = line.transform(this.inverseMatrix)
 		var d = localLine.dir1
 		return localLine.contains(V3.ZERO) && NLA.equals(d.x * d.x + d.y * d.y, d.z * d.z)
@@ -144,10 +150,10 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {ParabolaCurve} parabola
+	 * @param parabola
 	 * @returns {boolean}
 	 */
-	containsParabola(parabola) {
+	containsParabola(parabola:ParabolaCurve) {
 		assertInst(ParabolaCurve, parabola)
 		var local = parabola.transform(this.inverseMatrix)
 		if (local.center.z < 0 || local.f2.z < 0) {
@@ -253,7 +259,7 @@ class ConicSurface extends Surface {
 					? Math.PI
 					: -Math.PI
 			}
-			return V3.create(angle, p2.z, 0)
+			return new V3(angle, p2.z, 0)
 		}
 	}
 
@@ -266,7 +272,7 @@ class ConicSurface extends Surface {
 		} else if (surface2 instanceof ConicSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => L3(is, this.dir))
+				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => new L3(is, this.dir))
 			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 
 			} else {
@@ -276,7 +282,7 @@ class ConicSurface extends Surface {
 	}
 
 	getCenterLine() {
-		return L3(this.baseEllipse.center, this.dir)
+		return new L3(this.baseEllipse.center, this.dir)
 	}
 
 	/**
@@ -307,7 +313,7 @@ class ConicSurface extends Surface {
 			return totalAngle > 0
 		} else {
 			var ptpF = this.pointToParameterFunction()
-			return isCCW(contour.map(e => ptpF(e.a)), V3.create(0, 0, this.normalDir))
+			return isCCW(contour.map(e => ptpF(e.a)), new V3(0, 0, this.normalDir))
 		}
 	}
 
@@ -326,12 +332,12 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {V3} apex
-	 * @param {EllipseCurve} ellipse
-	 * @param {number} normalDir
+	 * @param apex
+	 * @param ellipse
+	 * @param normalDir
 	 * @returns {ConicSurface}
 	 */
-	static atApexThroughEllipse(apex, ellipse, normalDir) {
+	static atApexThroughEllipse(apex:V3, ellipse:EllipseCurve, normalDir:number) {
 		assertVectors(apex)
 		assertInst(EllipseCurve, ellipse)
 		return new ConicSurface(new EllipseCurve(apex, ellipse.f1, ellipse.f2), ellipse.center.minus(apex), normalDir)
@@ -339,11 +345,11 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {V3} anchor
-	 * @param {V3} dir
+	 * @param anchor
+	 * @param dir
 	 * @returns {Array.<number>}
 	 */
-	static unitISLineTs(anchor, dir) {
+	static unitISLineTs(anchor:V3, dir:V3) {
 		var {x: ax, y: ay, z: az} = anchor
 		var {x: dx, y: dy, z: dz} = dir
 
@@ -360,12 +366,12 @@ class ConicSurface extends Surface {
 
 	/**
 	 *
-	 * @param {number} a
-	 * @param {number} c
-	 * @param {number} d
+	 * @param a
+	 * @param c
+	 * @param d
 	 * @returns {Array.<L3|HyperbolaCurve|ParabolaCurve|EllipseCurve>}
 	 */
-	static unitISPlane(a, c, d) {
+	static unitISPlane(a:number, c:number, d:number) {
 		// plane: ax + cz = d
 		// cone: x² + y² = z²
 		if (NLA.isZero(c)) {
@@ -375,14 +381,13 @@ class ConicSurface extends Surface {
 			if (NLA.isZero(d)) {
 				// d = 0 => z² - y² = 0 => z² = y² => z = y
 				// plane goes through origin/V3.ZERO
-				return [
-					L3(V3.ZERO, V3.create(0, Math.sqrt(2) / 2, Math.sqrt(2) / 2)),
-					V3(V3.ZERO, V3.create(0, Math.sqrt(2) / 2, -Math.sqrt(2) / 2))]
+				return [ new L3(V3.ZERO, new V3(0, Math.sqrt(2) / 2, Math.sqrt(2) / 2)),
+					V3(V3.ZERO, new V3(0, Math.sqrt(2) / 2, -Math.sqrt(2) / 2))]
 			} else {
 				// hyperbola
-				var center = V3.create(d / a, 0, 0)
-				var f1 = V3.create(0, 0, Math.abs(d / a)) // abs, because we always want the hyperbola to be pointing up
-				var f2 = V3.create(0, d / a, 0)
+				var center = new V3(d / a, 0, 0)
+				var f1 = new V3(0, 0, Math.abs(d / a)) // abs, because we always want the hyperbola to be pointing up
+				var f2 = new V3(0, d / a, 0)
 				return [new HyperbolaCurve(center, f1, f2)]
 			}
 
@@ -391,40 +396,39 @@ class ConicSurface extends Surface {
 			var aa = a * a, cc = c * c
 			if (NLA.isZero(d)) {
 				if (NLA.equals(aa, cc)) {
-					return [L3(V3.ZERO, V3.create(c, 0, -a).normalized())]
+					return [L3(V3.ZERO, new V3(c, 0, -a).normalized())]
 				} else if (aa < cc) {
 					assert(false, 'intersection is single point V3.ZERO')
 				} else if (aa > cc) {
-					return [
-						L3(V3.ZERO, V3.create(c, Math.sqrt(aa - cc), -a).normalized()),
-						V3(V3.ZERO, V3.create(c, -Math.sqrt(aa - cc), -a).normalized())]
+					return [ new L3(V3.ZERO, new V3(c, Math.sqrt(aa - cc), -a).normalized()),
+						V3(V3.ZERO, new V3(c, -Math.sqrt(aa - cc), -a).normalized())]
 				}
 			} else {
 				if (NLA.equals(aa, cc)) {
 					console.log('acd', a, c, d)
 					// parabola
-					let parabolaVertex = V3.create(d / 2 / a, 0, d / 2 / c)
-					let parabolaVertexTangentPoint = V3.create(d / 2 / a, d / c, d / 2 / c)
-					let p2 = V3.create(0, 0, d / c)
+					let parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
+					let parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
+					let p2 = new V3(0, 0, d / c)
 					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), p2.minus(parabolaVertex))]
 				} else if (aa < cc) {
 					// ellipse
-					let center = V3.create(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					let center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
 					if (center.z < 0) {
 						return []
 					}
-					let p1 = V3.create(d / (a - c), 0, -d / (a - c))
-					let p2 = V3.create(-a * d / (cc - aa), d / Math.sqrt(cc - aa), d * c / (cc - aa))
+					let p1 = new V3(d / (a - c), 0, -d / (a - c))
+					let p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(cc - aa), d * c / (cc - aa))
 					return [new EllipseCurve(center, p1.minus(center), p2.minus(center))]
 				} else if (aa > cc) {
 					// hyperbola
-					let center = V3.create(-a * d / (cc - aa), 0, -d * c / (cc - aa))
-					let f1 = V3.create(d / (a - c) - center.x, 0, d / (a - c) - center.z)
+					let center = new V3(-a * d / (cc - aa), 0, -d * c / (cc - aa))
+					let f1 = new V3(d / (a - c) - center.x, 0, d / (a - c) - center.z)
 					if (f1.z < 0) {
 						f1 = f1.negated()
 					}
 					// sqrt(cc - aa) flipped relative to ellipse case:
-					let p2 = V3.create(-a * d / (cc - aa), d / Math.sqrt(aa - cc), -d * c / (cc - aa))
+					let p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(aa - cc), -d * c / (cc - aa))
 					console.log(center.sce, f1.sce, p2.sce)
 					return [new HyperbolaCurve(center, f1, p2.minus(center))]
 				}

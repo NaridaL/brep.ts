@@ -10,14 +10,23 @@
  * @property {V3} f3
  */
 class EllipsoidSurface extends Surface {
+	center:V3
+	f1:V3
+	f2:V3
+	f3:V3
+	matrix:M4
+	inverseMatrix:M4
+	matrixTransposedInverse:M4
+
+
 	/**
 	 *
-	 * @param {V3} center
-	 * @param {V3} f1
+	 * @param center
+	 * @param f1
 	 * @param {V3} f2
 	 * @param {V3} f3
 	 */
-	constructor(center, f1, f2, f3) {
+	constructor(center:V3, f1:V3, f2, f3) {
 		super()
 		assertVectors(center, f1, f2, f3)
 		this.center = center
@@ -33,64 +42,6 @@ class EllipsoidSurface extends Surface {
 		return `new SphereSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
 	}
 
-	edgeLoopContainsPoint(contour, p) {
-		assertVectors(p)
-		var line = L3(p, this.dir)
-		// create plane that goes through cylinder seam
-		var seamBase = this.baseEllipse.at(PI)
-		var intersectionLinePerpendicular = this.dir.cross(p.minus(seamBase))
-		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
-		var colinearSegments = contour.map((edge) => edge.colinearToLine(line))
-		var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir) > 0)
-		var inside = false
-
-		function logIS(p) {
-			if (line.pointLambda(p) > 0) {
-				inside = !inside
-			}
-		}
-
-		contour.forEach((edge, i, edges) => {
-			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
-			if (colinearSegments[i]) {
-				// edge colinear to intersection
-				var outVector = edge.bDir.cross(this.normalAt(edge.b))
-				var insideNext = outVector.dot(nextEdge.aDir) > 0
-				if (colinearSegmentsInside[i] != insideNext) {
-					logIS(edge.b)
-				}
-			} else {
-				var edgeTs = edge.edgeISTsWithPlane(plane2)
-				for (var k = 0; k < edgeTs.length; k++) {
-					var edgeT = edgeTs[k]
-					if (edgeT == edge.bT) {
-						// endpoint lies on intersection line
-						if (colinearSegments[j]) {
-							// next segment is colinear
-							// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
-							// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
-							// point in the same direction (dot > 0)
-							var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
-							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
-							// if the "inside-ness" changes, add intersection point
-							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
-							if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
-								logIS(edge.b)
-							}
-						} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
-							logIS(edge.b)
-						}
-					} else if (edgeT != edge.aT) {
-						// edge crosses line, neither starts nor ends on it
-						logIS(edge.curve.at(edgeT))
-					}
-				}
-			}
-		})
-		return inside
-
-	}
 
 	/**
 	 * @inheritDoc
@@ -108,7 +59,7 @@ class EllipsoidSurface extends Surface {
 		if (this == surface) return true
 		if (surface.constructor != EllipsoidSurface) return false
 		if (!this.center.like(surface.center)) return false
-		if (this.isSphere()) return surface.isSphere() && NLA.equals(this.f1.length() + this.f2.length())
+		if (this.isSphere()) return surface.isSphere() && NLA.equals(this.f1.length(), this.f2.length())
 
 		let thisMA = this.mainAxes(), surfaceMA = surface.mainAxes()
 		return thisMA.every(tma => surfaceMA.some(sma => tma.like(sma)))
@@ -116,10 +67,10 @@ class EllipsoidSurface extends Surface {
 
 	/**
 	 *
-	 * @param {EllipseCurve} ellipse
+	 * @param ellipse
 	 * @returns {boolean}
 	 */
-	containsEllipse(ellipse) {
+	containsEllipse(ellipse:EllipseCurve) {
 		let localEllipse = ellipse.transform(this.inverseMatrix)
 		let distLocalEllipseCenter = localEllipse.center.length()
 		let correctRadius = Math.sqrt(1 - distLocalEllipseCenter * distLocalEllipseCenter)
@@ -234,7 +185,7 @@ class EllipsoidSurface extends Surface {
 		}
 	}
 	
-	mainAxes() {
+	mainAxes():{f1:V3, f2:V3, f3:V3} {
 		// q(a, b) = f1 cos a cos b + f2 sin a cos b + f2 sin b
 		// q(s, t, u) = s * f1 + t * f2 + u * f3 with s² + t² + u² = 1
 		// (del q(a, b) / del a) = f1 (-sin a) cos b  + f2 cos a cos b
@@ -259,22 +210,6 @@ class EllipsoidSurface extends Surface {
 		assert(false)
 	}
 
-	pointToParameterFunction() {
-		return (pWC, hint) => {
-			var pLC = this.inverseMatrix.transformPoint(pWC)
-			let a = pLC.angleXY()
-			if (a < -Math.PI + NLA_PRECISION || a > Math.PI - NLA_PRECISION) {
-				a = hint.dot(this.baseEllipse.f2) < 0 // TODO: no base ellipse
-					? Math.PI
-					: -Math.PI
-			}
-			// right-angled triangle: hypotenuse = 1, side opposite to angle b = pLC.z
-			// sin(b) = gegenkathete / hypotenuse
-			let b = Math.asin(pLC.z)
-			return V3.create(a, b, 0)
-		}
-	}
-
 	/**
 	 * unit sphere: x² + y² + z² = 1
 	 * line: p = anchor + t * dir |^2
@@ -282,11 +217,11 @@ class EllipsoidSurface extends Surface {
 	 * 1 == (anchor + t * dir)^2
 	 * 1 == anchor DOT anchor + 2 * anchor * t * dir + t² * dir DOT dir
 	 *
-	 * @param {V3} anchor
-	 * @param {V3} dir
+	 * @param anchor
+	 * @param dir
 	 * @returns {number[]}
 	 */
-	static unitISTsWithLine(anchor, dir) {
+	static unitISTsWithLine(anchor:V3, dir:V3) {
 		// for 0 = a t² + b t + c
 		let a = dir.dot(dir)
 		let b = 2 * anchor.dot(dir)
@@ -316,32 +251,20 @@ class EllipsoidSurface extends Surface {
 		}
 	}
 
-	/**
-	 *
-	 * @param {number} radius
-	 * @param {V3=} center
-	 * @returns {EllipsoidSurface}
-	 */
-	static sphere(radius, center) {
+	static sphere(radius:number, center?:V3):EllipsoidSurface {
 		assertNumbers(radius)
 		center && assertVectors(center)
-		return new EllipsoidSurface(center || V3.ZERO, V3.create(radius, 0, 0), V3.create(0, radius, 0), V3.create(0, 0, radius))
+		return new EllipsoidSurface(center || V3.ZERO, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius))
 	}
 
 	/**
 	 * x²/a² + y²/b² + z²/c² = 1
-	 *
-	 * @param {number} a
-	 * @param {number} b
-	 * @param {number} c
-	 * @param {V3=} center
-	 * @returns {EllipsoidSurface}
 	 */
-	static forABC(a, b, c, center) {
-		return new EllipsoidSurface(center || V3.ZERO, V3.create(a, 0, 0), V3.create(0, b, 0), V3.create(0, 0, c))
+	static forABC(a:number, b:number, c:number, center?:V3):EllipsoidSurface {
+		return new EllipsoidSurface(center || V3.ZERO, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c))
 	}
 
-	volume() {
+	volume():number {
 		return 4 / 4 * Math.PI * this.f1.dot(this.f2.cross(this.f3))
 	}
 }

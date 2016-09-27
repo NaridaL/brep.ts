@@ -1,48 +1,40 @@
-class ProjectionCurve extends Curve {
-	constructor(originalCurve, projDir, targetSurface, isIndex) {
-		this.originalCurve = originalCurve
-		this.projDir = projDir
-		this.targetSurface = targetSurface
-		this.isIndex = isIndex
-	}
+abstract class Curve extends Transformable {
+	tIncrement: number
+	hlol: number
 
 	/**
 	 * Returns curve parameter t for point p on curve.
-	 * @param p This is a test
 	 */
-	pointLambda(p) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract pointLambda(p): number
 
 	/**
 	 * Returns the point on the line that is closest to the given point.
 	 *
-	 * @param {V3} p
-	 * @returns {V3}
+	 * @param p
 	 */
-	closestPointToPoint (p) {
+	closestPointToPoint(p: V3): V3 {
 		return this.at(this.closestTToPoint(p))
 	}
 
 	/**
 	 * @abstract
-	 * @param {V3} p
+	 * @param p
 	 */
-	closestTToPoint(p) {}
+	abstract closestTToPoint(p: V3): number
 
 	/**
 	 * So different edges on the same curve do not have different vertices, they are always generated
 	 * on fixed points this.at(k * this.tIncrement), with k taking integer values
 	 *
-	 * @param {number} aT
-	 * @param {number} bT
-	 * @param {V3} a
-	 * @param {V3} b
+	 * @param aT
+	 * @param bT
+	 * @param a
+	 * @param b
 	 * @param {boolean} reversed
 	 * @param {boolean} includeFirst
 	 * @returns {Array.<V3>}
 	 */
-	calcSegmentPoints(aT, bT, a, b, reversed, includeFirst) {
+	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed, includeFirst) {
 		assert(this.tIncrement, "tIncrement not defined on " + this)
 		var split = 4 * 62, inc = this.tIncrement
 		var verts = []
@@ -68,84 +60,35 @@ class ProjectionCurve extends Curve {
 
 	/**
 	 *
-	 * @param {V3} p
+	 * @param p
 	 * @returns {number}
 	 */
-	distanceToPoint(p) {
+	distanceToPoint(p: V3) {
 		return this.at(this.closestTToPoint(p)).distanceTo(p)
 	}
 
 	/**
 	 * Behavior when curves are colinear: self intersections
-	 * @abstract
-	 * @param curve
-	 * @returns {{tThis:number, tOther:number, p:V3}[]}
 	 */
-	isInfosWithCurve(curve) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract isInfosWithCurve(curve): {tThis: number, tOther: number, p: V3}[]
 
-	/**
-	 *
-	 * @abstract
-	 * @param {number} t
-	 * @returns {V3}
-	 */
-	at(t) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract at(t: number): V3
 
-	/**
-	 *
-	 * @abstract
-	 * @param {number} t
-	 * @returns {V3}
-	 */
-	tangentAt(t) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract tangentAt(t: number): V3
 
 	/**
 	 * Derivative of tangentAt(t) for parameter t
-	 * @abstract
-	 * @param {number} t
-	 * @returns {V3}
 	 */
-	ddt(t) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract ddt(t: number): V3
+
+	abstract containsPoint(p: V3): boolean
+
+	abstract isTsWithSurface(surface: Surface): number[]
+
+	abstract isTsWithPlane(plane: P3): number[]
 
 	/**
-	 * @abstract
-	 * @param {V3} p
-	 * @returns {boolean}
-	 */
-	containsPoint(p) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
-
-	/**
-	 *
-	 * @abstract
-	 * @param {Surface} surface
-	 * @returns {number[]}
-	 */
-	isTsWithSurface(surface) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
-
-	/**
-	 *
-	 * @abstract
-	 * @param {P3} plane
-	 * @returns {number[]}
-	 */
-	isTsWithPlane(plane) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
-
-	/**
-	 * Should really be abstract, but it works for all teh conic is curves, so it's here.
+	 * Should really be abstract, but it works for all the conic is curves, so it's here.
 	 * @param mesh
 	 * @param bufferName
 	 */
@@ -172,10 +115,10 @@ class ProjectionCurve extends Curve {
 	 * iff for any t, this.at(t) == curve.at(t)
 	 *
 	 * @abstract
-	 * @param {Curve} curve
+	 * @param curve
 	 * @returns {boolean}
 	 */
-	likeCurve(curve) {
+	likeCurve(curve: Curve) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
@@ -188,10 +131,10 @@ class ProjectionCurve extends Curve {
 	 * and for every s, there is a t so that curve.at(s) == this.a(t)
 	 *
 	 * @abstract
-	 * @param {Curve} curve
+	 * @param curve
 	 * @returns {boolean}
 	 */
-	isColinearTo(curve) {
+	isColinearTo(curve: Curve) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
@@ -214,6 +157,8 @@ class ProjectionCurve extends Curve {
 				}
 			}
 		}
-		return new AABB(V3(mins), V3(maxs))
+		return new AABB(V(mins), V(maxs))
 	}
+
+	static hlol = 0
 }

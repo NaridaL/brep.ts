@@ -98,11 +98,11 @@ class ParabolaCurve extends Curve {
 
 	/**
 	 *
-	 * @param {number} startT
-	 * @param {number} endT
+	 * @param startT
+	 * @param endT
 	 * @returns {number}
 	 */
-	arcLength(startT, endT) {
+	arcLength(startT:number, endT:number) {
 		var f1 = this.f1, f2 = this.f2, f1DOTf2 = f1.dot(f2), t0 = 0
 		if (!NLA.isZero(f1DOTf2)) {
 			t0 = -f1DOTf2 / f2.lengthSquared() / 2
@@ -207,7 +207,7 @@ class ParabolaCurve extends Curve {
 	 * @returns {ParabolaCurve}
 	 */
 	static forAB(a, b, center) {
-		return new ParabolaCurve(center || V3.ZERO, V3(a, 0, 0), V3(0, b, 0))
+		return new ParabolaCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
 	}
 
 }

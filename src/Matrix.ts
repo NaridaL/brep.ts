@@ -1,113 +1,110 @@
+"use strict"
+var Vector = NLA.Vector
+class Matrix {
+	m: Float64Array
+	width: number
+	height: number
 
-/**
- *
- * @param width
- * @param height
- * @param m
- * @constructor
- * @property {Float64Array} m
- */
-NLA.Matrix = function (width, height, m) {
-	assert(width * height == m.length, "width * height == m.length", width, height, m.length)
-	this.m = m;
-	this.width = width;
-	this.height = height;
-}
-NLA.Matrix.random = function (width, height) {
-	NLA.assertNumbers(width, height);
-	return NLA.Matrix.fromFunction(width, height, (i, j) => Math.random())
-}
-NLA.Matrix.fromFunction = function(width, height, f) {
-	NLA.assertNumbers(width, height);
-	var m = new Float64Array(height * width)
-	var elIndex = height * width;
-	while (elIndex--) {
-		m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
+	constructor(width, height, m) {
+		assert(width * height == m.length, "width * height == m.length", width, height, m.length)
+		this.m = m;
+		this.width = width;
+		this.height = height;
 	}
-	return new NLA.Matrix(width, height, m);
-}
-NLA.Matrix.identity = function(dim) {
-	NLA.assertNumbers(dim);
-	var m = new Float64Array(dim * dim)
-	// Float64Arrays are init to 0
-	var elIndex = dim * (dim + 1);
-	while (elIndex) {
-		elIndex -= (dim + 1)
-		m[elIndex] = 1
+	static random(width, height) {
+		assertNumbers(width, height);
+		return Matrix.fromFunction(width, height, (i, j) => Math.random())
 	}
-	return new NLA.Matrix(dim, dim, m);
-}
-NLA.Matrix.permutation = function(dim, i, k) {
-	NLA.assertNumbers(dim, i, k);
-	var m = new Float64Array(dim * dim)
-	// Float64Array are init to 0
-	var elIndex = dim * (dim + 1);
-	while (elIndex) {
-		elIndex -= (dim + 1)
-		m[elIndex] = 1
-	}
-	m[i * dim + i] = 0
-	m[k * dim + k] = 0
-	m[i * dim + k] = 1
-	m[k * dim + i] = 1
-	return new NLA.Matrix(dim, dim, m);
-}
-NLA.Matrix.fromRowArrays = function() {
-	return NLA.Matrix.fromRowArrays2(arguments)
-}
-NLA.Matrix.fromRowArrays2 = function(arrays) {
-	if (0 == arrays.length) {
-		throw new Error("cannot have 0 vector");
-	}
-	var height = arrays.length
-	var width = arrays[0].length
-	var m = new Float64Array(height * width)
-	NLA.arrayCopy(arrays[0], 0, m, 0, width);
-	for (var rowIndex = 1; rowIndex < height; rowIndex++) {
-		if (arrays[rowIndex].length != width) {
-			throw new Error("all row arrays must be the same length")
+	static fromFunction(width, height, f) {
+		assertNumbers(width, height);
+		var m = new Float64Array(height * width)
+		var elIndex = height * width;
+		while (elIndex--) {
+			m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
 		}
-		NLA.arrayCopy(arrays[rowIndex], 0, m, rowIndex * width, width)
+		return new Matrix(width, height, m);
 	}
-	return new NLA.Matrix(width, height, m);
-}
-NLA.Matrix.fromColVectors = function (colVectors) {
-	return NLA.Matrix.fromColArrays(colVectors.map((v) => v.v))
-}
-NLA.Matrix.forWidthHeight = function(width, height) {
-	return new NLA.Matrix(width, height, new Float64Array(width * height))
-}
-NLA.Matrix.fromColArrays = function(colArrays) {
-	if (0 == colArrays.length) {
-		throw new Error("cannot have 0 vector");
-	}
-	var width = colArrays.length
-	var height = colArrays[0].length
-	var m = new Float64Array(height * width)
-	NLA.arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height)
-	for (var colIndex = 1; colIndex < width; colIndex++) {
-		if (colArrays[colIndex].length != height) {
-			throw new Error("all col arrays must be the same length")
+	static identity(dim:number):Matrix {
+		assertNumbers(dim);
+		var m = new Float64Array(dim * dim)
+		// Float64Arrays are init to 0
+		var elIndex = dim * (dim + 1);
+		while (elIndex) {
+			elIndex -= (dim + 1)
+			m[elIndex] = 1
 		}
-		NLA.arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height)
+		return new Matrix(dim, dim, m);
 	}
-	return new NLA.Matrix(width, height, m);
-}
-NLA.Matrix.prototype = {
-	e: function (rowIndex, colIndex) {
-		NLA.assertNumbers(rowIndex, colIndex)
+	static permutation(dim, i, k) {
+		assertNumbers(dim, i, k);
+		var m = new Float64Array(dim * dim)
+		// Float64Array are init to 0
+		var elIndex = dim * (dim + 1);
+		while (elIndex) {
+			elIndex -= (dim + 1)
+			m[elIndex] = 1
+		}
+		m[i * dim + i] = 0
+		m[k * dim + k] = 0
+		m[i * dim + k] = 1
+		m[k * dim + i] = 1
+		return new Matrix(dim, dim, m);
+	}
+	static fromRowArrays() {
+		return Matrix.fromRowArrays2(arguments)
+	}
+	static fromRowArrays2(arrays) {
+		if (0 == arrays.length) {
+			throw new Error("cannot have 0 vector");
+		}
+		var height = arrays.length
+		var width = arrays[0].length
+		var m = new Float64Array(height * width)
+		NLA.arrayCopy(arrays[0], 0, m, 0, width);
+		for (var rowIndex = 1; rowIndex < height; rowIndex++) {
+			if (arrays[rowIndex].length != width) {
+				throw new Error("all row arrays must be the same length")
+			}
+			NLA.arrayCopy(arrays[rowIndex], 0, m, rowIndex * width, width)
+		}
+		return new Matrix(width, height, m);
+	}
+	static fromColVectors(colVectors) {
+		return Matrix.fromColArrays(colVectors.map((v) => v.v))
+	}
+	static forWidthHeight(width, height) {
+		return new Matrix(width, height, new Float64Array(width * height))
+	}
+	static fromColArrays(colArrays) {
+		if (0 == colArrays.length) {
+			throw new Error("cannot have 0 vector");
+		}
+		var width = colArrays.length
+		var height = colArrays[0].length
+		var m = new Float64Array(height * width)
+		NLA.arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height)
+		for (var colIndex = 1; colIndex < width; colIndex++) {
+			if (colArrays[colIndex].length != height) {
+				throw new Error("all col arrays must be the same length")
+			}
+			NLA.arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height)
+		}
+		return new Matrix(width, height, m);
+	}
+	e(rowIndex, colIndex) {
+		assertNumbers(rowIndex, colIndex)
 		if (NLA_DEBUG && (rowIndex >= this.height || colIndex >= this.width)) {
 			throw new Error("index " + rowIndex + ", " + colIndex + " is out of bounds (" + this.width + " x " + this.height + ")")
 		}
 		return this.m[rowIndex * this.width + colIndex]
-	},
-	setEl: function (rowIndex, colIndex, val) {
-		NLA.assertNumbers(rowIndex, colIndex, val)
+	}
+	setEl(rowIndex, colIndex, val) {
+		assertNumbers(rowIndex, colIndex, val)
 		assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex)
 		assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex)
 		this.m[rowIndex * this.width + colIndex] = val
-	},
-	toString: function (f) {
+	}
+	toString(f?) {
 		f = f || ((v) => v.toFixed(6))
 		assert(typeof f(0) == "string", "" + typeof f(0))
 		var rounded = Array.prototype.slice.call(this.m).map(f);
@@ -118,56 +115,58 @@ NLA.Matrix.prototype = {
 				.map((x, colIndex) => NLA.repeatString(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
 				.join(" ")
 		).map(x => x + "\n").join(""); // join rows
-	},
+	}
 
-	row: function (rowIndex) {
+	row(rowIndex) {
 		var v = new Float64Array(this.width)
 		NLA.arrayCopy(this.m, rowIndex * this.width, v, 0, this.width)
 		return new NLA.Vector(v)
-	},
-	col: function (colIndex) {
+	}
+
+	col(colIndex):Vector {
 		var v = new Float64Array(this.height)
 		NLA.arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height)
 		return new NLA.Vector(v)
-	},
-	dim: function() {
-		return {width: this.width, height: this.height};
-	},
-	dimString: function () {
+	}
+
+	dim(): {width: number, height: number} {
+		return {width: this.width, height: this.height}
+	}
+
+	dimString(): string {
 		return this.width + "x" + this.height
-	},
-	equals: function (obj) {
-		if (obj.constructor != NLA.Matrix) return false;
+	}
+
+	equals(obj): boolean {
+		if (obj.constructor != Matrix) return false;
 		if (this.width != obj.width || this.height != obj.height) return false;
 		var elIndex = this.m.length;
 		while (elIndex--) {
 			if (this.m[elIndex] != obj.m[elIndex]) return false;
 		}
-	},
-	equalsMatrix: function (matrix, precision) {
+	}
+
+	equalsMatrix(matrix:Matrix, precision?:number):boolean {
 		precision = precision || NLA_PRECISION
-		if (!(matrix instanceof NLA.Matrix)) throw new Error("not a matrix");
+		if (!(matrix instanceof Matrix)) throw new Error("not a matrix");
 		if (this.width != matrix.width || this.height != matrix.height) return false;
 		var elIndex = this.m.length;
 		while (elIndex--) {
 			if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) >= precision) return false;
 		}
 		return true
-	},
-	hashCode: function () {
+	}
+
+	hashCode() {
 		var result = 0
 		var elIndex = this.m.length;
 		while (elIndex--) {
 			result = result * 31 + NLA.floatHashCode(this.m[elIndex])
 		}
 		return result
-	},
+	}
 
-	/**
-	 *
-	 * @returns {boolean}
-	 */
-	isZero() {
+	isZero(): boolean {
 		var elIndex = this.m.length;
 		while (elIndex--) {
 			if (!NLA.isZero(this.m[elIndex])) {
@@ -175,22 +174,24 @@ NLA.Matrix.prototype = {
 			}
 		}
 		return true
-	},
-	isOrthogonal: function () {
-		return this.isSquare() && this.transposed().times(this).equalsMatrix(NLA.Matrix.identity(this.width))
-	},
-	luDecomposition: function() {
+	}
+
+	isOrthogonal(): boolean {
+		return this.isSquare() && this.transposed().times(this).equalsMatrix(Matrix.identity(this.width))
+	}
+
+	luDecomposition() {
 		assertf(() => this.isSquare(), this.dim().toSource())
 		var uRowArrays = this.asRowArrays(Float64Array)
 		var dim = this.width
 		var lRowArrays = NLA.arrayFromFunction(dim, (row) => new Float64Array(dim))
-		var pRowArrays = NLA.Matrix.identity(dim).asRowArrays(Float64Array)
+		var pRowArrays = Matrix.identity(dim).asRowArrays(Float64Array)
 		let currentRowIndex = 0
 		for (let colIndex = 0; colIndex < dim; colIndex++) {
 			// find largest value in colIndex
-			let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows = 0
+			let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows:number = 0
 			for (let rowIndex = currentRowIndex; rowIndex < dim; rowIndex++) {
-				var el = uRowArrays[rowIndex][colIndex]
+				var el:number = uRowArrays[rowIndex][colIndex]
 				numberOfNonZeroRows += (0 != el) | 0
 				if (Math.abs(el) > maxAbsValue) {
 					maxAbsValue = Math.abs(el)
@@ -222,13 +223,14 @@ NLA.Matrix.prototype = {
 			}
 			currentRowIndex++ // this doesn't increase if pivot was zero
 		}
-		return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(uRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
-	},
-	gauss: function() {
+		return {L: Matrix.fromRowArrays2(lRowArrays), U: Matrix.fromRowArrays2(uRowArrays), P: Matrix.fromRowArrays2(pRowArrays)}
+	}
+
+	gauss() {
 		var uRowArrays = this.asRowArrays(Float64Array)
 		var w = this.width, h = this.height
 		var lRowArrays = NLA.arrayFromFunction(h, (row) => new Float64Array(w))
-		var pRowArrays = NLA.Matrix.identity(h).asRowArrays(Float64Array)
+		var pRowArrays = Matrix.identity(h).asRowArrays(Float64Array)
 		let currentRowIndex = 0
 		for (let colIndex = 0; colIndex < w; colIndex++) {
 			// console.log('currentRowIndex', currentRowIndex)
@@ -267,9 +269,9 @@ NLA.Matrix.prototype = {
 			}
 			currentRowIndex++ // this doesn't increase if pivot was zero
 		}
-		return {L: NLA.Matrix.fromRowArrays2(lRowArrays), U: NLA.Matrix.fromRowArrays2(uRowArrays), P: NLA.Matrix.fromRowArrays2(pRowArrays)}
-	},
-	qrDecompositionGivensRotation: function () {
+		return {L: Matrix.fromRowArrays2(lRowArrays), U: Matrix.fromRowArrays2(uRowArrays), P: Matrix.fromRowArrays2(pRowArrays)}
+	}
+	qrDecompositionGivensRotation() {
 		function sigma (c, s) {
 			if ( 0 == c) {
 				return 1
@@ -280,7 +282,7 @@ NLA.Matrix.prototype = {
 			return 2 * Math.sign (s) / c;
 		}
 		function matrixForCS(dim, i, k, c, s) {
-			var m = NLA.Matrix.identity(dim)
+			var m = Matrix.identity(dim)
 			m.setEl(i, i, c)
 			m.setEl(k, k, c)
 			m.setEl(i, k, s)
@@ -288,7 +290,7 @@ NLA.Matrix.prototype = {
 			return m
 		}
 
-		var qTransposed = NLA.Matrix.identity(this.height)
+		var qTransposed = Matrix.identity(this.height)
 		for (var colIndex = 0; colIndex < this.width; colIndex++) {
 			// find largest value in colIndex
 			for (var rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
@@ -316,8 +318,8 @@ NLA.Matrix.prototype = {
 		}
 		//console.log(qTransposed.transposed().toString(), this.toString(), qTransposed.transposed().times(this).toString())
 		return {Q: qTransposed.transposed(), R: this}
-	},
-	isPermutation: function () {
+	}
+	isPermutation() {
 		if (!this.isSquare()) return false
 		if (this.m.some((value) => !NLA.isZero(value) && !NLA.equals(1, value))) return false
 
@@ -328,29 +330,30 @@ NLA.Matrix.prototype = {
 		if (cols.some((col) => col.filter((value) => NLA.equals(1, value)).length != 1)) return false
 
 		return true
-	},
-	isIdentity: function (precision) {
+	}
+	isIdentity(precision) {
 		return this.isLowerUnitriangular(precision) && this.isUpperTriangular(precision)
-	},
-	isUpperTriangular: function () {
+	}
+	isUpperTriangular(precision?:number) {
+		precision = "number" == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
 		for (var rowIndex = 1; rowIndex < this.height; rowIndex++) {
 			for (var colIndex = 0; colIndex < rowIndex; colIndex++) {
-				if (!NLA.isZero(this.m[rowIndex * this.width + colIndex])) {
+				if (!NLA.isZero2(this.m[rowIndex * this.width + colIndex], precision)) {
 					return false
 				}
 			}
 		}
 		return true
-	},
+	}
 
 	/**
 	 * Returns x, so that this * x = b
 	 * More efficient than calculating the inverse for few (~ <= this.height) values
-	 * @param {NLA.Vector} b
+	 * @param b
 	 * @returns {NLA.Vector}
 	 */
-	solveLinearSystem: function (b) {
+	solveLinearSystem(b:NLA.Vector) {
 		var lup = this.luDecomposition()
 		// console.log(lup.L.toString())
 		// console.log(lup.U.toString())
@@ -358,14 +361,14 @@ NLA.Matrix.prototype = {
 		var y = lup.L.solveForwards(lup.P.timesVector(b))
 		var x = lup.U.solveBackwards(y)
 		return x
-	},
+	}
 
 	/**
 	 *
-	 * @param {number=} precision
+	 * @param precision
 	 * @returns {boolean}
 	 */
-	isLowerUnitriangular: function (precision) {
+	isLowerUnitriangular(precision?:number) {
 		precision = "number" == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
 		for (var rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
@@ -377,13 +380,13 @@ NLA.Matrix.prototype = {
 			}
 		}
 		return true
-	},
+	}
 
 	/**
 	 *
 	 * @returns {boolean}
 	 */
-	isLowerTriangular: function () {
+	isLowerTriangular() {
 		if (!this.isSquare()) return false
 		for (var rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
 			for (var colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
@@ -393,7 +396,7 @@ NLA.Matrix.prototype = {
 			}
 		}
 		return true
-	},
+	}
 
 
 	/**
@@ -401,8 +404,8 @@ NLA.Matrix.prototype = {
 	 * @param x
 	 * @returns {NLA.Vector}
 	 */
-	solveBackwards: function (x) {
-		NLA.assertVectors(x)
+	solveBackwards(x) {
+		assertVectors(x)
 		assert(this.height == x.dim(), "this.height == x.dim()")
 		assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.str)
 		var v = new Float64Array(this.width)
@@ -415,25 +418,25 @@ NLA.Matrix.prototype = {
 			v[rowIndex] = temp / this.e(rowIndex, rowIndex)
 		}
 		return new NLA.Vector(v)
-	},
-	solveBackwardsMatrix: function (matrix) {
+	}
+	solveBackwardsMatrix(matrix) {
 		var colVectors = new Array(matrix.width)
 		var i = matrix.width
 		while (i--) {
 			colVectors[i] = this.solveBackwards(matrix.col(i))
 		}
-		return NLA.Matrix.fromColVectors(colVectors)
-	},
-	solveForwardsMatrix: function (matrix) {
+		return Matrix.fromColVectors(colVectors)
+	}
+	solveForwardsMatrix(matrix) {
 		var colVectors = new Array(matrix.width)
 		var i = matrix.width
 		while (i--) {
 			colVectors[i] = this.solveForwards(matrix.col(i))
 		}
-		return NLA.Matrix.fromColVectors(colVectors)
-	},
-	solveForwards: function (x) {
-		NLA.assertVectors(x)
+		return Matrix.fromColVectors(colVectors)
+	}
+	solveForwards(x) {
+		assertVectors(x)
 		assert(this.height == x.dim(), "°°")
 		assertf(() => this.isLowerTriangular(), this.toString())
 		var v = new Float64Array(this.width)
@@ -445,7 +448,7 @@ NLA.Matrix.prototype = {
 			v[rowIndex] = temp / this.e(rowIndex, rowIndex)
 		}
 		return new NLA.Vector(v)
-	},
+	}
 
 
 
@@ -456,21 +459,21 @@ NLA.Matrix.prototype = {
 	 *
 	 * @returns {number} integer
 	 */
-	rank: function () {
+	rank() {
 		let U = this.gauss().U
 		//console.log(R.toString())
 		var rowIndex = this.height
 		while (rowIndex-- && U.row(rowIndex).isZero()) {
 			console.log("RANK" + U.row(rowIndex).toString() + U.row(rowIndex).isZero())}
 		return rowIndex + 1
-	},
-	rowsIndependent: function () {
+	}
+	rowsIndependent() {
 		return this.height == this.rank()
-	},
-	colsIndependent: function () {
+	}
+	colsIndependent() {
 		return this.width == this.rank()
-	},
-	asRowArrays: function (arrayConstructor) {
+	}
+	asRowArrays(arrayConstructor) {
 		arrayConstructor = arrayConstructor || Float64Array
 		var rowIndex = this.height
 		var result = new Array(this.height)
@@ -478,8 +481,8 @@ NLA.Matrix.prototype = {
 			result[rowIndex] = this.rowArray(rowIndex, arrayConstructor)
 		}
 		return result
-	},
-	asColArrays: function (arrayConstructor) {
+	}
+	asColArrays(arrayConstructor) {
 		arrayConstructor = arrayConstructor || Float64Array
 		var colIndex = this.width
 		var result = new Array(this.width)
@@ -487,46 +490,46 @@ NLA.Matrix.prototype = {
 			result[colIndex] = this.colArray(colIndex, arrayConstructor)
 		}
 		return result
-	},
-	rowArray: function (rowIndex, arrayConstructor) {
+	}
+	rowArray(rowIndex, arrayConstructor) {
 		arrayConstructor = arrayConstructor || Float64Array
 		var result = new arrayConstructor(this.width)
 		NLA.arrayCopy(this.m, rowIndex * this.width, result, 0, this.width)
 		return result
-	},
-	colArray: function (colIndex, arrayConstructor) {
+	}
+	colArray(colIndex, arrayConstructor) {
 		arrayConstructor = arrayConstructor || Float64Array
 		var result = new arrayConstructor(this.width)
 		NLA.arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height)
 		return result
-	},
-	subMatrix: function (firstColIndex, subWidth, firstRowIndex, subHeight) {
+	}
+	subMatrix(firstColIndex, subWidth, firstRowIndex, subHeight) {
 		if (firstColIndex + subWidth > this.width || firstRowIndex + subHeight > this.height) {
 			throw new Error("inavlid params")
 		}
 		var m = new Float64Array(this.height)
 		NLA.arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth)
-		return new NLA.Matrix(subWidth, subHeight, m)
-	},
-	map: function (fn) {
-		return new NLA.Matrix(this.width, this.height, this.m.map(fn));
-	},
+		return new Matrix(subWidth, subHeight, m)
+	}
+	map(fn) {
+		return new Matrix(this.width, this.height, this.m.map(fn));
+	}
 
-	dimEquals: function (matrix) {
-		assertInst(NLA.Matrix, matrix)
+	dimEquals(matrix) {
+		assertInst(Matrix, matrix)
 		return this.width == matrix.width && this.height == matrix.height
-	},
+	}
 
-	inversed: function () {
+	inversed() {
 		var lup = this.luDecomposition()
 		var y = lup.L.solveForwardsMatrix(lup.P)
 		var inverse = lup.U.solveBackwardsMatrix(y)
 		return inverse
-	},
+	}
 
-	inversed3: function () {
+	inversed3() {
 		assertf(() => 3 == this.width && 3 == this.height)
-		let result = new NLA.Matrix.forWidthHeight(3, 3), m = this.m, r = result.m
+		let result = Matrix.forWidthHeight(3, 3), m = this.m, r = result.m
 
 		r[0] = m[4]*m[8] - m[5]*m[7]
 		r[1] = -m[1]*m[8] + m[2]*m[7]
@@ -545,11 +548,11 @@ NLA.Matrix.prototype = {
 		while (i--) { r[i] /= det }
 
 		return result
-	},
+	}
 
-	inversed2: function () {
+	inversed2() {
 		assertf(() => 2 == this.width && 2 == this.height)
-		let result = new NLA.Matrix.forWidthHeight(2, 2), m = this.m, r = result.m
+		let result = new Matrix.forWidthHeight(2, 2), m = this.m, r = result.m
 
 		let det = m[0]*m[3] - m[1]*r[2]
 
@@ -560,14 +563,15 @@ NLA.Matrix.prototype = {
 		r[3] = m[0] / det
 
 		return result
-	},
+	}
 
-	canMultiply: function (matrix) {
-		assertInst(NLA.Matrix, matrix)
+	canMultiply(matrix) {
+		assertInst(Matrix, matrix)
 		return this.width == matrix.height
-	},
-	times: function (matrix) {
-		assertInst(NLA.Matrix, matrix)
+	}
+
+	times(matrix:Matrix):Matrix {
+		assertInst(Matrix, matrix)
 		assert(this.canMultiply(matrix), `Cannot multiply this {this.dimString()} by matrix {matrix.dimString()}`)
 		var nWidth = matrix.width, nHeight = this.height, n = this.width
 		var nM = new Float64Array(nWidth * nHeight)
@@ -583,10 +587,11 @@ NLA.Matrix.prototype = {
 				nM[nRowIndex * nWidth + nColIndex] = result
 			}
 		}
-		return new NLA.Matrix(nWidth, nHeight, nM)
-	},
-	timesVector: function (vector) {
-		NLA.assertVectors(vector)
+		return new Matrix(nWidth, nHeight, nM)
+	}
+
+	timesVector(vector) {
+		assertVectors(vector)
 		assert(this.width == vector.dim())
 		var nHeight = this.height, n = this.width
 		var nM = new Float64Array(nHeight)
@@ -600,8 +605,9 @@ NLA.Matrix.prototype = {
 			nM[nRowIndex] = result
 		}
 		return new NLA.Vector(nM)
-	},
-	transposed: function () {
+	}
+
+	transposed():Matrix {
 		var tWidth = this.height, tHeight = this.width
 		var tM = new Float64Array(tWidth * tHeight)
 		var tRowIndex = tHeight
@@ -611,9 +617,10 @@ NLA.Matrix.prototype = {
 				tM[tRowIndex * tWidth + tColIndex] = this.m[tColIndex * tHeight + tRowIndex]
 			}
 		}
-		return new NLA.Matrix(tWidth, tHeight, tM)
-	},
-	transpose: function () {
+		return new Matrix(tWidth, tHeight, tM)
+	}
+
+	transpose() {
 		var h = this.height, w = this.width, tM = this.m
 		var tRowIndex = h
 		while (tRowIndex--) {
@@ -627,11 +634,11 @@ NLA.Matrix.prototype = {
 		}
 		this.width = h
 		this.height = w
-	},
-	isSquare: function () {
+	}
+	isSquare() {
 		return this.height == this.width;
-	},
-	diagonal: function () {
+	}
+	diagonal() {
 		if (!this.isSquare()) {
 			throw new Error("!!")
 		}
@@ -643,14 +650,14 @@ NLA.Matrix.prototype = {
 			v[vIndex] = this.m[elIndex]
 		}
 		return new NLA.Vector(v)
-	},
-	max: function () {
-		return NLA.arrayMax(this.m);
-	},
-	min: function () {
-		return NLA.arrayMin(this.m);
-	},
-	maxAbsColSum: function () {
+	}
+	max() {
+		return NLA.arrayMax(this.m)
+	}
+	min() {
+		return NLA.arrayMin(this.m)
+	}
+	maxAbsColSum() {
 		var result = 0
 		var colIndex = this.width
 		while (colIndex--) {
@@ -662,8 +669,8 @@ NLA.Matrix.prototype = {
 			result = Math.max(result, absSum)
 		}
 		return result
-	},
-	maxAbsRowSum: function () {
+	}
+	maxAbsRowSum() {
 		var result = 0
 		var rowIndex = this.height
 		while (rowIndex--) {
@@ -675,8 +682,8 @@ NLA.Matrix.prototype = {
 			result = Math.max(result, absSum)
 		}
 		return result
-	},
-	getTriangularDeterminant: function () {
+	}
+	getTriangularDeterminant() {
 		assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix")
 
 		var product = 1
@@ -686,45 +693,46 @@ NLA.Matrix.prototype = {
 			product *= this.m[elIndex]
 		}
 		return product
-	},
+	}
 	/**
 	 * Calculates the determinant by first calculating the LU decomposition. If you already have that, use
 	 * U.getTriangularDeterminant()
 	 * @returns {*}
 	 */
-	getDeterminant: function () {
+	getDeterminant() {
 		// PA = LU
 		// det(A) * det(B) = det(AB)
 		// det(P) == 1 (permutation matrix)
 		// det(L) == 1 (main diagonal is 1s
 		// =>  det(A) == det(U)
 		return this.luDecomposition().U.getTriangularDeterminant()
-	},
-	hasFullRank: function () {
+	}
+	hasFullRank() {
 		return Math.min(this.width, this.height) == this.rank()
 	}
-}
 
-/**
- * Numerically calculate all the partial derivates of f at x0.
- *
- *
- * @param {function(Array.<number>):Array.<number>} f
- * @param {Array.<number>} x0
- * @param {Array.<number>=} fx0 f(x0), pass it if you have it already
- * @param {number=} EPSILON
- */
-NLA.Matrix.jacobi = function (f, x0, fx0, EPSILON) {
-	EPSILON = EPSILON || 1e-8
-	fx0 = fx0 || f(x0)
-	let jacobi = NLA.Matrix.forWidthHeight(x0.length, fx0.length)
-	for (let colIndex = 0; colIndex < x0.length; colIndex++) {
-		x0[colIndex] += EPSILON
-		let fx = f(x0)
-		for (let rowIndex = 0; rowIndex < fx0.length; rowIndex++) {
-			jacobi.setEl(rowIndex, colIndex, (fx[rowIndex] - fx0[rowIndex]) / EPSILON)
+
+	/**
+	 * Numerically calculate all the partial derivates of f at x0.
+	 *
+	 *
+	 * @param f
+	 * @param x0
+	 * @param fx0 f(x0), pass it if you have it already
+	 * @param EPSILON
+	 */
+	static jacobi (f:(x:number[]) => number[], x0:number[], fx0:number[], EPSILON?:number) {
+		EPSILON = EPSILON || 1e-8
+		fx0 = fx0 || f(x0)
+		let jacobi = Matrix.forWidthHeight(x0.length, fx0.length)
+		for (let colIndex = 0; colIndex < x0.length; colIndex++) {
+			x0[colIndex] += EPSILON
+			let fx = f(x0)
+			for (let rowIndex = 0; rowIndex < fx0.length; rowIndex++) {
+				jacobi.setEl(rowIndex, colIndex, (fx[rowIndex] - fx0[rowIndex]) / EPSILON)
+			}
+			x0[colIndex] -= EPSILON
 		}
-		x0[colIndex] -= EPSILON
+		return jacobi
 	}
-	return jacobi
 }

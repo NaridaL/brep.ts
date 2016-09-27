@@ -1,7 +1,11 @@
-/**
- * Created by aval on 14/02/2016.
- */
 class EllipseCurve extends Curve {
+	center: V3
+	f1:V3
+	f2:V3
+	normal:V3
+	matrix:M4
+	inverseMatrix:M4
+
 	constructor(center, f1, f2) {
 		super()
 		assertVectors(center, f1, f2)
@@ -16,7 +20,7 @@ class EllipseCurve extends Curve {
 		} else {
 			this.matrix = M4.forSys(f1, f2, f1.normalized(), center)
 			let f1p = f1.getPerpendicular()
-			this.inverseMatrix = M4(
+			this.inverseMatrix = new M4(
 				1,0,0,0,
 				0,0,0,0,
 				0,0,0,0,
@@ -24,7 +28,7 @@ class EllipseCurve extends Curve {
 		}
 	}
 
-	toString(f) {
+	toString(f?) {
 		return `new EllipseCurve(${this.center}, ${this.f1}, ${this.f2})`
 	}
 
@@ -87,8 +91,8 @@ class EllipseCurve extends Curve {
 			return ell.isCircular() && NLA.equals(this.f1.length(), ell.f1.length())
 		} else {
 			var {f1: f1, f2: f2} = this.mainAxes(), {f1: c1, f2: c2} = ell.mainAxes()
-			return NLA.equals(f1.lengthSquared(), abs(f1.dot(c1)))
-				&& NLA.equals(f2.lengthSquared(), abs(f2.dot(c2)))
+			return NLA.equals(f1.lengthSquared(), Math.abs(f1.dot(c1)))
+				&& NLA.equals(f2.lengthSquared(), Math.abs(f2.dot(c2)))
 		}
 	}
 
@@ -98,11 +102,11 @@ class EllipseCurve extends Curve {
 
 	/**
 	 *
-	 * @param {V3} p
-	 * @param {number=} hint TODO document hint
+	 * @param p
+	 * @param hint TODO document hint
 	 * @returns {*}
 	 */
-	pointLambda(p, hint) {
+	pointLambda(p:V3, hint?:number) {
 		assertVectors(p)
 		var p2 = this.inverseMatrix.transformPoint(p)
 		var angle = p2.angleXY()
@@ -233,7 +237,7 @@ class EllipseCurve extends Curve {
 		if (isNaN(xi1)) {
 			return []
 		}
-		return [atan2(eta1, xi1), atan2(eta2, xi2)]
+		return [Math.atan2(eta1, xi1), Math.atan2(eta2, xi2)]
 
 	}
 
@@ -246,12 +250,7 @@ class EllipseCurve extends Curve {
 		return NLA.equals(1, localP.lengthXY()) && NLA.isZero(localP.z)
 	}
 
-	/**
-	 *
-	 * @param {EllipseCurve} ellipse
-	 * @returns {{tThis: number, tOther: number, p: V3}[]}
-	 */
-	isInfosWithEllipse(ellipse) {
+	isInfosWithEllipse(ellipse:EllipseCurve):{tThis: number, tOther: number, p: V3}[] {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
@@ -268,13 +267,13 @@ class EllipseCurve extends Curve {
 			var angle = localEllipse.f1.angleXY()
 			console.log('angle', angle)
 			var aSqr = localEllipse.f1.lengthSquared(), bSqr = localEllipse.f2.lengthSquared()
-			var a = sqrt(aSqr), b = sqrt(bSqr)
+			var a = Math.sqrt(aSqr), b = Math.sqrt(bSqr)
 			var {x: centerX, y: centerY} = localEllipse.center
-			var rotCenterX = centerX * cos(-angle) + centerY * -sin(-angle)
-			var rotCenterY = centerX * sin(-angle) + centerY * cos(-angle)
-			var rotCenter = V3(rotCenterX, rotCenterY)
+			var rotCenterX = centerX * Math.cos(-angle) + centerY * -Math.sin(-angle)
+			var rotCenterY = centerX * Math.sin(-angle) + centerY * Math.cos(-angle)
+			var rotCenter = V(rotCenterX, rotCenterY)
 			var f = t => {
-				var lex = cos(t) - rotCenterX, ley = sin(t) - rotCenterY;
+				var lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY;
 				return lex * lex / aSqr + ley * ley / bSqr - 1
 			}
 			var uc = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
@@ -283,7 +282,7 @@ class EllipseCurve extends Curve {
 			var f3 = (x, y) => 200 * ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1)
 			var results = []
 			var resetMatrix = this.matrix.times(M4.rotationZ(angle))
-			for (var da = PI / 4; da < 2 * PI; da += PI / 2) {
+			for (var da = Math.PI / 4; da < 2 * Math.PI; da += Math.PI / 2) {
 				var startP = uc.at(da)
 				var p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)
 				if (p && !results.some(r => r.like(p))) {
@@ -291,7 +290,7 @@ class EllipseCurve extends Curve {
 					drPs.push(p)
 				}
 			}
-			var rotEl = new EllipseCurve(rotCenter, V3(a, 0, 0), V3(0, b, 0))
+			var rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0))
 			//var rotEl = localEllipse.transform(resetMatrix)
 			console.log(rotEl, rotEl.sce)
 			//rotEl.debugToMesh(dMesh, 'curve2')
@@ -316,7 +315,7 @@ class EllipseCurve extends Curve {
 			 //drPs.push(startP)
 			 var p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)
 			 p && drPs.push(p)
-			 p && console.log(p.$, p.minus(V3(x0, y0)).length())
+			 p && console.log(p.$, p.minus(V(x0, y0)).length())
 			 }
 			 circle.debugToMesh(dMesh, 'curve1')
 			 localEllipse.debugToMesh(dMesh, 'curve2')
@@ -359,7 +358,7 @@ class EllipseCurve extends Curve {
 		return []
 	}
 
-	isInfosWithCurve(curve) {
+	isInfosWithCurve(curve):{tThis: number, tOther: number, p: V3}[] {
 		if (curve instanceof L3) {
 			return this.isInfosWithLine(curve)
 		}
@@ -374,9 +373,9 @@ class EllipseCurve extends Curve {
 
 	/**
 	 *
-	 * @param {BezierCurve} bezier
+	 * @param bezier
 	 */
-	isPointsWithBezier(bezier) {
+	isPointsWithBezier(bezier:BezierCurve) {
 		let localBezier = bezier.transform(this.inverseMatrix)
 		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
 			// up to 6 solutions possible
@@ -386,15 +385,15 @@ class EllipseCurve extends Curve {
 			return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
 		} else {
 			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
-			return possibleISPoints.filter(p => NLA.equals(1, p.lengthXY())).m
+			return possibleISPoints.filter(p => NLA.equals(1, p.lengthXY()))
 		}
 	}
 	/**
 	 *
-	 * @param {BezierCurve} bezier
+	 * @param bezier
 	 * @returns {{tThis: number, tOther: number, p: V3}[]}
 	 */
-	isInfosWithBezier(bezier) {
+	isInfosWithBezier(bezier:BezierCurve) {
 		let localBezier = bezier.transform(this.inverseMatrix)
 		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
 			return this.isInfosWithBezier2D(bezier)
@@ -408,14 +407,7 @@ class EllipseCurve extends Curve {
 		}
 	}
 
-	/**
-	 *
-	 * @param {BezierCurve} bezier
-	 * @param {number=} sMin
-	 * @param {number=} sMax
-	 * @returns {{tThis: number, tOther: number, p: V3}[]}
-	 */
-	isInfosWithBezier2D(bezier, sMin, sMax) {
+	isInfosWithBezier2D(bezier:BezierCurve, sMin?:number, sMax?:number):{tThis: number, tOther: number, p: V3}[] {
 		// the recursive function finds good approximates for the intersection points
 		// this function uses newton iteration to improve the result as much as possible
 		// is declared as an arrow function so this will be bound correctly
@@ -502,31 +494,31 @@ class EllipseCurve extends Curve {
 	 * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
 	 * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
 	 *
-	 * @param {number} a length of the axis parallel to X axis
-	 * @param {number} b length of the axis parallel to Y axis
-	 * @param {V3=} center Defaults to V3.ZERO
+	 * @param a length of the axis parallel to X axis
+	 * @param b length of the axis parallel to Y axis
+	 * @param center Defaults to V3.ZERO
 	 * @returns {EllipseCurve}
 	 */
-	static forAB(a, b, center) {
-		return new EllipseCurve(center || V3.ZERO, V3(a, 0, 0), V3(0, b, 0))
+	static forAB(a:number, b:number, center?:V3) {
+		return new EllipseCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
 	}
 
 	/**
 	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
 	 *
-	 * @param {number} radius
-	 * @param {V3=} center Defaults to V3.ZERO
+	 * @param radius
+	 * @param center Defaults to V3.ZERO
 	 * @returns {EllipseCurve}
 	 */
-	static circle(radius, center) {
-		return new EllipseCurve(center || V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0))
+	static circle(radius:number, center?:V3) {
+		return new EllipseCurve(center || V3.ZERO, V(radius, 0, 0), V(0, radius, 0))
 	}
 
 	area() {
 		// see https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
 		return Math.PI * this.f1.cross(this.f2).length()
 	}
+	static hlol = Curve.hlol++
+	static UNIT = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
+	static tIncrement = 2 * Math.PI / (4 * 16)
 }
-EllipseCurve.prototype.hlol = Curve.hlol++
-EllipseCurve.UNIT = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
-EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 16)

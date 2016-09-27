@@ -1,4 +1,8 @@
 class CylinderSurface extends Surface {
+	baseEllipse: EllipseCurve
+	dir: V3
+	matrix:M4
+	inverseMatrix:M4
 	constructor(baseEllipse, dir) {
 		super()
 		assert(2 == arguments.length)
@@ -18,7 +22,7 @@ class CylinderSurface extends Surface {
 
 	edgeLoopContainsPoint(contour, p) {
 		assertVectors(p)
-		var line = L3(p, this.dir)
+		var line = new L3(p, this.dir)
 		// create plane that goes through cylinder seam
 		var seamBase = this.baseEllipse.at(PI)
 		var intersectionLinePerpendicular = this.dir.cross(p.minus(seamBase))
@@ -35,7 +39,7 @@ class CylinderSurface extends Surface {
 
 		contour.forEach((/** Edge= */ edge, /** number */ i, /** Array.<Edge> */ edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
+			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearSegments[i]) {
 				// edge colinear to intersection
 				var outVector = edge.bDir.cross(this.normalAt(edge.b))
@@ -206,7 +210,7 @@ class CylinderSurface extends Surface {
 			if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
 				angle = Math.sign(hint) * Math.PI
 			}
-			return V3.create(angle, pLC.z, 0)
+			return new V3(angle, pLC.z, 0)
 		}
 	}
 
@@ -216,7 +220,7 @@ class CylinderSurface extends Surface {
 		} else if (surface2 instanceof CylinderSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-				return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => L3(info.p, this.dir))
+				return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir))
 			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
 			} else {
@@ -226,13 +230,10 @@ class CylinderSurface extends Surface {
 	}
 
 	getCenterLine() {
-		return L3(this.baseEllipse.center, this.dir)
+		return new L3(this.baseEllipse.center, this.dir)
 	}
 
-	/**
-	 * @inheritDoc
-	 */
-	isCurvesWithPlane(plane) {
+	isCurvesWithPlane(plane):Curve[] {
 		assertInst(P3, plane)
 		if (this.dir.isPerpendicularTo(plane.normal)) {
 			var ellipseTs = this.baseEllipse.isTsWithPlane(plane)
@@ -247,9 +248,9 @@ class CylinderSurface extends Surface {
 			if (this.dir.dot(plane.normal) > 0) {
 				// we need to flip the ellipse so the tangent is correct
 				projEllipse = new EllipseCurve(projEllipse.center, projEllipse.f1, projEllipse.f2.negated())
-			}
-			return [projEllipse]
 		}
+			return [projEllipse]
+	}
 	}
 
 	edgeLoopCCW(contour) {
@@ -267,22 +268,17 @@ class CylinderSurface extends Surface {
 		}
 	}
 
-	/**
-	 *
-	 * @param {number} radius
-	 * @returns {CylinderSurface}
-	 */
-	static cylinder(radius) {
-		return new CylinderSurface(new EllipseCurve(V3.ZERO, V3(radius, 0, 0), V3(0, radius, 0)), V3.Z)
+	static cylinder(radius:number):CylinderSurface {
+		return new CylinderSurface(new EllipseCurve(V3.ZERO, V(radius, 0, 0), V(0, radius, 0)), V3.Z)
 	}
 
 	/**
 	 *
-	 * @param {V3} anchor
-	 * @param {V3} dir not necessarily normalized
+	 * @param anchor
+	 * @param dir not necessarily normalized
 	 * @returns {Array.<number>}
 	 */
-	static unitISLineTs(anchor, dir) {
+	static unitISLineTs(anchor:V3, dir:V3) {
 		var {x: ax, y: ay, z: az} = anchor
 		var {x: dx, y: dy, z: dz} = dir
 
@@ -298,5 +294,6 @@ class CylinderSurface extends Surface {
 		var c = ax * ax + ay * ay - 1
 		return pqFormula(b / a, c / a)
 	}
+
+	static UNIT = new CylinderSurface(EllipseCurve.UNIT, V3.Z)
 }
-CylinderSurface.UNIT = new CylinderSurface(EllipseCurve.UNIT, V3.Z)

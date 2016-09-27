@@ -1,4 +1,7 @@
 class PPCurve extends Curve {
+	parametricSurface1: Surface
+	parametricSurface2: Surface
+
 	/**
 	 *
 	 * @param parametricSurface1
@@ -15,7 +18,7 @@ class PPCurve extends Curve {
 		this.parametricSurface1 = parametricSurface1
 		this.parametricSurface2 = parametricSurface2
 		if (!startPoint) {
-			var pmPoint = curvePoint(this.implicitCurve(), V3(1, 1, 0))
+			var pmPoint = curvePoint(this.implicitCurve(), V(1, 1, 0))
 			this.startPoint = this.parametricSurface.parametricFunction()(pmPoint.x, pmPoint.y)
 		} else {
 			this.startPoint = startPoint

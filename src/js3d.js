@@ -61,7 +61,7 @@ const log = Math.log
 function distanceDiffForPointSquared(c) {
 	return p => {
 		let dist = c.distanceTo(p)
-		return V3.create(
+		return new V3(
 			(p.x - c.x) / dist,
 			(p.y - c.y) / dist,
 			(p.z - c.z) / dist
@@ -309,7 +309,7 @@ SegmentEndPoint.prototype = {
 	 * @returns {V3}
 	 */
 	V3: function () {
-		return V3(this.x, this.y, 0);
+		return V(this.x, this.y, 0);
 	},
 
 	isConstrained: function (sketch) {
@@ -414,13 +414,13 @@ SketchArc.prototype = {
 		return this.a.distanceToCoords(this.c)
 	},
 	distanceToCoords: function (coords) {
-		coords = V3(coords)
+		coords = V(coords)
 		var angleA = this.angleA(), angleB = this.angleB()
 		if (angleB <= angleA) { angleB += Math.PI * 2 }
 		var relCoords = coords.minus(this.c.V3()), angle = relCoords.angleXY(), radius = this.radiusA()
 		if (angle < 0) { angle += Math.PI * 2 }
 		var angle2 = NLA.clamp(angle, angleA, angleB)
-		return V3(radius * cos(angle2), radius * sin(angle2), 0).minus(relCoords).length()
+		return V(radius * cos(angle2), radius * sin(angle2), 0).minus(relCoords).length()
 	},
 	flip: function () {
 		[this.a, this.b] = [this.b, this.a]
@@ -536,7 +536,7 @@ SketchLineSeg.prototype = {
 		}
 	},
 	getVectorAB: function () {
-		return V3(this.b.x - this.a.x, this.b.y - this.a.y, 0);
+		return V(this.b.x - this.a.x, this.b.y - this.a.y, 0);
 	},
 	getClosestPoint: function (x, y) {
 		var x1 = this.a.x, y1 = this.a.y, x2 = this.b.x, y2 = this.b.y;
@@ -578,7 +578,7 @@ function intersection(x1, y1, x2, y2, x3, y3, x4, y4) {
 	var denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 	var xNominator = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4);
 	var yNominator = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4);
-	return V3(xNominator / denominator, yNominator / denominator, 0);
+	return V(xNominator / denominator, yNominator / denominator, 0);
 }
 
 function isBetween(val, a, b) {
@@ -1296,16 +1296,16 @@ function rebuildModel() {
 	brepEdges = []
 
 	planes = [
-		CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
-		CustomPlane(V3.ZERO, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
-		CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
+		new CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
+		new CustomPlane(V3.ZERO, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
+		new CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
 	]
 	planes.forEach(customPlane => publish(customPlane.name, customPlane))
 
 	let loopEnd = -1 == rebuildLimit ? featureStack.length : min(rebuildLimit, featureStack.length)
 	for (var featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
 		var feature = featureStack[featureIndex]
-		try {
+		// try {
 			if (feature instanceof Sketch) {
 				feature.plane = feature.planeRef.getOrThrow()
 				//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(), feature.plane.normal.length())
@@ -1368,18 +1368,18 @@ function rebuildModel() {
 		// brepMesh.computeWireframeFromFlatTriangles()
 		// brepMesh.compile()
 
-		} catch (error) {
-			let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
-
-			if (featureDiv) {
-				let ediv = featureDiv.getElement('[name=error]')
-				ediv.setStyle('display', 'inline')
-				ediv.title= error.toString() + '\n' + error.stack
-			}
-			console.error(error)
-			// throw error
-			break
-		}
+		// } catch (error) {
+		// 	let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
+		//
+		// 	if (featureDiv) {
+		// 		let ediv = featureDiv.getElement('[name=error]')
+		// 		ediv.setStyle('display', 'inline')
+		// 		ediv.title= error.toString() + '\n' + error.stack
+		// 	}
+		// 	console.error(error)
+		// 	throw error
+		// 	break
+		// }
 	}
 	if (modelBREP) {
 		brepMesh = modelBREP.toMesh()
@@ -1406,7 +1406,7 @@ var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges = []
 var rebuildLimit = -1
 var drPs = [], drVs = []
 var oldConsole = undefined;
-var eyePos = V3(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z
+var eyePos = V(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z
 var hoverHighlight = undefined
 // console.log = oldConsole;
 var modeStack = []
@@ -1563,8 +1563,8 @@ function paintScreen () {
 // 	if (!mesh1) {
 // //		let pF = modelBREP.faces.filter(face => face.constructor == RotationFace)[1]
 // 		let pf = new RotationFace(
-// 			new ProjectedCurveSurface(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V3(161.78547089700214, -252.13248349581008, 0), V3(284.63214994898954, -163.59789158697575, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(0, 0, 1), 0, 1), [
-// 			new PCurveEdge(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V3(161.78547089700214, -252.13248349581008, 0), V3(284.63214994898954, -163.59789158697575, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(372.40411211189405, -210.3992206435476, 0), V3(142.87578921496748, -191.46078243076332, 0), 1, 0, new PCurveEdge(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V3(161.78547089700214, -252.13248349581008, 0), V3(284.63214994898954, -163.59789158697575, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(142.87578921496748, -191.46078243076332, 0), V3(372.40411211189405, -210.3992206435476, 0), 0, 1, null, V3(142.87578921496748, -191.46078243076332, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(-372.40411211189405, 210.3992206435476, 0), V3(-142.87578921496748, 191.46078243076332, 0)),
+// 			new ProjectedCurveSurface(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0)), V(0, 0, 1), 0, 1), [
+// 			new PCurveEdge(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0)), V(372.40411211189405, -210.3992206435476, 0), V(142.87578921496748, -191.46078243076332, 0), 1, 0, new PCurveEdge(new BezierCurve(V3(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0)), V(142.87578921496748, -191.46078243076332, 0), V3(372.40411211189405, -210.3992206435476, 0), 0, 1, null, V3(142.87578921496748, -191.46078243076332, 0), V3(372.40411211189405, -210.3992206435476, 0)), V3(-372.40411211189405, 210.3992206435476, 0), V3(-142.87578921496748, 191.46078243076332, 0)),
 // 			StraightEdge.throughPoints(V3(142.87578921496748, -191.46078243076332, 0), V3(142.87578921496748, -191.46078243076332, -100)),
 // 			new PCurveEdge(new BezierCurve(V3(142.87578921496748, -191.46078243076332, -100), V3(161.78547089700214, -252.13248349581008, -100), V3(284.63214994898954, -163.59789158697575, -100), V3(372.40411211189405, -210.3992206435476, -100)), V3(142.87578921496748, -191.46078243076332, -100), V3(372.40411211189405, -210.3992206435476, -100), 0, 1, null, V3(142.87578921496748, -191.46078243076332, 0), V3(372.40411211189405, -210.3992206435476, 0)),
 // 			StraightEdge.throughPoints(V3(372.40411211189405, -210.3992206435476, -100), V3(372.40411211189405, -210.3992206435476, 0))], [])
@@ -1910,8 +1910,8 @@ function initMeshes() {
 	meshes.sphere1 = GL.Mesh.sphere(2)
 	meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
 	meshes.text = GL.Mesh.plane()
-	meshes.vector = GL.Mesh.rotation([V3.ZERO, V3(0, 0.05, 0), V3(0.8, 0.05), V3(0.8, 0.1), V3(1, 0)], L3.X, Math.PI * 2, 8, true)
-	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => V3.create(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
+	meshes.vector = GL.Mesh.rotation([V3.ZERO, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, Math.PI * 2, 8, true)
+	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
 	meshes.xyLinePlane = GL.Mesh.plane()
 }
 function initShaders() {
@@ -1928,22 +1928,6 @@ function initShaders() {
 }
 function main() {
 
-	let isc = new BezierCurve(V3(298.87639221507385, 162.667841424329, -146.8113588066827), V3(280.8890230060535, -48.7184401564907, 33.452468065317454), V3(252.7320514162261, 103.59114067551941, -90.1057675126865), V3(203.7658849214215, -21.316596978802774, 22.31079548556537), -0.1, 1.1)
-	let po = V3(291.2967892977242, 108.30752763303609, -100)
-	let pce = new PCurveEdge(new BezierCurve(V3(321.4663967541227, 285.941889389124, -100), V3(275.74165967136094, -76.80769146745264, -100), V3(266.59671225480844, 179.25083619601324, -100), V3(200.3329014289632, -40.05044765068365, -100), -0.1, 1.1), V3(200.3329014289632, -40.05044765068365, -100), V3(321.4663967541227, 285.941889389124, -100), 1, 0, null, V3(198.79143247753572, 657.9038515400907, 0), V3(137.17421124828525, 1088.24874256973, 0))
-	let ps = new PlaneSurface(P3(V3(0.11702878916613137, 0.6386281394494563, 0.760564502201907), 27.20189517996009))
-	let ps2 = new ProjectedCurveSurface(new BezierCurve(V3(321.4663967541227, 285.941889389124, 0), V3(275.74165967136094, -76.80769146745264, 0), V3(266.59671225480844, 179.25083619601324, 0), V3(200.3329014289632, -40.05044765068365, 0), -0.1, 1.1), V3(0, 0, -1), 0, 1)
-	console.log(ps2.dir1.sce)
-	console.log(M4.projection(ps.plane, ps2.dir1).str)
-	let iscactual = ps2.isCurvesWithSurface(ps)[0]
-	let t = pce.edgeISTsWithSurface(ps)[0], p = pce.curve.at(t)
-
-	assert(ps.containsCurve(iscactual))
-	assert(ps2.containsCurve(iscactual))
-	assert(ps2.containsPoint(p))
-	assert(ps.containsPoint(p))
-	assert(pce.curve.containsPoint(p))
-	assert(iscactual.containsPoint(p), iscactual.distanceToPoint(p))
 	// initTips()
 	// new Request({url: 'src/testshader.glsl', async: false, onSuccess: text => console.log(text)}).send()
 
@@ -1975,7 +1959,7 @@ function main() {
 	// mesh1.compile()
 	// let mint = -2, maxt = 2
 	// drPs.push(curve.at(mint), curve.at(maxt))
-	// let line = L3(V3(-1560.8950828838565, 716.07295580975, 249.61382611323648), V3(0.9130103135570956, -0.36545647611595106, -0.18125598308272678))
+	// let line = L3(V3(-1560.8950828838565, 716.07295580975, 249.61382611323648), V(0.9130103135570956, -0.36545647611595106, -0.18125598308272678))
 	// isc.debugToMesh(mesh1, 'curve1')
 	// console.log(mesh1)
 	mesh1.compile()
@@ -1986,7 +1970,7 @@ function main() {
 	//mesh1 = mesh1.transform(M4.FOO.as3x3())
 
 	let linksHaendig = M4.forSys(V3.X, V3.Y, V3.Z.negated())
-	let v0 = V3(2, 3, 4), v1 = V3(-2, 3, 5), v2 = v0.cross(v1)
+	let v0 = V(2, 3, 4), v1 = V(-2, 3, 5), v2 = v0.cross(v1)
 	let v2t = linksHaendig.transformVector(v0).cross(linksHaendig.transformVector(v1))
 	let v2s = linksHaendig.inversed().transposed().transformVector(v2)
 	console.log("ASKDKJALDS", v2t.dot(v2s), v2t.isParallelTo(v2s))
@@ -2062,7 +2046,7 @@ function main() {
 			//noinspection JSBitwiseOperatorUsage
 			if (e.buttons & 4) {
 				// pan
-				let moveCamera = V3(-e.deltaX * 2 / gl.canvas.width, e.deltaY * 2 / gl.canvas.height, 0);
+				let moveCamera = V(-e.deltaX * 2 / gl.canvas.width, e.deltaY * 2 / gl.canvas.height, 0);
 				let inverseProjectionMatrix = gl.projectionMatrix.inversed();
 				let worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
 				eyePos = eyePos.plus(worldMoveCamera);
@@ -2092,7 +2076,7 @@ function main() {
 		//console.log(e)
 		zoomFactor *= pow(0.9, -e.wheel)
 		var mouseCoords = e.client
-		var moveCamera = V3(mouseCoords.x * 2 / gl.canvas.width - 1, -mouseCoords.y * 2 / gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
+		var moveCamera = V(mouseCoords.x * 2 / gl.canvas.width - 1, -mouseCoords.y * 2 / gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
 		var inverseProjectionMatrix = gl.projectionMatrix.inversed()
 		var worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
 		//console.log("moveCamera", moveCamera)
@@ -2170,7 +2154,7 @@ function getHovering(mouseLine, ...consider) {
 		})
 	}
 	if (consider.contains('brepEdges')) {
-		let projPlane = P3(mouseLine.dir1, 0)
+		let projPlane = new P3(mouseLine.dir1, 0)
 		let projPoint = projPlane.projectedPoint(mouseLine.anchor)
 		brepEdges.forEach(edge => {
 			let curve = edge.curve
@@ -2215,8 +2199,8 @@ function getHovering(mouseLine, ...consider) {
  * @returns {L3}
  */
 function getMouseLine(pos) {
-	let ndc1 = V3(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 0)
-	let ndc2 = V3(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 1)
+	let ndc1 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 0)
+	let ndc2 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 1)
 	//console.log(ndc)
 	let inverseProjectionMatrix = gl.projectionMatrix.inversed()
 	let s = inverseProjectionMatrix.transformPoint(ndc1)
@@ -2629,8 +2613,8 @@ function unserialize(string) {
 			return v
 		} else if ('object' == typeof v && null != v) {
 			if ("#PROTO" in v) {
-				assert(window[v["#PROTO"]], v["#PROTO"] + ' Missing ' + window[v["#PROTO"]])
-				let result = Object.create(window[v["#PROTO"]].prototype)
+				assert(window[v["#PROTO"]] || NLA.CLASSES[v["#PROTO"]], v["#PROTO"] + ' Missing ' + window[v["#PROTO"]])
+				let result = Object.create((window[v["#PROTO"]] || NLA.CLASSES[v["#PROTO"]]).prototype)
 				let keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {
 					//if ("name" == keys[i]) console.log(result)

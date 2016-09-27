@@ -49,7 +49,7 @@ SketchBezier = class SketchBezier {
 		assert(false)
 	}
 	distanceTo(x, y) {
-		let p = V3.create(x, y, 0)
+		let p = V(x, y, 0)
 		const curve = this.getBezierCurve()
 		let t = NLA.clamp(curve.closestTToPoint(p), 0, 1)
 		return curve.at(t).distanceTo(p)

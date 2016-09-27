@@ -1,9 +1,11 @@
-/**
- * @template T
- * @class Curve.<T>
- * @extends Transformable.<T>
- */
-class Curve extends Transformable {
+class ProjectionCurve extends Curve {
+	constructor(originalCurve, projDir, targetSurface, isIndex) {
+		super()
+		this.originalCurve = originalCurve
+		this.projDir = projDir
+		this.targetSurface = targetSurface
+		this.isIndex = isIndex
+	}
 
 	/**
 	 * Returns curve parameter t for point p on curve.
@@ -16,34 +18,33 @@ class Curve extends Transformable {
 	/**
 	 * Returns the point on the line that is closest to the given point.
 	 *
-	 * @param {V3} p
+	 * @param p
 	 * @returns {V3}
 	 */
-	closestPointToPoint (p) {
+	closestPointToPoint(p: V3) {
 		return this.at(this.closestTToPoint(p))
 	}
 
 	/**
 	 * @abstract
-	 * @param {V3} p
+	 * @param p
 	 */
-	closestTToPoint(p) {
-		assert(false, "Not implemented on " + this.constructor.name)
+	closestTToPoint(p: V3) {
 	}
 
 	/**
 	 * So different edges on the same curve do not have different vertices, they are always generated
 	 * on fixed points this.at(k * this.tIncrement), with k taking integer values
 	 *
-	 * @param {number} aT
-	 * @param {number} bT
-	 * @param {V3} a
-	 * @param {V3} b
+	 * @param aT
+	 * @param bT
+	 * @param a
+	 * @param b
 	 * @param {boolean} reversed
 	 * @param {boolean} includeFirst
 	 * @returns {Array.<V3>}
 	 */
-	calcSegmentPoints(aT, bT, a, b, reversed, includeFirst) {
+	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed, includeFirst) {
 		assert(this.tIncrement, "tIncrement not defined on " + this)
 		var split = 4 * 62, inc = this.tIncrement
 		var verts = []
@@ -69,10 +70,10 @@ class Curve extends Transformable {
 
 	/**
 	 *
-	 * @param {V3} p
+	 * @param p
 	 * @returns {number}
 	 */
-	distanceToPoint(p) {
+	distanceToPoint(p: V3) {
 		return this.at(this.closestTToPoint(p)).distanceTo(p)
 	}
 
@@ -89,64 +90,64 @@ class Curve extends Transformable {
 	/**
 	 *
 	 * @abstract
-	 * @param {number} t
+	 * @param t
 	 * @returns {V3}
 	 */
-	at(t) {
+	at(t: number) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
 	 *
 	 * @abstract
-	 * @param {number} t
+	 * @param t
 	 * @returns {V3}
 	 */
-	tangentAt(t) {
+	tangentAt(t: number) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
 	 * Derivative of tangentAt(t) for parameter t
 	 * @abstract
-	 * @param {number} t
+	 * @param t
 	 * @returns {V3}
 	 */
-	ddt(t) {
+	ddt(t: number) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
 	 * @abstract
-	 * @param {V3} p
+	 * @param p
 	 * @returns {boolean}
 	 */
-	containsPoint(p) {
+	containsPoint(p: V3) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
 	 *
 	 * @abstract
-	 * @param {Surface} surface
+	 * @param surface
 	 * @returns {number[]}
 	 */
-	isTsWithSurface(surface) {
+	isTsWithSurface(surface: Surface) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
 	 *
 	 * @abstract
-	 * @param {P3} plane
+	 * @param plane
 	 * @returns {number[]}
 	 */
-	isTsWithPlane(plane) {
+	isTsWithPlane(plane: P3) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
 	/**
-	 * Should really be abstract, but it works for all the conic is curves, so it's here.
+	 * Should really be abstract, but it works for all teh conic is curves, so it's here.
 	 * @param mesh
 	 * @param bufferName
 	 */
@@ -173,10 +174,10 @@ class Curve extends Transformable {
 	 * iff for any t, this.at(t) == curve.at(t)
 	 *
 	 * @abstract
-	 * @param {Curve} curve
+	 * @param curve
 	 * @returns {boolean}
 	 */
-	likeCurve(curve) {
+	likeCurve(curve: Curve) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
@@ -189,10 +190,10 @@ class Curve extends Transformable {
 	 * and for every s, there is a t so that curve.at(s) == this.a(t)
 	 *
 	 * @abstract
-	 * @param {Curve} curve
+	 * @param curve
 	 * @returns {boolean}
 	 */
-	isColinearTo(curve) {
+	isColinearTo(curve: Curve) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 
@@ -215,7 +216,6 @@ class Curve extends Transformable {
 				}
 			}
 		}
-		return new AABB(V3(mins), V3(maxs))
+		return new AABB(V(mins), V(maxs))
 	}
 }
-Curve.hlol = 0

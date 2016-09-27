@@ -1,13 +1,8 @@
 var PlaneSurface = class PlaneSurface extends Surface {
-	/**
-	 *
-	 * @param {P3} plane
-	 * @param {V3=} right
-	 * @param {V3=} up
-	 * @constructor
-	 * @extends {Surface}
-	 */
-	constructor(plane, right, up) {
+	plane:P3
+	right:V3
+	up:V3
+	constructor(plane:P3, right?:V3, up?:V3) {
 		super()
 		assertInst(P3, plane)
 		this.plane = plane
@@ -25,9 +20,9 @@ var PlaneSurface = class PlaneSurface extends Surface {
 	}
 
 	parametricFunction() {
-		var matrix = M4.forSys(this.right, this.up, this.normal, this.plane.anchor)
+		var matrix = M4.forSys(this.right, this.up, this.plane.normal, this.plane.anchor)
 		return function (s, t) {
-			return matrix.transformPoint(V3.create(s, t, 0))
+			return matrix.transformPoint(new V3(s, t, 0))
 		}
 	}
 
@@ -49,10 +44,10 @@ var PlaneSurface = class PlaneSurface extends Surface {
 
 	/**
 	 *
-	 * @param {Array.<Edge>} contour
+	 * @param contour
 	 * @returns {boolean}
 	 */
-	edgeLoopCCW(contour) {
+	edgeLoopCCW(contour:Edge[]) {
 		var totalAngle = 0
 		for (var i = 0; i < contour.length; i++) {
 			var ipp = (i + 1) % contour.length
@@ -67,17 +62,11 @@ var PlaneSurface = class PlaneSurface extends Surface {
 		return totalAngle > 0
 	}
 
-	/**
-	 *
-	 * @param {Edge[]} contour
-	 * @param {V3} p
-	 * @returns {boolean}
-	 */
-	edgeLoopContainsPoint(contour, p) {
+	edgeLoopContainsPoint(contour:Edge[], p:V3) {
 		assert(contour)
 		assertVectors (p)
 		var dir = this.right.plus(this.up.times(0.123)).normalized()
-		var line = L3(p, dir)
+		var line = new L3(p, dir)
 		var plane = this.plane
 		var intersectionLinePerpendicular = dir.cross(plane.normal)
 		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
@@ -91,7 +80,7 @@ var PlaneSurface = class PlaneSurface extends Surface {
 		}
 		contour.forEach((/** Edge= */ edge, i, edges) => {
 			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
+			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearSegments[i]) {
 				// edge colinear to intersection
 				var outVector = edge.bDir.cross(plane.normal)
@@ -172,7 +161,8 @@ var PlaneSurface = class PlaneSurface extends Surface {
 	toSource() {
 		return `new PlaneSurface(${this.plane})`
 	}
-}
-PlaneSurface.throughPoints = function (a, b, c) {
-	return new PlaneSurface(P3.throughPoints(a, b, c))
+
+	static throughPoints(a, b, c) {
+		return new PlaneSurface(P3.throughPoints(a, b, c))
+	}
 }

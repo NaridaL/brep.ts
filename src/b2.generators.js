@@ -18,12 +18,12 @@ B2.box = function (w, h, d, name) {
 	assertNumbers(w, h, d)
 	assertInst('string' === typeof name)
 	var baseVertices = [
-		V3.create(0, 0, 0),
-		V3.create(0, h, 0),
-		V3.create(w, h, 0),
-		V3.create(w, 0, 0)
+		V(0, 0, 0),
+		V(0, h, 0),
+		V(w, h, 0),
+		V(w, 0, 0)
 	]
-	return B2.extrudeVertices(baseVertices, P3.XY.flipped(), V3.create(0, 0, d), name)
+	return B2.extrudeVertices(baseVertices, P3.XY.flipped(), V(0, 0, d), name)
 }
 
 /**
@@ -36,14 +36,14 @@ B2.box = function (w, h, d, name) {
  */
 B2.puckman = function (radius, rads, height, name) {
 	// TODO: argument checking
-	var circleCurve = new EllipseCurve(V3.ZERO, V3.create(radius, 0, 0), V3.create(0, -radius, 0))
+	var circleCurve = new EllipseCurve(V3.ZERO, V(radius, 0, 0), V(0, -radius, 0))
 	var a = circleCurve.at(0)
 	var b = circleCurve.at(-rads)
 	var edges = [
 		StraightEdge.throughPoints(a, V3.ZERO),
 		StraightEdge.throughPoints(V3.ZERO, b),
 		new PCurveEdge(circleCurve, b, a, -rads, 0, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))]
-	return B2.extrudeEdges(edges, P3.XY.flipped(), V3.create(0, 0, height), name)
+	return B2.extrudeEdges(edges, P3.XY.flipped(), V(0, 0, height), name)
 }
 
 B2.registerVertexName = function (map, name, p) {
@@ -131,7 +131,7 @@ B2.cylinder = function (radius, height, rads) {
 B2.torus = function (rSmall, rLarge, rads) {
 	assertNumbers(rSmall, rLarge, rads)
 	assertf(() => rLarge > rSmall)
-	return B2.rotateEdges([EllipseCurve.circle(rSmall, V3.create(rLarge, 0, 0))], rads)
+	return B2.rotateEdges([EllipseCurve.circle(rSmall, V(rLarge, 0, 0))], rads)
 }
 
 /**
@@ -140,7 +140,7 @@ B2.torus = function (rSmall, rLarge, rads) {
  * @param {number} rads
  * @returns {B2}
  */
-B2.rotateEdges = function (edges, rads) {
+B2.rotateEdges = function (edges, rads, name) {
 	var rotationMatrix = M4.rotationZ(rads)
 	var open = !NLA.equals(rads, 2 * PI)
 	var endEdges = open ? edges.map(edge => edge.transform(rotationMatrix)) : edges
@@ -149,9 +149,9 @@ B2.rotateEdges = function (edges, rads) {
 		var a = edges[i].a, radius = a.lengthXY()
 		var b = endEdges[i].a
 		if (!NLA.isZero(radius)) {
-			var curve = new EllipseCurve(V3.create(0, 0, a.z), V3.create(-radius, 0, 0), V3.create(0, -radius, 0))
+			var curve = new EllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
 			var aT = -PI, bT = -PI + rads
-			return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT))
+			return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
 		}
 	})
 	var faces = edges.map((edge, i) => {
@@ -171,7 +171,7 @@ B2.rotateEdges = function (edges, rads) {
 				return new RotationFace(surface, faceEdges)
 			} else if (line.dir1.isPerpendicularTo(V3.Z)) {
 				let flipped = edge.a.x > edge.b.x
-				let surface = new PlaneSurface(P3(V3.Z, edge.a.z))
+				let surface = new PlaneSurface(new P3(V3.Z, edge.a.z))
 				if (!flipped) surface = surface.flipped()
 				if (!open) {
 					var hole = flipped
@@ -232,7 +232,7 @@ B2.rotStep = function (edges, rads, count) {
 		var ipp = (i + 1) % edges.length
 		if (edge instanceof StraightEdge && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
 			var flipped = edge.a.x > edge.b.x;
-			surface = new PlaneSurface(flipped ? P3(V3.Z, edge.a.z) : P3(V3.Z.negated(), -edge.a.z))
+			surface = new PlaneSurface(flipped ? new P3(V3.Z, edge.a.z) : new P3(V3.Z.negated(), -edge.a.z))
 			if (open) {
 				var newEdges = []
 				if (!NLA.isZero(edge.a.x)) {
