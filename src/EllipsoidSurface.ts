@@ -59,7 +59,7 @@ class EllipsoidSurface extends Surface {
 		if (this == surface) return true
 		if (surface.constructor != EllipsoidSurface) return false
 		if (!this.center.like(surface.center)) return false
-		if (this.isSphere()) return surface.isSphere() && NLA.equals(this.f1.length(), this.f2.length())
+		if (this.isSphere()) return surface.isSphere() && NLA.eq(this.f1.length(), this.f2.length())
 
 		let thisMA = this.mainAxes(), surfaceMA = surface.mainAxes()
 		return thisMA.every(tma => surfaceMA.some(sma => tma.like(sma)))
@@ -170,9 +170,9 @@ class EllipsoidSurface extends Surface {
 	 * @returns {boolean}
 	 */
 	isSphere() {
-		return NLA.equals(this.f1.length(), this.f2.length())
-			&& NLA.equals(this.f2.length(), this.f3.length())
-			&& NLA.equals(this.f3.length(), this.f1.length())
+		return NLA.eq(this.f1.length(), this.f2.length())
+			&& NLA.eq(this.f2.length(), this.f3.length())
+			&& NLA.eq(this.f3.length(), this.f1.length())
 			&& this.f1.isPerpendicularTo(this.f2)
 			&& this.f2.isPerpendicularTo(this.f3)
 			&& this.f3.isPerpendicularTo(this.f1)
@@ -203,7 +203,7 @@ class EllipsoidSurface extends Surface {
 	}
 
 	containsPoint(p) {
-		return NLA.isZero(this.implicitFunction()(p))
+		return NLA.eq0(this.implicitFunction()(p))
 	}
 
 	boundsFunction() {

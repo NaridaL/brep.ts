@@ -1,6 +1,26 @@
 "use strict"
 
+
+// I'd use a loop but it kills the type checker.
+const ceil = Math.ceil
+const floor = Math.floor
+const abs = Math.abs
+const sign = Math.sign
+const atan2 = Math.atan2
+const atan = Math.atan
+const cos = Math.cos
+const sin = Math.sin
+const min = Math.min
+const max = Math.max
+const PI = Math.PI
+const sqrt = Math.sqrt
+const pow = Math.pow
+const round = Math.round
+const log = Math.log
+
 var globalId = 0;
+type int = number
+type FloatArray = Float32Array | Float64Array | number[]
 
 /** @define {boolean} */
 const NLA_DEBUG = true
@@ -25,13 +45,34 @@ interface Object {
 	toSource():string
 }
 interface Array<T> {
-	withMax(f:(el:T)=>number):T
-	mapFilter<U>(f:(el:T)=>U):U[]
-	concatenated<U>():U[]
+    withMax(f: (el: T)=>number): T
+    mapFilter<U>(f: (el: T, elIndex: int, array: Array<T>)=>U): U[]
+    concatenated(): T
+    includes(el: T): boolean
+    isEmpty(): boolean
+    remove(el: T): boolean
+    unique(): T[]
+    last(): T
+    pushAll(els: T[])
+    flatMap<U>(f: (el: T) => (U | U[])): U[]
+    sum(): number
+	max(): number
+	min(): number
+}
+
+var oldConsole = undefined
+function disableConsole() {
+	oldConsole = console.log
+	console.log = function() {}
+}
+function enableConsole() {
+	if (oldConsole) {
+		console.log = oldConsole;
+	}
 }
 
 
-function assertVectors(...vectors:V3[]) {
+function assertVectors(...vectors:(Vector|V3)[]) {
 	if (NLA_DEBUG) {
 		for (var i = 0; i < arguments.length; i++) {
 			if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
@@ -61,33 +102,69 @@ function assertNumbers(...numbers) {
 	}
 	return true
 }
-function assert(value:any, ...messages:(string|(() => string))[]):boolean {
+function assert(value:any, ...messages:(any|(() => string))[]):boolean {
 	if (NLA_DEBUG && !value) {
-		throw new Error("NLA.assert failed: " + messages.map(message => ('function' == typeof message ? message() : message || '')).join('\n'))
+		throw new Error("NLA.assert failed: "
+			+ messages.map(message => ('function' === typeof message ? message() : message || '')).join('\n'))
 	}
 	return true
 }
+function assertNever(value?: never): never {
+    throw new Error()
+}
 
-function assertf(f:() => any, ...messages:(string|(() => string))[]) {
+function assertf(f:() => any, ...messages:(string|(() => any))[]) {
 	if (!f()) {
-		throw new Error("NLA.assertf failed: " + f.toString() + ('function' == typeof message ? message() : (message || '')))
+		throw new Error("NLA.assertf failed: " + f.toString()
+			+ messages.map(message => ('function' === typeof message ? message() : message || '')).join('\n'))
 	}
 }
 
 namespace NLA {
-	export const isZero = (x:number) => Math.abs(x) < NLA_PRECISION
-	export const isZero2 = (x:number, precision:number) => Math.abs(x) < precision
-	export const equals = (x:number, y:number) => Math.abs(x - y) <= NLA_PRECISION
-	export const lt = (x:number, y:number) => x + NLA_PRECISION < y
-	export const gt = (x:number, y:number) => x > y + NLA_PRECISION
-	export const le = (x:number, y:number) => x <= y + NLA_PRECISION
-	export const ge = (x:number, y:number) => x + NLA_PRECISION >= y
-	export const equals2 = (x, y, precision) => Math.abs(x - y) < precision
-	export const eqAngle = (x:number, y:number) => zeroAngle(x - y)
-	export const zeroAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
-	export const snapTo = (x, to) => Math.abs(x - to) <= NLA_PRECISION ? to : x
-	export const canonAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+    export const eq0 = (x: number): boolean => Math.abs(x) < NLA_PRECISION
+    export const eq02 = (x: number, precision: number) => Math.abs(x) < precision
+    export const eq = (x: number, y: number) => Math.abs(x - y) <= NLA_PRECISION
+    export const lt = (x: number, y: number): boolean => x + NLA_PRECISION < y
+    export const gt = (x: number, y: number): boolean => x > y + NLA_PRECISION
+    export const le = (x: number, y: number): boolean => x <= y + NLA_PRECISION
+    export const ge = (x: number, y: number): boolean => x + NLA_PRECISION >= y
+    export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
+    export const eqAngle = (x: number, y: number): boolean => zeroAngle(x - y)
+    export const zeroAngle = (x:number):number => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
+    export const snapTo = (x:number, to:number):number => Math.abs(x - to) <= NLA_PRECISION ? to : x
+    export const canonAngle = (x:number):number => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 
+
+    /**
+	 * Decimal adjustment of a number.
+	 *
+	 * @param  f  The type of adjustment.
+	 * @param  value The number.
+	 * @param exp   The exponent (the 10 logarithm of the adjustment base).
+	 * @returns {number} The adjusted value.
+	 */
+	function decimalAdjust(f: (x: number)=>number, value: number, exp: number): number {
+		// If the exp is undefined or zero...
+		if (typeof exp === 'undefined' || +exp === 0) {
+			return f(value)
+		}
+		value = +value
+		exp = +exp
+		// If the value is not a number or the exp is not an integer...
+		if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0)) {
+			return NaN
+		}
+		// Shift
+		let vs = value.toString().split('e')
+		value = f(+(vs[0] + 'e' + (vs[1] ? (+vs[1] - exp) : -exp)))
+		// Shift back
+		vs = value.toString().split('e')
+		return +(vs[0] + 'e' + (vs[1] ? (+vs[1] + exp) : exp))
+	}
+
+	export const round10: (value: number, exp: number) => number = decimalAdjust.bind(undefined, Math.round)
+	export const floor10: (value: number, exp: number) => number = decimalAdjust.bind(undefined, Math.floor)
+	export const ceil10: (value: number, exp: number) => number = decimalAdjust.bind(undefined, Math.ceil)
 
 
 
@@ -132,7 +209,7 @@ namespace NLA {
 	export const randomColor = function () {
 		return Math.floor(Math.random() * 0x1000000)
 	}
-	export const mapAdd = function (map, key, val) {
+	export function mapAdd<T, U>(map:Map<T, U[]>, key:T, val:U) {
 		var list = map.get(key)
 		if (list) {
 			list.push(val)
@@ -165,7 +242,7 @@ namespace NLA {
 		return result;
 	}
 
-	export const arrayFromFunction = function<T>(length:number, f:(i:number) => T) {
+	export const arrayFromFunction = function<T>(length:number, f:(i:number) => T):T[] {
 		assertNumbers(length)
 		assert("function" == typeof f)
 		var a = new Array(length)
@@ -188,8 +265,8 @@ namespace NLA {
 			let val = vals[i], roundVal = round(val)
 			let key
 			if (!map.has(roundVal)
-				&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.equals(key, val))
-				&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.equals(key, val))) {
+				&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.eq(key, val))
+				&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.eq(key, val))) {
 				map.set(roundVal, val)
 			}
 		}
@@ -208,8 +285,8 @@ namespace NLA {
 			let val = vals[i], roundVal = round(f(val))
 			let key
 			if (!map.has(roundVal)
-				&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.equals(key, f(val)))
-				&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.equals(key, f(val)))) {
+				&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.eq(key, f(val)))
+				&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.eq(key, f(val)))) {
 				map.set(roundVal, val)
 			}
 		}
@@ -274,7 +351,7 @@ namespace NLA {
 
 
 	export const CLASSES:any = {}
-	export const registerClass = function (clazz) {
+	export const registerClass = function (clazz: any) {
 		NLA.CLASSES[clazz.name] = clazz
 	}
 }
@@ -312,20 +389,17 @@ function rad2deg(rad) {
 	return rad / .017453292519943295 // (angle / 180) * Math.PI;
 }
 
+interface String {
+	capitalizeFirstLetter(): string
+}
 String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
-var ARRAY_UTILITIES = /** @template T
- @lends Array.prototype */ {
+var ARRAY_UTILITIES =
+/** @template T
+@lends Array.prototype */ {
 	pushAll: function (arr) {
 		Array.prototype.push.apply(this, arr)
-	},
-	copyStep: function(src,sstart,sstep, dst,dstart,dstep,count) {
-		var srcIndex = sstart + count * sstep;
-		var dIndex = dstart + count * dstep;
-		while(srcIndex > sstart) {
-			dst[dIndex -= dstep] = src[srcIndex -= sstep];
-		}
 	},
 	sliceStep: function (start, step, chunkSize) {
 		assertNumbers(start, step)
@@ -367,6 +441,9 @@ var ARRAY_UTILITIES = /** @template T
 			}
 		}
 		return result
+	},
+	flatMap(f) {
+		return Array.prototype.concat.apply([], this.map(f));
 	},
 
 	/**
@@ -516,56 +593,13 @@ var ARRAY_UTILITIES = /** @template T
 }
 for (let key in ARRAY_UTILITIES) {
 	NLA["array" + key.capitalizeFirstLetter()] = function (arr, ...rest) {
+		assert(!ARRAY_UTILITIES[key])
 		ARRAY_UTILITIES[key].apply(arr, rest)
 	}
 }
 // Closure
-;(function() {
-	/**
-	 * Decimal adjustment of a number.
-	 *
-	 * @param  type  The type of adjustment.
-	 * @param  value The number.
-	 * @param exp   The exponent (the 10 logarithm of the adjustment base).
-	 * @returns {number} The adjusted value.
-	 */
-	function decimalAdjust(type:String, value:number, exp:number) {
-		// If the exp is undefined or zero...
-		if (typeof exp === 'undefined' || +exp === 0) {
-			return Math[type](value);
-		}
-		value = +value;
-		exp = +exp;
-		// If the value is not a number or the exp is not an integer...
-		if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0)) {
-			return NaN;
-		}
-		// Shift
-		value = value.toString().split('e');
-		value = Math[type](+(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp)));
-		// Shift back
-		value = value.toString().split('e');
-		return +(value[0] + 'e' + (value[1] ? (+value[1] + exp) : exp));
-	}
 
-	// Decimal round
-	if (!Math.round10) {
-		Math.round10 = function(value, exp) {
-			return decimalAdjust('round', value, exp);
-		};
-	}
-	// Decimal floor
-	if (!Math.floor10) {
-		Math.floor10 = function(value, exp) {
-			return decimalAdjust('floor', value, exp);
-		};
-	}
-	// Decimal ceil
-	if (!Math.ceil10) {
-		Math.ceil10 = function(value, exp) {
-			return decimalAdjust('ceil', value, exp);
-		};
-	}
+	;(function() {
 })();
 
 
@@ -575,12 +609,13 @@ function isCCW(vertices, normal) {
 	assert(0 != dsa)
 	return dsa < 0
 }
+declare function earcut(data:number[], holeIndices:number[], dim?:number): number[]
 function triangulateVertices(normal, vertices, holeStarts) {
-	var absMaxDim = normal.absMaxDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
+	var absMaxDim = normal.maxAbsDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
 	var contour = new Array(vertices.length * 2)
 	var i = vertices.length
 	/*
-	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
+	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]
 	 while (i--) {
 	 contour[i * 2    ] = vertices[i][coord0] * factor
 	 contour[i * 2 + 1] = vertices[i][coord1]
@@ -610,9 +645,9 @@ function triangulateVertices(normal, vertices, holeStarts) {
 
 function doubleSignedArea(vertices, normal) {
 	assert(!normal.isZero(),'!normal.isZero()')
-	var absMaxDim = normal.absMaxDim()
+	var absMaxDim = normal.maxAbsDim()
 	// order is important, coord0 and coord1 must be set so that coord0, coord1 and maxDim span a right-hand coordinate system
-	//var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][absMaxDim]
+	//var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]
 	var doubleSignedArea = vertices.map((v0, i, vertices) => {
 		var v1 = vertices[(i + 1) % vertices.length]
 		//return (v1[coord0] - v0[coord0]) * (v1[coord1] + v0[coord1])
@@ -658,8 +693,8 @@ function pqFormula(p:number, q:number) {
  * @returns {number[]} with 0-3 entries
  */
 function solveCubicReal2(a:number, b:number, c:number, d:number) {
-	if (NLA.isZero(a)) {
-		if (NLA.isZero(b)) {
+	if (NLA.eq0(a)) {
+		if (NLA.eq0(b)) {
 			return [-d/c]
 		} else {
 			return pqFormula(c / b, d / b)
@@ -727,7 +762,7 @@ let a = [1, 2, 3].mapFilter(x => x * 2)
  * @param EPSILON
  * @returns {*}
  */
-function newtonIterate(f: (x: number[]) => number[], xStart: number, steps?: number, EPSILON?: number) {
+function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps?: number, EPSILON?: number) {
 	steps = steps || 4
 	EPSILON = EPSILON || 1e-8
 
@@ -778,7 +813,7 @@ function newtonIterateWithDerivative(f:(x:number) => number, xStart:number, step
  * @param {number=} steps
  * @returns {V3}
  */
-function newtonIterate2d(f1:(s:number,t:number)=>number, f2:(s:number,t:number)=>number, sStart:number, tStart:number, steps:number) {
+function newtonIterate2d(f1:(s:number,t:number)=>number, f2:(s:number,t:number)=>number, sStart:number, tStart:number, steps?:number) {
 	const EPSILON = 1e-6
 	steps = steps || 4
 	let s = sStart, t = tStart

@@ -1,20 +1,6 @@
 "use strict"
 
-var CustomPlane = class CustomPlane extends P3 {
-	/**
-	 *
-	 * @param anchor2
-	 * @param right
-	 * @param up
-	 * @param upStart
-	 * @param upEnd
-	 * @param rightStart
-	 * @param rightEnd
-	 * @param color
-	 * @param name
-	 * @returns {P3}
-	 * @constructor
-	 */
+class CustomPlane extends P3 {
 	constructor(anchor2, right, up, upStart, upEnd, rightStart, rightEnd, color, name) {
 		var p = P3.forAnchorAndPlaneVectors(anchor2, right, up, CustomPlane.prototype)
 		p.up = up
@@ -70,3 +56,4 @@ var CustomPlane = class CustomPlane extends P3 {
 	}
 
 }
+NLA.registerClass(CustomPlane)

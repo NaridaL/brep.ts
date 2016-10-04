@@ -40,313 +40,12 @@ function formatStack(stack) {
 	return output
 }
 
-// I'd use a loop but it kills the type checker.
-const ceil = Math.ceil
-const floor = Math.floor
-const abs = Math.abs
-const sign = Math.sign
-const atan2 = Math.atan2
-const atan = Math.atan
-const cos = Math.cos
-const sin = Math.sin
-const min = Math.min
-const max = Math.max
-const PI = Math.PI
-const sqrt = Math.sqrt
-const pow = Math.pow
-const round = Math.round
-const log = Math.log
 
-
-function distanceDiffForPointSquared(c) {
-	return p => {
-		let dist = c.distanceTo(p)
-		return new V3(
-			(p.x - c.x) / dist,
-			(p.y - c.y) / dist,
-			(p.z - c.z) / dist
-		)
-	}
-}
 
 function Point(x, y) {
 	this.x = x;
 	this.y = y;
 }
-function Sketch(planeName) {
-	// elements in 2D coordinates on x-y plane
-	this.planeRef = NameRef.UNASSIGNED
-	this.elements = []
-	this.constraints = []
-	this.name = "sketch"+(globalId++)
-	this.plane = null
-}
-Sketch.prototype = {
-	dependentOnNames: function () {
-		return this.constraints.map(constraint => constraint.cs.filter(c => c instanceof NameRef)).concatenated()
-	},
-	getConstraintsFor: function (el) {
-		return this.constraints.filter((constraint) => constraint.constrains(el))
-	},
-	constrainDistancePointFixedLineWC: function (point, lineWC, distance) {
-		this.b.push(distance);
-		var px = this.varMap.get(point), py = px + 1;
-		var lineA_SC = this.worldToSketchMatrix.transformPoint(lineWC.anchor);
-		var lineB_SC = lineA_SC.plus(this.worldToSketchMatrix.transformVector(lineWC.dir1));
-		// console.log(lineA_SC, lineB_SC);
-		if (NLA.isZero(distance)) {
-			this.F.push(x => distanceLinePointSigned(lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]))
-		} else {
-			this.F.push(x => distanceLinePoint(lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]))
-		}
-
-		// console.log("calling F", lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]);
-
-	},
-	constrainDistancePointFixedPlane: function (point, plane, distance) {
-		var sketchLineWC = this.plane.intersectionWithPlane(plane);
-		if (null == sketchLineWC) throw new Error("no intersection!!");
-		this.constrainDistancePointFixedLineWC(point, sketchLineWC, distance);
-	},
-	constrainAngleSegmentToPlane: function (segment, plane, cosAngle) {
-		var sketchLineWC = this.plane.intersectionWithPlane(plane);
-		if (null == sketchLineWC) throw new Error("no intersection!!");
-		this.constrainAngleSegmentFixedLineWC(segment, sketchLineWC, cosAngle);
-	},
-	constrainAngleSegmentFixedLineWC: function (segment, lineWC, cosAngle) {
-		this.b.push(cosAngle);
-		// indexes:
-		var ia = this.varMap.get(segment.a), ib = this.varMap.get(segment.b);
-		var lineDirectionSC = this.worldToSketchMatrix.transformVector(lineWC.dir1);
-		this.F.push(function (x) { return angleVectors(x[ib] - x[ia], x[ib + 1] - x[ia + 1], lineDirectionSC.x, lineDirectionSC.y); })
-	},
-	constrainEqualDistance: function (ia, ib, ic, id) {
-		this.b.push(0);
-		this.F.push((x) => distance(x[ia], x[ia+1], x[ib], x[ib+1]) - distance(x[ic], x[ic+1], x[id], x[id+1]));
-	},
-	constrainAngleSegmentSegment: function(line1, line2, cosAngle) {
-		this.b.push(cosAngle * cosAngle);
-		var ia = this.varMap.get(line1.a),
-			ib = this.varMap.get(line1.b),
-			ic = this.varMap.get(line2.a),
-			id = this.varMap.get(line2.b)
-		this.F.push((x) => {
-			let angle = angleABCD(
-				x[ia], x[ia + 1],
-				x[ib], x[ib + 1],
-				x[ic], x[ic + 1],
-				x[id], x[id + 1]
-			)
-			return angle * angle
-		})
-	},
-	constrainDistancePointPoint: function(pA, pB, pDistance) {
-		this.b.push(pDistance);
-		var ia = this.varMap.get(pA), ib = this.varMap.get(pB);
-		this.F.push((x) => distance(x[ia], x[ia + 1], x[ib], x[ib + 1]));
-	},
-	constrainDistancePointSegment: function(point, segment, distance) {
-		this.b.push(distance);
-		var ip = this.varMap.get(point), ia = this.varMap.get(segment.a), ib = this.varMap.get(segment.b);
-		if (NLA.isZero(distance)) {
-			this.F.push(x => distanceLinePointSigned(x[ia], x[ia + 1], x[ib], x[ib + 1], x[ip], x[ip + 1]))
-		} else {
-			this.F.push(x => distanceLinePoint(x[ia], x[ia + 1], x[ib], x[ib + 1], x[ip], x[ip + 1]))
-		}
-	},
-	constrainDistancePointBezier: function(point, bezier, pDistance) {
-		let startT = bezier.getBezierCurve().closestTToPoint(point.V3())
-		let startTIndex = this.x.length
-		this.x.push(startT)
-		this.b.push(pDistance)
-		this.b.push(0)
-		var ip = this.varMap.get(point),
-			ib = bezier.points.map(p => this.varMap.get(p))
-		this.F.push(
-		x => {
-			// cos
-			let {x:tPx, y:tPy} = bezierCurveAt(
-				x[ib[0]], x[ib[0] + 1],
-				x[ib[2]], x[ib[2] + 1],
-				x[ib[3]], x[ib[3] + 1],
-				x[ib[1]], x[ib[1] + 1],
-				x[startTIndex]
-			)
-			let {x:tPdx, y:tPdy} = bezierCurveTangentAt(
-				x[ib[0]], x[ib[0] + 1],
-				x[ib[2]], x[ib[2] + 1],
-				x[ib[3]], x[ib[3] + 1],
-				x[ib[1]], x[ib[1] + 1],
-				x[startTIndex]
-			)
-			return [
-				distance(tPx, tPy, x[ip], x[ip + 1]),
-				tPdx * (tPx - x[ip]) + tPdy * (tPy - x[ip + 1])]
-		})
-	},
-	constrainAngleSegmentSegment2: function(ab, cd, f, value) {
-		// value is in [-2 pi ; 2 pi]; divide by 2 to map to [-pi;pi]
-		this.b.push(sin(value)/*, sin(value)*/)
-		var ia = this.varMap.get(ab.a),
-			ib = this.varMap.get(ab.b),
-			ic = this.varMap.get(cd.a),
-			id = this.varMap.get(cd.b);
-		// calculate the angle for each segment relative to the x axis using atan
-		// subtract angle of ab from angle of cd to get signed difference
-		// two functions, one calculate sin, one cos of signed difference / 2 to map the signed difference to a point on the unit circle
-		// using two functions is necessary so that the resulting functions are "continuous"
-		this.F.push(
-			(x) => {
-				var angle = atan2(
-						(x[id + 1] - x[ic + 1]) * f[1],
-						(x[id]     - x[ic]    ) * f[1])
-					- atan2(
-						(x[ib + 1] - x[ia + 1]) * f[0],
-						(x[ib]     - x[ia]    ) * f[0]);
-				console.log("vaalue", rad2deg(value).toFixed(6), "angle", rad2deg(angle).toFixed(6), cos(angle), sin(angle));
-				return sin(
-					( atan2(
-						(x[id + 1] - x[ic + 1]) * f[1],
-						(x[id]     - x[ic]    ) * f[1])
-					- atan2(
-						(x[ib + 1] - x[ia + 1]) * f[0],
-						(x[ib]     - x[ia]    ) * f[0]))) }/*,
-			 (x) => sin(
-			 ( atan2(
-			 (x[id + 1] - x[ic + 1]) * f[1],
-			 (x[id]     - x[ic]    ) * f[1])
-			 - atan2(
-			 (x[ib + 1] - x[ia + 1]) * f[0],
-			 (x[ib]     - x[ia]    ) * f[0])))*/ )
-	},
-	gaussNewtonStep: function () {
-		let DISABLE_CONSOLE = true
-		DISABLE_CONSOLE && disableConsole();
-		var {F, x, b} = this
-		var Fx = NLA.Vector.fromFunction(F.length, i => F[i](x))
-		console.log('F', F)
-		console.log("x", x)
-		console.log("Fx", Fx.toString())
-		console.log("b", b)
-		var jacobi = NLA.Matrix.jacobi(x => F.map(f => f(x)).concatenated(), x, Fx.v)
-		console.log("jacobi\n", jacobi.toString())
-		var jacobiTranspose = jacobi.transposed()
-		var matrix = jacobiTranspose.times((jacobi.times(jacobiTranspose)).inversed())
-		var bVector = new NLA.Vector(new Float64Array(b))
-		var xDiff = matrix.timesVector(Fx.minus(bVector))
-		console.log("matrix\n",matrix.toString(),"\nFx.minus(bVector)", Fx.minus(bVector).toString(), "\nxDiff", xDiff.toString())
-		this.x = new NLA.Vector(new Float64Array(x)).minus(xDiff).v;
-		Fx = NLA.Vector.fromFunction(F.length, i => F[i](this.x))
-		DISABLE_CONSOLE && enableConsole();
-		return Fx.minus(bVector)
-	},
-
-	/**
-	 *
-	 * @param segment
-	 * @returns {Array.<Edge>}
-	 */
-	// TODO: check for self-intersections
-	getLoopForSegment: function (segment) {
-		var startPoint = segment.b;
-		var currentPoint = startPoint;
-		var loop = [];
-		do {
-			let currentSegment = currentPoint.line
-			let edge = currentSegment.toBrepEdge()
-			if (currentSegment.b != currentPoint) {
-				edge = edge.flipped()
-			}
-			loop.push(edge);
-			//console.log(currentPoint.coincidence.cs.filter(function (point) { point instanceof SegmentEndPoint && point != currentPoint; }));
-			var otherPointsInCoincidence = currentPoint.coincidence && currentPoint.coincidence.cs.filter(function (point) {
-					//console.log("point", point, point instanceof SegmentEndPoint, point != currentPoint);
-					return point instanceof SegmentEndPoint && point != currentPoint; });
-			if (!otherPointsInCoincidence || otherPointsInCoincidence.length != 1) {
-				throw new Error("The selected segment is not part of an unambiguous loop.");
-			}
-			var nextSegmentCoincidencePoint = otherPointsInCoincidence[0]
-			var nextSegment = nextSegmentCoincidencePoint.line
-			currentPoint = nextSegment.getOtherPoint(nextSegmentCoincidencePoint);
-		} while (startPoint.coincidence != currentPoint.coincidence);
-		return loop
-	},
-	delete: function () {
-		$('sketchEditor').set('display', 'none')
-		featureStack.remove(this)
-
-		rebuildModel()
-		updateFeatureDisplay()
-	},
-	toSource: function () {
-		return `(function () {
-			let sketch = new Sketch('${this.planeRef.ref}')
-			let els = sketch.elements = [${this.elements.map(el => el.toSource()).join(',')}]
-			sketch.constraints = [${this.constraints.map(el => el.serialize(this.elements)).join(',')}]
-			return sketch
-		})()`
-	}
-}
-Sketch.prototype.constructor = Sketch
-
-function SegmentEndPoint(x, y, line) {
-	this.x = x;
-	this.y = y;
-	this.line = line;
-	this.id = globalId++;
-	this.name = "segEndPoint" + (this.id)
-	this.coincidence = null
-}
-SegmentEndPoint.prototype = {
-	distanceToCoords: function (p) {
-		return distance(this.x, this.y, p.x, p.y)
-	},
-	toString: function () {
-		return "SegmentEndPoint #" + this.id;
-	},
-	/**
-	 *
-	 * @returns {V3}
-	 */
-	V3: function () {
-		return V(this.x, this.y, 0);
-	},
-
-	isConstrained: function (sketch) {
-		return sketch.constraints.some(constraint => constraint.constrains(this) || constraint.constrains(this.line))
-	},
-	freeFromConstraints: function (sketch) {
-		sketch.constraints.forEach(constraint => constraint.constrains(this) && removeFromConstraint(this, sketch, constraint))
-	},
-	/**
-	 * Can be called even if already removed
-	 * @param sketch
-	 */
-	removeFromSketch: function (sketch) {
-		this.line.removeFromSketch(sketch)
-	},
-	moveCoincidence: function (v3) {
-		if (this.coincidence) {
-			this.coincidence.cs.forEach(p => {
-				p.x = v3.x
-				p.y = v3.y
-			})
-		} else {
-			this.x = v3.x
-			this.y = v3.y
-		}
-	},
-	get sketch() {
-		return this.line.sketch
-	},
-	canon: function () {
-		return this.coincidence && this.coincidence.cs[0] || this
-	}
-}
-SegmentEndPoint.fromV3 = function(segment, p) {
-	return new SegmentEndPoint(p.x, p.y, segment)
-}
-SegmentEndPoint.prototype.constructor = SegmentEndPoint
 
 
 function makeCoincident(p1, p2, sketch) {
@@ -382,407 +81,10 @@ function deleteCoincidence(coincidence, sketch) {
 	sketch.constraints.remove(coincidence)
 	coincidence.cs.forEach(p => p.coincidence = null)
 }
-/**
- * Arc goes CCW from a to b
- * @param sketch
- * @param ax
- * @param ay
- * @param bx
- * @param by
- * @param cx
- * @param cy
- * @constructor
- */
-function SketchArc(sketch, ax, ay, bx, by, cx, cy) {
-	assertInst(Sketch, sketch)
-	this.sketch = sketch
-	this.a = new SegmentEndPoint(ax, ay, this)
-	this.b = new SegmentEndPoint(bx, by, this)
-	this.c = new SegmentEndPoint(cx, cy, this)
-	this.points = [this.c, this.a, this.b]
-	this.id = globalId++
-	this.name = "SketchArc" + this.id
-}
-SketchArc.prototype = {
-	angleA: function () {
-		return this.a.V3().minus(this.c.V3()).angleXY()
-	},
-	angleB: function () {
-		return this.b.V3().minus(this.c.V3()).angleXY()
-	},
-	radiusA: function () {
-		return this.a.distanceToCoords(this.c)
-	},
-	distanceToCoords: function (coords) {
-		coords = V(coords)
-		var angleA = this.angleA(), angleB = this.angleB()
-		if (angleB <= angleA) { angleB += Math.PI * 2 }
-		var relCoords = coords.minus(this.c.V3()), angle = relCoords.angleXY(), radius = this.radiusA()
-		if (angle < 0) { angle += Math.PI * 2 }
-		var angle2 = NLA.clamp(angle, angleA, angleB)
-		return V(radius * cos(angle2), radius * sin(angle2), 0).minus(relCoords).length()
-	},
-	flip: function () {
-		[this.a, this.b] = [this.b, this.a]
-	},
-	getIntermediatePoints: function () {
-		var result = []
-		var angleA = this.angleA(), angleB = this.angleB()
-		if (angleB <= angleA) { angleB += Math.PI * 2 }
-		var radius = this.radiusA()
-		var center = this.c.V3()
-		var segmentLength = radius * (angleB - angleA), pointCount = floor(segmentLength / 10)
-		var intervalAngle = (angleB - angleA) / (pointCount + 1)
-		for (var i = 1; i < pointCount + 1; i++) {
-			var angle = angleA + i * intervalAngle
-			result.push(V3(radius * cos(angle), radius * sin(angle), 0).plus(center))
-		}
-		return result
-	},
-	getVectorCA: function () {
-		return this.a.V3().minus(this.c.V3())
-	},
-	getVectorCB: function () {
-		return this.b.V3().minus(this.c.V3())
-	},
-	getOtherPoint: function (p) {
-		if (p == this.a) return this.b
-		if (p == this.b) return this.a
-		assert(false)
-	},
-	toBrepEdge: function () {
-		let ca = this.getVectorCA()
-		let curve = new EllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
-		return new PCurveEdge(curve,
-			this.a.V3(), this.b.V3(),
-			-PI, curve.pointLambda(this.b.V3()),
-			null,
-			curve.tangentAt(-PI), curve.tangentAt(curve.pointLambda(this.b.V3())),
-			this.name)
-	}
-}
-SketchArc.prototype.constructor = SketchArc
 
 
-function SketchLineSeg(sketch, x1, y1, x2, y2) {
-	assertInst(Sketch, sketch)
-	this.sketch = sketch
-	this.points = [new SegmentEndPoint(x1, y1, this), new SegmentEndPoint(x2, y2, this)]
-	this.a = this.points[0]
-	this.b = this.points[1]
-	this.id = globalId++
-	this.name = "segment" + this.id
-}
-SketchLineSeg.prototype = {
-	remove: function () {
-		assert (editingSketch.elements.contains(this))
-		this.removeFromSketch(editingSketch)
-	},
-	distanceToCoords: function (coords) {
-		return this.distanceTo(coords.x, coords.y);
-	},
-	angleTo: function (segment) {
-		assertInst(SketchLineSeg, segment)
-		return segment.angleAB() - this.angleAB();
-	},
-	toString: function ()  {
-		return "SketchLineSeg #" + this.id;
-	},
-	angleAB: function () {
-		return atan2(this.b.y - this.a.y, this.b.x - this.a.x);
-	},
-	/**
-	 * Can be called even if already removed
-	 * @param sketch
-	 */
-	removeFromSketch: function (sketch) {
-		this.a.freeFromConstraints(sketch)
-		this.b.freeFromConstraints(sketch)
-		sketch.elements.remove(this)
-		sketch.constraints.forEach(constraint => constraint.constrains(this) && removeFromConstraint(this, sketch, constraint))
-		selected.remove(this)
-	},
-	getOtherPoint: function (p) {
-		if (p == this.a) return this.b
-		if (p == this.b) return this.a
-		assert(false)
-	},
-	pointLambda: function (v) {
-		if (this.b.x - this.a.x > this.b.y - this.a.y) {
-			return (v.x - this.a.x) / (this.b.x - this.a.x);
-		} else {
-			return (v.y - this.a.y) / (this.b.y - this.a.y);
-		}
-	},
-	distanceTo: function (x, y) {
-		var x1 = this.a.x, y1 = this.a.y, x2 = this.b.x,  y2 = this.b.y;
-		var a = y1 - y2;
-		var b = x2 - x1;
-		var c = x2 * y1 - x1 * y2;
-		var dist = Math.abs(a * x + b * y - c) / length(a, b);
-		var xClosest = (b * (b * x - a * y) + a * c) / lengthSquared(a, b);
-		var yClosest = (a * ( -b * x + a * y) + b * c) / lengthSquared(a, b);
-		if (x1 != x2 ? isBetween(xClosest, x1, x2) : isBetween(yClosest, y1, y2)) {
-			return dist;
-		} else {
-			if (x1 < x2 && x < x1 || x1 > x2 && x > x1
-				|| x1 == x2 && (y1 < y2 && y < y2 || y1 > y2 && y > y1)) {
-				//noinspection JSSuspiciousNameCombination
-				return distance(x, x1, y, y1);
-			} else {
-				//noinspection JSSuspiciousNameCombination
-				return distance(x, x2, y, y2);
-			}
-		}
-	},
-	getVectorAB: function () {
-		return V(this.b.x - this.a.x, this.b.y - this.a.y, 0);
-	},
-	getClosestPoint: function (x, y) {
-		var x1 = this.a.x, y1 = this.a.y, x2 = this.b.x, y2 = this.b.y;
-		var a = y1 - y2;
-		var b = x2 - x1;
-		var c = x2 * y1 - x1 * y2;
-		var dist = abs(a * x + b * y - c) / length(a, b);
-		var xClosest = (b * (b * x - a * y) + a * c) / lengthSquared(a, b);
-		var yClosest = (a * ( -b * x + a * y) + b * c) / lengthSquared(a, b);
-		if (isBetween(xClosest, x1, x2)) {
-			return {"x": xClosest, "y": yClosest};
-		} else {
-			if (x1 < x2 && x < x1 || x1 > x2 && x > x1
-				|| x1 == x2 && (y1 < y2 && y < y2 || y1 > y2 && y > y1)) {
-				return {x: x1, y: y1}
-			} else {
-				//noinspection JSSuspiciousNameCombination
-				return {x: y1, y: y2}
-			}
-		}
-	},
-	length: function () {
-		return this.points[0].distanceTo(this.points[1]);
-	},
-	intersection: function (segment) {
-		return intersection(this.a.x, this.a.y, this.b.x, this.b.y,
-			segment.a.x, segment.a.y, segment.b.x, segment.b.y);
-	},
-	getL3: function() {
-		return L3.anchorDirection(this.a.V3(), this.getVectorAB())
-	},
-	toBrepEdge: function() {
-		return StraightEdge.throughPoints(this.a.V3(), this.b.V3(), this.name)
-	}
-}
-SketchLineSeg.prototype.constructor = SketchLineSeg
 
-function intersection(x1, y1, x2, y2, x3, y3, x4, y4) {
-	var denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-	var xNominator = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4);
-	var yNominator = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4);
-	return V(xNominator / denominator, yNominator / denominator, 0);
-}
-
-function isBetween(val, a, b) {
-	if (a < b) {
-		return a < val && val < b;
-	} else {
-		return b < val && val < a;
-	}
-}
-
-function distance(x1, y1, x2, y2) {
-	return length(x2 - x1, y2 - y1);
-}
-function distanceSquared(x1, y1, x2, y2) {
-	return lengthSquared(x2 - x1, y2 - y1);
-}
-function bezierCurveAt(x0, y0, x1, y1, x2, y2, x3, y3, t) {
-	//console.log(x0, y0, x1, y1, x2, y2, x3, y3, t)
-	let s = 1 - t, c0 = s * s * s, c1 = 3 * s * s * t, c2 = 3 * s * t * t, c3 = t * t * t
-	return {
-		x: x0 * c0 + x1 * c1 + x2 * c2 + x3 * c3,
-		y: y0 * c0 + y1 * c1 + y2 * c2 + y3 * c3
-	}
-}
-function bezierCurveTangentAt(x0, y0, x1, y1, x2, y2, x3, y3, t) {
-	//console.log(x0, y0, x1, y1, x2, y2, x3, y3, t)
-	let s = 1 - t, c01 = 3 * s * s, c12 = 6 * s * t, c23 = 3 * t * t
-	return {
-		x: (x1 - x0) * c01 + (x2 - x1) * c12 + (x3 - x2) * c23,
-		y: (y1 - y0) * c01 + (y2 - y1) * c12 + (y3 - y2) * c23,
-	}
-}
-function angle(x1, y1, x2, y2) {
-	return length(x2 - x1, y2 - y1);
-}
-
-function length(x, y) {
-	return Math.sqrt(x * x + y * y);
-}
-function lengthSquared(x, y) {
-	return x * x + y * y
-}
-
-function distanceLinePoint(x1, y1, x2, y2, x, y) {
-	let a = y1 - y2;
-	let b = x2 - x1;
-	let c = x2 * y1 - x1 * y2;
-	let dist = Math.abs(a * x + b * y - c) / length(a, b);
-	return dist;
-}
-
-
-function distanceLinePointSigned(x1, y1, x2, y2, x, y) {
-	// function needs to be differentiable around target value
-	// therefore this funciton is necessary
-	let a = y1 - y2;
-	let b = x2 - x1;
-	let c = x2 * y1 - x1 * y2;
-	//TODOlet dist = Math.abs(a * x + b * y - c) / length(a, b);
-	let dist = (a * x + b * y - c) / length(a, b);
-	return dist;
-}
-
-function angleVectors(ax, ay, bx, by) {
-//	console.log(ax, ay, bx, by);
-	return Math.abs(ax * bx + ay * by) / Math.sqrt((ax * ax + ay * ay) * (bx * bx + by * by));
-}
-
-// returns angle between segments AB, CD
-function angleABCD(ax, ay, bx, by, cx, cy, dx, dy) {
-	return angleVectors(bx - ax, by - ay, dx - cx, dy - cy);
-	// return ((bx - ax) * (dx - cx) + (by - ay) * (dy - cy)) / Math.sqrt(((bx - ax)*(bx - ax)+(by - ay)*(by - ay))*((dx - cx)*(dx - cx)+(dy - cy)*(dy - cy)))
-}
-// 4 vars per line: s0, s1, d0, d1
-// (d0, d1)^T is normalized
-// x.length = 4 * lines.length
-function recalculate(sketch) {
-	function pushPoint(p) {
-		var varMap = sketch.varMap, x = sketch.x
-		if (varMap.has(p) /*	|| !p.isConstrained()*/) {
-			return;
-		}
-		if (p.coincidence) {
-			p.coincidence.cs.forEach(function (p2) {
-				varMap.set(p2, xIndex);
-			});
-		} else {
-			varMap.set(p, xIndex);
-		}
-		x.push(p.x, p.y);
-		xIndex += 2;
-	}
-	console.log("recalculating");
-	Object.defineProperty(sketch, 'x', {enumerable: false, value: [], writable: true})
-	Object.defineProperty(sketch, 'b', {enumerable: false, value: [], writable: true})
-	Object.defineProperty(sketch, 'F', {enumerable: false, value: [], writable: true})
-	Object.defineProperty(sketch, 'varMap', {enumerable: false, value: new Map(), writable: true})
-	// init x to current values
-	var xIndex = 0;
-	sketch.elements.forEach(function (seg) {
-		seg.points.forEach(pushPoint)
-		if (seg instanceof SketchArc && sketch.varMap.get(seg.a) != sketch.varMap.get(seg.b)) {
-			sketch.constrainEqualDistance.apply(sketch, [seg.a, seg.c, seg.b, seg.c].map(point => sketch.varMap.get(point)))
-		}
-	});
-	console.log("varMap", sketch.varMap)
-	var constraintFunctionSources = []
-	sketch.constraints.forEach(function (cst) {
-		//console.log(cst);
-		if (cst.type == "parallel" || cst.type == "colinear" || cst.type == "equalLength") {
-			if (cst.fixed) {
-				for (let j = 0; j < cst.segments.length; j++) {
-					if ("colinear" == cst.type) {
-						sketch.constrainDistancePointFixedPlane(cst.segments[j].a, cst.fixed.plane, 0);
-						sketch.constrainDistancePointFixedPlane(cst.segments[j].b, cst.fixed.plane, 0);
-					} else {
-						sketch.constrainAngleSegmentToPlane(cst.segments[j], cst.fixed.plane, 1);
-					}
-				}
-			} else {
-				for (let j = 1; j < cst.segments.length; j++) {
-					var first = cst.segments[0], second = cst.segments[j];
-					if ("parallel" == cst.type) {
-						// assume that max. one element can be a line or a plane
-						sketch.constrainAngleSegmentSegment(first, second, 1);
-					}
-					if ("colinear" == cst.type) {
-						sketch.constrainDistancePointSegment(second.a, first, 0)
-						sketch.constrainDistancePointSegment(second.b, first, 0)
-					}
-					if ("equalLength" == cst.type) {
-						sketch.constrainEqualDistance.apply(sketch,
-							[0, j]
-								.map((segmentsIndex) => cst.segments[segmentsIndex].points)
-								.concatenated()
-								.map((point) => sketch.varMap.get(point)))
-					}
-				}
-			}
-		}
-		if (cst.type == "pointDistance") {
-			sketch.constrainDistancePointPoint(cst.cs[0], cst.cs[1], cst.distance);
-		}
-		if (cst.type == "pointOnLine" || cst.type == "pointLineDistance" || cst.type == "pointPlaneDistance") {
-			var distance = cst.type != "pointOnLine" ? cst.distance : 0;
-			if (cst.other.plane) {
-				sketch.constrainDistancePointFixedPlane(cst.point, cst.other.plane, distance)
-			} else if(cst.other instanceof SketchLineSeg) {
-				sketch.constrainDistancePointSegment(cst.point, cst.other, distance)
-			} else if (cst.other instanceof SketchBezier) {
-				sketch.constrainDistancePointBezier(cst.point, cst.other, distance)
-			} else if (cst.other instanceof SketchArc) {
-				sketch.constrainEqualDistance.apply(sketch, [cst.other.a, cst.other.c, cst.point, cst.other.c].map(point => sketch.varMap.get(point)))
-			}
-		}
-		if (cst.type == "angle") {
-			sketch.constrainAngleSegmentSegment2(cst.cs[0], cst.cs[1], cst.f, cst.value);
-		}
-		if (cst.type == "perpendicular") {
-			var cosValue = cst.type == "angle" ? cos(cst.value) : 0
-			// assume that max. one element can be a line or a plane
-			if (cst.other.plane) {
-				sketch.constrainAngleSegmentToPlane(cst.segment, cst.other.plane, cosValue);
-			} else {
-				sketch.constrainAngleSegmentSegment(cst.segment, cst.other, cosValue);
-			}
-			/*
-			 constrainAngle2D.apply(undefined,
-			 [0, 1]
-			 .map((whichIndex) => cst.constrains[whichIndex].points).concatenated()
-			 .map((point) => varMap.get(point))
-			 .map((pointXCoord) => [pointXCoord, pointXCoord + 1]).concatenated()
-			 .concat(cst.value));
-			 */
-		}
-//			console.log("added constraint, b:", b);
-		for (var i = constraintFunctionSources.length; i < sketch.b.length; i++) {
-			constraintFunctionSources.push(cst)
-		}
-	});
-	if (sketch.b.isEmpty()) {
-		return;
-	}
-	for (var count = 0; count < 100; count++) {
-		var lastDiffs = sketch.gaussNewtonStep(), lastSize = lastDiffs.length()
-		if (lastSize < NLA_PRECISION / 1000) {
-			break;
-		}
-	}
-	//enableConsole()
-	console.log(`broke at ${count}, lastDiffs ${lastDiffs}, lastSize ${lastSize}`)
-	// first set all of them to false
-	sketch.constraints.forEach(cst => cst.error = false)
-	if (lastSize < 1) {
-		console.log("REVERSING")
-		reverse(sketch);
-	} else {
-		// then mark every constraint which has a problematic function
-		lastDiffs.v.forEach((el, index) => constraintFunctionSources[index].error |= !NLA.isZero(el))
-	}
-}
-
-
-function paintLineXY(a, b, color, width) {
+function paintLineXY(a, b, color?, width?) {
 	color = color || paintDefaultColor
 	width = width || 2
 	var ab = b.minus(a)
@@ -798,9 +100,9 @@ function randomVec4Color(opacity) {
 	opacity = opacity || 1.0
 	return [Math.random(), Math.random(), Math.random(), opacity]
 }
-function paintArc(center, radius, width, color, startAngle, endAngle) {
-	startAngle = isFinite(startAngle) ? startAngle : 0
-	endAngle = isFinite(endAngle) ? endAngle : 2 * Math.PI
+function paintArc(center, radius, width, color, startAngle= 0, endAngle=2 * Math.PI) {
+	// startAngle = isFinite(startAngle) ? startAngle : 0
+	// endAngle = isFinite(endAngle) ? endAngle : 2 * Math.PI
 	gl.pushMatrix()
 	gl.translate(center)
 	shaders.arc2.uniforms({
@@ -834,7 +136,7 @@ function getTextureForString(str) {
 		return texture
 	}
 
-	var canvas = $("textTextureCanvas");
+	var canvas = $("textTextureCanvas") as any as HTMLCanvasElement
 	var ctx = canvas.getContext('2d');
 
 	var font = TEXT_TEXTURE_HEIGHT + "px Anonymous Pro";
@@ -876,9 +178,9 @@ function paintSketch(sketch) {
 	gl.multMatrix(sketch.sketchToWorldMatrix)
 	sketch.elements.forEach(function (seg) {
 		function drawPoint(p) {
-			paintArc(p.V3(), 1.5, 3, colorFor(highlighted.contains(p) || hoverHighlight == p, selected.contains(p)))
+			paintArc(p.V3(), 1.5, 3, colorFor(highlighted.includes(p) || hoverHighlight == p, selected.includes(p)))
 		}
-		let color = colorFor(highlighted.contains(seg) || hoverHighlight == seg, selected.contains(seg))
+		let color = colorFor(highlighted.includes(seg) || hoverHighlight == seg, selected.includes(seg))
 		if (seg instanceof SketchLineSeg) {
 			//console.log("seg", seg);
 			//console.log("hoverHighlight.length", hoverHighlight.length);
@@ -925,7 +227,7 @@ function paintConstraints(sketch) {
 			case "coincident":
 				var point = cst.cs[0]
 				paintArc(point.V3(), 4, 1, colorFor(false, false), 0, 2 * Math.PI)
-				paintArc(point.V3(), 1.5, 3, colorFor(highlighted.contains(point) || hoverHighlight == point, selected.contains(point)), 0, 2 * Math.PI)
+				paintArc(point.V3(), 1.5, 3, colorFor(highlighted.includes(point) || hoverHighlight == point, selected.includes(point)), 0, 2 * Math.PI)
 				break;
 			case "parallel": {
 				var dir1 = cst.segments[0].getVectorAB().normalized()
@@ -1076,6 +378,7 @@ function paintConstraints(sketch) {
 					paintArc(cst.other.c.V3(), radius, 3, 0x000000, angle - 12 / radius, angle - 4 / radius)
 					break
 				}
+				break
 				if (cst.other.plane) break
 				let ab = cst.other instanceof SketchLineSeg ? cst.other.getVectorAB() : sketch.plane.normal.cross(cst.other.plane.normal)
 				let ab1 = ab.normalized()
@@ -1143,6 +446,7 @@ var PlaneDefinition = class PlaneDefinition {
 		this.offset = 0
 		this.angle = 0
 		this.whats = []
+		this.flipped = false
 	}
 
 	toSource(line) {
@@ -1199,12 +503,12 @@ function initLoadSave() {
 }
 
 function isSketchEl(el) {
-	return el instanceof SketchBezier || el instanceof  SegmentEndPoint
+	return el instanceof SketchBezier || el instanceof SegmentEndPoint
 			|| el instanceof SketchLineSeg || el instanceof SketchArc
 }
 
 //var sketchPlane = new CustomPlane(V3(0, 0,1), V3.X, V3.Y, -500, 500, -500, 500, 0xff00ff);
-var /** @type Sketch */ editingSketch, /** @type Array */ featureStack = []
+var editingSketch:Sketch, featureStack = []
 function initModel() {
 
 
@@ -1305,14 +609,14 @@ function rebuildModel() {
 	let loopEnd = -1 == rebuildLimit ? featureStack.length : min(rebuildLimit, featureStack.length)
 	for (var featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
 		var feature = featureStack[featureIndex]
-		// try {
+		//try {
 			if (feature instanceof Sketch) {
 				feature.plane = feature.planeRef.getOrThrow()
 				//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(), feature.plane.normal.length())
 				feature.sketchToWorldMatrix =
 					M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal, feature.plane.anchor)
 				feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed()
-				recalculate(feature)
+				feature.recalculate()
 				feature.elements.forEach(el => publish(el.name, el))
 			} else if (feature.type && feature.type == "extrude") {
 
@@ -1342,12 +646,13 @@ function rebuildModel() {
 
 				modelBREP.faces.forEach(face => publish(face.name, face))
 				modelBREP.faces.map(face => face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id).forEach(edge => publish(edge.name, edge)))
-				if (modelBREP.vertexNames) for (let entry of modelBREP.vertexNames.entries()) { publish(entry[0], entry[1]) }
+				console.log('modelBREP.vertexNames', modelBREP.vertexNames)
+				modelBREP.vertexNames && modelBREP.vertexNames.forEach((name, p) => publish(name, p))
 			} else if (feature.type && "planeDefinition" == feature.type) {
 				let sel = feature.whats.map(w => w.getOrThrow())
 				let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
-				console.log('PLANE', plane, feature.whats.sce, sel.sce, feature.whats.length, sel.length)
 				if (plane) {
+					if (feature.flipped) plane = plane.flipped()
 					let right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
 
 					var cp
@@ -1368,18 +673,18 @@ function rebuildModel() {
 		// brepMesh.computeWireframeFromFlatTriangles()
 		// brepMesh.compile()
 
-		// } catch (error) {
-		// 	let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
+		//} catch (error) {
+		//	let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
 		//
-		// 	if (featureDiv) {
-		// 		let ediv = featureDiv.getElement('[name=error]')
-		// 		ediv.setStyle('display', 'inline')
-		// 		ediv.title= error.toString() + '\n' + error.stack
-		// 	}
-		// 	console.error(error)
-		// 	throw error
-		// 	break
-		// }
+		//	if (featureDiv) {
+		//		let ediv = featureDiv.getElement('[name=error]')
+		//		ediv.setStyle('display', 'inline')
+		//		ediv.title= error.toString() + '\n' + error.stack
+		//	}
+		//	console.error(error)
+		//	// throw error
+		//	break
+		//}
 	}
 	if (modelBREP) {
 		brepMesh = modelBREP.toMesh()
@@ -1401,25 +706,24 @@ function rebuildModel() {
 var missingEls = [], namesPublishedBy, publishedObjects
 var faces = []
 var highlighted = [], selected = [], paintDefaultColor = 0x000000
-var /** @type LightGLContext */ gl;
+var gl:GL.LightGLContext
 var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges = []
-var rebuildLimit = -1
+var rebuildLimit = -1, rollBackIndex = -1
 var drPs = [], drVs = []
-var oldConsole = undefined;
+
 var eyePos = V(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z
 var hoverHighlight = undefined
 // console.log = oldConsole;
 var modeStack = []
-var actionStack = []
-var shaders = {}
+var shaders:any = {}
 
 function rgbToVec4(color) {
 	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
 }
-function renderColor(mesh, color, mode) {
+function renderColor(mesh, color, mode?) {
 	shaders.singleColor.uniforms({
 		color: rgbToVec4(color)
-	}).draw(mesh)
+	}).draw(mesh, mode)
 }
 function renderColorLines(mesh, color) {
 	shaders.singleColor.uniforms({
@@ -1466,7 +770,7 @@ function drawPoint(p, color=0x000000, size=5) {
 function drawPoints() {
 	drPs.forEach(info => drawPoint(info.p || p, 0xcc0000, 5))
 	brepPoints && brepPoints.forEach(p =>
-		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.contains(p) ? 0xff0000 : 0xcccc00), 2))
+		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.includes(p) ? 0xff0000 : 0xcccc00), 2))
 }
 const CURVE_PAINTERS = {}
 CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse, color, startT, endT, width = 2) {
@@ -1525,7 +829,7 @@ function drawFace(face, color) {
 	shaders.singleColor.uniforms({ color: rgbToVec4(color) }).draw(mesh)
 }
 var /**@type GL.Mesh */ mesh1, mesh2
-var meshes = {}
+var meshes:any = {}
 var ZERO_EL = {}
 function drawEl(el, color) {
 	if (el instanceof V3) {
@@ -1608,7 +912,7 @@ function paintScreen () {
 			let face = modelBREP.faces[faceIndex]
 			let faceTriangleIndexes = brepMesh.faceIndexes.get(face)
 			shaders.lighting.uniforms({
-				color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.contains(face) ? 0x00ff45 : COLORS.RD_FILL))
+				color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.includes(face) ? 0x00ff45 : COLORS.RD_FILL))
 			}).draw(brepMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count);
 			/*
 			 shaders.singleColor.uniforms({
@@ -1618,8 +922,8 @@ function paintScreen () {
 		}
 
 		// paint edges
-		isEdges.forEach(edge => drawEdge(edge, hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : 0x000000), 2))
-		brepEdges.forEach(edge => drawEdge(edge, hoverHighlight == edge ? 0xff00ff : (selected.contains(edge) ? 0x00ff45 : COLORS.RD_STROKE), 2))
+		isEdges.forEach(edge => drawEdge(edge, hoverHighlight == edge ? 0xff00ff : (selected.includes(edge) ? 0x00ff45 : 0x000000), 2))
+		brepEdges.forEach(edge => drawEdge(edge, hoverHighlight == edge ? 0xff00ff : (selected.includes(edge) ? 0x00ff45 : COLORS.RD_STROKE), 2))
 
 		gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
 		shaders.singleColor.uniforms({
@@ -1639,15 +943,6 @@ function paintScreen () {
 	gl.projectionMatrix.m[11] += DZ
 }
 
-function disableConsole() {
-	oldConsole = console.log;
-	console.log = function() {};
-}
-function enableConsole() {
-	if (oldConsole) {
-		console.log = oldConsole;
-	}
-}
 function setupCamera() {
 	//console.log("eyePos", eyePos.$, "eyeFocus", eyeFocus.$, "eyeUp", eyeUp.$)
 	gl.matrixMode(gl.PROJECTION)
@@ -1682,7 +977,7 @@ function segmentIntersectsRay(a, b, p, dir) {
 	//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1, "s", s, "t", t, "div", div)
 	return t > 0 && s >= 0 && s <= 1
 }
-function template(templateName, map) {
+function template(templateName, map):MooToolsElement {
 	var html = $(templateName).text;
 	for (var key in map) {
 		html = html.replace(new RegExp('\\$'+key, 'g'), map[key]);
@@ -1690,12 +985,16 @@ function template(templateName, map) {
 	return $(new Element('div', {html: html.trim()}).firstChild)
 
 }
+function featureRollBack(feature: any, featureIndex: number) {
+    rollBackIndex = featureIndex
+}
 function updateFeatureDisplay() {
 	var div = $('featureDisplay')
 	div.erase('text')
 	featureStack.forEach(function (feature, featureIndex) {
 		if (rebuildLimit == featureIndex) {
 			div.adopt(new Element('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
+            // div.adopt(<div class='rebuildLimit'>REBUILD LIMIT</div>)
 		}
 		var newChild
 		if (feature.type == "extrude") {
@@ -1717,20 +1016,24 @@ function updateFeatureDisplay() {
 			console.log(feature)
 			throw new Error("Unknown feature" + feature.toSource() + feature.constructor.name)
 		}
-		newChild.inject(div);
-		newChild.getElement('[name=delete]').onclick = function () {
-			featureDelete(feature)
-		}
+		newChild.inject(div)
+        newChild.getElement('[name=delete]').onclick = function () {
+            featureDelete(feature)
+        }
+        newChild.getElement('[name=rollBack]').onclick = function () {
+            featureRollBack(feature, featureIndex)
+        }
 		newChild.featureLink = feature
 		newChild.onmouseover = function (e) {
 			const dependencies = featureDependencies(feature)
 			const dependents = featureDependents(feature)
-			div.getChildren().filter(subDiv => dependencies.contains(subDiv.featureLink)).addClass('isDependedOn')
-			div.getChildren().filter(subDiv => dependents.contains(subDiv.featureLink)).addClass('hasDependents')
+			div.getChildren().filter(subDiv => dependencies.includes(subDiv.featureLink)).addClass('isDependedOn')
+			div.getChildren().filter(subDiv => dependents.includes(subDiv.featureLink)).addClass('hasDependents')
 		}
 		newChild.onmouseout = function (e) {
 			div.getChildren().removeClass('isDependedOn').removeClass('hasDependents')
 		}
+		feature.hide && newChild.getElement('[name=toggleHide]').addClass('hidden')
 		newChild.getElement('[name=toggleHide]').onclick = function () {
 			feature.hide = !feature.hide
 			this.toggleClass('hidden', feature.hide)
@@ -1741,7 +1044,7 @@ function updateFeatureDisplay() {
 function updateSelected() {
 	var div = $('selectedElements')
 	div.erase('text')
-	selected.forEach(function (sel) {
+	selected.forEach(sel => {
 		// TODO, if only necessary part of model is rebuilt, this probably wont be necessary:
 		let target, name
 		if (sel instanceof NameRef) {
@@ -1773,7 +1076,7 @@ function updateSelected() {
 			paintScreen()
 		};
 		newChild.getElement(".remove").onclick = function (e) {
-			(target instanceof SegmentEndPoint ? target.line : target).removeFromSketch(editingSketch)
+			editingSketch.removeElement(target)
 			updateSelected()
 			paintScreen()
 		};
@@ -1782,103 +1085,141 @@ function updateSelected() {
 			updateSelected()
 			paintScreen()
 		};
-		sel.toBrepEdge && newChild.grab(new Element('span', {text: sel.toBrepEdge().curve.toSource(x => Math.round10(x, -3)), style: 'font-size: small;'}))
+		sel.toBrepEdge && newChild.grab(new Element('span', {text: sel.toBrepEdge().curve.toSource(x => NLA.round10(x, -3)), style: 'font-size: small;'}))
 		sel.surface && newChild.grab(new Element('textarea', {text: sel.sce, style: 'font-size: xx-small;display:block;width:100%;'}))
 		newChild.inject(div)
 	});
 	div = $('selectedConstraints')
-	div.erase('text');
-	(MODES.SKETCH == modeGetCurrent()) && selected.map((el) => editingSketch.getConstraintsFor(el)).concatenated().unique().forEach(function (cst) {
-		var newChild
-		if ('pointDistance' == cst.type
-			|| 'pointLineDistance' == cst.type
-			|| 'pointPlaneDistance' == cst.type) {
-			newChild = template('templateDistance', {name: cst.type, id: cst.id});
-			newChild.getElement('.distanceInput').value = cst.distance;
-			newChild.getElement('.distanceInput').onchange = function (e) {
-				cst.distance = e.target.value;
-				rebuildModel();
-				paintScreen();
-			}
-		} else if ('angle' == cst.type) {
-			newChild = template('templateAngle', {name: cst.type, id: cst.id});
-			var input = newChild.getElement('.distanceInput');
-			newChild.getElement('.distanceInput').value = round(rad2deg(cst.value, 5));
-			newChild.getElement('.fa').onclick = () => { cst.f[0] *= -1; input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI)))); paintScreen() };
-			newChild.getElement('.fb').onclick = () => { cst.f[1] *= -1; input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI)))); paintScreen() };
-			newChild.getElement('.fv').onclick = () => { input.value = round(rad2deg(abs(cst.value -= sign(cst.value) * 2*PI))); paintScreen() };
-			input.onchange = function (e) {
-				cst.value = deg2rad(e.target.value);
-				rebuildModel();
-				paintScreen();
-			}
-		} else {
-			newChild = template("templateConstraint", {name: cst.type});
+	div.erase('text')
+    if (MODES.SKETCH == modeGetCurrent()) {
+        selected.flatMap((el) => editingSketch.getConstraintsFor(el)).unique().forEach(cst => {
+            var newChild
+            if ('pointDistance' == cst.type
+                || 'pointLineDistance' == cst.type
+                || 'pointPlaneDistance' == cst.type) {
+                newChild = template('templateDistance', {name: cst.type, id: cst.id});
+                newChild.getElement('.distanceInput').value = cst.distance;
+                newChild.getElement('.distanceInput').onchange = function (e) {
+                    cst.distance = e.target.value;
+                    rebuildModel();
+                    paintScreen();
+                }
+            } else if ('angle' == cst.type) {
+                newChild = template('templateAngle', {name: cst.type, id: cst.id});
+                var input = newChild.getElement('.distanceInput');
+                newChild.getElement('.distanceInput').value = NLA.round10(rad2deg(cst.value), -5);
+                newChild.getElement('.fa').onclick = () => { cst.f[0] *= -1; input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI)))); paintScreen() };
+                newChild.getElement('.fb').onclick = () => { cst.f[1] *= -1; input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI)))); paintScreen() };
+                newChild.getElement('.fv').onclick = () => { input.value = round(rad2deg(abs(cst.value -= sign(cst.value) * 2*PI))); paintScreen() };
+                input.onchange = function (e) {
+                    cst.value = deg2rad(e.target.value);
+                    rebuildModel();
+                    paintScreen();
+                }
+            } else {
+                newChild = template("templateConstraint", {name: cst.type});
 
-			cst.cs.forEach(function (el) {
-				var subChild = template("templateConstraintSub", {what: el.constructor.name, name: el.name});
-				subChild.inject(newChild);
-				subChild.getElement(".removeFromConstraint").onclick = function (e) {
-					removeFromConstraint(el, editingSketch, cst)
-					updateSelected();
-					paintScreen();
-				};
-				subChild.onmouseover = function (e) {
-					hoverHighlight = el
-					e.stopPropagation()
-					paintScreen()
-				};
-				subChild.onmouseout = function (e) {
-					hoverHighlight = null
-					paintScreen()
-				};
-			});
-		}
-		newChild.getElement(".remove").onclick = function (e) {
-			deleteConstraint(editingSketch, cst)
-			updateSelected();
-		}
-		newChild.onmouseover = function (e) {
-			hoverHighlight = cst
-			paintScreen()
-		}
-		newChild.onmouseout = function (el) {
-			hoverHighlight = null
-			paintScreen()
-		}
-		newChild.inject(div);
-	});
+                cst.cs.forEach(function (el) {
+                    var subChild = template("templateConstraintSub", {what: el.constructor.name, name: el.name});
+                    subChild.inject(newChild);
+                    subChild.getElement(".removeFromConstraint").onclick = function (e) {
+                        removeFromConstraint(el, editingSketch, cst)
+                        updateSelected();
+                        paintScreen();
+                    };
+                    subChild.onmouseover = function (e) {
+                        hoverHighlight = el
+                        e.stopPropagation()
+                        paintScreen()
+                    };
+                    subChild.onmouseout = function (e) {
+                        hoverHighlight = null
+                        paintScreen()
+                    };
+                });
+            }
+            newChild.getElement(".remove").onclick = function (e) {
+                deleteConstraint(editingSketch, cst)
+                updateSelected();
+            }
+            newChild.onmouseover = function (e) {
+                hoverHighlight = cst
+                paintScreen()
+            }
+            newChild.onmouseout = function (el) {
+                hoverHighlight = null
+                paintScreen()
+            }
+            newChild.inject(div);
+        });
+    }
 }
-function NameRef(name, lastHit) {
-	var x
-	if (x = NameRef.pool.get(name)) return x
-	this.ref = name
-	this.lastHit = lastHit
-}
-Object.defineProperty(NameRef.prototype, "what", { get: function () { return this.get() instanceof Face ? "face" : "plane" } });
-Object.defineProperty(NameRef.prototype, "name", { get: function () { let hit = this.get(); return hit && hit.name } });
-Object.defineProperty(NameRef.prototype, "plane", { get: function () { return this.getPlane() } });
-NameRef.pool = new Map()
-NameRef.prototype.isRef = true
-NameRef.prototype.get = function () {
-	let hit = publishedObjects.get(this.ref)
-	// let hit = planes.find(plane => plane.name == this.ref)
-	// 	|| modelBREP && modelBREP.faces.find(face => face.name == this.ref)
-	// 	|| modelBREP && modelBREP.faces.firstMatch(face => face.getAllEdges().find(edge => edge.name == this.ref))
-	// 	|| modelBREP && modelBREP.vertexNames && mapReverse(modelBREP.vertexNames, this.ref)
-	if (hit) this.lastHit = hit
-	return hit
-}
-NameRef.prototype.getOrThrow = function () {
-	let hit = this.get()
-	if (!hit) {
-		throw new Error(`could not find ${this.lastHit.constructor.name} ${this.ref}`)
+class NameRef {
+	static pool: Map<string, NameRef> = new Map()
+
+	ref: string
+	lastHit: any
+
+	constructor(name, lastHit) {
+		let x = NameRef.pool.get(name)
+		if (x) return x
+		this.ref = name
+		this.lastHit = lastHit
+		NameRef.pool.set(name, this)
 	}
-	return hit
+
+	get() {
+		let hit = publishedObjects.get(this.ref)
+		// let hit = planes.find(plane => plane.name == this.ref)
+		// 	|| modelBREP && modelBREP.faces.find(face => face.name == this.ref)
+		// 	|| modelBREP && modelBREP.faces.firstMatch(face => face.getAllEdges().find(edge => edge.name == this.ref))
+		// 	|| modelBREP && modelBREP.vertexNames && mapReverse(modelBREP.vertexNames, this.ref)
+		if (hit) this.lastHit = hit
+		return hit
+	}
+
+	getOrThrow() {
+		let hit = this.get()
+		if (!hit) {
+			throw new Error(`could not find ${this.lastHit.constructor.name} ${this.ref}`)
+		}
+		return hit
+	}
+
+	getPlane() {
+		return planes.find(plane => plane.name == this.ref) || modelBREP && modelBREP.faces.find(face => face.name == this.ref).plane
+	}
+
+	get plane() {
+		return this.getPlane()
+	}
+
+	get what() {
+		return this.get() instanceof Face ? "face" : "plane"
+	}
+
+	get name() {
+		let hit = this.get();
+		return hit && hit.name
+	}
+
+	static forObject(o) {
+		if (o instanceof V3) {
+			return new NameRef(modelBREP.vertexNames.get(o), o)
+		} else {
+			assert(o.name)
+			return new NameRef(o.name, o)
+		}
+	}
+
+	static UNASSIGNED = new NameRef('UNASSIGNED', ZERO_EL)
 }
-NameRef.prototype.getPlane = function () {
-	return planes.find(plane => plane.name == this.ref) || modelBREP && modelBREP.faces.find(face => face.name == this.ref).plane
-}
+NameRef.UNASSIGNED.get = function () { return undefined }
+NameRef.UNASSIGNED.getOrThrow = function () { throw new Error('this nameref has never been assigned a value') }
+NLA.registerClass(NameRef)
+
+
+
 function mapReverse(map, value) {
 	let it = map.keys(), key
 	while (key = it.next().value) {
@@ -1887,17 +1228,6 @@ function mapReverse(map, value) {
 		}
 	}
 }
-NameRef.forObject = function (o) {
-	if (o instanceof V3) {
-		return new NameRef(modelBREP.vertexNames.get(o), o)
-	} else {
-		assert(o.name)
-		return new NameRef(o.name, o)
-	}
-}
-NameRef.UNASSIGNED = new NameRef('UNASSIGNED', ZERO_EL)
-NameRef.UNASSIGNED.get = function () { return undefined }
-NameRef.UNASSIGNED.getOrThrow = function () { throw new Error('this nameref has never been assigned a value') }
 function initTips() {
 	console.log($$('[data-tooltip]'))
 	let tips = new Tips($$('[data-tooltip]'), {
@@ -1926,8 +1256,161 @@ function initShaders() {
 	shaders.lighting = new GL.Shader(vertexShaderLighting, fragmentShaderLighting)
 	shaders.waves = new GL.Shader(vertexShaderWaves, fragmentShaderLighting)
 }
+function initEvents() {
+	window.onkeypress = function (e) {
+		if ("Delete" == e.key) {
+			selected.forEach(x => editingSketch.removeElement(x))
+			paintScreen()
+		}
+	}
+	let canvas:HTMLCanvasElement = $(gl.canvas)
+	gl.onmouseup = function (e) {
+		// don't put modeGetCurrent().mouseup in local var as 'this' won't be bound correctly
+		modeGetCurrent().mouseup && modeGetCurrent().mouseup(e, getMouseLine(e))
+		paintScreen()
+	}
+	gl.onmousedown = function (e) {
+		if (1 == e.button) {
+			modePop()
+		}
+		if (0 == e.button) {
+            let mouseLine = getMouseLine(e)
+            console.log("mouseLine", getMouseLine(e).toString(x => x), "mode", modeGetCurrent())
+            modeGetCurrent().mousedown(e, mouseLine)
+		}
+
+        return false
+	}
+
+	gl.onmousemove = function (e) {
+		var mouseLine = getMouseLine({x: e.clientX, y: e.clientY})
+		modeGetCurrent().mousemove(e, mouseLine)
+		{
+			let pp, html = '', closestP = Infinity
+			drPs.forEach(info => {
+				let p = info.p || info
+				let text = p.toString(x => NLA.round10(x, -4)) + (info.p ? ' ' + info.text : '')
+				text = `<li>${text}</li>`
+				const dist = mouseLine.distanceToPoint(p)
+				if (dist < 16) {
+					if (pp && p.distanceTo(pp) < 10) {
+						html += text
+					} else if (dist < closestP) {
+						pp = p
+						closestP = dist
+						html = text
+					}
+				}
+			})
+			if (pp) {
+				let pSC = gl.projectionMatrix.times(gl.modelViewMatrix).transformPoint(pp)
+				let x = (pSC.x * 0.5 + 0.5) * window.innerWidth, y = (-pSC.y * 0.5 + 0.5) * window.innerHeight
+				tooltipShow(html, x, y)
+			} else {
+				tooltipHide()
+			}
+		}
+
+		if (e.dragging) {
+
+			//noinspection JSBitwiseOperatorUsage
+			if (e.buttons & 4) {
+				// pan
+				let moveCamera = V(-e.deltaX * 2 / gl.canvas.width, e.deltaY * 2 / gl.canvas.height, 0);
+				let inverseProjectionMatrix = gl.projectionMatrix.inversed();
+				let worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
+				eyePos = eyePos.plus(worldMoveCamera);
+				eyeFocus = eyeFocus.plus(worldMoveCamera);
+				setupCamera();
+			}
+			// scene rotation
+			//noinspection JSBitwiseOperatorUsage
+			if (e.buttons & 2) {
+				let rotateLR = deg2rad(-e.deltaX / 6.0);
+				let rotateUD = deg2rad(-e.deltaY / 6.0);
+
+				// rotate
+				let matrix = M4.rotationLine(eyeFocus, eyeUp, rotateLR)
+				//let horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
+				let horizontalRotationAxis = eyeUp.cross(eyePos.minus(eyeFocus))
+				matrix = matrix.times(M4.rotationLine(eyeFocus, horizontalRotationAxis, rotateUD))
+				eyePos = matrix.transformPoint(eyePos)
+				eyeUp = matrix.transformVector(eyeUp)
+
+				setupCamera();
+			}
+		}
+		paintScreen()
+	}
+	canvas.addEvent('mousewheel', function (e) {
+		//console.log(e)
+		zoomFactor *= pow(0.9, -e.wheel)
+		var mouseCoords = e.client
+		var moveCamera = V(mouseCoords.x * 2 / gl.canvas.width - 1, -mouseCoords.y * 2 / gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
+		var inverseProjectionMatrix = gl.projectionMatrix.inversed()
+		var worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
+		//console.log("moveCamera", moveCamera)
+		//console.log("worldMoveCamera", worldMoveCamera)
+		eyePos = eyePos.plus(worldMoveCamera)
+		eyeFocus = eyeFocus.plus(worldMoveCamera)
+		setupCamera()
+		paintScreen()
+	})
+	$("clearmode").addEvent('click', modePop)
+}
 function main() {
 
+//	// goal: group linearly dependent vectors together
+//	// these represent constraints which conflict
+//	// are these groups clearly defined?
+//	new Float32Array(3) instanceof MimeTypeArray
+//	let m = Matrix.fromRowArrays(
+//		[2, 3, 0, 0, 0],
+//		[1, 0, 0, 0, 0],
+//		[0, 0, 1, 2, 3],
+//		[0, 1, 0, 0, 0],
+//		[0, 0, 1, 2, 3],
+//		[0, 0, 0, 0, 3],
+//		[0, 0, 0, 0, 0]
+//	)
+//	//m = new M4(
+//	//	2, -3, -3, 4,
+//	//	0, 0, 1, -1,
+//	//	0, 0, 0, 1,
+//	//	0, 0, 0, 0
+//	//)
+//	let {L, U, P} = m.gauss()
+//	const height = L.height
+//	let dependents = new Array(height)
+//	let uRowIndex = height
+//	while (uRowIndex--) {
+//		let uRow = U.row(uRowIndex)
+//		if (uRow.length() < NLA_PRECISION) {
+//			dependents[uRowIndex] = true
+//		} else {
+//			break
+//		}
+//	}
+//	let lRowIndex = height
+//	while (lRowIndex--) {
+//		if (dependents[lRowIndex]) {
+//			let lColIndex = Math.min(lRowIndex, L.width)
+//			while (lColIndex--) {
+//				if (0 !== L.e(lRowIndex, lColIndex)) {
+//					dependents[lColIndex] = true
+//				}
+//			}
+//		}
+//	}
+//	let indexMap = P.permutationAsIndexMap()
+//	console.log(dependents, dependents.map((b, index) => b && index).filter(x => x != void 0))
+//	console.log(dependents, dependents.map((b, index) => b && indexMap[index]).filter(x => x != void 0))
+//	console.log(P.permutationAsIndexMap())
+//	console.log("m\n", m.str)
+//	console.log("L\n", L.str)
+//	console.log("U\n", U.str)
+//	console.log("P\n", P.str)
+//return
 	// initTips()
 	// new Request({url: 'src/testshader.glsl', async: false, onSuccess: text => console.log(text)}).send()
 
@@ -1935,9 +1418,9 @@ function main() {
 
 	$$('.sketchControl').set('disabled', true)
 
-	gl = GL.create({});
-	gl.fullscreen();
-	gl.canvas.oncontextmenu = () => false;
+	gl = GL.create({canvas: document.getElementById('mainCanvas') })
+	gl.fullscreen()
+	gl.canvas.oncontextmenu = () => false
 
 	setupCamera();
 	//gl.cullFace(gl.FRONT_AND_BACK);
@@ -1976,7 +1459,15 @@ function main() {
 	console.log("ASKDKJALDS", v2t.dot(v2s), v2t.isParallelTo(v2s))
 	initMeshes()
 	initShaders()
+	let b = editingSketch && editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
 	//	console.log(mesh.vertices)
+	console.log("BBB", b)
+	initEvents()
+
+
+	initLoadSave()
+
+	mesh1.compile()
 	if (window.location.hash && window.location.hash.length > 1) {
 		var key = window.location.hash.substr(1)
 		console.log(key)
@@ -1984,130 +1475,17 @@ function main() {
 	} else {
 		initModel()
 	}
-	let b = editingSketch && editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
-	console.log("BBB", b)
 
-	window.onkeypress = function (e) {
-		if ("Delete" == e.key) {
-			selected.map((x) => x instanceof SegmentEndPoint ? x.line : x).unique().forEach((x) => x.removeFromSketch(editingSketch))
-			paintScreen()
-		}
-	}
-	gl.onmouseup = function (e) {
-		// don't put modeGetCurrent().mouseup in local var as 'this' won't be bound correctly
-		modeGetCurrent().mouseup && modeGetCurrent().mouseup(e, getMouseLine(e))
-		paintScreen()
-	}
-	gl.onmousedown = function (e) {
-		if (1 == e.button) {
-			modePop()
-			return false
-		}
-		//noinspection JSBitwiseOperatorUsage
-		if (!(e.buttons & 1)) {
-			return
-		}
-
-		let mouseLine = getMouseLine(e)
-		console.log("mouseLine", getMouseLine(e).toString(x => x), "mode", modeGetCurrent())
-		modeGetCurrent().mousedown(e, mouseLine)
-	}
-
-	gl.onmousemove = function (e) {
-		var mouseLine = getMouseLine(e)
-		modeGetCurrent().mousemove(e, mouseLine)
-		{
-			let pp, html = '', closestP = Infinity
-			drPs.forEach(info => {
-				let p = info.p || info
-				let text = p.toString(x => Math.round10(x, -4)) + (info.p ? ' ' + info.text : '')
-				text = `<li>${text}</li>`
-				const dist = mouseLine.distanceToPoint(p)
-				if (dist < 16) {
-					if (pp && p.distanceTo(pp) < 10) {
-						html += text
-					} else if (dist < closestP) {
-						pp = p
-						closestP = dist
-						html = text
-					}
-				}
-			})
-			if (pp) {
-				let pSC = gl.projectionMatrix.times(gl.modelViewMatrix).transformPoint(pp)
-				let x = (pSC.x * 0.5 + 0.5) * window.innerWidth, y = (-pSC.y * 0.5 + 0.5) * window.innerHeight
-				tooltipShow(html, x, y)
-			} else {
-				tooltipHide()
-			}
-		}
-		if (e.dragging) {
-
-			//noinspection JSBitwiseOperatorUsage
-			if (e.buttons & 4) {
-				// pan
-				let moveCamera = V(-e.deltaX * 2 / gl.canvas.width, e.deltaY * 2 / gl.canvas.height, 0);
-				let inverseProjectionMatrix = gl.projectionMatrix.inversed();
-				let worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
-				eyePos = eyePos.plus(worldMoveCamera);
-				eyeFocus = eyeFocus.plus(worldMoveCamera);
-				setupCamera();
-			}
-			// scene rotation
-			//noinspection JSBitwiseOperatorUsage
-			if (e.buttons & 2) {
-				let rotateLR = deg2rad(-e.deltaX / 6.0);
-				let rotateUD = deg2rad(-e.deltaY / 6.0);
-
-				// rotate
-				let matrix = M4.rotationLine(eyeFocus, eyeUp, rotateLR)
-				//let horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
-				let horizontalRotationAxis = eyeUp.cross(eyePos.minus(eyeFocus))
-				matrix = matrix.times(M4.rotationLine(eyeFocus, horizontalRotationAxis, rotateUD))
-				eyePos = matrix.transformPoint(eyePos)
-				eyeUp = matrix.transformVector(eyeUp)
-
-				setupCamera();
-			}
-		}
-		paintScreen()
-	}
-	$(gl.canvas).addEvent('mousewheel', function (e) {
-		//console.log(e)
-		zoomFactor *= pow(0.9, -e.wheel)
-		var mouseCoords = e.client
-		var moveCamera = V(mouseCoords.x * 2 / gl.canvas.width - 1, -mouseCoords.y * 2 / gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
-		var inverseProjectionMatrix = gl.projectionMatrix.inversed()
-		var worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
-		//console.log("moveCamera", moveCamera)
-		//console.log("worldMoveCamera", worldMoveCamera)
-		eyePos = eyePos.plus(worldMoveCamera)
-		eyeFocus = eyeFocus.plus(worldMoveCamera)
-		setupCamera()
-		paintScreen()
-	})
-	$("clearmode").onclick = modePop
-
-
-
-		rebuildModel() // necessary to init planes
-		updateFeatureDisplay()
-		rebuildModel() // so warning will show
-		initLoadSave()
-
-	mesh1.compile()
+	rebuildModel() // necessary to init planes
+	updateFeatureDisplay()
+	rebuildModel() // so warning will show
 	paintScreen();
-	let lastPlane = featureStack.slice().reverse().find(f => f instanceof PlaneDefinition)
-	lastPlane && modePush(MODES.PLANE_DEFINITION, lastPlane)
+	let lastInterst = featureStack.slice().reverse().find(f => f instanceof Sketch)
+	lastInterst && modePush(MODES.SKETCH, lastInterst)
 
 }
 
-/**
- *
- * @param {L3} mouseLine
- * @param {String} consider
- */
-function getHovering(mouseLine, ...consider) {
+function getHovering(mouseLine: L3, ...consider:('faces' | 'planes' | 'sketchElements' | 'brepPoints' | 'brepEdges')[]) {
 	var hoverHighlight = null, nearest = Infinity
 	function checkEl(el, distance) {
 		if (distance < nearest) {
@@ -2115,15 +1493,15 @@ function getHovering(mouseLine, ...consider) {
 			hoverHighlight = el
 		}
 	}
-	if (consider.contains('faces') && modelBREP) {
+	if (consider.includes('faces') && modelBREP) {
 		modelBREP.faces.forEach((face) => {
 			checkEl(face, face.intersectsLine(mouseLine))
 		})
 	}
-	if (consider.contains('planes')) {
+	if (consider.includes('planes')) {
 		planes.forEach(plane => checkEl(plane, plane.distanceTo(mouseLine)))
 	}
-	if (consider.contains('sketchElements')) {
+	if (consider.includes('sketchElements')) {
 		featureStack.filter(f => f instanceof Sketch).forEach(sketch => {
 			if (!sketch.hide && sketch.plane && sketch.plane.normal.dot(mouseLine.dir1) < -0.1) {
 				// sketch plane is facing user; ensures there is an intersection
@@ -2145,7 +1523,7 @@ function getHovering(mouseLine, ...consider) {
 			}
 		})
 	}
-	if (consider.contains('brepPoints')) {
+	if (consider.includes('brepPoints')) {
 		brepPoints.forEach(p => {
 			let t = mouseLine.pointLambda(p)
 			if (mouseLine.at(t).distanceTo(p) < 20) {
@@ -2153,7 +1531,7 @@ function getHovering(mouseLine, ...consider) {
 			}
 		})
 	}
-	if (consider.contains('brepEdges')) {
+	if (consider.includes('brepEdges')) {
 		let projPlane = new P3(mouseLine.dir1, 0)
 		let projPoint = projPlane.projectedPoint(mouseLine.anchor)
 		brepEdges.forEach(edge => {
@@ -2217,7 +1595,7 @@ function setupSelectors(el, feature, mode) {
 		.addEvents(tooltipEvents)
 		.each(el => {
 			el.set('text', feature[el.dataset.featureProperty].ref)
-			el.linkRef = feature[el.dataset.featureProperty].ref
+			el.linkRef = feature[el.dataset.featureProperty]
 		})
 		.addEvent('mouseover', function (e) {
 			let target = this.linkRef.get()
@@ -2258,6 +1636,7 @@ function setupSelectors(el, feature, mode) {
 				selector.removeClass('selecting')
 				selector.set('text', planeRef.ref)
 				selector.linkRef = planeRef
+				modeEnd(MODES.PLANE_SELECT)
 
 				feature[selector.dataset.featureProperty] = planeRef
 				rebuildModel()
@@ -2281,29 +1660,30 @@ function setupSelectors(el, feature, mode) {
 
 	el.getElements('.string-id-input, .select-text')
 		.removeEvents()
+		.each(el => el.value = feature[el.dataset.featureProperty])
 		.addEvent('change', function (e) {
 			// TODO: check if unique
 			let propName = el.dataset.featureProperty
 			feature[propName] = this.value
 			rebuildModel()
 		})
-		.each(el => el.value = feature[el.dataset.featureProperty])
 
 	el.getElements('.select-select')
 		.removeEvents()
+		.each(el => el.value = feature[el.dataset.featureProperty])
 		.addEvent('change', function (e) {
 			var propName = this.dataset.featureProperty
 			feature[propName] = this.value
 			rebuildModel()
 		})
-		.each(el => el.value = feature[el.dataset.featureProperty])
 
 	el.getElements('.dimension-input')
 		.removeEvents()
+		.each(el => el.value = feature[el.dataset.featureProperty])
 		.addEvent('mousewheel', function (e) {
 			console.log(e)
 			let delta = (e.shift ? 1 : 10) * Math.sign(e.wheel)
-			this.set('value', Math.round10(parseFloat(this.value) + delta, -6))
+			this.set('value', NLA.round10(parseFloat(this.value) + delta, -6))
 			this.fireEvent('change')
 		})
 		.addEvent('click', function (e) {
@@ -2317,7 +1697,15 @@ function setupSelectors(el, feature, mode) {
 			feature[propName] = this.value = NLA.forceFinite(this.value)
 			rebuildModel()
 		})
-		.each(el => el.value = feature[el.dataset.featureProperty])
+
+	el.getElements('.boolean-input')
+		.removeEvents()
+		.each(el => el.checked = feature[el.dataset.featureProperty])
+		.addEvent('change', function (e) {
+			var propName = this.dataset.featureProperty
+			feature[propName] = this.checked
+			rebuildModel()
+		})
 
 	el.getElement('[name=done]')
 		.removeEvents()
@@ -2347,7 +1735,7 @@ function featureDependents(feature) {
 	let featureIndex = featureStack.indexOf(feature)
 	return featureStack
 		.slice(featureIndex + 1)
-		.filter(followingFeature => featureDependencies(followingFeature).contains(feature))
+		.filter(followingFeature => featureDependencies(followingFeature).includes(feature))
 }
 function featureDependencies(feature) {
 	let result = new Set()
@@ -2361,22 +1749,22 @@ function featureDependencies(feature) {
 function chainComparison(diff1, diff2) {
 	return diff1 != 0 ? diff1 : diff2
 }
-function reverse(sketch) {
-	sketch.varMap.forEach(function (pointIndex, point) {
-		point.x = sketch.x[pointIndex]
-		point.y = sketch.x[pointIndex + 1]
-	});
-}
 function pointsFirst(a, b) {
 	//console.log((a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1));
 	return (a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1);
+}
+function exportModel() {
+	saveAs(brepMesh.toBinarySTL(), 'export.stl')
 }
 function clicky() {
 	for (var j = 0; j < 1; j++) {
 		editingSketch.gaussNewtonStep()
 	}
-	reverse(editingSketch)
+	editingSketch.reverse()
 	paintScreen()
+
+	const self = this
+	const closure = () => self
 }
 function deleteConstraint(sketch, constraint) {
 	if ("coincident" == constraint.type) {
@@ -2384,46 +1772,47 @@ function deleteConstraint(sketch, constraint) {
 	} else {
 		sketch.constraints.remove(constraint)
 	}
-	recalculate(sketch)
+	sketch.recalculate()
 	paintScreen()
 }
 function getGroupConstraint(el, sketch, type) {
-	return sketch.constraints.find(function (c) { return c.type == type && (c.fixed == el || c.segments.contains(el)); });
+	return sketch.constraints.find(function (c) {
+		return c.type == type && (c.fixed == el || c.segments.includes(el))
+	})
 }
 // removes segment or plane from group constraint
 function removeFromGroupConstraint(el, sketch, type) {
 	var groupConstraint = getGroupConstraint(el, sketch, type)
 	if (!groupConstraint) return;
-	groupConstraint.segments.remove(el)
-	if (1 == groupConstraint.segments.length) {
-		sketch.constraints.remove(groupConstraint);
-	}
-	if (groupConstraint.fixed == el) {
-		groupConstraint.fixed = undefined;
-	}
 	groupConstraint.cs.remove(el)
+	if (1 == groupConstraint.cs.length) {
+		sketch.constraints.remove(groupConstraint)
+	}
+	groupConstraint.segments.remove(el)
+	if (groupConstraint.fixed == el) {
+		groupConstraint.fixed = undefined
+	}
 }
-function removeFromConstraint(el, sketch, constraint) {
+function removeFromConstraint(el: SketchSegment | SegmentEndPoint, sketch: Sketch, constraint: Constraint) {
 	switch (constraint.type) {
-		case "coincident":
+		case 'coincident':
 			removeFromCoincidence(el, sketch)
 			break;
-		case "parallel":
-		case "colinear":
-		case "equalLength":
+		case 'parallel':
+		case 'colinear':
+		case 'equalLength':
 			removeFromGroupConstraint(el, sketch, constraint.type)
 			break;
-		case "perpendicular":
-		case "pointDistance":
-		case "pointLineDistance":
-		case "pointOnLine":
-		case "angle":
+		case 'perpendicular':
+		case 'pointDistance':
+		case 'pointLineDistance':
+		case 'pointOnLine':
+		case 'angle':
 			sketch.constraints.remove(constraint)
 			break
 		default:
-			throw new Error("implement!" + constraint.type)
-			//throw new Error("unknown constraint " + constraint.type);
-		// console.log("errror", constraint.type);
+			throw new Error('unknown constraint ' + constraint.type);
+		// console.log('errror', constraint.type);
 	}
 }
 // colinear, equal length or parallel
@@ -2471,195 +1860,34 @@ function makeGroup2(type) {
 }
 */
 function makeGroup(type) {
-	var els = selected.filter((el) => el instanceof SketchLineSeg || ('equalLength' != type && el.plane) )
-	if (els.length < 2) return;
+	const isFixed = x => x instanceof Face || x instanceof Edge || x instanceof CustomPlane
+	var els = selected.filter((el) => el instanceof SketchLineSeg || ('equalLength' != type && isFixed(el)) )
+	if (els.length < 2) return
 
 	var newGroup = els.map(el => {
-		el = el.plane ? new NameRef(el.name) : el
-		var c = getGroupConstraint(el, editingSketch, type);
-		return c
-			? (c.fixed ? c.segments.concat(c.fixed) : c.segments)
-			: el }).concatenated().unique();
-	var fixeds = newGroup.filter(el => el.isRef);
+		if (isFixed(el)) el = NameRef.forObject(el)
+		var c = getGroupConstraint(el, editingSketch, type)
+		return c ? c.cs : el
+	}).concatenated().unique()
+	var fixeds = newGroup.filter(el => el instanceof NameRef)
 	if (1 < fixeds.length) {
-		throw new Error("cannot have two fixed");
+		throw new Error("cannot have two fixed")
 	}
 
-	var oldConstraints = els.map(el => getGroupConstraint(el, editingSketch, type)).filter(x => x);
-	editingSketch.constraints.removeAll(oldConstraints);
+	var oldConstraints = newGroup.map(el => getGroupConstraint(el, editingSketch, type))
+	editingSketch.constraints.removeAll(oldConstraints)
 
 	// add new constraint
 	// fixeds[0] may be null
-	var segments = newGroup.filter(x => x instanceof SketchLineSeg);
-	var f = fixeds[0];
-	editingSketch.constraints.push(new Constraint(type, f ? segments.concat(f) : segments, {fixed: fixeds[0], segments: segments}));
+	var segments = newGroup.filter(x => !(x instanceof NameRef))
+	var f = fixeds[0]
+	editingSketch.constraints.push(new Constraint(type, f ? segments.concat(f) : segments, {fixed: f, segments: segments}))
 
-	rebuildModel();
-	paintScreen();
-	updateSelected();
-}
-function Constraint(type, constrains, props) {
-	if (constrains.constructor != Array) {
-		throw new Error("not an array: " + constrains);
-	}
-	this.type = type;
-	this.id = globalId++;
-	this.cs = constrains;
-	for (var key in props) {
-		this[key] = props[key];
-	}
-}
-Constraint.prototype = {
-	constrains: function (o) {
-		if (!this.cs) {
-			console.log(this);
-		}
-		return this.cs.contains(o);
-	},
-	segmentOtherTypeFree(sketch, el) {
-
-	},
-	/*
-	serialize: function (els) {
-		function lookup (val) {
-			let i = els.indexOf(val)
-			return i != -1 ? 'els[' + i + ']' : serialize(val)
-		}
-		return serialize(this, lookup)
-		return `new Constraint('${this.type}',[${els.map(lookup).join(',')}])`
-	}
-	*/
-	//constrains: o => this.cs.contains(o)
-}
-Constraint.prototype.constructor = Constraint
-
-
-function serialize(v) {
-	function gatherList(v) {
-		if (v && v.constructor === Array) {
-			if (visited.has(v)) {
-				if (!listMap.has(v)) {
-					listMap.set(v, resultList.length)
-					resultList.push(v)
-				}
-			} else {
-				visited.add(v)
-				for (let i = 0; i < v.length; i++) {
-					gatherList(v[i])
-				}
-			}
-		} else if (null !== v && 'object' == typeof v) {
-			if (visited.has(v)) {
-				if (!listMap.has(v)) {
-					listMap.set(v, resultList.length)
-					resultList.push(v)
-				}
-			} else {
-				visited.add(v)
-				let keys = Object.keys(v)
-				for (let i = 0; i < keys.length; i++) {
-					gatherList(v[keys[i]])
-				}
-			}
-		}
-	}
-	function transform(v, first) {
-		if ('string' == typeof v || 'number' == typeof v || 'boolean' == typeof v || 'undefined' == typeof v || null == v) {
-			return v
-		} else if (v.constructor === Array) {
-			let index
-			if (true !== first && undefined !== (index = listMap.get(v))) {
-				return {'#REF': index}
-			} else {
-				return v.map(transform)
-			}
-		} else if ('object' == typeof v) {
-			let index
-			if (true !== first && undefined !== (index = listMap.get(v))) {
-				return {'#REF': index}
-			} else {
-				let result = Object.prototype == v.prototype ? {}
-				: assert(v.constructor && v.constructor.name && v.constructor.name != "Object",
-					() => (console.log(v), v.toSource() +v.constructor.name)) && {'#PROTO': v.constructor.name}
-				let keys = Object.keys(v)
-				for (let i = 0; i < keys.length; i++) {
-					result[keys[i]] = transform(v[keys[i]])
-				}
-				return result
-			}
-		} else {
-			throw new Error("?" + typeof v + v.toString())
-		}
-	}
-
-	let visited = new Set()
-	let listMap = new Map(), resultList = []
-	listMap.set(v, 0)
-	resultList.push(v)
-	gatherList(v)
-	console.log(resultList)
-
-	resultList = resultList.map(v => transform(v, true))
-	console.log(JSON.encode(resultList))
-	return JSON.encode(resultList)
+	rebuildModel()
+	paintScreen()
+	updateSelected()
 }
 
-function unserialize(string) {
-	function fixObjects(v) {
-		if (v && v.constructor === Array) {
-			for (let i = 0; i < v.length; i++) {
-				v[i] = fixObjects(v[i])
-			}
-			return v
-		} else if ('object' == typeof v && null != v) {
-			if ("#PROTO" in v) {
-				assert(window[v["#PROTO"]] || NLA.CLASSES[v["#PROTO"]], v["#PROTO"] + ' Missing ' + window[v["#PROTO"]])
-				let result = Object.create((window[v["#PROTO"]] || NLA.CLASSES[v["#PROTO"]]).prototype)
-				let keys = Object.keys(v)
-				for (let i = 0; i < keys.length; i++) {
-					//if ("name" == keys[i]) console.log(result)
-					if ("#PROTO" != keys[i]) {
-						Object.defineProperty(result, keys[i], {value: fixObjects(v[keys[i]]), enumerable: true, writable: true})
-					}
-				}
-				Object.defineProperty(result, 'loadID', {value: globalId++, enumerable: false, writable: false})
-				return result
-			} else {
-				return v
-			}
-		} else {
-			return v
-		}
-	}
-
-	function linkReferences(v) {
-		if (v && v.constructor === Array) {
-			for (let i = 0; i < v.length; i++) {
-				v[i] = linkReferences(v[i])
-			}
-			return v
-		} else if ('object' == typeof v && null != v) {
-			if ("#REF" in v) {
-				return tree[v["#REF"]]
-			} else {
-				let keys = Object.keys(v)
-				for (let i = 0; i < keys.length; i++) {
-					v[keys[i]] = linkReferences(v[keys[i]])
-				}
-				return v
-			}
-		} else {
-			return v
-		}
-	}
-	let tree = JSON.decode(string, true)
-	// console.log(tree)
-	fixObjects(tree)
-	// console.log(tree)
-	linkReferences(tree)
-	// console.log(tree)
-	return tree[0]
-}
 
 function makeAngle() {
 	var selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane )
@@ -2671,9 +1899,9 @@ function makeAngle() {
 			throw new Error ("at least one must be a segment");
 		}
 		editingSketch.constraints.push(new Constraint("angle", [segment, other], {segment:segment, other:other, f: [1, 1], value: selSegments[0].angleTo(selSegments[1])})); //
-		rebuildModel();
-		paintScreen();
-		updateSelected();
+		rebuildModel()
+		paintScreen()
+		updateSelected()
 	}
 }
 function makePerpendicular() {
@@ -2705,7 +1933,7 @@ function makeDistance() {
 		} else {
 			let distance = round(other.plane.intersectionWithPlane(editingSketch.plane)
 				.transform(editingSketch.worldToSketchMatrix).distanceToPoint(V3(point)))
-			other = new NameRef(other.name)
+			other = NameRef.forObject(other)
 			newConstraint = new Constraint("pointPlaneDistance", [point, other],
 				{point:point, other:other, distance: distance})
 			console.log(newConstraint)
@@ -2717,18 +1945,26 @@ function makeDistance() {
 		$("distanceInput"+newConstraint.id).select()
 	}
 }
+interface getCurvable {
+	getCurve()
+}
+interface Edge extends getCurvable {}
+Edge.prototype.getCurve = function () {
+
+}
 function selPointOnLine() {
 	if (2 != selected.length) return;
 	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1];
 	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0];
-	if (point instanceof SegmentEndPoint && (other instanceof SketchLineSeg || other instanceof SketchBezier || other instanceof SketchArc || other.plane)) {
-		other = !(other.plane) ? other : new NameRef(other.name)
-		var newConstraint = new Constraint("pointOnLine", [point, other], {point:point, other:other});
-		console.log(newConstraint);
-		editingSketch.constraints.push(newConstraint);
-		rebuildModel();
-		paintScreen();
-		updateSelected();
+	if (point instanceof SegmentEndPoint && (other instanceof SketchLineSeg || other instanceof SketchBezier || other instanceof SketchArc
+		|| other instanceof Face || other instanceof Edge || other instanceof CustomPlane)) {
+		other = isSketchEl(other) ? other : NameRef.forObject(other)
+		var newConstraint = new Constraint("pointOnLine", [point, other], {point:point, other:other})
+		console.log(newConstraint)
+		editingSketch.constraints.push(newConstraint)
+		rebuildModel()
+		paintScreen()
+		updateSelected()
 	}
 }
 function makeSelCoincident() {
@@ -2752,52 +1988,52 @@ function faceSketchPlane() {
 	setupCamera();
 	paintScreen();
 }
-function Extrude(name, segmentName, start, end, operation) {
-	this.type = "extrude"
-	this.name = name || "extrude" + (globalId++)
-	segmentName = segmentName || NameRef.UNASSIGNED
-	assertInst(NameRef, segmentName)
-	this.segmentName = segmentName
-	this.start = start || 0
-	this.end = end || 100
-	this.operation = operation || "minus"
-}
-Extrude.prototype = {}
-Extrude.prototype.constructor = Extrude
-Extrude.prototype.dependentOnNames = function () {
-	return [this.segmentName]
-}
-class Pattern {
-	constructor(name, features) {
-		this.name = name || 'pattern' + globalId
-		this.features = features
-		this.direction = V3.X
-		this.count = 2
-		this.totalLength = 20
-		this.intervalLength = 10
-		this.mode = 0
+class Extrude {
+	type: string
+	name: string
+	_segmentName: NameRef
+	start: number
+	end: number
+	operation: 'minus' | 'plus'
+
+	constructor(name, segmentName, start, end, operation) {
+		this.type = "extrude"
+		this.name = name || "extrude" + (globalId++)
+		segmentName = segmentName || NameRef.UNASSIGNED
+		assertInst(NameRef, segmentName)
+		this.segmentName = segmentName
+		this.start = start || 0
+		this.end = end || 100
+		this.operation = operation || "minus"
 	}
+
+	set segmentName(sn: NameRef) {
+		assertInst(NameRef, sn)
+		this._segmentName = sn
+	}
+
+	get segmentName() {
+		assertInst(NameRef, this._segmentName)
+		return this._segmentName
+	}
+
+	dependentOnNames():NameRef[] {
+		return [this.segmentName]
+	}
+}
+NLA.registerClass(Extrude)
+
+class Pattern {
+	name = 'pattern' + globalId++
+	features
+	direction = V3.X
+	count = 2
+	totalLength = 20
+	intervalLength = 10
+	mode = 0
 	build() {
 
 	}
-}
-function addSketch() {
-	let feature = new Sketch()
-	featureStack.push(feature)
-	modePush(MODES.SKETCH, feature)
-	updateFeatureDisplay()
-}
-function addPlane() {
-	let feature = new PlaneDefinition("face")  // TODO?
-	featureStack.push(feature)
-	modePush(MODES.PLANE_DEFINITION, feature)
-	updateFeatureDisplay()
-}
-function addExtrude() {
-	let feature = new Extrude();
-	featureStack.push(feature);
-	modePush(MODES.EXTRUDE, feature)
-	updateFeatureDisplay()
 }
 
 
@@ -2821,7 +2057,7 @@ function modePush(mode, ...args) {
 	modeUpdateDisplay()
 }
 function modeEnd(mode) {
-	if (modeStack.contains(mode)) {
+	if (modeStack.includes(mode)) {
 		do {
 			var popped = modeStack.pop()
 			popped.end()
@@ -2836,41 +2072,30 @@ function modeEnd(mode) {
 }
 function modePop() {
 	if (1 == modeStack.length) return
-	modeStack.pop().end()
-	modeUpdateDisplay()
+	modeEnd(modeStack.last())
 }
 function modeGetCurrent() {
 	return modeStack.last()
 }
 
+interface Mode {
+	end()
+	init()
+	mousemove()
+	mousedown()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-function createArcMesh(insideRadius, outsideRadius, cornerCount) {
-	var mesh = new GL.Mesh({});
-	for (var i = 0; i < cornerCount; i++) {
-		mesh.vertices.push(
-			V3(outsideRadius, i / (cornerCount - 1), 0),
-			V3(insideRadius, i / (cornerCount - 1), 0))
-		if (i == cornerCount - 1) break;
-		mesh.triangles.pushAll([
-			0, 2, 1,
-			1, 2, 3].map(offset=>(2 * i + offset) % (2 * cornerCount)))
-	}
-	mesh.compile();
-	return mesh;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 function tooltipShow(htmlContent, x, y) {
@@ -2906,3 +2131,132 @@ function tooltipHide() {
 }
 
 let tooltipEvents = {}
+
+
+
+function serialize(v) {
+	function gatherList(v) {
+		if (v && v.constructor === Array) {
+			if (visited.has(v)) {
+				if (!listMap.has(v)) {
+					listMap.set(v, resultList.length)
+					resultList.push(v)
+				}
+			} else {
+				visited.add(v)
+				for (let i = 0; i < v.length; i++) {
+					gatherList(v[i])
+				}
+			}
+		} else if (null !== v && 'object' == typeof v) {
+			if (visited.has(v)) {
+				if (!listMap.has(v)) {
+					listMap.set(v, resultList.length)
+					resultList.push(v)
+				}
+			} else {
+				visited.add(v)
+				let keys = Object.keys(v)
+				for (let i = 0; i < keys.length; i++) {
+					gatherList(v[keys[i]])
+				}
+			}
+		}
+	}
+	function transform(v, first?) {
+		if ('string' == typeof v || 'number' == typeof v || 'boolean' == typeof v || 'undefined' == typeof v || null == v) {
+			return v
+		} else if (v.constructor === Array) {
+			let index
+			if (true !== first && undefined !== (index = listMap.get(v))) {
+				return {'#REF': index}
+			} else {
+				return v.map(transform)
+			}
+		} else if ('object' == typeof v) {
+			let index
+			if (true !== first && undefined !== (index = listMap.get(v))) {
+				return {'#REF': index}
+			} else {
+				let result = Object.prototype == v.prototype ? {}
+					: assert(v.constructor && v.constructor.name && v.constructor.name != 'Object',
+					() => (console.log(v), v.toSource() +v.constructor.name)) && {'#PROTO': v.constructor.name}
+				let keys = Object.keys(v)
+				for (let i = 0; i < keys.length; i++) {
+					result[keys[i]] = transform(v[keys[i]])
+				}
+				return result
+			}
+		} else {
+			throw new Error('?' + typeof v + v.toString())
+		}
+	}
+
+	let visited = new Set()
+	let listMap = new Map(), resultList = []
+	listMap.set(v, 0)
+	resultList.push(v)
+	gatherList(v)
+	console.log(resultList)
+
+	resultList = resultList.map(v => transform(v, true))
+	console.log(JSON.encode(resultList))
+	return JSON.encode(resultList)
+}
+
+function unserialize(string) {
+	function fixObjects(v) {
+		if (v && v.constructor === Array) {
+			for (let i = 0; i < v.length; i++) {
+				v[i] = fixObjects(v[i])
+			}
+			return v
+		} else if ('object' == typeof v && null != v) {
+			if ('#PROTO' in v) {
+				assert(window[v['#PROTO']] || NLA.CLASSES[v['#PROTO']], v['#PROTO'] + ' Missing ' + window[v['#PROTO']])
+				let result = Object.create((window[v['#PROTO']] || NLA.CLASSES[v['#PROTO']]).prototype)
+				let keys = Object.keys(v)
+				for (let i = 0; i < keys.length; i++) {
+					//if ('name' == keys[i]) console.log(result)
+					if ('#PROTO' != keys[i]) {
+						Object.defineProperty(result, keys[i], {value: fixObjects(v[keys[i]]), enumerable: true, writable: true})
+					}
+				}
+				Object.defineProperty(result, 'loadID', {value: globalId++, enumerable: false, writable: false})
+				return result
+			} else {
+				return v
+			}
+		} else {
+			return v
+		}
+	}
+
+	function linkReferences(v) {
+		if (v && v.constructor === Array) {
+			for (let i = 0; i < v.length; i++) {
+				v[i] = linkReferences(v[i])
+			}
+			return v
+		} else if ('object' == typeof v && null != v) {
+			if ('#REF' in v) {
+				return tree[v['#REF']]
+			} else {
+				let keys = Object.keys(v)
+				for (let i = 0; i < keys.length; i++) {
+					v[keys[i]] = linkReferences(v[keys[i]])
+				}
+				return v
+			}
+		} else {
+			return v
+		}
+	}
+	let tree = JSON.decode(string, true)
+	// console.log(tree)
+	fixObjects(tree)
+	// console.log(tree)
+	linkReferences(tree)
+	// console.log(tree)
+	return tree[0]
+}

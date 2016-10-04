@@ -3,3 +3,7 @@ jsunit
 lightgl.js-master
 node_modules
 /min
+out
+*.exe
+*.pdf
+*~

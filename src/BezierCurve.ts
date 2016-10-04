@@ -138,7 +138,7 @@ class BezierCurve extends Curve {
 			return false
 		}
 		var thisSplit
-		if (NLA.equals(1, curveP0T)) {
+		if (NLA.eq(1, curveP0T)) {
 			// this.split(curveP0T).right is degenerate in this case, so we need to handle it separately
 
 			// this.split(curveP3T): 0 --> curveP3T --> 1
@@ -204,14 +204,14 @@ class BezierCurve extends Curve {
 		var c = p1.minus(p0).times(3)
 		var d = p0.minus(p)
 
-		let absMinDim = a.absMinDim()
+		let absMinDim = a.minAbsDim()
 		let [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim]
 
 
 		let matrix = M4.forSys(a, b, c, d) // B(t) = matrix * V(1, t, t², t³)
 		const g = matrix.gauss().U.m
 		let pqp = g[6] / g[5], q = g[7] / g[5]
-		let results = solveCubicReal2(0, g[5], g[6], g[7]).filter(t => NLA.isZero(t * t * g[1] + t * g[2] + g[3] + g[0] * t * t * t))
+		let results = solveCubicReal2(0, g[5], g[6], g[7]).filter(t => NLA.eq0(t * t * g[1] + t * g[2] + g[3] + g[0] * t * t * t))
 		if (0 == results.length) return NaN
 		if (1 == results.length) return results[0]
 		assert(false, 'multiple intersection ' + this.toString() + p.sce)
@@ -237,13 +237,13 @@ class BezierCurve extends Curve {
 		// try to find a single result in the x-dimension, if multiple are found,
 		// filter them by checking the other dimensions
 		for (var dim = 0; dim < 3; dim++) {
-			if (NLA.isZero(a[dim]) && NLA.isZero(b[dim]) && NLA.isZero(c[dim])) {
+			if (NLA.eq0(a[dim]) && NLA.eq0(b[dim]) && NLA.eq0(c[dim])) {
 				// for case x:
 				// ax == bx == cx == 0 => x(t) = dx
 				// x value is constant
 				// if x == 0 for all t, this does not limit the result, otherwise, there is no result, i.e
 				// the passed point is not on the curve
-				if (!NLA.isZero(d[dim])) return NaN
+				if (!NLA.eq0(d[dim])) return NaN
 			} else {
 
 				var newResults = solveCubicReal2(a[dim], b[dim], c[dim], d[dim])
@@ -251,7 +251,7 @@ class BezierCurve extends Curve {
 				if (0 == newResults.length) return NaN
 				if (1 == newResults.length) return newResults[0]
 				if (results) {
-					results = results.filter(t => newResults.some(t2 => NLA.equals(t, t2)))
+					results = results.filter(t => newResults.some(t2 => NLA.eq(t, t2)))
 					if (0 == results.length) return NaN
 					if (1 == results.length) return results[0]
 				} else {
@@ -396,7 +396,7 @@ class BezierCurve extends Curve {
 		// let z = (d.x - anchor.x) * dir.y - (d.y - anchor.y) * dir.x
 
 		// the above version doesn't work for dir.x == dir.y == 0, so:
-		let absMinDim = dir.absMinDim()
+		let absMinDim = dir.minAbsDim()
 		let [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim]
 
 		let w = a.e(coord0) * dir.e(coord1) - a.e(coord1) * dir.e(coord0)
@@ -456,7 +456,7 @@ class BezierCurve extends Curve {
 	 */
 	isInfosWithBezie3(bezier:BezierCurve, tMin?:number, tMax?:number, sMin?:number, sMax?:number) {
 		const handleStartTS = (startT, startS) => {
-			if (!result.some(info => NLA.equals(info.tThis, startT) && NLA.equals(info.tOther, startS))) {
+			if (!result.some(info => NLA.eq(info.tThis, startT) && NLA.eq(info.tOther, startS))) {
 				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
 				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
@@ -515,7 +515,7 @@ class BezierCurve extends Curve {
 		// this function uses newton iteration to improve the result as much as possible
 		// is declared as an arrow function so this will be bound correctly
 		const handleStartTS = (startT, startS) => {
-			if (!result.some(info => NLA.equals(info.tThis, startT) && NLA.equals(info.tOther, startS))) {
+			if (!result.some(info => NLA.eq(info.tThis, startT) && NLA.eq(info.tOther, startS))) {
 				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
 				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
@@ -628,6 +628,6 @@ class BezierCurve extends Curve {
 	 */
 	static EX2D = BezierCurve.graphXY(2,-3,-3,2)
 	static EX3D = new BezierCurve(V3.ZERO, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X)
-	static tIncrement = 1 / (64)
 }
 BezierCurve.prototype.hlol = Curve.hlol++
+BezierCurve.prototype.tIncrement = 1 / (64)

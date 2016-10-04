@@ -274,7 +274,7 @@ class ProjectedCurveSurface extends Surface {
 				for (var k = 0; k < edgeTs.length; k++) {
 					var edgeT = edgeTs[k]
 					let isp = edge.curve.at(edgeT)
-					if (!NLA.equals(pp.x, ptpf(isp).x)) {
+					if (!NLA.eq(pp.x, ptpf(isp).x)) {
 						// point is on plane, but not on line
 						continue
 					}

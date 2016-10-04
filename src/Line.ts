@@ -45,7 +45,7 @@ class Line {
 	isParallelToLine(line) {
 		assertInst(Line, line)
 		// we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than isParallelTo()
-		return NLA.equals(1, Math.abs(this.dir1.dot(line.dir1)))
+		return NLA.eq(1, Math.abs(this.dir1.dot(line.dir1)))
 	}
 
 	angleToLine(line) {

@@ -29,7 +29,7 @@ class PICurve extends Curve {
 
 	containsPoint(p) {
 		assertVectors(p)
-		return this.parametricSurface.containsPoint(p) && NLA.isZero(this.implicitSurface.implicitFunction()(p))
+		return this.parametricSurface.containsPoint(p) && NLA.eq0(this.implicitSurface.implicitFunction()(p))
 	}
 
 	getVerticesNo0() {

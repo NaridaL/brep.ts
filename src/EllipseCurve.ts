@@ -62,7 +62,7 @@ class EllipseCurve extends Curve {
 	 *
 	 */
 	isCircular() {
-		return NLA.equals(this.f1.length(), this.f2.length())
+		return NLA.eq(this.f1.length(), this.f2.length())
 	}
 
 
@@ -88,11 +88,11 @@ class EllipseCurve extends Curve {
 			return true
 		}
 		if (this.isCircular()) {
-			return ell.isCircular() && NLA.equals(this.f1.length(), ell.f1.length())
+			return ell.isCircular() && NLA.eq(this.f1.length(), ell.f1.length())
 		} else {
 			var {f1: f1, f2: f2} = this.mainAxes(), {f1: c1, f2: c2} = ell.mainAxes()
-			return NLA.equals(f1.lengthSquared(), Math.abs(f1.dot(c1)))
-				&& NLA.equals(f2.lengthSquared(), Math.abs(f2.dot(c2)))
+			return NLA.eq(f1.lengthSquared(), Math.abs(f1.dot(c1)))
+				&& NLA.eq(f2.lengthSquared(), Math.abs(f2.dot(c2)))
 		}
 	}
 
@@ -146,7 +146,7 @@ class EllipseCurve extends Curve {
 	 */
 	mainAxes() {
 		var f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.lengthSquared() - f1.lengthSquared()
-		if (NLA.isZero(a)) {
+		if (NLA.eq0(a)) {
 			return this
 		}
 		var g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a)
@@ -247,11 +247,11 @@ class EllipseCurve extends Curve {
 
 	containsPoint(p) {
 		var localP = this.inverseMatrix.transformPoint(p)
-		return NLA.equals(1, localP.lengthXY()) && NLA.isZero(localP.z)
+		return NLA.eq(1, localP.lengthXY()) && NLA.eq0(localP.z)
 	}
 
 	isInfosWithEllipse(ellipse:EllipseCurve):{tThis: number, tOther: number, p: V3}[] {
-		if (this.normal.isParallelTo(ellipse.normal) && NLA.isZero(this.center.minus(ellipse.center).dot(ellipse.normal))) {
+		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
 			var localEllipse = ellipse.transform(this.inverseMatrix).rightAngled()
@@ -328,9 +328,9 @@ class EllipseCurve extends Curve {
 	isInfosWithLine(line) {
 		let localAnchor = this.inverseMatrix.transformPoint(line.anchor)
 		let localDir = this.inverseMatrix.transformVector(line.dir1)
-		if (NLA.isZero(localDir.z)) {
+		if (NLA.eq0(localDir.z)) {
 			// local line parallel to XY-plane
-			if (NLA.isZero(localAnchor.z)) {
+			if (NLA.eq0(localAnchor.z)) {
 				// local line lies in XY-plane
 				// ell: x² + y² = 1 = p²
 				// line(t) = anchor + t dir
@@ -347,7 +347,7 @@ class EllipseCurve extends Curve {
 			// find point, then check if distance from circle = 1
 			let localLineISTWithXYPlane = localAnchor.z / localDir.z
 			let localLineISPointWithXYPlane = localDir.times(localLineISTWithXYPlane).plus(localAnchor)
-			if (NLA.equals(1, localLineISPointWithXYPlane.lengthXY())) {
+			if (NLA.eq(1, localLineISPointWithXYPlane.lengthXY())) {
 				// point lies on unit circle
 				return [{
 					tThis: localLineISPointWithXYPlane.angleXY(),
@@ -385,7 +385,7 @@ class EllipseCurve extends Curve {
 			return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
 		} else {
 			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
-			return possibleISPoints.filter(p => NLA.equals(1, p.lengthXY()))
+			return possibleISPoints.filter(p => NLA.eq(1, p.lengthXY()))
 		}
 	}
 	/**
@@ -400,7 +400,7 @@ class EllipseCurve extends Curve {
 		} else {
 			let infos = localBezier.isTsWithPlane(P3.XY).mapFilter(tOther => {
 				let localP = localBezier.at(tOther)
-				if (NLA.equals(1, localP.lengthXY())) {
+				if (NLA.eq(1, localP.lengthXY())) {
 					return {tOther: tOther, p: bezier.at(tOther), tThis: localP.angleXY()}
 				}})
 			return infos
@@ -412,7 +412,7 @@ class EllipseCurve extends Curve {
 		// this function uses newton iteration to improve the result as much as possible
 		// is declared as an arrow function so this will be bound correctly
 		const handleStartTS = (startT, startS) => {
-			if (!result.some(info => NLA.equals(info.tThis, startT) && NLA.equals(info.tOther, startS))) {
+			if (!result.some(info => NLA.eq(info.tThis, startT) && NLA.eq(info.tOther, startS))) {
 				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
 				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
@@ -518,7 +518,7 @@ class EllipseCurve extends Curve {
 		// see https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
 		return Math.PI * this.f1.cross(this.f2).length()
 	}
-	static hlol = Curve.hlol++
 	static UNIT = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
-	static tIncrement = 2 * Math.PI / (4 * 16)
 }
+EllipseCurve.prototype.hlol = Curve.hlol++
+EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 16)

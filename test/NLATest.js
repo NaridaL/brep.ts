@@ -166,9 +166,9 @@ QUnit.test( "Matrix.isOrthogonal", function( assert ) {
 });
 QUnit.test( "Matrix.prototype.solveLinearSystem", function( assert ) {
 	var a = Matrix.fromRowArrays([0,1,1],[1,1,1],[1,2,3])
-	var b = NLA.Vector.fromArguments(1, 2, 3)
+	var b = NLA.Vector.from(1, 2, 3)
 	var x = a.solveLinearSystem(b)
-	assert.ok(x.equals(NLA.Vector.fromArguments(1, 1, 0)))
+	assert.ok(x.equals(NLA.Vector.from(1, 1, 0)))
 	assert.ok(a.timesVector(x).equals(b))
 });
 QUnit.test( "Matrix.prototype.inverse", function( assert ) {
@@ -181,6 +181,12 @@ QUnit.test( "Matrix.prototype.inverse 2", function( assert ) {
 	var a = Matrix.random(8, 8)
 	var aInverse = a.inversed()
 	assert.matrixEquals(a.times(aInverse), Matrix.identity(8))
+});
+QUnit.test( "Matrix.prototype.inverse 3", function( assert ) {
+	var a = new Matrix(1, 1, new Float64Array([5]))
+	var aInverse = a.inversed()
+	console.log(a.luDecomposition())
+	assert.equal(aInverse.m[0], 1/5)
 });
 QUnit.test( "Matrix.prototype.qrDecompositionGivensRotation", function( assert ) {
 	var sqrt = Math.sqrt
@@ -227,7 +233,7 @@ QUnit.test( "Matrix4x4.prototype.rotationLine", function( assert ) {
 
 	var a = V(1, 2, 3), PI = Math.PI;
 	assert.matrixEquals(
-		M4.rotationLine(a, V(1, 1, 0).unit(), 1),
+		M4.rotationLine(a, V(1, 1, 0).normalized(), 1),
 		M4.multiplyMultiple(M4.translation(a), M4.rotationZ(PI / 4), M4.rotationX(1), M4.rotationZ(-PI / 4), M4.translation(a.negated())),
 		"",
 		1e-6)

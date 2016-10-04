@@ -6,41 +6,47 @@
 
 		<script type="text/javascript" src="toSource.js"></script>
 
-		<script type="text/javascript" src="src/NLA.js"></script>
-		<script type="text/javascript" src="src/Surface.js"></script>
-		<script type="text/javascript" src="src/shaders.js"></script>
-		<script type="text/javascript" src="src/Vector.js"></script>
-		<script type="text/javascript" src="src/Vector3.js"></script>
-		<script type="text/javascript" src="src/Matrix.js"></script>
-		<script type="text/javascript" src="src/Matrix4x4.js"></script>
-		<script type="text/javascript" src="src/AABB.js"></script>
+		<script type="text/javascript" src="out/NLA.js"></script>
+		<script type="text/javascript" src="out/Transformable.js"></script>
+		<script type="text/javascript" src="out/Surface.js"></script>
+		<script type="text/javascript" src="out/shaders.ts"></script>
+		<script type="text/javascript" src="out/Vector.js"></script>
+		<script type="text/javascript" src="out/Vector3.js"></script>
+		<script type="text/javascript" src="out/Matrix.js"></script>
+		<script type="text/javascript" src="out/Matrix4x4.js"></script>
+		<script type="text/javascript" src="out/AABB.js"></script>
 
 
-		<script type="text/javascript" src="src/Curve.js"></script>
-		<script type="text/javascript" src="src/Plane3.js"></script>
-		<script type="text/javascript" src="src/Line3.js"></script>
+		<script type="text/javascript" src="out/Curve.js"></script>
+		<script type="text/javascript" src="out/Plane3.js"></script>
+		<script type="text/javascript" src="out/Line3.js"></script>
 
-		<script type="text/javascript" src="src/PICurve.js"></script>
-		<script type="text/javascript" src="src/PPCurve.js"></script>
-		<script type="text/javascript" src="src/BezierCurve.js"></script>
-		<script type="text/javascript" src="src/EllipseCurve.js"></script>
+		<script type="text/javascript" src="out/PICurve.js"></script>
+		<script type="text/javascript" src="out/PPCurve.js"></script>
+		<script type="text/javascript" src="out/BezierCurve.js"></script>
+		<script type="text/javascript" src="out/EllipseCurve.js"></script>
+		<script type="text/javascript" src="out/HyperbolaCurve.js"></script>
+		<script type="text/javascript" src="out/ParabolaCurve.js"></script>
 
-		<script type="text/javascript" src="src/PlaneSurface.js"></script>
-		<script type="text/javascript" src="src/ProjectedCurveSurface.js"></script>
-		<script type="text/javascript" src="src/CylinderSurface.js"></script>
-		<script type="text/javascript" src="src/EllipsoidSurface.js"></script>
+		<script type="text/javascript" src="out/PlaneSurface.js"></script>
+		<script type="text/javascript" src="out/ProjectedCurveSurface.js"></script>
+		<script type="text/javascript" src="out/CylinderSurface.js"></script>
+		<script type="text/javascript" src="out/EllipsoidSurface.js"></script>
 
-		<script type="text/javascript" src="src/Edge.js"></script>
-		<script type="text/javascript" src="src/brep2.js"></script>
-		<script type="text/javascript" src="src/b2.generators.js"></script>
+		<script type="text/javascript" src="out/Edge.js"></script>
+		<script type="text/javascript" src="out/B2.js"></script>
+		<script type="text/javascript" src="out/b2.generators.js"></script>
+
 
 		<script type="text/javascript" src="MooTools-Core-1.6.0.js"></script>
-		<script type="text/javascript" src="MooTools-More-1.6.0.js"></script>
-		<script type="text/javascript" src="src/lightgl.js"></script>
-		<script type="text/javascript" src="src/js3d.js"></script>
-		<script type="text/javascript" src="src/modes.js"></script>
-		<script type="text/javascript" src="src/SketchBezier.js"></script>
+		<script type="text/javascript" src="out/lightgl.js"></script>
+		<script type="text/javascript" src="out/CustomPlane.js"></script>
+		<script type="text/javascript" src="out/js3d.js"></script>
+		<script type="text/javascript" src="out/modes.js"></script>
+		<script type="text/javascript" src="out/SketchBezier.js"></script>
+		<script type="text/javascript" src="out/Sketch.js"></script>
 		<script type="text/javascript" src="earcut.dev.js"></script>
+		<script type="text/javascript" src="FileSaver.js"></script>
 
 		<script type="text/javascript">window.onload = main</script>
 
@@ -79,13 +85,16 @@
 				<span style="width: 8em; display: inline-block;color: purple;">$name</span>
 				<a class="featureDelete icon-link" name="delete">&#x274C;</a>
 				<a class="featureEdit icon-link" name="edit">&#x1f589;</a>
-				<a class="featureHide icon-link" name="toggleHide">&#x1f441;</a>
+                <a class="featureHide icon-link" name="toggleHide">&#x1f441;</a>
+                <a class="icon-link" name="rollBack">R</a>
 				<span style="cursor:help; display:none; color:red; font-weight: bold" name="error">⚠</span></div>
 		</script>
 
 		<style type="text/css">
 			body {
 				font-family: Verdana,sans-serif;
+				padding: 0;
+				margin:0;
 			}
 			.selector {
 				border: 1px solid black;
@@ -123,6 +132,19 @@
 				color: darkgrey;
 			}
 
+
+			.rebuildLimit {
+				font-size: smaller;
+				background-color: #de7c58;
+				text-align: center;
+			}
+			.isDependedOn {
+				background-color: #9fde60;
+			}
+			.hasDependents {
+				background-color: #8dc3de;
+			}
+
 			#tip-wrap {
 				z-index: 3000;
 			}
@@ -148,22 +170,46 @@
 				top: -16px;
 				left: 16px;
 			}
+
+			#buttonbar {
+				background-color: #8f8e93;
+				font-size: 0;
+			}
+			#buttonbar button {
+				background-color: transparent;
+				color: white;
+				border: none;
+				line-height: 2.5em;
+				font-size: 12pt;
+				margin: 0;
+				padding: 0 0.5em;
+			}
+			#buttonbar button:hover {
+				/*border-bottom: 4px solid white;*/
+				background-color: #4354ed;
+				cursor: pointer;
+			}
+			#buttonbar button:disabled {
+				background-color: #bbbabf;
+				color: #d9d8de;
+				display: none;
+				cursor: not-allowed;
+			}
+
 		</style>
 	</head>
 	<body>
-	<canvas id="myCanvas" width="1200" height="600" style="border:1px solid #000000;"></canvas>
 	<canvas id="textTextureCanvas" style="display: none;top: 80px; left: 8px; z-index: 1000" width="64" height="64"></canvas>
-	<br />
 	<div id="featureDisplay"
 
-	     style="background:#eeeeee; padding:4px;position: absolute; top: 40px; left: 8px; z-index: 1000;width: 20%; ">
+	     style="background:#eeeeee; padding:4px;position: absolute; top: 4em; left: 8px; z-index: 1000;width: 20%; ">
 		TEEEST</div>
-	<div style="position: absolute; top: 20px; right: 8px; z-index: 1000;width: 20%; ">
+	<div style="position: absolute; top: 4em; right: 8px; z-index: 1000;width: 20%; ">
 		<div id="sketchEditor" class="editorBox">
 			Edit Sketch
 			<input type="text" data-feature-property="name" id="sketchEditorSketchName" class="string-id-input" />
 			<label><span>On Plane</span>
-			<span id="sketchEditorPlaneName" class="plane-select selector" data-feature-property="planeName">nbsp;</span></label>
+			<span id="sketchEditorPlaneName" class="plane-select selector" data-feature-property="planeRef">nbsp;</span></label>
 
 			<button name="done">Done</button>
 			<button name="delete">Delete</button>
@@ -204,6 +250,8 @@
 					<input class="dimension-input" data-default-value="0" data-feature-property="offset" /></label>
 				<label><span>Angle</span>
 					<input class="dimension-input" data-default-value="0" data-feature-property="angle" /></label>
+				<label><span>Flip</span>
+					<input class="boolean-input" data-default-value="false" data-feature-property="flipped" type="checkbox" /></label>
 
 
 			</div>
@@ -232,15 +280,17 @@
 			<button name="delete">Delete</button>
 		</div>
 	</div>
-	<div id="buttonbar" style="position: absolute; top: 8px; left: 8px; z-index: 1000">
+	<div id="buttonbar">
 		<button type="button" onclick="clicky()">Step</button>
-		<button type="button" id="clearmode">Clear Mode</button>
-		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchLineSeg);">Add Segments</button>
-		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchArc);">Add Arc</button>
-		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchBezier);">Add Curve</button>
-		<button type="button" onclick="modePush(MODES.SKETCH)">Add Sketch</button>
-		<button type="button" onclick="modePush(MODES.PLANE_DEFINITION)">Add Plane</button>
-		<button type="button" onclick="modePush(MODES.EXTRUDE)">Extrude</button>
+		<button type="button" onclick="exportModel()">STL</button>
+		<button type="button" id="clearmode">Pop Mode</button>
+		<button type="button" id="rebuild" onclick="rebuildModel();">rebuild</button>
+		<button type="button" onclick="modePush(MODES.SKETCH)">+ Sketch</button>
+		<button type="button" onclick="modePush(MODES.PLANE_DEFINITION)">+ Plane</button>
+		<button type="button" onclick="modePush(MODES.EXTRUDE)">+ Extrude</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchLineSeg);">+ Line Seg</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchArc);">+ Arc</button>
+		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_SEGMENT, SketchBezier);">+ Bezier</button>
 		<button type="button" class="sketchControl" onclick="modePush(MODES.ADD_POINTS);">Add Points</button>
 		<button type="button" class="sketchControl" onclick="makeGroup('parallel');">Parallel</button>
 		<button type="button" class="sketchControl" onclick="makePerpendicular();">Perpendicular</button>
@@ -252,6 +302,8 @@
 		<button type="button" class="sketchControl" onclick="makeAngle();">Angle</button>
 		<button type="button" class="sketchControl" onclick="faceSketchPlane();">Face Sketch Plane</button>
 	</div>
+	<canvas id="mainCanvas" style="display:block;position: absolute; left: 0px; right: 0px; top: 2em; bottom: 0px;width: 100%;z-index: -100"></canvas>
+
 	<div id="tip-wrap" style="position: absolute;z-index: 6000; left: 100px; top:100px; color:red;">
 		<div id="tip">This should be visitble.</div>
 		<div id="tip-arrow"></div>

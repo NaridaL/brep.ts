@@ -196,7 +196,7 @@ class CylinderSurface extends Surface {
 	}
 
 	containsPoint(p) {
-		return NLA.isZero(this.implicitFunction()(p))
+		return NLA.eq0(this.implicitFunction()(p))
 	}
 
 	boundsFunction() {
@@ -221,7 +221,7 @@ class CylinderSurface extends Surface {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
 				return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir))
-			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
 			} else {
 				assert(false)

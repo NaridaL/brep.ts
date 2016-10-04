@@ -3,12 +3,8 @@
  *
  */
 class HyperbolaCurve extends Curve {
-	/**
-	 *
-	 * @param center
-	 * @param f1
-	 * @param f2
-	 */
+    normal: V3
+
 	constructor(center:V3, f1:V3, f2:V3) {
 		super()
 		assertVectors(center, f1, f2)
@@ -47,7 +43,7 @@ class HyperbolaCurve extends Curve {
 	}
 
 	isCircular() {
-		return NLA.equals(this.f1.length(), this.f2.length())
+		return NLA.eq(this.f1.length(), this.f2.length())
 	}
 
 	equals(curve) {
@@ -74,8 +70,8 @@ class HyperbolaCurve extends Curve {
 		}
 		assert(false)
 		var {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
-		return NLA.equals(f1.lengthSquared(), Math.abs(f1.dot(c1)))
-			&& NLA.equals(f2.lengthSquared(), Math.abs(f2.dot(c2)))
+		return NLA.eq(f1.lengthSquared(), Math.abs(f1.dot(c1)))
+			&& NLA.eq(f2.lengthSquared(), Math.abs(f2.dot(c2)))
 	}
 
 	normalAt(t) {
@@ -98,7 +94,7 @@ class HyperbolaCurve extends Curve {
 	 */
 	rightAngled() {
 		var f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.lengthSquared() + f1.lengthSquared()
-		if (NLA.isZero(a)) {
+		if (NLA.eq0(a)) {
 			return this
 		}
 		var g1 = 2 * a, g2 = b + Math.sqrt(b * b - 4 * a * a)
@@ -127,7 +123,7 @@ class HyperbolaCurve extends Curve {
 
 	containsPoint(p) {
 		var localP = this.inverseMatrix.transformPoint(p)
-		return localP.x > 0 && NLA.isZero(localP.z) && NLA.equals(1, localP.x * localP.x - localP.y * localP.y)
+		return localP.x > 0 && NLA.eq0(localP.z) && NLA.eq(1, localP.x * localP.x - localP.y * localP.y)
 	}
 
 	static forAB(a, b, center) {

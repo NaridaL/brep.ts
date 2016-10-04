@@ -2,7 +2,8 @@
 /**
  * Created by aval on 26.08.2016.
  */
-var MODES = {}
+
+var MODES:any = {}
 MODES.DEFAULT = {
 	init: function () {},
 	end: function () {
@@ -97,13 +98,14 @@ MODES.SKETCH = {
 			let intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
 			if (intersection && !GL.keys.SHIFT) {
 				let mouseSC = editingSketch.worldToSketchMatrix.transformPoint(intersection)
-				if (!selected.contains(hoverHighlight)) {
+				if (!selected.includes(hoverHighlight)) {
 					selected = [hoverHighlight]
 				}
-				selected.filter(el => isSketchEl(el) && el.sketch == editingSketch)
+				selected.filter(el => isSketchEl(el) && editingSketch == el.sketch)
 					.map(el => el instanceof SegmentEndPoint ? el : el.points)
 					.concatenated()
 					.forEach(p => this.relPoss.set(p, p.V3().minus(mouseSC)))
+				console.log(this.relPoss)
 			}
 			updateSelected()
 			console.log("selected is now ", selected);

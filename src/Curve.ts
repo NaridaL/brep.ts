@@ -49,7 +49,7 @@ abstract class Curve extends Transformable {
 		} else {
 			assert(bT < aT)
 			let start = Math.floor((aT - NLA_PRECISION) / inc)
-			let end = ceil((bT + NLA_PRECISION) / inc)
+			let end = Math.ceil((bT + NLA_PRECISION) / inc)
 			for (let i = start; i >= end; i--) {
 				verts.push(this.at(i * inc))
 			}

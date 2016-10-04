@@ -1,4 +1,5 @@
 class ParabolaCurve extends Curve {
+    normal: V3
 	/**
 	 * @param center
 	 * @param f1
@@ -8,11 +9,8 @@ class ParabolaCurve extends Curve {
 	constructor(center, f1, f2) {
 		super()
 		assertVectors(center, f1, f2)
-		/** @member {V3} */
 		this.center = center
-		/** @member {V3} */
 		this.f1 = f1
-		/** @member {V3} */
 		this.f2 = f2
 		this.normal = f1.cross(f2).normalized()
 		this.matrix = M4.forSys(f1, f2, this.normal, center)
@@ -47,7 +45,7 @@ class ParabolaCurve extends Curve {
 	}
 
 	isCircular() {
-		return NLA.equals(this.f1.length(), this.f2.length())
+		return NLA.eq(this.f1.length(), this.f2.length())
 	}
 
 	equals(curve) {
@@ -88,7 +86,7 @@ class ParabolaCurve extends Curve {
 		// f1 DOT f2 + f2 DOT f2 * 2 * t0 == 0
 		// t0 == -(f1 DOT f2) / (f2 DOT f2 * 2)
 		var f1 = this.f1, f2 = this.f2, f1DOTf2 = f1.dot(f2)
-		if (NLA.isZero(f1DOTf2)) {
+		if (NLA.eq0(f1DOTf2)) {
 			return this
 		}
 		var t0 = -f1DOTf2 / f2.lengthSquared() / 2
@@ -104,7 +102,7 @@ class ParabolaCurve extends Curve {
 	 */
 	arcLength(startT:number, endT:number) {
 		var f1 = this.f1, f2 = this.f2, f1DOTf2 = f1.dot(f2), t0 = 0
-		if (!NLA.isZero(f1DOTf2)) {
+		if (!NLA.eq0(f1DOTf2)) {
 			t0 = -f1DOTf2 / f2.lengthSquared() / 2
 			f1 = f1.plus(f2.times(2 * t0))
 		}
@@ -196,7 +194,7 @@ class ParabolaCurve extends Curve {
 
 	containsPoint(p) {
 		var localP = this.inverseMatrix.transformPoint(p)
-		return NLA.equals(localP.x * localP.x, localP.y)
+		return NLA.eq(localP.x * localP.x, localP.y)
 	}
 
 	/**

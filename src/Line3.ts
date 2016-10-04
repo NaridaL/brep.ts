@@ -32,7 +32,7 @@ class L3 extends Curve {
 		assertVectors(point)
 		var dist = this.distanceToPoint(point);
 		assertNumbers(dist)
-		return NLA.isZero(dist)
+		return NLA.eq0(dist)
 	}
 
 	likeCurve(curve) {
@@ -42,7 +42,7 @@ class L3 extends Curve {
 	isColinearTo(obj) {
 		return obj instanceof L3
 			&& this.containsPoint(obj.anchor)
-			&& NLA.equals(1, Math.abs(this.dir1.dot(obj.dir1)))
+			&& NLA.eq(1, Math.abs(this.dir1.dot(obj.dir1)))
 	}
 
 	/**
@@ -84,12 +84,12 @@ class L3 extends Curve {
 		assertInst(L3, line)
 		var dirCross = this.dir1.cross(line.dir1)
 		var div = dirCross.lengthSquared()
-		if (NLA.isZero(div)) {
+		if (NLA.eq0(div)) {
 			return null
 		} // lines parallel
 		var anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
-		if (!NLA.isZero(anchorDiff.dot(dirCross.normalized()))) {
+		if (!NLA.eq0(anchorDiff.dot(dirCross.normalized()))) {
 			return null
 		}
 		var t = this.infoClosestToLine(line).t
@@ -133,7 +133,7 @@ class L3 extends Curve {
 	isParallelToLine(line: L3) {
 		assertInst(L3, line)
 		// we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than isParallelTo()
-		return NLA.equals(1, Math.abs(this.dir1.dot(line.dir1)))
+		return NLA.eq(1, Math.abs(this.dir1.dot(line.dir1)))
 	}
 
 	/**
@@ -160,12 +160,12 @@ class L3 extends Curve {
 
 		let dirCross = this.dir1.cross(line.dir1)
 		let div = dirCross.lengthSquared()
-		if (NLA.isZero(div)) {
+		if (NLA.eq0(div)) {
 			// lines are parallel
 			return []
 		}
 		let anchorDiff = line.anchor.minus(this.anchor)
-		if (NLA.isZero(anchorDiff.dot(dirCross))) {
+		if (NLA.eq0(anchorDiff.dot(dirCross))) {
 			let tThis = anchorDiff.cross(line.dir1).dot(dirCross) / div
 			let tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
 			let p = this.at(tThis)
@@ -183,12 +183,12 @@ class L3 extends Curve {
 		assertInst(L3, line)
 		var dirCross = this.dir1.cross(line.dir1)
 		var div = dirCross.lengthSquared()
-		if (NLA.isZero(div)) {
+		if (NLA.eq0(div)) {
 			return null
 		} // lines parallel
 		var anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
-		if (!NLA.isZero(anchorDiff.dot(dirCross.normalized()))) {
+		if (!NLA.eq0(anchorDiff.dot(dirCross.normalized()))) {
 			return null
 		}
 		var t = anchorDiff.cross(line.dir1).dot(dirCross) / div
@@ -295,7 +295,7 @@ class L3 extends Curve {
 		// plane: plane.normal * p = plane.w
 		// line: p=line.point + lambda * line.dir1
 		var div = plane.normal.dot(this.dir1)
-		if (NLA.isZero(div)) return NaN
+		if (NLA.eq0(div)) return NaN
 		var lambda = (plane.w - plane.normal.dot(this.anchor)) / div
 		return lambda
 	}
@@ -308,10 +308,10 @@ class L3 extends Curve {
 		return new L3(this.anchor, this.dir1.negated())
 	}
 
-	transform(m4: M4):this {
+	transform(m4: M4): this {
 		var newAnchor = m4.transformPoint(this.anchor)
 		var newDir = m4.transformVector(this.dir1)
-		return new L3(newAnchor, newDir.normalized())
+		return new L3(newAnchor, newDir.normalized()) as this
 	}
 
 	projectedOnPlane(plane) {

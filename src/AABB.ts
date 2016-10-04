@@ -1,31 +1,31 @@
+class AABB extends Transformable {
+	min: V3
+	max: V3
 
-class AABB extends Transformable{
-	min:V3
-	max:V3
-
-	constructor(min:V3 = V3.INF, max:V3 = V3.INF.negated()) {
+	constructor(min: V3 = V3.INF, max: V3 = V3.INF.negated()) {
 		assertVectors(min, max)
 		super()
 		this.min = min
 		this.max = max
 	}
 
-	addPoint(p) {
+	addPoint(p: V3): this {
 		assertVectors(p)
 		this.min = this.min.min(p)
 		this.max = this.max.max(p)
 		return this
 	}
 
-	addPoints(ps) {
+	addPoints(ps: V3[]): this {
 		ps.forEach(p => this.addPoint(p))
 		return this
 	}
 
-	addAABB(aabb) {
+	addAABB(aabb: AABB): this {
 		assertInst(AABB, aabb)
 		this.addPoint(aabb.min)
 		this.addPoint(aabb.max)
+		return this
 	}
 
 	/**
@@ -126,16 +126,18 @@ class AABB extends Transformable{
 
 	intersectsLine(l3) {
 		assertInst(L3, l3)
-		var maxDim = l3.dir1.absMaxDim()
+		var maxDim = l3.dir1.maxAbsDim()
 		var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
 		var s0 = (this.min[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
 		var s1 = (this.max[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
 		var sMin = Math.min(s0, s1)
 		var sMax = Math.max(s0, s1)
 		var c = l3.dir1[coord0] * l3.anchor[coord1] - l3.anchor[coord0] * l3.dir1[coord1]
+
 		function lineSide(pCoord0, pCoord1) {
 			return l3.dir1[coord1] * pCoord0 + l3.dir1[coord0] * pCoord1 + c
 		}
+
 		var sideBL = lineSide()
 	}
 
@@ -191,7 +193,7 @@ class AABB extends Transformable{
 	}
 
 	toString() {
-		return "new AABB("+this.min.toString()+", "+this.max.toString()+")"
+		return "new AABB(" + this.min.toString() + ", " + this.max.toString() + ")"
 	}
 
 	toSource() {

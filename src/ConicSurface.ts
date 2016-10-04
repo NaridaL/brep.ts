@@ -132,9 +132,9 @@ class ConicSurface extends Surface {
 		var p1 = localEllipse.center.plus(f1), p2 = localEllipse.center.plus(f2)
 		// check if both endpoints are on the cone's surface
 		// and that one main axis is perpendicular to the Z-axis
-		return NLA.equals(p1.x * p1.x + p1.y * p1.y, p1.z * p1.z)
-			&& NLA.equals(p2.x * p2.x + p2.y * p2.y, p2.z * p2.z)
-			&& (NLA.isZero(f1.z) || NLA.isZero(f2.z))
+		return NLA.eq(p1.x * p1.x + p1.y * p1.y, p1.z * p1.z)
+			&& NLA.eq(p2.x * p2.x + p2.y * p2.y, p2.z * p2.z)
+			&& (NLA.eq0(f1.z) || NLA.eq0(f2.z))
 	}
 
 	/**
@@ -145,7 +145,7 @@ class ConicSurface extends Surface {
 	containsLine(line:L3) {
 		var localLine = line.transform(this.inverseMatrix)
 		var d = localLine.dir1
-		return localLine.contains(V3.ZERO) && NLA.equals(d.x * d.x + d.y * d.y, d.z * d.z)
+		return localLine.includes(V3.ZERO) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
 	}
 
 	/**
@@ -164,9 +164,9 @@ class ConicSurface extends Surface {
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		// and that "y" axis is parallel to surface
-		return NLA.equals(center.x * center.x + center.y * center.y, center.z * center.z)
-			&& NLA.isZero(f1.z)
-			&& NLA.equals(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z)
+		return NLA.eq(center.x * center.x + center.y * center.y, center.z * center.z)
+			&& NLA.eq0(f1.z)
+			&& NLA.eq(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z)
 
 	}
 
@@ -243,7 +243,7 @@ class ConicSurface extends Surface {
 	}
 
 	containsPoint(p) {
-		return NLA.isZero(this.implicitFunction()(p))
+		return NLA.eq0(this.implicitFunction()(p))
 	}
 
 	boundsFunction() {
@@ -273,7 +273,7 @@ class ConicSurface extends Surface {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				var ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
 				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => new L3(is, this.dir))
-			} else if (NLA.isZero(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 
 			} else {
 				assert(false)
@@ -374,11 +374,11 @@ class ConicSurface extends Surface {
 	static unitISPlane(a:number, c:number, d:number) {
 		// plane: ax + cz = d
 		// cone: x² + y² = z²
-		if (NLA.isZero(c)) {
+		if (NLA.eq0(c)) {
 			// plane is "vertical", i.e. parallel to Y and Z axes
-			assert(!NLA.isZero(a))
+			assert(!NLA.eq0(a))
 			// z² - y² = d²/a²
-			if (NLA.isZero(d)) {
+			if (NLA.eq0(d)) {
 				// d = 0 => z² - y² = 0 => z² = y² => z = y
 				// plane goes through origin/V3.ZERO
 				return [ new L3(V3.ZERO, new V3(0, Math.sqrt(2) / 2, Math.sqrt(2) / 2)),
@@ -394,8 +394,8 @@ class ConicSurface extends Surface {
 		} else {
 			// c != 0
 			var aa = a * a, cc = c * c
-			if (NLA.isZero(d)) {
-				if (NLA.equals(aa, cc)) {
+			if (NLA.eq0(d)) {
+				if (NLA.eq(aa, cc)) {
 					return [L3(V3.ZERO, new V3(c, 0, -a).normalized())]
 				} else if (aa < cc) {
 					assert(false, 'intersection is single point V3.ZERO')
@@ -404,7 +404,7 @@ class ConicSurface extends Surface {
 						V3(V3.ZERO, new V3(c, -Math.sqrt(aa - cc), -a).normalized())]
 				}
 			} else {
-				if (NLA.equals(aa, cc)) {
+				if (NLA.eq(aa, cc)) {
 					console.log('acd', a, c, d)
 					// parabola
 					let parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
