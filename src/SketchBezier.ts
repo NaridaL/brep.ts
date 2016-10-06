@@ -55,7 +55,7 @@ class SketchBezier {
 
 	distanceTo(x, y) {
 		let p = V(x, y, 0)
-		const curve = this.getBezierCurve()
+		const curve = this.getCurve()
 		let t = NLA.clamp(curve.closestTToPoint(p), 0, 1)
 		return curve.at(t).distanceTo(p)
 	}
@@ -68,17 +68,17 @@ class SketchBezier {
 	 *
 	 * @returns {BezierCurve}
 	 */
-	getBezierCurve() {
+	getCurve() {
 		let p = this.points
 		return new (Function.prototype.bind.apply(BezierCurve, [null, p[0], p[2], p[3], p[1]].map(p => p && p.V3())))
 	}
 
 	length() {
-		return this.getBezierCurve().arcLength(0, 1)
+		return this.getCurve().arcLength(0, 1)
 	}
 
 	toBrepEdge() {
-		let curve = this.getBezierCurve()
+		let curve = this.getCurve()
 		return new PCurveEdge(curve,
 			this.a.V3(), this.b.V3(),
 			0, 1,

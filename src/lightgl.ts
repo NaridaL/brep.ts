@@ -10,7 +10,7 @@ namespace GL {
 
 
 
-	class LightGLContext extends WebGLRenderingContext {
+	export class LightGLContext extends WebGLRenderingContext {
 		modelViewMatrix: M4 = new M4()
 		projectionMatrix: M4 = new M4()
 		static MODELVIEW = {}
@@ -145,7 +145,7 @@ void main() {
 			this.multMatrix(M4.scaling(x, y, z, this.tempMatrix))
 		}
 
-		translate(x, y, z) {
+		translate(x, y?, z?) {
 			if (undefined !== y) {
 				this.multMatrix(M4.translation(x, y, z, this.tempMatrix))
 			} else {
@@ -205,13 +205,13 @@ void main() {
 // debugging. This intentionally doesn't implement fixed-function lighting
 // because it's only meant for quick debugging tasks.
 
-		private readonly immediate = {
-				mesh: new Mesh({coords: true, colors: true, triangles: false}),
-				mode: -1,
-				coord: [0, 0, 0, 0],
-				color: [1, 1, 1, 1],
-				pointSize: 1,
-				shader: new Shader(`
+		private immediate = {
+			mesh: new Mesh({coords: true, colors: true, triangles: false}),
+			mode: -1,
+			coord: [0, 0, 0, 0],
+			color: [1, 1, 1, 1],
+			pointSize: 1,
+			shader: new Shader(`
 uniform float pointSize;
 varying vec4 color;
 varying vec4 coord;
@@ -319,20 +319,17 @@ void main() {
 		 * Adding padding from the edge of the window:
 		 *
 		 *     gl.fullscreen({ paddingLeft: 250, paddingBottom: 60 })
-		 *
-		 * @param {object=} options
-		 * @param {number=} options.paddingTop
-		 * @param {number=} options.paddingLeft
-		 * @param {number=} options.paddingRight
-		 * @param {number=} options.paddingBottom
-		 *
-		 * @param {boolean=} options.camera
-		 * @param {number=} options.fov
-		 * @param {number=} options.near
-		 * @param {number=} options.far
 		 */
-		fullscreen(options) {
-			options = options || {}
+		fullscreen(options: {
+			paddingTop?: number,
+			paddingLeft?: number,
+			paddingRight?: number,
+			paddingBottom?: number,
+			camera?: boolean,
+			fov?: number,
+			near?: number,
+			far?: number} = {}) {
+
 			var top = options.paddingTop || 0
 			var left = options.paddingLeft || 0
 			var right = options.paddingRight || 0
@@ -365,6 +362,12 @@ void main() {
 			window.addEventListener('resize', windowOnResize)
 			windowOnResize()
 		}
+
+
+		////// EVENTS
+		onmouseup: (ev: GL_Event) => any
+		onmousedown: (ev: GL_Event) => any
+		onmousemove: (ev: GL_Event) => any
 	}
 	LightGLContext.prototype.MODELVIEW = LightGLContext.MODELVIEW
 	LightGLContext.prototype.PROJECTION = LightGLContext.PROJECTION
@@ -373,13 +376,8 @@ void main() {
 	/**
 	 * `GL.create()` creates a new WebGL context and augments it with more methods. The alpha channel is disabled
 	 * by default because it usually causes unintended transparencies in the canvas.
-	 *
-	 * @param {Object} options
-	 * @param {HTMLCanvasElement=} options.canvas Canvas to use. A new one will be created if undefined.
-	 * @param {boolean=} options.alpha
 	 */
-	export function create(options): LightGLContext {
-		options = options || {}
+	export function create(options: {canvas?: HTMLCanvasElement, alpha?: boolean} = {}): LightGLContext {
 		var canvas = options.canvas || document.createElement('canvas');
 		if (!options.canvas) {
 			canvas.width = 800;
@@ -387,13 +385,13 @@ void main() {
 		}
 		if (!('alpha' in options)) options.alpha = false;
 		try {
-			gl = canvas.getContext('webgl', options)
+			gl = canvas.getContext('webgl', options) as LightGLContext
 			console.log("getting context")
 		} catch (e) {
 			console.log(e, gl)
 		}
 		try {
-			gl = gl || canvas.getContext('experimental-webgl', options)
+			gl = gl || canvas.getContext('experimental-webgl', options) as LightGLContext
 		} catch (e) {
 			console.log(e, gl)
 		}
@@ -407,8 +405,16 @@ void main() {
 
 	// `GL.KEYS` contains a mapping of key codes to booleans indicating whether
 	// that key is currently pressed.
-	const KEYS: { [keyCode: number]: boolean } = {}
+	export const KEYS: { [keyCode: number]: boolean } = {}
 
+	interface GL_EVENT extends Event {
+		original: DOMEvent
+		x: number
+		y: number
+		deltaX: number
+		deltaY: number
+		dragging: boolean
+	}
 
 // ### Improved mouse events
 //
@@ -426,14 +432,7 @@ void main() {
 			return false
 		}
 
-		interface GL_EVENT extends DOMEvent {
-			original: DOMEvent
-			x: number
-			y: number
-			deltaX: number
-			deltaY: number
-			dragging: boolean
-		}
+
 		function augmented(original) {
 			// Make a copy of original, a native `MouseEvent`, so we can overwrite
 			// WebKit's non-standard read-only `x` and `y` properties (which are just
@@ -566,7 +565,7 @@ void main() {
 		}
 	})
 
-	class Buffer {
+	export class Buffer {
 		buffer: WebGLBuffer
 		target: int
 		type: typeof Float32Array | typeof Uint16Array
@@ -817,7 +816,7 @@ void main() {
 				let a = this.vertices[triangles[i]], b = this.vertices[triangles[i + 1]], c = this.vertices[triangles[i + 2]]
 				let normal = V3.normalOnPoints(a, b, c)
 
-				; [normal, a, b, c].forEach(v => {
+					; [normal, a, b, c].forEach(v => {
 					dataView.setFloat32(bufferPtr, v.x, true)
 					bufferPtr += 4
 					dataView.setFloat32(bufferPtr, v.y, true)
@@ -994,7 +993,15 @@ void main() {
 		 * @param {number=} options.startX defaults to 0
 		 * @param {number=} options.startY defaults to 0
 		 */
-		static plane(options = {}): Mesh {
+		static plane(options:{
+			detail?: int,
+			detailX?: int,
+			detailY?: int,
+			width?: number,
+			height?: number,
+			startX?: number,
+			startY?: number
+		} = {}): Mesh {
 			let detailX = options.detailX || options.detail || 1
 			let detailY = options.detailY || options.detail || 1
 			let startX = options.startX || 0
@@ -1478,16 +1485,8 @@ void main() {
 		 * object of type `WGL.ELEMENT_ARRAY_BUFFER`, and `mode` is a WebGL primitive mode
 		 * like `WGL.TRIANGLES` or `WGL.LINES`. This method automatically creates and caches
 		 * vertex attribute pointers for attributes as needed.
-		 *
-		 * @param {Object} vertexBuffers An object which maps shader attribute names to the buffer they should be bound
-		 *     to
-		 * @param {GL.Buffer|undefined} indexBuffer
-		 * @param {number} mode
-		 * @param {number=} start
-		 * @param {number=} count
-		 * @returns {Shader} this
 		 */
-		drawBuffers(vertexBuffers: { [shaderAttribute: string]: Buffer }, indexBuffer: Buffer|undefined, mode, start?: int, count?: int): this {
+		drawBuffers(vertexBuffers: { [attributeName: string]: Buffer }, indexBuffer: Buffer|undefined, mode, start?: int, count?: int): this {
 			assert(DRAW_MODES.some(stringMode => gl[stringMode] == mode), 'GL.DRAW_MODES.some(stringMode => gl[stringMode] == mode) ' + mode)
 			assertf(() => 1 <= Object.keys(vertexBuffers).length)
 			Object.keys(vertexBuffers).forEach(key => assertInst(Buffer, vertexBuffers[key]))
@@ -1595,7 +1594,7 @@ void main() {
 	DRAW_MODES.forEach(modeName => DRAW_MODE_CHECKS[WebGLRenderingContext[modeName]] = DRAW_MODE_CHECKS[modeName])
 
 
-	class Texture {
+	export class Texture {
 		height: int
 		width: int
 		texture: WebGLTexture

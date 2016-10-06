@@ -53,8 +53,8 @@ QUnit.test( "NLA.eq etc", function( assert ) {
 	assert.ok(NLA.le(2, 3))
 	assert.ok(NLA.ge(3, 2))
 
-	assert.ok(NLA.equals(2, 2 + NLA_PRECISION) == !NLA.gt(2, 2 + NLA_PRECISION))
-	assert.ok(NLA.equals(2, 2 + NLA_PRECISION) == NLA.ge(2, 2 + NLA_PRECISION))
+	assert.ok(NLA.eq(2, 2 + NLA_PRECISION) == !NLA.gt(2, 2 + NLA_PRECISION))
+	assert.ok(NLA.eq(2, 2 + NLA_PRECISION) == NLA.ge(2, 2 + NLA_PRECISION))
 });
 QUnit.test( "arrayCopyStep", function( assert ) {
 	var a = [1, 2, 3, 4, 5, 6, 7, 8]
@@ -352,13 +352,13 @@ QUnit.test( "ParabolaCurve", function (assert) {
 });
 QUnit.test( "BezierCurve", function (assert) {
 	var curve = BezierCurve.graphXY(2,-3,-3,2)//.rotateZ(PI/3)
-	//NLA.arrayRange(-1, 1, 0.1).forEach(t => assert.ok(NLA.equals(curve.at(t).x, t)))
+	//NLA.arrayRange(-1, 1, 0.1).forEach(t => assert.ok(NLA.eq(curve.at(t).x, t)))
 	//curve.pointLambda(V3.ZERO)//(V(1,-2))
-	NLA.arrayRange(-1, 1, 0.1).forEach(t => assert.push(NLA.equals(t, curve.pointLambda(curve.at(t))), t, curve.pointLambda(curve.at(t))))
+	NLA.arrayRange(-1, 1, 0.1).forEach(t => assert.push(NLA.eq(t, curve.pointLambda(curve.at(t))), t, curve.pointLambda(curve.at(t))))
 });
 QUnit.test( "BezierCurve.distanceToPoint", function (assert) {
 	var curve = BezierCurve.graphXY(0,0,0,1)//.rotateZ(PI/3)
-//        assert.ok(NLA.equals2(curve.distanceToPoint(V(0.5, 0)), 1, NLA_PRECISION))
+//        assert.ok(NLA.eq2(curve.distanceToPoint(V(0.5, 0)), 1, NLA_PRECISION))
 
 	let curve2 = BezierCurve.graphXY(2,-3,-3,2)
 	let p = V(0.5, 0.2)
@@ -644,6 +644,35 @@ QUnit.test( 'BezierCurve.pointLambda' , function (assert) {
 
 
 })
+
+QUnit.testDifferentSystems('EllipseCurve.getAreaInDir', function (assert, m4) {
+		[
+			{right: V3.X, up: V3.Y, s: 0, t: PI, result: PI / 2},
+			{right: V3.X, up: V3.Y, s: PI, t: 0, result: -PI / 2},
+			{right: V3.X, up: V3.Y, s: -PI / 2, t: PI / 2, result: PI / 2},
+			{right: V3.X, up: V3.Y, s: -PI, t: 0, result: PI / 2},
+			// let "down" be X
+			{right: V3.Y, up: V3.X.negated(), s: 0, t: PI, result: PI / 2},
+			{right: V3.Y, up: V3.X.negated(), s: -PI, t: 0, result: PI / 2}].forEach(test => {
+			[0, 4].forEach(yDiff => {
+				let r = m4.transformVector(test.right)
+				let areaFactor = m4.transformVector(V3.X).cross(m4.transformVector(V3.Y)).length()
+				console.log(areaFactor)
+				const ell = EllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
+				let up = m4.transformVector(test.up).normalized()
+				let offsetArea = yDiff * ((1 - cos(test.t)) - (1 - cos(test.s))) * test.up.dot(V3.Y)
+				const expected = (test.result + offsetArea) * areaFactor
+				assert.fuzzyEquals(
+					ell.getAreaInDir(r, up, test.s, test.t),
+					expected,
+					`yDiff: ${yDiff}, ${test.sce}, offsetArea: ${offsetArea}, expected: ${expected}, ${areaFactor * offsetArea}`)
+			})
+		})
+	},
+	M4.IDENTITY,
+	M4.rotationZ(45 * DEG),
+	M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
+	M4.FOO.as3x3())
 
 QUnit.test( 'M4.gauss' , function (assert) {
 	let m = new M4(

@@ -14,7 +14,7 @@ QUnit.assert.B2equals = function(actual, expected, message) {
 	})
 }
 QUnit.assert.fuzzyEquals = function(actual, expected, message) {
-	this.push(NLA.equals(actual, expected), actual, expected, message)
+	this.push(NLA.eq(actual, expected), actual, expected, message)
 }
 
 QUnit.assert.b2Equal = function (a, b, actual, expected) {

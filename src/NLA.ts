@@ -45,19 +45,27 @@ interface Object {
 	toSource():string
 }
 interface Array<T> {
-    withMax(f: (el: T)=>number): T
-    mapFilter<U>(f: (el: T, elIndex: int, array: Array<T>)=>U): U[]
-    concatenated(): T
-    includes(el: T): boolean
-    isEmpty(): boolean
-    remove(el: T): boolean
-    unique(): T[]
-    last(): T
-    pushAll(els: T[])
-    flatMap<U>(f: (el: T) => (U | U[])): U[]
-    sum(): number
+	absSum: () => number
+	binaryIndexOf: <S>(searchElement: S, cmp: (a: T, b: S) => number) => int
+	binaryInsert: <S>(searchElement: S, cmp: (a: T, b: S) => number) => void
+	concatenated(): T
+	firstMatch: (f: (el: T) => any) => T
+	flatMap<U>(f: (el: T) => (U | U[])): U[]
+	includes: (el: T) => boolean
+	indexWithMax: (f: (el: T) => number) => int
+	isEmpty(): boolean
+	last(): T
+	mapFilter<U>(f: (el: T, elIndex: int, array: Array<T>)=>U): U[]
 	max(): number
 	min(): number
+	pushAll(els: T[])
+	remove(el: T): boolean
+	removeAll: (els: T[]) => void
+	sliceStep: (start: int, step: int, chunkSize: int) => int
+	sum(): number
+	toggle: (el: T) => void
+	unique(): T[]
+	withMax(f: (el: T)=>number): T
 }
 
 var oldConsole = undefined
@@ -113,7 +121,7 @@ function assertNever(value?: never): never {
     throw new Error()
 }
 
-function assertf(f:() => any, ...messages:(string|(() => any))[]) {
+function assertf(f:() => any, ...messages:(any|(() => any))[]) {
 	if (!f()) {
 		throw new Error("NLA.assertf failed: " + f.toString()
 			+ messages.map(message => ('function' === typeof message ? message() : message || '')).join('\n'))
@@ -121,18 +129,18 @@ function assertf(f:() => any, ...messages:(string|(() => any))[]) {
 }
 
 namespace NLA {
-    export const eq0 = (x: number): boolean => Math.abs(x) < NLA_PRECISION
-    export const eq02 = (x: number, precision: number) => Math.abs(x) < precision
-    export const eq = (x: number, y: number) => Math.abs(x - y) <= NLA_PRECISION
-    export const lt = (x: number, y: number): boolean => x + NLA_PRECISION < y
-    export const gt = (x: number, y: number): boolean => x > y + NLA_PRECISION
-    export const le = (x: number, y: number): boolean => x <= y + NLA_PRECISION
-    export const ge = (x: number, y: number): boolean => x + NLA_PRECISION >= y
-    export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
-    export const eqAngle = (x: number, y: number): boolean => zeroAngle(x - y)
-    export const zeroAngle = (x:number):number => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
-    export const snapTo = (x:number, to:number):number => Math.abs(x - to) <= NLA_PRECISION ? to : x
-    export const canonAngle = (x:number):number => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+	export const eq0 = (x: number): boolean => Math.abs(x) < NLA_PRECISION
+	export const eq02 = (x: number, precision: number) => Math.abs(x) < precision
+	export const eq = (x: number, y: number) => Math.abs(x - y) <= NLA_PRECISION
+	export const lt = (x: number, y: number): boolean => x + NLA_PRECISION < y
+	export const gt = (x: number, y: number): boolean => x > y + NLA_PRECISION
+	export const le = (x: number, y: number): boolean => x <= y + NLA_PRECISION
+	export const ge = (x: number, y: number): boolean => x + NLA_PRECISION >= y
+	export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
+	export const eqAngle = (x: number, y: number): boolean => zeroAngle(x - y)
+	export const zeroAngle = (x: number): boolean => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
+	export const snapTo = (x: number, to: number): number => Math.abs(x - to) <= NLA_PRECISION ? to : x
+	export const canonAngle = (x: number): number => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 
 
     /**
@@ -395,16 +403,21 @@ interface String {
 String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
-var ARRAY_UTILITIES =
-/** @template T
-@lends Array.prototype */ {
-	pushAll: function (arr) {
+
+interface Array<T> extends ARRAY_UTILITIES<T> {}
+
+var ARRAY_UTILITIES = {
+
+	pushAll(arr) {
 		Array.prototype.push.apply(this, arr)
 	},
-	sliceStep: function (start, step, chunkSize) {
+
+	sliceStep(start, step, chunkSize) {
 		assertNumbers(start, step)
 		chunkSize = chunkSize || 1;
-		var result = new Array(Math.ceil((this.length - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
+		var result = new Array(Math.ceil((this.length - start) / step)); // "- start" so that chunk in the last row
+		                                                                 // will also be selected, even if the row is
+		                                                                 // not complete
 		var index = 0;
 		for (var i = 0; i < this.length; i += step) {
 			for (var j = 0; j < chunkSize; j++) {
@@ -413,7 +426,8 @@ var ARRAY_UTILITIES =
 		}
 		return result;
 	},
-	firstMatch: function (f) {
+
+	firstMatch(f) {
 		for (let i = 0; i < this.length; i++) {
 			if (i in this) {
 				let val = f(this[i])
@@ -426,11 +440,8 @@ var ARRAY_UTILITIES =
 
 	/**
 	 * Semantically identical to .map(f).filter(v => v)
-	 * @template S
-	 * @param f
-	 * @returns {Array.<S>}
 	 */
-	mapFilter<U>(f:(T) => U) {
+	mapFilter(f) {
 		let length = this.length, result = []
 		for (let i = 0; i < length; i++) {
 			if (i in this) {
@@ -442,6 +453,7 @@ var ARRAY_UTILITIES =
 		}
 		return result
 	},
+
 	flatMap(f) {
 		return Array.prototype.concat.apply([], this.map(f));
 	},
@@ -450,16 +462,19 @@ var ARRAY_UTILITIES =
 	 *
 	 * @returns {Array} Array.prototype.concat.apply([], this)
 	 */
-	concatenated: function () {
+	concatenated() {
 		return Array.prototype.concat.apply([], this);
 	},
-	min: function() {
+
+	min() {
 		return Math.min.apply(null, this);
 	},
-	max: function() {
+
+	max() {
 		return Math.max.apply(null, this);
 	},
-	indexWithMax: function (f) {
+
+	indexWithMax(f) {
 		if (this.length == 0) { return 0 }
 		var i = this.length, result = -1, maxVal = -Infinity
 		while (i--) {
@@ -471,7 +486,8 @@ var ARRAY_UTILITIES =
 		}
 		return result
 	},
-	withMax: function (f) {
+
+	withMax(f) {
 		var i = this.length, result = undefined, maxVal = -Infinity
 		while (i--) {
 			var el = this[i], val = f(el)
@@ -482,11 +498,12 @@ var ARRAY_UTILITIES =
 		}
 		return result
 	},
+
 	/**
 	 Returns the sum of the absolute values of the components of this vector.
 	 E.g. NLA.V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
 	 */
-	absSum: function() {
+	absSum() {
 		var i = this.length
 		var result = 0
 		while (i--) {
@@ -494,7 +511,8 @@ var ARRAY_UTILITIES =
 		}
 		return result
 	},
-	sum: function () {
+
+	sum() {
 		var i = this.length
 		var result = 0
 		while (i--) {
@@ -502,26 +520,31 @@ var ARRAY_UTILITIES =
 		}
 		return result
 	},
-	isEmpty: function () {
+
+	isEmpty() {
 		return 0 == this.length
 	},
-	unique: function () {
+
+	unique() {
 		var uniqueSet = new Set(this)
 		return Array.from(uniqueSet)
 	},
-	remove: function (o) {
+
+	remove(o) {
 		var index = this.indexOf(o);
 		if (index != -1) {
 			this.splice(index, 1);
 		}
 	},
-	removeAll: function (o) {
+
+	removeAll(o) {
 		var i = o.length
 		while (i--) {
 			this.remove(o[i]);
 		}
 	},
-	toggle: function (o) {
+
+	toggle(o) {
 		var index = this.indexOf(o);
 		if (index != -1) {
 			this.splice(index, 1);
@@ -530,12 +553,7 @@ var ARRAY_UTILITIES =
 		}
 	},
 
-	/**
-	 * @param searchElement
-	 * @param cmp
-	 * @returns {number}
-	 */
-	binaryIndexOf: function<S>(searchElement:S, cmp:(a:T, b:S) => number) {
+	binaryIndexOf(searchElement: S, cmp: (a: T, b: S) => number) {
 
 		var minIndex = 0;
 		var maxIndex = this.length - 1;
@@ -557,9 +575,10 @@ var ARRAY_UTILITIES =
 			}
 		}
 
-		return -minIndex-1;
+		return -minIndex - 1;
 	},
-	binaryInsert: function (el, cmp) {
+
+	binaryInsert(el, cmp) {
 		cmp = cmp || NLA.minus
 		var minIndex = 0
 		var maxIndex = this.length
@@ -579,18 +598,12 @@ var ARRAY_UTILITIES =
 
 		this.splice(minIndex, 0, el)
 	},
-	last: function () {
+
+	last() {
 		return this[this.length - 1]
-	},
-	// forEachCall: function (f, ...args) {
-	// 	for (let i = 0; i < this.length; i++) {
-	// 		f.apply(this[i], args)
-	// 	}
-	// },
-	// mapCall: function (f, ...args) {
-	// 	return this.map(e => f.apply(e, args))
-	// }
+	}
 }
+
 for (let key in ARRAY_UTILITIES) {
 	NLA["array" + key.capitalizeFirstLetter()] = function (arr, ...rest) {
 		assert(!ARRAY_UTILITIES[key])

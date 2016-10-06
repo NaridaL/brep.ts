@@ -28,6 +28,58 @@ class EllipseCurve extends Curve {
 		}
 	}
 
+	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number) {
+		//assertf(() => tStart < tEnd)
+		assertf(() => right.isPerpendicularTo(this.normal))
+		assertf(() => up.isPerpendicularTo(this.normal))
+		assertf(() => EllipseCurve.isValidT(tStart))
+		assertf(() => EllipseCurve.isValidT(tEnd))
+
+		let localUp = this.inverseMatrix.transformVector(up)
+		let localRight = localUp.cross(V3.Z)
+		let normTStart = tStart - localRight.angleXY()
+		let normTEnd = tEnd - localRight.angleXY()
+		console.log(localUp.str, localRight.str, normTStart, normTEnd, 'localUp.length()', localUp.length())
+		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.normalized())
+		console.log('transformedOriginY', transformedOriginY)
+		//assertf(() => localUp.hasLength(1), localUp.length())
+		const fPi = Math.PI / 4
+		// integral of sqrt(1 - x²) from 0 to cos(t)
+		let totalCXTimesA = 0, totalCYimesArea = 0
+		let f = (t) => { let x = Math.cos(t); let y = Math.sin(t); return (x * y + Math.PI / 2 - t) / 2 }
+		let cx = t => { let x = Math.cos(t); return - 1/3 * Math.pow(1 - x * x, 3 / 2) }
+		let cy = t => { let x = Math.cos(t); return (x - x * x * x / 3) / 2 }
+		// calculate from 0 to t
+		let f2 = (t) => {
+			let toHorizontalArea, cxa, cya
+			if (t < -Math.PI) {
+				toHorizontalArea = -Math.PI / 2 // bottom part
+					+ -(Math.PI / 4 + f(t + Math.PI * 2)) // top part in negative
+			} else if (t < 0) {
+				toHorizontalArea = -(Math.PI / 4 - f(-t))
+			} else if (t < Math.PI) {
+				toHorizontalArea = Math.PI / 4 - f(t)
+				cxa = cx(t)
+			} else {
+				toHorizontalArea = Math.PI / 2 // top part
+					+ (Math.PI / 4 + f(Math.abs(t - Math.PI * 2))) // bottom part negative * negative
+			}
+			let restArea = -transformedOriginY * (1 - Math.cos(t))
+			console.log(t, 'toHorizontalArea', toHorizontalArea, 'restArea', restArea)
+			return restArea + toHorizontalArea
+		}
+		console.log('f(normTStart)', f(normTStart))
+		console.log('f(normTEnd)', f(normTEnd))
+		console.log('f2(normTStart)', f2(normTStart))
+		console.log('f2(normTEnd)', f2(normTEnd))
+		let area = f2(normTEnd) - f2(normTStart)
+		let factor = this.matrix.XYAreaFactor() // * localUp.length()
+		console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
+		assert(!NLA.eq0(factor))
+		return area * factor
+
+	}
+
 	toString(f?) {
 		return `new EllipseCurve(${this.center}, ${this.f1}, ${this.f2})`
 	}

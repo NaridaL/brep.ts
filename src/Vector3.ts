@@ -91,6 +91,10 @@ class V3 {
 		return this.minus(a).lengthSquared()
 	}
 
+	toSource(): string {
+		return this.toString()
+	}
+
 	nonParallelVector() {
 		var abs = this.abs();
 		if ((abs.x <= abs.y) && (abs.x <= abs.z)) {

@@ -628,6 +628,10 @@ class BezierCurve extends Curve {
 	 */
 	static EX2D = BezierCurve.graphXY(2,-3,-3,2)
 	static EX3D = new BezierCurve(V3.ZERO, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X)
+
+	getAreaInDir(u1: V3, r1: V3, aT: number, bT: number) {
+
+	}
 }
 BezierCurve.prototype.hlol = Curve.hlol++
 BezierCurve.prototype.tIncrement = 1 / (64)

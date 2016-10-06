@@ -305,9 +305,8 @@ class M4 extends Matrix {
 
 	/**
 	 * Get the translation part of this matrix, i.e. the result of this.transformVector(V3.ZERO)
-	 * @returns {V3}
 	 */
-	getTranslation() {
+	getTranslation():V3 {
 		var m = this.m, w = m[15]
 		return new V3(m[3] / w, m[7] / w, m[11] / w)
 	}
@@ -318,7 +317,7 @@ class M4 extends Matrix {
 	 * so we need to divide by the 4th root of the determinant
 	 * @returns {M4}
 	 */
-	normalized() {
+	normalized():M4 {
 		var det = this.determinant()
 		return 1 == det ? this : this.divScalar(Math.sqrt(Math.sqrt(det)))
 	}
@@ -1178,6 +1177,10 @@ class M4 extends Matrix {
 		0, 0, 1, 0,
 		0, 0, 0, 0
 	)
+
+	XYAreaFactor() {
+		return this.transformVector(V3.X).cross(this.transformVector(V3.Y)).length()
+	}
 }
 M4.prototype.height = 4
 M4.prototype.width = 4

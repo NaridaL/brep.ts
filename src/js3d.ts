@@ -9,6 +9,8 @@
 // 		return false
 // 	}
 // }
+
+const MooEl:ElementConstructor = Element
 function formatStack(stack) {
 	let re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
 	let match, matches = []
@@ -83,52 +85,6 @@ function deleteCoincidence(coincidence, sketch) {
 }
 
 
-
-function paintLineXY(a, b, color?, width?) {
-	color = color || paintDefaultColor
-	width = width || 2
-	var ab = b.minus(a)
-	if (ab.isZero()) { return }
-	var abT = ab.getPerpendicular().toLength(width)
-	//console.log(ab)
-	gl.pushMatrix()
-	gl.multMatrix(M4.forSys(ab, abT, V3.Z, a))
-	renderColor(meshes.segment, color)
-	gl.popMatrix()
-}
-function randomVec4Color(opacity) {
-	opacity = opacity || 1.0
-	return [Math.random(), Math.random(), Math.random(), opacity]
-}
-function paintArc(center, radius, width, color, startAngle= 0, endAngle=2 * Math.PI) {
-	// startAngle = isFinite(startAngle) ? startAngle : 0
-	// endAngle = isFinite(endAngle) ? endAngle : 2 * Math.PI
-	gl.pushMatrix()
-	gl.translate(center)
-	shaders.arc2.uniforms({
-		color: rgbToVec4(color),
-		offset: startAngle,
-		step: endAngle - startAngle,
-		radius: radius,
-		width: width
-	}).draw(meshes.segment)
-	gl.popMatrix()
-}
-
-function paintBezier(ps, width, color, startT, endT) {
-	// TODO PS AREN'T IN THE ORDER YOU EXPECT THEM TO BE!!!
-	assertVectors.apply(undefined, ps)
-	shaders.bezier.uniforms({
-		color: rgbToVec4(color),
-		width: width,
-		p0: ps[0],
-		p1: ps[2],
-		p2: ps[3],
-		p3: ps[1],
-		startT: startT || 0,
-		endT: endT || 1
-	}).draw(meshes.segment);
-}
 var savedTextures = new Map();
 function getTextureForString(str) {
 	var texture
@@ -137,22 +93,22 @@ function getTextureForString(str) {
 	}
 
 	var canvas = $("textTextureCanvas") as any as HTMLCanvasElement
-	var ctx = canvas.getContext('2d');
+	var ctx = canvas.getContext('2d')
 
-	var font = TEXT_TEXTURE_HEIGHT + "px Anonymous Pro";
+	var font = TEXT_TEXTURE_HEIGHT + "px Anonymous Pro"
 
-	ctx.font = font ;
-	var textWidthPx = ctx.measureText(str).width;
-	var canvasWidth = 1 << ceil(log(textWidthPx)/log(2));
-	canvas.width = canvasWidth;
-	canvas.height = TEXT_TEXTURE_HEIGHT;
+	ctx.font = font 
+	var textWidthPx = ctx.measureText(str).width
+	var canvasWidth = 1 << ceil(log(textWidthPx)/log(2))
+	canvas.width = canvasWidth
+	canvas.height = TEXT_TEXTURE_HEIGHT
 
 
-	ctx.font = font;
-	ctx.fillStyle = "#ffffff";
-	ctx.textAlign = "left";	// This determines the alignment of text, e.g. left, center, right
-	ctx.textBaseline = "top";	// This determines the baseline of the text, e.g. top, middle, bottom
-	ctx.imageSmoothingEnabled = false;
+	ctx.font = font
+	ctx.fillStyle = "#ffffff"
+	ctx.textAlign = "left"	// This determines the alignment of text, e.g. left, center, right
+	ctx.textBaseline = "top"	// This determines the baseline of the text, e.g. top, middle, bottom
+	;(ctx as any).imageSmoothingEnabled = false
 
 
 	ctx.fillText(str, 0, 0)
@@ -219,29 +175,37 @@ function colorFor(highlighted, selected) {
 function getAllPoints(sketch) {
 	return sketch.elements.map(segment => segment.points).concatenated()
 }
-function paintConstraints(sketch) {
+function getCachedCurve(other: NameRef|any, plane:P3) {
+	if (other instanceof NameRef) other = other.lastHit
+	if (other instanceof Edge) return other.curve
+	if (other instanceof SketchLineSeg || other instanceof SketchArc || other instanceof SketchBezier) return other.getCurve()
+	if (other instanceof CustomPlane) return other.intersectionWithPlane(plane)
+	if (other instanceof Face) other = other.surface
+	if (other instanceof Surface) return other.isCurvesWithPlane(plane)[0]
+}
+function paintConstraints(sketch:Sketch) {
 	var crossCount = 2, parallelCrossCount = 1;
 	sketch.constraints.forEach(function (cst) {
 		paintDefaultColor = hoverHighlight == cst ? (!cst.error ? 0x00ff00 : 0xffff00) : (!cst.error ? 0x000000 : 0xff0000)
 		switch (cst.type) {
-			case "coincident":
-				var point = cst.cs[0]
+			case 'coincident':
+				let point = cst.cs[0]
 				paintArc(point.V3(), 4, 1, colorFor(false, false), 0, 2 * Math.PI)
 				paintArc(point.V3(), 1.5, 3, colorFor(highlighted.includes(point) || hoverHighlight == point, selected.includes(point)), 0, 2 * Math.PI)
 				break;
-			case "parallel": {
-				var dir1 = cst.segments[0].getVectorAB().normalized()
-				var dir90 = dir1.getPerpendicular().normalized()
-				var ARR_SPACING = 5
-				for (var c = 0; c < cst.segments.length; c++) {
+			case 'parallel': {
+				let dir1 = cst.segments[0].getVectorAB().normalized()
+				let dir90 = dir1.getPerpendicular().normalized()
+				let ARR_SPACING = 5
+				for (let c = 0; c < cst.segments.length; c++) {
 					let line = cst.segments[c]
 					let ab = line.getVectorAB()
 					let abLength = ab.length()
 					let ab1 = ab.normalized()
 					for (let i = 0; i < parallelCrossCount; i++) {
-						var s = abLength / 2 - ARR_SPACING * parallelCrossCount / 2 + i * ARR_SPACING - 10
-						var arrPoint = line.a.V3().plus(ab1.times(s))
-						//console.log("crosspos", crossStart, crossEnd);
+						let s = abLength / 2 - ARR_SPACING * parallelCrossCount / 2 + i * ARR_SPACING - 10
+						let arrPoint = line.a.V3().plus(ab1.times(s))
+						//console.log('crosspos', crossStart, crossEnd);
 						paintLineXY(arrPoint.plus(dir90.times(-1)), arrPoint.plus(dir1.times(6).plus(dir90.times(5))))
 						paintLineXY(arrPoint.plus(dir90.times(1)), arrPoint.plus(dir1.times(6).plus(dir90.times(-5))))
 					}
@@ -249,7 +213,7 @@ function paintConstraints(sketch) {
 				parallelCrossCount++;
 				break;
 			}
-			case "perpendicular":
+			case 'perpendicular':
 				if (cst.other instanceof SketchLineSeg) {
 					let ab = cst.segment.getVectorAB()
 					let cd = cst.other.getVectorAB()
@@ -277,20 +241,20 @@ function paintConstraints(sketch) {
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
 				}
 				break
-			case "colinear":
+			case 'colinear':
 				// assume segments dont overlap
-				var segments = cst.segments;
-				var ab = segments[0].getVectorAB().normalized();
-				var coord = ab.x > ab.y ? "x" : "y";
+				let segments = cst.segments;
+				let ab = segments[0].getVectorAB().normalized();
+				let coord = ab.x > ab.y ? 'x' : 'y';
 				if (ab[coord] < 0) {
 					ab = ab.times(-1);
 				}
-				var scale = ab[coord];
-				var offsetPoint = segments[0].a.V3().minus(ab.times(segments[0].a.V3()[coord] / scale));
+				let scale = ab[coord];
+				let offsetPoint = segments[0].a.V3().minus(ab.times(segments[0].a.V3()[coord] / scale));
 				segments.sort((a, b) => a.a[coord] - b.a[coord]);
-				for (var i = 0; i < segments.length - (cst.fixed ? 0 : 1); i++) {
-					var startS = max(segments[i].a.V3()[coord]/scale, segments[i].b.V3()[coord]/scale) + 8;
-					var endS = startS + 20;
+				for (let i = 0; i < segments.length - (cst.fixed ? 0 : 1); i++) {
+					let startS = max(segments[i].a.V3()[coord]/scale, segments[i].b.V3()[coord]/scale) + 8;
+					let endS = startS + 20;
 					paintLineXY(offsetPoint.plus(ab.times(startS)), offsetPoint.plus(ab.times(endS)), undefined, 2);
 
 					startS = min(segments[(i + 1) % segments.length].a[coord]/scale, segments[(i + 1) % segments.length].b[coord]/scale) - 8;
@@ -298,7 +262,7 @@ function paintConstraints(sketch) {
 					paintLineXY(offsetPoint.plus(ab.times(startS)), offsetPoint.plus(ab.times(endS)), undefined, 2);
 				}
 				break;
-			case "pointDistance": {
+			case 'pointDistance': {
 				let a = cst.cs[0].V3(), b = cst.cs[1].V3();
 				let ab = b.minus(a);
 				let ab1 = ab.normalized();
@@ -321,7 +285,7 @@ function paintConstraints(sketch) {
 				gl.popMatrix();
 				break;
 			}
-			case "pointLineDistance": {
+			case 'pointLineDistance': {
 				let texture = getTextureForString(cst.distance)
 				let p = cst.point.V3(), ab = cst.other.getVectorAB(), a = cst.other.a.V3()
 				let ab1 = ab.normalized()
@@ -342,7 +306,7 @@ function paintConstraints(sketch) {
 				gl.popMatrix()
 				break
 			}
-			case "pointPlaneDistance": {
+			case 'pointPlaneDistance': {
 				let texture = getTextureForString(cst.distance)
 				let p = cst.point.V3()
 				let sketchLineWC = sketch.plane.intersectionWithPlane(cst.other.plane)
@@ -361,39 +325,21 @@ function paintConstraints(sketch) {
 				gl.popMatrix()
 				break
 			}
-			case "pointOnLine": {
-				if (cst.other instanceof SketchBezier) {
-					let bez = cst.other.getBezierCurve()
-					let t = bez.closestTToPoint(cst.point.V3())
-					let tangentLength = bez.tangentAt(t).length()
-					const ps = cst.other.points.map(p => p.V3())
-					paintBezier(ps, 3, 0x000000, t + 4 / tangentLength, t + 12 / tangentLength)
-					paintBezier(ps, 3, 0x000000, t - 12 / tangentLength, t - 4 / tangentLength)
-					break
-				}
-				if (cst.other instanceof SketchArc) {
-					let angle = cst.point.V3().minus(cst.other.c.V3()).angleXY()
-					let radius = cst.other.radiusA()
-					paintArc(cst.other.c.V3(), radius, 3, 0x000000, angle + 4 / radius, angle + 12 / radius)
-					paintArc(cst.other.c.V3(), radius, 3, 0x000000, angle - 12 / radius, angle - 4 / radius)
-					break
-				}
-				break
-				if (cst.other.plane) break
-				let ab = cst.other instanceof SketchLineSeg ? cst.other.getVectorAB() : sketch.plane.normal.cross(cst.other.plane.normal)
-				let ab1 = ab.normalized()
-				let p = cst.point.V3()
-				paintLineXY(p.plus(ab1.times(12)), p.plus(ab1.times(4)), 0x000000, 3)
-				paintLineXY(p.plus(ab1.times(-12)), p.plus(ab1.times(-4)), 0x000000, 3)
+			case 'pointOnLine': {
+				let curve = getCachedCurve(cst.other, sketch.plane)
+				let t = curve.closestTToPoint(cst.point.V3())
+				let tangentLength = curve.tangentAt(t).length()
+				CURVE_PAINTERS[curve.constructor.name](curve, 0x000000, t - 12 / tangentLength, t - 4 / tangentLength, 3)
+				CURVE_PAINTERS[curve.constructor.name](curve, 0x000000, t + 4 / tangentLength, t + 12 / tangentLength, 3)
 				break
 			}
-			case "angle":
-				var first = cst.cs[0], second = cst.cs[1]
-				var intersection = first.intersection(second)
-				var startAngle = (first.angleAB() + (cst.f[0] == -1 ? PI : 0)) % (2 * PI), endAngle = startAngle + cst.value
+			case 'angle':
+				let first = cst.cs[0], second = cst.cs[1]
+				let intersection = first.intersection(second)
+				let startAngle = (first.angleAB() + (cst.f[0] == -1 ? PI : 0)) % (2 * PI), endAngle = startAngle + cst.value
 				paintArc(intersection, 20, 1, 0x000000, startAngle, endAngle)
 				break
-			case "equalLength":
+			case 'equalLength': {
 				for (let c = 0; c < cst.segments.length; c++) {
 					let line = cst.segments[c];
 					let ab = line.getVectorAB();
@@ -406,21 +352,22 @@ function paintConstraints(sketch) {
 						let s = abLength / 2 - crossSpacing * crossCount / 2 + i * crossSpacing + 10
 						let crossStart = line.a.V3().plus(ab1.times(s)).plus(ab90.times(crossLength / 2))
 						let crossEnd = line.a.V3().plus(ab1.times(s)).plus(ab90.times(-crossLength / 2))
-						//console.log("crosspos", crossStart, crossEnd)
+						//console.log('crosspos', crossStart, crossEnd)
 						paintLineXY(crossStart, crossEnd)
 					}
 				}
 				crossCount++;
 				break
+			}
 			default:
-				throw new Error("unknown cst " + cst.type)
-			// console.log("errror", cst.type);
+				throw new Error('unknown cst ' + cst.type)
+			// console.log('errror', cst.type);
 		}
 
 	});
 }
 
-var PlaneDefinition = class PlaneDefinition {
+class PlaneDefinition {
 	/*
 	if ("face" == feature.planeType && feature.faceName) {
 		var face = modelBREP.faces.find(face => face.name == feature.faceName)
@@ -437,16 +384,18 @@ var PlaneDefinition = class PlaneDefinition {
 			right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 	}
 	*/
+	type = "planeDefinition"
+	planeId
+	planeType = 'dynamic'
+	source = ''
+	offset = 0
+	angle = 0
+	whats = []
+	flipped = false
+	
 	constructor(planeId) {
 		assert(planeId)
-		this.type = "planeDefinition"
 		this.planeId = planeId
-		this.planeType = 'dynamic'
-		this.source = ''
-		this.offset = 0
-		this.angle = 0
-		this.whats = []
-		this.flipped = false
 	}
 
 	toSource(line) {
@@ -457,6 +406,7 @@ var PlaneDefinition = class PlaneDefinition {
 		return this.whats
 	}
 }
+NLA.registerClass(PlaneDefinition)
 
 function serializeFeatures(features) {
 	return serialize(features)
@@ -464,7 +414,7 @@ function serializeFeatures(features) {
 }
 
 function load(key) {
-	$('saveNameInput').value = key
+	$<HTMLInputElement>('saveNameInput').value = key
 	window.location.hash = key
 	console.log(localStorage.getItem(key))
 	// console.log(unserialize(localStorage.getItem(key)))
@@ -479,10 +429,10 @@ function load(key) {
 	// lastSketch && modePush(MODES.SKETCH, lastSketch)
 }
 function initLoadSave() {
-	let loadSelect = $('loadSelect')
+	let loadSelect = $('loadSelect') as HTMLSelectElement
 	let keys = NLA.arrayFromFunction(localStorage.length, i => localStorage.key(i))
 	keys.sort()
-	keys.forEach(key => loadSelect.adopt(new Element('option', {html: key})))
+	keys.forEach(key => loadSelect.adopt(new MooEl('option', {html: key})))
 	loadSelect.onchange = function () {
 		let key = loadSelect.value
 		if (key) {
@@ -491,11 +441,11 @@ function initLoadSave() {
 	}
 
 
-	let saveButton = $('saveButton')
+	let saveButton = $<HTMLButtonElement>('saveButton')
 	saveButton.onclick = function () {
-		let key = $('saveNameInput').value
+		let key = $<HTMLInputElement>('saveNameInput').value
 		if (null == key) {
-			loadSelect.adopt(new Element('option', {html: key}))
+			loadSelect.adopt(new MooEl('option', {html: key}))
 		}
 		localStorage.setItem(key, serializeFeatures(featureStack))
 		console.log("saved " + key)
@@ -511,62 +461,6 @@ function isSketchEl(el) {
 var editingSketch:Sketch, featureStack = []
 function initModel() {
 
-
-	return
-	featureStack.push(new PlaneDefinition("immediate", "new P3(V3.X, 450.00086883286616)", "sketchPlane"))
-	//featureStack.push({type: "planeDefinition", planeType: "immediate", source: "P3.normalOnAnchor(V3(1, 0, -1).normalized(), V3.X)", planeId: "sketchPlane", delete: PlaneDefinition.prototype.delete})
-	var sketch = new Sketch("sketchPlane");
-	featureStack.push(sketch);
-	editingSketch = sketch
-	console.log("init sketch");
-	sketch.elements.push(new SketchLineSeg(sketch, 0,100,100,0));
-	let sb = SketchBezier.forBezierCurve(BezierCurve.graphXY(2,-3,-3,2).scale(100, 100, 100), sketch)
-	sketch.elements.push(sb)
-	console.log("sb", sb)
-	//sketch.elements.push(new SketchArc(0,100,100,0, 0,0))
-	sketch.elements.push(new SketchLineSeg(sketch, 0,0,100 * sqrt(3) /2,50));
-	//sketch.elements.push(new SketchLineSeg(100 * sqrt(3) /2,50, 100, 100));
-	//sketch.elements.push(new SketchLineSeg(100,100,0,0));
-	makeCoincident(sketch.elements[0].b, sketch.elements[1].a, sketch);
-	//makeCoincident(sketch.elements[1].b, sketch.elements[2].a, sketch);
-	//makeCoincident(sketch.elements[2].b, sketch.elements[0].a, sketch);
-	selected = [sketch.elements[0].b, sketch.elements[1]];
-
-
-	selected = sketch.elements.slice(0, 2)
-	makePerpendicular()
-	sketch.constraints[0].error = true
-	//makeGroup("equalLength")
-	selected = [sketch.elements[0], sketch.elements[1]]
-	//makeAngle()
-	//makePerpendicular()
-	//makeGroup("parallel")
-	//console.log("angle" ,rad2deg(sketch.elements[0].angleTo(sketch.elements[1])));
-	//makeGroup("colinear");
-	//sketch.constraints[0].value = deg2rad(30);
-	//selected = sketch.elements.slice(1, 3);
-	//makeDistance();
-	//selected = [sketch.elements[0], sketch.elements[1]];
-	//makeAngle();
-	console.log("constraints", sketch.constraints);
-	featureStack.push(new Extrude("initExtrude", sketch.elements[0].name))
-	//featureStack.push({type: "planeDefinition", planeType: "face", faceName: "initExtrudewall0", offset: 0, planeId: "planeCustom1", delete: PlaneDefinition.prototype.delete})
-	//featureStack.push(editingSketch = new Sketch("planeCustom1"))
-	//editingSketch.elements.push(new SketchLineSeg(0,10,100,0));
-	//rebuildModel();
-	//selected = [editingSketch.elements[0], new NameRef("initExtruderoof").get()]
-	//makeGroup("parallel")
-
-	rebuildModel();
-
-	/*
-	 sketch.elements.push(new SketchLineSeg(10,10,10,100));
-	 sketch.elements.push(new SketchLineSeg(10,10,100,10));
-	 sketch.elements.push(new SketchLineSeg(10,100,100,10));
-	 makeCoincident(sketch.elements[0].a, sketch.elements[1].a, sketch);
-	 makeCoincident(sketch.elements[0].b, sketch.elements[2].a, sketch);
-	 makeCoincident(sketch.elements[1].b, sketch.elements[2].b, sketch);
-	 */
 }
 function directionObjectToVector(dirObj) {
 	if (dirObj instanceof CustomPlane) {
@@ -636,6 +530,7 @@ function rebuildModel() {
 				let length = feature.end - feature.start
 				//console.log("polypoints", polygonPoints, polygonPoints.toSource(), loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
 				let brep = B2.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
+
 				if (modelBREP) {
 					// isEdges = modelBREP.getIntersectionEdges(brep)
 					// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
@@ -768,12 +663,15 @@ function drawPoint(p, color=0x000000, size=5) {
 	gl.popMatrix()
 }
 function drawPoints() {
-	drPs.forEach(info => drawPoint(info.p || p, 0xcc0000, 5))
+	drPs.forEach(info => drawPoint(info.p || info, 0xcc0000, 5))
 	brepPoints && brepPoints.forEach(p =>
 		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.includes(p) ? 0xff0000 : 0xcccc00), 2))
 }
-const CURVE_PAINTERS = {}
-CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse, color, startT, endT, width = 2) {
+
+
+
+const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int, startT: number, endT: number, width: number) => void} = {}
+CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse:EllipseCurve, color, startT, endT, width = 2) {
 	shaders.ellipse3d.uniforms({
 		f1: ellipse.f1,
 		f2: ellipse.f2,
@@ -785,7 +683,7 @@ CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse, color, s
 		mode: 0 // ellipse
 	}).draw(meshes.pipe)
 }
-CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve, color, startT, endT, width = 2, normal = V3.Z) {
+CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve:BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
 	shaders.bezier3d.uniforms({
 		p0: curve.p0,
 		p1: curve.p1,
@@ -798,7 +696,7 @@ CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve, color, start
 		normal: normal
 	}).draw(meshes.pipe)
 }
-CURVE_PAINTERS[L3.name] = function (curve, color, startT, endT, width = 2, normal = V3.Z) {
+CURVE_PAINTERS[L3.name] = function (curve:L3, color, startT, endT, width = 2, normal = V3.Z) {
 	gl.pushMatrix()
 	let a = curve.at(startT), b = curve.at(endT)
 	let ab = b.minus(a), abT = ab.getPerpendicular().normalized()
@@ -812,6 +710,54 @@ CURVE_PAINTERS[L3.name] = function (curve, color, startT, endT, width = 2, norma
 	gl.popMatrix()
 }
 
+
+
+function paintLineXY(a, b, color?, width?) {
+	color = color || paintDefaultColor
+	width = width || 2
+	var ab = b.minus(a)
+	if (ab.isZero()) { return }
+	var abT = ab.getPerpendicular().toLength(width)
+	//console.log(ab)
+	gl.pushMatrix()
+	gl.multMatrix(M4.forSys(ab, abT, V3.Z, a))
+	renderColor(meshes.segment, color)
+	gl.popMatrix()
+}
+function paintArc(center, radius, width, color, startAngle= 0, endAngle=2 * Math.PI) {
+	// startAngle = isFinite(startAngle) ? startAngle : 0
+	// endAngle = isFinite(endAngle) ? endAngle : 2 * Math.PI
+	gl.pushMatrix()
+	gl.translate(center)
+	shaders.arc2.uniforms({
+		color: rgbToVec4(color),
+		offset: startAngle,
+		step: endAngle - startAngle,
+		radius: radius,
+		width: width
+	}).draw(meshes.segment)
+	gl.popMatrix()
+}
+
+function paintBezier(ps, width, color, startT, endT) {
+	// TODO PS AREN'T IN THE ORDER YOU EXPECT THEM TO BE!!!
+	assertVectors.apply(undefined, ps)
+	shaders.bezier.uniforms({
+		color: rgbToVec4(color),
+		width: width,
+		p0: ps[0],
+		p1: ps[2],
+		p2: ps[3],
+		p3: ps[1],
+		startT: startT || 0,
+		endT: endT || 1
+	}).draw(meshes.segment)
+}
+
+function randomVec4Color(opacity) {
+	opacity = opacity || 1.0
+	return [Math.random(), Math.random(), Math.random(), opacity]
+}
 function drawEdge(edge, color = 0x000000, width = 2) {
 	const startT = min(edge.aT, edge.bT)
 	const endT = max(edge.aT, edge.bT)
@@ -977,12 +923,12 @@ function segmentIntersectsRay(a, b, p, dir) {
 	//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1, "s", s, "t", t, "div", div)
 	return t > 0 && s >= 0 && s <= 1
 }
-function template(templateName, map):MooToolsElement {
-	var html = $(templateName).text;
+function template(templateName, map):HTMLElement {
+	var html = $<HTMLScriptElement>(templateName).text;
 	for (var key in map) {
 		html = html.replace(new RegExp('\\$'+key, 'g'), map[key]);
 	}
-	return $(new Element('div', {html: html.trim()}).firstChild)
+	return $(new MooEl('div', {html: html.trim()}).firstChild)
 
 }
 function featureRollBack(feature: any, featureIndex: number) {
@@ -993,7 +939,7 @@ function updateFeatureDisplay() {
 	div.erase('text')
 	featureStack.forEach(function (feature, featureIndex) {
 		if (rebuildLimit == featureIndex) {
-			div.adopt(new Element('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
+			div.adopt(new MooEl('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
             // div.adopt(<div class='rebuildLimit'>REBUILD LIMIT</div>)
 		}
 		var newChild
@@ -1027,8 +973,8 @@ function updateFeatureDisplay() {
 		newChild.onmouseover = function (e) {
 			const dependencies = featureDependencies(feature)
 			const dependents = featureDependents(feature)
-			div.getChildren().filter(subDiv => dependencies.includes(subDiv.featureLink)).addClass('isDependedOn')
-			div.getChildren().filter(subDiv => dependents.includes(subDiv.featureLink)).addClass('hasDependents')
+			div.getChildren().filter((subDiv:any) => dependencies.includes(subDiv.featureLink)).addClass('isDependedOn')
+			div.getChildren().filter((subDiv:any) => dependents.includes(subDiv.featureLink)).addClass('hasDependents')
 		}
 		newChild.onmouseout = function (e) {
 			div.getChildren().removeClass('isDependedOn').removeClass('hasDependents')
@@ -1085,8 +1031,8 @@ function updateSelected() {
 			updateSelected()
 			paintScreen()
 		};
-		sel.toBrepEdge && newChild.grab(new Element('span', {text: sel.toBrepEdge().curve.toSource(x => NLA.round10(x, -3)), style: 'font-size: small;'}))
-		sel.surface && newChild.grab(new Element('textarea', {text: sel.sce, style: 'font-size: xx-small;display:block;width:100%;'}))
+		sel.toBrepEdge && newChild.grab(new MooEl('span', {text: sel.toBrepEdge().curve.toSource(x => NLA.round10(x, -3)), style: 'font-size: small;'}))
+		sel.surface && newChild.grab(new MooEl('textarea', {text: sel.sce, style: 'font-size: xx-small;display:block;width:100%;'}))
 		newChild.inject(div)
 	});
 	div = $('selectedConstraints')
@@ -1227,14 +1173,6 @@ function mapReverse(map, value) {
 			return key
 		}
 	}
-}
-function initTips() {
-	console.log($$('[data-tooltip]'))
-	let tips = new Tips($$('[data-tooltip]'), {
-		title: 'data-tooltip',
-		showDelay: 0,
-		fixed: true
-			})
 }
 function initMeshes() {
 	meshes.sphere1 = GL.Mesh.sphere(2)
@@ -1418,7 +1356,7 @@ function main() {
 
 	$$('.sketchControl').set('disabled', true)
 
-	gl = GL.create({canvas: document.getElementById('mainCanvas') })
+	gl = GL.create({canvas: document.getElementById('mainCanvas') as HTMLCanvasElement })
 	gl.fullscreen()
 	gl.canvas.oncontextmenu = () => false
 
@@ -1473,7 +1411,7 @@ function main() {
 		console.log(key)
 		load(key)
 	} else {
-		initModel()
+		//initModel()
 	}
 
 	rebuildModel() // necessary to init planes
@@ -1753,6 +1691,8 @@ function pointsFirst(a, b) {
 	//console.log((a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1));
 	return (a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1);
 }
+
+declare var saveAs: (blob: Blob, name: string, no_auto_bom?: boolean) => void
 function exportModel() {
 	saveAs(brepMesh.toBinarySTL(), 'export.stl')
 }
@@ -1762,9 +1702,6 @@ function clicky() {
 	}
 	editingSketch.reverse()
 	paintScreen()
-
-	const self = this
-	const closure = () => self
 }
 function deleteConstraint(sketch, constraint) {
 	if ("coincident" == constraint.type) {
@@ -1932,7 +1869,7 @@ function makeDistance() {
 				{point:point, other:other, distance: distance})
 		} else {
 			let distance = round(other.plane.intersectionWithPlane(editingSketch.plane)
-				.transform(editingSketch.worldToSketchMatrix).distanceToPoint(V3(point)))
+				.transform(editingSketch.worldToSketchMatrix).distanceToPoint(point.V3()))
 			other = NameRef.forObject(other)
 			newConstraint = new Constraint("pointPlaneDistance", [point, other],
 				{point:point, other:other, distance: distance})
@@ -1942,7 +1879,7 @@ function makeDistance() {
 		rebuildModel()
 		paintScreen()
 		updateSelected()
-		$("distanceInput"+newConstraint.id).select()
+		;($("distanceInput"+newConstraint.id) as HTMLInputElement).select()
 	}
 }
 interface getCurvable {
@@ -2099,9 +2036,9 @@ interface Mode {
 
 
 function tooltipShow(htmlContent, x, y) {
-	let tipWrap = $('tip-wrap')
+	let tipWrap = $('tip-wrap') as HTMLDivElement
 	assert(tipWrap)
-	let tip = $('tip')
+	let tip = $('tip') as HTMLDivElement
 	tipWrap.setStyle('visibility', 'visible')
 	tip.set('html', htmlContent)
 	let size = tipWrap.getSize()
@@ -2200,8 +2137,8 @@ function serialize(v) {
 	console.log(resultList)
 
 	resultList = resultList.map(v => transform(v, true))
-	console.log(JSON.encode(resultList))
-	return JSON.encode(resultList)
+	console.log(JSON.stringify(resultList))
+	return JSON.stringify(resultList)
 }
 
 function unserialize(string) {
@@ -2252,7 +2189,7 @@ function unserialize(string) {
 			return v
 		}
 	}
-	let tree = JSON.decode(string, true)
+	let tree = JSON.parse(string)
 	// console.log(tree)
 	fixObjects(tree)
 	// console.log(tree)

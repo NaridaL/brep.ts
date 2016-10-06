@@ -1,13 +1,10 @@
-declare var Element: {
+interface ElementConstructor {
 	prototype: Element
 	new(): Element
 	new (tagNameOrCSSSelector: string, properties: {[prop: string]: any})
 }
 
-interface ElementConstructor {
-
-}
-
+/////// Element
 interface Element {
 	new (tagNameOrCSSSelector: string, properties: {[prop: string]: any})
 	new (el: HTMLElement, properties: {})
@@ -16,7 +13,7 @@ interface Element {
 	 * Gets the first descendant element whose tag name matches the tag provided. CSS selectors may also be passed.
 	 * @param tag Tag name of the element to find or a CSS Selector.
 	 */
-	getElement(tag: string): Element
+	getElement<T extends HTMLElement>(tag: string): T
 
 	/**
 	 * Collects all descendant elements whose tag name matches the tag provided. CSS selectors may also be passed.
@@ -35,7 +32,8 @@ interface Element {
 	getElementById(id: string)
 
 	/**
-	 * This is a "dynamic arguments" method. Properties passed in can be any of the 'set' properties in the Element.Properties Object.
+	 * This is a "dynamic arguments" method. Properties passed in can be any of the 'set' properties in the
+	 * Element.Properties Object.
 	 *
 	 *
 	 Two Arguments (property, value)
@@ -43,14 +41,10 @@ interface Element {
 	 value:mixed The value to set for the specified property.
 	 One Argument (properties)
 	 properties:object Object with its keys/value pairs representing the properties and values to set for the Element (as described below).
-
 	 Returns:
-
 	 (element) This Element.
-
 	 Examples:
 	 With Property and Value:
-
 	 $('myElement').set('text', 'text goes here');
 	 $('myElement').set('class', 'active');
 	 // the 'styles' property passes the object to Element:setStyles.
@@ -58,9 +52,7 @@ interface Element {
 	font: '12px Arial',
 	color: 'blue'
 });
-
 	 With an Object:
-
 	 var myElement = $('myElement').set({
 		// the 'styles' property passes the object to Element:setStyles.
 		styles: {
@@ -76,9 +68,7 @@ interface Element {
 		//Any other property uses Element:setProperty.
 		id: 'documentBody'
 	});
-
 	 Notes:
-
 	 All the property arguments are passed to the corresponding method of the Element.Properties Object.
 	 If no matching property is found in Element.Properties, it falls back to Element:setProperty.
 	 Whenever using Element:setProperty to set an attribute, pass in the lowercase, simplified form of the property. For example:
@@ -87,79 +77,49 @@ interface Element {
 	 use 'frameborder', not 'frameBorder'
 	 etc.
 	 In IE8 or lower, it is not possible to set type multiple times. It will throw an error.
-
 	 See Also:
-
 	 Element, Element.Properties, Element:setProperty, Element:addEvents, Element:setStyles
-
 	 */
 	set(property: string, value: any)
 	set(properties: { [property: string] : any })
 
 	/**
 	 *
-
 	 Element Method: get
 	 Back to Top
-
 	 This is a "dynamic arguments" method. Properties passed in can be any of the 'get' properties in the Element.Properties Object.
 	 Syntax:
-
 	 myElement.get(property);
-
 	 Arguments:
-
 	 property:string The string key from the Element.Properties Object representing the property to get.
-
 	 Returns:
-
 	 (mixed) The result of calling the corresponding 'get' function in the Element.Properties Object.
-
 	 Examples:
 	 Using Custom Getters:
-
 	 var tag = $('myDiv').get('tag'); // returns "div".
-
 	 Fallback to Element Attributes:
-
 	 var id = $('myDiv').get('id'); // returns "myDiv".
 	 var value = $('myInput').get('value'); // returns the myInput element's value.
-
 	 Notes:
-
 	 If the corresponding accessor doesn't exist in the Element.Properties Object, the result of Element:getProperty on the property passed in is returned.
-
 	 See Also:
-
 	 Element, Element.Properties, Element:getProperty
 	 */
 
 	/**
-
 	 This is a "dynamic arguments" method. Properties passed in can be any of the 'erase' properties in the Element.Properties Object.
 	 Syntax:
-
 	 myElement.erase(property);
-
 	 Arguments:
-
 	 property:string The string key from the Element.Properties Object representing the property to erase.
-
 	 Returns:
-
 	 (mixed) The result of calling the corresponding 'erase' function in the Element.Properties Object.
-
 	 Examples:
-
 	 $('myDiv').erase('id'); //Removes the id from myDiv.
 	 $('myDiv').erase('class'); //myDiv element no longer has any class names set.
-
 	 Note:
-
 	 If the corresponding eraser doesn't exist in the Element.Properties Object, Element:removeProperty is called with the property passed in.
-
 	 See Also:
-
 	 Element, Element.Properties, Element:removeProperty
 	 */
 	erase(property: string)
@@ -187,36 +147,23 @@ interface Element {
 	removeEvents(events:{[type: string] :  (e: DOMEvent) => any}):this
 
 	/**
-
 	 Works like [Element:grab](#Element:grab), but instead of accepting an id or an element, it only accepts an HTML string.
 	 The HTML string will be parsed to create new DOM elements, and then injected relative to the element from where the method
 	 was called.
-
 	 ### Examples:
-
 	 ##### HTML
-
 	 <div id="myElement">Hey.</div>
-
 	 ##### JavaScript
-
 	 $('myElement').appendHTML(' <strong>Howdy.</strong>');
-
 	 ##### Resulting HTML
-
 	 <div id="myElement">Hey. <strong>Howdy.</strong></div>
-
 	 ### Notes:
-
 	 - This method does *not* use the `innerHTML` property of an element but instead creates elements
 	 directly before injecting them. Thus, it is safe to use in cases where you don't want to destroy
 	 any descendant elements already present in the parent.
 	 - This method uses `insertAdjacentHTML` when available.
-
 	 ### See Also:
-
 	 - [MDN Element:insertAdjacentHTML][].
-
 	 */
 	/**
 	 *
@@ -256,63 +203,42 @@ interface Element {
 	appendText(text: string, where?: 'top' | 'bottom' | 'after' | 'before')
 	/**
 	 Removes the Element from the DOM.
-
 	 ### Examples:
-
 	 ##### HTML
-
 	 <div id="myElement"></div>
 	 <div id="mySecondElement"></div>
-
 	 ##### JavaScript
-
 	 $('myElement').dispose();
-
 	 ##### Resulting HTML
-
 	 <div id="mySecondElement"></div>
-
 	 ### See Also:
-
 	 - [MDN Element:removeChild][]
-	 @returns This Element. Useful to always grab the return from this function, as the element could be [injected](#Element:inject) back.
+	 @returns This Element. Useful to always grab the return from this function, as the element could be
+	      [injected](#Element:inject) back.
 	 */
 	dispose(): this
 
 	/**
 	 Clones the Element and returns the cloned one.
-
 	 ### Arguments:
-
 	 @param contents When set to false the Element's contents are not cloned. default=true
-	 @param keepid When true the cloned Element keeps the id attribute, if present. Same goes for any of the cloned childNodes. default=false
-
+	 @param keepid When true the cloned Element keeps the id attribute, if present. Same goes for any of the cloned
+	      childNodes. default=false
 	 ### Examples:
-
 	 ##### HTML
-
 	 <div id="myElement">ciao</div>
-
 	 ##### JavaScript
-
 	 // clones the Element and appends the clone after the Element.
 	 var clone = $('myElement').clone().inject('myElement','after');
-
 	 ##### Resulting HTML
-
 	 <div id="myElement">ciao</div>
 	 <div>ciao</div>
-
 	 ### Note:
-
 	 - The returned Element does not have attached events. To clone the events use [Element:cloneEvents](/core/Element/Element.Event#Element:cloneEvents).
 	 - Values stored in Element.Storage are not cloned.
 	 - The clone element and its children are stripped of ids, unless otherwise specified by the keepid parameter.
-
 	 ### See Also:
-
 	 - [Element:cloneEvents](/core/Element/Element.Event#Element:cloneEvents).
-
 	 */
 	clone(contents: boolean, keepid: boolean): Element
 
@@ -447,7 +373,8 @@ interface Element {
 	/**
 	 * Returns the previousSibling of the Element (excluding text nodes).
 	 *
-	 * @param match A comma separated list of tag names to match the found element(s) with. A full CSS selector can be passed.
+	 * @param match A comma separated list of tag names to match the found element(s) with. A full CSS selector can be
+	 *     passed.
 	 * @returns The previous sibling Element or null if none found.
 	 */
 	getPrevious(match?: string): Element | null
@@ -521,35 +448,21 @@ interface Element {
 
 	/**
 	 Like [Element:getAllPrevious][] but returns all Element's previous and next siblings (excluding text nodes). Returns as [Elements][].
-
-
-
 	 ### Arguments:
-
 	 1. match - (*string*, optional): A tag name to match the found element(s) with. A full CSS selector can be passed.
-
 	 ### Returns:
-
 	 * (*array*) A [Elements](#Elements) array with all of the Element's siblings, except the text nodes.
-
 	 */
 	getSiblings(match?: string): Elements
 
 	/**
 	 Returns all the Element's children (excluding text nodes). Returns as [Elements][].
-
 	 ### Arguments:
-
 	 1. match - (*string*, optional): A tag name to match the found element(s) with. A full CSS selector can be passed.
-
 	 ### Returns:
-
 	 * (*array*) A [Elements](#Elements) array with all of the Element's children, except the text nodes.
-
 	 ### Note:
-
 	 The difference between the methods *getChildren* and *getElements* is that getChildren will only return its direct children while getElements searches for all the Elements in any depth.
-
 	 */
 	getChildren(match?: string): Elements
 
@@ -688,35 +601,23 @@ interface Element {
 
 	/**
 	 Sets an attribute or special property for this Element.
-
 	 ### Arguments:
-
 	 @param property The property to assign the value passed in.
 	 @param value The value to assign to the property passed in.
-
 	 ### Examples:
-
 	 ##### HTML
-
 	 <img id="myImage" />
-
 	 ##### JavaScript
-
 	 $('myImage').setProperty('src', 'mootools.png');
-
 	 ##### Resulting HTML
-
 	 <img id="myImage" src="mootools.png" />
-
 	 ### Note
-
 	 - Whenever using [Element:setProperty][] to set an attribute, pass in the lowercase, simplified form of the property. For example:
 	 - use 'for', not 'htmlFor',
 	 - use 'class', not 'className'
 	 - use 'frameborder', not 'frameBorder'
 	 - etc.
 	 - When setting the `src` property for an image file, be sure to remove the `width` and `height` attribute (use `Element.removeAttribute`). IE7, and less, set and freeze the `width` and `height` of an image if previously specified.
-
 	 */
 	setProperty(property: string, value: any): this
 
@@ -840,6 +741,7 @@ interface Element {
 	 */
 	eliminate(key: string): this
 }
+
 /////// Element.Styles
 interface Element {
 	/**
@@ -849,12 +751,11 @@ interface Element {
 	 //Both lines have the same effect.
 	 $('myElement').setStyle('width', '300px'); // the width is now 300px.
 	 $('myElement').setStyle('width', 300); // the width is now 300px.
-
 	 ### Notes:
-
 	 - All number values will automatically be rounded to the nearest whole number.
 	 * @param property The property to set.
-	 * @param value The value to which to set it. Numeric values of properties requiring a unit will automatically be appended with 'px'.
+	 * @param value The value to which to set it. Numeric values of properties requiring a unit will automatically be
+	 *     appended with 'px'.
 	 */
 	setStyle(property:CSSProperty, value:string | number): this
 	/**
@@ -906,6 +807,255 @@ interface Element {
 	 */
 	setStyles(...properties: CSSProperty[]): {[property: string]: string|number}
 }
+
+/////// Element.Position
+interface Element {
+	/**
+	 * Type: Element {#Element}
+	 =========================
+	 Custom Type to allow all of its methods to be used with any DOM element via the dollar function [$][].
+	 ### Notes:
+	 * These methods don't take into consideration the body element margins and borders. If you need margin/borders on
+	 * the body, consider adding a wrapper div, but always reset the margin and borders of body to 0. If you need to
+	 * measure the properties of elements that are not displayed (either their display style is none or one of their
+	 * parents display style is none), you will need to use [Element.measure][] to expose it.
+	 ### Credits:
+	 - Element positioning based on the [qooxdoo](http://qooxdoo.org/) code and smart browser fixes, [LGPL License](http://www.gnu.org/licenses/lgpl.html).
+	 - Viewport dimensions based on [YUI](http://developer.yahoo.com/yui/) code, [BSD License](http://developer.yahoo.com/yui/license.html).
+	 Element Method: scrollTo {#Element:scrollTo}
+	 --------------------------------------------
+	 Scrolls the element to the specified coordinated (if the element has an overflow).
+	 The following method is also available on the Window object.
+	 ### Syntax:
+	 myElement.scrollTo(x, y);
+	 ### Arguments:
+	 1. x - (*number*) The x coordinate.
+	 2. y - (*number*) The y coordinate.
+	 ### Example:
+	 $('myElement').scrollTo(0, 100);
+	 ### See Also:
+	 - [MDN Element:scrollLeft][], [MDN Element:scrollTop][]
+	 */
+	scrollTo(x: number, y: number): this
+	/*
+
+
+	 Element Method: getSize {#Element:getSize}
+	 ------------------------------------------
+
+	 Returns the height and width of the Element, taking into account borders and padding.
+	 The following method is also available on the Window object.
+
+	 ### Syntax:
+
+	 myElement.getSize();
+
+	 ### Returns:
+
+	 * (*object*) An object containing the width (as x) and the height (as y) of the target Element.
+
+	 ### Example:
+
+	 var size = myElement.getSize();
+	 alert('The element is ' + size.x + ' pixels wide and ' + size.y + 'pixels high.');
+
+	 ### Note:
+
+	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
+
+	 */
+	getSize(): {x: number, y: number}
+	/*
+
+	 Element Method: getScrollSize {#Element:getScrollSize}
+	 ------------------------------------------------------
+
+	 Returns an Object representing the size of the target Element, including scrollable area.
+	 The following method is also available on the Window object.
+
+	 ### Syntax:
+
+	 myElement.getScrollSize();
+
+	 ### Returns:
+
+	 * (*object*) An object containing the x and y dimensions of the target Element.
+
+	 ### Example:
+
+	 var scroll = $('myElement').getScrollSize();
+	 alert('My element can scroll to ' + scroll.y + 'px'); // alerts 'My element can scroll down to 820px'
+
+	 ### See Also:
+
+	 - [MDN Element:scrollLeft][], [MDN Element:scrollTop][], [MDN Element:offsetWidth][], [MDN Element:offsetHeight][], [MDN Element:scrollWidth][], [MDN Element:scrollHeight][]
+
+	 ### Note:
+
+	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
+
+	 */
+	getScrollSize(): {x: number, y: number}
+	/*
+
+	 Element Method: getScroll {#Element:getScroll}
+	 ----------------------------------------------
+
+	 Returns an Object representing how far the target Element is scrolled in either direction.
+	 The following method is also available on the Window object.
+
+	 ### Syntax:
+
+	 myElement.getScroll();
+
+	 ### Returns:
+
+	 * (*object*) An object containing the x and y dimensions of the target Element's scroll.
+
+	 ### Example:
+
+	 var scroll = $('myElement').getScroll();
+	 alert('My element is scrolled down ' + scroll.y + 'px'); // alerts 'My element is scrolled down to 620px'
+
+	 ### Note:
+
+	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
+
+	 */
+	getScroll(): {x: number, y: number}
+	/*
+
+
+	 Element Method: getPosition {#Element:getPosition}
+	 --------------------------------------------------
+
+	 Returns the real offsets of the element.
+
+	 ### Syntax:
+
+	 myElement.getPosition(relative);
+
+	 ### Arguments:
+
+	 relative - (Element, defaults to the document) If set, the position will be relative to this Element.
+
+	 ### Returns:
+
+	 * (*object*) An object with the x and y coordinates of the Element's position.
+
+	 ### Example:
+
+	 $('element').getPosition(); // returns {x: 100, y: 500};
+
+	 ### See Also:
+
+	 - [QuirksMode: Find position](http://www.quirksmode.org/js/findpos.html)
+
+	 ### Note:
+
+	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
+	 */
+	getPosition(relative?: Element): {x: number, y: number}
+	/*
+
+	 Element Method: setPosition {#Element:setPosition}
+	 --------------------------------------------------
+
+	 Sets the position of the element's *left* and *top* values to the x/y positions you specify.
+
+	 ### Syntax
+
+	 myElement.setPosition(positions);
+
+	 ### Arguments
+
+	 1. positions - (*object*) an object with x/y values (integers or strings, i.e. 10 or "10px")
+
+	 ### Returns
+
+	 * (*element*) the element that is positioned.
+
+	 ### Example
+
+	 myElement.setPosition({x: 10, y: 100});
+
+	 */
+	setPosition(positions: {x: number | string, y: number | string}): this
+	/*
+
+
+	 Element Method: getCoordinates {#Element:getCoordinates}
+	 --------------------------------------------------------
+
+	 Returns an object with width, height, left, right, top, and bottom coordinate values of the Element.
+
+	 ### Syntax:
+
+	 myElement.getCoordinates(relative);
+
+	 ### Arguments:
+
+	 relative - (*element*, optional) if set, the position will be relative to this element, otherwise relative to the document.
+
+	 ### Returns:
+
+	 * (*object*) An object containing the Element's current: top, left, width, height, right, and bottom.
+
+	 ### Example:
+
+	 var myValues = $('myElement').getCoordinates();
+
+	 #### Returns:
+
+	 {
+		 top: 50,
+		 left: 100,
+		 width: 200,
+		 height: 300,
+		 right: 300,
+		 bottom: 350
+	 }
+
+	 ### See Also:
+
+	 [Element:getPosition](#Element:getPosition)
+
+	 ### Note:
+
+	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
+	 */
+	getCoordinates(relative?: Element): {
+		top: number, left: number, width: number, height: number, right: number, bottom: number}
+	/*
+
+	 Element Method: getOffsetParent {#Element:getOffsetParent}
+	 ----------------------------------------------------------
+
+	 Returns the parent of the element that is positioned, if there is one.
+
+	 ### Syntax
+
+	 myElement.getOffsetParent();
+
+	 ### Returns
+
+	 * (*mixed*) If the element has a parent that is positioned, it returns that element, otherwise it returns *null*.
+
+
+
+	 [$]: /core/Element/Element#Window:dollar
+	 [MDN Element:scrollLeft]: https://developer.mozilla.org/en/DOM/element.scrollLeft
+	 [MDN Element:scrollTop]: https://developer.mozilla.org/en/DOM/element.scrollTop
+	 [MDN Element:offsetWidth]: https://developer.mozilla.org/en/DOM/element.offsetWidth
+	 [MDN Element:offsetHeight]: https://developer.mozilla.org/en/DOM/element.offsetHeight
+	 [MDN Element:scrollWidth]: https://developer.mozilla.org/en/DOM/element.scrollWidth
+	 [MDN Element:scrollHeight]: https://developer.mozilla.org/en/DOM/element.scrollHeight
+	 [Element.measure]: /more/Element/Element.Measure
+
+	 */
+	getOffsetParent(): Element | null
+}
+
 interface Elements extends Element, Array<Element> {
 	each(f: (el:Element)=>void):this
     filter(f: (el:Element)=>boolean):Elements
@@ -954,7 +1104,8 @@ interface DOMEvent {
 	code: number
 
 	/**
-	 * The key pressed as a lowercase string. key can be 'enter', 'up', 'down', 'left', 'right', 'space', 'backspace', 'tab', 'delete', and 'esc'.
+	 * The key pressed as a lowercase string. key can be 'enter', 'up', 'down', 'left', 'right', 'space', 'backspace',
+	 * 'tab', 'delete', and 'esc'.
 	 */
 	key: string
 
@@ -1007,45 +1158,30 @@ declare function $$(selector: string): Elements
  *
  Function: document.id {#Window:document-id}
  -------------------------------------------
-
  The document.id function has a dual purpose: Getting the element by its id, and making an element in Internet Explorer "grab" all the [Element][] methods.
-
  ### Syntax:
-
  var myElement = document.id(el);
-
  ### Arguments:
-
  1. el - The Element to be extended. Can be one of the following types:
  * (*element*) The element will be extended if it is not already.
  * (*string*) A string containing the id of the DOM element desired.
  * (*object*) If the object has a toElement method, toElement will be called to get the Element.
-
  ### Returns:
-
  * (*element*) A DOM element.
  * (*null*) Null if no matching id was found or if toElement did not return an element.
-
  ### Examples:
-
  #### Get a DOM Element by ID:
-
  var myElement = document.id('myElement');
-
  #### Get a DOM Element by reference:
-
  var div = document.getElementById('myElement');
  div = document.id(div); // the element with all the Element methods applied.
-
  ### Notes:
-
  - This method is useful when it's unclear if working with an actual element or an id.  It also serves as a shorthand for document.getElementById().
  - In Internet Explorer, the [Element][] is extended the first time document.id is called on it, and all the [Element][] Methods become available.
  - Browsers with native HTMLElement support, such as Safari, Firefox, and Opera, apply all the [Element][] Methods to every DOM element automatically.
  - Because MooTools detects if an element needs to be extended or not, this function may be called on the same Element many times with no ill effects.
-
  */
-declare function $(selector: string): Element | null
+declare function $<T extends Element>(selector: string): T | null
 declare function $(elementable: { toElement: () => HTMLElement }): Element | null
 declare function $(anything:any|null): null
 declare function $<T extends Element>(element: T): T

@@ -43,7 +43,7 @@ QUnit.assert.brepEquals = function(actual, expected, message) {
 	this.push(actual.equals(expected), actual.ss(), expected.ss(), message)
 }
 QUnit.assert.fuzzyEquals = function(actual, expected, message) {
-	this.push(NLA.equals(actual, expected), actual, expected, message)
+	this.push(NLA.eq(actual, expected), actual, expected, message)
 }
 QUnit.test( "BREP.tetrahedon", function( assert ) {
 	var result = new BREP(null, null, [

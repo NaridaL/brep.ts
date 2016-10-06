@@ -1,10 +1,7 @@
 "use strict";
-import registerClass = NLA.registerClass;
-
 var eps = 1e-5
 
-
-class Face extends Transformable {
+abstract class Face extends Transformable {
     surface: Surface
     edges: Edge[]
     holes: Edge[][]
@@ -17,7 +14,7 @@ class Face extends Transformable {
 		//assert(surface.edgeLoopCCW(contour), surface.toString()+contour.join("\n"))
 		assert(contour.every(f => f instanceof Edge), 'contour.every(f => f instanceof Edge)' + contour.toSource())
 		// contour.forEach(e => !surface.containsCurve(e.curve) && console.log("FAIL:"+surface.distanceToPoint(e.curve.anchor)))
-		contour.forEach(e => assert(surface.containsCurve(e.curve), e + surface))
+		contour.forEach(e => assert(surface.containsCurve(e.curve), '' + e + surface))
 		holes && holes.forEach(hole => this.assertChain(hole))
 		//holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)))
 		assert (!holes || holes.constructor == Array, holes && holes.toString())
@@ -61,7 +58,7 @@ class Face extends Transformable {
 		//TODO		assert(false)
 		var edgeCount = this.edges.length
 
-		return this.surface.equalsSurface(face.surface) &&
+		return this.surface.equals(face.surface) &&
 			this.edges.length == face.edges.length &&
 			NLA.arrayRange(0, edgeCount, 1)
 				.some(offset => this.edges.every((edge, i) => edge.equals(face.edges[(offset + i) % edgeCount])))
@@ -120,14 +117,18 @@ class Face extends Transformable {
 
 	toMesh() {
 		let mesh = new GL.Mesh({triangles: true, normals: true, lines: true})
-		mesh.faceIndexes = new Map()
 		this.addToMesh(mesh)
 		mesh.compile()
 		return mesh
 	}
+
+	abstract addToMesh(mesh: GL.Mesh)
+
+	abstract zDirVolume(): {centroid: V3, volume: number}
 }
 
 class PlaneFace extends Face {
+
     surface: PlaneSurface
 
 	constructor(planeSurface, contour, holes, name) {
@@ -135,7 +136,44 @@ class PlaneFace extends Face {
 		super(planeSurface, contour, holes, name)
 	}
 
-	calculateArea() {
+
+	zDirVolume(): {centroid: V3, volume: number} {
+		let {centroid, area} = this.calculateArea()
+		return {volume: this.surface.plane.normal.z * centroid.z * area,
+			centroid: new V3(centroid.x, centroid.y, centroid.z / 2) }
+
+	}
+
+	calculateArea(): {centroid: V3, area: number} {
+		let centroid = V3.ZERO, tcs = 0, tct = 0, totalArea = 0
+		let r1 = this.surface.right, u1 = this.surface.up
+		this.edges.forEach(edge => {
+			let edgeCentroid, edgeArea, centroidS, centroidT
+			if (edge instanceof StraightEdge) {
+				let midPoint = edge.a.lerp(edge.b, 0.5)
+				edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
+				centroidS = midPoint.dot(r1) / 2
+				centroidT = midPoint.dot(u1)
+				let edgeLength = edge.a.distanceTo(edge.b)
+				edgeArea = edgeLength * edge.curve.dir1.dot(r1)
+			} else {
+				let curve = edge.curve
+				if (curve instanceof EllipseCurve) {
+					edgeArea = curve.getAreaInDir(u1, r1, edge.aT, edge.bT)
+				} else if (curve instanceof BezierCurve) {
+					edgeArea = curve.getAreaInDir(u1, r1, edge.aT, edge.bT)
+				} else {
+					assertNever(curve)
+				}
+			}
+
+
+			tcs += edgeArea * centroidS
+			tct += edgeArea * centroidT
+			totalArea += edgeArea
+		})
+		centroid = r1.times(tcs).plus(u1.times(tct))
+		return
 		assert(false)
 	}
 
@@ -150,7 +188,6 @@ class PlaneFace extends Face {
 			vertices.pushAll(hole.flatMap(edge => edge.getVerticesNo0()))
 		})
 		var triangles = triangulateVertices(normal, vertices, holeStarts).map(index => index + mvl)
-		mesh.faceIndexes && mesh.faceIndexes.set(this, {start: mesh.triangles.length, count: triangles.length})
 		Array.prototype.push.apply(mesh.vertices, vertices)
 		Array.prototype.push.apply(mesh.triangles, triangles)
 		Array.prototype.push.apply(mesh.normals, NLA.arrayFromFunction(vertices.length, i => normal))
@@ -565,7 +602,6 @@ class RotationFace extends Face {
 		//console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(), triangles.map(i => vertices[i].$).toSource() )
 		triangles = triangles.map(index => index + mesh.vertices.length)
 		//assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +" "+normals.findIndex(n => !n.hasLength(1)))
-		mesh.faceIndexes.set(this, {start: mesh.triangles.length, count: triangles.length})
 		Array.prototype.push.apply(mesh.vertices, vertices)
 		Array.prototype.push.apply(mesh.triangles, triangles)
 		Array.prototype.push.apply(mesh.normals, normals)
@@ -798,9 +834,6 @@ function addLikeSurfaceFaces(likeSurfaceFaces, face1, face2) {
 	likeSurfaceFaces.push([face1, face2])
 }
 
-/**
- *
- */
 class B2 extends Transformable {
 	faces: Face[]
 	infiniteVolume: boolean
@@ -824,7 +857,9 @@ class B2 extends Transformable {
 		var mesh = new GL.Mesh({triangles: true, normals: true, lines: true})
 		mesh.faceIndexes = new Map()
 		this.faces.forEach((face, i) => {
+			let triangleStart = mesh.triangles.length
 			face.addToMesh(mesh)
+			mesh.faceIndexes.set(face, {start: triangleStart, count: mesh.triangles.length - triangleStart})
 		})
 		mesh.compile()
 		return mesh
@@ -841,7 +876,7 @@ class B2 extends Transformable {
 	}
 
 	xor(brep2: B2): B2 {
-		assertNever()
+		return assertNever()
 	}
 
 	equals(brep): boolean {
@@ -854,7 +889,8 @@ class B2 extends Transformable {
 	}
 
 	toSource(): string {
-		return this.generator || `new B2([\n${this.faces.map(face => face.toSource()).join(',\n').replace(/^/gm, '\t')}])`
+		return this.generator ||
+			'new B2([\n' + this.faces.map(face => face.toSource()).join(',\n').replace(/^/gm, '\t') + '])'
 	}
 
 	assembleFacesFromLoops(newFaces: Face[], loops, oldFace): boolean {
@@ -1301,8 +1337,7 @@ function planeFaceEdgeISPsWithPlane(brep, brepFace, isLine, plane2):PSSInfo[] {
 	return ps
 }
 type PSSInfo = {p: V3, insideDir: V3, t: number, edge: Edge, edgeT: number, colinear: boolean, used?: boolean}
-function faceEdgeISPsWithSurface(brep:B2, brepFace:Face, isCurves:Curve[], surface2:Surface)
-:PSSInfo[][] {
+function faceEdgeISPsWithSurface(brep:B2, brepFace:Face, isCurves:Curve[], surface2:Surface):PSSInfo[][] {
 	let faceSurface = brepFace.surface
 	let pss = NLA.arrayFromFunction(isCurves.length, i => [])
 
@@ -1634,13 +1669,13 @@ function curvePoint(implicitCurve, startPoint) {
 			dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
 		var scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
 		//console.log(p.$)
-		p = p.minus(V3(scale * dfpdx, scale * dfpdy))
+		p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
 	}
 	return p
 }
 function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, startDir, tangentEndPoints, boundsFunction) {
-	NLA.assertNumbers(stepLength, implicitCurve(0, 0))
-	NLA.assertVectors(startPoint, endPoint)
+	assertNumbers(stepLength, implicitCurve(0, 0))
+	assertVectors(startPoint, endPoint)
 	assert (!startDir || startDir instanceof V3)
 	var points = []
 	tangentEndPoints = tangentEndPoints || []

@@ -1,6 +1,16 @@
 "use strict"
 
 class CustomPlane extends P3 {
+	up: V3
+	right: V3
+	upStart: number
+	upEnd: number
+	rightStart: number
+	rightEnd: number
+	color: int
+	id: int
+	name: string
+
 	constructor(anchor2, right, up, upStart, upEnd, rightStart, rightEnd, color, name) {
 		var p = P3.forAnchorAndPlaneVectors(anchor2, right, up, CustomPlane.prototype)
 		p.up = up
@@ -13,8 +23,6 @@ class CustomPlane extends P3 {
 		p.id = globalId++
 		p.name = name
 		return p
-	this.constructor = CustomPlane;
-		this.what = "Plane";
 	}
 
 	toString() {
@@ -42,7 +50,7 @@ class CustomPlane extends P3 {
 	get plane(){ return this }
 
 	static forPlane(plane, color, name) {
-		var p = new P3(plane.normal, plane.w, CustomPlane.prototype)
+		var p = new P3(plane.normal, plane.w, CustomPlane.prototype) as CustomPlane
 		p.up = plane.normal.getPerpendicular().normalized()
 		p.right = p.up.cross(p.normal)
 		p.upStart = -500

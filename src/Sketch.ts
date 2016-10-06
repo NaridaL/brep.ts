@@ -6,6 +6,7 @@ class Sketch {
 	constraints: (Constraint|any)[]
 	name: string
 	plane: CustomPlane
+	hide: boolean
 
 	F: ((x: number[]) => number[]|number)[]
 	x: number[]
@@ -179,7 +180,7 @@ class Sketch {
 	}
 
 	constrainDistancePointBezier(point, bezier, pDistance) {
-		let startT = bezier.getBezierCurve().closestTToPoint(point.V3())
+		let startT = bezier.getCurve().closestTToPoint(point.V3())
 		let startTIndex = this.x.length
 		this.x.push(startT)
 		this.b.push(pDistance)
@@ -240,7 +241,7 @@ class Sketch {
 	}
 
 	gaussNewtonStep() {
-		let DISABLE_CONSOLE = false
+		let DISABLE_CONSOLE = true
 		DISABLE_CONSOLE && disableConsole();
 		var {F, x, b} = this
 		const flatF = x => F.flatMap(f => f(x))
@@ -249,7 +250,7 @@ class Sketch {
 		console.log("x", x)
 		console.log("Fx", Fx.toString())
 		console.log("b", b)
-		var jacobi = Matrix.jacobi(x => F.flatMap(f => f(x)), x, Fx.v, 1e-4)
+		var jacobi = Matrix.jacobi(x => F.flatMap(f => f(x)), x, Fx.v, 1e-6)
 		console.log("jacobi\n", jacobi.toString(x=>''+x))
 		let jacobiDependentRowIndexes = jacobi.getDependentRowIndexes()
 		if (0 != jacobiDependentRowIndexes.length) {
@@ -265,7 +266,7 @@ class Sketch {
 		var xDiff = matrix.timesVector(Fx.minus(bVector))
 		console.log("matrix\n", matrix.toString(), "\nFx.minus(bVector)", Fx.minus(bVector).toString(), "\nxDiff", xDiff.toString())
 		this.x = new NLA.Vector(new Float64Array(x)).minus(xDiff).v;
-		Fx = NLA.Vector.fromFunction(F.length, i => F[i](this.x))
+		Fx = new NLA.Vector(new Float64Array(flatF(x)))
 		DISABLE_CONSOLE && enableConsole();
 		return Fx.minus(bVector)
 	}
@@ -457,7 +458,7 @@ class Sketch {
 		}
 		let count, lastDiffs, lastSize
 		try {
-			for (count = 0; count < 10; count++) {
+			for (count = 0; count < 5; count++) {
 				lastDiffs = sketch.gaussNewtonStep()
 				lastSize = lastDiffs.length()
 				if (lastSize < NLA_PRECISION / 1000) {
@@ -655,14 +656,18 @@ class SketchArc {
 	}
 
 	toBrepEdge() {
-		let ca = this.getVectorCA()
-		let curve = new EllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
+		let curve = this.getCurve()
 		return new PCurveEdge(curve,
 			this.a.V3(), this.b.V3(),
 			-PI, curve.pointLambda(this.b.V3()),
 			null,
 			curve.tangentAt(-PI), curve.tangentAt(curve.pointLambda(this.b.V3())),
 			this.name + 'Edge')
+	}
+
+	getCurve() {
+		let ca = this.getVectorCA()
+		return new EllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
 	}
 }
 NLA.registerClass(SketchArc)
@@ -778,7 +783,7 @@ class SketchLineSeg {
 			segment.a.x, segment.a.y, segment.b.x, segment.b.y);
 	}
 
-	getL3() {
+	getCurve() {
 		return L3.anchorDirection(this.a.V3(), this.getVectorAB())
 	}
 
@@ -793,7 +798,7 @@ class Constraint {
 	id: int
 	cs: any[]
 
-	constructor(type, constrains, props) {
+	constructor(type, constrains, props?) {
 		if (constrains.constructor != Array) {
 			throw new Error("not an array: " + constrains)
 		}

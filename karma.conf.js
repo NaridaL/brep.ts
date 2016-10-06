@@ -15,7 +15,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'src/NLA.js',
+      'src/NLA.ts',
       'src/Vector3.js',
       'src/Matrix4x4.js',
       'src/Curve.js',
