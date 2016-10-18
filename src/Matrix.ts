@@ -420,11 +420,11 @@ class Matrix {
 		assertVectors(x)
 		assert(this.height == x.dim(), "this.height == x.dim()")
 		assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.str)
-		var v = new Float64Array(this.width)
-		var rowIndex = this.height
+		const v = new Float64Array(this.width)
+		let rowIndex = this.height
 		while (rowIndex--) {
-			var temp = x.v[rowIndex]
-			for (var colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+			let temp = x.v[rowIndex]
+			for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
 				temp -= v[colIndex] * this.e(rowIndex, colIndex)
 			}
 			v[rowIndex] = temp / this.e(rowIndex, rowIndex)

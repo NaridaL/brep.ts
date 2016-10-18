@@ -4,16 +4,15 @@
  * @param closed Whether to connect the first and last vertices. Defaults to true.
  * @returns
  */
-function verticesChain(vertices: V3[], closed?: boolean = true): StraightEdge[] {
-    closed = 'boolean' === typeof closed ? closed : true
+function verticesChain(vertices: V3[], closed: boolean = true): StraightEdge[] {
     var vc = vertices.length
     return NLA.arrayFromFunction(closed ? vc : vc - 1,
         i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]))
 }
 
-function projectCurve(curve: Curve, offset: number, flipped: boolean): Curve {
+function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
     if (curve instanceof L3) {
-        var surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
+        let surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
         return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor))
     }
     if (curve instanceof EllipseCurve) {
@@ -24,7 +23,7 @@ function projectCurve(curve: Curve, offset: number, flipped: boolean): Curve {
         let curveDir = flipped ? offset : offset.negated()
         return new ProjectedCurveSurface(curve, curveDir.normalized(), 0, 1)
     }
-    assertNever(curve)
+    assertNever()
 }
 
 namespace B2 {
@@ -115,7 +114,8 @@ namespace B2 {
     export function torus(rSmall: number, rLarge: number, rads: number, name: string): B2 {
         assertNumbers(rSmall, rLarge, rads)
         assertf(() => rLarge > rSmall)
-        return B2.rotateEdges([EllipseCurve.circle(rSmall, V(rLarge, 0, 0))], rads, name)
+	    let baseEdge = PCurveEdge.forCurveAndTs(EllipseCurve.circle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI)
+        return B2.rotateEdges([baseEdge], rads, name || 'torus' + globalId++)
     }
 
     export function rotateEdges(edges: Edge[], rads: number, name: string): B2 {
@@ -164,7 +164,7 @@ namespace B2 {
                     // apex is intersection of segment with Z-axis
                     let a = edge.a, b = edge.b
                     let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
-                    let apex = V3(0, 0, apexZ)
+                    let apex = new V3(0, 0, apexZ)
                     let flipped = edge.a.z > edge.b.z
                     let surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as EllipseCurve, !flipped ? 1 : -1)
                     return new RotationFace(surface, faceEdges)
@@ -194,9 +194,9 @@ namespace B2 {
         return new B2(faces)
     }
 
-    export function rotStep(edges: Edge[], rads: number, count: number) {
-        var radStep = rads / count
-        var open = !NLA.eq(rads, 2 * PI)
+    export function rotStep(edges: Edge[], totalRads: number, count: int) {
+        var radStep = totalRads / count
+        var open = !NLA.eq(totalRads, 2 * PI)
         var ribCount = !open ? count : count + 1
         var ribs = NLA.arrayFromFunction(ribCount, i => {
             if (i == 0) return edges
@@ -260,13 +260,13 @@ namespace B2 {
         })
         if (open) {
             var endFaceEdges = ribs[count].map(edge => edge.flipped()).reverse()
-            var endFace = new PlaneFace(new PlaneSurface(P3.XZ.rotateZ(rads)), endFaceEdges)
+            var endFace = new PlaneFace(new PlaneSurface(P3.XZ.rotateZ(totalRads)), endFaceEdges)
             faces.push(new PlaneFace(new PlaneSurface(P3.XZ.flipped()), edges), endFace)
         }
         return new B2(faces)
     }
 
-    export function extrudeVertices(baseVertices, baseFacePlane, offset, name, source) {
+    export function extrudeVertices(baseVertices, baseFacePlane, offset, name?, source?) {
         assert(baseVertices.every(v => v instanceof V3), "baseVertices.every(v => v instanceof V3)")
         assertInst(P3, baseFacePlane)
         assertVectors(offset)
@@ -274,16 +274,16 @@ namespace B2 {
         if (!isCCW(baseVertices, baseFacePlane.normal)) {
             baseVertices = baseVertices.reverse()
         }
-        var topVertices = baseVertices.map((v) => v.plus(offset)).reverse()
-        //var topPlane = basePlane.translated(offset)
-        var top, bottom
-        var faces = [
+        let topVertices = baseVertices.map((v) => v.plus(offset)).reverse()
+        //let topPlane = basePlane.translated(offset)
+        let top, bottom
+        let faces = [
             bottom = PlaneFace.forVertices(new PlaneSurface(baseFacePlane), baseVertices),
             top = PlaneFace.forVertices(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topVertices)]
-        var m = baseVertices.length
-        var ribs = NLA.arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
-        for (var i = 0; i < m; i++) {
-            var j = (i + 1) % m
+        let m = baseVertices.length
+        let ribs = NLA.arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
+        for (let i = 0; i < m; i++) {
+            let j = (i + 1) % m
             faces.push(
                 new PlaneFace(
                     PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
@@ -297,7 +297,7 @@ namespace B2 {
     // Returns a tetrahedron (3 sided pyramid).
     // Faces will face outwards.
     // abcd can be in any order. The only constraint is that abcd cannot be on a common plane.
-    export function tetrahedron(a: V3, b: V3, c: V3, d: V3): B2 {
+    export function tetrahedron(a: V3, b: V3, c: V3, d: V3, name:string = 'tetra' + globalId++): B2 {
         assertVectors(a, b, c, d)
         let dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
         if (NLA.eq0(dDistance)) {
@@ -313,12 +313,16 @@ namespace B2 {
         let bd = StraightEdge.throughPoints(b, d)
         let cd = StraightEdge.throughPoints(c, d)
         let faces = [
-            new PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()]),
-            new PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()]),
-            new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()]),
-            new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac])
+            new PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()], [], name + 'abc'),
+            new PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()], [], name + 'adb'),
+            new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + 'bdc'),
+            new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda')
         ]
         let gen = `B2.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
         return new B2(faces, false, gen)
     }
+
+	export function pyramidEdges(edges: Edge[], apex: V3, name: string = 'pyramid' + globalId++): B2 {
+
+	}
 }

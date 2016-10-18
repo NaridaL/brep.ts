@@ -1,11 +1,11 @@
 class ParabolaCurve extends Curve {
-    normal: V3
-	/**
-	 * @param center
-	 * @param f1
-	 * @param f2
-	 * @class ParabolaCurve
-	 */
+	normal: V3
+	center: V3
+	f1: V3
+	f2: V3
+	matrix: M4
+	inverseMatrix: M4
+
 	constructor(center, f1, f2) {
 		super()
 		assertVectors(center, f1, f2)
@@ -94,13 +94,7 @@ class ParabolaCurve extends Curve {
 		return new ParabolaCurve(this.at(t0), f1.plus(f2.times(2 * t0)), f2)
 	}
 
-	/**
-	 *
-	 * @param startT
-	 * @param endT
-	 * @returns {number}
-	 */
-	arcLength(startT:number, endT:number) {
+	arcLength(startT: number, endT: number): number {
 		var f1 = this.f1, f2 = this.f2, f1DOTf2 = f1.dot(f2), t0 = 0
 		if (!NLA.eq0(f1DOTf2)) {
 			t0 = -f1DOTf2 / f2.lengthSquared() / 2
@@ -185,9 +179,6 @@ class ParabolaCurve extends Curve {
 		}
 	}
 
-	/**
-	 * @returns {P3}
-	 */
 	getPlane() {
 		return P3.normalOnAnchor(this.normal, this.center)
 	}
@@ -197,18 +188,11 @@ class ParabolaCurve extends Curve {
 		return NLA.eq(localP.x * localP.x, localP.y)
 	}
 
-	/**
-	 *
-	 * @param a
-	 * @param b
-	 * @param center
-	 * @returns {ParabolaCurve}
-	 */
-	static forAB(a, b, center) {
+	static forAB(a, b, center):ParabolaCurve {
 		return new ParabolaCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
 	}
 
+	static XY = new ParabolaCurve(V3.ZERO, V3.X, V3.Y)
+	static YZ = new ParabolaCurve(V3.ZERO, V3.Y, V3.Z)
+	static ZX = new ParabolaCurve(V3.ZERO, V3.Z, V3.X)
 }
-ParabolaCurve.XY = new ParabolaCurve(V3.ZERO, V3.X, V3.Y)
-ParabolaCurve.YZ = new ParabolaCurve(V3.ZERO, V3.Y, V3.Z)
-ParabolaCurve.ZX = new ParabolaCurve(V3.ZERO, V3.Z, V3.X)

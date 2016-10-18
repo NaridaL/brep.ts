@@ -103,9 +103,9 @@ namespace NLA {
 
 		equals(obj: any): boolean {
 			if (obj === this) return true
-			if (!(obj.constructor != Vector)) return false
+			if (obj.constructor !== Vector) return false
 			if (this.v.length != obj.v.length) return false
-			var i = this.v.length
+			let i = this.v.length
 			while (i--) {
 				if (!NLA.eq(this.v[i], obj.v[i])) return false
 			}

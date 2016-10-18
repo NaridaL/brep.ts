@@ -28,55 +28,56 @@ class EllipseCurve extends Curve {
 		}
 	}
 
-	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number) {
+	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): {area: number, centroid: V3} {
 		//assertf(() => tStart < tEnd)
 		assertf(() => right.isPerpendicularTo(this.normal))
 		assertf(() => up.isPerpendicularTo(this.normal))
-		assertf(() => EllipseCurve.isValidT(tStart))
-		assertf(() => EllipseCurve.isValidT(tEnd))
+		//assertf(() => EllipseCurve.isValidT(tStart), tStart)
+		//assertf(() => EllipseCurve.isValidT(tEnd), tEnd)
 
 		let localUp = this.inverseMatrix.transformVector(up)
 		let localRight = localUp.cross(V3.Z)
 		let normTStart = tStart - localRight.angleXY()
 		let normTEnd = tEnd - localRight.angleXY()
-		console.log(localUp.str, localRight.str, normTStart, normTEnd, 'localUp.length()', localUp.length())
 		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.normalized())
-		console.log('transformedOriginY', transformedOriginY)
+		//console.log(localUp.str, localRight.str, normTStart, normTEnd, 'localUp.length()', localUp.length())
+		//console.log('transformedOriginY', transformedOriginY)
 		//assertf(() => localUp.hasLength(1), localUp.length())
 		const fPi = Math.PI / 4
 		// integral of sqrt(1 - x²) from 0 to cos(t)
-		let totalCXTimesA = 0, totalCYimesArea = 0
-		let f = (t) => { let x = Math.cos(t); let y = Math.sin(t); return (x * y + Math.PI / 2 - t) / 2 }
-		let cx = t => { let x = Math.cos(t); return - 1/3 * Math.pow(1 - x * x, 3 / 2) }
-		let cy = t => { let x = Math.cos(t); return (x - x * x * x / 3) / 2 }
-		// calculate from 0 to t
-		let f2 = (t) => {
-			let toHorizontalArea, cxa, cya
-			if (t < -Math.PI) {
-				toHorizontalArea = -Math.PI / 2 // bottom part
-					+ -(Math.PI / 4 + f(t + Math.PI * 2)) // top part in negative
-			} else if (t < 0) {
-				toHorizontalArea = -(Math.PI / 4 - f(-t))
-			} else if (t < Math.PI) {
-				toHorizontalArea = Math.PI / 4 - f(t)
-				cxa = cx(t)
-			} else {
-				toHorizontalArea = Math.PI / 2 // top part
-					+ (Math.PI / 4 + f(Math.abs(t - Math.PI * 2))) // bottom part negative * negative
-			}
-			let restArea = -transformedOriginY * (1 - Math.cos(t))
-			console.log(t, 'toHorizontalArea', toHorizontalArea, 'restArea', restArea)
-			return restArea + toHorizontalArea
-		}
-		console.log('f(normTStart)', f(normTStart))
-		console.log('f(normTEnd)', f(normTEnd))
-		console.log('f2(normTStart)', f2(normTStart))
-		console.log('f2(normTEnd)', f2(normTEnd))
-		let area = f2(normTEnd) - f2(normTStart)
+		// Basically, we want
+		// INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
+		// INTEGRAL[PI/2: cos(t)] -sqrt(1 - x²) dx
+		// = INTEGRAL[cos(0); cos(t)] -sqrt(1 - x²) dx
+		// = INTEGRAL[0; t] -sqrt(1 - cos²(t)) * -sin(t) dt
+		// = INTEGRAL[0; t] -sin(t) * -sin(t) dt
+		// = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
+		// = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
+		function fArea(t) { return (t - Math.sin(t) * Math.cos(t)) / 2 }
+
+		// for the centroid, we want
+		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
+		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * sqrt(1 - x²) dx
+		// cx = 1 / area * INTEGRAL[cos(0); cos(t)] x * -sqrt(1 - x²) dx
+		// ...
+		// cx = 1 / area * INTEGRAL[0; t] cos(t) * sin²(t) dt // WA
+		// cx = 1 / area * (sin^3(t) / 3)[0; t]
+		function cxTimesArea(t) { return Math.pow(Math.sin(t), 3) / 3 }
+
+		// cy = 1 / area * INTEGRAL[cos(t); PI/2] f²(x) / 2 dx
+		// cy = 1 / area * INTEGRAL[cos(0); cos(t)] -(1 - x²) / 2 dx
+		// cy = 1 / area * INTEGRAL[0; t] (cos²(t) - 1) * -sin(t) / 2 dt
+		// cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
+		function cyTimesArea(t) { return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24 }
+
+		let restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart) )
+		let area = fArea(normTEnd) - fArea(normTStart) + restArea
+		let cxt = (cxTimesArea(normTEnd) - cxTimesArea(normTStart) + -transformedOriginY * (-Math.cos(normTEnd) - Math.cos(normTStart)) / 2 * restArea) / area
+		let cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area
 		let factor = this.matrix.XYAreaFactor() // * localUp.length()
-		console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
+		//console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
 		assert(!NLA.eq0(factor))
-		return area * factor
+		return {area: area * factor, centroid: this.matrix.transformPoint(M4.rotationZ(localRight.angleXY()).transformPoint(new V3(cxt, cyt, 0)))}
 
 	}
 
@@ -103,7 +104,7 @@ class EllipseCurve extends Curve {
 
 	ddt(t) {
 		assertNumbers(t)
-		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t))).normalized()
+		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)))
 	}
 
 	tangentAt2(xi, eta) {
@@ -226,22 +227,15 @@ class EllipseCurve extends Curve {
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 
-	transform(m4) {
-		return new EllipseCurve(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2))
+	transform(m4): this {
+		return new EllipseCurve(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2)) as this
 	}
 
-	/**
-	 *
-	 * @returns {EllipseCurve}
-	 */
-	rightAngled() {
+	rightAngled():EllipseCurve {
 		var {f1, f2} = this.mainAxes()
 		return new EllipseCurve(this.center, f1, f2)
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	isTsWithSurface(surface) {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
@@ -293,7 +287,7 @@ class EllipseCurve extends Curve {
 
 	}
 
-	getPlane() {
+	getPlane():P3 {
 		return P3.normalOnAnchor(this.normal, this.center)
 	}
 
@@ -302,7 +296,7 @@ class EllipseCurve extends Curve {
 		return NLA.eq(1, localP.lengthXY()) && NLA.eq0(localP.z)
 	}
 
-	isInfosWithEllipse(ellipse:EllipseCurve):{tThis: number, tOther: number, p: V3}[] {
+	isInfosWithEllipse(ellipse: EllipseCurve): {tThis: number, tOther: number, p: V3}[] {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
@@ -440,12 +434,8 @@ class EllipseCurve extends Curve {
 			return possibleISPoints.filter(p => NLA.eq(1, p.lengthXY()))
 		}
 	}
-	/**
-	 *
-	 * @param bezier
-	 * @returns {{tThis: number, tOther: number, p: V3}[]}
-	 */
-	isInfosWithBezier(bezier:BezierCurve) {
+
+	isInfosWithBezier(bezier: BezierCurve): {tThis: number, tOther: number, p: V3}[] {
 		let localBezier = bezier.transform(this.inverseMatrix)
 		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
 			return this.isInfosWithBezier2D(bezier)
@@ -454,7 +444,8 @@ class EllipseCurve extends Curve {
 				let localP = localBezier.at(tOther)
 				if (NLA.eq(1, localP.lengthXY())) {
 					return {tOther: tOther, p: bezier.at(tOther), tThis: localP.angleXY()}
-				}})
+				}
+			})
 			return infos
 		}
 	}
@@ -551,7 +542,7 @@ class EllipseCurve extends Curve {
 	 * @param center Defaults to V3.ZERO
 	 * @returns {EllipseCurve}
 	 */
-	static forAB(a:number, b:number, center?:V3) {
+	static forAB(a:number, b:number, center?:V3):EllipseCurve {
 		return new EllipseCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
 	}
 
@@ -562,11 +553,11 @@ class EllipseCurve extends Curve {
 	 * @param center Defaults to V3.ZERO
 	 * @returns {EllipseCurve}
 	 */
-	static circle(radius:number, center?:V3) {
+	static circle(radius:number, center?:V3):EllipseCurve {
 		return new EllipseCurve(center || V3.ZERO, V(radius, 0, 0), V(0, radius, 0))
 	}
 
-	area() {
+	area():number {
 		// see https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
 		return Math.PI * this.f1.cross(this.f2).length()
 	}

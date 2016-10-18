@@ -6,4 +6,4 @@ node_modules
 out
 *.exe
 *.pdf
-*~
+other

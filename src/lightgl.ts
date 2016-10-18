@@ -408,7 +408,7 @@ void main() {
 	export const KEYS: { [keyCode: number]: boolean } = {}
 
 	interface GL_EVENT extends Event {
-		original: DOMEvent
+		original: Event
 		x: number
 		y: number
 		deltaX: number
@@ -433,7 +433,7 @@ void main() {
 		}
 
 
-		function augmented(original) {
+		function augmented(original: Event) {
 			// Make a copy of original, a native `MouseEvent`, so we can overwrite
 			// WebKit's non-standard read-only `x` and `y` properties (which are just
 			// duplicates of `pageX` and `pageY`). We can't just use
@@ -720,20 +720,10 @@ void main() {
 		coords?: any[]
 		colors?: any[]
 
-		/**
-		 *
-		 * @param {Object=} options
-		 * @param {boolean=} options.coords Texture coordinates.
-		 * @param {boolean=} options.normals
-		 * @param {boolean=} options.colors
-		 * @param {boolean=} options.lines
-		 * @param {boolean=} options.triangles
-		 */
-		constructor(options?) {
-			options = options || {}
+		constructor(options: {coords?: boolean, normals?: boolean, colors?: boolean, lines?: boolean, triangles?: boolean} = {}) {
 			this.hasBeenCompiled = false
-			/** @dict */ this.vertexBuffers = {}
-			/** @dict */ this.indexBuffers = {}
+			this.vertexBuffers = {}
+			this.indexBuffers = {}
 			this.addVertexBuffer('vertices', 'LGL_Vertex');
 			if (options.coords) this.addVertexBuffer('coords', 'LGL_TexCoord')
 			if (options.normals) this.addVertexBuffer('normals', 'LGL_Normal')
@@ -745,10 +735,8 @@ void main() {
 		/**
 		 * Add a new vertex buffer with a list as a property called `name` on this object and map it to
 		 * the attribute called `attribute` in all shaders that draw this mesh.
-		 * @param {string} name
-		 * @param {string} attribute
 		 */
-		addVertexBuffer(name, attribute) {
+		addVertexBuffer(name: string, attribute: string) {
 			assert(!this.vertexBuffers[attribute])
 			//assert(!this[name])
 			this.hasBeenCompiled = false
@@ -761,9 +749,8 @@ void main() {
 
 		/**
 		 * Add a new index buffer.
-		 * @param {string} name
 		 */
-		addIndexBuffer(name) {
+		addIndexBuffer(name: string) {
 			this.hasBeenCompiled = false
 			var buffer = this.indexBuffers[name] = new Buffer(WGL.ELEMENT_ARRAY_BUFFER, Uint16Array);
 			buffer.name = name.toLowerCase()
@@ -1642,7 +1629,7 @@ void main() {
 		 * @constructor
 		 * @alias GL.Texture
 		 */
-		constructor(width, height, options) {
+		constructor(width: int, height: int, options) {
 			options = options || {}
 			this.texture = gl.createTexture()
 			this.width = width

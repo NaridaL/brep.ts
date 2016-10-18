@@ -168,8 +168,8 @@ QUnit.test( "Matrix.prototype.solveLinearSystem", function( assert ) {
 	var a = Matrix.fromRowArrays([0,1,1],[1,1,1],[1,2,3])
 	var b = NLA.Vector.from(1, 2, 3)
 	var x = a.solveLinearSystem(b)
-	assert.ok(x.equals(NLA.Vector.from(1, 1, 0)))
-	assert.ok(a.timesVector(x).equals(b))
+	assert.push(x.equals(NLA.Vector.from(1, 1, 0)), x, NLA.Vector.from(1, 1, 0))
+	assert.push(a.timesVector(x).equals(b), a.timesVector(x), b)
 });
 QUnit.test( "Matrix.prototype.inverse", function( assert ) {
 	var a = Matrix.fromRowArrays([0,1,1],[1,1,1],[1,2,3])
@@ -542,7 +542,7 @@ QUnit.testDifferentSystems( "Matrix4x4 eigenValues and eigenVectors", function (
 	console.log(eigenValues)
 //		assert.equal(eigenValues.length, 3)
 	eigenValues.forEach((eigenValue, i)=> {
-		assert.ok(NLA.isZero(M4.IDENTITY.timesScalar(-eigenValue).plus(m4.as3x3()).determinant()))
+		assert.ok(NLA.eq0(M4.IDENTITY.timesScalar(-eigenValue).plus(m4.as3x3()).determinant()))
 		//assert.ok(ei)
 	})
 	let eigenVectors = m4.realEigenVectors3()
@@ -592,7 +592,7 @@ QUnit.test( "BezierCurve.isPointsWithBezier()", function (assert, /** M4*/ m4) {
 		console.log(isInfos.map(SCE))
 		isInfos.forEach(info => {
 			let p = info.p
-			assert.ok(NLA.isZero(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
+			assert.ok(NLA.eq0(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
 		})
 	})
 })
@@ -639,21 +639,23 @@ QUnit.test( 'BezierCurve.pointLambda' , function (assert) {
 		V( 63.52151476563836, 168.59279980361327, 0),
 		V(151.89049176954802, 231.21343792479922, 0))
 	let p = V(90.8280915025532, 214.7764313721318, 0)
-	assert.ok(NLA.isZero(curve.distanceToPoint(p)))
+	assert.ok(NLA.eq0(curve.distanceToPoint(p)))
 	assert.ok(isFinite(curve.pointLambda(p)))
 
 
 })
 
 QUnit.testDifferentSystems('EllipseCurve.getAreaInDir', function (assert, m4) {
+		let k = 1;
 		[
-			{right: V3.X, up: V3.Y, s: 0, t: PI, result: PI / 2},
-			{right: V3.X, up: V3.Y, s: PI, t: 0, result: -PI / 2},
-			{right: V3.X, up: V3.Y, s: -PI / 2, t: PI / 2, result: PI / 2},
-			{right: V3.X, up: V3.Y, s: -PI, t: 0, result: PI / 2},
+			{right: V3.X, up: V3.Y, s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
+			{right: V3.X, up: V3.Y, s: PI, t: 0, result: -PI / 2, c: V(0, 4 / 3 / PI)},
+			{right: V3.X, up: V3.Y, s: -PI / 2, t: PI / 2, result: PI / 2, c: V(4 / 3 / PI, 0)},
+			{right: V3.X, up: V3.Y, s: -PI, t: 0, result: PI / 2, c: V(0, -4 / 3 / PI)},
 			// let "down" be X
-			{right: V3.Y, up: V3.X.negated(), s: 0, t: PI, result: PI / 2},
-			{right: V3.Y, up: V3.X.negated(), s: -PI, t: 0, result: PI / 2}].forEach(test => {
+			{right: V3.Y, up: V3.X.negated(), s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
+			{right: V3.Y, up: V3.X.negated(), s: -PI, t: 0, result: PI / 2, c: V(0, -4 / 3 / PI)}
+		].forEach(test => {
 			[0, 4].forEach(yDiff => {
 				let r = m4.transformVector(test.right)
 				let areaFactor = m4.transformVector(V3.X).cross(m4.transformVector(V3.Y)).length()
@@ -661,11 +663,22 @@ QUnit.testDifferentSystems('EllipseCurve.getAreaInDir', function (assert, m4) {
 				const ell = EllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
 				let up = m4.transformVector(test.up).normalized()
 				let offsetArea = yDiff * ((1 - cos(test.t)) - (1 - cos(test.s))) * test.up.dot(V3.Y)
-				const expected = (test.result + offsetArea) * areaFactor
+				const totalArea = test.result + offsetArea
+				const expectedArea = totalArea * areaFactor
+				let result = ell.getAreaInDir(r, up, test.s, test.t)
+				let offsetCentroid = V((cos(test.t) + cos(test.s)) / 2, yDiff / 2)
+				let movedCentroid = test.c.plus(V(0, yDiff))
+				const expectedCentroid = m4.transformPoint(movedCentroid.times(test.result).plus(offsetCentroid.times(offsetArea)).div(totalArea))
+				console.log(test.t, test.s, 1 - cos(test.t), 1 - cos(test.s))
+				console.log(test.c.times(test.result).str, offsetCentroid.str, offsetArea, offsetCentroid.times(offsetArea).str, test.c.times(test.result).plus(offsetCentroid.times(offsetArea)).str, totalArea, expectedCentroid.str   )
 				assert.fuzzyEquals(
-					ell.getAreaInDir(r, up, test.s, test.t),
-					expected,
-					`yDiff: ${yDiff}, ${test.sce}, offsetArea: ${offsetArea}, expected: ${expected}, ${areaFactor * offsetArea}`)
+					result.area,
+					expectedArea,
+					`yDiff: ${yDiff}, ${test.sce}, offsetArea: ${offsetArea}, expected: ${expectedArea}, ${areaFactor * offsetArea}`)
+
+				assert.fuzzyEquals(result.centroid.x, expectedCentroid.x, 'cx ' + result.centroid.x)
+				assert.fuzzyEquals(result.centroid.y, expectedCentroid.y, 'cy ' + result.centroid.y)
+				// if (!k--) throw new Error()
 			})
 		})
 	},
@@ -692,3 +705,15 @@ QUnit.test( 'M4.gauss' , function (assert) {
 	console.log(M4.FOO.gauss().U.str)
 })
 
+QUnit.test('asd', function (assert) {
+	const surface = new CylinderSurface(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, -8, 0)), V(0, 0, -1))
+	const loop = [
+		StraightEdge.throughPoints(V(1, 7.937253933193773, 4), V(1, 7.937253933193773, 1)),
+		new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(8, 0, 0), V(0, -8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), -1.4454684956268313, -0.7227342478134156, null, V(7.937253933193772, -0.9999999999999991, 0), V(5.2915026221291805, -6, 0)),
+		StraightEdge.throughPoints(V(6, 5.291502622129181, 1), V(6, 5.291502622129181, 4)),
+		new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), 0.7227342478134156, 1.4454684956268313, null, V(-5.2915026221291805, 6, 0), V(-7.937253933193772, 0.9999999999999991, 0))
+	]
+
+	assert.equal(surface.edgeLoopContainsPoint(loop, V(8, 0, 0)), PointVsFace.OUTSIDE)
+	assert.equal(surface.edgeLoopContainsPoint(loop, V(1, 7.937253933193773, 3)), PointVsFace.ON_EDGE)
+})

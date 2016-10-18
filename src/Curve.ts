@@ -5,36 +5,23 @@ abstract class Curve extends Transformable {
 	/**
 	 * Returns curve parameter t for point p on curve.
 	 */
-	abstract pointLambda(p): number
+	abstract pointLambda(p:V3, hint?): number
 
 	/**
 	 * Returns the point on the line that is closest to the given point.
-	 *
-	 * @param p
 	 */
 	closestPointToPoint(p: V3): V3 {
 		return this.at(this.closestTToPoint(p))
 	}
 
-	/**
-	 * @abstract
-	 * @param p
-	 */
 	abstract closestTToPoint(p: V3): number
 
 	/**
 	 * So different edges on the same curve do not have different vertices, they are always generated
 	 * on fixed points this.at(k * this.tIncrement), with k taking integer values
 	 *
-	 * @param aT
-	 * @param bT
-	 * @param a
-	 * @param b
-	 * @param {boolean} reversed
-	 * @param {boolean} includeFirst
-	 * @returns {Array.<V3>}
 	 */
-	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed, includeFirst) {
+	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed: boolean, includeFirst: boolean): V3[] {
 		assert(this.tIncrement, "tIncrement not defined on " + this)
 		var split = 4 * 62, inc = this.tIncrement
 		var verts = []
@@ -58,12 +45,7 @@ abstract class Curve extends Transformable {
 		return verts
 	}
 
-	/**
-	 *
-	 * @param p
-	 * @returns {number}
-	 */
-	distanceToPoint(p: V3) {
+	distanceToPoint(p: V3): number {
 		return this.at(this.closestTToPoint(p)).distanceTo(p)
 	}
 
@@ -77,7 +59,7 @@ abstract class Curve extends Transformable {
 	abstract tangentAt(t: number): V3
 
 	/**
-	 * Derivative of tangentAt(t) for parameter t
+	 * Derivative of tangentAt for parameter t
 	 */
 	abstract ddt(t: number): V3
 
@@ -111,16 +93,9 @@ abstract class Curve extends Transformable {
 	}
 
 	/**
-	 *
 	 * iff for any t, this.at(t) == curve.at(t)
-	 *
-	 * @abstract
-	 * @param curve
-	 * @returns {boolean}
 	 */
-	likeCurve(curve: Curve) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract likeCurve(curve: Curve): boolean
 
 	/**
 	 * Return whether the curves occupy the same points in space. They do
@@ -129,14 +104,8 @@ abstract class Curve extends Transformable {
 	 *
 	 * iff for every t, there is an s so that this.at(t) == curve.at(s)
 	 * and for every s, there is a t so that curve.at(s) == this.a(t)
-	 *
-	 * @abstract
-	 * @param curve
-	 * @returns {boolean}
 	 */
-	isColinearTo(curve: Curve) {
-		assert(false, "Not implemented on " + this.constructor.name)
-	}
+	abstract isColinearTo(curve: Curve): boolean
 
 
 	getAABB(tMin, tMax) {

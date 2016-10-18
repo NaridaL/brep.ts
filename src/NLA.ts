@@ -44,29 +44,6 @@ interface Object {
 	str:string
 	toSource():string
 }
-interface Array<T> {
-	absSum: () => number
-	binaryIndexOf: <S>(searchElement: S, cmp: (a: T, b: S) => number) => int
-	binaryInsert: <S>(searchElement: S, cmp: (a: T, b: S) => number) => void
-	concatenated(): T
-	firstMatch: (f: (el: T) => any) => T
-	flatMap<U>(f: (el: T) => (U | U[])): U[]
-	includes: (el: T) => boolean
-	indexWithMax: (f: (el: T) => number) => int
-	isEmpty(): boolean
-	last(): T
-	mapFilter<U>(f: (el: T, elIndex: int, array: Array<T>)=>U): U[]
-	max(): number
-	min(): number
-	pushAll(els: T[])
-	remove(el: T): boolean
-	removeAll: (els: T[]) => void
-	sliceStep: (start: int, step: int, chunkSize: int) => int
-	sum(): number
-	toggle: (el: T) => void
-	unique(): T[]
-	withMax(f: (el: T)=>number): T
-}
 
 var oldConsole = undefined
 function disableConsole() {
@@ -143,13 +120,13 @@ namespace NLA {
 	export const canonAngle = (x: number): number => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 
 
-    /**
+	/**
 	 * Decimal adjustment of a number.
 	 *
 	 * @param  f  The type of adjustment.
 	 * @param  value The number.
 	 * @param exp   The exponent (the 10 logarithm of the adjustment base).
-	 * @returns {number} The adjusted value.
+	 * @returns The adjusted value.
 	 */
 	function decimalAdjust(f: (x: number)=>number, value: number, exp: number): number {
 		// If the exp is undefined or zero...
@@ -194,27 +171,27 @@ namespace NLA {
 		// using extra memory
 		return result + result.substring(0, count - result.length)
 	}
-	export const mod = function (a, b) {
+	export function mod(a, b) {
 		return ((a % b) + b) % b
 	}
-	export const arraySwap = function (arr, i, j) {
+	export function arraySwap(arr, i, j) {
 		var temp = arr[i]
 		arr[i] = arr[j]
 		arr[j] = temp
 	}
-	export const arrayCopy = function(src,sstart,dst,dstart,length) {
+	export function arrayCopy(src,sstart,dst,dstart,length) {
 		dstart += length;
 		length += sstart;
 		while(length-- > sstart) {
 			dst[--dstart] = src[length];
 		}
 	}
-	export const clamp = function (val, min, max) {
+	export function clamp(val, min, max) {
 		assertNumbers(val, min, max)
 		return Math.max(min, Math.min(max, val))
 	}
 
-	export const randomColor = function () {
+	export function randomColor() {
 		return Math.floor(Math.random() * 0x1000000)
 	}
 	export function mapAdd<T, U>(map:Map<T, U[]>, key:T, val:U) {
@@ -227,19 +204,19 @@ namespace NLA {
 	}
 
 
-	export const arrayCopyStep = function(src,sstart,sstep, dst,dstart,dstep,count) {
+	export function arrayCopyStep(src,sstart,sstep, dst,dstart,dstep,count) {
 		var srcIndex = sstart + count * sstep;
 		var dIndex = dstart + count * dstep;
 		while(srcIndex > sstart) {
 			dst[dIndex -= dstep] = src[srcIndex -= sstep];
 		}
 	}
-	export const arrayCopyBlocks = function (src,sstart,sstep, dst,dstart,dstep,blockSize, blockCount) {
+	export function arrayCopyBlocks(src,sstart,sstep, dst,dstart,dstep,blockSize, blockCount) {
 		for (var i = 0; i < blockCount; i++) {
 			NLA.arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize)
 		}
 	}
-	export const arrayRange = function (start, end, step) {
+	export function arrayRange(start, end, step) {
 		assertNumbers(start, step)
 		//console.log(Math.ceil((end - start) / step))
 		var result = new Array(Math.ceil((end - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
@@ -250,7 +227,7 @@ namespace NLA {
 		return result;
 	}
 
-	export const arrayFromFunction = function<T>(length:number, f:(i:number) => T):T[] {
+	export function arrayFromFunction<T>(length:number, f:(i:number) => T):T[] {
 		assertNumbers(length)
 		assert("function" == typeof f)
 		var a = new Array(length)
@@ -261,11 +238,7 @@ namespace NLA {
 		return a
 	}
 
-	/**
-	 * @param vals
-	 * @returns {number[]}
-	 */
-	export const fuzzyUniques = function (vals:number[]):number[] {
+	export function fuzzyUniques(vals:number[]):number[] {
 		let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
 		let map = new Map()
 		map.set(round(vals[0]), vals[0])
@@ -281,12 +254,7 @@ namespace NLA {
 		return Array.from(map.values())
 	}
 
-	/**
-	 * @param vals
-	 * @param f
-	 * @returns {T[]}
-	 */
-	export const fuzzyUniquesF = function<T>(vals:T[], f: (o:T) => number) {
+	export function fuzzyUniquesF<T>(vals:T[], f: (o:T) => number) {
 		let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
 		let map = new Map()
 		for (let i = 0; i < vals.length; i++) {
@@ -302,7 +270,7 @@ namespace NLA {
 	}
 
 
-	export const addOwnProperties = function (target, props) {
+	export function addOwnProperties(target, props) {
 		Object.getOwnPropertyNames(props).forEach(key => {
 			//console.log(props, key)
 			if (target.hasOwnProperty(key)) {
@@ -312,7 +280,7 @@ namespace NLA {
 		})
 	}
 
-	export const defineClass = function (name, parent, constructor, props, statics) {
+	export function defineClass(name, parent, constructor, props, statics) {
 		assert('function' == typeof constructor, "'function' == typeof constructor")
 		constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
 		constructor.prototype.constructor = constructor
@@ -322,7 +290,7 @@ namespace NLA {
 	}
 	export const defaultRoundFunction = x => x // Math.round10(x, -4)
 
-	export const defineObject = function (prot, props) {
+	export function defineObject(prot, props) {
 		var o = Object.create(prot || NLA.BaseObject)
 		addOwnProperties(o, props)
 		return o
@@ -332,7 +300,7 @@ namespace NLA {
 			return this.toString == Object.prototype.toString ? Object.prototype.toSource.apply(this) : this.toString()
 		}
 	}
-	export const forceFinite = function(val) {
+	export function forceFinite(val) {
 		val = parseFloat(val.replace(',', '.').replace(/^[^0-9,\.\-]/, ''))
 		return Number.isFinite(val) ? val : 0
 	}
@@ -346,10 +314,8 @@ namespace NLA {
 	/**
 	 * combinations(2) will generate
 	 * [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
-	 * @param n
-	 * @returns {{i: number, j: number}}
 	 */
-	export const combinations = function* (n:number) {
+	export function* combinations(n:int): IterableIterator<{i: number, j: number}> {
 		for (var i = 0; i < n; i++) {
 			for (var j = i; j < n; j++) {
 				yield {i: i, j: j}
@@ -359,15 +325,10 @@ namespace NLA {
 
 
 	export const CLASSES:any = {}
-	export const registerClass = function (clazz: any) {
+	export function registerClass(clazz: any) {
 		NLA.CLASSES[clazz.name] = clazz
 	}
 }
-/**
- *
- * @param x
- * @returns {boolean}
- */
 
 var COLORS = {
 	RD_FILL:0x9EDBF9,
@@ -377,7 +338,7 @@ var COLORS = {
 	PP_FILL:0xF3B6CF,
 	PP_STROKE:0xEB81B4,
 }
-var DEG = .017453292519943295
+const DEG = .017453292519943295
 function deg2rad(angle) {
 	//  discuss at: http://phpjs.org/functions/deg2rad/
 	// original by: Enrique Gonzalez
@@ -404,7 +365,29 @@ String.prototype.capitalizeFirstLetter = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
-interface Array<T> extends ARRAY_UTILITIES<T> {}
+interface Array<T> {
+	absSum: () => number
+	binaryIndexOf: <S>(searchElement: S, cmp: (a: T, b: S) => number) => int
+	binaryInsert: <S>(searchElement: S, cmp: (a: T, b: S) => number) => void
+	concatenated(): T
+	firstMatch: (f: (el: T, elIndex: int, arr: T[]) => any) => T
+	flatMap<U>(f: (el: T, elIndex: int, arr: T[]) => (U | U[])): U[]
+	includes: (el: T) => boolean
+	indexWithMax: (f: (el: T, elIndex: int, arr: T[]) => number) => int
+	isEmpty(): boolean
+	last(): T
+	mapFilter<U>(f: (el: T, elIndex: int, arr: T[]) => U): U[]
+	max(): number
+	min(): number
+	pushAll(els: T[])
+	remove(el: T): boolean
+	removeAll: (els: T[]) => void
+	sliceStep: (start: int, step: int, chunkSize: int) => int
+	sum(): number
+	toggle: (el: T) => void
+	unique(): T[]
+	withMax(f: (el: T, elIndex: int, arr: T[]) => number): T
+}
 
 var ARRAY_UTILITIES = {
 
@@ -553,7 +536,7 @@ var ARRAY_UTILITIES = {
 		}
 	},
 
-	binaryIndexOf(searchElement: S, cmp: (a: T, b: S) => number) {
+	binaryIndexOf(searchElement, cmp) {
 
 		var minIndex = 0;
 		var maxIndex = this.length - 1;
@@ -605,10 +588,9 @@ var ARRAY_UTILITIES = {
 }
 
 for (let key in ARRAY_UTILITIES) {
-	NLA["array" + key.capitalizeFirstLetter()] = function (arr, ...rest) {
-		assert(!ARRAY_UTILITIES[key])
-		ARRAY_UTILITIES[key].apply(arr, rest)
-	}
+	const nlaName = "array" + key.capitalizeFirstLetter()
+	assert(!NLA[nlaName])
+	NLA[nlaName] = (arr, ...rest) => ARRAY_UTILITIES[key].apply(arr, rest)
 }
 // Closure
 
@@ -622,10 +604,10 @@ function isCCW(vertices, normal) {
 	assert(0 != dsa)
 	return dsa < 0
 }
-declare function earcut(data:number[], holeIndices:number[], dim?:number): number[]
-function triangulateVertices(normal, vertices, holeStarts) {
+declare function earcut(data:FloatArray, holeIndices:number[], dim?:number): number[]
+function triangulateVertices(normal:V3, vertices:V3[], holeStarts:int[]) {
 	var absMaxDim = normal.maxAbsDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
-	var contour = new Array(vertices.length * 2)
+	var contour = new Float64Array(vertices.length * 2)
 	var i = vertices.length
 	/*
 	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]

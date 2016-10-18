@@ -20,64 +20,15 @@ class CylinderSurface extends Surface {
 		return `new CylinderSurface(${this.baseEllipse.toSource()}, ${this.dir.toSource()})`
 	}
 
-	edgeLoopContainsPoint(contour, p) {
+
+	edgeLoopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
-		var line = new L3(p, this.dir)
+
 		// create plane that goes through cylinder seam
-		var seamBase = this.baseEllipse.at(PI)
-		var intersectionLinePerpendicular = this.dir.cross(p.minus(seamBase))
-		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
-		var colinearSegments = contour.map((edge) => edge.colinearToLine(line))
-		var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir) > 0)
-		var inside = false
-
-		const logIS = (p) => {
-			if (line.pointLambda(p) > 0 && line.containsPoint(p)) {
-				inside = !inside
-			}
-		}
-
-		contour.forEach((/** Edge= */ edge, /** number */ i, /** Array.<Edge> */ edges) => {
-			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-			if (colinearSegments[i]) {
-				// edge colinear to intersection
-				var outVector = edge.bDir.cross(this.normalAt(edge.b))
-				var insideNext = outVector.dot(nextEdge.aDir) > 0
-				if (colinearSegmentsInside[i] != insideNext) {
-					logIS(edge.b)
-				}
-			} else {
-				var edgeTs = edge.edgeISTsWithPlane(plane2)
-				for (var k = 0; k < edgeTs.length; k++) {
-					var edgeT = edgeTs[k]
-					if (edgeT == edge.bT) {
-						// endpoint lies on intersection line
-						if (colinearSegments[j]) {
-							// next segment is colinear
-							// we need to calculate if the section of the plane intersection line BEFORE the colinear
-							// segment is inside or outside the face. It is inside when the colinear segment out vector
-							// and the current segment vector point in the same direction (dot > 0)
-							var colinearSegmentOutsideVector = nextEdge.aDir.cross(this.normalAt(nextEdge.a))
-							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
-							// if the "inside-ness" changes, add intersection point
-							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear !=
-							// colinearSegmentInsideFace, nextSegmentOutsideVector)
-							if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
-								logIS(edge.b)
-							}
-						} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
-							logIS(edge.b)
-						}
-					} else if (edgeT != edge.aT) {
-						// edge crosses line, neither starts nor ends on it
-						logIS(edge.curve.at(edgeT))
-					}
-				}
-			}
-		})
-		return inside
-
+		const line = new L3(p, this.dir)
+		const seamBase = this.baseEllipse.at(PI)
+		const lineOut = this.dir.cross(p.minus(seamBase))
+		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
 	/**
@@ -241,7 +192,7 @@ class CylinderSurface extends Surface {
 				let l3dir = 0 < this.baseEllipse.tangentAt(t).dot(plane.normal)
 					? this.dir
 					: this.dir.negated()
-				return L3(this.baseEllipse.at(t), l3dir)
+				return new L3(this.baseEllipse.at(t), l3dir)
 			})
 		} else {
 			let projEllipse = this.baseEllipse.transform(M4.projection(plane, this.dir))
@@ -278,9 +229,9 @@ class CylinderSurface extends Surface {
 	 * @param dir not necessarily normalized
 	 * @returns {Array.<number>}
 	 */
-	static unitISLineTs(anchor:V3, dir:V3) {
+	static unitISLineTs(anchor:V3, loop:V3):number[] {
 		var {x: ax, y: ay, z: az} = anchor
-		var {x: dx, y: dy, z: dz} = dir
+		var {x: dx, y: dy, z: dz} = loop
 
 		// this cylinder: x² + y² = 1
 		// line: p = anchor + t * dir

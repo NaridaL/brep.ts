@@ -53,7 +53,7 @@ MODES.SKETCH = {
 		let div = $('sketchEditor')
 		div.setStyle('display', 'none')
 	},
-	mouseup: function (/** MouseEvent */ e, mouseLine) {
+	mouseup: function (e, mouseLine) {
 		console.log('MOUSEUP', 'buttons', e.buttons, 'button', e.button, 'which', e.which)
 		if (this.draggingElements) {
 			console.log('draggingElements')

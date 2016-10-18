@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "outDir": "out/",
+    "sourceMap": true,
+    "allowJs": true
+//    "noImplicitAny": true,
+//    "noImplicitReturns": true
+
+  },
+  "include": [
+    "src/*.ts",
+    "test/*.ts",
+    "C:\\Users\\aval\\.WebStorm2016.2\\config\\javascript\\extLibs\\http_github.com_DefinitelyTyped_DefinitelyTyped_raw_master_qunit_qunit.d.ts",
+    "FileSaver"
+  ]
+}

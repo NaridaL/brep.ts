@@ -17,11 +17,7 @@ class BezierCurve extends Curve {
 		this.tMax = isFinite(tMax) ? tMax : 1.1
 	}
 
-	/**
-	 *
-	 * @returns {V3[]}
-	 */
-	get points() {
+	get points(): V3[] {
 		return [this.p0, this.p1, this.p2, this.p3]
 	}
 
@@ -29,9 +25,6 @@ class BezierCurve extends Curve {
 		return `new BezierCurve(${this.p0}, ${this.p1}, ${this.p2}, ${this.p3}, ${this.tMin}, ${this.tMax})`
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	at(t) {
 		assertNumbers(t)
 		var p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
@@ -48,23 +41,25 @@ class BezierCurve extends Curve {
 	 *            := (3 (p3 - p2) - 6 (p2 - p1) + 3 (p1 - p0)) t²*
 	 *                + (-6 (p1 - p0) + (p2 - p1)) t
 	 *                + 3 (p1 - p0)
-	 *
-	 *
-	 * @param t
-	 * @returns {V3}
 	 */
 	tangentAt(t) {
 		assertNumbers(t)
-		var p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
-		var s = 1 - t, c01 = 3 * s * s, c12 = 6 * s * t, c23 = 3 * t * t
-		return new V3((p1.x - p0.x) * c01 + (p2.x - p1.x) * c12 + (p3.x - p2.x) * c23, (p1.y - p0.y) * c01 + (p2.y - p1.y) * c12 + (p3.y - p2.y) * c23, (p1.z - p0.z) * c01 + (p2.z - p1.z) * c12 + (p3.z - p2.z) * c23)
+		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
+		const s = 1 - t, c01 = 3 * s * s, c12 = 6 * s * t, c23 = 3 * t * t
+		return new V3(
+			(p1.x - p0.x) * c01 + (p2.x - p1.x) * c12 + (p3.x - p2.x) * c23,
+			(p1.y - p0.y) * c01 + (p2.y - p1.y) * c12 + (p3.y - p2.y) * c23,
+			(p1.z - p0.z) * c01 + (p2.z - p1.z) * c12 + (p3.z - p2.z) * c23)
 	}
 
 	ddt(t) {
 		assertNumbers(t)
-		var p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
-		var c012 = 6 * (1 - t), c123 = 6 * t
-		return new V3((p2.x - 2 * p1.x + p0.x) * c012 + (p3.x - 2 * p2.x + p1.x) * c123, (p2.y - 2 * p1.y + p0.y) * c012 + (p3.y - 2 * p2.y + p1.y) * c123, (p2.z - 2 * p1.z + p0.z) * c012 + (p3.z - 2 * p2.z + p1.z) * c123)
+		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
+		const c012 = 6 * (1 - t), c123 = 6 * t
+		return new V3(
+			(p2.x - 2 * p1.x + p0.x) * c012 + (p3.x - 2 * p2.x + p1.x) * c123,
+			(p2.y - 2 * p1.y + p0.y) * c012 + (p3.y - 2 * p2.y + p1.y) * c123,
+			(p2.z - 2 * p1.z + p0.z) * c012 + (p3.z - 2 * p2.z + p1.z) * c123)
 	}
 
 	normalAt(t) {
@@ -73,9 +68,6 @@ class BezierCurve extends Curve {
 		return rot.cross(tangent)
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	isTsWithPlane(plane) {
 		assertInst(P3, plane)
 		/*
@@ -158,10 +150,7 @@ class BezierCurve extends Curve {
 		return curve.likeCurve(thisSplit)
 	}
 
-	/**
-	 * @returns {BezierCurve}
-	 */
-	reversed() {
+	reversed():BezierCurve {
 		return new BezierCurve(this.p3, this.p2, this.p1, this.p0, -this.tMax, -this.tMin)
 	}
 
@@ -262,17 +251,13 @@ class BezierCurve extends Curve {
 		assert(false, 'multiple intersection ' + results + this.toString() + p.sce)
 	}
 
-	/**
-	 * @inheritDoc
-	 * @returns BezierCurve
-	 */
-	transform(m4) {
+	transform(m4): this {
 		return new BezierCurve(
 			m4.transformPoint(this.p0),
 			m4.transformPoint(this.p1),
 			m4.transformPoint(this.p2),
 			m4.transformPoint(this.p3),
-			this.tMin, this.tMax)
+			this.tMin, this.tMax) as this
 	}
 
 	isClosed() {

@@ -10,8 +10,10 @@ abstract class Edge extends Transformable {
     bDir: V3
     reversed: boolean
     id: number
+	aDDT: V3
+	bDDT: V3
 
-    abstract tangentAt(t:number):V3
+	abstract tangentAt(t:number):V3
 
     constructor(curve, a, b, aT, bT, flippedOf, name) {
         super()
@@ -30,13 +32,9 @@ abstract class Edge extends Transformable {
         return `new ${this.constructor.name}(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, null, ${this.aDir}, ${this.bDir})`
     }
 
-    edgeISTsWithSurface(surface: Surface): number[] {
-        throw new Error(this.constructor.name)
-    }
+    abstract edgeISTsWithSurface(surface: Surface): number[]
 
-    edgeISTsWithPlane(plane: P3): number[] {
-        throw new Error(this.constructor.name)
-    }
+    abstract edgeISTsWithPlane(plane: P3): number[]
 
     colinearToLine(line): boolean {
         return this.curve instanceof L3 && this.curve.isColinearTo(line)
@@ -46,6 +44,12 @@ abstract class Edge extends Transformable {
         return this.aT < this.bT
             ? NLA.lt(this.aT, t) && NLA.lt(t, this.bT)
             : NLA.lt(this.bT, t) && NLA.lt(t, this.aT)
+    }
+
+    isValidT(t:number):boolean {
+	    return this.aT < this.bT
+		    ? NLA.le(this.aT, t) && NLA.le(t, this.bT)
+		    : NLA.le(this.bT, t) && NLA.le(t, this.aT)
     }
 
     clampedT(t) {
@@ -98,14 +102,20 @@ abstract class Edge extends Transformable {
     abstract flipped(): Edge
 
     abstract equals(edge2: any)
+
+    abstract getVerticesNo0():V3[]
+
+	static assertLoop(edges: Edge[]): void {
+		edges.forEach((edge, i) => {
+			var j = (i + 1) % edges.length
+			assert(edge.b.like(edges[j].a), `edges[${i}].b != edges[${j}].a (${edges[i].b.sce} != ${edges[j].a.sce})`)
+		})
+	}
 }
 
 class PCurveEdge extends Edge {
-    aDir: V3
-    bDir: V3
-    reversed: boolean
 
-    constructor(curve, a, b, aT, bT, flippedOf, aDir, bDir, name) {
+    constructor(curve, a, b, aT, bT, flippedOf, aDir, bDir, name?) {
         assertNumbers(aT, bT)
         assertVectors(a, b, aDir, bDir)
         assertf(() => curve instanceof L3 || curve instanceof Curve, curve)
@@ -141,45 +151,45 @@ class PCurveEdge extends Edge {
     }
 
     edgeISTsWithSurface(surface) {
-        return this.curve.isTsWithSurface(surface).filter(edgeT => {
-            var aT = this.aT, bT = this.bT
-            edgeT = NLA.snapTo(edgeT, aT)
-            edgeT = NLA.snapTo(edgeT, bT)
-            if (!this.reversed) {
-                if (aT < bT) {
-                    return aT <= edgeT && edgeT <= bT
+        const aT = this.aT, bT = this.bT
+        return this.curve.isTsWithSurface(surface)
+            .map(edgeT => NLA.snapTo(NLA.snapTo(edgeT, aT), bT))
+            .filter(edgeT => {
+                if (!this.reversed) {
+                    if (aT < bT) {
+                        return aT <= edgeT && edgeT <= bT
+                    } else {
+                        return !(bT < edgeT && edgeT < aT)
+                    }
                 } else {
-                    return !(bT < edgeT && edgeT < aT)
+                    if (aT > bT) {
+                        return aT >= edgeT && edgeT >= bT
+                    } else {
+                        return !(bT > edgeT && edgeT > aT)
+                    }
                 }
-            } else {
-                if (aT > bT) {
-                    return aT >= edgeT && edgeT >= bT
-                } else {
-                    return !(bT > edgeT && edgeT > aT)
-                }
-            }
-        })
+            })
     }
 
     edgeISTsWithPlane(surface) {
-        return this.curve.isTsWithPlane(surface).filter(edgeT => {
-            var aT = this.aT, bT = this.bT
-            edgeT = NLA.snapTo(edgeT, aT)
-            edgeT = NLA.snapTo(edgeT, bT)
-            if (!this.reversed) {
-                if (aT < bT) {
-                    return aT <= edgeT && edgeT <= bT
+        const aT = this.aT, bT = this.bT
+        return this.curve.isTsWithPlane(surface)
+            .map(edgeT => NLA.snapTo(NLA.snapTo(edgeT, aT), bT))
+            .filter(edgeT => {
+                if (!this.reversed) {
+                    if (aT < bT) {
+                        return aT <= edgeT && edgeT <= bT
+                    } else {
+                        return !(bT < edgeT && edgeT < aT)
+                    }
                 } else {
-                    return !(bT < edgeT && edgeT < aT)
+                    if (aT > bT) {
+                        return aT >= edgeT && edgeT >= bT
+                    } else {
+                        return !(bT > edgeT && edgeT > aT)
+                    }
                 }
-            } else {
-                if (aT > bT) {
-                    return aT >= edgeT && edgeT >= bT
-                } else {
-                    return !(bT > edgeT && edgeT > aT)
-                }
-            }
-        })
+            })
     }
 
     tangentAt(t) {
@@ -220,13 +230,16 @@ class PCurveEdge extends Edge {
             aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(),
             aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated(), name)
     }
+
+    get aDDT() { let ddt = this.curve.ddt(this.aT); return this.reversed ? ddt.negated() : ddt }
+    get bDDT() { let ddt = this.curve.ddt(this.bT); return this.reversed ? ddt.negated() : ddt }
 }
 
 
 class StraightEdge extends Edge {
     tangent: V3
     curve: L3
-    flippedOf: StraightEdge
+    // flippedOf: StraightEdge
 
     constructor(line, a, b, aT, bT, flippedOf, name) {
         assertInst(L3, line)
@@ -252,37 +265,32 @@ class StraightEdge extends Edge {
         return [this.a, this.b]
     }
 
-    edgeISTsWithPlane(plane) {
-        var minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
-        var edgeT = this.curve.intersectWithPlaneLambda(plane)
+    edgeISTsWithPlane(plane):number[] {
+        const minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
+	    let edgeT = this.curve.intersectWithPlaneLambda(plane)
         edgeT = NLA.snapTo(edgeT, this.aT)
         edgeT = NLA.snapTo(edgeT, this.bT)
         return (minT <= edgeT && edgeT <= maxT) ? [edgeT] : []
     }
 
-    edgeISTsWithSurface(surface) {
+    edgeISTsWithSurface(surface):number[] {
         if (surface instanceof PlaneSurface) {
             return this.edgeISTsWithPlane(surface.plane)
         } else {
-            var minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
-            return surface.isTsForLine(/** @type {L3} */ this.curve)
-                .mapFilter(edgeT => {
-                    edgeT = NLA.snapTo(edgeT, this.aT)
-                    edgeT = NLA.snapTo(edgeT, this.bT)
-                    if (minT <= edgeT && edgeT <= maxT) {
-                        return edgeT
-                    }
-                })
+	        const minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
+            return surface.isTsForLine(this.curve)
+                .map(edgeT => NLA.snapTo(NLA.snapTo(edgeT, minT), maxT))
+                .filter(edgeT => minT <= edgeT && edgeT <= maxT)
         }
     }
 
-    tangentAt(p) {
-        return this.tangent
-    }
+	tangentAt(p) {
+		return this.tangent
+	}
 
-    flipped():StraightEdge {
-        return this.flippedOf || (this.flippedOf = new StraightEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.name))
-    }
+	flipped(): StraightEdge {
+		return this.flippedOf || (this.flippedOf = new StraightEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.name))
+	}
 
     get aDir() {
         return this.tangent
@@ -314,21 +322,24 @@ class StraightEdge extends Edge {
         return edge.constructor == StraightEdge && this.a.equals(edge.a) && this.b.equals(edge.b)
     }
 
-    getEdgeT(p):number|undefined {
-        assertVectors(p)
-        var edgeT = p.minus(this.curve.anchor).dot(this.curve.dir1)
-        if (!NLA.eq0(this.curve.at(edgeT).distanceTo(p))) {
-            return
-        }
-        var minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
-        edgeT = NLA.snapTo(edgeT, this.aT)
-        edgeT = NLA.snapTo(edgeT, this.bT)
-        return (minT <= edgeT && edgeT <= maxT) ? edgeT : undefined
-    }
+	getEdgeT(p: V3): number|undefined {
+		assertVectors(p)
+		var edgeT = p.minus(this.curve.anchor).dot(this.curve.dir1)
+		if (!NLA.eq0(this.curve.at(edgeT).distanceTo(p))) {
+			return
+		}
+		var minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
+		edgeT = NLA.snapTo(edgeT, this.aT)
+		edgeT = NLA.snapTo(edgeT, this.bT)
+		return (minT <= edgeT && edgeT <= maxT) ? edgeT : undefined
+	}
 
 
     static throughPoints(a: V3, b: V3, name?: string) {
         return new StraightEdge(L3.throughPoints(a, b), a, b, 0, b.minus(a).length(), null, name)
     }
 }
+StraightEdge.prototype.aDDT = V3.ZERO
+StraightEdge.prototype.bDDT = V3.ZERO
+
 NLA.registerClass(StraightEdge)

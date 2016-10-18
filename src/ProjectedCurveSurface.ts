@@ -236,73 +236,19 @@ class ProjectedCurveSurface extends Surface {
 		return 0 < thisNormal.dot(otherNormal)
 	}
 
-	edgeLoopContainsPoint(contour, p) {
-		// TODO: this is copied from CylinderSurface, mb create common super class?
+	edgeLoopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
 		assert(isFinite(p.x), p.y, p.z)
-		var testLine = new L3(p, this.dir1)
-		let ptpf = this.pointToParameterFunction()
-		let pp = ptpf(p)
+		const line = new L3(p, this.dir1)
+		const ptpf = this.pointToParameterFunction()
+		const pp = ptpf(p)
 		if (isNaN(pp.x)) {
 			console.log(this.sce, p.sce)
 			assert(false)
 		}
-		var intersectionLinePerpendicular = this.baseCurve.tangentAt(pp.x).rejectedFrom(this.dir1)
-		var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
-		var colinearSegments = contour.map((edge) => edge.colinearToLine(testLine))
-		var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir1) > 0)
-		var inside = false
+		const lineOut = this.baseCurve.tangentAt(pp.x).rejectedFrom(this.dir1)
 
-		function logIS(p) {
-			if (testLine.pointLambda(p) > 0 && testLine.containsPoint(p)) {
-				inside = !inside
-			}
-		}
-
-		contour.forEach((edge, i, edges) => {
-			var j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-			if (colinearSegments[i]) {
-				// edge colinear to intersection
-				var outVector = edge.bDir.cross(this.normalAt(edge.b))
-				var insideNext = outVector.dot(nextEdge.aDir) > 0
-				if (colinearSegmentsInside[i] != insideNext) {
-					logIS(edge.b)
-				}
-			} else {
-				var edgeTs = edge.edgeISTsWithPlane(plane2)
-				for (var k = 0; k < edgeTs.length; k++) {
-					var edgeT = edgeTs[k]
-					let isp = edge.curve.at(edgeT)
-					if (!NLA.eq(pp.x, ptpf(isp).x)) {
-						// point is on plane, but not on line
-						continue
-					}
-					if (edgeT == edge.bT) {
-						// endpoint lies on intersection line
-						if (colinearSegments[j]) {
-							// next segment is colinear
-							// we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
-							// inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
-							// point in the same direction (dot > 0)
-							var colinearSegmentOutsideVector = nextEdge.aDir.cross(this.normalAt(nextEdge.a))
-							var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
-							// if the "inside-ness" changes, add intersection point
-							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
-							if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
-								logIS(edge.b)
-							}
-						} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
-							logIS(edge.b)
-						}
-					} else if (edgeT != edge.aT) {
-						// edge crosses line, neither starts nor ends on it
-						logIS(edge.curve.at(edgeT))
-					}
-				}
-			}
-		})
-		return inside
+		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
 

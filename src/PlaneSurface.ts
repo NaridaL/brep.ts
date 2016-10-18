@@ -41,12 +41,7 @@ class PlaneSurface extends Surface {
         return null
     }
 
-    /**
-     *
-     * @param contour
-     * @returns {boolean}
-     */
-    edgeLoopCCW(contour: Edge[]) {
+    edgeLoopCCW(contour: Edge[]):boolean {
         var totalAngle = 0
         for (var i = 0; i < contour.length; i++) {
             var ipp = (i + 1) % contour.length
@@ -61,63 +56,64 @@ class PlaneSurface extends Surface {
         return totalAngle > 0
     }
 
-    edgeLoopContainsPoint(contour: Edge[], p: V3) {
-        assert(contour)
+    edgeLoopContainsPoint(loop: Edge[], p: V3): PointVsFace {
+        assert(loop)
         assertVectors(p)
-        var dir = this.right.plus(this.up.times(0.123)).normalized()
-        var line = new L3(p, dir)
-        var plane = this.plane
-        var intersectionLinePerpendicular = dir.cross(plane.normal)
-        var plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
-        var colinearSegments = contour.map((edge) => edge.colinearToLine(line))
-        var colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(dir) > 0)
-        var inside = false
+        const dir = this.right.plus(this.up.times(0.123)).normalized()
+        const line = new L3(p, dir)
+	    const lineOut = dir.cross(this.plane.normal)
+        const plane2 = P3.normalOnAnchor(lineOut, p)
+        const colinearEdges = loop.map((edge) => edge.colinearToLine(line))
+        const colinearEdgeInside = loop.map((edge, i) => colinearEdges[i] && edge.aDir.dot(dir) > 0)
+        let inside = false
 
         function logIS(p) {
-            if (line.pointLambda(p) > 0) {
-                inside = !inside
+        	let t = line.pointLambda(p)
+            if (NLA.eq0(t)) {
+        		return PointVsFace.ON_EDGE
+            } else if (t > 0) {
+	            inside = !inside
             }
         }
 
-        contour.forEach((/** Edge= */ edge, i, edges) => {
-            var j = (i + 1) % edges.length, nextEdge = edges[j]
+
+	    for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
+		    const edge = loop[edgeIndex]
+		    const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
             //console.log(edge.toSource()) {p:V(2, -2.102, 0),
-            if (colinearSegments[i]) {
+            if (colinearEdges[edgeIndex]) {
+            	const lineAT = line.pointLambda(edge.a), lineBT = line.pointLambda(edge.b)
+	            if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
+	            	return PointVsFace.ON_EDGE
+	            }
                 // edge colinear to intersection
-                var outVector = edge.bDir.cross(plane.normal)
-                var insideNext = outVector.dot(nextEdge.aDir) > 0
-                if (colinearSegmentsInside[i] != insideNext) {
+                const nextInside = colinearEdges[nextEdgeIndex]
+	                    ? colinearEdgeInside[nextEdgeIndex]
+                        : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
+                if (colinearEdgeInside[edgeIndex] != nextInside) {
                     logIS(edge.b)
                 }
             } else {
-                var edgeTs = edge.edgeISTsWithPlane(plane2)
-                for (var k = 0; k < edgeTs.length; k++) {
-                    var edgeT = edgeTs[k]
+                const edgeTs = edge.edgeISTsWithPlane(plane2)
+                for (let k = 0; k < edgeTs.length; k++) {
+                    const edgeT = edgeTs[k]
                     if (edgeT == edge.bT) {
                         // endpoint lies on intersection line
-                        if (colinearSegments[j]) {
-                            // next segment is colinear
-                            // we need to calculate if the section of the plane intersection line BEFORE the colinear segment is
-                            // inside or outside the face. It is inside when the colinear segment out vector and the current segment vector
-                            // point in the same direction (dot > 0)
-                            var colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
-                            var insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
-                            // if the "inside-ness" changes, add intersection point
-                            //console.log("segment end on line followed by colinear", insideFaceBeforeColinear != colinearSegmentInsideFace, nextSegmentOutsideVector)
-                            if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
-                                logIS(edge.b)
-                            }
-                        } else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
-                            logIS(edge.b)
-                        }
+	                    const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT)
+	                    const nextInside = colinearEdges[nextEdgeIndex]
+		                    ? colinearEdgeInside[nextEdgeIndex]
+		                    : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
+	                    if (edgeInside != nextInside) {
+	                        logIS(edge.b)
+	                    }
                     } else if (edgeT != edge.aT) {
                         // edge crosses line, neither starts nor ends on it
-                        logIS(edge.curve.at(edgeT))
+                        logIS(edge.curve.at(edgeT)) // TODO: tangents?
                     }
                 }
             }
         })
-        return inside
+        return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
 
     }
 
@@ -149,8 +145,8 @@ class PlaneSurface extends Surface {
         }
     }
 
-    transform(m4) {
-        return new PlaneSurface(this.plane.transform(m4))
+    transform(m4): this {
+        return new PlaneSurface(this.plane.transform(m4)) as this
     }
 
     flipped() {
@@ -165,7 +161,7 @@ class PlaneSurface extends Surface {
         return `new PlaneSurface(${this.plane})`
     }
 
-    static throughPoints(a, b, c) {
+    static throughPoints(a, b, c): PlaneSurface {
         return new PlaneSurface(P3.throughPoints(a, b, c))
     }
 }

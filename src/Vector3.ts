@@ -144,9 +144,7 @@ class V3 {
 	/**
 	 * Documentation stub. You want {@link normalized}
 	 */
-	unit(): V3 {
-		assertNever()
-	}
+	unit(): V3 { throw new Error() }
 
 	minElement(): number {
 		return Math.min(this.x, this.y, this.z)
@@ -214,7 +212,7 @@ class V3 {
 
 	toString(roundFunction?) {
 		roundFunction = roundFunction || NLA.defaultRoundFunction;
-		return "V3(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"; //+ this.id
+		return "V(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"; //+ this.id
 	}
 
 	angleTo(b: V3): number {
@@ -549,9 +547,12 @@ class V3 {
 		return a.angleTo(b)
 	}
 
-	static zip(f: (...args: number[]) => number, ...args) {
+	static zip(f: (...args: number[]) => number, ...args):V3 {
 		assert(f instanceof Function)
-		return new V3(f.apply(undefined, args.map(x => x.x)), f.apply(undefined, args.map(x => x.y)), f.apply(undefined, args.map(x => x.z)))
+		return new V3(
+			f.apply(undefined, args.map(x => x.x)),
+			f.apply(undefined, args.map(x => x.y)),
+			f.apply(undefined, args.map(x => x.z)))
 	}
 
 	static normalOnPoints(v0: V3, v1: V3, v2: V3): V3 {
@@ -619,10 +620,16 @@ class V3 {
 		return true
 	}
 
+    static sphere(longitude: number, latitude: number): V3 {
+        return new V3(
+            Math.cos(latitude) * Math.cos(longitude),
+            Math.cos(latitude) * Math.sin(longitude),
+            Math.sin(latitude))
+    }
 }
 
 /**
- * Represents a 3D vector.
+ * Utility method for creating V3s
  *
  * Example usage:
  *
