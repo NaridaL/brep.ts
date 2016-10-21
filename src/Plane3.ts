@@ -1,9 +1,3 @@
-"use strict"
-
-/**
- * Created by aval on 20/11/2015.
- */
-
 class P3 extends Transformable {
 	w: number
 	normal: V3
@@ -24,7 +18,7 @@ class P3 extends Transformable {
 		assertVectors(normal1)
 		assertNumbers(w)
 		assert(normal1.hasLength(1), "normal1.hasLength(1)" + normal1)
-		var p = Object.create(prototype || P3.prototype)
+		const p = Object.create(prototype || P3.prototype);
 		p.w = w
 		p.normal = normal1
 		return p
@@ -89,12 +83,12 @@ class P3 extends Transformable {
 	}
 
 	transform(m4): this {
-		var mirror = m4.isMirroring()
+		let mirror = m4.isMirroring()
 		// get two vectors in the plane:
-		var u = this.normal.getPerpendicular()
-		var v = u.cross(this.normal)
+		const u = this.normal.getPerpendicular()
+		const v = u.cross(this.normal)
 		// get 3 points in the plane:
-		var p1 = m4.transformPoint(this.anchor),
+		const p1 = m4.transformPoint(this.anchor),
 			p2 = m4.transformPoint(this.anchor.plus(v)),
 			p3 = m4.transformPoint(this.anchor.plus(u))
 		// and create a new plane from the transformed points:
@@ -153,8 +147,8 @@ class P3 extends Transformable {
 		 .plus(n2.cross(n0).times(x1.dot(n1)))
 		 .div(m.determinant())
 		 */
-		var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized()
-		var p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0))
+		const n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized();
+		const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0));
 		return new L3(p, n2)
 	}
 
@@ -179,13 +173,13 @@ class P3 extends Transformable {
 
 	static throughPoints(a: V3, b: V3, c: V3, prototype?): P3 {
 		assertVectors(a, b, c)
-		var n1 = b.minus(a).cross(c.minus(a)).normalized();
+		const n1 = b.minus(a).cross(c.minus(a)).normalized();
 		return new P3(n1, n1.dot(a), prototype)
 	}
 
 	static normalOnAnchor(normal: V3, anchor: V3, prototype?): P3 {
 		assertVectors(normal, anchor)
-		var n1 = normal.normalized()
+		const n1 = normal.normalized();
 		return new P3(n1, n1.dot(anchor), prototype)
 	}
 

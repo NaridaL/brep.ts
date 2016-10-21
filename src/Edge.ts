@@ -338,6 +338,18 @@ class StraightEdge extends Edge {
     static throughPoints(a: V3, b: V3, name?: string) {
         return new StraightEdge(L3.throughPoints(a, b), a, b, 0, b.minus(a).length(), null, name)
     }
+
+	/**
+	 * Create a list of StraightEdges from a list of vertices.
+	 * @param vertices
+	 * @param closed Whether to connect the first and last vertices. Defaults to true.
+	 * @returns
+	 */
+	static chain(vertices: V3[], closed: boolean = true): StraightEdge[] {
+		const vc = vertices.length;
+		return NLA.arrayFromFunction(closed ? vc : vc - 1,
+			i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]))
+	}
 }
 StraightEdge.prototype.aDDT = V3.ZERO
 StraightEdge.prototype.bDDT = V3.ZERO

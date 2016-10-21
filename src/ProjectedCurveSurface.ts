@@ -1,6 +1,4 @@
 /**
- * Created by aval on 30/08/2016.
- *
  * Surface normal is (t, z) => this.baseCurve.tangentAt(t) X this.dir1
  * Choose dir1 appropriately to select surface orientation.
  */
@@ -236,7 +234,7 @@ class ProjectedCurveSurface extends Surface {
 		return 0 < thisNormal.dot(otherNormal)
 	}
 
-	edgeLoopContainsPoint(loop: Edge[], p: V3): PointVsFace {
+	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
 		assert(isFinite(p.x), p.y, p.z)
 		const line = new L3(p, this.dir1)

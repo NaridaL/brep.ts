@@ -56,7 +56,7 @@ class PlaneSurface extends Surface {
         return totalAngle > 0
     }
 
-    edgeLoopContainsPoint(loop: Edge[], p: V3): PointVsFace {
+    loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
         assert(loop)
         assertVectors(p)
         const dir = this.right.plus(this.up.times(0.123)).normalized()
@@ -67,10 +67,10 @@ class PlaneSurface extends Surface {
         const colinearEdgeInside = loop.map((edge, i) => colinearEdges[i] && edge.aDir.dot(dir) > 0)
         let inside = false
 
-        function logIS(p) {
-        	let t = line.pointLambda(p)
+        function logIS(p): boolean {
+        	const t = line.pointLambda(p)
             if (NLA.eq0(t)) {
-        		return PointVsFace.ON_EDGE
+        		return true
             } else if (t > 0) {
 	            inside = !inside
             }
@@ -91,12 +91,10 @@ class PlaneSurface extends Surface {
 	                    ? colinearEdgeInside[nextEdgeIndex]
                         : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
                 if (colinearEdgeInside[edgeIndex] != nextInside) {
-                    logIS(edge.b)
+                    if (logIS(edge.b)) return PointVsFace.ON_EDGE
                 }
             } else {
-                const edgeTs = edge.edgeISTsWithPlane(plane2)
-                for (let k = 0; k < edgeTs.length; k++) {
-                    const edgeT = edgeTs[k]
+	            for (const edgeT of edge.edgeISTsWithPlane(plane2)) {
                     if (edgeT == edge.bT) {
                         // endpoint lies on intersection line
 	                    const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT)
@@ -104,15 +102,15 @@ class PlaneSurface extends Surface {
 		                    ? colinearEdgeInside[nextEdgeIndex]
 		                    : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
 	                    if (edgeInside != nextInside) {
-	                        logIS(edge.b)
+		                    if (logIS(edge.b)) return PointVsFace.ON_EDGE
 	                    }
                     } else if (edgeT != edge.aT) {
                         // edge crosses line, neither starts nor ends on it
-                        logIS(edge.curve.at(edgeT)) // TODO: tangents?
+	                    if (logIS(edge.curve.at(edgeT))) return PointVsFace.ON_EDGE// TODO: tangents?
                     }
                 }
             }
-        })
+        }
         return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
 
     }

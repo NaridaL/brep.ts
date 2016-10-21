@@ -1,14 +1,3 @@
-/**
- * Create a list of StraightEdges from a list of vertices.
- * @param vertices
- * @param closed Whether to connect the first and last vertices. Defaults to true.
- * @returns
- */
-function verticesChain(vertices: V3[], closed: boolean = true): StraightEdge[] {
-    var vc = vertices.length
-    return NLA.arrayFromFunction(closed ? vc : vc - 1,
-        i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]))
-}
 
 function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
     if (curve instanceof L3) {
@@ -30,24 +19,24 @@ namespace B2 {
     export function box(w: number, h: number, d: number, name?: string): B2 {
         assertNumbers(w, h, d)
         assertInst('string' === typeof name)
-        var baseVertices = [
-            V(0, 0, 0),
-            V(0, h, 0),
-            V(w, h, 0),
-            V(w, 0, 0)
-        ]
-        return B2.extrudeVertices(baseVertices, P3.XY.flipped(), V(0, 0, d), name)
+        const baseVertices = [
+	        V(0, 0, 0),
+	        V(0, h, 0),
+	        V(w, h, 0),
+	        V(w, 0, 0)
+        ];
+        return B2.extrudeVertices(baseVertices, P3.XY.flipped(), V(0, 0, d), name, `B2.box(${w}, ${h}, ${d}, "${name || ''}")`)
     }
 
     export function puckman(radius: number, rads: number, height: number, name: string): B2 {
         // TODO: argument checking
-        var circleCurve = new EllipseCurve(V3.ZERO, V(radius, 0, 0), V(0, -radius, 0))
-        var a = circleCurve.at(0)
-        var b = circleCurve.at(-rads)
-        var edges = [
-            StraightEdge.throughPoints(a, V3.ZERO),
-            StraightEdge.throughPoints(V3.ZERO, b),
-            new PCurveEdge(circleCurve, b, a, -rads, 0, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))]
+        const circleCurve = new EllipseCurve(V3.ZERO, V(radius, 0, 0), V(0, -radius, 0));
+        const a = circleCurve.at(0);
+        const b = circleCurve.at(-rads);
+        const edges = [
+	        StraightEdge.throughPoints(a, V3.ZERO),
+	        StraightEdge.throughPoints(V3.ZERO, b),
+	        new PCurveEdge(circleCurve, b, a, -rads, 0, null, circleCurve.tangentAt(-rads), circleCurve.tangentAt(0))];
         return B2.extrudeEdges(edges, P3.XY.flipped(), V(0, 0, height), name)
     }
 
@@ -70,19 +59,19 @@ namespace B2 {
         let vertexNames = new Map()
         let basePlaneSurface = new PlaneSurface(baseFacePlane)
         assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), "edges not CCW on baseFacePlane")
-        var translationMatrix = M4.translation(offset)
-        var topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix, 'top'))
-        var edgeCount = baseFaceEdges.length
-        var bottomFace = new PlaneFace(basePlaneSurface, baseFaceEdges, [], name + 'Bottom')
-        var topFaceEdges = topEdges.map(edge => edge.flipped()).reverse()
-        var topFace = new PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges, [], name + 'Top')
+        const translationMatrix = M4.translation(offset);
+        const topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix, 'top'));
+        const edgeCount = baseFaceEdges.length;
+        const bottomFace = new PlaneFace(basePlaneSurface, baseFaceEdges, [], name + 'Bottom');
+        const topFaceEdges = topEdges.map(edge => edge.flipped()).reverse();
+        const topFace = new PlaneFace(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topFaceEdges, [], name + 'Top');
 
 
         baseFaceEdges.forEach(edge => B2.registerVertexName(vertexNames, edge.name + 'A', edge.a))
         topFaceEdges.forEach(edge => B2.registerVertexName(vertexNames, edge.name + 'A', edge.a))
 
-        var ribs = NLA.arrayFromFunction(edgeCount,
-            i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i))
+        const ribs = NLA.arrayFromFunction(edgeCount,
+	        i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i));
 
         let faces = baseFaceEdges.map((edge, i) => {
             let faceName = name + 'Wall' + i
@@ -108,7 +97,7 @@ namespace B2 {
 
     export function cylinder(radius: number, height: number, rads: number, name: string): B2 {
 	    const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
-	    return B2.rotateEdges(verticesChain(vertices), rads || 2 * PI, name)
+	    return B2.rotateEdges(StraightEdge.chain(vertices, true), rads || 2 * PI, name)
     }
 
     export function torus(rSmall: number, rLarge: number, rads: number, name: string): B2 {
@@ -119,106 +108,107 @@ namespace B2 {
     }
 
     export function rotateEdges(edges: Edge[], rads: number, name: string): B2 {
-        var rotationMatrix = M4.rotationZ(rads)
-        var open = !NLA.eq(rads, 2 * PI)
-        var endEdges = open ? edges.map(edge => edge.transform(rotationMatrix)) : edges
-        var edgeCount = edges.length;
-        var ribs = NLA.arrayFromFunction(edgeCount, i => {
-            var a = edges[i].a, radius = a.lengthXY()
-            var b = endEdges[i].a
-            if (!NLA.eq0(radius)) {
-                var curve = new EllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
-                var aT = -PI, bT = -PI + rads
-                return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
-            }
-        })
-        var faces = edges.map((edge, i) => {
-            var ipp = (i + 1) % edgeCount
-            var faceEdges = [
-                edge.flipped(),
-                !NLA.eq0(edge.a.x) && ribs[i],
-                endEdges[i],
-                !NLA.eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
-            var curve = edge.curve;
-            if (edge instanceof StraightEdge) {
-                var line = edge.curve
-                if (line.dir1.isParallelTo(V3.Z)) {
-                    if (NLA.eq0(edge.a.x)) {
-                        return
-                    }
-                    let flipped = edge.a.z > edge.b.z
-                    let surface = new CylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated())
-                    return new RotationFace(surface, faceEdges)
-                } else if (line.dir1.isPerpendicularTo(V3.Z)) {
-                    let flipped = edge.a.x > edge.b.x
-                    let surface = new PlaneSurface(new P3(V3.Z, edge.a.z))
-                    if (!flipped) surface = surface.flipped()
-                    if (!open) {
-                        var hole = flipped
-                            ? !NLA.eq0(edge.b.x) && ribs[ipp].flipped()
-                            : !NLA.eq0(edge.a.x) && ribs[i]
-                        return new PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
-                    }
-                    return new PlaneFace(surface, faceEdges)
-                } else {
-                    // apex is intersection of segment with Z-axis
-                    let a = edge.a, b = edge.b
-                    let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
-                    let apex = new V3(0, 0, apexZ)
-                    let flipped = edge.a.z > edge.b.z
-                    let surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as EllipseCurve, !flipped ? 1 : -1)
-                    return new RotationFace(surface, faceEdges)
-                }
-            }
-            if (edge.curve instanceof EllipseCurve) {
-                let flipped = undefined
-                let ell = edge.curve.rightAngled()
-                let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
-                if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
-                    let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
-                    if (flipped) {
-                        f3length *= -1
-                    }
-                    let surface = new EllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
-                    return new RotationFace(surface, faceEdges)
-                }
-            } else {
-                assert(false, edge)
-            }
-        }).filter(x =>x)
+        const rotationMatrix = M4.rotationZ(rads);
+        let open = !NLA.eq(rads, 2 * PI);
+        const endEdges = open ? edges.map(edge => edge.transform(rotationMatrix)) : edges;
+        const edgeCount = edges.length;
+        const ribs = NLA.arrayFromFunction(edgeCount, i => {
+	        const a = edges[i].a, radius = a.lengthXY();
+	        const b = endEdges[i].a;
+	        if (!NLA.eq0(radius)) {
+		        const curve = new EllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0));
+		        const aT = -PI, bT = -PI + rads;
+		        return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
+	        }
+        });
+        const faces = edges.map((edge, i) => {
+	        const ipp = (i + 1) % edgeCount;
+	        const faceEdges = [
+		        edge.flipped(),
+		        !NLA.eq0(edge.a.x) && ribs[i],
+		        endEdges[i],
+		        !NLA.eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x);
+	        let curve = edge.curve;
+	        if (edge instanceof StraightEdge) {
+		        const line = edge.curve;
+		        if (line.dir1.isParallelTo(V3.Z)) {
+			        if (NLA.eq0(edge.a.x)) {
+				        return
+			        }
+			        let flipped = edge.a.z > edge.b.z
+			        let surface = new CylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated())
+			        return new RotationFace(surface, faceEdges)
+		        } else if (line.dir1.isPerpendicularTo(V3.Z)) {
+			        let flipped = edge.a.x > edge.b.x
+			        let surface = new PlaneSurface(new P3(V3.Z, edge.a.z))
+			        if (!flipped) surface = surface.flipped()
+			        if (!open) {
+				        const hole = flipped
+					        ? !NLA.eq0(edge.b.x) && ribs[ipp].flipped()
+					        : !NLA.eq0(edge.a.x) && ribs[i];
+				        return new PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
+			        }
+			        return new PlaneFace(surface, faceEdges)
+		        } else {
+			        // apex is intersection of segment with Z-axis
+			        let a = edge.a, b = edge.b
+			        let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
+			        let apex = new V3(0, 0, apexZ)
+			        let flipped = edge.a.z > edge.b.z
+			        let surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as EllipseCurve, !flipped ? 1 : -1)
+			        return new RotationFace(surface, faceEdges)
+		        }
+	        }
+	        if (edge.curve instanceof EllipseCurve) {
+		        let flipped = undefined
+		        let ell = edge.curve.rightAngled()
+		        let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
+		        if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
+			        let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
+			        if (flipped) {
+				        f3length *= -1
+			        }
+			        let surface = new EllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
+			        return new RotationFace(surface, faceEdges)
+		        }
+	        } else {
+		        assert(false, edge)
+	        }
+        }).filter(x =>x);
         if (open) {
-            var endFaceEdges = endEdges.map(edge => edge.flipped()).reverse()
-            var endFace = new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)
+            const endFaceEdges = endEdges.map(edge => edge.flipped()).reverse();
+            const endFace = new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges);
             faces.push(new PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace)
         }
         return new B2(faces)
     }
 
     export function rotStep(edges: Edge[], totalRads: number, count: int) {
-        var radStep = totalRads / count
-        var open = !NLA.eq(totalRads, 2 * PI)
-        var ribCount = !open ? count : count + 1
-        var ribs = NLA.arrayFromFunction(ribCount, i => {
-            if (i == 0) return edges
-            var matrix = M4.rotationZ(radStep * i)
-            return edges.map(edge => edge.transform(matrix))
-        })
-        var hs = NLA.arrayFromFunction(count, i => {
-            var ipp = (i + 1) % ribCount
-            return NLA.arrayFromFunction(edges.length, j => {
-                if (!NLA.eq0(edges[j].a.lengthXY())) {
-                    return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a)
-                }
-            })
-        })
-        var faces = [], surface, face
+        const radStep = totalRads / count;
+        let open = !NLA.eq(totalRads, 2 * PI);
+        const ribCount = !open ? count : count + 1;
+        const ribs = NLA.arrayFromFunction(ribCount, i => {
+	        if (i == 0) return edges
+	        const matrix = M4.rotationZ(radStep * i);
+	        return edges.map(edge => edge.transform(matrix))
+        });
+        const hs = NLA.arrayFromFunction(count, i => {
+	        const ipp = (i + 1) % ribCount;
+	        return NLA.arrayFromFunction(edges.length, j => {
+		        if (!NLA.eq0(edges[j].a.lengthXY())) {
+			        return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a)
+		        }
+	        })
+        });
+        const faces = []
+	    let surface, face
         edges.forEach((edge, i) => {
-            var ipp = (i + 1) % edges.length
+            const ipp = (i + 1) % edges.length;
             if (edge instanceof StraightEdge && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
-                var flipped = edge.a.x > edge.b.x;
+                let flipped = edge.a.x > edge.b.x;
                 surface = new PlaneSurface(flipped ? new P3(V3.Z, edge.a.z) : new P3(V3.Z.negated(), -edge.a.z))
                 if (open) {
-                    var newEdges = []
+                    const newEdges = [];
                     if (!NLA.eq0(edge.a.x)) {
                         newEdges.pushAll(NLA.arrayFromFunction(count, j => hs[j][i]))
                     }
@@ -229,10 +219,10 @@ namespace B2 {
                     newEdges.push(edge.flipped())
                     face = new PlaneFace(surface, newEdges)
                 } else {
-                    var contour = flipped
-                        ? NLA.arrayFromFunction(count, j => hs[j][i])
-                        : NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
-                    var hole
+                    const contour = flipped
+	                    ? NLA.arrayFromFunction(count, j => hs[j][i])
+	                    : NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped());
+                    let hole;
                     if (flipped && !NLA.eq0(edge.b.x)) {
                         hole = NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
                     } else if (!flipped && !NLA.eq0(edge.a.x)) {
@@ -247,9 +237,9 @@ namespace B2 {
                     return
                 }
             }
-            for (var r = 0; r < count; r++) {
-                var rpp = (r + 1) % ribCount
-                var faceEdges = [ribs[r][i].flipped(), hs[r][i], ribs[rpp][i], hs[r][ipp] && hs[r][ipp].flipped()].filter(x => x)
+            for (let r = 0; r < count; r++) {
+                const rpp = (r + 1) % ribCount;
+                const faceEdges = [ribs[r][i].flipped(), hs[r][i], ribs[rpp][i], hs[r][ipp] && hs[r][ipp].flipped()].filter(x => x);
                 if (edge instanceof StraightEdge) {
                     var surface = new PlaneSurface(P3.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a))
                     faces.push(new PlaneFace(surface, faceEdges))
@@ -259,8 +249,8 @@ namespace B2 {
             }
         })
         if (open) {
-            var endFaceEdges = ribs[count].map(edge => edge.flipped()).reverse()
-            var endFace = new PlaneFace(new PlaneSurface(P3.XZ.rotateZ(totalRads)), endFaceEdges)
+            const endFaceEdges = ribs[count].map(edge => edge.flipped()).reverse();
+            const endFace = new PlaneFace(new PlaneSurface(P3.XZ.rotateZ(totalRads)), endFaceEdges);
             faces.push(new PlaneFace(new PlaneSurface(P3.XZ.flipped()), edges), endFace)
         }
         return new B2(faces)
@@ -289,8 +279,8 @@ namespace B2 {
                     PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
                     [bottom.edges[i].flipped(), ribs[i], top.edges[m - j - 1].flipped(), ribs[j].flipped()], [], name + "wall" + i))
         }
-        let edges = verticesChain(baseVertices, true)
-        source = source || `B2.extrudeVertices(${baseVertices.sce}, ${baseFacePlane.sce}, ${offset.sce}, "${name}")`
+	    let edges = StraightEdge.chain(baseVertices, true)
+	    source = source || `B2.extrudeVertices(${baseVertices.sce}, ${baseFacePlane.sce}, ${offset.sce}, "${name}")`
         return B2.extrudeEdges(edges, baseFacePlane, offset, name, source)
     }
 

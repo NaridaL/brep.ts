@@ -1,4 +1,3 @@
-"use strict"
 
 class CustomPlane extends P3 {
 	up: V3

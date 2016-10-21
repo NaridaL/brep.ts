@@ -21,7 +21,7 @@ class CylinderSurface extends Surface {
 	}
 
 
-	edgeLoopContainsPoint(loop: Edge[], p: V3): PointVsFace {
+	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
 
 		// create plane that goes through cylinder seam

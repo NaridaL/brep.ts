@@ -27,11 +27,11 @@ abstract class Surface extends Transformable {
 	abstract flipped(): Surface
 
 	normalAt(p: V3): V3 {
-		var pmPoint = this.pointToParameterFunction()(p)
+		const pmPoint = this.pointToParameterFunction()(p)
 		return this.parametricNormal()(pmPoint.x, pmPoint.y)
 	}
 
-	abstract edgeLoopContainsPoint(contour: Edge[], point: V3): PointVsFace
+	abstract loopContainsPoint(contour: Edge[], point: V3): PointVsFace
 
 	/**
 	 * Returns true iff the surface occupies the same space as the argument (not necessarily same normal)
@@ -60,9 +60,9 @@ abstract class Surface extends Transformable {
 		let inside = false
 
 		function logIS(p) {
-			let t = line.pointLambda(p)
+			const t = line.pointLambda(p)
 			if (NLA.eq0(t)) {
-				return PointVsFace.ON_EDGE
+				return true
 			} else if (t > 0) {
 				inside = !inside
 			}
@@ -82,12 +82,10 @@ abstract class Surface extends Transformable {
 					? colinearEdgeInside[nextEdgeIndex]
 					: dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
 				if (colinearEdgeInside[edgeIndex] != nextInside) {
-					logIS(edge.b)
+					if (logIS(edge.b)) return PointVsFace.ON_EDGE
 				}
 			} else {
-				const edgeTs = edge.edgeISTsWithPlane(plane2)
-				for (let k = 0; k < edgeTs.length; k++) {
-					const edgeT = edgeTs[k]
+				for (const edgeT of edge.edgeISTsWithPlane(plane2)) {
 					if (edgeT == edge.bT) {
 						if (!line.containsPoint(edge.b)) continue
 						// endpoint lies on intersection line
@@ -96,13 +94,14 @@ abstract class Surface extends Transformable {
 							? colinearEdgeInside[nextEdgeIndex]
 							: dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
 						if (edgeInside != nextInside) {
-							logIS(edge.b)
+							if (logIS(edge.b)) return PointVsFace.ON_EDGE
 						}
 					} else if (edgeT != edge.aT) {
 						const p = edge.curve.at(edgeT)
 						if (!line.containsPoint(p)) continue
 						// edge crosses line, neither starts nor ends on it
-						logIS(p) // TODO: tangents?
+						if (logIS(p)) return PointVsFace.ON_EDGE
+						 // TODO: tangents?
 					}
 				}
 			}

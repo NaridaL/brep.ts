@@ -1,10 +1,10 @@
 namespace NLA {
-	class CustomSet<T extends {hashCode(): int, equals(x: any): boolean}> {
-		_map: Map<number, T>
+	export class CustomSet<T extends {hashCode(): int, equals(x: any): boolean, hashCodes?():int[], like(x: any): boolean}> {
+		_map: Map<number, T[]>
 		_size: int
 
 
-		constructor(iterable) {
+		constructor(iterable?: Iterable<T>) {
 			this._map = new Map()
 			this._size = 0
 			if (iterable) {
@@ -54,7 +54,7 @@ namespace NLA {
 			return bucket && bucket.some(x => x.equals(val))
 		}
 
-		getLike(val) {
+		getLike(val: T) {
 			for (const hashCode of val.hashCodes()) {
 				const bucket = this._map.get(hashCode)
 				const canonVal = bucket && bucket.find(x => x.like(val))
@@ -62,7 +62,7 @@ namespace NLA {
 			}
 		}
 
-		canonicalizeLike(val) {
+		canonicalizeLike(val: T) {
 			// if this.getLike(val) is defined, return it, otherwise add val and return val
 			return this.getLike(val) || this.canonicalize(val)
 		}
@@ -76,8 +76,8 @@ namespace NLA {
 			if (bucket) {
 				var index = bucket.findIndex(x => x.equals(val))
 				if (-1 != index) {
-					if (1 == bucket.size) {
-						this._map.delete(bucket)
+					if (1 == bucket.length) {
+						this._map.delete(hashCode)
 					} else {
 						bucket.splice(index, 1)
 					}
@@ -95,8 +95,8 @@ namespace NLA {
 					var index = bucket.findIndex(x => x.like(val))
 					if (-1 != index) {
 						var deleted = bucket[index]
-						if (1 == bucket.size) {
-							this._map.delete(bucket)
+						if (1 == bucket.length) {
+							this._map.delete(hashCode)
 						} else {
 							bucket.splice(index, 1)
 						}
@@ -107,18 +107,18 @@ namespace NLA {
 			}
 		}
 
-		*entries():T[] {
-			for (var bucket of this._map) {
+		*entries(): IterableIterator<T> {
+			for (const bucket of this._map) {
 				yield* bucket
 			}
 		}
 
-		clear():void {
+		clear(): void {
 			this._map.clear()
 			this._size = 0
 		}
 
-		size():int {
+		size(): int {
 			return this._size
 		}
 
@@ -202,7 +202,7 @@ namespace NLA {
 			}
 		}
 
-		entries() {
+		*entries() {
 			for (var bucket of this._map) {
 				yield* bucket
 			}

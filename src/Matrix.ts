@@ -1,4 +1,3 @@
-"use strict"
 const Vector = NLA.Vector
 type Vector = NLA.Vector
 class Matrix {

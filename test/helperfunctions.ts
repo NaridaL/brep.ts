@@ -13,6 +13,7 @@ QUnit.assert.B2equals = function(actual, expected, message) {
 		}
 	})
 }
+
 QUnit.assert.fuzzyEquals = function(actual, expected, message) {
 	this.push(NLA.eq(actual, expected), actual, expected, message)
 }
@@ -24,4 +25,16 @@ QUnit.assert.b2Equal = function (a, b, actual, expected) {
 	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>link</a>`)
 	this.B2equals(actual, expected)
+}
+
+
+QUnit.assert.V3ArraysLike = function (actual, expected, message) {
+	this.push(expected.every((v, i) => v.like(actual[i])), actual.toSource(), expected.toSource(), message)
+}
+
+
+function registerTests(o: {[key: string]: (assert:Assert) => void}) {
+	for (const key in o) {
+		QUnit.test(key, o[key])
+	}
 }

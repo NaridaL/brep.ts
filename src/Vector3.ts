@@ -1,7 +1,3 @@
-/**
- * Created by aval on 20/11/2015.
- */
-
 class V3 {
 	readonly x: number
 	readonly y: number
@@ -460,7 +456,7 @@ class V3 {
 			~~(hc + 1 + 961),
 			~~(hc + 1 + 31),
 			~~(hc + 1 + 31 + 961)
-		];
+		]
 	}
 
 	compareTo2(v3, precision) {
@@ -609,9 +605,9 @@ class V3 {
 		return new V3(radius * Math.cos(phi), radius * Math.sin(phi), 0)
 	}
 
-	static areDisjoint(it) {
-		var vSet = new NLA.CustomSet, v
-		while (v = it.next().value) {
+	static areDisjoint(it: Iterable<T>) {
+		const vSet = new NLA.CustomSet
+		for (const v of it) {
 			if (!v.equals(vSet.canonicalizeLike(v))) {
 				// like value already in set
 				return false

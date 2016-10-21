@@ -1,4 +1,3 @@
-"use strict"
 namespace GL {
 	var gl: LightGLContext
 	const WGL = WebGLRenderingContext

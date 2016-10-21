@@ -1,9 +1,4 @@
-"use strict"
-/**
- * Created by aval on 26.08.2016.
- */
-
-var MODES:any = {}
+const MODES:any = {}
 MODES.DEFAULT = {
 	init: function () {},
 	end: function () {
@@ -80,8 +75,8 @@ MODES.SKETCH = {
 			if (intersection) {
 				// parallel to mouseline
 				let mouseSC = editingSketch.worldToSketchMatrix.transformPoint(intersection)
-				for (var [point, relPos] of this.relPoss.entries()) {
-					var newPos = mouseSC.plus(relPos)
+				for (const [point, relPos] of this.relPoss.entries()) {
+					const newPos = mouseSC.plus(relPos)
 					point.moveCoincidence(newPos)
 				}
 				this.draggingElements = true
@@ -214,12 +209,12 @@ MODES.PLANE_DEFINITION = {
 		}
 		updateSelected()
 		this.feature = feature
-		var div = $('planeDefiner')
+		const div = $('planeDefiner')
 		div.setStyle('display', 'block')
 		setupSelectors(div, feature, this)
 	},
 	end: function () {
-		var div = $('planeDefiner')
+		const div = $('planeDefiner')
 		div.setStyle('display', 'none')
 	},
 	mousemove: function (e, mouseLine) {
@@ -308,9 +303,9 @@ MODES.ADD_SEGMENT = {
 		let mouseSC = editingSketch.worldToSketchMatrix.transformPoint(intersection)
 		removeFromCoincidence(this.currentAddingSegment.points[this.arcmode], editingSketch)
 		//console.log(mousePos);
-		var points = getAllPoints(editingSketch);
+		const points = getAllPoints(editingSketch);
 		points.removeAll(this.currentAddingSegment.points);
-		var pointDistances = points
+		const pointDistances = points
 			.map(function (point) { return {point: point, distance: point.distanceToCoords(mouseSC)} })
 			.filter(function (pair) { return pair.distance < 16; })
 			.sort(function (a, b) { return a.distance - b.distance; })
@@ -334,8 +329,8 @@ MODES.ADD_SEGMENT = {
 			 */
 	},
 	mousedown: function (e, mouseLine) {
-		let intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
-		let sketchCoords = editingSketch.worldToSketchMatrix.transformPoint(intersection)
+		const intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
+		const sketchCoords = editingSketch.worldToSketchMatrix.transformPoint(intersection)
 		if (intersection == null) {
 			return;
 		}

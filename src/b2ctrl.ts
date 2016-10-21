@@ -103,6 +103,7 @@ function paintScreen2() {
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
         cMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES');
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
+
         shaders.lighting.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
             camPos: eyePos }).draw(cMesh)
 

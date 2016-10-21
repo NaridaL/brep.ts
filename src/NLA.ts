@@ -1,4 +1,3 @@
-"use strict"
 
 
 // I'd use a loop but it kills the type checker.

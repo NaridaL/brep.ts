@@ -1,4 +1,3 @@
-"use strict";
 // window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 // 	// console.error(errorMsg, url, lineNumber, column, errorObj);
 // 	console.error("%c"+errorMsg, 'color: black')
@@ -2116,7 +2115,7 @@ function serialize(v) {
 				return {'#REF': index}
 			} else {
 				let result = Object.prototype == v.prototype ? {}
-					: assert(v.constructor && v.constructor.name && v.constructor.name != 'Object',
+					: assert(v.constructor && v.constructor.name,
 					() => (console.log(v), v.toSource() +v.constructor.name)) && {'#PROTO': v.constructor.name}
 				let keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {

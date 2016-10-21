@@ -26,7 +26,7 @@ class ConicSurface extends Surface {
 	/**
 	 * @inheritDoc
 	 */
-	edgeLoopContainsPoint(contour, p) {
+	loopContainsPoint(contour, p) {
 		assertVectors(p)
 		var line = L3.throughPoints(this.apex, p)
 		// create plane that goes through cylinder seam

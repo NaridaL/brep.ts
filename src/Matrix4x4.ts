@@ -1,4 +1,3 @@
-"use strict"
 
 class M4 extends Matrix {
 	m: Float64Array
@@ -933,13 +932,14 @@ class M4 extends Matrix {
 	static rotationLine(rotationAnchor: V3, rotationAxis: V3, radians: number, result?: M4): M4 {
 		// see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
 		assertVectors(rotationAnchor, rotationAxis)
+		assertNumbers(radians)
 		!result || assertInst(M4, result)
 		result = result || new M4()
 		rotationAxis = rotationAxis.normalized()
 
-		var ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z,
-			dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z
-		var m = result.m, cos = Math.cos(radians), sin = Math.sin(radians)
+		const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z,
+			  dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z
+		const m = result.m, cos = Math.cos(radians), sin = Math.sin(radians)
 
 		m[0] = dx * dx + (dy * dy + dz * dz) * cos
 		m[1] = dx * dy * (1 - cos) - dz * sin

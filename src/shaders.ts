@@ -1,7 +1,4 @@
-/**
- * Created by aval on 15/01/2016.
- */
-var fragmentShaderLighting = `
+const fragmentShaderLighting = `
 	uniform vec4 color;
 	uniform vec3 camPos;
 	varying vec3 normal;
@@ -18,7 +15,7 @@ var fragmentShaderLighting = `
 		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
 	}
 `
-var vertexShaderLighting = `
+const vertexShaderLighting = `
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
@@ -28,7 +25,7 @@ var vertexShaderLighting = `
 		normal = normalize(LGL_NormalMatrix * LGL_Normal);
 	}
 `
-var vertexShaderWaves = `
+const vertexShaderWaves = `
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
@@ -40,7 +37,7 @@ var vertexShaderWaves = `
         vPosition = LGL_ModelViewMatrix * modPos;
 	}
 `
-var vertexShader = `
+const vertexShader = `
 	varying vec4 pos;
 	void main() {
 		pos = vec4(position,1.0);
@@ -49,7 +46,7 @@ var vertexShader = `
 			vec4(position,1.0);
 	}
 `
-var fragmentShader = `
+const fragmentShader = `
 	uniform vec3 color;
 	varying vec4 pos;
 	void main() {
@@ -78,12 +75,12 @@ var fragmentShader = `
 	 }
 	 */
 `
-var vertexShaderBasic = `
+const vertexShaderBasic = `
 	void main() {
 		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
-var vertexShaderArc = `
+const vertexShaderArc = `
 	uniform float step, offset;
 	uniform float radius, width;
 	void main() {
@@ -94,7 +91,7 @@ var vertexShaderArc = `
 		gl_Position = LGL_ModelViewProjectionMatrix * p;
 }
 `
-var vertexShaderConic3d = `
+const vertexShaderConic3d = `
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
 	uniform int mode;
@@ -123,7 +120,7 @@ var vertexShaderConic3d = `
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
-var vertexShaderBezier = `
+const vertexShaderBezier = `
     // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
 	uniform float width, startT, endT;
 	uniform vec3 p0, p1, p2, p3;
@@ -139,7 +136,7 @@ var vertexShaderBezier = `
 		gl_Position = LGL_ModelViewProjectionMatrix * p;
 	}
 `
-var vertexShaderBezier3d = `
+const vertexShaderBezier3d = `
     // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
 	uniform vec3 ps[4];
@@ -158,7 +155,7 @@ var vertexShaderBezier3d = `
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
-var vertexShaderRing = `
+const vertexShaderRing = `
 	#define M_PI 3.1415926535897932384626433832795
 	uniform float step;
 	uniform float innerRadius, outerRadius;
@@ -170,13 +167,13 @@ var vertexShaderRing = `
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
 	}
 `
-var fragmentShaderColor = `
+const fragmentShaderColor = `
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
 	}
 `
-var fragmentShaderColorHighlight = `
+const fragmentShaderColorHighlight = `
 	uniform vec4 color;
 	void main() {
 		float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
@@ -188,14 +185,14 @@ var fragmentShaderColorHighlight = `
 		}
 	}
 `
-var vertexShaderTexture = `
+const vertexShaderTexture = `
 	varying vec2 texturePos;
 	void main() {
 		texturePos = LGL_Vertex.xy;
 		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
-var fragmentShaderTextureColor = `
+const fragmentShaderTextureColor = `
 	varying vec2 texturePos;
 	uniform vec4 color;
 	uniform sampler2D texture;
@@ -203,7 +200,7 @@ var fragmentShaderTextureColor = `
 		gl_FragColor = texture2D(texture, texturePos) * color;
 	}
 `
-var fragmentShaderTexture = `
+const fragmentShaderTexture = `
 	varying vec2 texturePos;
 	uniform sampler2D texture;
 	void main() {
