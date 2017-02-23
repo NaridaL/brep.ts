@@ -1,14 +1,15 @@
 function parseGetParams() {
-	var result = {}
+	const result = {};
 	window.location.search
 		.substr(1)
 		.split("&")
 		.forEach(function (item) {
-			var tmp = item.split("=");
+			const tmp = item.split("=");
 			result[tmp[0]] = decodeURI(tmp[1])
 		});
 	return result;
 }
+let a, b, c
 function initB2() {
 	dMesh = new GL.Mesh()
 	/*
@@ -25,17 +26,17 @@ function initB2() {
 	eyePos = V(0, 100, 100)
 	eyeFocus = V(0, 100, 0)
 	eyeUp = V(0, 1, 0)
-	zoomFactor = 0.5
+	zoomFactor = 1
 
-	var face = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
+	const face = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)]);
 	// splitting contour in base position:
-	var brep = B2.extrudeVertices([V(5, 0), V(2, 3), V(8, 3)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
+	const brep = B2T.extrudeVertices([V(5, 0), V(2, 3), V(8, 3)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped();
 
 	aMesh = face.inB2().toMesh()
 	bMesh = brep.toMesh()
 
-	var gets = parseGetParams()
-	"abc".split('').forEach(c => gets[c] && (console.log(c+" from GET: ", gets[c]), eval(c+'Mesh = '+gets[c] + '.toMesh()')))
+	const gets = parseGetParams();
+	"abc".split('').forEach(k => gets[k] && (console.log(k+'='+gets[k]+';'+k+'Mesh = '+k+'.toMesh()'), eval(k+'='+gets[k]+';'+k+'Mesh = '+k+'.toMesh()')))
 
 	if (gets['points']) {
 		console.log("drPs from GET")
@@ -45,15 +46,27 @@ function initB2() {
 	if (gets['edges']) {
 		console.log("edges from GET")
 		dMesh = new GL.Mesh({triangles: false})
+		const edges = eval(gets['edges'])
 		edges && dMesh.addVertexBuffer('curve1', 'curve1')
-		var edges = eval(gets['edges'])
 		edges.forEach(edge => {
-			var points = edge.points
-			for (var i = 0; i < points.length - 1; i++) {
+			const points = edge.points()
+			console.log(points)
+			for (let i = 0; i < points.length - 1; i++) {
 				dMesh.curve1.push(points[i], points[i + 1])
 			}
 		})
 		console.log(dMesh.curve1)
+	}
+	if (gets['mesh']) {
+		console.log("mesh from GET")
+		sMesh = eval(gets['mesh'])
+		sMesh.computeWireframeFromFlatTriangles()
+		//sMesh.computeNormalLines()
+		sMesh.compile()
+	}
+	if (gets['vectors']) {
+		console.log("vectors from GET")
+		drVs.pushAll(eval(gets['vectors']))
 	}
 
 	dMesh.compile()
@@ -63,18 +76,15 @@ function initB2() {
 
 
 
-
-var aMesh, bMesh, cMesh, dMesh
-function paintScreen2() {
+const randomColors = NLA.arrayFromFunction(20, i => NLA.randomColor())
+let aMesh, bMesh, cMesh, dMesh, sMesh
+paintScreen = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.loadIdentity();
-    gl.scale(10, 10, 10);
-
-    gl.loadIdentity();
+    gl.loadIdentity()
 
     drawVectors()
 
-    gl.scale(10, 10, 10)
+	gl.scale(100, 100, 100)
 
     if (aMesh) {
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
@@ -92,9 +102,9 @@ function paintScreen2() {
         shaders.lighting.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
             camPos: eyePos }).draw(bMesh);
         bMesh.edgeTangents && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
-            .drawBuffers({gl_Vertex: bMesh.vertexBuffers.edgeTangents}, null, gl.LINES)
+            .drawBuffers({LGL_Vertex: bMesh.vertexBuffers.edgeTangents}, null, gl.LINES)
         bMesh.edgeTangents2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
-            .drawBuffers({gl_Vertex: bMesh.vertexBuffers.edgeTangents2}, null, gl.LINES)
+            .drawBuffers({LGL_Vertex: bMesh.vertexBuffers.edgeTangents2}, null, gl.LINES)
         gl.popMatrix()
     }
     if (cMesh) {
@@ -104,14 +114,25 @@ function paintScreen2() {
         cMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES');
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
 
-        shaders.lighting.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
-            camPos: eyePos }).draw(cMesh)
+	    let faceIndex = c.faces.length;
+	    while (faceIndex--) {
+
+		    const face = c.faces[faceIndex]
+		    const faceTriangleIndexes = cMesh.faceIndexes.get(face)
+		    shaders.lighting.uniforms({
+			    color: rgbToVec4(randomColors[faceIndex])
+		    }).draw(cMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count);
+		    /*
+		     shaders.singleColor.uniforms({
+		     color: rgbToVec4(0x0000ff)
+		     }).draw(brepMesh, 'LINES');
+		     */
+	    }
 
         gl.popMatrix()
     }
-    if (dMesh) {
+    if (dMesh && dMesh.hasBeenCompiled) {
         gl.pushMatrix()
-        gl.translate(20, 0, 0)
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
         dMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES');
@@ -120,26 +141,40 @@ function paintScreen2() {
             camPos: eyePos }).draw(dMesh)
 
         dMesh.curve1 && shaders.singleColor.uniforms({ color: rgbToVec4(0xff00000) })
-            .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve1}, null, gl.LINES)
+            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve1}, null, gl.LINES)
         dMesh.curve2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
-            .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
+            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
 
         dMesh.curve3 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) })
-            .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve3}, null, gl.LINES)
+            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve3}, null, gl.LINES)
         dMesh.curve4 && shaders.singleColor.uniforms({ color: rgbToVec4(0x00ff00) })
-            .drawBuffers({gl_Vertex: dMesh.vertexBuffers.curve4}, null, gl.LINES)
+            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve4}, null, gl.LINES)
+        gl.popMatrix()
+    }
+    if (sMesh && sMesh.hasBeenCompiled) {
+        gl.pushMatrix()
+        //gl.scale(10, 10, 10)
+        gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
+        sMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES');
+        gl.projectionMatrix.m[11] += 1 / (1 << 20)
+        sMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
+            camPos: eyePos }).draw(sMesh)
+
+        sMesh.curve1 && shaders.singleColor.uniforms({ color: rgbToVec4(0xff00000) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve1}, null, gl.LINES)
+        sMesh.curve2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve2}, null, gl.LINES)
+
+        sMesh.curve3 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve3}, null, gl.LINES)
+        sMesh.curve4 && shaders.singleColor.uniforms({ color: rgbToVec4(0x00ff00) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve4}, null, gl.LINES)
         gl.popMatrix()
     }
 
-    drPs.forEach(v => {
-        gl.pushMatrix()
-        gl.translate(v)
-        gl.scale(0.3,0.3,0.3)
-        shaders.lighting.uniforms({color: rgbToVec4(0x000000)}).draw(meshes.sphere1)
-        //shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES')
-        gl.popMatrix()
-    })
-    drawPlanes();
+    //drPs.forEach(v => drawPoint(v, undefined, 0.3))
+	drawPoints()
+    planes.forEach(plane => drawPlane(plane))
 }
 
 
@@ -168,27 +203,12 @@ var planes = [
     //	sketchPlane
 ];
 
-
-var sMesh
-
-window.loadup = function () {
-    /*
-     var start = new Date().getTime();
-     var m = M4.fromFunction(Math.random)
-     for (var i = 0; i < 500000; ++i) {
-     var  d= m.isMirroring()
-     }
-
-     console.log(m.determinant())
-     var end = new Date().getTime();
-     var time = end - start;
-     console.log('Execution time: ' + time);
-     */
-
+window.onload = function () {
+	modeStack.push({})
     window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
         console.log(errorMsg, url, lineNumber, column, errorObj);
     }
-    gl = GL.create({canvas: document.getElementById("testcanvas")});
+    gl = GL.create({canvas: document.getElementById("testcanvas") as HTMLCanvasElement});
     gl.fullscreen();
     gl.canvas.oncontextmenu = () => false;
 
@@ -210,52 +230,10 @@ window.loadup = function () {
 
 	initMeshes()
 	initShaders()
-    gl.onmousemove = function (e) {
-        if (e.dragging) {
-            if (0x4 & e.buttons) {
-                // pan
-                var moveCamera = V3(-e.deltaX * 2 / gl.canvas.width, e.deltaY * 2 / gl.canvas.height, 0);
-                var inverseProjectionMatrix = gl.projectionMatrix.inversed();
-                var worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
-                eyePos = eyePos.plus(worldMoveCamera);
-                eyeFocus = eyeFocus.plus(worldMoveCamera);
-                setupCamera();
-                paintScreen2();
-            }
-            if (0x2 & e.buttons) {
-                var rotateLR = deg2rad(-e.deltaX / 6.0);
-                var rotateUD = deg2rad(-e.deltaY / 6.0);
-
-                // rotate
-                var matrix = M4.rotationLine(eyeFocus, eyeUp, rotateLR)
-                //var horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
-                var horizontalRotationAxis = eyeUp.cross(eyePos.minus(eyeFocus))
-                matrix = matrix.times(M4.rotationLine(eyeFocus, horizontalRotationAxis, rotateUD))
-                eyePos = matrix.transformPoint(eyePos)
-                eyeUp = matrix.transformVector(eyeUp)
-
-                setupCamera();
-                paintScreen2();
-            }
-        }
-    }
-
-    $(gl.canvas).addEvent('mousewheel', function (e) {
-        //console.log(e);
-        zoomFactor *= pow(0.9, -e.wheel);
-        var mouseCoords = e.client;
-        var moveCamera = V(mouseCoords.x * 2 / gl.canvas.width - 1, -mouseCoords.y * 2 / gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel));
-        var inverseProjectionMatrix = gl.projectionMatrix.inversed();
-        var worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
-        //console.log("moveCamera", moveCamera);
-        //console.log("worldMoveCamera", worldMoveCamera);
-        eyePos = eyePos.plus(worldMoveCamera);
-        eyeFocus = eyeFocus.plus(worldMoveCamera);
-        setupCamera();
-        paintScreen2();
-    });
+    initNavigationEvents()
+	initPointInfoEvents()
     initB2()
     setupCamera()
-    paintScreen2()
+    paintScreen()
 
 }

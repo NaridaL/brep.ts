@@ -1,4 +1,4 @@
-abstract class Surface extends Transformable {
+abstract class Surface extends Transformable implements NLA.Equalable {
 	toString(): string {
 		return this.toSource()
 	}
@@ -53,17 +53,17 @@ abstract class Surface extends Transformable {
 
 
 
-	static loopContainsPointGeneral(loop: Edge[], p: V3, line: L3, lineOut: V3):PointVsFace {
-		const plane2 = P3.normalOnAnchor(lineOut, p)
-		const colinearEdges = loop.map((edge) => edge.colinearToLine(line))
-		const colinearEdgeInside = loop.map((edge, i) => colinearEdges[i] && edge.aDir.dot(line.dir1) > 0)
+	static loopContainsPointGeneral(loop: Edge[], p: V3, testLine: L3, lineOut: V3): PointVsFace {
+		const testPlane = P3.normalOnAnchor(lineOut, p)
+		// edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
+		const colinearEdges = loop.map((edge) => edge.colinearToLine(testLine))
 		let inside = false
 
-		function logIS(p) {
-			const t = line.pointLambda(p)
-			if (NLA.eq0(t)) {
+		function logIS(isP) {
+			const isT = testLine.pointLambda(isP)
+			if (NLA.eq0(isT)) {
 				return true
-			} else if (t > 0) {
+			} else if (isT > 0) {
 				inside = !inside
 			}
 		}
@@ -73,32 +73,28 @@ abstract class Surface extends Transformable {
 			const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
 			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearEdges[edgeIndex]) {
-				const lineAT = line.pointLambda(edge.a), lineBT = line.pointLambda(edge.b)
+				const lineAT = testLine.pointLambda(edge.a), lineBT = testLine.pointLambda(edge.b)
 				if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
 					return PointVsFace.ON_EDGE
 				}
 				// edge colinear to intersection
-				const nextInside = colinearEdges[nextEdgeIndex]
-					? colinearEdgeInside[nextEdgeIndex]
-					: dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
-				if (colinearEdgeInside[edgeIndex] != nextInside) {
+				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+				if (nextInside) {
 					if (logIS(edge.b)) return PointVsFace.ON_EDGE
 				}
 			} else {
-				for (const edgeT of edge.edgeISTsWithPlane(plane2)) {
+				for (const edgeT of edge.edgeISTsWithPlane(testPlane)) {
 					if (edgeT == edge.bT) {
-						if (!line.containsPoint(edge.b)) continue
+						if (!testLine.containsPoint(edge.b)) continue
 						// endpoint lies on intersection line
-						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT)
-						const nextInside = colinearEdges[nextEdgeIndex]
-							? colinearEdgeInside[nextEdgeIndex]
-							: dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
+						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) < 0
+						const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
 						if (edgeInside != nextInside) {
 							if (logIS(edge.b)) return PointVsFace.ON_EDGE
 						}
 					} else if (edgeT != edge.aT) {
 						const p = edge.curve.at(edgeT)
-						if (!line.containsPoint(p)) continue
+						if (!testLine.containsPoint(p)) continue
 						// edge crosses line, neither starts nor ends on it
 						if (logIS(p)) return PointVsFace.ON_EDGE
 						 // TODO: tangents?
@@ -108,6 +104,10 @@ abstract class Surface extends Transformable {
 		}
 		return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
 
+	}
+
+	hashCode(): int {
+		return 455678631
 	}
 }
 

@@ -1,6 +1,12 @@
-QUnit.module('BrepTest2')
+QUnit.module('B2Test')
 
 registerTests({
+
+	'BREP.isCCW'(assert) {
+		const vertices = [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)];
+		assert.ok(isCCW(vertices, V(0, 0, 1)))
+		assert.notOk(isCCW(vertices, V(0, 0, -1)))
+	},
 	'Face.equals'(assert) {
 		const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
 		const b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(10, 0, 0), V(10, 10, 0)])
@@ -57,17 +63,17 @@ registerTests({
 		assert.ok(c.containsPoint(V(2, 5, 0)))
 
 
-		a = a.rotateZ(deg2rad(30))
-		const m = M4.rotationZ(deg2rad(30))
-		console.log(a.toString())
+a = a.rotateZ(30 * DEG)
+        const m = M4.rotationZ(30 * DEG)
+        console.log(a.toString())
 		assert.ok(a.containsPoint(m.transformPoint(V(5, 5, 0))))
 		assert.notOk(a.containsPoint(m.transformPoint(V(-5, 5, 0))))
 
-		b = b.rotateZ(deg2rad(30))
-		assert.ok(b.containsPoint(m.transformPoint(V(2, 5, 0))))
+b = b.rotateZ(30 * DEG)
+        assert.ok(b.containsPoint(m.transformPoint(V(2, 5, 0))))
 
-		c = c.rotateZ(deg2rad(30))
-		assert.ok(c.containsPoint(m.transformPoint(V(2, 5, 0))))
+c = c.rotateZ(30 * DEG)
+        assert.ok(c.containsPoint(m.transformPoint(V(2, 5, 0))))
 	},
 
 	'Face.prototype.containsPoint'(assert) {
@@ -87,34 +93,39 @@ registerTests({
 
 	'splitsVolumeEnclosingFaces'(assert) {
 		const brep = B2.tetrahedron(V(0, 0, 0), V(10, 0, 0), V(0, 10, 0), V(0, 0, 10))
+		brep.buildAdjacencies()
 		// pointing into tetrahedon
-		const edge = StraightEdge.throughPoints
-		assert.ok(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 1), V(0, -1, 1)))
-		assert.ok(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 1), V(0, 1, -1)))
-		// pointing out of tetrahedon
-		assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, -1, 0), V(0, 1, 1)))
+		const edge = (a, b) => brep.faces.map(face => face.getAllEdges()).concatenated().find(edge => edge.a.like(a) && edge.b.like(b)).getCanon()
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 1), V(0, -1, 1)), INSIDE)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 1), V(0, 1, -1)), INSIDE)
 
-		assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, -1, -1), V(0, -1, 1)))
-		assert.notOk(INSIDE == splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, -1, -1), V(0, 1, -1)))
+		// pointing out of tetrahedon
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, -1, 0), V(0, 1, 1)), OUTSIDE)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, -1, -1), V(0, -1, 1)), OUTSIDE)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, -1, -1), V(0, 1, -1)), OUTSIDE)
 	},
 
 
 	'splitsVolumeEnclosingFaces 2'(assert) {
 		const brep = B2.tetrahedron(V(0, 0, 0), V(10, 0, 0), V(0, 10, 0), V(0, 0, 10))
+		brep.buildAdjacencies()
 		// pointing out of tetrahedon
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 0), V(0, 0, 1)), COPLANAR_OPPOSITE)
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 0), V(0, 0, -1)), COPLANAR_SAME)
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 0, 0), V(10, 0, 0)), V(0, 0, 1), V(0, 1, 0)), COPLANAR_OPPOSITE)
+		const edge = (a, b) => brep.faces.map(face => face.getAllEdges()).concatenated().find(edge => edge.a.like(a) && edge.b.like(b)).getCanon()
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 0), V(0, 0, 1)), COPLANAR_OPPOSITE)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 1, 0), V(0, 0, -1)), COPLANAR_SAME)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(10, 0, 0)), V(0, 0, 1), V(0, 1, 0)), COPLANAR_OPPOSITE)
 	},
 	'splitsVolumeEnclosingFaces 3'(assert) {
 		const brep = B2.box(5, 5, 5).flipped()
+		brep.buildAdjacencies()
 		console.log(brep.sce)
 
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 5, 0), V(0, 0, 0)), V(0, 0, -1), V(1, 0, 0)), INSIDE)
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 0, 0), V(0, 5, 0)), V(0, 0, -1), V(1, 0, 0)), INSIDE)
+		const edge = (a, b) => brep.faces.map(face => face.getAllEdges()).concatenated().find(edge => edge.a.like(a) && edge.b.like(b)).getCanon()
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 5, 0), V(0, 0, 0)), V(0, 0, -1), V(1, 0, 0)), INSIDE)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(0, 5, 0)), V(0, 0, -1), V(1, 0, 0)), INSIDE)
 
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 0, 0), V(0, 5, 0)), V(0, 0, 1), V(-1, 0, 0)), COPLANAR_OPPOSITE)
-		assert.equal(splitsVolumeEnclosingFaces(brep, StraightEdge.throughPoints(V(0, 0, 0), V(0, 5, 0)), V(0, 0, 1), V(1, 0, 0)), COPLANAR_SAME)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(0, 5, 0)), V(0, 0, 1), V(-1, 0, 0)), COPLANAR_OPPOSITE)
+		assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 0, 0), V(0, 5, 0)), V(0, 0, 1), V(1, 0, 0)), COPLANAR_SAME)
 	},
 	'splitsVolumeEnclosingCone'(assert) {
 		const brep = B2.box(5, 5, 5)
@@ -172,6 +183,31 @@ registerTests({
 		assert.compareV3arraysLike(result, [V(0, 0, 0), V(0, 10, 0)])
 		result = planeFaceEdgeISPsWithPlane(brep.translate(0, 0, 10), brep.translate(0, 0, 10).faces[2], L3.Y.translate(0, 0, 6), P3.XY.translate(0, 0, 6), true, true, new NLA.CustomSet()).map(is => is.p)
 		assert.compareV3arraysLike(result, [V(0, 0, 6), V(0, 10, 6)])
+	},
+
+
+
+	'planeFaceEdgeISPsWithPlane 2'(assert) {
+		const brep = BREP.extrude([
+				V(3.318793683290006e-10, 9.12934465653568e-10, 3.8212177478055603e-10), // 0 0 0
+				V(9.999999999857609, 4.561232401125957e-13, 5.033029171552123e-10), // 10 0 0
+				V(2.984222284459465e-10, 9.999999999852161, -1.0461618780772852e-9)], // 0 10 0
+			P3.XY, V(-1.8192047548394726e-10, -3.0150747681012967e-10, -5.0000000009123795), 'ex0').flipped();
+		const result = planeFaceEdgeISPsWithPlane(brep,
+			new BREP.Face([
+					V(9.999999999675689, -3.010513535700171e-10, -5.000000000409076), // 10 0 -5
+					V(1.4995889284505332e-10, 6.114269888434384e-10, -5.000000000530258), // 0 0 -5
+					V(3.318793683290006e-10, 9.12934465653568e-10, 3.8212177478055603e-10), // 0 0 0
+					V(9.999999999857609, 4.561232401125957e-13, 5.033029171552123e-10)], // 10 0 0
+				new P3(V(9.12478342464039e-11, 1, -6.03014953543423e-11), 9.129344656608087e-10)), // 0 1 0
+			L3(V(-1.3833878355530264e-10, 6.114269894465992e-10, -4.999999990964091), V(-1, 9.12478342480723e-11, 2.7667756772219476e-11)),
+			new P3(V(2.766775686256173e-11, 9.90075577448337e-10, 1), -4.999999990964091),
+			true, true, new NLA.CustomSet()).map(is => is.p);
+		assert.compareV3arraysLike(result, [])
+		console.log(brep.faces[2])
+		const result2 = planeFaceEdgeISPsWithPlane(brep, brep.faces[2], L3.X, P3.XY, true, true, new NLA.CustomSet());
+		assert.compareV3arraysLike(result2, [])
+		console.log(result2)
 	},
 
 	'B2.prototype.minus B2.box(5, 5, 5).minus(B2.box(1, 1, 6))'(assert) {
@@ -295,13 +331,25 @@ registerTests({
 		assert.b2Equal(box, box2, box.intersection(box2, true, true), B2.box(7, 7, 4).translate(3, 3, 0))
 	},
 	'B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains union of faces'(assert) {
-		const boxA = B2.box(10, 10, 5, 'boxA'), boxB = box.translate(3, 3, 0)
-		assert.b2Equal(box, box.translate(3, 3, 0), boxB, B2.box(7, 7, 5).translate(3, 3, 0))
+		const boxA = B2.box(10, 10, 5, 'boxA').flipped(), boxB = boxA.translate(3, 3, 0)
+		const result = B2.extrudeVertices([V3.ZERO, V(0, 10), V(3, 10), V(3, 13), V(13, 13), V(13, 3), V(10, 3), V(10, 0)], P3.XY.flipped(), V(0, 0, 5), 'result').flipped()
+		assert.b2Equal(boxA, boxB, boxA.intersection(boxB, true, true).withMergedFaces(), result)
 	},
 
 
-	'B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains union of faces'(assert) {
+	'B2.box(10, 10, 5) + B2.box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains union of faces 2'(assert) {
 		const box = B2.box(10, 10, 5), box2 = B2.box(4, 10, 2).translate(2, 0, 3)
 		assert.b2Equal(box, box2, box.minus(box2), box)
 	},
+
+	'B2.withMergedFaces'(assert) {
+		const box = B2.box(5, 5, 5)
+		const boxToMerge = new B2(box.faces.filter((face:PlaneFace) => face.surface.plane.normal.x != 1).concat(
+			box.translate(5, 0, 0).faces.filter((face:PlaneFace) => face.surface.plane.normal.x != -1)
+		), false)
+
+		assert.equal(boxToMerge.faces.length, 10)
+		const boxMerged = boxToMerge.withMergedFaces()
+		assert.b2Equal(boxToMerge, B2.EMPTY, boxMerged, B2.box(10, 5, 5))
+	}
 })

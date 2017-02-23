@@ -17,8 +17,8 @@ class ParabolaCurve extends Curve {
 		this.inverseMatrix = this.matrix.inversed()
 	}
 
-	toString(f) {
-		return `new ParabolaCurve(${this.center} ${this.f1} ${this.f2})`
+	toString() {
+		return makeGen('new ParabolaCurve', this.center, this.f1, this.f2)
 	}
 
 	at(t) {
@@ -59,7 +59,7 @@ class ParabolaCurve extends Curve {
 		if (curve.constructor != ParabolaCurve) {
 			return false
 		}
-		var mainAxes = this.rightAngled(), curveMainAxes = curve.rightAngled()
+		const mainAxes = this.rightAngled(), curveMainAxes = curve.rightAngled();
 		return mainAxes.center.like(curveMainAxes.center)
 			&& mainAxes.f2.like(curveMainAxes.f2)
 			&& mainAxes.f1.likeOrReversed(curveMainAxes.f1)
@@ -85,23 +85,26 @@ class ParabolaCurve extends Curve {
 		// f2 DOT (f1 + f2 * 2 * t0) == 0
 		// f1 DOT f2 + f2 DOT f2 * 2 * t0 == 0
 		// t0 == -(f1 DOT f2) / (f2 DOT f2 * 2)
-		var f1 = this.f1, f2 = this.f2, f1DOTf2 = f1.dot(f2)
+		const f1 = this.f1, f2 = this.f2;
+		let f1DOTf2 = f1.dot(f2);
 		if (NLA.eq0(f1DOTf2)) {
 			return this
 		}
-		var t0 = -f1DOTf2 / f2.lengthSquared() / 2
+		const t0 = -f1DOTf2 / f2.squared() / 2;
 		// can't use .tangentAt as that gets normalized
 		return new ParabolaCurve(this.at(t0), f1.plus(f2.times(2 * t0)), f2)
 	}
 
 	arcLength(startT: number, endT: number): number {
-		var f1 = this.f1, f2 = this.f2, f1DOTf2 = f1.dot(f2), t0 = 0
+		let f1 = this.f1;
+		const f2 = this.f2;
+		let f1DOTf2 = f1.dot(f2), t0 = 0;
 		if (!NLA.eq0(f1DOTf2)) {
-			t0 = -f1DOTf2 / f2.lengthSquared() / 2
+			t0 = -f1DOTf2 / f2.squared() / 2
 			f1 = f1.plus(f2.times(2 * t0))
 		}
-		var f1Length = f1.length()
-		var a = f2.length() / f1Length
+		const f1Length = f1.length();
+		const a = f2.length() / f1Length;
 
 		function F(x) {
 			return Math.asinh(a * 2 * x) / 4 / a + x * Math.sqrt(1 + a * a * 4 * x * x) / 2
@@ -125,7 +128,7 @@ class ParabolaCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof ConicSurface) {
-			var ParabolaProjected = surface.baseParabola.transform(M4.projection(this.getPlane(), surface.dir))
+			const ParabolaProjected = surface.baseParabola.transform(M4.projection(this.getPlane(), surface.dir));
 			return this.intersectWithParabola(ParabolaProjected).map(p => this.pointLambda(p))
 		} else {
 			assert(false)
@@ -162,19 +165,20 @@ class ParabolaCurve extends Curve {
 			return []
 		}
 		// funnily enough, changing the order of the operations changes nothing...
-		var
-			n = plane.normal, w = plane.w,
-			g1 = n.dot(this.f1), g2 = n.dot(this.f2), g3 = w - n.dot(this.center)
+		const n = plane.normal, w = plane.w,
+			g1 = n.dot(this.f1), g2 = n.dot(this.f2);
+		let g3 = w - n.dot(this.center);
 		// g2 not zero (!plane.normal.isParallelTo(this.normal))
-		var p = g1 / g2, q = -g3 / g2
-		var discriminant4 = p * p / 4 - q
+		let p = g1 / g2;
+		const q = -g3 / g2;
+		const discriminant4 = p * p / 4 - q;
 		console.log('pq', p, q, discriminant4)
 		if (discriminant4 < -NLA_PRECISION) {
 			return []
 		} else if (discriminant4 <= NLA_PRECISION) {
 			return [-p / 2]
 		} else {
-			var root = Math.sqrt(discriminant4)
+			const root = Math.sqrt(discriminant4);
 			return [-p / 2 - root, -p / 2 + root]
 		}
 	}
@@ -184,7 +188,7 @@ class ParabolaCurve extends Curve {
 	}
 
 	containsPoint(p) {
-		var localP = this.inverseMatrix.transformPoint(p)
+		const localP = this.inverseMatrix.transformPoint(p);
 		return NLA.eq(localP.x * localP.x, localP.y)
 	}
 

@@ -52,7 +52,8 @@ class HyperbolaCurve extends Curve {
     }
 
     equals(curve) {
-        return curve.constructor == HyperbolaCurve
+        return this == curve ||
+	        curve.constructor == HyperbolaCurve
             && this.center.like(curve.center)
             && this.f1.like(curve.f1)
             && this.f2.like(curve.f2)
@@ -69,9 +70,9 @@ class HyperbolaCurve extends Curve {
             return true
         }
         assert(false)
-        var {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
-        return NLA.eq(f1.lengthSquared(), Math.abs(f1.dot(c1)))
-            && NLA.eq(f2.lengthSquared(), Math.abs(f2.dot(c2)))
+        const {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
+        return NLA.eq(f1.squared(), Math.abs(f1.dot(c1)))
+            && NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
     normalAt(t) {
@@ -80,21 +81,21 @@ class HyperbolaCurve extends Curve {
 
     pointLambda(p, hint) {
         assertVectors(p)
-        var p2 = this.inverseMatrix.transformPoint(p)
+        const p2 = this.inverseMatrix.transformPoint(p)
         return Math.asinh(p2.y)
     }
 
-    isOrthogonal(p) {
+    isOrthogonal(p): boolean {
         return this.f1.isPerpendicularTo(this.f2)
     }
 
     rightAngled(): HyperbolaCurve {
-        var f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.lengthSquared() + f1.lengthSquared()
+        const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() + f1.squared()
         if (NLA.eq0(a)) {
             return this
         }
-        var g1 = 2 * a, g2 = b + Math.sqrt(b * b - 4 * a * a)
-        var {x1: xi, y1: eta} = intersectionUnitHyperbolaLine(g1, g2, 0)
+        const g1 = 2 * a, g2 = b + Math.sqrt(b * b - 4 * a * a)
+        const {x1: xi, y1: eta} = intersectionUnitHyperbolaLine(g1, g2, 0)
         return new HyperbolaCurve(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(eta).plus(f2.times(xi)))
     }
 
@@ -103,9 +104,9 @@ class HyperbolaCurve extends Curve {
     }
 
     eccentricity(): number {
-        var mainAxes = this.rightAngled()
-        var f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length()
-        var [a, b] = f1length > f2length ? [f1length, f2length] : [f2length, f1length]
+        const mainAxes = this.rightAngled()
+        const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length()
+        const [a, b] = f1length > f2length ? [f1length, f2length] : [f2length, f1length]
         return Math.sqrt(1 + b * b / a / a)
     }
 
@@ -114,7 +115,7 @@ class HyperbolaCurve extends Curve {
     }
 
     containsPoint(p) {
-        var localP = this.inverseMatrix.transformPoint(p)
+        const localP = this.inverseMatrix.transformPoint(p)
         return localP.x > 0 && NLA.eq0(localP.z) && NLA.eq(1, localP.x * localP.x - localP.y * localP.y)
     }
 

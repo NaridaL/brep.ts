@@ -3,13 +3,13 @@
  * Choose dir1 appropriately to select surface orientation.
  */
 class ProjectedCurveSurface extends Surface {
-	baseCurve:BezierCurve
-	dir1:V3
-	tMin:number
-	tMax:number
+	baseCurve: BezierCurve
+	dir1: V3
+	tMin: number
+	tMax: number
 
 
-	constructor(baseCurve, dir1, tMin=baseCurve.tMin, tMax=baseCurve.tMax) {
+	constructor(baseCurve, dir1, tMin = baseCurve.tMin, tMax = baseCurve.tMax) {
 		super()
 		assertInst(Curve, baseCurve)
 		assertInst(V3, dir1)

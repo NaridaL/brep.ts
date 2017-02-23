@@ -23,26 +23,25 @@ abstract class Curve extends Transformable {
 	 */
 	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed: boolean, includeFirst: boolean): V3[] {
 		assert(this.tIncrement, "tIncrement not defined on " + this)
-		var split = 4 * 62, inc = this.tIncrement
-		var verts = []
-		if (includeFirst) verts.push(a)
-		if (!reversed) {
-			assert(aT < bT)
-			let start = Math.ceil((aT + NLA_PRECISION) / inc)
-			let end = Math.floor((bT - NLA_PRECISION) / inc)
+		const split = 4 * 62, inc = this.tIncrement
+		const points = []
+		if (includeFirst) points.push(a)
+		assert(reversed != aT < bT)
+		if (aT < bT) {
+			const start = Math.ceil((aT + NLA_PRECISION) / inc)
+			const end = Math.floor((bT - NLA_PRECISION) / inc)
 			for (let i = start; i <= end; i++) {
-				verts.push(this.at(i * inc))
+				points.push(this.at(i * inc))
 			}
 		} else {
-			assert(bT < aT)
-			let start = Math.floor((aT - NLA_PRECISION) / inc)
-			let end = Math.ceil((bT + NLA_PRECISION) / inc)
+			const start = Math.floor((aT - NLA_PRECISION) / inc)
+			const end = Math.ceil((bT + NLA_PRECISION) / inc)
 			for (let i = start; i >= end; i--) {
-				verts.push(this.at(i * inc))
+				points.push(this.at(i * inc))
 			}
 		}
-		verts.push(b)
-		return verts
+		points.push(b)
+		return points
 	}
 
 	distanceToPoint(p: V3): number {
@@ -71,8 +70,6 @@ abstract class Curve extends Transformable {
 
 	/**
 	 * Should really be abstract, but it works for all the conic is curves, so it's here.
-	 * @param mesh
-	 * @param bufferName
 	 */
 	debugToMesh(mesh, bufferName) {
 		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
@@ -86,10 +83,9 @@ abstract class Curve extends Transformable {
 		mesh[bufferName].push(this.center, this.center.plus(this.normal))
 	}
 
-	arcLength(startT, endT, steps) {
+	arcLength(startT: number, endT: number, steps?: int): number {
 		assert(startT < endT, 'startT < endT')
-		return gaussLegendreQuadrature24(t => this.tangentAt(t).length(), startT, endT)
-		//return integrateCurve(this, startT, endT, steps || 1024)
+		return glqInSteps(t => this.tangentAt(t).length(), startT, endT, 8)
 	}
 
 	/**
@@ -108,7 +104,7 @@ abstract class Curve extends Transformable {
 	abstract isColinearTo(curve: Curve): boolean
 
 
-	getAABB(tMin, tMax) {
+	getAABB(tMin, tMax): AABB {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
 		let tMinAt = this.at(tMin), tMaxAt = this.at(tMax)

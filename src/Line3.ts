@@ -2,17 +2,17 @@
  * 3-dimensional line
  */
 class L3 extends Curve {
-    // Anchor of the line.
-    anchor:V3
-    // Normalized direction of the line.
-    dir1:V3
+	// Anchor of the line.
+	anchor: V3
+	// Normalized direction of the line.
+	dir1: V3
 
 	constructor(anchor, dir1) {
 		super()
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), "dir must be normalized" + dir1)
 		assertf(() => !Number.isNaN(anchor.x))
-		var l = Object.create(L3.prototype)
+		const l = Object.create(L3.prototype);
 		l.dir1 = dir1
 		l.anchor = anchor
 		return l
@@ -20,16 +20,23 @@ class L3 extends Curve {
 
 	containsPoint(point) {
 		assertVectors(point)
-		var dist = this.distanceToPoint(point);
+		const dist = this.distanceToPoint(point);
 		assertNumbers(dist)
 		return NLA.eq0(dist)
+	}
+
+	equals(obj: any): boolean {
+		return this == obj ||
+			Object.getPrototypeOf(obj) == L3.prototype
+			&& this.anchor.equals(obj.anchor)
+			&& this.dir1.equals(obj.dir1)
 	}
 
 	likeCurve(curve) {
 		return this.anchor.like(curve.anchor) && this.dir1.like(curve.dir1)
 	}
 
-	isColinearTo(obj) {
+	isColinearTo(obj: Curve): boolean {
 		return obj instanceof L3
 			&& this.containsPoint(obj.anchor)
 			&& NLA.eq(1, Math.abs(this.dir1.dot(obj.dir1)))
@@ -40,39 +47,39 @@ class L3 extends Curve {
 		if (this.isParallelToLine(line)) {
 			return this.distanceToPoint(line.anchor)
 		}
-		var dirCross1 = this.dir1.cross(line.dir1).normalized()
-		var anchorDiff = this.anchor.minus(line.anchor)
+		const dirCross1 = this.dir1.cross(line.dir1).normalized();
+		const anchorDiff = this.anchor.minus(line.anchor);
 		return Math.abs(anchorDiff.dot(dirCross1))
 	}
 
 	distanceToPoint(x: V3):number {
 		assertVectors(x)
 		// See http://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
-		var t = x.minus(this.anchor).dot(this.dir1)
+		const t = x.minus(this.anchor).dot(this.dir1);
 		return this.at(t).distanceTo(x)
 
 		//return x.minus(this.anchor).cross(x.minus(this.anchor.plus(this.dir1))).length()
 	}
 
 	asSegmentDistanceToPoint(x, sStart, sEnd) {
-		var t = x.minus(this.anchor).dot(this.dir1)
+		let t = x.minus(this.anchor).dot(this.dir1);
 		t = NLA.clamp(t, sStart, sEnd)
 		return this.at(t).minus(x).length()
 	}
 
 	asSegmentDistanceToLine(line, sStart, sEnd) {
 		assertInst(L3, line)
-		var dirCross = this.dir1.cross(line.dir1)
-		var div = dirCross.lengthSquared()
+		const dirCross = this.dir1.cross(line.dir1);
+		const div = dirCross.squared();
 		if (NLA.eq0(div)) {
 			return null
 		} // lines parallel
-		var anchorDiff = line.anchor.minus(this.anchor)
+		const anchorDiff = line.anchor.minus(this.anchor);
 		// check if distance is zero (see also L3.distanceToLine)
 		if (!NLA.eq0(anchorDiff.dot(dirCross.normalized()))) {
 			return null
 		}
-		var t = this.infoClosestToLine(line).t
+		let t = this.infoClosestToLine(line).t;
 		t = NLA.clamp(t, sStart, sEnd)
 		return this.at(NLA.clamp(t, sStart, sEnd))
 	}
@@ -95,7 +102,7 @@ class L3 extends Curve {
 	 */
 	pointLambda(x: V3) {
 		assertVectors(x)
-		var t = x.minus(this.anchor).dot(this.dir1)
+		const t = x.minus(this.anchor).dot(this.dir1);
 		return t
 	}
 
@@ -126,7 +133,7 @@ class L3 extends Curve {
 		assertInst(L3, line)
 
 		let dirCross = this.dir1.cross(line.dir1)
-		let div = dirCross.lengthSquared()
+		let div = dirCross.squared()
 		if (NLA.eq0(div)) {
 			// lines are parallel
 			return []
@@ -144,17 +151,17 @@ class L3 extends Curve {
 	isInfoWithLine(line: L3) {
 	    // todo infos?
 		assertInst(L3, line)
-		var dirCross = this.dir1.cross(line.dir1)
-		var div = dirCross.lengthSquared()
+		const dirCross = this.dir1.cross(line.dir1);
+		const div = dirCross.squared();
 		if (NLA.eq0(div)) {
 			return null
 		} // lines parallel
-		var anchorDiff = line.anchor.minus(this.anchor)
+		const anchorDiff = line.anchor.minus(this.anchor);
 		// check if distance is zero (see also L3.distanceToLine)
 		if (!NLA.eq0(anchorDiff.dot(dirCross.normalized()))) {
 			return null
 		}
-		var t = anchorDiff.cross(line.dir1).dot(dirCross) / div
+		const t = anchorDiff.cross(line.dir1).dot(dirCross) / div;
 		return this.at(t)
 	}
 
@@ -167,11 +174,11 @@ class L3 extends Curve {
 		// TODO Where does this come from?
 		// TODO: return value when no IS?
 		assertInst(L3, line)
-		var dirCross = this.dir1.cross(line.dir1)
-		var div = dirCross.lengthSquared()
-		var anchorDiff = line.anchor.minus(this.anchor)
-		var s = anchorDiff.cross(this.dir1).dot(dirCross) / div
-		var t = anchorDiff.cross(line.dir1).dot(dirCross) / div
+		const dirCross = this.dir1.cross(line.dir1);
+		const div = dirCross.squared();
+		const anchorDiff = line.anchor.minus(this.anchor);
+		const s = anchorDiff.cross(this.dir1).dot(dirCross) / div;
+		const t = anchorDiff.cross(line.dir1).dot(dirCross) / div;
 		return {s: s, t: t}
 		//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1, "s", s, "t", t, "div", div)
 	}
@@ -221,10 +228,10 @@ class L3 extends Curve {
 		if (this.isParallelToLine(line)) {
 			return {t: NaN, s: NaN, distance: this.distanceToLine(line)};
 		}
-		var a = line.anchor, b = line.dir1, c = this.anchor, d = this.dir1;
-		var bd = b.dot(d), bb = b.lengthSquared(), dd = d.lengthSquared(), amc = a.minus(c), divisor = bd * bd - dd * bb;
-		var t = (amc.dot(b) * bd - amc.dot(d) * bb) / divisor;
-		var s = (amc.dot(b) * dd - amc.dot(d) * bd) / divisor;
+		const a = line.anchor, b = line.dir1, c = this.anchor, d = this.dir1;
+		const bd = b.dot(d), bb = b.squared(), dd = d.squared(), amc = a.minus(c), divisor = bd * bd - dd * bb;
+		const t = (amc.dot(b) * bd - amc.dot(d) * bb) / divisor;
+		const s = (amc.dot(b) * dd - amc.dot(d) * bd) / divisor;
 		return {
 			t: t,
 			s: s,
@@ -249,9 +256,9 @@ class L3 extends Curve {
 	intersectWithPlaneLambda(plane): number {
 		// plane: plane.normal * p = plane.w
 		// line: p=line.point + lambda * line.dir1
-		var div = plane.normal.dot(this.dir1)
+		const div = plane.normal.dot(this.dir1);
 		if (NLA.eq0(div)) return NaN
-		var lambda = (plane.w - plane.normal.dot(this.anchor)) / div
+		const lambda = (plane.w - plane.normal.dot(this.anchor)) / div;
 		return lambda
 	}
 
@@ -264,8 +271,8 @@ class L3 extends Curve {
 	}
 
 	transform(m4: M4): this {
-		var newAnchor = m4.transformPoint(this.anchor)
-		var newDir = m4.transformVector(this.dir1)
+		const newAnchor = m4.transformPoint(this.anchor);
+		const newDir = m4.transformVector(this.dir1);
 		return new L3(newAnchor, newDir.normalized()) as this
 	}
 
@@ -285,23 +292,27 @@ class L3 extends Curve {
 
 	static pointLambdaNotNormalized(anchor, dir, x) {
 		assertVectors(anchor, dir, x)
-		return x.minus(anchor).dot(dir) / dir.lengthSquared()
+		return x.minus(anchor).dot(dir) / dir.squared()
+	}
+
+	hashCode(): int {
+		return this.anchor.hashCode() * 31 + this.dir1.hashCode()
 	}
 
 	static fromPlanes(p1: P3, p2: P3): L3 {
 		assertInst(P3, p1, p2)
-		var direction = p1.normal.cross(p2.normal);
-		var l = direction.length();
-		if (l < 1e-10) {
+		const dir = p1.normal.cross(p2.normal)
+		const length = dir.length();
+		if (length < 1e-10) {
 			throw new Error("Parallel planes");
 		}
 
 		return p1.intersectionWithPlane(p2)
 	}
 
-	static X:L3 = new L3(V3.ZERO, V3.X)
-	static Y:L3 = new L3(V3.ZERO, V3.Y)
-	static Z:L3 = new L3(V3.ZERO, V3.Z)
+	static readonly X: L3 = new L3(V3.ZERO, V3.X)
+	static readonly Y: L3 = new L3(V3.ZERO, V3.Y)
+	static readonly Z: L3 = new L3(V3.ZERO, V3.Z)
 
 }
 L3.prototype.hlol = Curve.hlol++

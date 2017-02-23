@@ -1,3 +1,5 @@
+import eq = NLA.eq
+import eq0 = NLA.eq0
 class P3 extends Transformable {
 	w: number
 	normal: V3
@@ -18,64 +20,64 @@ class P3 extends Transformable {
 		assertVectors(normal1)
 		assertNumbers(w)
 		assert(normal1.hasLength(1), "normal1.hasLength(1)" + normal1)
-		const p = Object.create(prototype || P3.prototype);
+		const p = Object.create(prototype || P3.prototype)
 		p.w = w
 		p.normal = normal1
 		return p
 	}
 
-	axisIntercepts():V3 {
-		let w = this.w, n = this.normal
+	axisIntercepts(): V3 {
+		const w = this.w, n = this.normal
 		return new V3(w / n.x, w / n.y, w / n.z)
 	}
 
-	get anchor():V3 {
+	get anchor(): V3 {
 		return this.normal.times(this.w)
 	}
 
-	isCoplanarToPlane(plane):boolean {
+	isCoplanarToPlane(plane): boolean {
 		assertInst(P3, plane)
 		return this.like(plane) || this.likeFlipped(plane)
 	}
 
-	like(plane):boolean {
+	like(plane): boolean {
 		assertInst(P3, plane)
-		return NLA.eq(this.w, plane.w) && this.normal.like(plane.normal)
+		return eq(this.w, plane.w) && this.normal.like(plane.normal)
 	}
 
-	likeFlipped(plane):boolean {
+	likeFlipped(plane): boolean {
 		assertInst(P3, plane)
-		return NLA.eq(this.w, -plane.w) && this.normal.like(plane.normal.negated())
+		return eq(this.w, -plane.w) && this.normal.like(plane.normal.negated())
 	}
 
 	/**
 	 * True iff plane.normal is equal to this.normal or it's negation.
 	 *
 	 */
-	isParallelToPlane(plane:P3) {
+	isParallelToPlane(plane: P3): boolean {
 		assertInst(P3, plane)
-		return NLA.eq(1, Math.abs(this.normal.dot(plane.normal)))
+		return eq(1, Math.abs(this.normal.dot(plane.normal)))
 	}
 
-	isParallelToLine(line) {
+	isParallelToLine(line: L3): boolean {
 		assertInst(L3, line)
-		return NLA.eq0(this.normal.dot(line.dir1))
+		return eq0(this.normal.dot(line.dir1))
 	}
 
-	isPerpendicularToLine(line) {
+	isPerpendicularToLine(line: L3): boolean {
 		assertInst(L3, line)
 		// this.normal || line.dir1
-		return NLA.eq(1, Math.abs(this.normal.dot(line.normal)))
+		return eq(1, Math.abs(this.normal.dot(line.dir1)))
 	}
 
 	isPerpendicularToPlane(plane) {
 		assertInst(P3, plane)
-		return NLA.eq0(this.normal.dot(plane.normal))
+		return eq0(this.normal.dot(plane.normal))
 	}
 
 	toString(roundFunction?) {
 		roundFunction = roundFunction || (v => v) //((v) => +v.toFixed(3))
-		return "new P3("+this.normal.toString(roundFunction) + ", " + roundFunction(this.w) +")"
+		return "new P3(" + this.normal.toString(roundFunction) + ", " + roundFunction(this.w) + ")"
 	}
 
 	translated(offset) {
@@ -83,7 +85,7 @@ class P3 extends Transformable {
 	}
 
 	transform(m4): this {
-		let mirror = m4.isMirroring()
+		const mirror = m4.isMirroring()
 		// get two vectors in the plane:
 		const u = this.normal.getPerpendicular()
 		const v = u.cross(this.normal)
@@ -104,12 +106,12 @@ class P3 extends Transformable {
 		}
 	}
 
-	containsPoint(x:V3):boolean {
+	containsPoint(x: V3): boolean {
 		assertVectors(x)
-		return NLA.eq(this.w, this.normal.dot(x))
+		return eq(this.w, this.normal.dot(x))
 	}
 
-	containsLine(line:L3):boolean {
+	containsLine(line: L3): boolean {
 		assertInst(L3, line)
 		return this.containsPoint(line.anchor) && this.isParallelToLine(line)
 	}
@@ -124,8 +126,8 @@ class P3 extends Transformable {
 		return Math.abs(this.normal.dot(point) - this.w)
 	}
 
-	intersectionWithLine(line) {
-		line.intersectionWithPlane(this)
+	intersectionWithLine(line: L3): V3 {
+		return line.intersectionWithPlane(this)
 	}
 
 	intersectionWithPlane(plane: P3): L3 | null {
@@ -147,8 +149,8 @@ class P3 extends Transformable {
 		 .plus(n2.cross(n0).times(x1.dot(n1)))
 		 .div(m.determinant())
 		 */
-		const n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized();
-		const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0));
+		const n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized()
+		const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0))
 		return new L3(p, n2)
 	}
 
@@ -156,30 +158,30 @@ class P3 extends Transformable {
 	 * Returns the point in the plane closest to the given point
 	 *
 	 */
-	projectedPoint(x:V3):V3 {
+	projectedPoint(x: V3): V3 {
 		// See http://math.stackexchange.com/questions/444968/project-a-point-in-3d-on-a-given-plane
 		// p = x - ((x - planeAnchor) * normal) * normal
 		return x.minus(this.normal.times(x.minus(this.anchor).dot(this.normal)))
 	}
 
-	projectedVector(x:V3):V3 {
+	projectedVector(x: V3): V3 {
 		// See V3.rejectedFrom. Simplified, as this.normal.length() == 1
 		return x.minus(this.normal.times(x.dot(this.normal)))
 	}
 
-	flipped():P3 {
+	flipped(): P3 {
 		return new P3(this.normal.negated(), -this.w)
 	}
 
 	static throughPoints(a: V3, b: V3, c: V3, prototype?): P3 {
 		assertVectors(a, b, c)
-		const n1 = b.minus(a).cross(c.minus(a)).normalized();
+		const n1 = b.minus(a).cross(c.minus(a)).normalized()
 		return new P3(n1, n1.dot(a), prototype)
 	}
 
 	static normalOnAnchor(normal: V3, anchor: V3, prototype?): P3 {
 		assertVectors(normal, anchor)
-		const n1 = normal.normalized();
+		const n1 = normal.normalized()
 		return new P3(n1, n1.dot(anchor), prototype)
 	}
 
@@ -199,9 +201,8 @@ class P3 extends Transformable {
 	}
 
 
-// X-Y-Z planes
-	static YZ = new P3(V3.X, 0)
-	static ZX = new P3(V3.Y, 0)
-	static XY = new P3(V3.Z, 0)
+	static readonly YZ = new P3(V3.X, 0)
+	static readonly ZX = new P3(V3.Y, 0)
+	static readonly XY = new P3(V3.Z, 0)
 }
 NLA.registerClass(P3)

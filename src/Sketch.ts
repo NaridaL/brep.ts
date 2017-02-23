@@ -868,7 +868,7 @@ function bezierCurveTangentAt(x0, y0, x1, y1, x2, y2, x3, y3, t) {
 function length(x, y) {
 	return Math.sqrt(x * x + y * y);
 }
-function angle(x1, y1, x2, y2) {
+function alpha(x1, y1, x2, y2) {
 	return length(x2 - x1, y2 - y1);
 }
 

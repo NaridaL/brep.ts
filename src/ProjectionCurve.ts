@@ -33,42 +33,6 @@ class ProjectionCurve extends Curve {
 	}
 
 	/**
-	 * So different edges on the same curve do not have different vertices, they are always generated
-	 * on fixed points this.at(k * this.tIncrement), with k taking integer values
-	 *
-	 * @param aT
-	 * @param bT
-	 * @param a
-	 * @param b
-	 * @param {boolean} reversed
-	 * @param {boolean} includeFirst
-	 * @returns {Array.<V3>}
-	 */
-	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed, includeFirst) {
-		assert(this.tIncrement, "tIncrement not defined on " + this)
-		var split = 4 * 62, inc = this.tIncrement
-		var verts = []
-		if (includeFirst) verts.push(a)
-		if (!reversed) {
-			assert(aT < bT)
-			let start = Math.ceil((aT + NLA_PRECISION) / inc)
-			let end = Math.floor((bT - NLA_PRECISION) / inc)
-			for (let i = start; i <= end; i++) {
-				verts.push(this.at(i * inc))
-			}
-		} else {
-			assert(bT < aT)
-			let start = Math.floor((aT - NLA_PRECISION) / inc)
-			let end = ceil((bT + NLA_PRECISION) / inc)
-			for (let i = start; i >= end; i--) {
-				verts.push(this.at(i * inc))
-			}
-		}
-		verts.push(b)
-		return verts
-	}
-
-	/**
 	 *
 	 * @param p
 	 * @returns {number}

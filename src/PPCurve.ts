@@ -153,7 +153,7 @@ class PPCurve extends Curve {
 					Q = V3.add(
 						bNormal.cross(abNormalsCross).times(a.dot(aNormal)),
 						abNormalsCross.cross(aNormal).times(b.dot(bNormal)),
-						abNormalsCross.times(abNormalsCross.dot(Q))).div(abNormalsCross.lengthSquared())
+						abNormalsCross.times(abNormalsCross.dot(Q))).div(abNormalsCross.squared())
 
 
 				} while (--i && a.minus(b).length() > NLA_PRECISION)

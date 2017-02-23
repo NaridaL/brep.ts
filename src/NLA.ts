@@ -12,12 +12,13 @@ const sin = Math.sin
 const min = Math.min
 const max = Math.max
 const PI = Math.PI
+const TAU = 2 * Math.PI
 const sqrt = Math.sqrt
 const pow = Math.pow
 const round = Math.round
 const log = Math.log
 
-var globalId = 0;
+let globalId = 0
 type int = number
 type FloatArray = Float32Array | Float64Array | number[]
 
@@ -44,23 +45,23 @@ interface Object {
 	toSource():string
 }
 
-var oldConsole = undefined
+let oldConsole = undefined
 function disableConsole() {
 	oldConsole = console.log
 	console.log = function() {}
 }
 function enableConsole() {
 	if (oldConsole) {
-		console.log = oldConsole;
+		console.log = oldConsole
 	}
 }
 
 
-function assertVectors(...vectors:(Vector|V3)[]) {
+function assertVectors(...vectors: (Vector|V3)[]) {
 	if (NLA_DEBUG) {
-		for (var i = 0; i < arguments.length; i++) {
+		for (let i = 0; i < arguments.length; i++) {
 			if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
-				throw new Error("assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i]);
+				throw new Error("assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i])
 			}
 		}
 	}
@@ -68,7 +69,7 @@ function assertVectors(...vectors:(Vector|V3)[]) {
 }
 function assertInst(what, ...objs) {
 	if (NLA_DEBUG) {
-		for (var i = 0; i < objs.length; i++) {
+		for (let i = 0; i < objs.length; i++) {
 			if (!(objs[i] instanceof what)) {
 				throw new Error("assertInst objs[" + (i) + "] is not a "+what.prototype.constructor.name+". " + objs[i].constructor.name + objs[i])
 			}
@@ -78,9 +79,9 @@ function assertInst(what, ...objs) {
 }
 function assertNumbers(...numbers) {
 	if (NLA_DEBUG) {
-		for (var i = 0; i < numbers.length; i++) {
+		for (let i = 0; i < numbers.length; i++) {
 			if (typeof numbers[i] !== 'number') {
-				throw new Error("assertNumbers arguments[" + (i) + "] is not a number. " + typeof numbers[i] + " == typeof " + numbers[i]);
+				throw new Error("assertNumbers arguments[" + (i) + "] is not a number. " + typeof numbers[i] + " == typeof " + numbers[i])
 			}
 		}
 	}
@@ -115,16 +116,17 @@ namespace NLA {
 	export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
 	export const eqAngle = (x: number, y: number): boolean => zeroAngle(x - y)
 	export const zeroAngle = (x: number): boolean => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
-	export const snapTo = (x: number, to: number): number => Math.abs(x - to) <= NLA_PRECISION ? to : x
+	export const snap = (x: number, to: number): number => Math.abs(x - to) <= NLA_PRECISION ? to : x
+	export const snap0 = (x: number): number => Math.abs(x) <= NLA_PRECISION ? 0 : x
 	export const canonAngle = (x: number): number => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
 
 
 	/**
 	 * Decimal adjustment of a number.
 	 *
-	 * @param  f  The type of adjustment.
-	 * @param  value The number.
-	 * @param exp   The exponent (the 10 logarithm of the adjustment base).
+	 * @param f  The type of adjustment.
+	 * @param value The number.
+	 * @param exp The exponent (the 10 logarithm of the adjustment base).
 	 * @returns The adjusted value.
 	 */
 	function decimalAdjust(f: (x: number)=>number, value: number, exp: number): number {
@@ -159,8 +161,8 @@ namespace NLA {
 			return ""
 		}
 		count *= str.length
-		var halfCharLength = count / 2
-		var result = str
+		const halfCharLength = count / 2
+		let result = str
 
 		// double the input until it is long enough.
 		while (result.length <= halfCharLength) {
@@ -174,15 +176,15 @@ namespace NLA {
 		return ((a % b) + b) % b
 	}
 	export function arraySwap(arr, i, j) {
-		var temp = arr[i]
+		const temp = arr[i]
 		arr[i] = arr[j]
 		arr[j] = temp
 	}
 	export function arrayCopy(src,sstart,dst,dstart,length) {
-		dstart += length;
-		length += sstart;
+		dstart += length
+		length += sstart
 		while(length-- > sstart) {
-			dst[--dstart] = src[length];
+			dst[--dstart] = src[length]
 		}
 	}
 	export function clamp(val, min, max) {
@@ -193,51 +195,50 @@ namespace NLA {
 	export function randomColor() {
 		return Math.floor(Math.random() * 0x1000000)
 	}
-	export function mapAdd<T, U>(map:Map<T, U[]>, key:T, val:U) {
-		var list = map.get(key)
-		if (list) {
-			list.push(val)
+	export function mapPush<T, U>(map:Map<T, U[]>, key:T, val:U) {
+		const array = map.get(key)
+		if (array) {
+			array.push(val)
 		} else {
 			map.set(key, [val])
 		}
 	}
 
 
-	export function arrayCopyStep(src,sstart,sstep, dst,dstart,dstep,count) {
-		var srcIndex = sstart + count * sstep;
-		var dIndex = dstart + count * dstep;
+	export function arrayCopyStep(src,sstart,sstep, dst,dstart,dstep,count):void {
+		let srcIndex = sstart + count * sstep
+		let dIndex = dstart + count * dstep
 		while(srcIndex > sstart) {
-			dst[dIndex -= dstep] = src[srcIndex -= sstep];
+			dst[dIndex -= dstep] = src[srcIndex -= sstep]
 		}
 	}
-	export function arrayCopyBlocks(src,sstart,sstep, dst,dstart,dstep,blockSize, blockCount) {
-		for (var i = 0; i < blockCount; i++) {
+	export function arrayCopyBlocks(src,sstart,sstep, dst,dstart,dstep,blockSize, blockCount):void {
+		for (let i = 0; i < blockCount; i++) {
 			NLA.arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize)
 		}
 	}
-	export function arrayRange(start, end, step) {
-		assertNumbers(start, step)
-		//console.log(Math.ceil((end - start) / step))
-		var result = new Array(Math.ceil((end - start) / step)); // "- start" so that chunk in the last row will also be selected, even if the row is not complete
-		var index = 0
-		for (var i = 0; i < end; i += step) {
-			result[index++] = i
+	export function arrayRange(startInclusive: int, endExclusive: int, step: int) {
+		assertNumbers(startInclusive, step)
+		//console.log(Math.ceil((endExclusive - startInclusive) / step))
+		const result = new Array(Math.ceil((endExclusive - startInclusive) / step)); // "- startInclusive" so that chunk in the last row will also be selected, even if the row is not complete
+		for (let i = 0, index = 0; i < endExclusive; i += step, index++) {
+			result[index] = i
 		}
-		return result;
+		return result
 	}
 
 	export function arrayFromFunction<T>(length:number, f:(i:number) => T):T[] {
 		assertNumbers(length)
 		assert("function" == typeof f)
-		var a = new Array(length)
-		var elIndex = length;
+		const a = new Array(length)
+		let elIndex = length
 		while (elIndex--) {
-			a[elIndex] = f(elIndex);
+			a[elIndex] = f(elIndex)
 		}
 		return a
 	}
 
-	export function fuzzyUniques(vals:number[]):number[] {
+	export function fuzzyUniques(vals: number[]): number[] {
 		let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
 		let map = new Map()
 		map.set(round(vals[0]), vals[0])
@@ -290,7 +291,7 @@ namespace NLA {
 	export const defaultRoundFunction = x => x // Math.round10(x, -4)
 
 	export function defineObject(prot, props) {
-		var o = Object.create(prot || NLA.BaseObject)
+		const o = Object.create(prot || NLA.BaseObject)
 		addOwnProperties(o, props)
 		return o
 	}
@@ -315,8 +316,8 @@ namespace NLA {
 	 * [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
 	 */
 	export function* combinations(n:int): IterableIterator<{i: number, j: number}> {
-		for (var i = 0; i < n; i++) {
-			for (var j = i; j < n; j++) {
+		for (let i = 0; i < n; i++) {
+			for (let j = i; j < n; j++) {
 				yield {i: i, j: j}
 			}
 		}
@@ -327,42 +328,112 @@ namespace NLA {
 	export function registerClass(clazz: any) {
 		NLA.CLASSES[clazz.name] = clazz
 	}
+
+
+	/* The arithmetic-geometric mean of two non-negative numbers */
+	export function arithmeticGeometricMean(x: number, y: number): number {
+		assertf(() => NLA.lt(0, x))
+		assertf(() => NLA.lt(0, y))
+		let a = x, g = y
+		let i = 30
+		while (i-- && a != g) {
+			[a, g] = [(a + g) / 2, Math.sqrt(a * g)]
+		}
+		assert(i != -1)
+
+		return a
+	}
+
+
+	/**
+	 * incomplete elliptic integral of the first kind
+	 * EllipticF(phi, k2) = INT[0; phi] 1 / sqrt(1 - k2 * sin²(phi)) dphi
+	 */
+	export function EllipticF(phi, k2) {
+		return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.sin(phi) ** 2, -0.5), 0, phi)
+	}
+
+	/**
+	 * incomplete elliptic integral of the second kind
+	 * EllipticE(phi, k2) = INT[0; phi] sqrt(1 - k2 * sin²(phi)) dphi
+	 */
+	export function EllipticE(phi, k2) {
+		return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.sin(phi) ** 2, 0.5), 0, phi)
+	}
 }
 
-var COLORS = {
-	RD_FILL:0x9EDBF9,
-	RD_STROKE:0x77B0E0,
+const COLORS = {
+	RD_FILL: 0x9EDBF9,
+	RD_STROKE: 0x77B0E0,
 	TS_FILL: 0xD19FE3,
 	TS_STROKE: 0xA76BC2,
-	PP_FILL:0xF3B6CF,
-	PP_STROKE:0xEB81B4,
+	PP_FILL: 0xF3B6CF,
+	PP_STROKE: 0xEB81B4,
 }
 const DEG = .017453292519943295
-function deg2rad(angle) {
-	//  discuss at: http://phpjs.org/functions/deg2rad/
-	// original by: Enrique Gonzalez
-	// improved by: Thomas Grainger (http://graingert.co.uk)
-	//   example 1: deg2rad(45);
-	//   returns 1: 0.7853981633974483
-
-	return angle * .017453292519943295 // (angle / 180) * Math.PI;
-}
 function rad2deg(rad) {
 	//  discuss at: http://phpjs.org/functions/deg2rad/
 	// original by: Enrique Gonzalez
 	// improved by: Thomas Grainger (http://graingert.co.uk)
-	//   example 1: deg2rad(45);
+	//   example 1: deg2rad(45)
 	//   returns 1: 0.7853981633974483
 
-	return rad / .017453292519943295 // (angle / 180) * Math.PI;
+	return rad / DEG
 }
 
 interface String {
 	capitalizeFirstLetter(): string
 }
 String.prototype.capitalizeFirstLetter = function() {
-	return this.charAt(0).toUpperCase() + this.slice(1);
+	return this.charAt(0).toUpperCase() + this.slice(1)
 }
+
+/**
+ * numberToStr(2/3) == '0.6p'
+ * numberToStr(7/12) == '0.583p'
+ * numberToStr(2/7) == '0.285714pppppp'
+ * numberToStr(NLA_PRECISION) == '0+'
+ * numberToStr(-NLA_PRECISION) == '0-'
+ * numberToStr(2-NLA_PRECISION) == '2-'
+ * numberToStr(0) == '0='
+ *
+ */
+function numberToStr(value: number, length: int) {
+	let minAbsDiff = Infinity, closestValue = undefined, closestValueStr = undefined
+	function test(testValue: number, testValueStr) {
+		const absDiff = Math.abs(testValue - value)
+		console.log(testValue, testValueStr, absDiff)
+		if (absDiff < minAbsDiff) {
+			minAbsDiff = absDiff
+			closestValue = testValue
+			closestValueStr = testValueStr
+		}
+		return 0 == absDiff
+	}
+
+	function overline(str) {
+		return str.split('').map(c => c + '\u0304').join('')
+	}
+
+	if (test(parseFloat(value.toFixed(length)), value.toFixed(length))) return closestValueStr + '='
+
+	const valueStr = '' + value
+	const toDecimal = valueStr.substr(0, valueStr.indexOf('.') + 1)
+	const decimals = valueStr.substr(valueStr.indexOf('.') + 1)
+
+	for (let startPos = 0; startPos < length; startPos++) {
+		for (let endPos = startPos + 1; endPos <= length; endPos++) {
+			const prefixDecimals = decimals.substr(0, startPos)
+			const period = decimals.substr(startPos, endPos)
+			const testValue = parseFloat(toDecimal + prefixDecimals + NLA.repeatString(Math.ceil((17 - startPos) / period.length), period))
+			if (test(testValue, toDecimal + prefixDecimals + overline(period))) return closestValueStr + '='
+		}
+	}
+
+	return closestValueStr + (closestValue < value ? '-' : '+')
+}
+console.log(numberToStr(29 / 99, 4))
+console.log(numberToStr(77 / 99, 4))
 
 interface Array<T> {
 	absSum: () => number
@@ -380,15 +451,17 @@ interface Array<T> {
 	min(): number
 	pushAll(els: T[])
 	remove(el: T): boolean
+	removeIndex(index: int): T
 	removeAll: (els: T[]) => void
 	sliceStep: (start: int, step: int, chunkSize: int) => int
 	sum(): number
+	sumInPlaceTree(): number
 	toggle: (el: T) => void
 	unique(): T[]
 	withMax(f: (el: T, elIndex: int, arr: T[]) => number): T
 }
 
-var ARRAY_UTILITIES = {
+const ARRAY_UTILITIES = {
 
 	pushAll(arr) {
 		Array.prototype.push.apply(this, arr)
@@ -396,17 +469,17 @@ var ARRAY_UTILITIES = {
 
 	sliceStep(start, step, chunkSize) {
 		assertNumbers(start, step)
-		chunkSize = chunkSize || 1;
-		var result = new Array(Math.ceil((this.length - start) / step)); // "- start" so that chunk in the last row
-		                                                                 // will also be selected, even if the row is
-		                                                                 // not complete
-		var index = 0;
-		for (var i = 0; i < this.length; i += step) {
-			for (var j = 0; j < chunkSize; j++) {
-				result[index++] = this[start + i + j];
+		chunkSize = chunkSize || 1
+		const result = new Array(Math.ceil((this.length - start) / step)); // "- start" so that chunk in the last row
+		// will also be selected, even if the row is
+		// not complete
+		let index = 0
+		for (let i = 0; i < this.length; i += step) {
+			for (let j = 0; j < chunkSize; j++) {
+				result[index++] = this[start + i + j]
 			}
 		}
-		return result;
+		return result
 	},
 
 	firstMatch(f) {
@@ -423,7 +496,7 @@ var ARRAY_UTILITIES = {
 	/**
 	 * Semantically identical to .map(f).filter(v => v)
 	 */
-	mapFilter(f) {
+		mapFilter(f) {
 		let length = this.length, result = []
 		for (let i = 0; i < length; i++) {
 			if (i in this) {
@@ -437,7 +510,7 @@ var ARRAY_UTILITIES = {
 	},
 
 	flatMap(f) {
-		return Array.prototype.concat.apply([], this.map(f));
+		return Array.prototype.concat.apply([], this.map(f))
 	},
 
 	/**
@@ -445,22 +518,33 @@ var ARRAY_UTILITIES = {
 	 * @returns {Array} Array.prototype.concat.apply([], this)
 	 */
 	concatenated() {
-		return Array.prototype.concat.apply([], this);
+		return Array.prototype.concat.apply([], this)
 	},
 
 	min() {
-		return Math.min.apply(null, this);
+		let i = this.length, max = Infinity
+		while (i--) {
+			const val = this[i]
+			if (max > val) max = val
+		}
+		return max
 	},
 
 	max() {
-		return Math.max.apply(null, this);
+		// faster and no limit on array size, see https://jsperf.com/math-max-apply-vs-loop/2
+		let i = this.length, max = -Infinity
+		while (i--) {
+			const val = this[i]
+			if (max < val) max = val
+		}
+		return max
 	},
 
 	indexWithMax(f) {
-		if (this.length == 0) { return 0 }
-		var i = this.length, result = -1, maxVal = -Infinity
+		if (this.length == 0) { return -1 }
+		let i = this.length, result = -1, maxVal = -Infinity
 		while (i--) {
-			var val = f(this[i], i)
+			const val = f(this[i], i)
 			if (val > maxVal) {
 				maxVal = val
 				result = i
@@ -470,9 +554,9 @@ var ARRAY_UTILITIES = {
 	},
 
 	withMax(f) {
-		var i = this.length, result = undefined, maxVal = -Infinity
+		let i = this.length, result = undefined, maxVal = -Infinity
 		while (i--) {
-			var el = this[i], val = f(el)
+			const el = this[i], val = f(el)
 			if (val > maxVal) {
 				maxVal = val
 				result = el
@@ -485,9 +569,9 @@ var ARRAY_UTILITIES = {
 	 Returns the sum of the absolute values of the components of this vector.
 	 E.g. NLA.V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
 	 */
-	absSum() {
-		var i = this.length
-		var result = 0
+		absSum() {
+		let i = this.length
+		let result = 0
 		while (i--) {
 			result += Math.abs(this[i])
 		}
@@ -495,12 +579,26 @@ var ARRAY_UTILITIES = {
 	},
 
 	sum() {
-		var i = this.length
-		var result = 0
+		let i = this.length
+		let result = 0
 		while (i--) {
 			result += this[i]
 		}
 		return result
+	},
+
+	sumInPlaceTree() {
+		if (0 == this.length) return 0
+		let l = this.length
+		while (l != 1) {
+			const lHalfFloor = Math.floor(l / 2)
+			const lHalfCeil = Math.ceil(l / 2)
+			for (let i = 0; i < lHalfFloor; i++) {
+				this[i] += this[i + lHalfCeil]
+			}
+			l = lHalfCeil
+		}
+		return this[0]
 	},
 
 	isEmpty() {
@@ -508,28 +606,34 @@ var ARRAY_UTILITIES = {
 	},
 
 	unique() {
-		var uniqueSet = new Set(this)
+		const uniqueSet = new Set(this)
 		return Array.from(uniqueSet)
 	},
 
 	remove(o) {
-		var index = this.indexOf(o);
+		const index = this.indexOf(o)
 		if (index != -1) {
-			this.splice(index, 1);
+			this.splice(index, 1)
 		}
 	},
 
+	removeIndex(i) {
+		const result = this[i]
+		this.splice(i, 1)
+		return result
+	},
+
 	removeAll(o) {
-		var i = o.length
+		let i = o.length
 		while (i--) {
-			this.remove(o[i]);
+			this.remove(o[i])
 		}
 	},
 
 	toggle(o) {
-		var index = this.indexOf(o);
+		const index = this.indexOf(o)
 		if (index != -1) {
-			this.splice(index, 1);
+			this.splice(index, 1)
 		} else {
 			this.push(o)
 		}
@@ -537,35 +641,35 @@ var ARRAY_UTILITIES = {
 
 	binaryIndexOf(searchElement, cmp) {
 
-		var minIndex = 0;
-		var maxIndex = this.length - 1;
-		var currentIndex;
-		var currentElement;
+		let minIndex = 0
+		let maxIndex = this.length - 1
+		let currentIndex
+		let currentElement
 
 		while (minIndex <= maxIndex) {
-			currentIndex = (minIndex + maxIndex) / 2 | 0;
-			currentElement = this[currentIndex];
+			currentIndex = (minIndex + maxIndex) / 2 | 0
+			currentElement = this[currentIndex]
 
 			if (cmp(currentElement, searchElement) < 0) {
-				minIndex = currentIndex + 1;
+				minIndex = currentIndex + 1
 			}
 			else if (cmp(currentElement, searchElement) > 0) {
-				maxIndex = currentIndex - 1;
+				maxIndex = currentIndex - 1
 			}
 			else {
-				return currentIndex;
+				return currentIndex
 			}
 		}
 
-		return -minIndex - 1;
+		return -minIndex - 1
 	},
 
 	binaryInsert(el, cmp) {
 		cmp = cmp || NLA.minus
-		var minIndex = 0
-		var maxIndex = this.length
-		var currentIndex
-		var currentElement
+		let minIndex = 0
+		let maxIndex = this.length
+		let currentIndex
+		let currentElement
 
 		while (minIndex < maxIndex) {
 			currentIndex = ~~((minIndex + maxIndex) / 2)
@@ -591,23 +695,18 @@ for (let key in ARRAY_UTILITIES) {
 	assert(!NLA[nlaName])
 	NLA[nlaName] = (arr, ...rest) => ARRAY_UTILITIES[key].apply(arr, rest)
 }
-// Closure
-
-	;(function() {
-})();
-
 
 
 function isCCW(vertices, normal) {
-	var dsa = doubleSignedArea(vertices, normal)
+	const dsa = doubleSignedArea(vertices, normal)
 	assert(0 != dsa)
 	return dsa < 0
 }
-declare function earcut(data:FloatArray, holeIndices:number[], dim?:number): number[]
-function triangulateVertices(normal:V3, vertices:V3[], holeStarts:int[]) {
-	var absMaxDim = normal.maxAbsDim(), factor = normal.e(absMaxDim) < 0 ? -1 : 1
-	var contour = new Float64Array(vertices.length * 2)
-	var i = vertices.length
+declare function earcut(data: FloatArray, holeIndices: number[], dim: int): int[]
+function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
+	const absMaxDim = normal.maxAbsDim(), factor = sign(normal.e(absMaxDim))
+	const contour = new Float64Array(vertices.length * 2)
+	let i = vertices.length
 	/*
 	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]
 	 while (i--) {
@@ -621,15 +720,15 @@ function triangulateVertices(normal:V3, vertices:V3[], holeStarts:int[]) {
 		// as it confuses google closure
 		switch (absMaxDim) {
 			case 0:
-				contour[i * 2    ] = vertices[i].y * factor
+				contour[i * 2] = vertices[i].y * factor
 				contour[i * 2 + 1] = vertices[i].z
 				break
 			case 1:
-				contour[i * 2    ] = vertices[i].z * factor
+				contour[i * 2] = vertices[i].z * factor
 				contour[i * 2 + 1] = vertices[i].x
 				break
 			case 2:
-				contour[i * 2    ] = vertices[i].x * factor
+				contour[i * 2] = vertices[i].x * factor
 				contour[i * 2 + 1] = vertices[i].y
 				break
 		}
@@ -639,11 +738,11 @@ function triangulateVertices(normal:V3, vertices:V3[], holeStarts:int[]) {
 
 function doubleSignedArea(vertices, normal) {
 	assert(!normal.isZero(),'!normal.isZero()')
-	var absMaxDim = normal.maxAbsDim()
+	const absMaxDim = normal.maxAbsDim()
 	// order is important, coord0 and coord1 must be set so that coord0, coord1 and maxDim span a right-hand coordinate system
 	//var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]
-	var doubleSignedArea = vertices.map((v0, i, vertices) => {
-		var v1 = vertices[(i + 1) % vertices.length]
+	const doubleSignedArea = vertices.map((v0, i, vertices) => {
+		const v1 = vertices[(i + 1) % vertices.length]
 		//return (v1[coord0] - v0[coord0]) * (v1[coord1] + v0[coord1])
 		switch (absMaxDim) {
 			case 0:
@@ -654,7 +753,7 @@ function doubleSignedArea(vertices, normal) {
 				return (v1.x - v0.x) * (v1.y + v0.y)
 		}
 	}).reduce((a, b) => a + b)
-	return NLA.snapTo(doubleSignedArea * Math.sign(normal.e(absMaxDim)), 0)
+	return NLA.snap(doubleSignedArea * Math.sign(normal.e(absMaxDim)), 0)
 }
 
 /**
@@ -666,13 +765,13 @@ function doubleSignedArea(vertices, normal) {
  */
 function pqFormula(p:number, q:number) {
 	// 4 times the discriminant:in
-	var discriminantX4 = p * p / 4 - q
+	const discriminantX4 = p * p / 4 - q
 	if (discriminantX4 < -NLA_PRECISION) {
 		return []
 	} else if (discriminantX4 <= NLA_PRECISION) {
 		return [-p/2]
 	} else {
-		var root = Math.sqrt(discriminantX4)
+		const root = Math.sqrt(discriminantX4)
 		return [-p/2 - root, -p/2 + root]
 	}
 }
@@ -680,84 +779,58 @@ function pqFormula(p:number, q:number) {
 /**
  * solves ax³ + bx² + cx + d = 0
  *
- * @param a
- * @param b
- * @param c
- * @param d
- * @returns {number[]} with 0-3 entries
+ * @returns 0-3 roots
  */
-function solveCubicReal2(a:number, b:number, c:number, d:number) {
-	if (NLA.eq0(a)) {
-		if (NLA.eq0(b)) {
-			return [-d/c]
+function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
+    if (NLA.eq0(a)) {
+        if (NLA.eq0(b)) {
+            return [-d / c]
 		} else {
 			return pqFormula(c / b, d / b)
 		}
 	}
-	var div = a
-	a = b/div
-	b = c/div
-	c = d/div
-	var p = (3*b - a*a)/3,
-		pDiv3 = p/3,
+	const divisor = a
+	a = b / divisor
+	b = c / divisor
+	c = d / divisor
+	const p = (3 * b - a * a) / 3,
+		pDiv3 = p / 3,
 		pDiv3Pow3 = pDiv3 * pDiv3 * pDiv3,
-		q = (2*a*a*a - 9*a*b + 27*c)/27,
-		qDiv2 = q/2,
-		discriminant = qDiv2*qDiv2 + pDiv3Pow3,
-		u1,v1,x1,x2,x3
+		q = (2 * a * a * a - 9 * a * b + 27 * c) / 27,
+		qDiv2 = q / 2,
+		discriminant = qDiv2 * qDiv2 + pDiv3Pow3
 	// 18abcd - 4b³d + b²c² - 4ac³ - 27a²d²
 	if (discriminant < -NLA_PRECISION / 8) {
-		var r = Math.sqrt(-pDiv3Pow3),
+		const r = Math.sqrt(-pDiv3Pow3),
 			t = -q/(2*r),
 			cosphi = t<-1 ? -1 : t>1 ? 1 : t, // clamp t to [-1;1]
 			phi = Math.acos(cosphi),
-			t1 = 2 * Math.cbrt(r)
-		x1 = t1 * Math.cos(phi/3) - a/3
-		x2 = t1 * Math.cos((phi+2*Math.PI)/3) - a/3
-		x3 = t1 * Math.cos((phi+4*Math.PI)/3) - a/3
-		return [x1, x2, x3]
-	} else if(discriminant <= NLA_PRECISION / 8) {
-		if (0 == qDiv2) {
-			// TODO: compare with NLA.isZero?
-			return [-a/3]
-		}
-		u1 = Math.cbrt(Math.abs(qDiv2))
-		x1 = 2*u1 - a/3
-		x2 = -u1 - a/3
-		return [x1,x2]
-	} else {
-		var sd = Math.sqrt(discriminant)
-		u1 = Math.cbrt(-qDiv2+sd)
-		v1 = Math.cbrt(qDiv2+sd)
-		return [u1-v1-a/3]
-	}
+            t1 = 2 * Math.cbrt(r)
+        const x1 = t1 * Math.cos(phi / 3) - a / 3
+		const x2 = t1 * Math.cos((phi + 2 * Math.PI) / 3) - a / 3
+		const x3 = t1 * Math.cos((phi + 4 * Math.PI) / 3) - a / 3
+        return [x1, x2, x3]
+    } else if (discriminant <= NLA_PRECISION / 8) {
+        if (0 == qDiv2) {
+            // TODO: compare with NLA.isZero?
+            return [-a / 3]
+        }
+		const u1 = Math.cbrt(Math.abs(qDiv2))
+		const x1 = 2 * u1 - a / 3
+		const x2 = -u1 - a / 3
+        return [x1, x2]
+    } else {
+        const sd = Math.sqrt(discriminant)
+		const u1 = Math.cbrt(-qDiv2 + sd)
+		const v1 = Math.cbrt(qDiv2 + sd)
+        return [u1 - v1 - a / 3]
+    }
 }
 
 NLA.addOwnProperties(Array.prototype, ARRAY_UTILITIES)
 
-let a = [1, 2, 3].mapFilter(x => x * 2)
 
-
-
-
-
-
-
-
-
-
-
-
-/**
- *
- * @param f
- * @param xStart
- * @param steps
- * @param EPSILON
- * @returns {*}
- */
-function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps?: number, EPSILON?: number) {
-	steps = steps || 4
+function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps: int = 4, EPSILON?: number): number[] {
 	EPSILON = EPSILON || 1e-8
 
 	let x = xStart
@@ -773,7 +846,7 @@ function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps?: n
 	return x
 }
 
-function newtonIterate1d(f:(x:number) => number, xStart: number, steps?:number, EPSILON?:number):number {
+function newtonIterate1d(f: (x: number) => number, xStart: number, steps?: number, EPSILON?: number): number {
 	steps = steps || 4
 	EPSILON = EPSILON || 1e-8
 
@@ -787,7 +860,7 @@ function newtonIterate1d(f:(x:number) => number, xStart: number, steps?:number, 
 	}
 	return x
 }
-function newtonIterateWithDerivative(f:(x:number) => number, xStart:number, steps:number, df:(x:number)=>number) {
+function newtonIterateWithDerivative(f: (x: number) => number, xStart: number, steps: number, df: (x: number)=>number) {
 	steps = steps || 4
 	let x = xStart
 	for (let i = 0; i < steps; i++) {
@@ -798,16 +871,7 @@ function newtonIterateWithDerivative(f:(x:number) => number, xStart:number, step
 	}
 	return x
 }
-/**
- *
- * @param f1
- * @param f2
- * @param sStart
- * @param tStart
- * @param {number=} steps
- * @returns {V3}
- */
-function newtonIterate2d(f1:(s:number,t:number)=>number, f2:(s:number,t:number)=>number, sStart:number, tStart:number, steps?:number) {
+function newtonIterate2d(f1: (s: number, t: number)=>number, f2: (s: number, t: number)=>number, sStart: number, tStart: number, steps?: number): V3 {
 	const EPSILON = 1e-6
 	steps = steps || 4
 	let s = sStart, t = tStart
@@ -837,18 +901,20 @@ function newtonIterate2d(f1:(s:number,t:number)=>number, f2:(s:number,t:number)=
 		//console.log(f1ts * f1ts + f2ts * f2ts)
 		return null
 	}
-	return V(s, t, 0)
+	return new V(s, t, 0)
 }
 function newtonIterate2dWithDerivatives(f, g, sStart, tStart, steps, dfds, dfdt, dgds, dgdt) {
 	steps = steps || 4
 	let s = sStart, t = tStart
 	let eps = 1e-6
+	let f1ts, f2ts
 	do {
 		/*
 		 | a b |-1                   |  d -b |
 		 | c d |   = 1 / (ad - bc) * | -c  a |
 		 */
-		var f1ts = f(s, t), f2ts = g(s, t)
+		f1ts = f(s, t)
+		f2ts = g(s, t)
 		let df1s = dfds(s, t), df1t = dfdt(s, t),
 			df2s = dgds(s, t), df2t = dgdt(s, t)
 		// TODO: is this even more accurate?
@@ -863,4 +929,102 @@ function newtonIterate2dWithDerivatives(f, g, sStart, tStart, steps, dfds, dfdt,
 		return null
 	}
 	return V(s, t, 0)
+}
+
+
+function integrateCurve(curve: Curve, startT: number, endT: number, steps: int): number {
+	const step = (endT - startT) / steps
+	let length = 0
+	let p = curve.at(startT)
+	let i = 0, t = startT + step
+	for (; i < steps; i++, t += step) {
+		const next = curve.at(t)
+		length += p.distanceTo(next)
+		p = next
+	}
+	return length
+}
+
+const gaussLegendre24Xs = [
+	-0.0640568928626056260850430826247450385909,
+	0.0640568928626056260850430826247450385909,
+	-0.1911188674736163091586398207570696318404,
+	0.1911188674736163091586398207570696318404,
+	-0.3150426796961633743867932913198102407864,
+	0.3150426796961633743867932913198102407864,
+	-0.4337935076260451384870842319133497124524,
+	0.4337935076260451384870842319133497124524,
+	-0.5454214713888395356583756172183723700107,
+	0.5454214713888395356583756172183723700107,
+	-0.6480936519369755692524957869107476266696,
+	0.6480936519369755692524957869107476266696,
+	-0.7401241915785543642438281030999784255232,
+	0.7401241915785543642438281030999784255232,
+	-0.8200019859739029219539498726697452080761,
+	0.8200019859739029219539498726697452080761,
+	-0.8864155270044010342131543419821967550873,
+	0.8864155270044010342131543419821967550873,
+	-0.9382745520027327585236490017087214496548,
+	0.9382745520027327585236490017087214496548,
+	-0.9747285559713094981983919930081690617411,
+	0.9747285559713094981983919930081690617411,
+	-0.9951872199970213601799974097007368118745,
+	0.9951872199970213601799974097007368118745
+]
+const gaussLegendre24Weights = [
+	0.1279381953467521569740561652246953718517,
+	0.1279381953467521569740561652246953718517,
+	0.1258374563468282961213753825111836887264,
+	0.1258374563468282961213753825111836887264,
+	0.1216704729278033912044631534762624256070,
+	0.1216704729278033912044631534762624256070,
+	0.1155056680537256013533444839067835598622,
+	0.1155056680537256013533444839067835598622,
+	0.1074442701159656347825773424466062227946,
+	0.1074442701159656347825773424466062227946,
+	0.0976186521041138882698806644642471544279,
+	0.0976186521041138882698806644642471544279,
+	0.0861901615319532759171852029837426671850,
+	0.0861901615319532759171852029837426671850,
+	0.0733464814110803057340336152531165181193,
+	0.0733464814110803057340336152531165181193,
+	0.0592985849154367807463677585001085845412,
+	0.0592985849154367807463677585001085845412,
+	0.0442774388174198061686027482113382288593,
+	0.0442774388174198061686027482113382288593,
+	0.0285313886289336631813078159518782864491,
+	0.0285313886289336631813078159518782864491,
+	0.0123412297999871995468056670700372915759,
+	0.0123412297999871995468056670700372915759
+]
+function gaussLegendreQuadrature24(f: (number) => number, startT: number, endT: number): number {
+	//let result = 0
+	//for (let i = 0; i < gaussLegendre24Xs.length; i++) {
+	//	// gauss-legendre goes from -1 to 1, so we need to scale
+	//	let t = startT + (gaussLegendre24Xs[i] + 1) / 2 * (endT - startT)
+	//	result += gaussLegendre24Weights[i] * f(t)
+	//}
+	//const result = NLA
+	//		.arrayFromFunction(24, i => startT + (gaussLegendre24Xs[i] + 1) / 2 * (endT - startT))
+	//		.map((t, i) => gaussLegendre24Weights[i] * f(t))
+	//		.sumInPlaceTree()
+	//99.54182500782605
+	//99.54182500782602
+	// again, [-1,1], so div by 2
+	//return result // 2 * (endT - startT)
+
+
+	return glq24_11(t => f(startT + (t + 1) / 2 * (endT - startT))) / 2 * (endT - startT)
+}
+function glq24_11(f: (number) => number): number {
+	return NLA.arrayFromFunction(24, i => gaussLegendre24Weights[i] * f(gaussLegendre24Xs[i])).sumInPlaceTree()
+}
+function glqInSteps(f, startT, endT, steps) {
+	const dt = (endT - startT) / steps
+	return NLA.arrayFromFunction(steps, i => glq24_11(t => f(startT + dt * i + (t + 1) / 2 * dt))).sumInPlaceTree() / 2 * dt
+}
+
+function midpointRuleQuadrature(f: (number) => number, startT: number, endT: number, steps: int = 32): number {
+	const dt = (endT - startT) / steps
+	return NLA.arrayFromFunction(steps, i => startT + dt / 2 + dt * i).map(f).sumInPlaceTree() * dt
 }

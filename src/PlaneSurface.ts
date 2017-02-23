@@ -41,19 +41,19 @@ class PlaneSurface extends Surface {
         return null
     }
 
-    edgeLoopCCW(contour: Edge[]):boolean {
-        var totalAngle = 0
-        for (var i = 0; i < contour.length; i++) {
-            var ipp = (i + 1) % contour.length
-            var edge = contour[i], nextEdge = contour[ipp]
-            assert(edge.b.like(nextEdge.a), "edges dont form a loop")
-            if (edge.curve instanceof EllipseCurve) {
-                totalAngle += edge.rotViaPlane(this.plane.normal)
-                // console.log(edge.toString(), edge.rotViaPlane(this.plane.normal))
-            }
-            totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal)
-        }
-        return totalAngle > 0
+    edgeLoopCCW(contour: Edge[]): boolean {
+	    let totalAngle = 0
+	    for (let i = 0; i < contour.length; i++) {
+		    const ipp = (i + 1) % contour.length
+		    const edge = contour[i], nextEdge = contour[ipp]
+		    assert(edge.b.like(nextEdge.a), "edges dont form a loop")
+		    if (edge.curve instanceof EllipseCurve) {
+			    totalAngle += edge.rotViaPlane(this.plane.normal)
+			    // console.log(edge.toString(), edge.rotViaPlane(this.plane.normal))
+		    }
+		    totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal)
+	    }
+	    return totalAngle > 0
     }
 
     loopContainsPoint(loop: Edge[], p: V3): PointVsFace {

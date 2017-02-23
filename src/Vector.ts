@@ -9,21 +9,21 @@ namespace NLA {
 			this.v = v
 		}
 
-		static fromFunction(dims: int, f: (dim: number) => number) {
+		static fromFunction(dims: int, f: (dim: number) => number): Vector {
 			assertNumbers(dims)
-			var e = new Float64Array(dims)
-			var i = dims
+			const e = new Float64Array(dims);
+			let i = dims;
 			while (i--) {
 				e[i] = f(i)
 			}
 			return new Vector(e)
 		}
 
-		static random(dims: int) {
+		static random(dims: int): Vector {
 			return Vector.fromFunction(dims, (i) => Math.random())
 		}
 
-		static from(...args) {
+		static from(...args): Vector {
 			assert(args[0] instanceof Float64Array || args.every(a => 'number' == typeof a),
 				"args[0] instanceof Float64Array || args.every(a => 'number' == typeof a)")
 			return new Vector(args[0] instanceof Float64Array ? args[0] : Float64Array.from(args))
@@ -41,9 +41,9 @@ namespace NLA {
 		}
 
 		plus(vector: Vector): Vector {
-			var u = this.v, v = vector.v
-			var n = new Float64Array(u.length)
-			var i = u.length
+			const u = this.v, v = vector.v;
+			const n = new Float64Array(u.length);
+			let i = u.length;
 			while (i--) {
 				n[i] = u[i] + v[i]
 			}
@@ -51,9 +51,9 @@ namespace NLA {
 		}
 
 		minus(vector: Vector): Vector {
-			var u = this.v, v = vector.v
-			var n = new Float64Array(u.length)
-			var i = u.length
+			const u = this.v, v = vector.v;
+			const n = new Float64Array(u.length);
+			let i = u.length;
 			while (i--) {
 				n[i] = u[i] - v[i]
 			}
@@ -61,9 +61,9 @@ namespace NLA {
 		}
 
 		times(factor: number): Vector {
-			var u = this.v
-			var n = new Float64Array(u.length)
-			var i = u.length
+			const u = this.v;
+			const n = new Float64Array(u.length);
+			let i = u.length;
 			while (i--) {
 				n[i] = u[i] * factor
 			}
@@ -71,9 +71,9 @@ namespace NLA {
 		}
 
 		div(val: number): Vector {
-			var u = this.v
-			var n = new Float64Array(u.length)
-			var i = u.length
+			const u = this.v;
+			const n = new Float64Array(u.length);
+			let i = u.length;
 			while (i--) {
 				n[i] = u[i] / val
 			}
@@ -82,9 +82,9 @@ namespace NLA {
 
 		dot(vector: Vector): number {
 			assert(this.dim == vector.dim, "passed vector must have the same dim")
-			var result = 0
-			var u = this.v, v = vector.v
-			var i = u.length
+			let result = 0;
+			const u = this.v, v = vector.v;
+			let i = u.length;
 			while (i--) {
 				result += u[i] * v[i]
 			}
@@ -93,7 +93,7 @@ namespace NLA {
 
 		cross(vector: Vector): Vector {
 			assertInst(Vector, vector)
-			var n = new Float64Array(3)
+			const n = new Float64Array(3);
 			n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1]
 			n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2]
 			n[2] = this.v[0] * vector.v[1] - this.v[1] * vector.v[0]
@@ -192,7 +192,7 @@ namespace NLA {
 		// Returns a new unit NLA.Vector (.length() === 1) with the same direction as this vector. Throws a
 		// NLA_DEBUGError if this has a length of 0.
 		normalized(): Vector {
-			var length = this.length()
+			const length = this.length();
 			if (NLA.eq0(length)) {
 				throw new Error("cannot normalize zero vector")
 			}
@@ -245,8 +245,8 @@ namespace NLA {
 
 		static Zero(dims: int): Vector {
 			assertNumbers(dims)
-			var i = 0
-			var n = new Float64Array(dims)
+			let i = 0;
+			const n = new Float64Array(dims);
 			while (i--) {
 				n[i] = 0
 			}
@@ -255,8 +255,8 @@ namespace NLA {
 
 		static Unit(dims: int, dir: int): Vector {
 			assertNumbers(dims, dir)
-			var i = 0
-			var n = new Float64Array(dims)
+			let i = 0;
+			const n = new Float64Array(dims);
 			while (i--) {
 				n[i] = +(i == dir) // +true === 1, +false === 0
 			}

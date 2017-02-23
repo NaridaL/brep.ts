@@ -71,6 +71,10 @@ void main() {
 	if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);
 }`) };
 			this.matrixMode(LightGLContext.MODELVIEW)
+
+			this.onmousedown = []
+			this.onmouseup = []
+			this.onmousemove = []
 		}
 
 		/// Implement the OpenGL modelview and projection matrix stacks, along with some other useful GLU matrix functions.
@@ -327,7 +331,7 @@ void main() {
 			camera?: boolean,
 			fov?: number,
 			near?: number,
-			far?: number} = {}) {
+			far?: number} = {}): void {
 
 			var top = options.paddingTop || 0
 			var left = options.paddingLeft || 0
@@ -364,9 +368,9 @@ void main() {
 
 
 		////// EVENTS
-		onmouseup: (ev: GL_Event) => any
-		onmousedown: (ev: GL_Event) => any
-		onmousemove: (ev: GL_Event) => any
+		onmouseup: ((ev: GL_Event) => any)[]
+		onmousedown: ((ev: GL_Event) => any)[]
+		onmousemove: ((ev: GL_Event) => any)[]
 	}
 	LightGLContext.prototype.MODELVIEW = LightGLContext.MODELVIEW
 	LightGLContext.prototype.PROJECTION = LightGLContext.PROJECTION
@@ -377,7 +381,7 @@ void main() {
 	 * by default because it usually causes unintended transparencies in the canvas.
 	 */
 	export function create(options: {canvas?: HTMLCanvasElement, alpha?: boolean} = {}): LightGLContext {
-		var canvas = options.canvas || document.createElement('canvas');
+		const canvas = options.canvas || document.createElement('canvas');
 		if (!options.canvas) {
 			canvas.width = 800;
 			canvas.height = 600;
@@ -421,7 +425,7 @@ void main() {
 // `gl.onmousedown()`, `gl.onmousemove()`, and `gl.onmouseup()` with an
 // augmented event object. The event object also has the properties `x`, `y`,
 // `deltaX`, `deltaY`, and `dragging`.
-	function addEventListeners(gl) {
+	function addEventListeners(gl:LightGLContext) {
 		var oldX = 0, oldY = 0, buttons = {}, hasOld = false
 
 		function isDragging() {
@@ -453,7 +457,7 @@ void main() {
 			e.original = original
 			e.x = e.pageX
 			e.y = e.pageY
-			for (var obj = gl.canvas; obj; obj = obj.offsetParent) {
+			for (let obj:Element = gl.canvas; obj; obj = obj.offsetParent) {
 				e.x -= obj.offsetLeft
 				e.y -= obj.offsetTop
 			}
@@ -476,7 +480,7 @@ void main() {
 
 		function mousemove(e) {
 			e = augmented(e)
-			if (gl.onmousemove) gl.onmousemove(e)
+			gl.onmousemove.forEach(handler => handler(e))
 			e.preventDefault()
 		}
 
@@ -490,7 +494,7 @@ void main() {
 				gl.canvas.addEventListener('mouseup', mouseup)
 			}
 			e = augmented(e)
-			if (gl.onmouseup) gl.onmouseup(e)
+			gl.onmouseup.forEach(handler => handler(e))
 			e.preventDefault()
 		}
 
@@ -514,7 +518,9 @@ void main() {
 			buttons[e.which] = true
 			e = augmented(e)
 			e.preventDefault()
-			if (gl.onmousedown) return gl.onmousedown(e)
+			for (const handler of gl.onmousedown) {
+				!e.isImmediatePropagationStopped() && handler(e)
+			}
 		})
 		gl.canvas.addEventListener('mousemove', mousemove)
 		gl.canvas.addEventListener('mouseup', mouseup)
@@ -673,7 +679,7 @@ void main() {
 //
 //     var mesh = new GL.Mesh({ coords: true, lines: true });
 //
-//     // Default attribute "vertices", available as "gl_Vertex" in
+//     // Default attribute "vertices", available as "LGL_Vertex" in
 //     // the vertex shader
 //     mesh.vertices = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]];
 //
@@ -699,14 +705,14 @@ void main() {
 // Represents a collection of vertex buffers and index buffers. Each vertex
 // buffer maps to one attribute in GLSL and has a corresponding property set
 // on the Mesh instance. There is one vertex buffer by default: `vertices`,
-// which maps to `gl_Vertex`. The `coords`, `normals`, and `colors` vertex
+// which maps to `LGL_Vertex`. The `coords`, `normals`, and `colors` vertex
 // buffers map to `gl_TexCoord`, `gl_Normal`, and `gl_Color` respectively,
 // and can be enabled by setting the corresponding options to true. There are
 // two index buffers, `triangles` and `lines`, which are used for rendering
 // `WGL.TRIANGLES` and `WGL.LINES`, respectively. Only `triangles` is enabled by
 // default, although `computeWireframe()` will add a normal buffer if it wasn't
 // initially enabled.
-	export class Mesh {
+	export class Mesh extends Transformable {
 		hasBeenCompiled: boolean
 		vertexBuffers: {[name: string]: Buffer}
 		indexBuffers: {[name: string]: Buffer}
@@ -720,6 +726,7 @@ void main() {
 		colors?: any[]
 
 		constructor(options: {coords?: boolean, normals?: boolean, colors?: boolean, lines?: boolean, triangles?: boolean} = {}) {
+			super()
 			this.hasBeenCompiled = false
 			this.vertexBuffers = {}
 			this.indexBuffers = {}
@@ -729,6 +736,27 @@ void main() {
 			if (options.colors) this.addVertexBuffer('colors', 'LGL_Color')
 			if (!('triangles' in options) || options.triangles) this.addIndexBuffer('TRIANGLES')
 			if (options.lines) this.addIndexBuffer('LINES')
+		}
+
+		calcVolume(): {volume: number, centroid: V3, area: number} {
+			let totalVolume = 0, totalCentroid = V3.ZERO, totalAreaX2 = 0
+			const triangles = this.triangles
+			const vertices = this.vertices
+			for (let i = 0; i < triangles.length; i += 3) {
+				const i0 = triangles[i + 0], i1 = triangles[i + 1], i2 = triangles[i + 2]
+				const v0 = vertices[i0], v1 = vertices[i1], v2 = vertices[i2]
+				const v01 = v1.minus(v0), v02 = v2.minus(v0)
+				const normal = v01.cross(v02)
+				//const centroidZ = (v0.z + v1.z + v2.z) / 3
+				//totalVolume += centroidZ * (area === v01.cross(v02).length() / 2) * v01.cross(v02).normalized().z
+				const faceCentroid = v0.plus(v1.plus(v2)).div(3)
+				totalVolume += faceCentroid.z * normal.z / 2
+				const faceAreaX2 = normal.length()
+				totalAreaX2 += faceAreaX2
+				totalCentroid = totalCentroid.plus(new V3(faceCentroid.x, faceCentroid.y, faceCentroid.z / 2).times(faceCentroid.z * normal.z / 2))
+			}
+			// sumInPlaceTree adds negligible additional accuracy for UNIT sphere
+			return {volume: totalVolume, centroid: totalCentroid.div(triangles.length / 3), area: totalAreaX2 / 2}
 		}
 
 		/**
@@ -741,9 +769,9 @@ void main() {
 			this.hasBeenCompiled = false
 			assert('string' == typeof name)
 			assert('string' == typeof attribute)
-			var buffer = this.vertexBuffers[attribute] = new Buffer(WGL.ARRAY_BUFFER, Float32Array);
-			buffer.name = name;
-			this[name] = [];
+			const buffer = this.vertexBuffers[attribute] = new Buffer(WGL.ARRAY_BUFFER, Float32Array)
+			buffer.name = name
+			this[name] = []
 		}
 
 		/**
@@ -751,9 +779,30 @@ void main() {
 		 */
 		addIndexBuffer(name: string) {
 			this.hasBeenCompiled = false
-			var buffer = this.indexBuffers[name] = new Buffer(WGL.ELEMENT_ARRAY_BUFFER, Uint16Array);
+			const buffer = this.indexBuffers[name] = new Buffer(WGL.ELEMENT_ARRAY_BUFFER, Uint16Array)
 			buffer.name = name.toLowerCase()
 			this[name.toLowerCase()] = []
+		}
+
+		concat(...others: Mesh[]) {
+			const mesh = new Mesh({triangles: false})
+			;[this as Mesh].concat(others).forEach(oldMesh => {
+				const startIndex = mesh.vertices ? mesh.vertices.length : 0
+				Object.getOwnPropertyNames(oldMesh.vertexBuffers).forEach(attribute => {
+					const bufferName = this.vertexBuffers[attribute].name
+					if (!mesh.vertexBuffers[attribute]) {
+						mesh.addVertexBuffer(bufferName, attribute)
+					}
+					mesh[bufferName].append(oldMesh[bufferName])
+				})
+				Object.getOwnPropertyNames(oldMesh.indexBuffers).forEach(name => {
+					if (!mesh.indexBuffers[name]) {
+						mesh.addIndexBuffer(name)
+					}
+					mesh[name.toLowerCase()].append(oldMesh[name.toLowerCase()].map(index => index + startIndex))
+				})
+			})
+			return mesh
 		}
 
 		/**
@@ -775,8 +824,8 @@ void main() {
 				}
 			})
 
-			for (var name in this.indexBuffers) {
-				let buffer = this.indexBuffers[name];
+			for (const name in this.indexBuffers) {
+				const buffer = this.indexBuffers[name];
 				buffer.data = this[buffer.name]
 				buffer.compile();
 				// if (NLA_DEBUG && buffer.maxValue >= minVertexBufferLength) {
@@ -824,7 +873,7 @@ void main() {
 		 * Index buffer data is referenced.
 		 */
 		transform(m4: M4): Mesh {
-			var mesh = new Mesh({vertices: this.vertices, normals: this.normals})
+			const mesh = new Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
 				let invTrans = m4.as3x3().inversed().transposed().normalized();
@@ -1006,8 +1055,8 @@ void main() {
 					if (i < detailX && j < detailY) {
 						let offset = i + j * (detailX + 1)
 						mesh.triangles.push(
-							offset, offset + 1, offset + detailX + 1,
-							offset + detailX + 1, offset + 1, offset + detailX + 2)
+							offset, offset + detailX + 1, offset + 1,
+							offset + detailX + 1, offset + detailX + 2, offset + 1)
 					}
 				}
 			}
@@ -1087,12 +1136,20 @@ void main() {
 			return mesh
 		}
 
-		static dodecahedron(): Mesh {
+		static isocahedron(): Mesh {
 			return Mesh.sphere(0)
 		}
 
+		static sphere2(las: int, longs: int) {
+			const baseVertices = NLA.arrayFromFunction(las, i => {
+				const angle = i / (las - 1) * PI - PI / 2
+				return new V3(0, cos(angle), sin(angle))
+			})
+			return Mesh.rotation(baseVertices, L3.Z, 2 * PI, longs, true, baseVertices)
+		}
+
 		/**
-		 * Returns a sphere mesh with radius 1 created by subdividing the faces of a dodecahedron (20-sided) recursively
+		 * Returns a sphere mesh with radius 1 created by subdividing the faces of a isocahedron (20-sided) recursively
 		 * The sphere is positioned at the origin
 		 * @param subdivisions
 		 *      How many recursive divisions to do. A subdivision divides a triangle into 4,
@@ -1100,10 +1157,10 @@ void main() {
 		 * @returns
 		 *      Contains vertex and normal buffers and index buffers for triangles and lines
 		 */
-		static sphere(subdivisions = 3): Mesh {
-			var golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).normalized(), s = u.x, t = u.y
-			// base vertices of dodecahedron
-			var vertices = [
+		static sphere(subdivisions: int = 3): Mesh {
+			const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).normalized(), s = u.x, t = u.y
+			// base vertices of isocahedron
+			const vertices = [
 				new V3(-s, t, 0),
 				new V3(s, t, 0),
 				new V3(-s, -t, 0),
@@ -1118,8 +1175,8 @@ void main() {
 				new V3(t, 0, s),
 				new V3(-t, 0, -s),
 				new V3(-t, 0, s)]
-			// base triangles of dodecahedron
-			var triangles = [
+			// base triangles of isocahedron
+			const triangles = [
 				// 5 faces around point 0
 				0, 11, 5,
 				0, 5, 1,

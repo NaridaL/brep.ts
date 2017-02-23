@@ -15,6 +15,7 @@ QUnit.module('BrepTest4')
  *              implies vertex of A lying in edge of B
 *           5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
  *          6.  vertex/vertex with/without edge/edge, edge/face and face/face intersections
+ *          7.  vertex lies in face
  *
  *
  *

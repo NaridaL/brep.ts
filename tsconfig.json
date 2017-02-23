@@ -9,6 +9,7 @@
 
   },
   "include": [
+    "src/B2.ts",
     "src/*.ts",
     "test/*.ts",
     "C:\\Users\\aval\\.WebStorm2016.2\\config\\javascript\\extLibs\\http_github.com_DefinitelyTyped_DefinitelyTyped_raw_master_qunit_qunit.d.ts",

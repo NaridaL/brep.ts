@@ -1,4 +1,5 @@
-class V3 {
+import Equalable = NLA.Equalable
+class V3 implements Equalable {
 	readonly x: number
 	readonly y: number
 	readonly z: number
@@ -16,22 +17,22 @@ class V3 {
 
 
 	perturbed(delta?: number): V3 {
-		delta = delta || NLA_PRECISION * 0.8;
-		return this.map(x => x + (Math.random() - 0.5) * delta);
+		delta = delta || NLA_PRECISION * 0.8
+		return this.map(x => x + (Math.random() - 0.5) * delta)
 	}
 
 
-	e(index): number {
-		assert(index >= 0 && index < 3);
-		return index == 0 ? this.x : (index == 1 ? this.y : this.z);
+	e(index: int): number {
+		assert(index >= 0 && index < 3)
+		return 0 == index ? this.x : (1 == index ? this.y : this.z)
 	}
 
 	negated(): V3 {
-		return new V3(-this.x, -this.y, -this.z);
+		return new V3(-this.x, -this.y, -this.z)
 	}
 
 	abs(): V3 {
-		return new V3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
+		return new V3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z))
 	}
 
 	plus(a: V3): V3 {
@@ -40,27 +41,35 @@ class V3 {
 	}
 
 	scale(a: V3): V3 {
-		return new V3(this.x * a.x, this.y * a.y, this.z * a.z);
+		return new V3(this.x * a.x, this.y * a.y, this.z * a.z)
 	}
 
+	/**
+	 * See also {@link to} which is a.minus(this)
+	 */
 	minus(a: V3): V3 {
-		assertVectors(a);
-		return new V3(this.x - a.x, this.y - a.y, this.z - a.z);
+		assertVectors(a)
+		return new V3(this.x - a.x, this.y - a.y, this.z - a.z)
+	}
+
+	to(a: V3): V3 {
+		assertVectors(a)
+		return a.minus(this)
 	}
 
 	times(factor: number): V3 {
 		assertNumbers(factor)
-		return new V3(this.x * factor, this.y * factor, this.z * factor);
+		return new V3(this.x * factor, this.y * factor, this.z * factor)
 	}
 
 	div(a: number): V3 {
-		assertNumbers(a);
-		return new V3(this.x / a, this.y / a, this.z / a);
+		assertNumbers(a)
+		return new V3(this.x / a, this.y / a, this.z / a)
 	}
 
 	dot(a: V3): number {
-		assertInst(V3, a);
-		return this.x * a.x + this.y * a.y + this.z * a.z;
+		assertInst(V3, a)
+		return this.x * a.x + this.y * a.y + this.z * a.z
 	}
 
 	/**
@@ -69,38 +78,38 @@ class V3 {
 	lerp(b: V3, t: number): V3 {
 		assertVectors(b)
 		assertNumbers(t)
-		return this.plus(b.minus(this).times(t));
+		return this.plus(b.minus(this).times(t))
 	}
 
-	lengthSquared(): number {
-		return this.dot(this);
+	squared(): number {
+		return this.dot(this)
 	}
 
 	distanceTo(a: V3): number {
 		assertVectors(a)
 		//return this.minus(a).length()
-		return Math.hypot(this.x - a.x, this.y - a.y, this.z - a.z);
+		return Math.hypot(this.x - a.x, this.y - a.y, this.z - a.z)
 	}
 
-	distanceToSquared(a): number {
+	distanceToSquared(a: V3): number {
 		assertVectors(a)
-		return this.minus(a).lengthSquared()
+		return this.minus(a).squared()
 	}
 
 	toSource(): string {
-		return this.toString()
+		return V3.NAMEMAP.get(this) || this.toString()
 	}
 
-	nonParallelVector() {
-		var abs = this.abs();
+	nonParallelVector(): V3 {
+		const abs = this.abs()
 		if ((abs.x <= abs.y) && (abs.x <= abs.z)) {
-			return V3.X;
+			return V3.X
 		}
 		else if ((abs.y <= abs.x) && (abs.y <= abs.z)) {
-			return V3.Y;
+			return V3.Y
 		}
 		else {
-			return V3.Z;
+			return V3.Z
 		}
 	}
 
@@ -109,19 +118,19 @@ class V3 {
 		assertNumbers(t)
 		const sin = Math.sin
 		const omega = this.angleTo(b)
-		return this.times(sin((1 - t) * omega) / sin(omega)).plus(b.times(sin(t * omega) / sin(omega)));
+		return this.times(sin((1 - t) * omega) / sin(omega)).plus(b.times(sin(t * omega) / sin(omega)))
 	}
 
 	min(b: V3): V3 {
-		return new V3(Math.min(this.x, b.x), Math.min(this.y, b.y), Math.min(this.z, b.z));
+		return new V3(Math.min(this.x, b.x), Math.min(this.y, b.y), Math.min(this.z, b.z))
 	}
 
 	max(b: V3): V3 {
-		return new V3(Math.max(this.x, b.x), Math.max(this.y, b.y), Math.max(this.z, b.z));
+		return new V3(Math.max(this.x, b.x), Math.max(this.y, b.y), Math.max(this.z, b.z))
 	}
 
-	equals(v): boolean {
-		return this == v || this.x == v.x && this.y == v.y && this.z == v.z;
+	equals(v: any): boolean {
+		return this == v || this.x == v.x && this.y == v.y && this.z == v.z
 	}
 
 	/**
@@ -134,7 +143,7 @@ class V3 {
 	 * The cross product is zero for parallel vectors.
 	 */
 	cross(v: V3): V3 {
-		return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x);
+		return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x)
 	}
 
 	/**
@@ -150,73 +159,65 @@ class V3 {
 		return Math.max(this.x, this.y, this.z)
 	}
 
-	toAngles(): {theta: number, phi: number} {
-		return {
-			theta: Math.atan2(this.z, this.x),
-			phi: Math.asin(this.y / this.length())
-		}
-	}
-
-	toArray(n = 3) {
-		return [this.x, this.y, this.z].slice(0, n);
+	toArray(n: int = 3): number[] {
+		return [this.x, this.y, this.z].slice(0, n)
 	}
 
 	/**
 	 * Get a perpendicular vector.
-	 * For vectors in the XY-Plane, returns vector rotated CCW.
-	 * @returns {V3}
+	 * For vectors in the XY-Plane, returns vector rotated 90° CCW.
 	 */
-	getPerpendicular() {
+	getPerpendicular(): V3 {
 		if (NLA.eq0(this.x) && NLA.eq0(this.y)) {
 			if (NLA.eq0(this.z)) {
-				throw new Error('zero vector');
+				throw new Error('zero vector')
 			}
 			// v is Vector(0, 0, v.z)
-			return V3.Y;
+			return V3.Y
 		}
-		return V(-this.y, this.x, 0);
+		return new V3(-this.y, this.x, 0)
 	}
 
-	dim() {
-		return 3;
+	dim(): int {
+		return 3
 	}
 
-	els() {
-		return [this.x, this.y, this.z];
+	els(): number[] {
+		return [this.x, this.y, this.z]
 	}
 
-	angleXY() {
-		return Math.atan2(this.y, this.x);
+	angleXY(): number {
+		return Math.atan2(this.y, this.x)
 	}
 
-	lengthXY() {
-		return Math.hypot(this.x, this.y);
+	lengthXY(): number {
+		return Math.hypot(this.x, this.y)
 		//return Math.sqrt(this.x * this.x + this.y * this.y)
 	}
 
-	lengthSquaredXY() {
-		return this.x * this.x + this.y * this.y;
+	lengthSquaredXY(): number {
+		return this.x * this.x + this.y * this.y
 	}
 
 	/**
 	 * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
 	 * @param f function to apply to elements (number -> number)
 	 */
-	map(f) {
-		return new V3(f(this.x), f(this.y), f(this.z));
+	map(f: (el: number) => number): V3 {
+		return new V3(f(this.x), f(this.y), f(this.z))
 	}
 
-	toString(roundFunction?) {
-		roundFunction = roundFunction || NLA.defaultRoundFunction;
-		return "V(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"; //+ this.id
+	toString(roundFunction?): string {
+		roundFunction = roundFunction || NLA.defaultRoundFunction
+		return 'V(' + [this.x, this.y, this.z].map(roundFunction).join(', ') + ')' //+ this.id
 	}
 
 	angleTo(b: V3): number {
-		assert(1 == arguments.length);
-		assertVectors(b);
-		assert(!this.isZero());
-		assert(!b.isZero());
-		return Math.acos(this.dot(b) / this.length() / b.length());
+		assert(1 == arguments.length)
+		assertVectors(b)
+		assert(!this.isZero())
+		assert(!b.isZero())
+		return Math.acos(this.dot(b) / this.length() / b.length())
 	}
 
 	/**
@@ -229,12 +230,12 @@ class V3 {
 	 * (A x B) . normal1 = ||A|| * ||B|| * sin(phi) * cos(alpha)
 	 */
 	angleRelativeNormal(vector: V3, normal1: V3): number {
-		assert(2 == arguments.length);
-		assertVectors(vector, normal1);
-		assert(normal1.hasLength(1));
-		assert(vector.isPerpendicularTo(normal1), "vector.isPerpendicularTo(normal1)" + vector.sce + normal1.sce);
-		assert(this.isPerpendicularTo(normal1), "this.isPerpendicularTo(normal1)" + this.dot(vector));
-		return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector));
+		assert(2 == arguments.length)
+		assertVectors(vector, normal1)
+		assert(normal1.hasLength(1))
+		assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
+		assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector))
+		return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector))
 	}
 
 	/**
@@ -244,31 +245,31 @@ class V3 {
 	 if this has a length of 0 or
 	 if vector has a length of 0
 	 */
-	isParallelTo(vector) {
-		assertVectors(vector);
-		assert(!this.isZero());
-		assert(!vector.isZero());
+	isParallelTo(vector: V3): boolean {
+		assertVectors(vector)
+		assert(!this.isZero())
+		assert(!vector.isZero())
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
-		var dot = this.dot(vector);
-		return NLA.eq(this.lengthSquared() * vector.lengthSquared(), dot * dot);
+		const dot = this.dot(vector)
+		return NLA.eq(this.squared() * vector.squared(), dot * dot)
 	}
 
-	isPerpendicularTo(vector) {
-		assertVectors(vector);
-		assert(!this.isZero(), "!this.isZero()");
-		assert(!vector.isZero(), "!vector.isZero()");
-		return NLA.eq0(this.dot(vector));
+	isPerpendicularTo(vector: V3): boolean {
+		assertVectors(vector)
+		assert(!this.isZero(), '!this.isZero()')
+		assert(!vector.isZero(), '!vector.isZero()')
+		return NLA.eq0(this.dot(vector))
 	}
 
-	isReverseDirTo(vector) {
-		assertVectors(vector);
-		assert(!this.isZero());
-		assert(!vector.isZero());
+	isReverseDirTo(other: V3): boolean {
+		assertVectors(other)
+		assert(!this.isZero())
+		assert(!other.isZero())
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
-		var dot = this.dot(vector);
-		return NLA.eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), dot);
+		const dot = this.dot(other)
+		return NLA.eq(Math.sqrt(this.squared() * other.squared()), dot)
 	}
 
 	/**
@@ -278,7 +279,7 @@ class V3 {
 	 * components of the normalized vector x.
 	 */
 	length(): number {
-		return Math.hypot(this.x, this.y, this.z);
+		return Math.hypot(this.x, this.y, this.z)
 		//return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
 	}
 
@@ -286,22 +287,22 @@ class V3 {
 	 * Definition: V3.isZero == V3.like(V3.ZERO)
 	 */
 	isZero(): boolean {
-		return this.like(V3.ZERO);
+		return this.like(V3.ZERO)
 	}
 
 	like(obj): boolean {
 		if (obj === this)
-			return true;
+			return true
 		if (!(obj instanceof V3))
-			return false;
-		return NLA.eq(this.x, obj.x) && NLA.eq(this.y, obj.y) && NLA.eq(this.z, obj.z);
+			return false
+		return NLA.eq(this.x, obj.x) && NLA.eq(this.y, obj.y) && NLA.eq(this.z, obj.z)
 	}
 
 	/**
 	 * equivalent to this.like(v) || this.negated().like(v)
 	 */
 	likeOrReversed(v: V3): boolean {
-		return NLA.eq(Math.abs(this.dot(v)), Math.sqrt(this.lengthSquared() * v.lengthSquared()));
+		return NLA.eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()))
 	}
 
 	/**
@@ -309,7 +310,7 @@ class V3 {
 	 * NLA.DebugError if this has a length of 0.
 	 */
 	normalized(): V3 {
-		assert(!this.isZero(), "cannot normalize zero vector");
+		assert(!this.isZero(), 'cannot normalize zero vector')
 		return this.div(this.length())
 	}
 
@@ -329,10 +330,10 @@ class V3 {
 	// * @param v
 	// */
 	//assign(v) {
-	//	assertVectors(v);
-	//	this.x = v.x;
-	//	this.y = v.y;
-	//	this.z = v.z;
+	//	assertVectors(v)
+	//	this.x = v.x
+	//	this.y = v.y
+	//	this.z = v.z
 	//}
 	//
 	///**
@@ -343,9 +344,9 @@ class V3 {
 	// * @param z
 	// */
 	//setTo(x, y, z = 0) {
-	//	this.x = x;
-	//	this.y = y;
-	//	this.z = z;
+	//	this.x = x
+	//	this.y = y
+	//	this.z = z
 	//}
 
 	/**
@@ -358,19 +359,55 @@ class V3 {
 	 NLA.V(3, 4).projectedOn(NLA.V(1, 1)) // returns
 	 */
 	projectedOn(b: V3): V3 {
-		assertVectors(b);
+		assertVectors(b)
 		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
-		return b.times(this.dot(b) / b.dot(b));
+		return b.times(this.dot(b) / b.dot(b))
 	}
 
 	rejectedFrom(b: V3): V3 {
-		assertVectors(b);
+		assertVectors(b)
 		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
-		return this.minus(b.times(this.dot(b) / b.dot(b)));
+		return this.minus(b.times(this.dot(b) / b.dot(b)))
+	}
+
+	rejectedFrom1(b1: V3): V3 {
+		assertVectors(b1)
+		assert(b1.hasLength(1))
+		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
+		return this.minus(b1.times(this.dot(b1)))
 	}
 
 	/**
-	 Returns true iff the length() of this vector is equal to "length", using NLA.eq
+	 * Returns the length of this vector rejected from the unit vector b.
+	 *
+	 *       /|
+	 * this / |    ^
+	 *     /__|    | b
+	 *      r
+	 *  Returns length of r (r === this.rejectedFrom(b))
+	 */
+	rejectedLength(b: V3): number {
+		assertVectors(b)
+		return Math.sqrt(this.dot(this) - this.dot(b) ** 2 / b.dot(b))
+	}
+
+	/**
+	 * Returns the length of this vector rejected from the unit vector b1.
+	 *
+	 *       /|
+	 * this / |    ^
+	 *     /__|    | b1
+	 *      r
+	 *  Returns length of r (r === this.rejectedFrom(b1))
+	 */
+	rejected1Length(b1: V3): number {
+		assertVectors(b1)
+		assert(b1.hasLength(1))
+		return Math.sqrt(this.dot(this) - this.dot(b1) ** 2)
+	}
+
+	/**
+	 Returns true iff the length() of this vector is equal to 'length', using NLA.eq
 	 E.g. NLA.V(3, 4).hasLength(5) === true
 	 NLA.V(1, 1).hasLength(1) === false
 	 */
@@ -383,8 +420,8 @@ class V3 {
 	 Returns the sum of the absolute values of the components of this vector.
 	 E.g. NLA.V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
 	 */
-	absSum() {
-		return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
+	absSum(): number {
+		return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z)
 	}
 
 	/**
@@ -401,34 +438,29 @@ class V3 {
 		return Math.min(Math.abs(this.x), Math.abs(this.y), Math.min(this.z))
 	}
 
-	maxAbsDim() {
-		var xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z)
-		return xAbs >= yAbs ? (xAbs >= zAbs ? 0 : 2) : (yAbs >= zAbs ? 1 : 2);
+	maxAbsDim(): number {
+		const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z)
+		return xAbs >= yAbs ? (xAbs >= zAbs ? 0 : 2) : (yAbs >= zAbs ? 1 : 2)
 	}
 
-	minAbsDim() {
-		var xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z)
-		return xAbs < yAbs ? (xAbs < zAbs ? 0 : 2) : (yAbs < zAbs ? 1 : 2);
+	minAbsDim(): number {
+		const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z)
+		return xAbs < yAbs ? (xAbs < zAbs ? 0 : 2) : (yAbs < zAbs ? 1 : 2)
 	}
 
-	transform(m4) {
-		assertInst(M4, m4)
-		return m4.transformPoint(this)
-	}
-
-	withElement(dim, el) {
-		assert(["x", "y", "z"].includes(dim), "" + dim);
-		assertNumbers(el);
-		if ("x" == dim) {
-			return new V3(el, this.y, this.z);
+	withElement(dim: 'x' | 'y' | 'z', el: number) {
+		assert(['x', 'y', 'z'].includes(dim), '' + dim)
+		assertNumbers(el)
+		if ('x' == dim) {
+			return new V3(el, this.y, this.z)
 		}
-		if ("y" == dim) {
-			return new V3(this.x, el, this.z);
+		if ('y' == dim) {
+			return new V3(this.x, el, this.z)
 		}
-		return new V3(this.x, this.y, el);
+		return new V3(this.x, this.y, el)
 	}
 
-	hashCode() {
+	hashCode(): int {
 		function floatHashCode(f) {
 			return ~~(f * (1 << 28))
 		}
@@ -437,16 +469,19 @@ class V3 {
 	}
 
 	hashCodes() {
-		function floatHashCode(f) {
-			return ~~(f * (1 << 28));
-		}
+		//function floatHashCode(f) {
+		//	return ~~(f * (1 << 28))
+		//}
 
 		// compare hashCode.floatHashCode
 		// the following ops are equivalent to
 		// floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
 		// this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
 		// the other 7 can be calculated by adding constants
-		var xHC = ~~(this.x * (1 << 28) - 0.5), yHC = ~~(this.y * (1 << 28) - 0.5), zHC = ~~(this.z * (1 << 28) - 0.5), hc = ~~((xHC * 31 + yHC) * 31 + zHC);
+		const xHC = ~~(this.x * (1 << 28) - 0.5), 
+			yHC = ~~(this.y * (1 << 28) - 0.5), 
+			zHC = ~~(this.z * (1 << 28) - 0.5), 
+			hc = ~~((xHC * 31 + yHC) * 31 + zHC)
 		return [
 			~~(hc),
 			~~(hc + 961),
@@ -459,42 +494,49 @@ class V3 {
 		]
 	}
 
-	compareTo2(v3, precision) {
-		precision = precision || 0;
-		if (!NLA.eq2(this.x, v3.x, precision)) {
-			return this.x - v3.x;
+	compareTo(other: V3): number {
+		if (this.x != other.x) {
+			return this.x - other.x
 		}
-		else if (!NLA.eq2(this.y, v3.y, precision)) {
-			return this.y - v3.y;
-		}
-		else if (!NLA.eq2(this.z, v3.z, precision)) {
-			return this.z - v3.z;
+		else if (this.y != other.y) {
+			return this.y - other.y
 		}
 		else {
-			return 0;
+			return this.z - other.z
 		}
 	}
 
-	compareTo(v3) {
-		if (this.x != v3.x) {
-			return this.x - v3.x;
+	compareTo2(other: V3, precision: number = 0): number {
+		if (!NLA.eq2(this.x, other.x, precision)) {
+			return this.x - other.x
 		}
-		else if (this.y != v3.y) {
-			return this.y - v3.y;
+		else if (!NLA.eq2(this.y, other.y, precision)) {
+			return this.y - other.y
+		}
+		else if (!NLA.eq2(this.z, other.z, precision)) {
+			return this.z - other.z
 		}
 		else {
-			return this.z - v3.z;
+			return 0
 		}
 	}
 
 
-	static ZERO: V3 = new V3(0, 0, 0)
-	static ONES: V3 = new V3(1, 1, 1)
-	static X: V3 = new V3(1, 0, 0)
-	static Y: V3 = new V3(0, 1, 0)
-	static Z: V3 = new V3(0, 0, 1)
-	static INF: V3 = new V3(Infinity, Infinity, Infinity)
-	static XYZ: V3[] = [V3.X, V3.Y, V3.Z]
+	static readonly ZERO: V3 = new V3(0, 0, 0)
+	static readonly ONES: V3 = new V3(1, 1, 1)
+	static readonly X: V3 = new V3(1, 0, 0)
+	static readonly Y: V3 = new V3(0, 1, 0)
+	static readonly Z: V3 = new V3(0, 0, 1)
+	static readonly INF: V3 = new V3(Infinity, Infinity, Infinity)
+	static readonly XYZ: V3[] = [V3.X, V3.Y, V3.Z]
+	
+	static readonly NAMEMAP = new NLA.CustomMap<V3, string>()
+		.set(V3.ZERO, 'V3.ZERO')
+		.set(V3.ONES, 'V3.ONES')
+		.set(V3.X, 'V3.X')
+		.set(V3.Y, 'V3.Y')
+		.set(V3.Z, 'V3.Z')
+		.set(V3.INF, 'V3.INF')
 
 	static random(): V3 {
 		return new V3(Math.random(), Math.random(), Math.random())
@@ -509,9 +551,9 @@ class V3 {
 	 * @returns A random point on the unit sphere with uniform distribution across the surface.
 	 */
 	static randomUnit(): V3 {
-		var zRotation = Math.random() * 2 * Math.PI
-		var z = Math.random() * 2 - 1
-		var zRadius = Math.sqrt(1 - z * z)
+		const zRotation = Math.random() * 2 * Math.PI
+		const z = Math.random() * 2 - 1
+		const zRadius = Math.sqrt(1 - z * z)
 		return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z)
 	}
 
@@ -531,7 +573,7 @@ class V3 {
 		return new V3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z))
 	}
 
-	static lerp(a: V3, b: V3, fraction: number) {
+	static lerp(a: V3, b: V3, fraction: number): V3 {
 		return b.minus(a).times(fraction).plus(a)
 	}
 
@@ -558,8 +600,8 @@ class V3 {
 
 	static add(...vs: V3[]): V3 {
 		assertVectors.apply(undefined, vs)
-		var x = 0, y = 0, z = 0
-		var i = vs.length
+		let x = 0, y = 0, z = 0
+		let i = vs.length
 		while (i--) {
 			x += vs[i].x
 			y += vs[i].y
@@ -570,8 +612,8 @@ class V3 {
 
 	static sub(...vs: V3[]): V3 {
 		assertVectors.apply(undefined, vs)
-		var x = vs[0].x, y = vs[0].y, z = vs[0].z
-		var i = vs.length
+		let x = vs[0].x, y = vs[0].y, z = vs[0].z
+		let i = vs.length
 		while (i--) {
 			x -= vs[i].x
 			y -= vs[i].y
@@ -581,15 +623,15 @@ class V3 {
 	}
 
 	static flattenV3Array(v3arr: V3[], dest?: number[]|Float64Array|Float32Array, srcStart?: number, destStart?: number, v3count?: number) {
-		//assert (v3arr.every(v3 => v3 instanceof V3), "v3arr.every(v3 => v3 instanceof V3)")
+		//assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
 		srcStart = srcStart || 0
 		destStart = destStart || 0
 		v3count = v3count || (v3arr.length - srcStart)
 		dest = dest || new Float32Array(3 * v3count)
-		assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count")
-		var i = v3count
+		assert(dest.length - destStart >= v3count, 'dest.length - destStart >= v3count')
+		let i = v3count
 		while (i--) {
-			var v = v3arr[srcStart + i]
+			const v = v3arr[srcStart + i]
 			dest[destStart + i * 3] = v.x
 			dest[destStart + i * 3 + 1] = v.y
 			dest[destStart + i * 3 + 2] = v.z
@@ -605,7 +647,7 @@ class V3 {
 		return new V3(radius * Math.cos(phi), radius * Math.sin(phi), 0)
 	}
 
-	static areDisjoint(it: Iterable<T>) {
+	static areDisjoint(it: Iterable<V3>): boolean {
 		const vSet = new NLA.CustomSet
 		for (const v of it) {
 			if (!v.equals(vSet.canonicalizeLike(v))) {
@@ -616,6 +658,19 @@ class V3 {
 		return true
 	}
 
+
+	toAngles(): {theta: number, phi: number} {
+		return {
+			theta: Math.atan2(this.y, this.x),
+			phi: Math.asin(this.z / this.length())
+		}
+	}
+
+	/**
+	 *
+	 * @param longitude angle in XY plane
+	 * @param latitude "height"/z dir angle
+	 */
     static sphere(longitude: number, latitude: number): V3 {
         return new V3(
             Math.cos(latitude) * Math.cos(longitude),
@@ -642,7 +697,7 @@ function V(a: any, b?: any, c?: any): V3 {
 	} else if (arguments.length == 2) {
 		return new V3(parseFloat(a), parseFloat(b), 0)
 	} else if (arguments.length == 1) {
-		if (typeof(a) == "object") {
+		if (typeof(a) == 'object') {
 			if (a instanceof V3) {
 				// immutable, so
 				return a
@@ -661,7 +716,7 @@ function V(a: any, b?: any, c?: any): V3 {
 			}
 		}
 	}
-	throw new Error("invalid arguments" + arguments)
+	throw new Error('invalid arguments' + arguments)
 }
 
 NLA.registerClass(V3)

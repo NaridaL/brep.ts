@@ -1,49 +1,48 @@
-const Vector = NLA.Vector
-type Vector = NLA.Vector
-class Matrix {
+import Vector = NLA.Vector
+class Matrix implements Equalable {
 	m: Float64Array
 	width: number
 	height: number
 
 	constructor(width: int, height: int, m: Float64Array) {
 		assert(width * height == m.length, "width * height == m.length", width, height, m.length)
-		this.m = m;
-		this.width = width;
-		this.height = height;
+		this.m = m
+		this.width = width
+		this.height = height
 	}
 
 	static random(width, height): Matrix {
-		assertNumbers(width, height);
+		assertNumbers(width, height)
 		return Matrix.fromFunction(width, height, (i, j) => Math.random())
 	}
 
 	static fromFunction(width, height, f): Matrix {
-		assertNumbers(width, height);
-		var m = new Float64Array(height * width)
-		var elIndex = height * width;
+		assertNumbers(width, height)
+		const m = new Float64Array(height * width)
+		let elIndex = height * width
 		while (elIndex--) {
-			m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
+			m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex)
 		}
-		return new Matrix(width, height, m);
+		return new Matrix(width, height, m)
 	}
 
 	static identity(dim: number): Matrix {
-		assertNumbers(dim);
-		var m = new Float64Array(dim * dim)
+		assertNumbers(dim)
+		const m = new Float64Array(dim * dim)
 		// Float64Arrays are init to 0
-		var elIndex = dim * (dim + 1);
+		let elIndex = dim * (dim + 1)
 		while (elIndex) {
 			elIndex -= (dim + 1)
 			m[elIndex] = 1
 		}
-		return new Matrix(dim, dim, m);
+		return new Matrix(dim, dim, m)
 	}
 
 	static permutation(dim, i, k): Matrix {
-		assertNumbers(dim, i, k);
-		var m = new Float64Array(dim * dim)
+		assertNumbers(dim, i, k)
+		const m = new Float64Array(dim * dim)
 		// Float64Array are init to 0
-		var elIndex = dim * (dim + 1);
+		let elIndex = dim * (dim + 1)
 		while (elIndex) {
 			elIndex -= (dim + 1)
 			m[elIndex] = 1
@@ -61,13 +60,13 @@ class Matrix {
 
 	static fromRowArrays2(arrays) {
 		if (0 == arrays.length) {
-			throw new Error("cannot have 0 vector");
+			throw new Error("cannot have 0 vector")
 		}
-		var height = arrays.length
-		var width = arrays[0].length
-		var m = new Float64Array(height * width)
-		NLA.arrayCopy(arrays[0], 0, m, 0, width);
-		for (var rowIndex = 1; rowIndex < height; rowIndex++) {
+		const height = arrays.length
+		const width = arrays[0].length
+		const m = new Float64Array(height * width)
+		NLA.arrayCopy(arrays[0], 0, m, 0, width)
+		for (let rowIndex = 1; rowIndex < height; rowIndex++) {
 			if (arrays[rowIndex].length != width) {
 				throw new Error("all row arrays must be the same length")
 			}
@@ -84,21 +83,21 @@ class Matrix {
 		return new Matrix(width, height, new Float64Array(width * height))
 	}
 
-	static fromColArrays(colArrays) {
+	static fromColArrays(colArrays): Matrix {
 		if (0 == colArrays.length) {
-			throw new Error("cannot have 0 vector");
+			throw new Error("cannot have 0 vector")
 		}
-		var width = colArrays.length
-		var height = colArrays[0].length
-		var m = new Float64Array(height * width)
+		const width = colArrays.length
+		const height = colArrays[0].length
+		const m = new Float64Array(height * width)
 		NLA.arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height)
-		for (var colIndex = 1; colIndex < width; colIndex++) {
+		for (let colIndex = 1; colIndex < width; colIndex++) {
 			if (colArrays[colIndex].length != height) {
 				throw new Error("all col arrays must be the same length")
 			}
 			NLA.arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height)
 		}
-		return new Matrix(width, height, m);
+		return new Matrix(width, height, m)
 	}
 
 
@@ -120,8 +119,8 @@ class Matrix {
 	toString(f?: (el: number) => string): string {
 		f = f || ((v) => v.toFixed(6))
 		assert(typeof f(0) == "string", "" + typeof f(0))
-		var rounded = Array.prototype.slice.call(this.m).map(f);
-		var colWidths = NLA.arrayFromFunction(this.width,
+		const rounded = Array.prototype.slice.call(this.m).map(f)
+		const colWidths = NLA.arrayFromFunction(this.width,
 			(colIndex) => rounded.sliceStep(colIndex, this.width).map((x) => x.length).max())
 		return NLA.arrayFromFunction(this.height,
 			(rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width) // select matrix row
@@ -131,13 +130,13 @@ class Matrix {
 	}
 
 	row(rowIndex): Vector {
-		var v = new Float64Array(this.width)
+		const v = new Float64Array(this.width)
 		NLA.arrayCopy(this.m, rowIndex * this.width, v, 0, this.width)
 		return new Vector(v)
 	}
 
 	col(colIndex): Vector {
-		var v = new Float64Array(this.height)
+		const v = new Float64Array(this.height)
 		NLA.arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height)
 		return new Vector(v)
 	}
@@ -151,28 +150,28 @@ class Matrix {
 	}
 
 	equals(obj): boolean {
-		if (obj.constructor != Matrix) return false;
-		if (this.width != obj.width || this.height != obj.height) return false;
-		var elIndex = this.m.length;
+		if (obj.constructor != Matrix) return false
+		if (this.width != obj.width || this.height != obj.height) return false
+		let elIndex = this.m.length
 		while (elIndex--) {
-			if (this.m[elIndex] != obj.m[elIndex]) return false;
+			if (this.m[elIndex] != obj.m[elIndex]) return false
 		}
 	}
 
 	equalsMatrix(matrix: Matrix, precision?: number): boolean {
 		precision = precision || NLA_PRECISION
-		if (!(matrix instanceof Matrix)) throw new Error("not a matrix");
-		if (this.width != matrix.width || this.height != matrix.height) return false;
-		var elIndex = this.m.length;
+		if (!(matrix instanceof Matrix)) throw new Error("not a matrix")
+		if (this.width != matrix.width || this.height != matrix.height) return false
+		let elIndex = this.m.length
 		while (elIndex--) {
-			if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) >= precision) return false;
+			if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) >= precision) return false
 		}
 		return true
 	}
 
 	hashCode(): int {
-		var result = 0
-		var elIndex = this.m.length;
+		let result = 0
+		let elIndex = this.m.length
 		while (elIndex--) {
 			result = result * 31 + NLA.floatHashCode(this.m[elIndex])
 		}
@@ -180,7 +179,7 @@ class Matrix {
 	}
 
 	isZero(): boolean {
-		var elIndex = this.m.length;
+		let elIndex = this.m.length
 		while (elIndex--) {
 			if (!NLA.eq0(this.m[elIndex])) {
 				return false
@@ -207,7 +206,7 @@ class Matrix {
 			// find largest value in colIndex
 			let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows: number = 0
 			for (let rowIndex = currentRowIndex; rowIndex < dim; rowIndex++) {
-				var el: number = uRowArrays[rowIndex][colIndex]
+				const el: number = uRowArrays[rowIndex][colIndex]
 				numberOfNonZeroRows += +(0 != el)
 				if (Math.abs(el) > maxAbsValue) {
 					maxAbsValue = Math.abs(el)
@@ -256,7 +255,7 @@ class Matrix {
 			// console.log('currentRowIndex', currentRowIndex)	// find largest value in colIndex
 			let maxAbsValue = 0, pivotRowIndex = undefined, numberOfNonZeroRows = 0
 			for (let rowIndex = currentRowIndex; rowIndex < height; rowIndex++) {
-				var el = uRowArrays[rowIndex][colIndex]
+				const el = uRowArrays[rowIndex][colIndex]
 				numberOfNonZeroRows += +(0 != el)
 				if (Math.abs(el) > maxAbsValue) {
 					maxAbsValue = Math.abs(el)
@@ -303,11 +302,11 @@ class Matrix {
 			if (Math.abs(s) < Math.abs(c)) {
 				return 0.5 * Math.sign(c) * s
 			}
-			return 2 * Math.sign(s) / c;
+			return 2 * Math.sign(s) / c
 		}
 
 		function matrixForCS(dim, i, k, c, s) {
-			var m = Matrix.identity(dim)
+			const m = Matrix.identity(dim)
 			m.setEl(i, i, c)
 			m.setEl(k, k, c)
 			m.setEl(i, k, s)
@@ -315,28 +314,28 @@ class Matrix {
 			return m
 		}
 
-		var qTransposed = Matrix.identity(this.height)
-		for (var colIndex = 0; colIndex < this.width; colIndex++) {
+		let qTransposed = Matrix.identity(this.height)
+		for (let colIndex = 0; colIndex < this.width; colIndex++) {
 			// find largest value in colIndex
-			for (var rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
-				//console.log("row ", rowIndex, "col ", colIndex);
-				var xi = this.e(colIndex, colIndex)
-				var xk = this.e(rowIndex, colIndex)
+			for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
+				//console.log("row ", rowIndex, "col ", colIndex)
+				const xi = this.e(colIndex, colIndex)
+				const xk = this.e(rowIndex, colIndex)
 				if (xk == 0) {
-					continue;
+					continue
 				}
-				var r = Math.sqrt(xi * xi + xk * xk);
-				var c = xi / r
-				var s = xk / r
+				const r = Math.sqrt(xi * xi + xk * xk)
+				const c = xi / r
+				const s = xk / r
 
 				// apply transformation on every column:
-				for (var col2 = colIndex; col2 < this.width; col2++) {
-					var x1 = this.e(colIndex, col2) * c + this.e(rowIndex, col2) * s
-					var x2 = this.e(rowIndex, col2) * c - this.e(colIndex, col2) * s
+				for (let col2 = colIndex; col2 < this.width; col2++) {
+					const x1 = this.e(colIndex, col2) * c + this.e(rowIndex, col2) * s
+					const x2 = this.e(rowIndex, col2) * c - this.e(colIndex, col2) * s
 					this.setEl(colIndex, col2, x1)
 					this.setEl(rowIndex, col2, x2)
 				}
-				//console.log("r ", r, "c ", c, "s ", s, "sigma", sigma(c, s));
+				//console.log("r ", r, "c ", c, "s ", s, "sigma", sigma(c, s))
 				//console.log(this.toString(),"cs\n", matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
 				qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed)
 			}
@@ -349,12 +348,20 @@ class Matrix {
 		if (!this.isSquare()) return false
 		if (this.m.some((value) => !NLA.eq0(value) && !NLA.eq(1, value))) return false
 
-		var rows = this.asRowArrays(Array)
+		const rows = this.asRowArrays(Array)
 		if (rows.some((row) => row.filter((value) => NLA.eq(1, value)).length != 1)) return false
 
-		var cols = this.asColArrays(Array)
+		const cols = this.asColArrays(Array)
 		if (cols.some((col) => col.filter((value) => NLA.eq(1, value)).length != 1)) return false
 
+		return true
+	}
+
+	isDiagonal(precision?: number): boolean {
+		let i = this.m.length
+		while (i--) {
+			if (0 !== i % (this.width + 1) && !NLA.eq0(this.m[i])) return false
+		}
 		return true
 	}
 
@@ -365,8 +372,8 @@ class Matrix {
 	isUpperTriangular(precision?: number) {
 		precision = "number" == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
-		for (var rowIndex = 1; rowIndex < this.height; rowIndex++) {
-			for (var colIndex = 0; colIndex < rowIndex; colIndex++) {
+		for (let rowIndex = 1; rowIndex < this.height; rowIndex++) {
+			for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
 				if (!NLA.eq02(this.m[rowIndex * this.width + colIndex], precision)) {
 					return false
 				}
@@ -380,21 +387,21 @@ class Matrix {
 	 * More efficient than calculating the inverse for few (~ <= this.height) values
 	 */
 	solveLinearSystem(b: Vector): Vector {
-		var lup = this.luDecomposition()
+		const lup = this.luDecomposition()
 		// console.log(lup.L.toString())
 		// console.log(lup.U.toString())
 		// console.log(lup.P.toString())
-		var y = lup.L.solveForwards(lup.P.timesVector(b))
-		var x = lup.U.solveBackwards(y)
+		const y = lup.L.solveForwards(lup.P.timesVector(b))
+		const x = lup.U.solveBackwards(y)
 		return x
 	}
 
 	isLowerUnitriangular(precision?: number): boolean {
 		precision = "number" == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
-		for (var rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-			for (var colIndex = rowIndex; colIndex < this.width; colIndex++) {
-				var el = this.m[rowIndex * this.width + colIndex];
+		for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+			for (let colIndex = rowIndex; colIndex < this.width; colIndex++) {
+				const el = this.m[rowIndex * this.width + colIndex]
 				if (rowIndex == colIndex ? !NLA.eq2(1, el, precision) : !NLA.eq02(el, precision)) {
 					return false
 				}
@@ -405,8 +412,8 @@ class Matrix {
 
 	isLowerTriangular(): boolean {
 		if (!this.isSquare()) return false
-		for (var rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-			for (var colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+		for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+			for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
 				if (!NLA.eq0(this.m[rowIndex * this.width + colIndex])) {
 					return false
 				}
@@ -432,8 +439,8 @@ class Matrix {
 	}
 
 	solveBackwardsMatrix(matrix: Matrix): Matrix {
-		var colVectors = new Array(matrix.width)
-		var i = matrix.width
+		const colVectors = new Array(matrix.width)
+		let i = matrix.width
 		while (i--) {
 			colVectors[i] = this.solveBackwards(matrix.col(i))
 		}
@@ -441,8 +448,8 @@ class Matrix {
 	}
 
 	solveForwardsMatrix(matrix: Matrix): Matrix {
-		var colVectors = new Array(matrix.width)
-		var i = matrix.width
+		const colVectors = new Array(matrix.width)
+		let i = matrix.width
 		while (i--) {
 			colVectors[i] = this.solveForwards(matrix.col(i))
 		}
@@ -453,10 +460,10 @@ class Matrix {
 		assertVectors(x)
 		assert(this.height == x.dim(), "this.height == x.dim()")
 		assertf(() => this.isLowerTriangular(), this.toString())
-		var v = new Float64Array(this.width)
-		for (var rowIndex = 0; rowIndex < this.height; rowIndex++) {
-			var temp = x.v[rowIndex]
-			for (var colIndex = 0; colIndex < rowIndex; colIndex++) {
+		const v = new Float64Array(this.width)
+		for (let rowIndex = 0; rowIndex < this.height; rowIndex++) {
+			let temp = x.v[rowIndex]
+			for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
 				temp -= v[colIndex] * this.e(rowIndex, colIndex)
 			}
 			v[rowIndex] = temp / this.e(rowIndex, rowIndex)
@@ -473,7 +480,7 @@ class Matrix {
 	rank(): int {
 		let U = this.gauss().U
 		//console.log(R.toString())
-		var rowIndex = this.height
+		let rowIndex = this.height
 		while (rowIndex-- && U.row(rowIndex).isZero()) {
 			console.log("RANK" + U.row(rowIndex).toString() + U.row(rowIndex).isZero())
 		}
@@ -490,8 +497,8 @@ class Matrix {
 
 	asRowArrays<T extends FloatArray>(arrayConstructor: new (length: int) => T): T[] {
 		arrayConstructor = arrayConstructor || Float64Array
-		var rowIndex = this.height
-		var result = new Array(this.height)
+		let rowIndex = this.height
+		const result = new Array(this.height)
 		while (rowIndex--) {
 			result[rowIndex] = this.rowArray(rowIndex, arrayConstructor)
 		}
@@ -500,8 +507,8 @@ class Matrix {
 
 	asColArrays<T extends FloatArray>(arrayConstructor: new (length: int) => T): T[] {
 		arrayConstructor = arrayConstructor || Float64Array
-		var colIndex = this.width
-		var result = new Array(this.width)
+		let colIndex = this.width
+		const result = new Array(this.width)
 		while (colIndex--) {
 			result[colIndex] = this.colArray(colIndex, arrayConstructor)
 		}
@@ -510,23 +517,21 @@ class Matrix {
 
 	rowArray<T extends FloatArray>(rowIndex, arrayConstructor: new (length: int) => T): T {
 		arrayConstructor = arrayConstructor || Float64Array
-		var result = new arrayConstructor(this.width)
+		const result = new arrayConstructor(this.width)
 		NLA.arrayCopy(this.m, rowIndex * this.width, result, 0, this.width)
 		return result
 	}
 
 	colArray<T extends FloatArray>(colIndex, arrayConstructor: new (length: int) => T): T {
 		arrayConstructor = arrayConstructor || Float64Array
-		var result = new arrayConstructor(this.width)
+		const result = new arrayConstructor(this.width)
 		NLA.arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height)
 		return result
 	}
 
 	subMatrix(firstColIndex: int, subWidth: int, firstRowIndex: int, subHeight: int): Matrix {
-		if (firstColIndex + subWidth > this.width || firstRowIndex + subHeight > this.height) {
-			throw new Error("inavlid params")
-		}
-		var m = new Float64Array(this.height)
+		assert(firstColIndex + subWidth > this.width || firstRowIndex + subHeight > this.height)
+		const m = new Float64Array(this.height)
 		NLA.arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth)
 		return new Matrix(subWidth, subHeight, m)
 	}
@@ -565,7 +570,7 @@ class Matrix {
 		r[8] = m[0] * m[4] - m[1] * m[3]
 
 		let det = m[0] * r[0] + m[1] * r[3] + m[2] * r[6]
-		var i = 9
+		let i = 9
 		while (i--) {
 			r[i] /= det
 		}
@@ -596,14 +601,14 @@ class Matrix {
 	times(matrix: Matrix): Matrix {
 		assertInst(Matrix, matrix)
 		assert(this.canMultiply(matrix), `Cannot multiply this {this.dimString()} by matrix {matrix.dimString()}`)
-		var nWidth = matrix.width, nHeight = this.height, n = this.width
-		var nM = new Float64Array(nWidth * nHeight)
-		var nRowIndex = nHeight
+		const nWidth = matrix.width, nHeight = this.height, n = this.width
+		const nM = new Float64Array(nWidth * nHeight)
+		let nRowIndex = nHeight
 		while (nRowIndex--) {
-			var nColIndex = nWidth
+			let nColIndex = nWidth
 			while (nColIndex--) {
-				var result = 0
-				var i = n
+				let result = 0
+				let i = n
 				while (i--) {
 					result += this.m[nRowIndex * n + i] * matrix.m[i * nWidth + nColIndex]
 				}
@@ -616,12 +621,12 @@ class Matrix {
 	timesVector(v: Vector): Vector {
 		assertVectors(v)
 		assert(this.width == v.dim())
-		var nHeight = this.height, n = this.width
-		var nM = new Float64Array(nHeight)
-		var nRowIndex = nHeight
+		const nHeight = this.height, n = this.width
+		const nM = new Float64Array(nHeight)
+		let nRowIndex = nHeight
 		while (nRowIndex--) {
-			var result = 0
-			var i = n
+			let result = 0
+			let i = n
 			while (i--) {
 				result += this.m[nRowIndex * n + i] * v.v[i]
 			}
@@ -631,11 +636,11 @@ class Matrix {
 	}
 
 	transposed(): Matrix {
-		var tWidth = this.height, tHeight = this.width
-		var tM = new Float64Array(tWidth * tHeight)
-		var tRowIndex = tHeight
+		const tWidth = this.height, tHeight = this.width
+		const tM = new Float64Array(tWidth * tHeight)
+		let tRowIndex = tHeight
 		while (tRowIndex--) {
-			var tColIndex = tWidth
+			let tColIndex = tWidth
 			while (tColIndex--) {
 				tM[tRowIndex * tWidth + tColIndex] = this.m[tColIndex * tHeight + tRowIndex]
 			}
@@ -646,14 +651,14 @@ class Matrix {
 	/**
 	 * In-place transpose.
 	 */
-	transpose() {
-		var h = this.height, w = this.width, tM = this.m
-		var tRowIndex = h
+	transpose(): void {
+		const h = this.height, w = this.width, tM = this.m
+		let tRowIndex = h
 		while (tRowIndex--) {
-			var tColIndex = Math.min(tRowIndex, w)
+			let tColIndex = Math.min(tRowIndex, w)
 			while (tColIndex--) {
 				console.log("col", tColIndex, "row", tRowIndex)
-				var temp = tM[tRowIndex * w + tColIndex]
+				const temp = tM[tRowIndex * w + tColIndex]
 				tM[tRowIndex * w + tColIndex] = tM[tColIndex * h + tRowIndex]
 				tM[tColIndex * h + tRowIndex] = temp
 			}
@@ -663,16 +668,16 @@ class Matrix {
 	}
 
 	isSquare(): boolean {
-		return this.height == this.width;
+		return this.height == this.width
 	}
 
 	diagonal(): Vector {
 		if (!this.isSquare()) {
 			throw new Error("!!")
 		}
-		var v = new Float64Array(this.width)
-		var elIndex = this.width * (this.width + 1)
-		var vIndex = this.width
+		const v = new Float64Array(this.width)
+		let elIndex = this.width * (this.width + 1)
+		let vIndex = this.width
 		while (vIndex--) {
 			elIndex -= this.width + 1
 			v[vIndex] = this.m[elIndex]
@@ -689,11 +694,11 @@ class Matrix {
 	}
 
 	maxAbsColSum(): number {
-		var result = 0
-		var colIndex = this.width
+		let result = 0
+		let colIndex = this.width
 		while (colIndex--) {
-			var absSum = 0
-			var rowIndex = this.height
+			let absSum = 0
+			let rowIndex = this.height
 			while (rowIndex--) {
 				absSum += Math.abs(this.m[rowIndex * this.width + colIndex])
 			}
@@ -703,11 +708,11 @@ class Matrix {
 	}
 
 	maxAbsRowSum(): number {
-		var result = 0
-		var rowIndex = this.height
+		let result = 0
+		let rowIndex = this.height
 		while (rowIndex--) {
-			var absSum = 0
-			var colIndex = this.width
+			let absSum = 0
+			let colIndex = this.width
 			while (colIndex--) {
 				absSum += Math.abs(this.m[rowIndex * this.width + colIndex])
 			}
@@ -719,8 +724,8 @@ class Matrix {
 	getTriangularDeterminant(): number {
 		assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix")
 
-		var product = 1
-		var elIndex = this.width * (this.width + 1)
+		let product = 1
+		let elIndex = this.width * (this.width + 1)
 		while (elIndex) {
 			elIndex -= this.width + 1
 			product *= this.m[elIndex]
@@ -741,7 +746,7 @@ class Matrix {
 		return this.luDecomposition().U.getTriangularDeterminant()
 	}
 
-	hasFullRank() {
+	hasFullRank(): boolean {
 		return Math.min(this.width, this.height) == this.rank()
 	}
 
@@ -781,10 +786,10 @@ class Matrix {
 				}
 			}
 		}
-	console.log("m\n", this.toString(x => '' + x))
-	console.log("L\n", L.toString(x => '' + x))
-	console.log("U\n", U.toString(x => '' + x))
-	console.log("P\n", P.toString(x => '' + x))
+		console.log("m\n", this.toString(x => '' + x))
+		console.log("L\n", L.toString(x => '' + x))
+		console.log("U\n", U.toString(x => '' + x))
+		console.log("P\n", P.toString(x => '' + x))
 		let indexMap = P.permutationAsIndexMap()
 		let dependentRowIndexes = dependents.map((b, index) => b && indexMap[index]).filter(x => x != void 0)
 		return dependentRowIndexes
@@ -800,7 +805,7 @@ class Matrix {
 	 * @param fx0 f(x0), pass it if you have it already
 	 * @param EPSILON
 	 */
-	static jacobi(f: (x: number[]) => number[], x0: number[], fx0: number[], EPSILON?: number) {
+	static jacobi(f: (x: number[]) => number[], x0: number[], fx0: number[], EPSILON?: number): Matrix {
 		EPSILON = EPSILON || 1e-6
 		fx0 = fx0 || f(x0)
 		let jacobi = Matrix.forWidthHeight(x0.length, fx0.length)
