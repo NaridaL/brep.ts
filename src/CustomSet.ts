@@ -55,9 +55,9 @@ namespace NLA {
 		}
 
 		canonicalize(val: T): T {
-			const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+			const hashCode = val.hashCode(), bucket = this._map.get(hashCode)
 			if (bucket) {
-				const existing = bucket.find(x => x.equals(val));
+				const existing = bucket.find(x => x.equals(val))
 				if (existing) {
 					return existing
 				}
@@ -70,7 +70,7 @@ namespace NLA {
 		}
 
 		has(val: T): boolean {
-			const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+			const hashCode = val.hashCode(), bucket = this._map.get(hashCode)
 			return bucket && bucket.some(x => x.equals(val))
 		}
 
@@ -92,9 +92,9 @@ namespace NLA {
 		}
 
 		'delete'(val) {
-			const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+			const hashCode = val.hashCode(), bucket = this._map.get(hashCode)
 			if (bucket) {
-				const index = bucket.findIndex(x => x.equals(val));
+				const index = bucket.findIndex(x => x.equals(val))
 				if (-1 != index) {
 					if (1 == bucket.length) {
 						this._map.delete(hashCode)
@@ -110,11 +110,11 @@ namespace NLA {
 
 		deleteLike(val) {
 			for (let hashCode of val.hashCodes()) {
-				const bucket = this._map.get(hashCode);
+				const bucket = this._map.get(hashCode)
 				if (bucket) {
-					const index = bucket.findIndex(x => x.like(val));
+					const index = bucket.findIndex(x => x.like(val))
 					if (-1 != index) {
-						const deleted = bucket[index];
+						const deleted = bucket[index]
 						if (1 == bucket.length) {
 							this._map.delete(hashCode)
 						} else {
@@ -157,6 +157,9 @@ namespace NLA {
 		keys = CustomSet.prototype.values
 	}
 
+	/**
+	 * Java style map.
+	 */
 	export class CustomMap<K extends {hashCode(): int, equals(x: any): boolean, hashCodes?():int[], like(x: any): boolean}, V> implements Map<K, V> {
 		[Symbol.toStringTag]:"Map" = "Map"
 
@@ -249,9 +252,9 @@ namespace NLA {
 		}
 
 		'delete'(key) {
-			const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+			const hashCode = key.hashCode(), bucket = this._map.get(hashCode)
 			if (bucket) {
-				const index = bucket.findIndex(x => x.key.equals(key));
+				const index = bucket.findIndex(x => x.key.equals(key))
 				if (-1 != index) {
 					if (1 == bucket.length) {
 						this._map.delete(hashCode)
@@ -267,11 +270,11 @@ namespace NLA {
 
 		deleteLike(key) {
 			for (const hashCode of key.hashCodes()) {
-				const bucket = this._map.get(hashCode);
+				const bucket = this._map.get(hashCode)
 				if (bucket) {
-					const index = bucket.findIndex(x => x.key.like(key));
+					const index = bucket.findIndex(x => x.key.like(key))
 					if (-1 != index) {
-						const deleted = bucket[index];
+						const deleted = bucket[index]
 						if (1 == bucket.length) {
 							this._map.delete(hashCode)
 						} else {

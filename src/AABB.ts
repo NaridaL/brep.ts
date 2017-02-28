@@ -34,16 +34,16 @@ class AABB extends Transformable {
 	 */
 	withoutAABB(aabb) {
 		assertInst(AABB, aabb)
-		var min, max
-		var volume = this.volume(), size = this.size()
-		var remainingVolume = -Infinity
-		for (var i = 0; i < 3; i++) {
-			var dim = ["x", "y", "z"][i]
-			var cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim]
-			var dimMin = cond ? this.min[dim] : Math.max(this.min[dim], aabb.max[dim])
-			var dimMax = !cond ? this.max[dim] : Math.min(this.max[dim], aabb.min[dim])
-			var newRemainingVolume = (dimMax - dimMin) * volume / size[dim]
-			if (newRemainingVolume > remainingVolume) {
+		let min, max
+        const volume = this.volume(), size = this.size()
+        let remainingVolume = -Infinity
+        for (let i = 0; i < 3; i++) {
+			const dim = ['x', 'y', 'z'][i]
+            const cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim]
+            const dimMin = cond ? this.min[dim] : Math.max(this.min[dim], aabb.max[dim])
+            const dimMax = !cond ? this.max[dim] : Math.min(this.max[dim], aabb.min[dim])
+            const newRemainingVolume = (dimMax - dimMin) * volume / size[dim]
+            if (newRemainingVolume > remainingVolume) {
 				remainingVolume = newRemainingVolume
 				min = this.min.withElement(dim, dimMin)
 				max = this.max.withElement(dim, dimMax)
@@ -100,9 +100,9 @@ class AABB extends Transformable {
 
 	distanceToPoint(p) {
 		assertVectors(p)
-		var x = p.x, y = p.y, z = p.z
-		var min = this.min, max = this.max
-		if (this.containsPoint(p)) {
+		const x = p.x, y = p.y, z = p.z
+        const min = this.min, max = this.max
+        if (this.containsPoint(p)) {
 			return Math.max(
 				min.x - x, x - max.x,
 				min.y - y, y - max.y,
@@ -126,20 +126,20 @@ class AABB extends Transformable {
 
 	intersectsLine(l3) {
 		assertInst(L3, l3)
-		var maxDim = l3.dir1.maxAbsDim()
-		var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
-		var s0 = (this.min[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
-		var s1 = (this.max[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
-		var sMin = Math.min(s0, s1)
-		var sMax = Math.max(s0, s1)
-		var c = l3.dir1[coord0] * l3.anchor[coord1] - l3.anchor[coord0] * l3.dir1[coord1]
+		const maxDim = l3.dir1.maxAbsDim()
+        const [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
+		const s0 = (this.min[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
+        const s1 = (this.max[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
+        let sMin = Math.min(s0, s1)
+        let sMax = Math.max(s0, s1)
+        const c = l3.dir1[coord0] * l3.anchor[coord1] - l3.anchor[coord0] * l3.dir1[coord1]
 
-		function lineSide(pCoord0, pCoord1) {
+        function lineSide(pCoord0, pCoord1) {
 			return l3.dir1[coord1] * pCoord0 + l3.dir1[coord0] * pCoord1 + c
 		}
 
-		var sideBL = lineSide()
-	}
+		let sideBL = lineSide()
+    }
 
 	hasVolume() {
 		return this.min.x <= this.max.x && this.min.y <= this.max.y && this.min.z <= this.max.z
@@ -149,8 +149,8 @@ class AABB extends Transformable {
 		if (!this.hasVolume()) {
 			return -1
 		}
-		var v = this.max.minus(this.min)
-		return v.x * v.y * v.z
+		const v = this.max.minus(this.min)
+        return v.x * v.y * v.z
 	}
 
 	size() {
@@ -164,22 +164,22 @@ class AABB extends Transformable {
 	transform(m4) {
 		assertInst(M4, m4)
 		assert(m4.isAxisAligned())
-		var aabb = new AABB()
-		aabb.addPoint(m4.transformPoint(this.min))
+		const aabb = new AABB()
+        aabb.addPoint(m4.transformPoint(this.min))
 		aabb.addPoint(m4.transformPoint(this.max))
 		return aabb
 	}
 
 	ofTransformed(m4) {
 		assertInst(M4, m4)
-		var aabb = new AABB()
-		aabb.addPoints(m4.transformedPoints(this.corners()))
+		const aabb = new AABB()
+        aabb.addPoints(m4.transformedPoints(this.corners()))
 		return aabb
 	}
 
 	corners() {
-		var min = this.min, max = this.max
-		return [
+		const min = this.min, max = this.max
+        return [
 			min,
 			new V3(min.x, min.y, max.z),
 			new V3(min.x, max.y, min.z),
@@ -201,18 +201,30 @@ class AABB extends Transformable {
 	}
 
 	toMesh() {
-		let matrix = M4.multiplyMultiple(
+		const matrix = M4.multiplyMultiple(
 			M4.translation(this.min),
 			M4.scaling(this.size().max(new V3(NLA_PRECISION, NLA_PRECISION, NLA_PRECISION))))
-		console.log(matrix.str)
+        console.log(matrix.str)
 		console.log(matrix.inversed().transposed().str)
-		let mesh = GL.Mesh.cube()
+		const mesh = GL.Mesh.cube().transform(matrix)
 		console.log(mesh)
 		// mesh.vertices = this.corners()
-		mesh = mesh.transform(matrix)
 		console.log(matrix.transformedPoints(mesh.vertices))
+        mesh.computeNormalLines(20)
 		mesh.compile()
 
 		return mesh
 	}
+
+	static forXYZ(x: number, y: number, z: number): AABB {
+	    return new AABB(V3.ZERO, new V3(x, y, z))
+    }
+
+    static forAAABBs(aabbs: AABB[]) {
+	    const result = new AABB()
+        for (const aabb of aabbs) {
+	        result.addAABB(aabb)
+        }
+        return result
+    }
 }

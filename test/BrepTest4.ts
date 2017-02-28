@@ -1,25 +1,7 @@
 QUnit.module('BrepTest4')
 
 
-/**
- * Cases for volumes A and B
- *
- *          1.  Volumes do not touch.
- *          2.  face/face Face surfaces intersect each other.
- *              implies edges going through faces.
- *              e.g. box(5, 5, 5) - box(5, 5, 5).translate(1, 1, 1)
- *          3.  face/edge Edge of A lies in a face of B
- *              implies vertices of A lying in face of B
- *              e.g. box(5, 5, 5) - box(3, 3, 3).rotateZ([0, 1, 2] * PI / 2).translate(0, 1, 1)
- *          4.  edge/edge Two edges are colinear.
- *              implies vertex of A lying in edge of B
-*           5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
- *          6.  vertex/vertex with/without edge/edge, edge/face and face/face intersections
- *          7.  vertex lies in face
- *
- *
- *
- */
+
 
 QUnit.assert.testIntersectFace = function (face, brep2, resultEdges, resultPoints, desc) {
 	if (brep2 instanceof Face) {

@@ -93,6 +93,10 @@ abstract class Curve extends Transformable {
 	 */
 	abstract likeCurve(curve: Curve): boolean
 
+	abstract equals(obj: any): boolean
+
+    abstract hashCode(): int
+
 	/**
 	 * Return whether the curves occupy the same points in space. They do
 	 * not necessarily need to share the same parameter values.
@@ -126,4 +130,6 @@ abstract class Curve extends Transformable {
 	}
 
 	static hlol = 0
+
+    abstract roots(): number[][]
 }

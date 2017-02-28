@@ -19,8 +19,12 @@ abstract class Transformable extends NLA.BaseObject {
 		return this.transform(M4.translation(x, y, z), `.translate(${x}, ${y}, ${z})`)
 	}
 
-	scale(x, y, z): this {
-		return this.transform(M4.scaling(x, y, z))
+	scale(f): this
+	scale(x: number, y: number, z: number)
+	scale(x, y?, z?): this {
+        return 1 == arguments.length
+            ? this.transform(M4.scaling(x), `.scale(${x})`)
+            : this.transform(M4.scaling(x, y, z), `.scale(${x}, ${y}, ${z})`)
 	}
 
 	rotateX(radians): this {

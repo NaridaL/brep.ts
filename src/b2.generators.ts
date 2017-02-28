@@ -75,7 +75,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 
 namespace B2T {
 
-	export function box(w: number, h: number, d: number, name?: string): B2 {
+    export function box(w: number, h: number, d: number, name?: string): B2 {
 		assertNumbers(w, h, d)
 		assertInst('string' === typeof name)
 		const baseVertices = [
@@ -466,6 +466,87 @@ namespace B2T {
 		const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
 		return new B2(faces, false, gen)
 	}
+    const b = 1 / NLA.GOLDEN_RATIO, c = 2 - NLA.GOLDEN_RATIO
+    export const DODECAHEDRON_VERTICES = [
+        new V3( c,  0,  1),
+        new V3(-c,  0,  1),
+        new V3(-b,  b,  b),
+        new V3( 0,  1,  c),
+        new V3( b,  b,  b),
+        new V3( b, -b,  b),
+        new V3( 0, -1,  c),
+        new V3(-b, -b,  b),
+        new V3( c,  0, -1),
+        new V3(-c,  0, -1),
+        new V3(-b, -b, -b),
+        new V3( 0, -1, -c),
+        new V3( b, -b, -b),
+        new V3( b,  b, -b),
+        new V3( 0,  1, -c),
+        new V3(-b,  b, -b),
+        new V3( 1,  c,  0),
+        new V3(-1,  c,  0),
+        new V3(-1, -c,  0),
+        new V3( 1, -c,  0)
+    ].map(v => v.normalized())
+
+    export const DODECAHEDRON_FACE_VERTICES = [
+        [  4,  3,  2,  1,  0 ],
+        [  7,  6,  5,  0,  1 ],
+        [ 12, 11, 10,  9,  8 ],
+        [ 15, 14, 13,  8,  9 ],
+        [ 14,  3,  4, 16, 13 ],
+        [  3, 14, 15, 17,  2 ],
+        [ 11,  6,  7, 18, 10 ],
+        [  6, 11, 12, 19,  5 ],
+        [  4,  0,  5, 19, 16 ],
+        [ 12,  8, 13, 16, 19 ],
+        [ 15,  9, 10, 18, 17 ],
+        [  7,  1,  2, 17, 18 ]].concatenated()
+
+    export const OCTAHEDRON_VERTICES = [
+        new V3( 1,  0,  0),
+        new V3(-1,  0,  0),
+        new V3( 0,  1,  0),
+        new V3( 0,  -1,  0),
+        new V3( 0,  0,  1),
+        new V3( 0,  0,  -1)]
+
+    export const OCTAHEDRON_FACE_VERTICES = [
+        0, 2, 4,
+        2, 1, 4,
+        1, 3, 4,
+        3, 0, 4,
+
+        2, 0, 5,
+        1, 2, 5,
+        3, 1, 5,
+        0, 3, 5]
+
+    export function dodecahedron() {
+        return makePlatonic(DODECAHEDRON_VERTICES, DODECAHEDRON_FACE_VERTICES, 5, 'B2T.dodecahedron()')
+    }
+    export function octahedron() {
+        return makePlatonic(OCTAHEDRON_VERTICES, OCTAHEDRON_FACE_VERTICES, 3, 'B2T.octahedron()')
+    }
+	function makePlatonic(VS, FVIS, FACE_EDGE_COUNT, generator) {
+	    const edgeMap = new Map(), faces = []
+        for (let start = 0; start < FVIS.length; start += FACE_EDGE_COUNT) {
+            console.log(start + 1, FVIS[start + 1], VS[FVIS[start + 1]])
+            const surface = PlaneSurface.throughPoints(VS[FVIS[start]], VS[FVIS[start + 1]], VS[FVIS[start + 2]])
+            const contour = []
+	        for (let i = 0; i < FACE_EDGE_COUNT; i++) {
+                const ipp = (i + 1) % FACE_EDGE_COUNT
+                const iA = FVIS[start + i], iB = FVIS[start + ipp]
+                const iMin = min(iA, iB), iMax = max(iA, iB), edgeID = iMin * VS.length + iMax
+                let edge = edgeMap.get(edgeID)
+                !edge && edgeMap.set(edgeID, edge = StraightEdge.throughPoints(VS[iMin], VS[iMax]))
+                contour.push(iA < iB ? edge : edge.flipped())
+            }
+            faces.push(new PlaneFace(surface, contour))
+        }
+        return new B2(faces, false, 'B2T.dodecahedron()')
+    }
 
 	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + globalId++): B2 {
 		assertInst.apply(undefined, [Edge].concat(baseEdges))

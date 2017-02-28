@@ -32,13 +32,6 @@ abstract class Edge extends Transformable {
 		this.id = globalId++
 	}
 
-	hashCode(): int {
-		let hashCode = this.curve.hashCode()
-		hashCode = hashCode * 31 + this.a.hashCode()
-		hashCode = hashCode * 31 + this.b.hashCode()
-		return hashCode
-	}
-
 	toString(f?): string {
 		return `new ${this.constructor.name}(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, null, ${this.aDir}, ${this.bDir})`
 	}
@@ -117,7 +110,37 @@ abstract class Edge extends Transformable {
 
 	abstract flipped(): Edge
 
-	abstract equals(edge2: any)
+    /**
+     * this is equals-equals. "isColinearTo" might make more sense but can't be used, because you can't get a
+     * consistent hashCode for colinear curves
+     * @param obj
+     * @returns {boolean}
+     */
+    equals(obj): boolean {
+        return this === obj ||
+            this.constructor == obj.constructor
+            && this.a.equals(obj.a)
+            && this.b.equals(obj.b)
+            && this.curve.equals(obj.curve)
+    }
+
+    hashCode(): int {
+        let hashCode = 0
+        hashCode = hashCode * 31 + this.a.hashCode()
+        hashCode = hashCode * 31 + this.b.hashCode()
+        hashCode = hashCode * 31 + this.curve.hashCode()
+        return hashCode | 0
+    }
+
+    like(edge) {
+        // TODO this breaks on colinear edges,
+        // TODO: what, where?
+        return this === edge ||
+            edge instanceof Edge &&
+            this.curve.isColinearTo(edge.curve)
+            && this.a.like(edge.a)
+            && this.b.like(edge.b)
+    }
 
 	abstract getVerticesNo0(): V3[]
 
@@ -136,6 +159,29 @@ abstract class Edge extends Transformable {
 			: this
 	}
 
+	overlaps(edge: Edge) {
+		assert(this.curve.isColinearTo(edge.curve))
+		const edgeAT = this.curve.pointLambda(edge.a), edgeBT = this.curve.pointLambda(edge.b)
+		const edgeMinT = Math.min(edgeAT, edgeBT), edgeMaxT = Math.max(edgeAT, edgeBT)
+		return !(NLA.le(edgeMaxT, this.minT) || NLA.le(this.maxT, edgeMinT))
+	}
+
+	getAABB(): AABB {
+        const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
+        this.curve.roots().forEach((ts, dim) => {
+            ts.forEach(t => {
+                if (lt(this.minT, t) && lt(t, this.maxT)) {
+                    min[dim] = Math.min(min[dim], this.curve.at(t).e(dim))
+                    max[dim] = Math.max(max[dim], this.curve.at(t).e(dim))
+                }
+            })
+        })
+        const aabb = new AABB(V(min), V(max))
+        aabb.addPoint(this.a)
+        aabb.addPoint(this.b)
+        return aabb
+    }
+
 	abstract isCoEdge(other: Edge): boolean
 
 	static reverseLoop(loop: Edge[]) {
@@ -144,7 +190,7 @@ abstract class Edge extends Transformable {
     static pathFromSVG(pathString: String): Edge[] {
         let currentPos, subPathStart, lastC2, lastC
         const parsed: {code: string, x: number, y: number, relative?: boolean}[] = parser.parse(pathString)
-        console.log(parsed);
+        console.log(parsed)
         const path: Edge[] = []
         for (const c of parsed) {
             let endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
@@ -238,7 +284,7 @@ abstract class Edge extends Transformable {
                         rx *= Math.sqrt(testValue)
                         ry *= Math.sqrt(testValue)
                     }
-                    const temp = (rx ** 2 * midPointTransformed.y ** 2 + ry ** 2 * midPointTransformed.x ** 2);
+                    const temp = (rx ** 2 * midPointTransformed.y ** 2 + ry ** 2 * midPointTransformed.x ** 2)
                     const centerTransformedScale = (largeArc != sweep ? 1 : -1) * Math.sqrt(max(0, (rx ** 2 * ry ** 2 - temp) / temp))
                     const centerTransformed = V(rx * midPointTransformed.y / ry, -ry * midPointTransformed.x / rx).times(centerTransformedScale)
                     const center = M4.rotationZ(rads).transformPoint(centerTransformed).plus(currentPos.plus(endPos).times(0.5))
@@ -381,14 +427,6 @@ class PCurveEdge extends Edge {
 			)
 	}
 
-	like(edge) {
-		// TODO this breaks on colinear edges
-		return this === edge ||
-			edge instanceof Edge &&
-			this.curve.isColinearTo(edge.curve) &&
-			this.a.like(edge.a) && this.b.like(edge.b)
-	}
-
     static forCurveAndTs(curve: Curve, aT: number, bT: number, name?: string) {
         return new PCurveEdge(curve, curve.at(aT), curve.at(bT), aT, bT, undefined,
             aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(),
@@ -396,12 +434,12 @@ class PCurveEdge extends Edge {
     }
 
 	get aDDT() {
-		let ddt = this.curve.ddt(this.aT);
+		let ddt = this.curve.ddt(this.aT)
 		return this.reversed ? ddt.negated() : ddt
 	}
 
 	get bDDT() {
-		let ddt = this.curve.ddt(this.bT);
+		let ddt = this.curve.ddt(this.bT)
 		return this.reversed ? ddt.negated() : ddt
 	}
 }
@@ -418,8 +456,9 @@ class StraightEdge extends Edge {
 		assertVectors(a, b)
 		!flippedOf || assertInst(StraightEdge, flippedOf)
 		!name || assertf(() => 'string' === typeof name, name)
-		assert(line.containsPoint(a), 'line.containsPoint(a)' + line + a)
-		assert(line.containsPoint(b), 'line.containsPoint(b)' + line + b)
+		assert(line.at(aT).like(a), 'line.at(aT).like(a)' + aT + line + a)
+		assert(line.at(bT).like(b), 'line.at(bT).like(b)' + bT + line + b)
+        assert(!a.like(b), '!a.like(b)' + a + b)
 		super(line, a, b, aT, bT, flippedOf, name)
 		this.tangent = this.aT < this.bT ? this.curve.dir1 : this.curve.dir1.negated()
 	}
@@ -441,21 +480,19 @@ class StraightEdge extends Edge {
 	}
 
 	edgeISTsWithPlane(plane): number[] {
-		const minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
 		let edgeT = this.curve.intersectWithPlaneLambda(plane)
 		edgeT = NLA.snap(edgeT, this.aT)
 		edgeT = NLA.snap(edgeT, this.bT)
-		return (minT <= edgeT && edgeT <= maxT) ? [edgeT] : []
+		return (this.minT <= edgeT && edgeT <= this.maxT) ? [edgeT] : []
 	}
 
 	edgeISTsWithSurface(surface): number[] {
 		if (surface instanceof PlaneSurface) {
 			return this.edgeISTsWithPlane(surface.plane)
 		} else {
-			const minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
 			return surface.isTsForLine(this.curve)
-				.map(edgeT => NLA.snap(NLA.snap(edgeT, minT), maxT))
-				.filter(edgeT => minT <= edgeT && edgeT <= maxT)
+				.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
+				.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 		}
 	}
 
@@ -476,10 +513,11 @@ class StraightEdge extends Edge {
 	}
 
 	transform(m4, desc): this {
+	    const lineDir1TransLength = m4.transformVector(this.curve.dir1).length()
 		return new StraightEdge(
 			this.curve.transform(m4),
 			m4.transformPoint(this.a),
-			m4.transformPoint(this.b), this.aT, this.bT, null, this.name + desc) as any
+			m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, null, this.name + desc) as any
 	}
 
 	isCoEdge(edge): boolean {
@@ -489,24 +527,15 @@ class StraightEdge extends Edge {
 			)
 	}
 
-	like(edge): boolean {
-		return edge.constructor === StraightEdge && this.a.like(edge.a) && this.b.like(edge.b)
-	}
-
-	equals(edge): boolean {
-		return edge.constructor === StraightEdge && this.a.equals(edge.a) && this.b.equals(edge.b)
-	}
-
 	getEdgeT(p: V3): number|undefined {
 		assertVectors(p)
 		let edgeT = p.minus(this.curve.anchor).dot(this.curve.dir1)
 		if (!NLA.eq0(this.curve.at(edgeT).distanceTo(p))) {
 			return
 		}
-		const minT = Math.min(this.aT, this.bT), maxT = Math.max(this.aT, this.bT)
 		edgeT = NLA.snap(edgeT, this.aT)
 		edgeT = NLA.snap(edgeT, this.bT)
-		return (minT <= edgeT && edgeT <= maxT) ? edgeT : undefined
+		return (this.minT <= edgeT && edgeT <= this.maxT) ? edgeT : undefined
 	}
 
 
@@ -521,7 +550,7 @@ class StraightEdge extends Edge {
 	 * @returns
 	 */
 	static chain(vertices: V3[], closed: boolean = true): StraightEdge[] {
-		const vc = vertices.length;
+		const vc = vertices.length
 		return NLA.arrayFromFunction(closed ? vc : vc - 1,
 			i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]))
 	}

@@ -153,6 +153,8 @@ namespace NLA {
 	export const ceil10: (value: number, exp: number) => number = decimalAdjust.bind(undefined, Math.ceil)
 
 
+    export const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2
+
 
 
 
@@ -220,7 +222,7 @@ namespace NLA {
 	export function arrayRange(startInclusive: int, endExclusive: int, step: int) {
 		assertNumbers(startInclusive, step)
 		//console.log(Math.ceil((endExclusive - startInclusive) / step))
-		const result = new Array(Math.ceil((endExclusive - startInclusive) / step)); // "- startInclusive" so that chunk in the last row will also be selected, even if the row is not complete
+		const result = new Array(Math.ceil((endExclusive - startInclusive) / step)) // "- startInclusive" so that chunk in the last row will also be selected, even if the row is not complete
 		for (let i = 0, index = 0; i < endExclusive; i += step, index++) {
 			result[index] = i
 		}
@@ -470,7 +472,7 @@ const ARRAY_UTILITIES = {
 	sliceStep(start, step, chunkSize) {
 		assertNumbers(start, step)
 		chunkSize = chunkSize || 1
-		const result = new Array(Math.ceil((this.length - start) / step)); // "- start" so that chunk in the last row
+		const result = new Array(Math.ceil((this.length - start) / step)) // "- start" so that chunk in the last row
 		// will also be selected, even if the row is
 		// not complete
 		let index = 0
@@ -758,22 +760,18 @@ function doubleSignedArea(vertices, normal) {
 
 /**
  * solves x² + px + q = 0
- *
- * @param p
- * @param q
- * @returns {Array.<number>}
  */
-function pqFormula(p:number, q:number) {
-	// 4 times the discriminant:in
-	const discriminantX4 = p * p / 4 - q
-	if (discriminantX4 < -NLA_PRECISION) {
-		return []
-	} else if (discriminantX4 <= NLA_PRECISION) {
-		return [-p/2]
-	} else {
-		const root = Math.sqrt(discriminantX4)
-		return [-p/2 - root, -p/2 + root]
-	}
+function pqFormula(p: number, q: number): number[] {
+    // 4 times the discriminant:in
+    const discriminantX4 = p * p / 4 - q
+    if (discriminantX4 < -NLA_PRECISION) {
+        return []
+    } else if (discriminantX4 <= NLA_PRECISION) {
+        return [-p / 2]
+    } else {
+        const root = Math.sqrt(discriminantX4)
+        return [-p / 2 - root, -p / 2 + root]
+    }
 }
 
 /**

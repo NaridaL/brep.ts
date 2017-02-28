@@ -137,6 +137,22 @@ class EllipseCurve extends Curve {
 	}
 
 
+	equals(obj: any): boolean {
+		return this == obj ||
+			Object.getPrototypeOf(obj) == EllipseCurve.prototype
+			&& this.center.equals(obj.center)
+			&& this.f1.equals(obj.f1)
+			&& this.f2.equals(obj.f2)
+	}
+
+    hashCode(): int {
+	    let hashCode = 0
+        hashCode = hashCode * 31 + this.center.hashCode()
+        hashCode = hashCode * 31 + this.f1.hashCode()
+        hashCode = hashCode * 31 + this.f2.hashCode()
+        return hashCode | 0
+    }
+
 	/**
 	 * @inheritDoc
 	 */
@@ -177,7 +193,7 @@ class EllipseCurve extends Curve {
 	/**
 	 * @param hint +-PI, whichever is correct
 	 */
-	pointLambda(p:V3, hint?:number) {
+	pointLambda(p: V3, hint?:number) {
 		assertVectors(p)
 		const p2 = this.inverseMatrix.transformPoint(p)
 		const angle = p2.angleXY();
@@ -301,7 +317,7 @@ class EllipseCurve extends Curve {
 		}
 		const n = plane.normal, w = plane.w,
 			center = this.center, f1 = this.f1, f2 = this.f2,
-			g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center);
+			g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center)
 
 		const {x1: xi1, y1: eta1, x2: xi2, y2: eta2} = intersectionUnitCircleLine(g1, g2, g3)
 		if (isNaN(xi1)) {
@@ -537,7 +553,7 @@ class EllipseCurve extends Curve {
 	}
 
 
-	roots() {
+	roots(): number[][] {
 		// tangent(t) = f2 cos t - f1 sin t
 		// solve for each dimension separately
 		// tangent(eta, xi) = f2 eta - f1 xi

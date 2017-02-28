@@ -80,7 +80,7 @@ MODES.SKETCH = {
 					point.moveCoincidence(newPos)
 				}
 				this.draggingElements = true
-				paintScreen();
+				paintScreen()
 			}
 		}
 	},
@@ -103,8 +103,8 @@ MODES.SKETCH = {
 				console.log(this.relPoss)
 			}
 			updateSelected()
-			console.log("selected is now ", selected);
-			console.log("highlighted is now ", highlighted);
+			console.log("selected is now ", selected)
+			console.log("highlighted is now ", highlighted)
 		}
 	}
 
@@ -287,13 +287,13 @@ MODES.ADD_SEGMENT = {
 	},
 	end: function () {
 		this.currentAddingSegment.points.forEach(p => removeFromCoincidence(p, editingSketch))
-		editingSketch.elements.remove(this.currentAddingSegment);
-		paintScreen();
+		editingSketch.elements.remove(this.currentAddingSegment)
+		paintScreen()
 	},
 	mousemove: function (e, mouseLine) {
 		let intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
 		if (intersection == null) {
-			return;
+			return
 		}
 		if (!this.currentAddingSegment) {
 			this.currentAddingSegment = new this.constructor(editingSketch)
@@ -303,15 +303,15 @@ MODES.ADD_SEGMENT = {
 		let mouseSC = editingSketch.worldToSketchMatrix.transformPoint(intersection)
 		removeFromCoincidence(this.currentAddingSegment.points[this.arcmode], editingSketch)
 		//console.log(mousePos);
-		const points = getAllPoints(editingSketch);
-		points.removeAll(this.currentAddingSegment.points);
+		const points = getAllPoints(editingSketch)
+		points.removeAll(this.currentAddingSegment.points)
 		const pointDistances = points
 			.map(function (point) { return {point: point, distance: point.distanceToCoords(mouseSC)} })
-			.filter(function (pair) { return pair.distance < 16; })
-			.sort(function (a, b) { return a.distance - b.distance; })
+			.filter(function (pair) { return pair.distance < 16 })
+			.sort(function (a, b) { return a.distance - b.distance })
 		if (pointDistances.length != 0 && this.currentAddingSegment) {
 			makeCoincident(pointDistances[0].point, this.currentAddingSegment.points[this.arcmode], editingSketch)
-			mouseSC = pointDistances[0].point;
+			mouseSC = pointDistances[0].point
 		}
 		for (let i = this.arcmode; i < this.currentAddingSegment.points.length; i++) {
 			this.currentAddingSegment.points[i].x = mouseSC.x
@@ -332,7 +332,7 @@ MODES.ADD_SEGMENT = {
 		const intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
 		const sketchCoords = editingSketch.worldToSketchMatrix.transformPoint(intersection)
 		if (intersection == null) {
-			return;
+			return
 		}
 		this.arcmode++
 		if (this.arcmode == this.currentAddingSegment.points.length) {

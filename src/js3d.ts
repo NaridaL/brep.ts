@@ -43,8 +43,8 @@ function formatStack(stack) {
 
 
 function Point(x, y) {
-	this.x = x;
-	this.y = y;
+	this.x = x
+	this.y = y
 }
 
 
@@ -69,13 +69,13 @@ function makeCoincident(p1, p2, sketch) {
 	p2.y = p1.y
 }
 function removeFromCoincidence(p, sketch) {
-	if (!p.coincidence) return;
-	p.coincidence.cs.remove(p);
+	if (!p.coincidence) return
+	p.coincidence.cs.remove(p)
 	if (p.coincidence.cs.length == 1) {
-		sketch.constraints.remove(p.coincidence);
+		sketch.constraints.remove(p.coincidence)
 		p.coincidence.cs[0].coincidence = null
 	}
-	p.coincidence = null;
+	p.coincidence = null
 }
 function deleteCoincidence(coincidence, sketch) {
 	sketch.constraints.remove(coincidence)
@@ -83,7 +83,7 @@ function deleteCoincidence(coincidence, sketch) {
 }
 
 
-var savedTextures = new Map();
+var savedTextures = new Map()
 function getTextureForString(str) {
 	var texture
 	if (texture = savedTextures.get(str)) {
@@ -120,7 +120,7 @@ function getTextureForString(str) {
 
 	return texture
 }
-var zoomFactor = 1;
+var zoomFactor = 1
 function paintSketch(sketch) {
 
 	if (!sketch.plane || !sketch.sketchToWorldMatrix || !sketch.sketchToWorldMatrix.m) return
@@ -163,9 +163,9 @@ function paintSketch(sketch) {
 		drawPoint(seg.a)
 		drawPoint(seg.b)
 
-	});
+	})
 
-	paintConstraints(sketch);
+	paintConstraints(sketch)
 }
 function colorFor(highlighted, selected) {
 	return !selected
@@ -184,7 +184,7 @@ function getCachedCurve(other: NameRef|any, plane: P3) {
 	if (other instanceof Surface) return other.isCurvesWithPlane(plane)[0]
 }
 function paintConstraints(sketch: Sketch) {
-	var crossCount = 2, parallelCrossCount = 1;
+	var crossCount = 2, parallelCrossCount = 1
 	sketch.constraints.forEach(function (cst) {
 		paintDefaultColor = hoverHighlight == cst ? (!cst.error ? 0x00ff00 : 0xffff00) : (!cst.error ? 0x000000 : 0xff0000)
 		switch (cst.type) {
@@ -192,7 +192,7 @@ function paintConstraints(sketch: Sketch) {
 				let point = cst.cs[0]
 				paintArc(point.V3(), 4, 1, colorFor(false, false), 0, 2 * Math.PI)
 				paintArc(point.V3(), 1.5, 3, colorFor(highlighted.includes(point) || hoverHighlight == point, selected.includes(point)), 0, 2 * Math.PI)
-				break;
+				break
 			case 'parallel': {
 				let dir1 = cst.segments[0].getVectorAB().normalized()
 				let dir90 = dir1.getPerpendicular().normalized()
@@ -210,8 +210,8 @@ function paintConstraints(sketch: Sketch) {
 						paintLineXY(arrPoint.plus(dir90.times(1)), arrPoint.plus(dir1.times(6).plus(dir90.times(-5))))
 					}
 				}
-				parallelCrossCount++;
-				break;
+				parallelCrossCount++
+				break
 			}
 			case 'perpendicular':
 				if (cst.other instanceof SketchLineSeg) {
@@ -243,47 +243,47 @@ function paintConstraints(sketch: Sketch) {
 				break
 			case 'colinear':
 				// assume segments dont overlap
-				let segments = cst.segments;
-				let ab = segments[0].getVectorAB().normalized();
-				let coord = ab.x > ab.y ? 'x' : 'y';
+				let segments = cst.segments
+				let ab = segments[0].getVectorAB().normalized()
+				let coord = ab.x > ab.y ? 'x' : 'y'
 				if (ab[coord] < 0) {
-					ab = ab.times(-1);
+					ab = ab.times(-1)
 				}
-				let scale = ab[coord];
-				let offsetPoint = segments[0].a.V3().minus(ab.times(segments[0].a.V3()[coord] / scale));
-				segments.sort((a, b) => a.a[coord] - b.a[coord]);
+				let scale = ab[coord]
+				let offsetPoint = segments[0].a.V3().minus(ab.times(segments[0].a.V3()[coord] / scale))
+				segments.sort((a, b) => a.a[coord] - b.a[coord])
 				for (let i = 0; i < segments.length - (cst.fixed ? 0 : 1); i++) {
-					let startS = max(segments[i].a.V3()[coord] / scale, segments[i].b.V3()[coord] / scale) + 8;
-					let endS = startS + 20;
-					paintLineXY(offsetPoint.plus(ab.times(startS)), offsetPoint.plus(ab.times(endS)), undefined, 2);
+					let startS = max(segments[i].a.V3()[coord] / scale, segments[i].b.V3()[coord] / scale) + 8
+					let endS = startS + 20
+					paintLineXY(offsetPoint.plus(ab.times(startS)), offsetPoint.plus(ab.times(endS)), undefined, 2)
 
-					startS = min(segments[(i + 1) % segments.length].a[coord] / scale, segments[(i + 1) % segments.length].b[coord] / scale) - 8;
-					endS = startS - 20;
-					paintLineXY(offsetPoint.plus(ab.times(startS)), offsetPoint.plus(ab.times(endS)), undefined, 2);
+					startS = min(segments[(i + 1) % segments.length].a[coord] / scale, segments[(i + 1) % segments.length].b[coord] / scale) - 8
+					endS = startS - 20
+					paintLineXY(offsetPoint.plus(ab.times(startS)), offsetPoint.plus(ab.times(endS)), undefined, 2)
 				}
-				break;
+				break
 			case 'pointDistance': {
-				let a = cst.cs[0].V3(), b = cst.cs[1].V3();
-				let ab = b.minus(a);
-				let ab1 = ab.normalized();
-				let abLength = ab.length();
-				let ab90 = ab1.getPerpendicular();
-				let texture = getTextureForString(cst.distance);
-				let textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20;
-				paintLineXY(a.plus(ab90.times(6)), a.plus(ab90.times(22)));
-				paintLineXY(b.plus(ab90.times(6)), b.plus(ab90.times(22)));
+				let a = cst.cs[0].V3(), b = cst.cs[1].V3()
+				let ab = b.minus(a)
+				let ab1 = ab.normalized()
+				let abLength = ab.length()
+				let ab90 = ab1.getPerpendicular()
+				let texture = getTextureForString(cst.distance)
+				let textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
+				paintLineXY(a.plus(ab90.times(6)), a.plus(ab90.times(22)))
+				paintLineXY(b.plus(ab90.times(6)), b.plus(ab90.times(22)))
 
-				paintLineXY(a.plus(ab90.times(14)), a.plus(ab90.times(14)).plus(ab1.times(abLength / 2 - textLength / 2 - 5)));
-				paintLineXY(a.plus(ab90.times(14)).plus(ab1.times(abLength / 2 + textLength / 2 + 5)), a.plus(ab90.times(14)).plus(ab1.times(abLength)));
-				let textCenter = a.plus(ab90.times(14)).plus(ab1.times(abLength / 2));
-				gl.pushMatrix();
-				gl.translate(textCenter);
-				gl.scale(20, 20, 10);
-				gl.multMatrix(M4.forSys(ab1, ab90.times(1), V3.Z));
-				gl.translate(-textLength / 2 / 20, -0.5, 0);
-				renderText(cst.distance, 0xff0000);
-				gl.popMatrix();
-				break;
+				paintLineXY(a.plus(ab90.times(14)), a.plus(ab90.times(14)).plus(ab1.times(abLength / 2 - textLength / 2 - 5)))
+				paintLineXY(a.plus(ab90.times(14)).plus(ab1.times(abLength / 2 + textLength / 2 + 5)), a.plus(ab90.times(14)).plus(ab1.times(abLength)))
+				let textCenter = a.plus(ab90.times(14)).plus(ab1.times(abLength / 2))
+				gl.pushMatrix()
+				gl.translate(textCenter)
+				gl.scale(20, 20, 10)
+				gl.multMatrix(M4.forSys(ab1, ab90.times(1), V3.Z))
+				gl.translate(-textLength / 2 / 20, -0.5, 0)
+				renderText(cst.distance, 0xff0000)
+				gl.popMatrix()
+				break
 			}
 			case 'pointLineDistance': {
 				let texture = getTextureForString(cst.distance)
@@ -341,13 +341,13 @@ function paintConstraints(sketch: Sketch) {
 				break
 			case 'equalLength': {
 				for (let c = 0; c < cst.segments.length; c++) {
-					let line = cst.segments[c];
-					let ab = line.getVectorAB();
-					let abLength = ab.length();
-					let ab1 = ab.normalized();
-					let ab90 = ab.getPerpendicular().normalized();
-					let crossLength = 10;
-					let crossSpacing = 3;
+					let line = cst.segments[c]
+					let ab = line.getVectorAB()
+					let abLength = ab.length()
+					let ab1 = ab.normalized()
+					let ab90 = ab.getPerpendicular().normalized()
+					let crossLength = 10
+					let crossSpacing = 3
 					for (let i = 0; i < crossCount; i++) {
 						let s = abLength / 2 - crossSpacing * crossCount / 2 + i * crossSpacing + 10
 						let crossStart = line.a.V3().plus(ab1.times(s)).plus(ab90.times(crossLength / 2))
@@ -356,7 +356,7 @@ function paintConstraints(sketch: Sketch) {
 						paintLineXY(crossStart, crossEnd)
 					}
 				}
-				crossCount++;
+				crossCount++
 				break
 			}
 			default:
@@ -364,7 +364,7 @@ function paintConstraints(sketch: Sketch) {
 			// console.log('errror', cst.type);
 		}
 
-	});
+	})
 }
 
 class PlaneDefinition {
@@ -464,10 +464,10 @@ function initModel() {
 }
 function directionObjectToVector(dirObj) {
 	if (dirObj instanceof CustomPlane) {
-		return dirObj.normal;
+		return dirObj.normal
 	} else {
 		console.log(dirObj)
-		throw new Error("uuuh" + dirObj);
+		throw new Error("uuuh" + dirObj)
 	}
 }
 function rebuildModel() {
@@ -565,7 +565,7 @@ function rebuildModel() {
 			publish(feature.planeId, cp)
 		} else {
 			//noinspection ExceptionCaughtLocallyJS
-			throw new Error("unknown feature");
+			throw new Error("unknown feature")
 		}
 		// brepMesh.computeWireframeFromFlatTriangles()
 		// brepMesh.compile()
@@ -615,7 +615,7 @@ var modeStack = []
 var shaders: any = {}
 
 function rgbToVec4(color) {
-	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
+	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0]
 }
 function renderColor(mesh, color, mode?) {
 	shaders.singleColor.uniforms({
@@ -625,19 +625,19 @@ function renderColor(mesh, color, mode?) {
 function renderColorLines(mesh, color) {
 	shaders.singleColor.uniforms({
 		color: rgbToVec4(color)
-	}).draw(mesh, 'LINES');
+	}).draw(mesh, 'LINES')
 }
-var TEXT_TEXTURE_HEIGHT = 128;
+var TEXT_TEXTURE_HEIGHT = 128
 function renderText(string, color) {
-	var texture = getTextureForString(string);
-	texture.bind(0);
-	gl.pushMatrix();
-	gl.scale(texture.width / TEXT_TEXTURE_HEIGHT, 1, 1);
+	var texture = getTextureForString(string)
+	texture.bind(0)
+	gl.pushMatrix()
+	gl.scale(texture.width / TEXT_TEXTURE_HEIGHT, 1, 1)
 	shaders.textureColor.uniforms({
 		texture: 0,
 		color: rgbToVec4(color)
-	}).draw(meshes.text);
-	gl.popMatrix();
+	}).draw(meshes.text)
+	gl.popMatrix()
 }
 function drawVector(vector, anchor, color = 0x0000ff, size = 50) {
 	gl.pushMatrix()
@@ -665,7 +665,7 @@ function drawPoint(p, color = 0x000000, size = 5) {
 	gl.popMatrix()
 }
 function drawPoints() {
-	drPs.forEach(info => drawPoint(info.p || info, 0xcc0000, 5))
+	drPs.forEach(info => drawPoint(info.p || info, 0xcc0000, 1))
 	brepPoints && brepPoints.forEach(p =>
 		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.includes(p) ? 0xff0000 : 0xcccc00), 2))
 }
@@ -791,10 +791,10 @@ function drawEl(el, color) {
 	}
 }
 let paintScreen = function () {
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 
-	gl.loadIdentity();
+	gl.loadIdentity()
 	planes.forEach(plane => drawPlane(plane, plane.color))
 	/*
 	 gl.translate(0, 0, -5);
@@ -847,17 +847,17 @@ let paintScreen = function () {
 	gl.popMatrix()
 
 
-	gl.pushMatrix();
+	gl.pushMatrix()
 	if (brepMesh) {
 		// paint faces
-		let faceIndex = modelBREP.faces.length;
+		let faceIndex = modelBREP.faces.length
 		while (faceIndex--) {
 
 			let face = modelBREP.faces[faceIndex]
 			let faceTriangleIndexes = brepMesh.faceIndexes.get(face)
 			shaders.lighting.uniforms({
 				color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.includes(face) ? 0x00ff45 : COLORS.RD_FILL))
-			}).draw(brepMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count);
+			}).draw(brepMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
 			/*
 			 shaders.singleColor.uniforms({
 			 color: rgbToVec4(0x0000ff)
@@ -872,10 +872,10 @@ let paintScreen = function () {
 		gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
 		shaders.singleColor.uniforms({
 			color: rgbToVec4(COLORS.PP_STROKE)
-		}).draw(brepMesh, 'LINES');
+		}).draw(brepMesh, 'LINES')
 		gl.projectionMatrix.m[11] += 1 / (1 << 22) // prevent Z-fighting
 	}
-	gl.popMatrix();
+	gl.popMatrix()
 
 	const DZ = 0.1
 	gl.projectionMatrix.m[11] -= DZ // prevent Z-fighting
@@ -923,9 +923,9 @@ function segmentIntersectsRay(a, b, p, dir) {
 	return t > 0 && s >= 0 && s <= 1
 }
 function template(templateName, map): HTMLElement {
-	var html = $<HTMLScriptElement>(templateName).text;
+	var html = $<HTMLScriptElement>(templateName).text
 	for (var key in map) {
-		html = html.replace(new RegExp('\\$' + key, 'g'), map[key]);
+		html = html.replace(new RegExp('\\$' + key, 'g'), map[key])
 	}
 	return $(new MooEl('div', {html: html.trim()}).firstChild)
 
@@ -1011,7 +1011,7 @@ function updateSelected() {
 				missingEls.push(sel.lastHit)
 			}
 			paintScreen()
-		};
+		}
 		newChild.onmouseout = function (e) {
 			if (target) {
 				hoverHighlight = null
@@ -1019,17 +1019,17 @@ function updateSelected() {
 				missingEls.remove(sel.lastHit)
 			}
 			paintScreen()
-		};
+		}
 		newChild.getElement(".remove").onclick = function (e) {
 			editingSketch.removeElement(target)
 			updateSelected()
 			paintScreen()
-		};
+		}
 		newChild.getElement(".unsel").onclick = function (e) {
 			selected.remove(sel)
 			updateSelected()
 			paintScreen()
-		};
+		}
 		sel.toBrepEdge && newChild.grab(new MooEl('span', {
 			text: sel.toBrepEdge().curve.toSource(x => NLA.round10(x, -3)),
 			style: 'font-size: small;'
@@ -1039,7 +1039,7 @@ function updateSelected() {
 			style: 'font-size: xx-small;display:block;width:100%;'
 		}))
 		newChild.inject(div)
-	});
+	})
 	div = $('selectedConstraints')
 	div.erase('text')
 	if (MODES.SKETCH == modeGetCurrent()) {
@@ -1048,61 +1048,61 @@ function updateSelected() {
 			if ('pointDistance' == cst.type
 				|| 'pointLineDistance' == cst.type
 				|| 'pointPlaneDistance' == cst.type) {
-				newChild = template('templateDistance', {name: cst.type, id: cst.id});
-				newChild.getElement('.distanceInput').value = cst.distance;
+				newChild = template('templateDistance', {name: cst.type, id: cst.id})
+				newChild.getElement('.distanceInput').value = cst.distance
 				newChild.getElement('.distanceInput').onchange = function (e) {
-					cst.distance = e.target.value;
-					rebuildModel();
-					paintScreen();
+					cst.distance = e.target.value
+					rebuildModel()
+					paintScreen()
 				}
 			} else if ('angle' == cst.type) {
-				newChild = template('templateAngle', {name: cst.type, id: cst.id});
-				var input = newChild.getElement('.distanceInput');
-				newChild.getElement('.distanceInput').value = NLA.round10(rad2deg(cst.value), -5);
+				newChild = template('templateAngle', {name: cst.type, id: cst.id})
+				var input = newChild.getElement('.distanceInput')
+				newChild.getElement('.distanceInput').value = NLA.round10(rad2deg(cst.value), -5)
 				newChild.getElement('.fa').onclick = () => {
-					cst.f[0] *= -1;
-					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))));
+					cst.f[0] *= -1
+					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))))
 					paintScreen()
-				};
+				}
 				newChild.getElement('.fb').onclick = () => {
-					cst.f[1] *= -1;
-					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))));
+					cst.f[1] *= -1
+					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))))
 					paintScreen()
-				};
+				}
 				newChild.getElement('.fv').onclick = () => {
-					input.value = round(rad2deg(abs(cst.value -= sign(cst.value) * 2 * PI)));
+					input.value = round(rad2deg(abs(cst.value -= sign(cst.value) * 2 * PI)))
 					paintScreen()
-				};
+				}
 				input.onchange = function (e) {
-					cst.value = e.target.value * DEG;
-					rebuildModel();
-					paintScreen();
+					cst.value = e.target.value * DEG
+					rebuildModel()
+					paintScreen()
 				}
 			} else {
-				newChild = template("templateConstraint", {name: cst.type});
+				newChild = template("templateConstraint", {name: cst.type})
 
 				cst.cs.forEach(function (el) {
-					var subChild = template("templateConstraintSub", {what: el.constructor.name, name: el.name});
-					subChild.inject(newChild);
+					var subChild = template("templateConstraintSub", {what: el.constructor.name, name: el.name})
+					subChild.inject(newChild)
 					subChild.getElement(".removeFromConstraint").onclick = function (e) {
 						removeFromConstraint(el, editingSketch, cst)
-						updateSelected();
-						paintScreen();
-					};
+						updateSelected()
+						paintScreen()
+					}
 					subChild.onmouseover = function (e) {
 						hoverHighlight = el
 						e.stopPropagation()
 						paintScreen()
-					};
+					}
 					subChild.onmouseout = function (e) {
 						hoverHighlight = null
 						paintScreen()
-					};
-				});
+					}
+				})
 			}
 			newChild.getElement(".remove").onclick = function (e) {
 				deleteConstraint(editingSketch, cst)
-				updateSelected();
+				updateSelected()
 			}
 			newChild.onmouseover = function (e) {
 				hoverHighlight = cst
@@ -1112,8 +1112,8 @@ function updateSelected() {
 				hoverHighlight = null
 				paintScreen()
 			}
-			newChild.inject(div);
-		});
+			newChild.inject(div)
+		})
 	}
 }
 class NameRef {
@@ -1161,7 +1161,7 @@ class NameRef {
 	}
 
 	get name() {
-		let hit = this.get();
+		let hit = this.get()
 		return hit && hit.name
 	}
 
@@ -1284,13 +1284,13 @@ function initNavigationEvents() {
 				const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
 				eyePos = eyePos.plus(worldMoveCamera)
 				eyeFocus = eyeFocus.plus(worldMoveCamera)
-				setupCamera();
+				setupCamera()
 			}
 			// scene rotation
 			//noinspection JSBitwiseOperatorUsage
 			if (e.buttons & 2) {
-				let rotateLR = -e.deltaX / 6.0 * DEG;
-				let rotateUD = -e.deltaY / 6.0 * DEG;
+				let rotateLR = -e.deltaX / 6.0 * DEG
+				let rotateUD = -e.deltaY / 6.0 * DEG
 				// rotate
 				let matrix = M4.rotationLine(eyeFocus, eyeUp, rotateLR)
 				//let horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
@@ -1299,7 +1299,7 @@ function initNavigationEvents() {
 				eyePos = matrix.transformPoint(eyePos)
 				eyeUp = matrix.transformVector(eyeUp)
 
-				setupCamera();
+				setupCamera()
 			}
 		}
 		paintScreen()
@@ -1429,14 +1429,14 @@ window.onload = function () {
 	gl.fullscreen()
 	gl.canvas.oncontextmenu = () => false
 
-	setupCamera();
+	setupCamera()
 	//gl.cullFace(gl.FRONT_AND_BACK);
 	gl.clearColor(1.0, 1.0, 1.0, 0.0)
 	gl.enable(gl.BLEND)
 	gl.enable(gl.DEPTH_TEST)
 	// gl.enable(gl.CULL_FACE)
 	gl.depthFunc(gl.LEQUAL)
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // TODO ?!
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA) // TODO ?!
 
 
 	// let s1 = new ProjectedCurveSurface(BezierCurve.EX3D.scale(100, 100, 100).project(P3.XY), V3.Z, -1, 2)
@@ -1488,7 +1488,7 @@ window.onload = function () {
 	rebuildModel() // necessary to init planes
 	updateFeatureDisplay()
 	rebuildModel() // so warning will show
-	paintScreen();
+	paintScreen()
 	let lastInterst = featureStack.slice().reverse().find(f => f instanceof Sketch)
 	lastInterst && modePush(MODES.SKETCH, lastInterst)
 
@@ -1499,7 +1499,7 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
 
 	function checkEl(el, distance) {
 		if (distance < nearest) {
-			nearest = distance;
+			nearest = distance
 			hoverHighlight = el
 		}
 	}
@@ -1762,7 +1762,7 @@ function chainComparison(diff1, diff2) {
 }
 function pointsFirst(a, b) {
 	//console.log((a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1));
-	return (a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1);
+	return (a instanceof SegmentEndPoint ? -1 : 1) - (b instanceof SegmentEndPoint ? -1 : 1)
 }
 
 declare var saveAs: (blob: Blob, name: string, no_auto_bom?: boolean) => void
@@ -1793,7 +1793,7 @@ function getGroupConstraint(el, sketch, type) {
 // removes segment or plane from group constraint
 function removeFromGroupConstraint(el, sketch, type) {
 	var groupConstraint = getGroupConstraint(el, sketch, type)
-	if (!groupConstraint) return;
+	if (!groupConstraint) return
 	groupConstraint.cs.remove(el)
 	if (1 == groupConstraint.cs.length) {
 		sketch.constraints.remove(groupConstraint)
@@ -1807,12 +1807,12 @@ function removeFromConstraint(el: SketchSegment | SegmentEndPoint, sketch: Sketc
 	switch (constraint.type) {
 		case 'coincident':
 			removeFromCoincidence(el, sketch)
-			break;
+			break
 		case 'parallel':
 		case 'colinear':
 		case 'equalLength':
 			removeFromGroupConstraint(el, sketch, constraint.type)
-			break;
+			break
 		case 'perpendicular':
 		case 'pointDistance':
 		case 'pointLineDistance':
@@ -1821,7 +1821,7 @@ function removeFromConstraint(el: SketchSegment | SegmentEndPoint, sketch: Sketc
 			sketch.constraints.remove(constraint)
 			break
 		default:
-			throw new Error('unknown constraint ' + constraint.type);
+			throw new Error('unknown constraint ' + constraint.type)
 		// console.log('errror', constraint.type);
 	}
 }
@@ -1904,19 +1904,19 @@ function makeGroup(type) {
 
 function makeAngle() {
 	var selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane)
-	console.log(selSegments);
+	console.log(selSegments)
 	if (selSegments.length == 2) {
-		var segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1];
-		var other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0];
+		var segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1]
+		var other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0]
 		if (!(segment instanceof SketchLineSeg)) {
-			throw new Error("at least one must be a segment");
+			throw new Error("at least one must be a segment")
 		}
 		editingSketch.constraints.push(new Constraint("angle", [segment, other], {
 			segment: segment,
 			other: other,
 			f: [1, 1],
 			value: selSegments[0].angleTo(selSegments[1])
-		})); //
+		})) //
 		rebuildModel()
 		paintScreen()
 		updateSelected()
@@ -1925,18 +1925,18 @@ function makeAngle() {
 function makePerpendicular() {
 	var selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane)
 	if (selSegments.length == 2) {
-		var segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1];
-		var other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0];
+		var segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1]
+		var other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0]
 		if (!(segment instanceof SketchLineSeg)) {
-			throw new Error("at least one must be a segment");
+			throw new Error("at least one must be a segment")
 		}
 		editingSketch.constraints.push(new Constraint("perpendicular", [segment, other], {
 			segment: segment,
 			other: other
-		}));
-		rebuildModel();
-		paintScreen();
-		updateSelected();
+		}))
+		rebuildModel()
+		paintScreen()
+		updateSelected()
 	}
 }
 function makeDistance() {
@@ -1975,9 +1975,9 @@ Edge.prototype.getCurve = function () {
 
 }
 function selPointOnLine() {
-	if (2 != selected.length) return;
-	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1];
-	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0];
+	if (2 != selected.length) return
+	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
+	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0]
 	if (point instanceof SegmentEndPoint && (other instanceof SketchLineSeg || other instanceof SketchBezier || other instanceof SketchArc
 		|| other instanceof Face || other instanceof Edge || other instanceof CustomPlane)) {
 		other = isSketchEl(other) ? other : NameRef.forObject(other)
@@ -1990,14 +1990,14 @@ function selPointOnLine() {
 	}
 }
 function makeSelCoincident() {
-	var selPoints = selected.filter(function (s) { return s instanceof SegmentEndPoint; });
+	var selPoints = selected.filter(function (s) { return s instanceof SegmentEndPoint })
 	if (selPoints.length >= 2) {
 		for (var i = 1; i < selPoints.length; i++) {
-			makeCoincident(selPoints[0], selPoints[i], editingSketch);
+			makeCoincident(selPoints[0], selPoints[i], editingSketch)
 		}
-		rebuildModel();
-		paintScreen();
-		updateSelected();
+		rebuildModel()
+		paintScreen()
+		updateSelected()
 	}
 }
 
@@ -2005,10 +2005,10 @@ function faceSketchPlane() {
 	var plane = editingSketch.plane
 	var viewLine = L3.throughPoints(eyePos, eyeFocus)
 	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.ZERO)
-	eyePos = eyeFocus.plus(plane.normal.times(100));
-	eyeUp = plane.up;
-	setupCamera();
-	paintScreen();
+	eyePos = eyeFocus.plus(plane.normal.times(100))
+	eyeUp = plane.up
+	setupCamera()
+	paintScreen()
 }
 class Extrude {
 	type: string

@@ -29,12 +29,12 @@ namespace GL {
 		private stack
 
 		init() {
-			this.modelViewMatrix = new M4();
-			this.projectionMatrix = new M4();
-			this.tempMatrix = new M4();
-			this.resultMatrix = new M4();
-			this.modelViewStack = [];
-			this.projectionStack = [];
+			this.modelViewMatrix = new M4()
+			this.projectionMatrix = new M4()
+			this.tempMatrix = new M4()
+			this.resultMatrix = new M4()
+			this.modelViewStack = []
+			this.projectionStack = []
 			/////////// IMMEDIATE MODE
 			// ### Immediate mode
 			//
@@ -69,7 +69,7 @@ varying vec4 coord;
 void main() {
 	gl_FragColor = color;
 	if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);
-}`) };
+}`) }
 			this.matrixMode(LightGLContext.MODELVIEW)
 
 			this.onmousedown = []
@@ -381,12 +381,12 @@ void main() {
 	 * by default because it usually causes unintended transparencies in the canvas.
 	 */
 	export function create(options: {canvas?: HTMLCanvasElement, alpha?: boolean} = {}): LightGLContext {
-		const canvas = options.canvas || document.createElement('canvas');
+		const canvas = options.canvas || document.createElement('canvas')
 		if (!options.canvas) {
-			canvas.width = 800;
-			canvas.height = 600;
+			canvas.width = 800
+			canvas.height = 600
 		}
-		if (!('alpha' in options)) options.alpha = false;
+		if (!('alpha' in options)) options.alpha = false
 		try {
 			gl = canvas.getContext('webgl', options) as LightGLContext
 			console.log("getting context")
@@ -644,10 +644,10 @@ void main() {
 				assert(Array != this.data[0].constructor, this.name + this.data[0])
 				var data = []
 				for (var i = 0, chunk = 10000; i < this.data.length; i += chunk) {
-					data = Array.prototype.concat.apply(data, this.data.slice(i, i + chunk));
+					data = Array.prototype.concat.apply(data, this.data.slice(i, i + chunk))
 				}
 				buffer = new this.type(data)
-				var spacing = this.data.length ? data.length / this.data.length : 0;
+				var spacing = this.data.length ? data.length / this.data.length : 0
 				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
 				assert(data.every(v => 'number' == typeof v), () => "data.every(v => 'number' == typeof v)" + data.toSource())
 				if (NLA_DEBUG) {
@@ -730,7 +730,7 @@ void main() {
 			this.hasBeenCompiled = false
 			this.vertexBuffers = {}
 			this.indexBuffers = {}
-			this.addVertexBuffer('vertices', 'LGL_Vertex');
+			this.addVertexBuffer('vertices', 'LGL_Vertex')
 			if (options.coords) this.addVertexBuffer('coords', 'LGL_TexCoord')
 			if (options.normals) this.addVertexBuffer('normals', 'LGL_Normal')
 			if (options.colors) this.addVertexBuffer('colors', 'LGL_Color')
@@ -825,9 +825,9 @@ void main() {
 			})
 
 			for (const name in this.indexBuffers) {
-				const buffer = this.indexBuffers[name];
+				const buffer = this.indexBuffers[name]
 				buffer.data = this[buffer.name]
-				buffer.compile();
+				buffer.compile()
 				// if (NLA_DEBUG && buffer.maxValue >= minVertexBufferLength) {
 				// 	throw new Error(`max index value for buffer ${name}
 				// 	is too large ${buffer.maxValue} min Vbuffer size: ${minVertexBufferLength} ${minBufferName}`)
@@ -876,7 +876,7 @@ void main() {
 			const mesh = new Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
-				let invTrans = m4.as3x3().inversed().transposed().normalized();
+				let invTrans = m4.as3x3().inversed().transposed().normalized()
 				mesh.normals = this.normals.map(n => invTrans.transformVector(n))
 			}
 			for (let name in this.indexBuffers) {
@@ -901,10 +901,10 @@ void main() {
 				let a = vertices[t[0]]
 				let b = vertices[t[1]]
 				let c = vertices[t[2]]
-				let normal = b.minus(a).cross(c.minus(a)).normalized();
-				normals[t[0]] = normals[t[0]].plus(normal);
-				normals[t[1]] = normals[t[1]].plus(normal);
-				normals[t[2]] = normals[t[2]].plus(normal);
+				let normal = b.minus(a).cross(c.minus(a)).normalized()
+				normals[t[0]] = normals[t[0]].plus(normal)
+				normals[t[1]] = normals[t[1]].plus(normal)
+				normals[t[2]] = normals[t[2]].plus(normal)
 			}
 			for (let i = 0; i < vertices.length; i++) {
 				normals[i] = normals[i].normalized()
@@ -932,7 +932,7 @@ void main() {
 				canonEdges.add(canonEdge(t[1], t[2]))
 				canonEdges.add(canonEdge(t[2], t[0]))
 			}
-			if (!this.lines) this.addIndexBuffer('LINES');
+			if (!this.lines) this.addIndexBuffer('LINES')
 			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
 			this.hasBeenCompiled = false
 			return this
@@ -955,7 +955,7 @@ void main() {
 				canonEdges.add(canonEdge(t[i + 1], t[i + 2]))
 				canonEdges.add(canonEdge(t[i + 2], t[i + 0]))
 			}
-			if (!this.lines) this.addIndexBuffer('LINES');
+			if (!this.lines) this.addIndexBuffer('LINES')
 			//this.lines = new Array(canonEdges.size)
 			canonEdges.forEach(val => this.lines.push(val >> 16, val & 0xffff))
 			this.hasBeenCompiled = false
@@ -963,7 +963,7 @@ void main() {
 		}
 
 		computeWireframeFromFlatTrianglesClosedMesh(): this {
-			if (!this.lines) this.addIndexBuffer('LINES');
+			if (!this.lines) this.addIndexBuffer('LINES')
 			let tris = this.triangles
 			let lines = this.lines
 			for (let i = 0; i < this.triangles.length; i += 3) {
@@ -978,10 +978,10 @@ void main() {
 		computeNormalLines(length: number): this {
 			length = length || 1
 			var vs = this.vertices, si = this.vertices.length
-			if (!this.lines) this.addIndexBuffer('LINES');
+			if (!this.lines) this.addIndexBuffer('LINES')
 
 			for (var i = 0; i < this.normals.length; i++) {
-				vs[si + i] = vs[i].plus(this.normals[i].times(length))
+				vs[si + i] = vs[i].plus(this.normals[i].toLength(length))
 				this.lines.push(si + i, i)
 			}
 			this.hasBeenCompiled = false
@@ -1232,7 +1232,7 @@ void main() {
 				}
 			}
 
-			var mesh = new Mesh({normals: true, colors: false, lines: true});
+			var mesh = new Mesh({normals: true, colors: false, lines: true})
 			mesh.vertices.pushAll(vertices)
 			subdivisions = undefined == subdivisions ? 4 : subdivisions
 			for (var i = 0; i < 20; i++) {
@@ -1380,7 +1380,7 @@ void main() {
 		attribute vec3 LGL_Normal;
 		attribute vec4 LGL_Color;
 	`
-			var fragmentHeader = `  precision highp float;` + header;
+			var fragmentHeader = `  precision highp float;` + header
 
 			const matrixNames = header.match(/\bLGL_\w+/g)
 
@@ -1395,12 +1395,12 @@ void main() {
 				return shader
 			}
 
-			this.program = gl.createProgram();
-			gl.attachShader(this.program, compileSource(WGL.VERTEX_SHADER, vertexHeader + vertexSource));
-			gl.attachShader(this.program, compileSource(WGL.FRAGMENT_SHADER, fragmentHeader + fragmentSource));
-			gl.linkProgram(this.program);
+			this.program = gl.createProgram()
+			gl.attachShader(this.program, compileSource(WGL.VERTEX_SHADER, vertexHeader + vertexSource))
+			gl.attachShader(this.program, compileSource(WGL.FRAGMENT_SHADER, fragmentHeader + fragmentSource))
+			gl.linkProgram(this.program)
 			if (!gl.getProgramParameter(this.program, WGL.LINK_STATUS)) {
-				throw new Error('link error: ' + gl.getProgramInfoLog(this.program));
+				throw new Error('link error: ' + gl.getProgramInfoLog(this.program))
 			}
 			this.attributes = {}
 			this.uniformLocations = {}
@@ -1432,9 +1432,9 @@ void main() {
 			for (var name in uniforms) {
 				var location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name)
 				assert(!!location, name + ' uniform is not used in shader')
-				if (!location) continue;
-				this.uniformLocations[name] = location;
-				let value = uniforms[name];
+				if (!location) continue
+				this.uniformLocations[name] = location
+				let value = uniforms[name]
 				if (NLA_DEBUG) {
 					var info = this.uniformInfos[name]
 					assert(info.type != WGL.FLOAT ||
@@ -1457,17 +1457,17 @@ void main() {
 				if (isArray(value)) {
 					switch (value.length) {
 						case 1:
-							gl.uniform1fv(location, value);
-							break;
+							gl.uniform1fv(location, value)
+							break
 						case 2:
-							gl.uniform2fv(location, value);
-							break;
+							gl.uniform2fv(location, value)
+							break
 						case 3:
-							gl.uniform3fv(location, value);
-							break;
+							gl.uniform3fv(location, value)
+							break
 						case 4:
-							gl.uniform4fv(location, value);
-							break;
+							gl.uniform4fv(location, value)
+							break
 						// Matrices are automatically transposed, since WebGL uses column-major
 						// indices instead of row-major indices.
 						case 9:
@@ -1475,31 +1475,31 @@ void main() {
 								value[0], value[3], value[6],
 								value[1], value[4], value[7],
 								value[2], value[5], value[8]
-							]));
-							break;
+							]))
+							break
 						case 16:
 							gl.uniformMatrix4fv(location, false, new Float32Array([
 								value[0], value[4], value[8], value[12],
 								value[1], value[5], value[9], value[13],
 								value[2], value[6], value[10], value[14],
 								value[3], value[7], value[11], value[15]
-							]));
-							break;
+							]))
+							break
 						default:
-							throw new Error('don\'t know how to load uniform "' + name + '" of length ' + value.length);
+							throw new Error('don\'t know how to load uniform "' + name + '" of length ' + value.length)
 					}
 				} else if (isNumber(value)) {
 					if (WGL.SAMPLER_2D == info.type || WGL.SAMPLER_CUBE == info.type || WGL.INT == info.type) {
-						gl.uniform1i(location, value);
+						gl.uniform1i(location, value)
 					} else {
-						gl.uniform1f(location, value);
+						gl.uniform1f(location, value)
 					}
 				} else {
-					throw new Error('attempted to set uniform "' + name + '" to invalid value ' + value);
+					throw new Error('attempted to set uniform "' + name + '" to invalid value ' + value)
 				}
 			}
 
-			return this;
+			return this
 		}
 
 		/**
@@ -1518,7 +1518,7 @@ void main() {
 			mode = mode || 'TRIANGLES'
 			assert(DRAW_MODES.includes(mode), 'GL.DRAW_MODES.includes(mode) ' + mode)
 			assert(mesh.indexBuffers[mode], `The index buffer ${mode} doesn't exist!`)
-			this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[mode], gl[mode], start, count);
+			this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[mode], gl[mode], start, count)
 		}
 
 		/**
@@ -1550,27 +1550,27 @@ void main() {
 			on['LGL_ModelViewProjectionMatrix'] && (uni['LGL_ModelViewProjectionMatrix'] = modelViewProjectionMatrix)
 			on['LGL_ModelViewProjectionMatrixInverse'] && (uni['LGL_ModelViewProjectionMatrixInverse'] = modelViewProjectionMatrix.inversed())
 			if (on['LGL_NormalMatrix']) {
-				const m = modelViewMatrixInverse.m;
+				const m = modelViewMatrixInverse.m
 				// transpose normal matrix
 				uni['LGL_NormalMatrix'] = new Float32Array([m[0], m[4], m[8], m[1], m[5], m[9], m[2], m[6], m[10]])
 			}
-			this.uniforms(uni);
+			this.uniforms(uni)
 
 			// Create and enable attribute pointers as necessary.
 			let minVertexBufferLength = Infinity
 			for (let attribute in vertexBuffers) {
-				var buffer = vertexBuffers[attribute];
+				var buffer = vertexBuffers[attribute]
 				var location = this.attributes[attribute] || gl.getAttribLocation(this.program, attribute)
 				if (location == -1 || !buffer.buffer) {
 					//console.warn(`Vertex buffer ${attribute} was not bound because the attribute is not active.`)
 					continue
 				}
-				this.attributes[attribute] = location;
+				this.attributes[attribute] = location
 				gl.bindBuffer(WGL.ARRAY_BUFFER, buffer.buffer)
-				gl.enableVertexAttribArray(location);
+				gl.enableVertexAttribArray(location)
 				//console.log(attribute)
 
-				gl.vertexAttribPointer(location, buffer.spacing, WGL.FLOAT, false, 0, 0);
+				gl.vertexAttribPointer(location, buffer.spacing, WGL.FLOAT, false, 0, 0)
 
 				minVertexBufferLength = Math.min(minVertexBufferLength, buffer.count)
 			}
@@ -1578,7 +1578,7 @@ void main() {
 			// Disable unused attribute pointers.
 			for (let attribute in this.attributes) {
 				if (!(attribute in vertexBuffers)) {
-					gl.disableVertexAttribArray(this.attributes[attribute]);
+					gl.disableVertexAttribArray(this.attributes[attribute])
 				}
 			}
 
@@ -1594,7 +1594,7 @@ void main() {
 					if (start + count > indexBuffer.count) {
 						throw new Error("Buffer not long enough for passed parameters start/length/buffer length" + " " + start + " " + count + " " + indexBuffer.count)
 					}
-					gl.bindBuffer(WGL.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
+					gl.bindBuffer(WGL.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer)
 					// start parameter has to be multiple of sizeof(WGL.UNSIGNED_SHORT)
 					gl.drawElements(mode, count, WGL.UNSIGNED_SHORT, 2 * start || 0)
 				} else {
@@ -1605,7 +1605,7 @@ void main() {
 				}
 			}
 
-			return this;
+			return this
 		}
 	}
 
@@ -1614,8 +1614,8 @@ void main() {
 	}
 
 	function isNumber(obj) {
-		var str = Object.prototype.toString.call(obj);
-		return str == '[object Number]' || str == '[object Boolean]';
+		var str = Object.prototype.toString.call(obj)
+		return str == '[object Number]' || str == '[object Boolean]'
 	}
 
 
@@ -1787,21 +1787,21 @@ void main() {
 		 */
 		static fromImage(image: HTMLImageElement | HTMLCanvasElement, options): Texture {
 			options = options || {}
-			var texture = new Texture(image.width, image.height, options);
+			var texture = new Texture(image.width, image.height, options)
 			try {
-				gl.texImage2D(WGL.TEXTURE_2D, 0, texture.format, texture.format, texture.type, image);
+				gl.texImage2D(WGL.TEXTURE_2D, 0, texture.format, texture.format, texture.type, image)
 			} catch (e) {
 				if (location.protocol == 'file:') {
 					throw new Error('image not loaded for security reasons (serve this page over "http://" instead)')
 				} else {
 					throw new Error('image not loaded for security reasons (image must originate from the same ' +
-						'domain as this page or use Cross-Origin Resource Sharing)');
+						'domain as this page or use Cross-Origin Resource Sharing)')
 				}
 			}
 			if (options.minFilter && options.minFilter != WGL.NEAREST && options.minFilter != WGL.LINEAR) {
 				gl.generateMipmap(WGL.TEXTURE_2D)
 			}
-			return texture;
+			return texture
 		}
 
 		/**
@@ -1812,26 +1812,26 @@ void main() {
 		 */
 		static fromURL(url: string, options): Texture {
 			Texture.checkerBoardCanvas = Texture.checkerBoardCanvas || (function () {
-					var c = document.createElement('canvas').getContext('2d');
-					c.canvas.width = c.canvas.height = 128;
+					var c = document.createElement('canvas').getContext('2d')
+					c.canvas.width = c.canvas.height = 128
 					for (var y = 0; y < c.canvas.height; y += 16) {
 						for (var x = 0; x < c.canvas.width; x += 16) {
 							//noinspection JSBitwiseOperatorUsage
-							c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD';
-							c.fillRect(x, y, 16, 16);
+							c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD'
+							c.fillRect(x, y, 16, 16)
 						}
 					}
-					return c.canvas;
-				})();
-			var texture = Texture.fromImage(Texture.checkerBoardCanvas, options);
-			var image = new Image();
-			var context = gl;
+					return c.canvas
+				})()
+			var texture = Texture.fromImage(Texture.checkerBoardCanvas, options)
+			var image = new Image()
+			var context = gl
 			image.onload = function () {
-				context.makeCurrent();
-				Texture.fromImage(image, options).swapWith(texture);
+				context.makeCurrent()
+				Texture.fromImage(image, options).swapWith(texture)
 			}
-			image.src = url;
-			return texture;
+			image.src = url
+			return texture
 		}
 	}
 

@@ -1,5 +1,7 @@
 import eq = NLA.eq
 import eq0 = NLA.eq0
+import lt = NLA.lt
+import le = NLA.le
 class P3 extends Transformable {
 	w: number
 	normal: V3

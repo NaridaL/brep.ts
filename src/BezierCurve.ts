@@ -71,6 +71,7 @@ class BezierCurve extends Curve {
 		return rot.cross(tangent)
 	}
 
+
 	isTsWithPlane(plane) {
 		assertInst(P3, plane)
 		/*
@@ -107,14 +108,32 @@ class BezierCurve extends Curve {
 	/**
 	 * @inheritDoc
 	 */
-	likeCurve(curve) {
-		return this == curve
-			|| curve.constructor == BezierCurve
-			&& this.p0.like(curve.p0)
-			&& this.p1.like(curve.p1)
-			&& this.p2.like(curve.p2)
-			&& this.p3.like(curve.p3)
+	likeCurve(obj) {
+		return this == obj ||
+			Object.getPrototypeOf(obj) == BezierCurve.prototype
+			&& this.p0.like(obj.p0)
+			&& this.p1.like(obj.p1)
+			&& this.p2.like(obj.p2)
+			&& this.p3.like(obj.p3)
 	}
+
+	equals(obj: any): boolean {
+		return this == obj ||
+			Object.getPrototypeOf(obj) == BezierCurve.prototype
+			&& this.p0.equals(obj.p0)
+			&& this.p1.equals(obj.p1)
+			&& this.p2.equals(obj.p2)
+			&& this.p3.equals(obj.p3)
+	}
+
+    hashCode(): int {
+        let hashCode = 0
+        hashCode = hashCode * 31 + this.p0.hashCode()
+        hashCode = hashCode * 31 + this.p1.hashCode()
+        hashCode = hashCode * 31 + this.p2.hashCode()
+        hashCode = hashCode * 31 + this.p3.hashCode()
+        return hashCode | 0
+    }
 
 	/**
 	 * Checks if this curve is colinear to the passed curve, i.e.

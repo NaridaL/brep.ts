@@ -752,16 +752,15 @@ class M4 extends Matrix implements Transformable {
 	static scaling(scale: number, result?: M4): M4
 	static scaling(x, y?, z?, result?): M4 {
 		if (1 == arguments.length || 2 == arguments.length) {
-			assertVectors(x)
 			result = y
+            if ('number' === typeof x) {
+                y = x
+                z = x
+            }
 			if (x instanceof V3) {
 				y = x.y
 				z = x.z
 				x = x.x
-			}
-			if ('number' === typeof x) {
-				y = x
-				z = x
 			}
 		} else {
 			assert(3 == arguments.length || 4 == arguments.length, "3 == arguments.length || 4 == arguments.length")
@@ -1166,13 +1165,12 @@ class M4 extends Matrix implements Transformable {
 
 	static multiplyMultiple(...m4s: M4[]): M4 {
 		if (0 == m4s.length) return M4.identity()
-		let temp = M4.temp0, result = m4s[0].copy()
+		let temp = M4.identity(), result = m4s[0].copy()
 		for (let i = 1; i < m4s.length; i++) {
 			M4.multiply(result, m4s[i], temp)
 
 			;[temp, result] = [result, temp]
 		}
-		assert(false, "fix: this can restirn a temp array...")
 		return result
 	}
 

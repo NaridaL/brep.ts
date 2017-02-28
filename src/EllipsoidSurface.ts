@@ -7,6 +7,13 @@ class EllipsoidSurface extends Surface {
     inverseMatrix: M4
     normalMatrix: M4
 
+	edgeLoopCCW(loop) {
+
+	}
+
+	rootPoints() {
+
+    }
 
     constructor(center: V3, f1: V3, f2: V3, f3: V3) {
         super()

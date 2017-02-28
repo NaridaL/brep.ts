@@ -1,13 +1,13 @@
 function parseGetParams() {
-	const result = {};
+	const result = {}
 	window.location.search
 		.substr(1)
 		.split("&")
 		.forEach(function (item) {
-			const tmp = item.split("=");
+			const tmp = item.split("=")
 			result[tmp[0]] = decodeURI(tmp[1])
-		});
-	return result;
+		})
+	return result
 }
 let a, b, c
 function initB2() {
@@ -28,14 +28,7 @@ function initB2() {
 	eyeUp = V(0, 1, 0)
 	zoomFactor = 1
 
-	const face = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)]);
-	// splitting contour in base position:
-	const brep = B2T.extrudeVertices([V(5, 0), V(2, 3), V(8, 3)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped();
-
-	aMesh = face.inB2().toMesh()
-	bMesh = brep.toMesh()
-
-	const gets = parseGetParams();
+	const gets = parseGetParams()
 	"abc".split('').forEach(k => gets[k] && (console.log(k+'='+gets[k]+';'+k+'Mesh = '+k+'.toMesh()'), eval(k+'='+gets[k]+';'+k+'Mesh = '+k+'.toMesh()')))
 
 	if (gets['points']) {
@@ -79,7 +72,7 @@ function initB2() {
 const randomColors = NLA.arrayFromFunction(20, i => NLA.randomColor())
 let aMesh, bMesh, cMesh, dMesh, sMesh
 paintScreen = function() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
 
     drawVectors()
@@ -88,19 +81,19 @@ paintScreen = function() {
 
     if (aMesh) {
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        aMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(aMesh, 'LINES');
+        aMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(aMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
         shaders.lighting.uniforms({ color: rgbToVec4(COLORS.PP_FILL),
-            camPos: eyePos }).draw(aMesh);
+            camPos: eyePos }).draw(aMesh)
     }
     if (bMesh) {
         gl.pushMatrix()
         //gl.translate(15, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        bMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(bMesh, 'LINES');
+        bMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) }).draw(bMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
         shaders.lighting.uniforms({ color: rgbToVec4(COLORS.RD_FILL),
-            camPos: eyePos }).draw(bMesh);
+            camPos: eyePos }).draw(bMesh)
         bMesh.edgeTangents && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) })
             .drawBuffers({LGL_Vertex: bMesh.vertexBuffers.edgeTangents}, null, gl.LINES)
         bMesh.edgeTangents2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
@@ -111,17 +104,17 @@ paintScreen = function() {
         gl.pushMatrix()
         //gl.translate(30, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        cMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES');
+        cMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
 
-	    let faceIndex = c.faces.length;
+	    let faceIndex = c.faces.length
 	    while (faceIndex--) {
 
 		    const face = c.faces[faceIndex]
 		    const faceTriangleIndexes = cMesh.faceIndexes.get(face)
 		    shaders.lighting.uniforms({
 			    color: rgbToVec4(randomColors[faceIndex])
-		    }).draw(cMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count);
+		    }).draw(cMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
 		    /*
 		     shaders.singleColor.uniforms({
 		     color: rgbToVec4(0x0000ff)
@@ -135,7 +128,7 @@ paintScreen = function() {
         gl.pushMatrix()
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        dMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES');
+        dMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
         dMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
             camPos: eyePos }).draw(dMesh)
@@ -155,7 +148,7 @@ paintScreen = function() {
         gl.pushMatrix()
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        sMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES');
+        sMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
         sMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
             camPos: eyePos }).draw(sMesh)
@@ -201,31 +194,31 @@ var planes = [
     new CustomPlane(V3.ZERO, V3.X, V3.Z, -500, 500, -500, 500, 0x00ff00),
     new CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0x0000ff),
     //	sketchPlane
-];
+]
 
 window.onload = function () {
 	modeStack.push({})
     window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-        console.log(errorMsg, url, lineNumber, column, errorObj);
+        console.log(errorMsg, url, lineNumber, column, errorObj)
     }
-    gl = GL.create({canvas: document.getElementById("testcanvas") as HTMLCanvasElement});
-    gl.fullscreen();
-    gl.canvas.oncontextmenu = () => false;
+    gl = GL.create({canvas: document.getElementById("testcanvas") as HTMLCanvasElement})
+    gl.fullscreen()
+    gl.canvas.oncontextmenu = () => false
 
-    setupCamera();
+    setupCamera()
     //gl.cullFace(gl.FRONT_AND_BACK);
-    gl.clearColor(1.0, 1.0, 1.0, 0.0);
-    gl.enable(gl.BLEND);
-    gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.CULL_FACE);
+    gl.clearColor(1.0, 1.0, 1.0, 0.0)
+    gl.enable(gl.BLEND)
+    gl.enable(gl.DEPTH_TEST)
+    gl.enable(gl.CULL_FACE)
     gl.depthFunc(gl.LEQUAL)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // TODO ?!
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA) // TODO ?!
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.loadIdentity();
-    gl.scale(10, 10, 10);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.loadIdentity()
+    gl.scale(10, 10, 10)
 
-    gl.loadIdentity();
+    gl.loadIdentity()
 
 
 	initMeshes()

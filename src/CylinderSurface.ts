@@ -29,7 +29,7 @@ class CylinderSurface extends Surface {
 		// create plane that goes through cylinder seam
 		const line = new L3(p, this.dir1)
 		const seamBase = this.baseEllipse.at(PI)
-		const lineOut = this.dir1.cross(p.minus(seamBase))
+		const lineOut = this.dir1.cross(this.normalAt(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 

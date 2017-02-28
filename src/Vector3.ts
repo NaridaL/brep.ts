@@ -230,9 +230,9 @@ class V3 implements Equalable {
 	 * (A x B) . normal1 = ||A|| * ||B|| * sin(phi) * cos(alpha)
 	 */
 	angleRelativeNormal(vector: V3, normal1: V3): number {
-		assert(2 == arguments.length)
+		assertf(() => 2 == arguments.length)
 		assertVectors(vector, normal1)
-		assert(normal1.hasLength(1))
+		assertf(() => normal1.hasLength(1))
 		assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
 		assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector))
 		return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector))

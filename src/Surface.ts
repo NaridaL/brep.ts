@@ -109,6 +109,10 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 	hashCode(): int {
 		return 455678631
 	}
+
+	abstract zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number}
+
+	abstract calculateArea(allEdges: Edge[]): number
 }
 
 enum PointVsFace {INSIDE, OUTSIDE, ON_EDGE}
