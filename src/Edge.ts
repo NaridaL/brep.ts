@@ -161,7 +161,9 @@ abstract class Edge extends Transformable {
 
 	overlaps(edge: Edge) {
 		assert(this.curve.isColinearTo(edge.curve))
-		const edgeAT = this.curve.pointLambda(edge.a), edgeBT = this.curve.pointLambda(edge.b)
+        const ellDir = this.curve instanceof EllipseCurve && this.curve.normal.dot(edge.curve.normal) * (edge.bT - edge.aT)
+		const edgeAT = this.curve.pointLambda(edge.a, sign(ellDir) * -PI)
+        const edgeBT = this.curve.pointLambda(edge.b, sign(ellDir) * PI)
 		const edgeMinT = Math.min(edgeAT, edgeBT), edgeMaxT = Math.max(edgeAT, edgeBT)
 		return !(NLA.le(edgeMaxT, this.minT) || NLA.le(this.maxT, edgeMinT))
 	}
@@ -327,12 +329,13 @@ class PCurveEdge extends Edge {
 		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
 		assertf(() => curve.at(aT).like(a), curve.at(aT) + a)
 		assertf(() => curve.at(bT).like(b), curve.at(bT) + b)
-		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), curve.tangentAt(aT).sce + ' ' + aDir.sce)
+		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce)
 		assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
 		super(curve, a, b, aT, bT, flippedOf, name)
 		this.aDir = aDir
 		this.bDir = bDir
 		assert(this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
+		assert(this.reversed === this.bDir.dot(curve.tangentAt(bT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
 	}
 
 	getVerticesNo0() {
@@ -450,7 +453,7 @@ class StraightEdge extends Edge {
 	curve: L3
 	// flippedOf: StraightEdge
 
-	constructor(line, a, b, aT, bT, flippedOf, name) {
+	constructor(line: L3, a: V3, b: V3, aT: number, bT: number, flippedOf?: StraightEdge, name?: string) {
 		assertInst(L3, line)
 		assertNumbers(aT, bT)
 		assertVectors(a, b)
@@ -463,9 +466,15 @@ class StraightEdge extends Edge {
 		this.tangent = this.aT < this.bT ? this.curve.dir1 : this.curve.dir1.negated()
 	}
 
-	toSource() {
-		return `StraightEdge.throughPoints(${this.a}, ${this.b})`
-	}
+    toSource() {
+        //return `StraightEdge.throughPoints(${this.a}, ${this.b})`
+        return `new StraightEdge(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT})`
+    }
+
+    toString() {
+        //return `StraightEdge.throughPoints(${this.a}, ${this.b})`
+        return `new StraightEdge(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT})`
+    }
 
 	getVerticesNo0() {
 		return [this.b]

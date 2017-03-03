@@ -972,18 +972,24 @@ registerTests({
 		assert.equal(surface.loopContainsPoint(loop, V(8, 0, 0)), PointVsFace.OUTSIDE)
 		assert.equal(surface.loopContainsPoint(loop, V(1, 7.937253933193773, 3)), PointVsFace.ON_EDGE)
 	},
-	'EllipseSurface.prototype.loopContainsPoint'(assert) {
-		const testFace = B2T.rotateEdges([
-			Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),
-			StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah')
-			.faces.find(face => face.surface instanceof EllipsoidSurface)
+    'EllipsoidSurface.loopContainsPoint'(assert) {
+        const testFace = B2T.rotateEdges([
+            Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),
+            StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah')
+            .faces.find(face => face.surface instanceof EllipsoidSurface)
 
-		const p1 = V3.sphere(10 * DEG, 10 * DEG)
-		assert.equal(testFace.surface.loopContainsPoint(testFace.edges, p1), PointVsFace.INSIDE)
-		const p2 = V3.sphere(10 * DEG, -10 * DEG)
-		assert.equal(testFace.surface.loopContainsPoint(testFace.edges, p2), PointVsFace.OUTSIDE)
-		assert.equal(testFace.surface.foo().loopContainsPoint(testFace.edges.map(edge => edge.foo()), M4.FOO.transformPoint(p1)), PointVsFace.INSIDE)
-	},
+        const p1 = V3.sphere(10 * DEG, 10 * DEG)
+        assert.equal(testFace.surface.loopContainsPoint(testFace.edges, p1), PointVsFace.INSIDE)
+        const p2 = V3.sphere(10 * DEG, -10 * DEG)
+        assert.equal(testFace.surface.loopContainsPoint(testFace.edges, p2), PointVsFace.OUTSIDE)
+        assert.equal(testFace.surface.foo().loopContainsPoint(testFace.edges.map(edge => edge.foo()), M4.FOO.transformPoint(p1)), PointVsFace.INSIDE)
+    },
+    'EllipsoidSurface.loopContainsPoint 2'(assert) {
+        const testFace = B2T.sphere(1).faces[0]
+
+        const p1 = new V3(0, 1, 0)
+        assert.equal(testFace.surface.loopContainsPoint(testFace.edges, p1), PointVsFace.INSIDE)
+    },
 	'serialization'(assert) {
 		let a = {a: 2, b: 3}
 		assert.equal(unserialize(serialize(a)).toString(), a.toString())

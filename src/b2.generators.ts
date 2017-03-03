@@ -75,7 +75,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 
 namespace B2T {
 
-    export function box(w: number, h: number, d: number, name?: string): B2 {
+    export function box(w: number = 1, h: number = 1, d: number = 1, name?: string): B2 {
 		assertNumbers(w, h, d)
 		assertInst('string' === typeof name)
 		const baseVertices = [
@@ -146,6 +146,11 @@ namespace B2T {
 		return B2T.rotateEdges(StraightEdge.chain(vertices, true), rads || 2 * PI, name)
 	}
 
+	export function sphere(radius: number, name: string = 'sphere' + globalId++): B2 {
+        const ee = PCurveEdge.forCurveAndTs(new EllipseCurve(V3.ZERO, new V3(0, 0, radius), new V3(radius, 0, 0)), -PI, 0)
+        return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], TAU, name)
+    }
+
 	export function torus(rSmall: number, rLarge: number, rads: number, name: string): B2 {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
@@ -201,20 +206,29 @@ namespace B2T {
 					return ConicSurface.atApexThroughEllipse(apex, ribCurves[a.x > b.x ? i : ipp] as EllipseCurve, !flipped ? 1 : -1)
 				}
 			}
+			/*
+			    at(t) = f1 * cos t + f2 sin t
+			    rotated projection
+			    at2(t) = V(at(t).lengthXY(), 0, at(t).z)
+			    at2(t).x = sqrt((f1x cos t + f2x sin t)² + (f1y cos t + f2y sin t)²)
+			    at2(t).x = sqrt((f1x² + f1y²) cos² t + (f1x f2x + f1y f2y) cos t sin t + (f2x² + f2y²)sin²t)
+			    at2(t).x = sqrt((a² + b²) cos² t + (a c + b d) cos t sin t + (c² + d²)sin²t)
+			    (x cos t + y sin t)² = x² cos² t + x y cos t sin t + y² sin² t
+			 */
 			if (edge.curve instanceof EllipseCurve) {
-				let flipped = undefined
+				let flipped = edge.a.z > edge.b.z
 				let ell = edge.curve.rightAngled()
-				let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
-				/// TODO: both need to be perp
-				if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
-					let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
-					if (flipped) {
-						f3length *= -1
-					}
-					return new EllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
-				} else {
-					assert(false, edge)
-				}
+                assert(ell.normal.isPerpendicularTo(V3.Z))
+                assert(L3.Z.containsPoint(ell.center))
+                let width = ell.f1.length(), height = ell.f2.length()
+                if (!ell.isCircular()) {
+				    assert(ell.f1.isParallelTo(V3.Z) && ell.f2.isParallelTo(V3.X)
+                        || ell.f2.isParallelTo(V3.Z) && ell.f1.isParallelTo(V3.X))
+                    if (ell.f1.isParallelTo(V3.Z)) {
+				        [width, height] = [height, width]
+                    }
+                }
+                return EllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
 			} else {
 				assert(false, edge)
 			}

@@ -132,15 +132,7 @@ class PlaneSurface extends Surface {
     }
 
     containsCurve(curve: Curve): boolean {
-        if (curve instanceof L3) {
-            return this.plane.containsLine(curve)
-        } else if (curve instanceof EllipseCurve || curve instanceof HyperbolaCurve || curve instanceof ParabolaCurve) {
-            return this.plane.containsPoint(curve.center) && this.plane.normal.isParallelTo(curve.normal)
-        } else if (curve instanceof BezierCurve) {
-            return curve.points.every(p => this.plane.containsPoint(p))
-        } else {
-            throw new Error(curve)
-        }
+        return this.plane.containsCurve(curve)
     }
 
     transform(m4): this {

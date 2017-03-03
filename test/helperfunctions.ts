@@ -18,13 +18,13 @@ QUnit.assert.fuzzyEquals = function(actual, expected, message) {
 	this.push(NLA.eq(actual, expected), actual, expected, message)
 }
 
-QUnit.assert.b2Equal = function (a, b, actual, expected) {
+function b2Equal(test, a, b, actual, expected) {
 
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+    test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'>link</a>`)
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+    test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>link</a>`)
-	this.B2equals(actual, expected)
+    test.B2equals(actual, expected)
 }
 
 

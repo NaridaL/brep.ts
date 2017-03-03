@@ -31,6 +31,22 @@ class EllipsoidSurface extends Surface {
         return `new EllipsoidSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
     }
 
+    isCurvesWithSurface(surface: Surface) {
+        if (surface instanceof PlaneSurface) {
+            const localPlane = surface.plane.transform(this.inverseMatrix)
+            return EllipsoidSurface.unitISCurvesWithPlane(localPlane).map(c => c.transform(this.matrix))
+        } else if (surface instanceof CylinderSurface) {
+            if (surface.dir1.isParallelTo(this.dir1)) {
+                const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
+                return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
+            } else if (NLA.eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
+                assert(false)
+            } else {
+                assert(false)
+            }
+        }
+    }
+
     isTsForLine(line) {
         assertInst(L3, line)
         // transforming line manually has advantage that dir1 will not be renormalized,
@@ -717,7 +733,7 @@ class EllipsoidSurface extends Surface {
 	}
 
 	getSeamPlane(): P3 {
-    	return P3.forAnchorAndPlaneVectors(this.center, this.f1, this. f3)
+    	return P3.forAnchorAndPlaneVectors(this.center, this.f1, this.f3)
 	}
 
 	static readonly UNIT = new EllipsoidSurface(V3.ZERO, V3.X, V3.Y, V3.Z)

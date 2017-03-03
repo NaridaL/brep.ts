@@ -197,7 +197,7 @@ class L3 extends Curve {
 	}
 
 	toString(roundFunction?) {
-		roundFunction = roundFunction || ((v) => +v.toFixed(4))
+		//roundFunction = roundFunction || ((v) => +v.toFixed(4))
 		return 'new L3(' + this.anchor.toString(roundFunction) + ', ' + this.dir1.toString(roundFunction) + ')'
 	}
 

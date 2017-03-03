@@ -1,15 +1,17 @@
 class EllipseCurve extends Curve {
-	center: V3
-	f1:V3
-	f2:V3
-	normal:V3
-	matrix:M4
-	inverseMatrix:M4
+    center: V3
+    f1: V3
+    f2: V3
+    normal: V3
+    matrix: M4
+    inverseMatrix: M4
+    minT: number
+    maxT: number
 
-	constructor(center, f1, f2) {
-		super()
-		assertVectors(center, f1, f2)
-		this.center = center
+    constructor(center, f1, f2) {
+        super()
+        assertVectors(center, f1, f2)
+        this.center = center
 		this.f1 = f1
 		this.f2 = f2
 		this.normal = f1.cross(f2)
@@ -196,9 +198,9 @@ class EllipseCurve extends Curve {
 	pointLambda(p: V3, hint?:number) {
 		assertVectors(p)
 		const p2 = this.inverseMatrix.transformPoint(p)
-		const angle = p2.angleXY();
+		const angle = p2.angleXY()
 		if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
-			// assert(isFinite(hint))
+			assert(isFinite(hint))
 			return Math.sign(hint) * Math.PI
 		}
 		return angle
@@ -231,18 +233,18 @@ class EllipseCurve extends Curve {
 	 * Solve (3), (2) with intersectionUnitCircleLine
 	 */
 	mainAxes(): {f1: V3, f2: V3} {
-		const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared();
+		const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared()
 		if (NLA.eq0(a)) {
 			return this
 		}
-		const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a);
+		const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a)
 		const {x1: xi, y1: eta} = intersectionUnitCircleLine(g1, g2, 0)
 		return {f1: f1.times(xi).plus(f2.times(eta)), f2: f1.times(-eta).plus(f2.times(xi))}
 	}
 
 	eccentricity() {
-		const mainAxes = this.mainAxes();
-		const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length();
+		const mainAxes = this.mainAxes()
+		const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length()
 		const [a, b] = f1length > f2length ? [f1length, f2length] : [f2length, f1length]
 		return Math.sqrt(1 - b * b / a / a)
 	}
@@ -281,7 +283,7 @@ class EllipseCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof CylinderSurface) {
-			const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir1));
+			const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir1))
 			return this.isInfosWithEllipse(ellipseProjected).map(info => info.tThis)
 		} else {
 			assert(false)
@@ -332,7 +334,7 @@ class EllipseCurve extends Curve {
 	}
 
 	containsPoint(p) {
-		const localP = this.inverseMatrix.transformPoint(p);
+		const localP = this.inverseMatrix.transformPoint(p)
 		return NLA.eq(1, localP.lengthXY()) && NLA.eq0(localP.z)
 	}
 
@@ -340,7 +342,7 @@ class EllipseCurve extends Curve {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
-			const localEllipse = ellipse.transform(this.inverseMatrix).rightAngled();
+			const localEllipse = ellipse.transform(this.inverseMatrix).rightAngled()
 
 			// check if colinear
 			if (localEllipse.f1.hasLength(1) && localEllipse.f2.hasLength(1) && localEllipse.center.isZero()) {
@@ -359,24 +361,24 @@ class EllipseCurve extends Curve {
 			const rotCenterY = centerX * Math.sin(-angle) + centerY * Math.cos(-angle)
 			const rotCenter = V(rotCenterX, rotCenterY)
 			let f = t => {
-				const lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY;
+				const lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY
 				return lex * lex / aSqr + ley * ley / bSqr - 1
-			};
-			const uc = new EllipseCurve(V3.ZERO, V3.X, V3.Y);
+			}
+			const uc = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
 			//uc.debugToMesh(dMesh, 'curve4')
-			const f2 = (x, y) => 200 * (x * x + y * y - 1);
-			const f3 = (x, y) => 200 * ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1);
-			const results = [];
-			const resetMatrix = this.matrix.times(M4.rotationZ(angle));
+			const f2 = (x, y) => 200 * (x * x + y * y - 1)
+			const f3 = (x, y) => 200 * ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1)
+			const results = []
+			const resetMatrix = this.matrix.times(M4.rotationZ(angle))
 			for (let da = Math.PI / 4; da < 2 * Math.PI; da += Math.PI / 2) {
-				const startP = uc.at(da);
-				const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10);
+				const startP = uc.at(da)
+				const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)
 				if (p && !results.some(r => r.like(p))) {
 					results.push(p)
 					drPs.push(p)
 				}
 			}
-			const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0));
+			const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0))
 			//var rotEl = localEllipse.transform(resetMatrix)
 			console.log(rotEl, rotEl.sce)
 			//rotEl.debugToMesh(dMesh, 'curve2')
@@ -614,3 +616,5 @@ class EllipseCurve extends Curve {
 }
 EllipseCurve.prototype.hlol = Curve.hlol++
 EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 8)
+EllipseCurve.prototype.minT = -PI
+EllipseCurve.prototype.maxT = PI

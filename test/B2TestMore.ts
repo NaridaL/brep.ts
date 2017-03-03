@@ -411,6 +411,17 @@ registerTests({
             '???', true)
 
     },
+    'sphere face box'(assert) {
+        const sphere = B2T.sphere(4, 'ball')
+        const face = sphere.faces.find(face => face.containsPoint(new V3(0, 4, 0)))
+        // splitting contour in base position:
+
+        const testBrep = B2T.box(10, 10, 10, 'box').translate(1, 2, 3).flipped()
+        doTestWithBrep(assert, face, sphere, testBrep, [
+            //Edge.forCurveAndTs(face.surface.isCurvesWithPlane(P3.ZX.translate(1, 0, 0)), )
+        ], [], '???')
+
+    },
 
 	'coplanar things'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
@@ -571,7 +582,7 @@ registerTests({
 				StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
 				PCurveEdge.forCurveAndTs(EllipseCurve.circle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
-		assert.b2Equal(pie, boxKnife, pie.minus(boxKnife), result)
+		b2Equal(assert, pie, boxKnife, pie.minus(boxKnife), result)
 	
 	
 		{
@@ -579,66 +590,65 @@ registerTests({
 			const k2 = boxKnife.translate(-1, 0, 0)
 			doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.ZERO, V(0, 0, 5)],
 				'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
-			assert.b2Equal(pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
+			b2Equal(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
 		}
 	},
 	'B2.prototype.minus cut hole through side of pie'(assert) {
 		let pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 		let result = new B2([
-			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
-				StraightEdge.throughPoints(V(0, 0, 0), V(8, 0, 0)),
-				StraightEdge.throughPoints(V(8, 0, 0), V(8, 0, 5)),
-				StraightEdge.throughPoints(V(8, 0, 5), V(0, 0, 5)),
-				StraightEdge.throughPoints(V(0, 0, 5), V(0, 0, 0))], [[
-				StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 4)),
-				StraightEdge.throughPoints(V(1, 0, 4), V(6, 0, 4)),
-				StraightEdge.throughPoints(V(6, 0, 4), V(6, 0, 1)),
-				StraightEdge.throughPoints(V(6, 0, 1), V(1, 0, 1))]]),
-			new RotationFace(new CylinderSurface(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, -8, 0)), V(0, 0, -1)), [
-				new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, -8, 0)), V(8, 0, 0), V(-8, 9.797174393178826e-16, 0), 0, -3.141592653589793, null, V(0, 8, 0), V(-9.797174393178826e-16, -8, 0)),
-				StraightEdge.throughPoints(V(-8, 9.797174393178826e-16, 0), V(-8, 9.797174393178826e-16, 5)),
-				new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, -8, 0)), V(-8, 9.797174393178826e-16, 5), V(8, 0, 5), -3.141592653589793, 0, null, V(9.797174393178826e-16, 8, 0), V(0, -8, 0)),
-				StraightEdge.throughPoints(V(8, 0, 5), V(8, 0, 0))], [[
-				StraightEdge.throughPoints(V(1, 7.937253933193773, 4), V(1, 7.937253933193773, 1)),
-				new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(8, 0, 0), V(0, -8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), -1.4454684956268313, -0.7227342478134156, null, V(7.937253933193772, -0.9999999999999991, 0), V(5.2915026221291805, -6, 0)),
-				StraightEdge.throughPoints(V(6, 5.291502622129181, 1), V(6, 5.291502622129181, 4)),
-				new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), 0.7227342478134156, 1.4454684956268313, null, V(-5.2915026221291805, 6, 0), V(-7.937253933193772, 0.9999999999999991, 0))]]),
-			new PlaneFace(new PlaneSurface(new P3(V(-1.2246467991473532e-16, -1, 0), 0)), [
-				StraightEdge.throughPoints(V(-8, 9.797174393178826e-16, 0), V(0, 0, 0)),
-				StraightEdge.throughPoints(V(0, 0, 0), V(0, 0, 5)),
-				StraightEdge.throughPoints(V(0, 0, 5), V(-8, 9.797174393178826e-16, 5)),
-				StraightEdge.throughPoints(V(-8, 9.797174393178826e-16, 5), V(-8, 9.797174393178826e-16, 0))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
-				StraightEdge.throughPoints(V(8, 0, 0), V(0, 0, 0)),
-				StraightEdge.throughPoints(V(0, 0, 0), V(-8, 9.797174393178826e-16, 0)),
-				new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, -8, 0)), V(-8, 9.797174393178826e-16, 0), V(8, 0, 0), -3.141592653589793, 0, null, V(9.797174393178826e-16, 8, 0), V(0, -8, 0))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
-				new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, -8, 0)), V(8, 0, 5), V(-8, 9.797174393178826e-16, 5), 0, -3.141592653589793, null, V(0, 8, 0), V(-9.797174393178826e-16, -8, 0)),
-				StraightEdge.throughPoints(V(-8, 9.797174393178826e-16, 5), V(0, 0, 5)),
-				StraightEdge.throughPoints(V(0, 0, 5), V(8, 0, 5))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1)), [
-				StraightEdge.throughPoints(V(1, 0, 4), V(1, 0, 1)),
-				StraightEdge.throughPoints(V(1, 0, 1), V(1, 7.937253933193773, 1)),
-				StraightEdge.throughPoints(V(1, 7.937253933193773, 1), V(1, 7.937253933193773, 4)),
-				StraightEdge.throughPoints(V(1, 7.937253933193773, 4), V(1, 0, 4))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6)), [
-				StraightEdge.throughPoints(V(6, 0, 1), V(6, 0, 4)),
-				StraightEdge.throughPoints(V(6, 0, 4), V(6, 5.291502622129181, 4)),
-				StraightEdge.throughPoints(V(6, 5.291502622129181, 4), V(6, 5.291502622129181, 1)),
-				StraightEdge.throughPoints(V(6, 5.291502622129181, 1), V(6, 0, 1))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
-				StraightEdge.throughPoints(V(1, 0, 1), V(6, 0, 1)),
-				StraightEdge.throughPoints(V(6, 0, 1), V(6, 5.291502622129181, 1)),
-				new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(8, 0, 0), V(0, -8, 0)), V(6, 5.291502622129181, 1), V(1, 7.937253933193773, 1), -0.7227342478134156, -1.4454684956268313, null, V(-5.2915026221291805, 6, 0), V(-7.937253933193772, 0.9999999999999991, 0)),
-				StraightEdge.throughPoints(V(1, 7.937253933193773, 1), V(1, 0, 1))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
-				StraightEdge.throughPoints(V(6, 0, 4), V(1, 0, 4)),
-				StraightEdge.throughPoints(V(1, 0, 4), V(1, 7.937253933193773, 4)),
-				new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 4), V(6, 5.291502622129181, 4), 1.4454684956268313, 0.7227342478134156, null, V(7.937253933193772, -0.9999999999999991, 0), V(5.2915026221291805, -6, 0)),
-				StraightEdge.throughPoints(V(6, 5.291502622129181, 4), V(6, 0, 4))], [])], false)
-	
-		assert.b2Equal(pie, punch, pie.minus(punch), result)
+            new RotationFace(new CylinderSurface(new EllipseCurve(V(0, 0, 0), V(-8, 0, 0), V(0, -8, 0)), V3.Z), [
+                new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 5), V(8, 0, 0), 5, 0),
+                new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(-8, 0, 0), V(0, -8, 0)), V(8, 0, 0), V(-8, -9.797174393178826e-16, 0), -3.141592653589793, 0, null, V(-9.797174393178826e-16, 8, 0), V(0, -8, 0)),
+                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 0), V(0, 0, 1)), V(-8, -9.797174393178826e-16, 0), V(-8, -9.797174393178826e-16, 5), 0, 5),
+                new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(-8, 0, 0), V(0, -8, 0)), V(-8, -9.797174393178826e-16, 5), V(8, 0, 5), 0, -3.141592653589793, null, V(0, 8, 0), V(9.797174393178826e-16, -8, 0))], [[
+                new StraightEdge(new L3(V(1, 7.937253933193772, 0), V(0, 0, -1)), V(1, 7.937253933193773, 4), V(1, 7.937253933193773, 1), -4, -1),
+                new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), 1.696124157962962, 2.4188584057763776, null, V(7.937253933193772, -0.9999999999999999, 0), V(5.291502622129181, -6, 0)),
+                new StraightEdge(new L3(V(6, 5.291502622129181, 0), V(0, 0, 1)), V(6, 5.291502622129181, 1), V(6, 5.291502622129181, 4), 1, 4),
+                new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(-8, 0, 0), V(0, -8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), -2.4188584057763776, -1.696124157962962, null, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 0.9999999999999999, 0))]]),
+            new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
+                new StraightEdge(new L3(V(0, 0, 0), V(1, 0, 0)), V(0, 0, 0), V(8, 0, 0), 0, 8),
+                new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 0), V(8, 0, 5), 0, 5),
+                new StraightEdge(new L3(V(8, 0, 5), V(-1, 0, 0)), V(8, 0, 5), V(0, 0, 5), 0, 8),
+                new StraightEdge(new L3(V(0, 0, 5), V(0, 0, -1)), V(0, 0, 5), V(0, 0, 0), 0, 5)], [[
+                new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 1), V(1, 0, 4), 1, 4),
+                new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(1, 0, 4), V(6, 0, 4), 1, 6),
+                new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 4), V(6, 0, 1), -4, -1),
+                new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(6, 0, 1), V(1, 0, 1), -6, -1)]]),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
+                new StraightEdge(new L3(V(0, 0, 0), V(1, 0, 0)), V(8, 0, 0), V(0, 0, 0), 8, 0),
+                new StraightEdge(new L3(V(0, 0, 0), V(-1, -1.2246467991473532e-16, 0)), V(0, 0, 0), V(-8, -9.797174393178826e-16, 0), 0, 8),
+                new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(-8, 0, 0), V(0, -8, 0)), V(-8, -9.797174393178826e-16, 0), V(8, 0, 0), 0, -3.141592653589793, null, V(0, 8, 0), V(9.797174393178826e-16, -8, 0))], []),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
+                new StraightEdge(new L3(V(8, 0, 5), V(-1, 0, 0)), V(0, 0, 5), V(8, 0, 5), 8, 0),
+                new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(-8, 0, 0), V(0, -8, 0)), V(8, 0, 5), V(-8, -9.797174393178826e-16, 5), -3.141592653589793, 0, null, V(-9.797174393178826e-16, 8, 0), V(0, -8, 0)),
+                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 5), V(1, 1.2246467991473532e-16, 0)), V(-8, -9.797174393178826e-16, 5), V(0, 0, 5), 0, 8)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(-1.2246467991473515e-16, -1, 0), -3.549874073494553e-30)), [
+                new StraightEdge(new L3(V(0, 0, 5), V(0, 0, -1)), V(0, 0, 0), V(0, 0, 5), 5, 0),
+                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 5), V(1, 1.2246467991473532e-16, 0)), V(0, 0, 5), V(-8, -9.797174393178826e-16, 5), 8, 0),
+                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 0), V(0, 0, 1)), V(-8, -9.797174393178826e-16, 5), V(-8, -9.797174393178826e-16, 0), 5, 0),
+                new StraightEdge(new L3(V(0, 0, 0), V(-1, -1.2246467991473532e-16, 0)), V(-8, -9.797174393178826e-16, 0), V(0, 0, 0), 8, 0)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1)), [
+                new StraightEdge(new L3(V(1, 7.937253933193772, 0), V(0, 0, -1)), V(1, 7.937253933193773, 1), V(1, 7.937253933193773, 4), -1, -4),
+                new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 7.937253933193773, 4), V(1, 0, 4), 8.937253933193773, 1),
+                new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 4), V(1, 0, 1), 4, 1),
+                new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 0, 1), V(1, 7.937253933193773, 1), 1, 8.937253933193773)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6)), [
+                new StraightEdge(new L3(V(6, 5.291502622129181, 0), V(0, 0, 1)), V(6, 5.291502622129181, 4), V(6, 5.291502622129181, 1), 4, 1),
+                new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 5.291502622129181, 1), V(6, 0, 1), 3.7084973778708186, 9),
+                new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 1), V(6, 0, 4), -1, -4),
+                new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 0, 4), V(6, 5.291502622129181, 4), 9, 3.7084973778708186)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
+                new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 1), V(1, 7.937253933193773, 1), 2.4188584057763776, 1.696124157962962, null, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 0.9999999999999999, 0)),
+                new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 7.937253933193773, 1), V(1, 0, 1), 8.937253933193773, 1),
+                new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(6, 0, 1), -1, -6),
+                new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 0, 1), V(6, 5.291502622129181, 1), 9, 3.7084973778708186)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
+                new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(-8, 0, 0), V(0, -8, 0)), V(1, 7.937253933193773, 4), V(6, 5.291502622129181, 4), -1.696124157962962, -2.4188584057763776, null, V(7.937253933193772, -0.9999999999999999, 0), V(5.291502622129181, -6, 0)),
+                new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 5.291502622129181, 4), V(6, 0, 4), 3.7084973778708186, 9),
+                new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
+                new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 7.937253933193773, 4), 1, 8.937253933193773)], [])], false)
+		b2Equal(assert, pie, punch, pie.minus(punch), result)
 		console.log(pie.minus(punch).sce)
 	},
 	
@@ -652,51 +662,78 @@ registerTests({
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 	
 		let result = new B2([
-			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
-				StraightEdge.throughPoints(V(0, 0, 0), V(10, 0, 0)),
-				StraightEdge.throughPoints(V(10, 0, 0), V(10, 0, 5)),
-				StraightEdge.throughPoints(V(10, 0, 5), V(0, 0, 5)),
-				StraightEdge.throughPoints(V(0, 0, 5), V(0, 0, 0))], [[
-				StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 4)),
-				StraightEdge.throughPoints(V(1, 0, 4), V(6, 0, 4)),
-				StraightEdge.throughPoints(V(6, 0, 4), V(6, 0, 1)),
-				StraightEdge.throughPoints(V(6, 0, 1), V(1, 0, 1))]]),
-			new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1), [
-				new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(10, 0, 0), V(0, 0, 0), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
-				StraightEdge.throughPoints(V(0, 0, 0), V(0, 0, 5)),
-				new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(0, 0, 5), V(10, 0, 5), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0)),
-				StraightEdge.throughPoints(V(10, 0, 5), V(10, 0, 0))], [[
-				StraightEdge.throughPoints(V(1, 3.185436104380006, 4), V(1, 3.185436104380006, 1)),
-				new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(1, 3.185436104380006, 1), V(6, 3.720106174228432, 1), 0.3059958942668147, 0.5446421518086273, null, V(16.85436104380006, 5.820123171995558, 0), V(22.201061742284324, -1.3392645542588184, 0)),
-				StraightEdge.throughPoints(V(6, 3.720106174228432, 1), V(6, 3.720106174228432, 4)),
-				new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -1.1, 0.1), V(6, 3.720106174228432, 4), V(1, 3.185436104380006, 4), 0.45535784819137265, 0.6940041057331853, null, V(-22.201061742284324, 1.3392645542588197, 0), V(-16.85436104380006, -5.820123171995558, 0))]]),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
-				StraightEdge.throughPoints(V(10, 0, 0), V(0, 0, 0)),
-				new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, 0), V(10, 0, 0), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
-				new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(10, 0, 5), V(0, 0, 5), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
-				StraightEdge.throughPoints(V(0, 0, 5), V(10, 0, 5))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1)), [
-				StraightEdge.throughPoints(V(1, 0, 4), V(1, 0, 1)),
-				StraightEdge.throughPoints(V(1, 0, 1), V(1, 3.185436104380006, 1)),
-				StraightEdge.throughPoints(V(1, 3.185436104380006, 1), V(1, 3.185436104380006, 4)),
-				StraightEdge.throughPoints(V(1, 3.185436104380006, 4), V(1, 0, 4))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6)), [
-				StraightEdge.throughPoints(V(6, 0, 1), V(6, 0, 4)),
-				StraightEdge.throughPoints(V(6, 0, 4), V(6, 3.720106174228432, 4)),
-				StraightEdge.throughPoints(V(6, 3.720106174228432, 4), V(6, 3.720106174228432, 1)),
-				StraightEdge.throughPoints(V(6, 3.720106174228432, 1), V(6, 0, 1))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
-				StraightEdge.throughPoints(V(1, 0, 1), V(6, 0, 1)),
-				StraightEdge.throughPoints(V(6, 0, 1), V(6, 3.720106174228432, 1)),
-				new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(6, 3.720106174228432, 1), V(1, 3.185436104380006, 1), 0.5446421518086273, 0.3059958942668147, null, V(-22.201061742284324, 1.3392645542588184, 0), V(-16.85436104380006, -5.820123171995558, 0)),
-				StraightEdge.throughPoints(V(1, 3.185436104380006, 1), V(1, 0, 1))], []),
-			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
-				StraightEdge.throughPoints(V(6, 0, 4), V(1, 0, 4)),
-				StraightEdge.throughPoints(V(1, 0, 4), V(1, 3.185436104380006, 4)),
-				new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -1.1, 0.1), V(1, 3.185436104380006, 4), V(6, 3.720106174228432, 4), 0.6940041057331853, 0.45535784819137265, null, V(16.85436104380006, 5.820123171995558, 0), V(22.201061742284324, -1.3392645542588197, 0)),
-				StraightEdge.throughPoints(V(6, 3.720106174228432, 4), V(6, 0, 4))], [])], false)
-	
-		assert.b2Equal(a, punch, a.minus(punch), result)
-	}
+            new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
+                new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(10, 0, 0), 10, 0),
+                new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 0), V(10, 0, 5), 0, 5),
+                new StraightEdge(new L3(V(10, 0, 5), V(-1, 0, 0)), V(10, 0, 5), V(0, 0, 5), 0, 10),
+                new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 5), V(0, 0, 0), 5, 0)], [[
+                new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 1), V(1, 0, 4), 1, 4),
+                new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(1, 0, 4), V(6, 0, 4), 1, 6),
+                new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 4), V(6, 0, 1), -4, -1),
+                new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(6, 0, 1), V(1, 0, 1), -6, -1)]]),
+            new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1), [
+                new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(10, 0, 0), V(0, 0, 0), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
+                new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 0), V(0, 0, 5), 0, 5),
+                new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(0, 0, 5), V(10, 0, 5), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0)),
+                new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 5), V(10, 0, 0), 5, 0)], [[
+                new StraightEdge(new L3(V(1, 3.1854361043800057, 0), V(0, 0, -1)), V(1, 3.185436104380006, 4), V(1, 3.185436104380006, 1), -4, -1),
+                new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(1, 3.185436104380006, 1), V(6, 3.720106174228432, 1), 0.3059958942668146, 0.5446421518086271, null, V(16.854361043800058, 5.8201231719955615, 0), V(22.201061742284324, -1.3392645542588122, 0)),
+                new StraightEdge(new L3(V(6, 3.7201061742284325, 0), V(0, 0, 1)), V(6, 3.720106174228432, 1), V(6, 3.720106174228432, 4), 1, 4),
+                new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -1.1, 0.1), V(6, 3.720106174228432, 4), V(1, 3.185436104380006, 4), 0.45535784819137265, 0.6940041057331852, null, V(-22.201061742284324, 1.3392645542588197, 0), V(-16.854361043800065, -5.820123171995554, 0))]]),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
+                new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(10, 0, 0), V(0, 0, 0), 0, 10),
+                new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, 0), V(10, 0, 0), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0))], []),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
+                new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(10, 0, 5), V(0, 0, 5), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
+                new StraightEdge(new L3(V(10, 0, 5), V(-1, 0, 0)), V(0, 0, 5), V(10, 0, 5), 10, 0)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1)), [
+                new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 4), V(1, 0, 1), 4, 1),
+                new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 0, 1), V(1, 3.185436104380006, 1), 1, 4.185436104380006),
+                new StraightEdge(new L3(V(1, 3.1854361043800057, 0), V(0, 0, -1)), V(1, 3.185436104380006, 1), V(1, 3.185436104380006, 4), -1, -4),
+                new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 3.185436104380006, 4), V(1, 0, 4), 4.185436104380006, 1)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6)), [
+                new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 1), V(6, 0, 4), -1, -4),
+                new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 0, 4), V(6, 3.720106174228432, 4), 9, 5.279893825771568),
+                new StraightEdge(new L3(V(6, 3.7201061742284325, 0), V(0, 0, 1)), V(6, 3.720106174228432, 4), V(6, 3.720106174228432, 1), 4, 1),
+                new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 3.720106174228432, 1), V(6, 0, 1), 5.279893825771568, 9)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
+                new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(6, 0, 1), -1, -6),
+                new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 0, 1), V(6, 3.720106174228432, 1), 9, 5.279893825771568),
+                new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(6, 3.720106174228432, 1), V(1, 3.185436104380006, 1), 0.5446421518086271, 0.3059958942668146, null, V(-22.201061742284324, 1.3392645542588122, 0), V(-16.854361043800058, -5.8201231719955615, 0)),
+                new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 3.185436104380006, 1), V(1, 0, 1), 4.185436104380006, 1)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
+                new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
+                new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 3.185436104380006, 4), 1, 4.185436104380006),
+                new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -1.1, 0.1), V(1, 3.185436104380006, 4), V(6, 3.720106174228432, 4), 0.6940041057331852, 0.45535784819137265, null, V(16.854361043800065, 5.820123171995554, 0), V(22.201061742284324, -1.3392645542588197, 0)),
+                new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 3.720106174228432, 4), V(6, 0, 4), 5.279893825771568, 9)], [])], false)
+		b2Equal(assert, a, punch, a.minus(punch), result)
+	},
+
+	'test intersection of volumes where no faces intersect'(assert) {
+        /**
+         * A in B:
+         * A - B = 0
+         * B - A = B + A flipped
+         * A + B = B
+         * intersection = A
+         *
+         * A and B outside each other
+         * A - B = A (B - A is equivalent)
+         * A + B = A + B
+         * intersection = 0
+         */
+
+        const b = B2T.box(10, 10, 10), a = B2T.box(2, 2, 2).translate(1,1,1)
+        b2Equal(assert, a, b, a.minus(b), B2.EMPTY)
+        b2Equal(assert, a, b, b.minus(a), new B2(b.faces.concat(a.flipped().faces), false))
+        b2Equal(assert, a, b, b.plus(a), b)
+        b2Equal(assert, a, b, b.and(a), a)
+
+        const c = B2T.box(2, 2, 2).translate(20)
+        b2Equal(assert, a, c, a.minus(b), a)
+        b2Equal(assert, a, c, b.plus(a), new B2(b.faces.concat(a.faces), false))
+        b2Equal(assert, a, c, b.and(a), B2.EMPTY)
+
+
+    }
 })

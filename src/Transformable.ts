@@ -15,7 +15,7 @@ abstract class Transformable extends NLA.BaseObject {
 		return this.mirrored(P3.XY)
 	}
 
-	translate(x, y, z): this {
+	translate(x: number, y: number = 0, z: number = 0): this {
 		return this.transform(M4.translation(x, y, z), `.translate(${x}, ${y}, ${z})`)
 	}
 
@@ -27,15 +27,15 @@ abstract class Transformable extends NLA.BaseObject {
             : this.transform(M4.scaling(x, y, z), `.scale(${x}, ${y}, ${z})`)
 	}
 
-	rotateX(radians): this {
+	rotateX(radians: number): this {
 		return this.transform(M4.rotationX(radians), `.rotateX(${radians})`)
 	}
 
-	rotateY(radians): this {
+	rotateY(radians: number): this {
 		return this.transform(M4.rotationY(radians), `.rotateY(${radians})`)
 	}
 
-	rotateZ(radians): this {
+	rotateZ(radians: number): this {
 		return this.transform(M4.rotationZ(radians), `.rotateZ(${radians})`)
 	}
 

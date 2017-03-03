@@ -51,7 +51,7 @@ abstract class Face extends Transformable {
     }
 
     toString() {
-        return 'new ' + this.constructor.name + '(' + this.surface + ', ' + this.edges.map(e => '\n\t' + e).join() + ']'
+        return 'new ' + this.constructor.name + '(' + this.surface + ', [' + this.edges.map(e => '\n\t' + e).join() + ']'
             + this.holes.map(hole => '\n\t\thole: ' + hole.join()) + ')'
     }
 
@@ -184,9 +184,8 @@ class PlaneFace extends Face {
 
     surface: PlaneSurface
 
-    constructor(planeSurface, contour, holes?, name?) {
-        assertInst(PlaneSurface, planeSurface)
-        super(planeSurface, contour, holes, name)
+    constructor(p: P3 | PlaneSurface, contour: Edge[], holes?: Edge[][], name?: string) {
+        super(p instanceof P3 ? new PlaneSurface(p) : p, contour, holes, name)
     }
 
 
@@ -281,27 +280,6 @@ class PlaneFace extends Face {
                        faceMap: Map<Face, Edge[]>,
                        faceEdgePoints: Map<Face, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
                        colinearEdgePairs: Set<NLA.Pair<any, any>>) {
-        assertInst(PlaneFace, face2)
-        const face: PlaneFace = this
-        // get intersection
-        const thisPlane = this.surface.plane, face2Plane = face2.surface.plane
-        if (thisPlane.isParallelToPlane(face2Plane)) {
-            if (thisPlane.like(face2Plane)) {
-                // normal same and same location in space
-                // addLikeSurfaceFaces(likeSurfaceFaces, this, face2)
-            }
-            return
-        }
-        const isLine = L3.fromPlanes(thisPlane, face2Plane)
-        // get intersections of newCurve with other edges of face and face2
-        const ps1 = planeFaceEdgeISPsWithPlane(thisBrep, face, isLine, face2Plane)
-        const ps2 = planeFaceEdgeISPsWithPlane(face2Brep, face2, isLine, thisPlane)
-        console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
-        if (ps1.length == 0 || ps2.length == 0) {
-            // faces to not intersect
-            return
-        }
-        console.log(''+thisPlane+face2Plane)
 
         function hasPair(a: NLA.Equalable, b: NLA.Equalable) {
             return colinearEdgePairs.has(new NLA.Pair(a, b))
@@ -309,14 +287,6 @@ class PlaneFace extends Face {
         function addPair(a: NLA.Equalable, b: NLA.Equalable) {
             return colinearEdgePairs.add(new NLA.Pair(a, b))
         }
-        //function hasPair(edge1: {id: int}, edge2: {id: int}) {
-        //    const str = edge1.id + '_' + edge2.id
-        //    return colinearEdgePairs.has(str)
-        //}
-        //function addPair(edge1: {id: int}, edge2: {id: int}) {
-        //    const str = edge1.id + '_' + edge2.id
-        //    return colinearEdgePairs.add(str)
-        //}
 
         /**
          *
@@ -346,8 +316,10 @@ class PlaneFace extends Face {
                     //         // however it indicates that it intersects the other volume here, i.e. the old edge cannot
                     //         // be counted as "inside" for purposes of reconstitution
                     thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => {
-                        const dot = NLA.snap0(face2Plane.normal.dot(faceInfo.inside))
-                        if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
+                        //const dot = NLA.snap0(face2Plane.normal.dot(faceInfo.inside))
+                        //if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
+                        const pointsInsideFace = fff(faceInfo, face2.surface)
+                        if (pointsInsideFace == INSIDE || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME) {
                             // we need to pass the edge through so that the curve is correct in the final B2
                             const faceInfoEdgeAT = faceInfo.edge.curve.pointLambda(newEdge.a)
                             const faceInfoEdgeBT = faceInfo.edge.curve.pointLambda(newEdge.b)
@@ -409,10 +381,6 @@ class PlaneFace extends Face {
                                 {edge: faceInfo.edge, edgeT: faceInfoEdgeAT, p: newEdge.a, passEdge: flipEdge ? newEdge.flipped() : undefined})
                             NLA.mapPush(faceEdgePoints, faceInfo.face,
                                 {edge: faceInfo.edge, edgeT: faceInfoEdgeBT, p: newEdge.b, passEdge: !flipEdge ? newEdge : undefined})
-
-                            for (const [face, ps] of faceEdgePoints.entries()) {
-                                assert(ps.every(p => p.edge.isValidT(p.edgeT)), face.sce, ps.map(p => p.str).sce)
-                            }
                         }
                     }
                 }
@@ -511,6 +479,29 @@ class PlaneFace extends Face {
                 //}
             }
         }
+
+
+        assertInst(PlaneFace, face2)
+        const face: PlaneFace = this
+        // get intersection
+        const thisPlane = this.surface.plane, face2Plane = face2.surface.plane
+        if (thisPlane.isParallelToPlane(face2Plane)) {
+            if (thisPlane.like(face2Plane)) {
+                // normal same and same location in space
+                // addLikeSurfaceFaces(likeSurfaceFaces, this, face2)
+            }
+            return
+        }
+        const isLine = L3.fromPlanes(thisPlane, face2Plane)
+        // get intersections of newCurve with other edges of face and face2
+        const ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane)
+        const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine, thisPlane)
+        console.log('ps1\n', ps1.map(m => m.toSource()).join('\n'), '\nps2\n', ps2.map(m => m.toSource()).join('\n'))
+        if (ps1.length == 0 || ps2.length == 0) {
+            // faces to not intersect
+            return
+        }
+        console.log(''+thisPlane+face2Plane)
 
         let in1 = false, in2 = false, col1: Edge = undefined, col2: Edge = undefined
         let i = 0, j = 0, last, segments = []
@@ -645,6 +636,11 @@ class RotationFace extends Face {
 				return sign(u) * PI
 			}
 		}
+        const localEdge = this.edges[0].transform(this.surface.inverseMatrix)
+		if (P3.ZX.containsCurve(localEdge.curve)) {
+		    const insideVector = localEdge.a.cross(localEdge.aDir)
+            return sign(insideVector.dot(V3.Y)) * PI
+        }
 		assert(false, "Couldn't find canon seam u")
 	}
 
@@ -818,6 +814,7 @@ class RotationFace extends Face {
 		}
 		const partss: int[][][] = new Array(uRes * vRes)
 		function fixUpPart(part, baseU, baseV) {
+		    assert(baseU < uRes && baseV < vRes, `${baseU}, ${baseV}, ${uRes}, ${vRes}`)
 			console.log("complete part", part, baseU, baseV)
 			//console.trace()
 			assert(part.length)
@@ -845,13 +842,14 @@ class RotationFace extends Face {
 				assert(vx0)
 				const di = vx01.x, dj = vx01.y
 				let vxIndex = vx0index, vx = vx0, currentT = 0
-				let whileLimit = 15
+				let whileLimit = 40
 				while (--whileLimit) {
 					const vxu = vx.x, vxv = vx.y
 					// points which are on a grid line are assigned to the cell into which they are going (+ NLA_PRECISION * sign(di))
 					// if they are parallel to the gridline (eq0(di)), they belong the the cell for which they are a CCW boundary
 					const baseU = floor(vxu + (!eq0(di) ? sign(di) : -sign(dj)) * NLA_PRECISION) - uOffset
 					const baseV = floor(vxv + (!eq0(dj) ? sign(dj) : sign(di)) * NLA_PRECISION) - vOffset
+                    assert(baseU < uRes && baseV < vRes, `${baseU}, ${baseV}, ${uRes}, ${vRes}`)
 					// figure out the next intersection with a gridline:
 					// iNext is the positive horizontal distance to the next vertical gridline
 					const iNext = ceil(sign(di) * vxu + NLA_PRECISION) - sign(di) * vxu
@@ -917,24 +915,25 @@ class RotationFace extends Face {
 			const index = j * (uRes + 1) + i
 			return fieldVertexIndices[index] || (fieldVertexIndices[index] = addVertex(i + uOffset, j + vOffset))
 		}
-		for (let row = 0; row < uRes; row++) {
+		for (let col = 0; col < uRes; col++) {
 			let inside = false
-			for (let col = 0; col < vRes; col++) {
-				const pos = col * uRes + row
-				const fieldU = uOffset + row, fieldV = vOffset + col
-				const fieldCU = uOffset + row + 0.5, fieldCV = vOffset + col + 0.5
+			for (let row = 0; row < vRes; row++) {
+				const pos = row * uRes + col
+				const fieldU = uOffset + col, fieldV = vOffset + row
+				const fieldCU = uOffset + col + 0.5, fieldCV = vOffset + row + 0.5
 				const parts = partss[pos]
 				if (!parts) {
 					if (inside) {
 						pushQuad(triangles, false,
-							getGridVertexIndex(row, col), getGridVertexIndex(row + 1, col),
-							getGridVertexIndex(row, col + 1), getGridVertexIndex(row + 1, col + 1))
+							getGridVertexIndex(col, row), getGridVertexIndex(col + 1, row),
+							getGridVertexIndex(col, row + 1), getGridVertexIndex(col + 1, row + 1))
 					}
 				} else {
 					// assemble the field with segments in in
 					function opos(index: int) {
 						const p = verticesUV[index], u1 = p.x - fieldU, v1 = p.y - fieldV
-						assert(-NLA_PRECISION < u1 && u1 < 1 + NLA_PRECISION && -NLA_PRECISION < v1 && v1 < 1 + NLA_PRECISION, "oob u1 v1 " + u1 + " " + v1 + " " + index + " " + p.str)
+						assert(-NLA_PRECISION < u1 && u1 < 1 + NLA_PRECISION && -NLA_PRECISION < v1 && v1 < 1 + NLA_PRECISION,
+                            "oob u1 v1 " + u1 + " " + v1 + " " + index + " " + p.str + "IF THIS FAILS check canonSeamU is correct")
 						return v1 < u1 ? u1 + v1 : 4 - u1 - v1
 					}
 					while (parts.length) {
@@ -954,18 +953,18 @@ class RotationFace extends Face {
 							while (NLA.lt(nextOpos, nextPartStartOpos)) {
 								switch (nextOpos % 4) {
 									case 0:
-										outline.push(getGridVertexIndex(row, col))
+										outline.push(getGridVertexIndex(col, row))
 										break
 									case 1:
 										inside = inside != flipping
-										outline.push(getGridVertexIndex(row + 1, col))
+										outline.push(getGridVertexIndex(col + 1, row))
 										break
 									case 2:
-										outline.push(getGridVertexIndex(row + 1, col + 1))
+										outline.push(getGridVertexIndex(col + 1, row + 1))
 										break
 									case 3:
 										inside = inside != flipping
-										outline.push(getGridVertexIndex(row, col + 1))
+										outline.push(getGridVertexIndex(col, row + 1))
 										break
 
 								}
@@ -983,12 +982,12 @@ class RotationFace extends Face {
 							const polyTriangles = triangulateVertices(V3.Z, outline.map(i => verticesUV[i]), []).map(i => outline[i])
 							triangles.pushAll(polyTriangles)
 						}
-						//console.log("outline", row, col, outline)
+						//console.log("outline", col, row, outline)
 					}
 				}
 			}
 		}
-		//console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(), triangles.map(row => vertices[row].$).toSource() )
+		//console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(), triangles.map(col => vertices[col].$).toSource() )
 		//assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +" "+normals.findIndex(n => !n.hasLength(1)))
 		Array.prototype.push.apply(mesh.triangles, triangles.map(index => index + mesh.vertices.length))
 		Array.prototype.push.apply(mesh.vertices, vertices)
@@ -1249,120 +1248,210 @@ class RotationFace extends Face {
 
     }
 
-    intersectFace(face2: Face, thisBrep: B2, face2Brep: B2, faceMap: Map<Face, Edge[]>, edgeMap: Map<Edge, any[]>, likeSurfaceFaces) {
+
+    intersectFace(face2: PlaneFace,
+                  thisBrep: B2,
+                  face2Brep: B2,
+                  faceMap: Map<Face, Edge[]>,
+                  faceEdgePoints: Map<Face, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
+                  colinearEdgePairs: Set<NLA.Pair<any, any>>) {
+
+        function hasPair(a: NLA.Equalable, b: NLA.Equalable) {
+            return colinearEdgePairs.has(new NLA.Pair(a, b))
+        }
+        function addPair(a: NLA.Equalable, b: NLA.Equalable) {
+            return colinearEdgePairs.add(new NLA.Pair(a, b))
+        }
+
 
         /**
-         * @param seg generated segment
-         * @param col1 if seg is colinear to an edge of this, the edge in question
+         *
+         * @param newEdge generated segment
+         * @param col1 if newEdge is colinear to an edge of this, the edge in question
          * @param col2 same for face2
          * @param in1
          * @param in2
          * @param a
          * @param b
          */
-        function handleGeneratedSegment(seg, col1, col2, in1, in2, a, b) {
-            console.log("handling seg", col1 && col1.toSource(), col2 && col2.toSource(), seg.toSource())
+        function handleNewEdge(newEdge: Edge, col1: Edge, col2: Edge, in1, in2, a, b) {
+            // console.log("handling newEdge", col1 && col1.toSource(), col2 && col2.toSource(), newEdge.toSource())
             if (!col1 && !col2) {
-                console.log("adding")
-                NLA.mapPush(faceMap, face, seg)
-                NLA.mapPush(faceMap, face2, seg.flipped())
+                NLA.mapPush(faceMap, face, newEdge)
+                NLA.mapPush(faceMap, face2, newEdge.flipped())
+                return true
             }
-            let segASurfaceNormal = surface.normalAt(seg.a)
-            let segASurface2Normal = surface2.normalAt(seg.a)
-            if (!col1 && col2) {
-                console.log('!col1 && col2')
-                // TODO: replace with curve.tangent DOT edge.tangent
-                if (col2.aDir.cross(surface2.normalAt(col2.a)).dot(surface.normalAt(col2.a)) > 0) {
-                    // if (seg.aDir.cross(segASurface2Normal).dot(segASurfaceNormal) > 0) {
+            function handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, coplanarSameIsInside: boolean) {
+                if (col1 && !col2) {
+                    if (hasPair(col1.getCanon(), face2)) return
+
+                    addPair(col1.getCanon(), face2)
+                    const face2Plane = face2.surface.plane
+
                     // NB: a new edge is inserted even though it may be the same as an old one
                     // however it indicates that it intersects the other volume here, i.e. the old edge cannot
                     // be counted as "inside" for purposes of reconstitution
-                    //NLA.mapPush(faceMap, face2, seg.flipped()) todo
+                    thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => {
+                        const dot = NLA.snap0(face2Plane.normal.dot(faceInfo.inside))
+                        const pointsInsideFace = fff(faceInfo, face2.surface)
+                        if (pointsInsideFace == INSIDE || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME) {
+                            // we need to pass the edge through so that the curve is correct in the final B2
+                            const faceInfoEdgeAT = faceInfo.edge.curve.pointLambda(newEdge.a)
+                            const faceInfoEdgeBT = faceInfo.edge.curve.pointLambda(newEdge.b)
+                            const flipEdge = faceInfo.edge.tangentAt(faceInfoEdgeAT).dot(newEdge.aDir) < 0
+                            NLA.mapPush(faceEdgePoints, faceInfo.face,
+                                {edge: faceInfo.edge, edgeT: faceInfoEdgeAT, p: newEdge.a, passEdge: flipEdge ? newEdge.flipped() : undefined})
+                            NLA.mapPush(faceEdgePoints, faceInfo.face,
+                                {edge: faceInfo.edge, edgeT: faceInfoEdgeBT, p: newEdge.b, passEdge: !flipEdge ? newEdge : undefined})
 
-                    NLA.mapPush(edgeMap, col2, {edgeT: col2.curve.pointLambda(seg.a), p: seg.a})
-                    NLA.mapPush(edgeMap, col2, {edgeT: col2.curve.pointLambda(seg.b), p: seg.b})
-                    let testVector = surface2.normalAt(col2.a).negated().rejectedFrom(surface.normalAt(col2.a))
-                    console.log("testVector", testVector.sce, face2Brep.sce, splitsVolumeEnclosingFaces(face2Brep, col2, testVector, surface.normal) == INSIDE)
-                    if (splitsVolumeEnclosingFaces(face2Brep, col2, testVector, surface.normalAt(col2.a)) == INSIDE) {
-                        NLA.mapPush(faceMap, face, seg)
+
+                            for (const [face, ps] of faceEdgePoints.entries()) {
+                                assert(ps.every(p => p.edge.isValidT(p.edgeT)), face.sce, ps.map(p => p.str).sce)
+                            }
+                        }
+                    })
+                    const newEdgeInside = face2Plane.normal.cross(newEdge.aDir)
+                    const sVEF1 = splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside, face2Plane.normal)
+                    let addNewEdge, addNewEdgeFlipped
+                    if (addNewEdge = sVEF1 == INSIDE || coplanarSameIsInside && sVEF1 == COPLANAR_SAME) {
+                        NLA.mapPush(faceMap, face2, newEdge)
+                    }
+                    const sVEF2 = splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside.negated(), face2Plane.normal)
+                    if (addNewEdgeFlipped = sVEF2 == INSIDE || coplanarSameIsInside && sVEF2 == COPLANAR_SAME) {
+                        NLA.mapPush(faceMap, face2, newEdge.flipped())
+                    }
+                    if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE || sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE) {
+                        return true
                     }
                 }
             }
-            if (!col2 && col1) {
-                if (col1.aDir.cross(surface.normalAt(col1.a)).dot(surface2.normalAt(col1.a)) > 0) {
-                    //NLA.mapPush(faceMap, face, seg) todo
+            const c1 = handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, false)
+            const c2 = handleEdgeInFace(col2, col1, face2, face, face2Brep, thisBrep, true)
+            if (c1 || c2) return true
 
-                    NLA.mapPush(edgeMap, col1, {edgeT: col1.curve.pointLambda(seg.a), p: seg.a})
-                    NLA.mapPush(edgeMap, col1, {edgeT: col1.curve.pointLambda(seg.b), p: seg.b})
-                    let testVector = surface.normalAt(col1.a).negated().rejectedFrom(surface2.normalAt(col1.a))
-                    if (splitsVolumeEnclosingFaces(thisBrep, col1, testVector, surface2.normalAt(col1.a)) == INSIDE) {
-                        NLA.mapPush(faceMap, face2, seg.flipped())
-                    }
-                }
-            }
             if (col1 && col2) {
-                // faces are touching edge-edge
-                let testVector1 = col1.aDir.cross(surface.normalAt(col1.a)).negated()
-                let testVector2 = col2.aDir.cross(surface2.normalAt(col2.a)).negated()
-                console.log("testVector", testVector1.sce, face2Brep.sce, splitsVolumeEnclosingFaces(face2Brep, col2, testVector1, surface.normal) == INSIDE)
-                if (splitsVolumeEnclosingFaces(face2Brep, col2, testVector1, surface.normalAt(col2.a)) == INSIDE
-                    && splitsVolumeEnclosingFaces(thisBrep, col1, testVector2, surface2.normalAt(col1.a)) == INSIDE) {
-                    //NLA.mapPush(faceMap, face2, seg.flipped()) todo
-                    NLA.mapPush(edgeMap, col1, {edgeT: col1.curve.pointLambda(seg.a), p: seg.a})
-                    NLA.mapPush(edgeMap, col1, {edgeT: col1.curve.pointLambda(seg.b), p: seg.b})
+                if (hasPair(col1.getCanon(), col2.getCanon())) return
 
-                    NLA.mapPush(edgeMap, col2, {edgeT: col2.curve.pointLambda(seg.a), p: seg.a})
-                    NLA.mapPush(edgeMap, col2, {edgeT: col2.curve.pointLambda(seg.b), p: seg.b})
+                addPair(col1.getCanon(), col2.getCanon())
+
+                function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean) {
+                    // not entirely sure for what i had the dirInsides in?
+                    //const aDirNegatedInside = (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE
+                    //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
+                    for (const faceInfo of thisBrep.edgeFaces.get(col1.getCanon())) {
+                        const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA)
+                        const edgeInside = sVEF == INSIDE || coplanarSameIsInside && sVEF == COPLANAR_SAME
+                        //if (edgeInside || aDirNegatedInside) {
+                        //   NLA.mapPush(faceEdgePoints, face, {edge: faceInfo.edge, edgeT: col1.curve.pointLambda(newEdge.a), p: newEdge.a})
+                        //}
+                        //if (edgeInside || bDirInside) {
+                        //    NLA.mapPush(faceEdgePoints, face, {edge: faceInfo.edge, edgeT: col1.curve.pointLambda(newEdge.b), p: newEdge.b})
+                        //}
+                        if (edgeInside) {
+                            // we need to pass the edge through so that the curve is correct in the final B2
+                            const faceInfoEdgeAT = faceInfo.edge.curve.pointLambda(newEdge.a)
+                            const faceInfoEdgeBT = faceInfo.edge.curve.pointLambda(newEdge.b)
+                            const flipEdge = faceInfo.edge.tangentAt(faceInfoEdgeAT).dot(newEdge.aDir) < 0
+                            NLA.mapPush(faceEdgePoints, faceInfo.face,
+                                {edge: faceInfo.edge, edgeT: faceInfoEdgeAT, p: newEdge.a, passEdge: flipEdge ? newEdge.flipped() : undefined})
+                            NLA.mapPush(faceEdgePoints, faceInfo.face,
+                                {edge: faceInfo.edge, edgeT: faceInfoEdgeBT, p: newEdge.b, passEdge: !flipEdge ? newEdge : undefined})
+                        }
+                    }
                 }
+                handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, true)
+                handleColinearEdgeFaces(col2, col1, face2Brep, thisBrep, false)
             }
         }
 
-        /**
-         * What does this do?? todo
-         * @param a
-         * @param b
-         * @param useA
-         * @param useB
-         */
-        function handlePoint(a, b, useA, useB) {
-            console.log("logging point", useA, a && a.toSource())
-            console.log("logging point", useB, b && b.toSource())
+
+        // what needs to be generated: new edges on face
+        // points on edges where they are cut by faces so that sub edges will be generated for loops
+        // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B
+        //         you don't want thos to be marked as "inside", otherwise invalid faces will be added
+        // if a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be
+        function handleEndPoint(a, b, useA, useB, newEdge) {
+            console.log("logging point", useA, a.toSource())
+            console.log("logging point", useB, b.toSource())
             if (useA && !useB) {
                 if (!a.colinear) {
-                    NLA.mapPush(edgeMap, a.edge, a)
+                    NLA.mapPush(faceEdgePoints, face, a)
+                    assert(a.edge.isValidT(a.edgeT))
                 }
                 // else colinear segment ends in middle of other face, do nothing
             }
             if (useB && !useA) {
                 if (!b.colinear) {
-                    NLA.mapPush(edgeMap, b.edge, b)
+                    NLA.mapPush(faceEdgePoints, face2, b)
+                    assert(b.edge.isValidT(b.edgeT))
                 }
                 // else colinear segment ends in middle of other face, do nothing
             }
             if (useA && useB) {
-                // segment start/ends on edge/edge intersection
-                if (!a.colinear && !NLA.eq(a.edgeT, a.edge.aT) && !NLA.eq(a.edgeT, a.edge.bT)) {
-                    //						assert(a.edgeT != a.edge.aT && a.edgeT != a.edge.bT, "implement point intersections")
-                    // ends on a, on colinear segment b bT != a.edge.bT &&
-                    let testVector = a.edge.aDir.rejectedFrom(b.edge.aDir)
-                    let sVEF1 = splitsVolumeEnclosingFaces(face2Brep, b.edge, testVector, surface.normalAt(b.edge.a))
-                    let sVEF2 = splitsVolumeEnclosingFaces(face2Brep, b.edge, testVector.negated(), surface.normalAt(b.edge.a))
-                    if (!(INSIDE == sVEF1 && INSIDE == sVEF2
-                        || (OUTSIDE == sVEF1 || COPLANAR_OPPOSITE == sVEF1) && (OUTSIDE == sVEF2 || COPLANAR_OPPOSITE == sVEF2))) {
-                        NLA.mapPush(edgeMap, a.edge, a)
+                // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
+                // segment starts/ends on edge/edge intersection
+                function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first) {
+                    if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
+                        let addedPoint = false
+                        //						assert(a.edgeT != a.edge.aT && a.edgeT != a.edge.bT, "implement point intersections") todo
+                        // ends on a, on colinear segment b bT != a.edge.bT &&
+                        // b can be colinear, so edgeT == aT is possible
+                        if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) {
+                            // face2brep corner on edge
+                            const sVEC1 = splitsVolumeEnclosingCone(face2Brep, a.p, a.edge.aDir)
+                            const sVEC2 = splitsVolumeEnclosingCone(face2Brep, a.p, a.edge.aDir.negated())
+                            // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge
+
+                            // sVEC1 != ALONG_EDGE_OR_PLANE && sVEC2 != ALONG_EDGE_OR_PLANE && sVEC1 != sVEC2
+                            // while ALONG_EDGE_OR_PLANE implies that there are some colinear edges, these wont necessarily be added
+                            // and the point is still necessary for a
+                            // i.e. when cutting corner from box, on a box face which gets changed, at the point where the new edge
+                            // touches the existing edge
+
+                            // sVEC1 == ALONG_EDGE_OR_PLANE || sVEC2 == ALONG_EDGE_OR_PLANE || sVEC1 != sVEC2
+                            // doesn't work because ALONG_EDGE_OR_PLANE means there is a colinear part, but that shouldn't necessarily be added
+
+
+
+
+                            if ((sVEC1 != INSIDE) != (sVEC2 != INSIDE)) {
+                                NLA.mapPush(faceEdgePoints, face, a)
+                                assert(a.edge.isValidT(a.edgeT))
+                                addedPoint = true
+                            }
+                        } else {
+                            const testVector = a.edge.aDir.rejectedFrom(b.edge.aDir)
+                            assert(!testVector.isZero())
+                            const sVEF1 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector, thisPlane.normal)
+                            const sVEF2 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector.negated(), thisPlane.normal)
+                            if (!(INSIDE == sVEF1 && INSIDE == sVEF2
+                                || (OUTSIDE == sVEF1 || COPLANAR_OPPOSITE == sVEF1) && (OUTSIDE == sVEF2 || COPLANAR_OPPOSITE == sVEF2))) {
+                                NLA.mapPush(faceEdgePoints, face, a)
+                                assert(a.edge.isValidT(a.edgeT))
+                                addedPoint = true
+                            }
+                        }
+
+                        //if (addedPoint && !hasPair(a, b)) {
+                        //	addPair(a, b)
+                        //
+                        //}
                     }
                 }
-                if (!b.colinear && !NLA.eq(b.edgeT, b.edge.aT) && !NLA.eq(b.edgeT, b.edge.bT)) {
-                    //						assert(b.edgeT != b.edge.aT && b.edgeT != b.edge.bT, "implement point intersections")
-                    // ends on b, on colinear segment a
-                    let testVector = b.edge.aDir.rejectedFrom(a.edge.aDir)
-                    let sVEF1 = splitsVolumeEnclosingFaces(thisBrep, a.edge, testVector, surface2.normal)
-                    let sVEF2 = splitsVolumeEnclosingFaces(thisBrep, a.edge, testVector.negated(), surface2.normal)
-                    if (!(INSIDE == sVEF1 && INSIDE == sVEF2
-                        || (OUTSIDE == sVEF1 || COPLANAR_OPPOSITE == sVEF1) && (OUTSIDE == sVEF2 || COPLANAR_OPPOSITE == sVEF2))) {
-                        NLA.mapPush(edgeMap, b.edge, b)
-                    }
-                }
+                const canonA = a, canonB = b
+                foo(a, b, face, face2, surface, surface2, thisBrep, face2Brep, true)
+                foo(b, a, face2, face, surface2, surface, face2Brep, thisBrep, false)
+                //if (!b.colinear && b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) {
+                //	//						assert(b.edgeT != b.edge.aT && b.edgeT != b.edge.bT, "implement point intersections")
+                //	// ends on b, on colinear segment a
+                //	const testVector = b.edge.aDir.rejectedFrom(a.edge.aDir)
+                //	const sVEF1 = splitsVolumeEnclosingFaces(thisBrep, a.edge, testVector, face2Plane.normal)
+                //	const sVEF2 = splitsVolumeEnclosingFaces(thisBrep, a.edge, testVector.negated(), face2Plane.normal)
+                //	if (!(INSIDE == sVEF1 && INSIDE == sVEF2
+                //		|| (OUTSIDE == sVEF1 || COPLANAR_OPPOSITE == sVEF1) && (OUTSIDE == sVEF2 || COPLANAR_OPPOSITE == sVEF2))) {
+                //		NLA.mapPush(faceEdgePoints, b.edge, b)
+                //	}
+                //}
             }
         }
 
@@ -1372,13 +1461,12 @@ class RotationFace extends Face {
         const face = this
         const surface = face.surface, surface2 = face2.surface
         if (surface.isCoplanarTo(surface2)) {
-            addLikeSurfaceFaces(likeSurfaceFaces, face, face2)
             return
         }
         const isCurves = surface.isCurvesWithSurface(surface2)
         // get intersections of newCurve with other edges of face and face2
-        const pss1 = faceEdgeISPsWithSurface(thisBrep, face, isCurves, face2.surface)
-        const pss2 = faceEdgeISPsWithSurface(face2Brep, face2, isCurves, face.surface)
+        const pss1 = faceEdgeISPsWithSurface(face, isCurves, face2.surface)
+        const pss2 = faceEdgeISPsWithSurface(face2, isCurves, face.surface)
         console.log('pss1\n', pss1.map(m => m.toSource()).join('\n'), '\npss2\n', pss2.map(m => m.toSource()).join('\n'))
         console.log(''+surface+surface2)
 
@@ -1398,24 +1486,35 @@ class RotationFace extends Face {
             // !! start in does depend on insidedir... TODO
             assertf(() => (0 == ps1.length) || !NLA.eq0(ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t))), () => ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t)))
             assertf(() => (0 == ps2.length) || !NLA.eq0(ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t))), () => ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t)))
-            // if ps is empty, in must be true or we wouldn't have gotten this far
-            let in1 = (0 == ps1.length) || ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t)) < 0
-            let in2 = (0 == ps2.length) || ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t)) < 0
-            let colinear1:boolean|Edge = false, colinear2:boolean|Edge = false
+            function startsInside(ps, otherFace) {
+                if (0 == ps.length) {
+                    return undefined !== isCurve.minT && otherFace.containsPoint(isCurve.at(isCurve.minT))
+                } else {
+                    return ps[0].insideDir.dot(isCurve.tangentAt(ps[0].t)) < 0
+                }
+            }
+            // they can't both be empty currently
+            // they can't both start "inside"
+            let in1 = startsInside(ps1, face2)
+            let in2 = startsInside(ps2, face)
+            let col1: Edge, col2: Edge
             let i = 0, j = 0, last, segments = []
-            let startP, startDir, startT
+            let startP, startDir, startT = isCurve.minT, startA, startB, startCol1, startCol2
             while (i < ps1.length || j < ps2.length) {
-                let a = ps1[i], b = ps2[j]
-                if (j >= ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
+                assert(i <= ps1.length)
+                assert(j <= ps2.length)
+                const a = ps1[i], b = ps2[j]
+                assert(a || b)
+                if (j == ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
                     last = a
                     in1 = !in1
-                    // ": colinear1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
-                    colinear1 = in1 ? a.colinear && a.edge : colinear1
+                    // ": col1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
+                    col1 = in1 ? a.colinear && a.edge : col1
                     i++
-                } else if (i >= ps1.length || NLA.gt(a.t, b.t)) {
+                } else if (i == ps1.length || NLA.gt(a.t, b.t)) {
                     last = b
                     in2 = !in2
-                    colinear2 = in2 ? b.colinear && b.edge : colinear2
+                    col2 = in2 ? b.colinear && b.edge : col2
                     j++
                 } else {
                     last = a
@@ -1424,8 +1523,8 @@ class RotationFace extends Face {
                     //if (in1 == in2) {
                     a.used = true
                     b.used = true
-                    colinear1 = in1 ? a.colinear && a.edge : colinear1
-                    colinear2 = in2 ? b.colinear && b.edge : colinear2
+                    col1 = in1 ? a.colinear && a.edge : col1
+                    col2 = in2 ? b.colinear && b.edge : col2
                     //}
                     i++
                     j++
@@ -1433,17 +1532,27 @@ class RotationFace extends Face {
                 console.log("as", a, b, in1, in2)
                 if (startP && !(in1 && in2)) {
                     // segment end
-                    handleGeneratedSegment(Edge.create(isCurve, startP, last.p, startT, last.t, null, isCurve.tangentAt(startT), isCurve.tangentAt(last.t)), colinear1, colinear2, in1, in2, a, b)
+                    startDir = isCurve.tangentAt(startT)
+                    startT > last.t && (startDir = startDir.negated())
+                    let endDir = isCurve.tangentAt(last.t)
+                    startT > last.t && (endDir = endDir.negated())
+                    const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, null, startDir, endDir, 'genseg' + globalId++)
                     startP = undefined
                     last.used = true
-                    handlePoint(a, b, colinear1 || a && !!a.used, colinear2 || b && !!b.used)
+                    if (handleNewEdge(newEdge, col1, col2, in1, in2, a, b)) {
+                        handleEndPoint(a || {colinear: false}, b, col1 || a && !!a.used, col2 || !!b.used, newEdge)
+                        handleEndPoint(startA || {colinear: false}, startB, startCol1, startCol2, newEdge)
+                    }
                 } else if (in1 && in2) {
                     // new segment just started
                     startP = last.p
                     startDir = last.insideDir
                     startT = last.t
                     last.used = true
-                    handlePoint(a, b, colinear1 || a && !!a.used, colinear2 || b && !!b.used)
+                    startA = a
+                    startB = b
+                    startCol1 = col1 || (a && !!a.used)
+                    startCol2 = col2 || !!b.used
                 }
             }
         })
@@ -1526,6 +1635,13 @@ class B2 extends Transformable {
         this.vertexNames = vertexNames
         this.edgeFaces = undefined
         this.assertSanity()
+    }
+
+    containsPoint(p: V3): boolean {
+        const testLine = new L3(p, V3.randomUnit())
+        for (const face of this.faces) {
+
+        }
     }
 
     withMergedFaces():B2 {
@@ -1625,12 +1741,12 @@ class B2 extends Transformable {
     }
 
     toString(): string {
-        return `new B2([\n${this.faces.join(',\n').replace(/^/gm, '\t')}])`
+        return `new B2([\n${this.faces.join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
     }
 
     toSource(): string {
         return this.generator ||
-            'new B2([\n' + this.faces.map(face => face.toSource()).join(',\n').replace(/^/gm, '\t') + '])'
+            `new B2([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
     }
 
     static loop1ContainsLoop2(loop1: Edge[], loop2: Edge[], surface: Surface): boolean {
@@ -1937,13 +2053,13 @@ class B2 extends Transformable {
 
 			assert(i == j
 				|| !a.curve.isColinearTo(b.curve)
-				|| a.curve.equals(b.curve)
+				|| (a.curve.equals(b.curve) && a.isCoEdge(b))
                 || !a.overlaps(b), 'colinear edges overlap', a, b)
 		}
 	}
 
 
-    buildAdjacencies():void {
+    buildAdjacencies(): void {
         if (this.edgeFaces) return
 
         this.edgeFaces = new NLA.CustomMap()
@@ -2012,8 +2128,13 @@ class B2 extends Transformable {
         const newFaces = []
         const edgeLooseSegments = this.getLooseEdgeSegments(edgeMap)
 
-        buildThis && B2.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces, other.infiniteVolume)
-        buildOther && B2.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces, this.infiniteVolume)
+        if (0 == faceMap.size && 0 == edgeMap.size) {
+            const thisInOther = other.containsPoint(this.faces[0].edges[0].a)
+            const otherInThis = !thisInOther && contians(other, this)
+        } else {
+            buildThis && B2.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces)
+            buildOther && B2.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces)
+        }
         //buildCoplanar && this.reconstituteCoplanarFaces(likeSurfaceFaces, edgeLooseSegments, faceMap, newFaces, this.infiniteVolume, other.infiniteVolume)
 
         return new B2(newFaces, this.infiniteVolume && other.infiniteVolume)
@@ -2102,11 +2223,65 @@ type IntersectionPointInfo = {
     edge: Edge, // face edge doing the intersection
     edgeT: number,
     colinear: boolean, // whether edge is colinear to intersection line
-    used?: boolean,
-    passEdge?: Edge | boolean }
+    used?: boolean }
 
-function planeFaceEdgeISPsWithPlane(brep: B2, face: PlaneFace, isLine: L3, plane2: P3): IntersectionPointInfo[] {
-    // todo remove param brep
+function planeFaceEdgeISPsWithPlane(face: PlaneFace, isLine: L3, plane2: P3): IntersectionPointInfo[] {
+    assert(face.surface.plane.containsLine(isLine))
+    assert(plane2.containsLine(isLine))
+    const plane = face.surface.plane
+    const ps = []
+    const loops = [face.edges].concat(face.holes)
+    loops.forEach(loop => {
+        const colinearEdges = loop.map((edge) => edge.colinearToLine(isLine) && -sign(edge.aDir.dot(isLine.dir1)))
+        const isLineOut = isLine.dir1.cross(plane.normal)
+
+        loop.forEach((edge, edgeIndex, edges) => {
+            const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
+            //console.log(edge.toSource()) {p:V3(2, -2.102, 0),
+            if (colinearEdges[edgeIndex]) {
+                // edge colinear to intersection line
+                const curveAT = isLine.pointLambda(edge.a), curveBT = isLine.pointLambda(edge.b)
+                // add interval for colinear segment
+                ps.push(
+                    {p: edge.a, insideDir: edge.aDir,           t: curveAT, edge: edge, edgeT: edge.aT, colinear: true},
+                    {p: edge.b, insideDir: edge.bDir.negated(), t: curveBT, edge: edge, edgeT: edge.bT, colinear: true})
+                // open next interval if necessary
+                const nextSide = colinearEdges[nextEdgeIndex] || dotCurve(isLineOut, nextEdge.aDir, nextEdge.aDDT)
+                if (colinearEdges[edgeIndex] * nextSide < 0) {
+                    // side changes
+                    ps.push({p: nextEdge.a, insideDir: edge.bDir, t: curveBT, edge: nextEdge, edgeT: nextEdge.aT, colinear: false})
+                }
+            } else {
+                // not necessarily a straight edge, so multiple intersections are possible
+                const edgeTs = edge.edgeISTsWithPlane(plane2)
+                assert(edgeTs.every(t => plane2.containsPoint(edge.curve.at(t))), edgeTs)
+                for (const edgeT of edgeTs) {
+                    if (edgeT == edge.bT) {
+                        // endpoint lies on intersection line
+                        const side = -dotCurve(isLineOut, edge.bDir, edge.bDDT)
+                        const nextSide = colinearEdges[nextEdgeIndex] || dotCurve(isLineOut, nextEdge.aDir, nextEdge.aDDT)
+                        if (side * nextSide < 0) {
+                            // next segment is not colinear and ends on different side
+                            ps.push({p: edge.b, insideDir: plane2.normal.negated(), t: isLine.pointLambda(edge.b), edge: edge, edgeT: edge.bT, colinear: false})
+                        }
+                    } else if (edgeT != edge.aT) {
+                        // edge crosses intersection line, neither starts nor ends on it
+                        const p = edge.curve.at(edgeT)
+                        assert(plane2.containsPoint(p), edge.toString(), p, edgeT, plane2.distanceToPoint(p))
+                        assert(isLine.containsPoint(p), edge.toString(), p, edgeT, isLine.distanceToPoint(p))
+                        const insideDir = plane2.normal.negated()
+                        ps.push({p: p, insideDir: insideDir, t: isLine.pointLambda(p), edge: edge, edgeT: edgeT, colinear: false})
+                    }
+                }
+            }
+        })
+    })
+    // duplicate 't's are ok, as sometimes a segment needs to stop and start again
+    // should be sorted so that back facing ones are first
+    ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isLine.dir1))
+    return ps
+}
+function planeFaceEdgeISPsWithPlane2(face: PlaneFace, isLine: L3, plane2: P3): IntersectionPointInfo[] {
     assert(face.surface.plane.containsLine(isLine))
     assert(plane2.containsLine(isLine))
     let plane = face.surface.plane
@@ -2170,13 +2345,15 @@ function planeFaceEdgeISPsWithPlane(brep: B2, face: PlaneFace, isLine: L3, plane
     ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isLine.dir1))
     return ps
 }
-function faceEdgeISPsWithSurface(brep: B2, face: Face, isCurves: Curve[], surface2: Surface): IntersectionPointInfo[][] {
+function faceEdgeISPsWithSurface(face: Face, isCurves: Curve[], surface2: Surface): IntersectionPointInfo[][] {
     const surface = face.surface
     const pss = NLA.arrayFromFunction(isCurves.length, i => [])
 
     const loops = face.holes.concat([face.edges])
     loops.forEach(loop => {
-        let colinearEdges: int[] = loop.map(edge => isCurves.findIndex(curve => edge.curve.isColinearTo(curve)))
+        const colinearEdges: int[] = loop.map(edge => isCurves.findIndex(curve => edge.curve.isColinearTo(curve)))
+        const colinearSides = loop.map((edge, edgeIndex) => -1 != colinearEdges[edgeIndex]
+                    && -sign(isCurves[colinearEdges[edgeIndex]].tangentAt(edge.aT).dot(edge.aDir)))
 // todo: this assumes that isCurves do not touch
         loop.forEach((edge, edgeIndex, edges) => {
             let nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
@@ -2186,17 +2363,21 @@ function faceEdgeISPsWithSurface(brep: B2, face: Face, isCurves: Curve[], surfac
                 let isCurve = isCurves[colinearEdgeCurveIndex]
                 // edge colinear to an intersection curve
                 let prevEdgeIndex = (edgeIndex - 1 + edges.length) % edges.length, prevEdge = edges[prevEdgeIndex]
-                let curveAT = isCurve.pointLambda(edge.a), curveBT = isCurve.pointLambda(edge.b)
+                const bHint = isCurve instanceof EllipseCurve
+                    && sign(isCurve.tangentAt(isCurve.pointLambda(edge.a, PI)).dot(edge.aDir)) * PI
+                const curveAT = isCurve.pointLambda(edge.a, -bHint), curveBT = isCurve.pointLambda(edge.b, bHint)
                 let colinearOutA = edge.aDir.cross(surface.normalAt(edge.a))
                 let ps = pss[colinearEdgeCurveIndex]
-                if (-1 != colinearEdges[prevEdgeIndex] && dotCurve(colinearOutA, prevEdge.bDir, prevEdge.bDDT) < 0) {
+                if (-1 != colinearEdges[prevEdgeIndex] && dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -1) > 0) {
+                //if (-1 != colinearEdges[prevEdgeIndex] && dotCurve(colinearOutA, prevEdge.bDir, prevEdge.bDDT) < 0) {
                     ps.push({p: prevEdge.b, insideDir: edge.aDir.negated(), t: curveAT, edge: prevEdge, edgeT: prevEdge.bT, colinear: false})
                 }
                 ps.push(
                     {p: edge.a, insideDir: edge.aDir, t: curveAT, edge: edge, edgeT: edge.aT, colinear: true},
                     {p: edge.b, insideDir: edge.bDir.negated(), t: curveBT, edge: edge, edgeT: edge.bT, colinear: true})
                 let colinearOutB = edge.bDir.cross(surface.normalAt(edge.b))
-                if (-1 != colinearEdges[nextEdgeIndex] && dotCurve(colinearOutB, nextEdge.aDir, nextEdge.aDDT) > 0) {
+                if (-1 != colinearEdges[nextEdgeIndex] && dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, 1) > 0) {
+                //if (-1 != colinearEdges[nextEdgeIndex] && dotCurve(colinearOutB, nextEdge.aDir, nextEdge.aDDT) > 0) {
                     ps.push({p: edge.b, insideDir: edge.bDir, t: curveBT, edge: edge, edgeT: prevEdge.bT, colinear: false})
                 }
             } else {
@@ -2218,15 +2399,10 @@ function faceEdgeISPsWithSurface(brep: B2, face: Face, isCurves: Curve[], surfac
                         assert(isCurves.slice(isCurveIndex + 1).every(isCurve => !isCurve.containsPoint(p)))
                     }
                     const isCurve = isCurves[isCurveIndex]
-                    let curveT = isCurve.pointLambda(p)
-                    if (isNaN(curveT)) {
-                        if (isCurve instanceof EllipseCurve) {
-                            let hint = edge.curve.tangentAt(edgeT).cross(isCurve.f1).dot(isCurve.f2)
-                            curveT = isCurve.pointLambda(p, hint)
-                        } else {
-                            assert(false)
-                        }
-                    }
+                    assert(!(isCurve instanceof EllipseCurve) || PI != isCurve.pointLambda(p, PI) || !eq0(edge.curve.tangentAt(edgeT).cross(isCurve.f1).dot(isCurve.f2)))
+                    const hint = isCurve instanceof EllipseCurve &&
+                        sign(edge.curve.tangentAt(edgeT).cross(isCurve.f1).dot(isCurve.f2)) * PI
+                    const curveT = isCurve.pointLambda(p, hint)
                     assert(!isNaN(curveT))
                     const insideDir = edge.tangentAt(edgeT).cross(surface.normalAt(p)).negated()
                     assert(!NLA.eq0(insideDir.dot(isCurve.tangentAt(curveT))))
@@ -2322,13 +2498,13 @@ function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, f
     assert(arguments.length == 4)
     assert(canonEdge == canonEdge.getCanon())
     //assert(p.equals(canonEdge.a))
-	const edgeFaceInfos = brep.edgeFaces.get(canonEdge) as any[]
-	assertf(() => edgeFaceInfos.length % 2 == 0)
-	assertf(() => brep.edgeFaces)
-	const faceInfo0 = edgeFaceInfos[0]
+    const edgeFaceInfos = brep.edgeFaces.get(canonEdge) as any[]
+    assertf(() => edgeFaceInfos.length % 2 == 0)
+    assertf(() => brep.edgeFaces)
+    const faceInfo0 = edgeFaceInfos[0]
     const aDir1 = canonEdge.aDir.normalized()
-	const angleToCanon = (faceInfo0.inside.angleRelativeNormal(dirAtEdgeA, aDir1) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) - NLA_PRECISION
-	const nearestFaceInfoIndex = edgeFaceInfos.findIndex(faceInfo => NLA.lt(angleToCanon, faceInfo.angle))
+    const angleToCanon = (faceInfo0.inside.angleRelativeNormal(dirAtEdgeA, aDir1) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) - NLA_PRECISION
+    const nearestFaceInfoIndex = edgeFaceInfos.findIndex(faceInfo => NLA.lt(angleToCanon, faceInfo.angle))
 	const nearestFaceInfo = edgeFaceInfos[nearestFaceInfoIndex == -1 ? edgeFaceInfos.length - 1 : nearestFaceInfoIndex - 1]
     if (NLA.eq(nearestFaceInfo.angle, angleToCanon)) {
         //assert(false) todo
@@ -2338,7 +2514,7 @@ function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, f
         return nearestFaceInfo.reversed ? INSIDE : OUTSIDE
     }
 }
-function splitsVolumeEnclosingCone(brep:B2, p:V3, dir:V3) {
+function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
     const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular())
     const rays = []
     for (let k = 0; k < brep.faces.length; k++) {
@@ -2351,7 +2527,7 @@ function splitsVolumeEnclosingCone(brep:B2, p:V3, dir:V3) {
                 }
             } else {
                 const isLine = L3.fromPlanes(testPlane, face.surface.plane)
-                const ps = planeFaceEdgeISPsWithPlane(null, face, isLine, testPlane)
+                const ps = planeFaceEdgeISPsWithPlane(face, isLine, testPlane)
                 let i = 0
                 while (i < ps.length) {
                     const a = ps[i++], b = ps[i++]
@@ -2374,7 +2550,18 @@ function splitsVolumeEnclosingCone(brep:B2, p:V3, dir:V3) {
         return rays[0].out ? OUTSIDE : INSIDE
     }
 }
-
+function fff(info: {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}, surface: Surface): int {
+    const canonA = info.edge.reversed ? info.edge.b : info.edge.a
+    const surfaceNormalAtCanonA = surface.normalAt(canonA)
+    const dot = NLA.snap0(info.inside.dot(surfaceNormalAtCanonA))
+    if (0 !== dot) {
+        return 0 < dot ? OUTSIDE : INSIDE
+    }
+    if (surface.isCoplanarTo(info.face.surface)) {
+        return 0 < info.normalAtCanonA.dot(surfaceNormalAtCanonA) ? COPLANAR_SAME : COPLANAR_OPPOSITE
+    }
+    assert(false)
+}
 
 /**
  * Solves a quadratic system of equations of the form

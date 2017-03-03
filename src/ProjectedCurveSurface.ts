@@ -298,4 +298,6 @@ class ProjectedCurveSurface extends Surface {
 		return new ProjectedCurveSurface(this.baseCurve, this.dir1.negated(), this.tMin, this.tMax)
 	}
 }
+ProjectedCurveSurface.prototype.uStep = 1 / 32
+ProjectedCurveSurface.prototype.vStep = 256
 NLA.registerClass(ProjectedCurveSurface)

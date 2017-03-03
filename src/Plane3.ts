@@ -206,5 +206,18 @@ class P3 extends Transformable {
 	static readonly YZ = new P3(V3.X, 0)
 	static readonly ZX = new P3(V3.Y, 0)
 	static readonly XY = new P3(V3.Z, 0)
+
+    containsCurve(curve: Curve) {
+        if (curve instanceof L3) {
+            return this.containsLine(curve)
+        } else if (curve instanceof EllipseCurve || curve instanceof HyperbolaCurve || curve instanceof ParabolaCurve) {
+            return this.containsPoint(curve.center) && this.normal.isParallelTo(curve.normal)
+        } else if (curve instanceof BezierCurve) {
+            return curve.points.every(p => this.containsPoint(p))
+        } else {
+            throw new Error(curve)
+        }
+
+    }
 }
 NLA.registerClass(P3)
