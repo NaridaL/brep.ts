@@ -11,7 +11,7 @@ class ProjectionCurve extends Curve {
 	 * Returns curve parameter t for point p on curve.
 	 * @param p This is a test
 	 */
-	pointLambda(p) {
+	pointT(p) {
 		assert(false, "Not implemented on " + this.constructor.name)
 	}
 

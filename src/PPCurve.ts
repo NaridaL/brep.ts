@@ -195,7 +195,7 @@ class PPCurve extends Curve {
 		return V3.lerp(this.tangents[Math.floor(t)], this.tangents[Math.ceil(t)], t % 1)
 	}
 
-	pointLambda(point) {
+	pointT(point) {
 		assertVectors(point)
 		assert(this.containsPoint(point), 'this.containsPoint(p)')
 		var pmPoint = this.parametricSurface.pointToParameterFunction()(point)

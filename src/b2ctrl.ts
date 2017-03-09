@@ -9,14 +9,14 @@ function parseGetParams() {
 		})
 	return result
 }
-let a, b, c
+let a, b, c, edges
 function initB2() {
 	dMesh = new GL.Mesh()
 	/*
-	var c1 = EllipseCurve.circle(5), c2 = EllipseCurve.circle(5, V3(3, 0))
-	var test = new EllipseCurve(V3(6, 1, 0), V3(3, 1, 0), V3(4, 0, 0))
-	var cyl = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 5, 0)), V3.Z, 1)
-	var ell = new CylinderSurface(new EllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 2, 0)), V3.Z, 1).rotateX(PI/3)
+	var c1 = SemiEllipseCurve.circle(5), c2 = SemiEllipseCurve.circle(5, V3(3, 0))
+	var test = new SemiEllipseCurve(V3(6, 1, 0), V3(3, 1, 0), V3(4, 0, 0))
+	var cyl = new SemiCylinderSurface(new SemiEllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 5, 0)), V3.Z, 1)
+	var ell = new SemiCylinderSurface(new SemiEllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 2, 0)), V3.Z, 1).rotateX(PI/3)
 
 	aMesh = cyl.toMesh()
 	bMesh = ell.toMesh()
@@ -29,7 +29,7 @@ function initB2() {
 	zoomFactor = 1
 
 	const gets = parseGetParams()
-	"abc".split('').forEach(k => gets[k] && (console.log(k+'='+gets[k]+';'+k+'Mesh = '+k+'.toMesh()'), eval(k+'='+gets[k]+';'+k+'Mesh = '+k+'.toMesh()')))
+    "abcd".split('').forEach(k => gets[k] && (console.log(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()'), eval(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()')))
 
 	if (gets['points']) {
 		console.log("drPs from GET")
@@ -39,7 +39,7 @@ function initB2() {
 	if (gets['edges']) {
 		console.log("edges from GET")
 		dMesh = new GL.Mesh({triangles: false})
-		const edges = eval(gets['edges'])
+		edges = eval(gets['edges'])
 		edges && dMesh.addVertexBuffer('curve1', 'curve1')
 		edges.forEach(edge => {
 			const points = edge.points()
@@ -86,6 +86,7 @@ paintScreen = function() {
         shaders.lighting.uniforms({ color: rgbToVec4(COLORS.PP_FILL),
             camPos: eyePos }).draw(aMesh)
     }
+
     if (bMesh) {
         gl.pushMatrix()
         //gl.translate(15, 0, 0)
@@ -148,7 +149,7 @@ paintScreen = function() {
         gl.pushMatrix()
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        sMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(sMesh, 'LINES')
+        sMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(0xFF6600) }).draw(sMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
         sMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
             camPos: eyePos }).draw(sMesh)

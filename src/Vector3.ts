@@ -5,14 +5,17 @@ class V3 implements Equalable {
 	readonly z: number
 
 	constructor(x: number, y: number, z: number) {
-		assert(arguments.length == 3)
-		assertNumbers(x, y, z)
-		Object.defineProperties(this, {
-			x: {value: x},
-			y: {value: y},
-			z: {value: z},
-			//id: {value: V3.id++}
-		})
+		//assert(arguments.length == 3)
+		//assertNumbers(x, y, z)
+		//Object.defineProperties(this, {
+		//	x: {value: x},
+		//	y: {value: y},
+		//	z: {value: z},
+		//	//id: {value: V3.id++}
+		//})
+        this.x = x
+        this.y = y
+        this.z = z
 	}
 
 
@@ -195,7 +198,7 @@ class V3 implements Equalable {
 		//return Math.sqrt(this.x * this.x + this.y * this.y)
 	}
 
-	lengthSquaredXY(): number {
+	squaredXY(): number {
 		return this.x * this.x + this.y * this.y
 	}
 
@@ -524,10 +527,11 @@ class V3 implements Equalable {
 
 	static readonly ZERO: V3 = new V3(0, 0, 0)
 	static readonly ONES: V3 = new V3(1, 1, 1)
-	static readonly X: V3 = new V3(1, 0, 0)
-	static readonly Y: V3 = new V3(0, 1, 0)
+    static readonly X: V3 = new V3(1, 0, 0)
+    static readonly Y: V3 = new V3(0, 1, 0)
 	static readonly Z: V3 = new V3(0, 0, 1)
-	static readonly INF: V3 = new V3(Infinity, Infinity, Infinity)
+    static readonly XY: V3 = new V3(1, 1, 0)
+    static readonly INF: V3 = new V3(Infinity, Infinity, Infinity)
 	static readonly XYZ: V3[] = [V3.X, V3.Y, V3.Z]
 	
 	static readonly NAMEMAP = new NLA.CustomMap<V3, string>()

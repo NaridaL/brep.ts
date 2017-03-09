@@ -24,7 +24,7 @@ function doTest(test, face: PlaneFace, brep2: B2, resultEdges: Edge[], resultPoi
 		test.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
 	})
 	const uniquePoints = []
-	face.edges.forEach(edge => {
+	face.contour.forEach(edge => {
 		const em = edgeMap.get(edge)
 		em && em.forEach(info => info && !uniquePoints.some(up => up.like(info.p)) && assert(info.p) && uniquePoints.push(info.p))
 	})
@@ -33,24 +33,21 @@ function doTest(test, face: PlaneFace, brep2: B2, resultEdges: Edge[], resultPoi
 		test.ok(uniquePoints.some(up => up.like(p)), `edges.some(edge2 => edge.like(edge2)) [${uniquePoints.toSource()}]`)
 	})
 }
-function doTestWithBrep(test, face, faceBrep, brep2, resultEdges, resultPoints, desc, backwards?) {
-	if (brep2 instanceof Face) {
-		brep2 = new B2([brep2])
-	}
+function doTestWithBrep(test: Assert, face: Face, faceBrep: B2, brep2: B2, resultEdges: Edge[], resultPoints: V3[], desc: string, backwards?: boolean) {
 	faceBrep.buildAdjacencies()
 	brep2.buildAdjacencies()
-	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+    test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
-						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
-	const faceMap = new Map(), faceEdgePoints = new Map(), colinearEdgePairs = new NLA.CustomSet()
+						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>expected ${desc}</a>`)
+	const faceMap = new Map(), faceEdgePoints = new NLA.CustomMap(), checkedPairs = new NLA.CustomSet()
 	if (!backwards) {
 		brep2.faces.forEach(face2 => {
-			face.intersectPlaneFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, colinearEdgePairs)
+			face.intersectFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, new NLA.CustomMap(), checkedPairs)
 		})
 	} else {
 		brep2.faces.forEach(face2 => {
-			face2.intersectPlaneFace(face, brep2, faceBrep, faceMap, faceEdgePoints, colinearEdgePairs)
+			face2.intersectFace(face, brep2, faceBrep, faceMap, new NLA.CustomMap(), faceEdgePoints, checkedPairs)
 		})
 	}
 	const edges = faceMap.get(face) || []
@@ -59,35 +56,46 @@ function doTestWithBrep(test, face, faceBrep, brep2, resultEdges, resultPoints, 
 	resultEdges.forEach(edge => {
 		test.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
 	})
-	const edgePointInfos = faceEdgePoints.get(face), uniquePoints = []
+	const edgePointInfos = face.getAllEdges()
+        .mapFilter(e => {
+            const canonEdgePoints = faceEdgePoints.get(e.getCanon())
+            return canonEdgePoints && canonEdgePoints.filter(p => !p.faces || p.faces[faceBrep.edgeFaces.get(e.getCanon()).findIndex(fi => fi.face == face)])
+        })
+        .concatenated(),
+        uniquePoints = []
+
 	edgePointInfos && edgePointInfos.forEach(info => !uniquePoints.some(up => up.like(info.p)) && assert(info.p) && uniquePoints.push(info.p))
 	console.log('edgePointInfos', edgePointInfos)
+    test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+						href='../brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
+						&edges=[${edges.map(e => e.toSource()).join(',')}]
+						&points=[${uniquePoints.map(e => e.toSource()).join(',')}]'>actual ${desc}</a>`)
 	test.equal(uniquePoints.length, resultPoints.length, resultPoints.length + ' == resultPoints.length == uniquePoints.length'+ uniquePoints.toSource())
 	resultPoints.forEach(p => {
 		test.ok(uniquePoints.some(up => up.like(p)), `uniquePoints.some(up => up.like(p)) [${uniquePoints.toSource()}]`)
 	})
 }
-QUnit.assert.doTest2 = function (face, brep, resultFaces, desc) {
+function doTest2 (test, face, brep, resultFaces, desc) {
 	if (brep instanceof Face) {
 		console.log('blah')
 		brep = new B2([brep])
 	}
-	const faceMap = new Map(), edgeMap = new Map()
+	const faceMap = new Map(), edgeMap = new NLA.CustomMap()
 	const faceBrep = new B2([face])
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 href='../brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	brep.faces.forEach(face2 => {
-		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap)
+		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap, new NLA.CustomMap(), new NLA.CustomSet())
 	})
 	console.log('faceMap', faceMap)
 	const edgeLooseSegments = B2.prototype.getLooseEdgeSegments(edgeMap)
 	const newFaces = []
 	B2.reconstituteFaces([face], edgeLooseSegments, faceMap, newFaces)
-	this.equal(newFaces.length, resultFaces.length, 'number of new faces')
-	this.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+	test.equal(newFaces.length, resultFaces.length, 'number of new faces')
+	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 href='../brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
 	resultFaces.forEach(face => {
-		this.ok(newFaces.some(newFace => newFace.likeFace(face)), `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`)
+		test.ok(newFaces.some(newFace => newFace.likeFace(face)), `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`)
 	})
 }
 function doTest3(assert, face: Face, newEdges: Edge[], points: Map<Edge, V3[]>, resultFaces: Face[], desc: string) {
@@ -95,7 +103,7 @@ function doTest3(assert, face: Face, newEdges: Edge[], points: Map<Edge, V3[]>, 
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 href='../brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	const isps = Array.from(points.entries()).map(([edge, ps]) =>
-		ps.map(p => ({edge: edge, p: p, edgeT: NLA.snap(NLA.snap(edge.curve.pointLambda(p), edge.aT), edge.bT)}))
+		ps.map(p => ({edge: edge, p: p, edgeT: NLA.snap(NLA.snap(edge.curve.pointT(p), edge.aT), edge.bT)}))
 	).concatenated()
 	const edgeLooseSegments = B2.prototype.getLooseEdgeSegments(new Map().set(face, isps))
 	const newFaces = []
@@ -108,170 +116,8 @@ href='../brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}
 	})
 }
 registerTests({
-	'two faces cutting each other in the middle'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
-		console.log(face, Face.prototype.rotateX)
-		const face2 = face.rotateX(PI / 2).translate(1, 2, -3)
-		doTest(assert, face, face2, [StraightEdge.throughPoints(V(1, 2), V(10, 2))], [V(10, 2)])
-	
-		const face3 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 2).translate(1, 2, -3)
-		doTest(assert, face, face3, [StraightEdge.throughPoints(V(1, 2), V(6, 2))], [])
-	},
-	
-	'face touching edge of test face with its middle'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
-		const face2 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(12, 0), V(12, 10), V(0, 10)]).rotateX(PI / 2).translate(-1, 0, -5)
-		doTest(assert, face, face2, [], [V(0, 0), V(10, 0)]) // StraightEdge.throughPoints(V(0, 0), V(10, 0))
-		doTest(assert, face, face2.flipped(), [], [])
-	},
-	
-	'V-shape with spine touching middle of test face'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, -10), V(10, -10), V(10, 10), V(-10, 10)])
-		const brep = B2T.tetrahedron(V(0, 0, 0), V(5, 0, 0), V(0, 10, 0), V(0, 10, 6))
-	
-		doTest(assert, face, brep.rotateX(PI / 2), [], [])
-		doTest(assert, face, brep.rotateX(PI / 2).flipped(), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 2), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 2).flipped(), [StraightEdge.throughPoints(V(0, 0), V(5, 0)), StraightEdge.throughPoints(V(5, 0), V(0, 0))], [])
-	},
-	
-	'V-shape splitting test face at spine'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, -10), V(10, -10), V(10, 10), V(-10, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped().rotateX(-PI / 4),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 4)
-		])
-	
-		doTest(assert, face, brep, [StraightEdge.throughPoints(V(0, 0), V(5, 0))], [])
-		doTest(assert, face, brep.flipped(), [StraightEdge.throughPoints(V(5, 0), V(0, 0))], [])
-	},
-	
-	'V-shape with spine parallel to test face normal; touching test face edge'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-20, 0), V(20, 0), V(20, 10), V(-20, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped().rotateX(-PI / 4),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 4)
-		]).rotateY(PI / 2).translate(0, 0, 2)
-	
-		doTest(assert, face, brep, [StraightEdge.throughPoints(V(0, 0), V(5 * sqrt(2), 5 * sqrt(2))), StraightEdge.throughPoints(V(-5 * sqrt(2), 5 * sqrt(2)), V(0, 0))], [])
-		doTest(assert, face, brep.flipped(), [
-			StraightEdge.throughPoints(V(5 * sqrt(2), 5 * sqrt(2)), V(0, 0)), StraightEdge.throughPoints(V(0, 0), V(-5 * sqrt(2), 5 * sqrt(2)))], [])
-		doTest(assert, face, brep.rotateZ(PI), [], [])
-		doTest(assert, face, brep.rotateZ(PI).flipped(), [], [])
-	},
-	
-	'V-shape with spine parallel to test face normal; touching test face edge; splitting test face edge'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-20, 0), V(20, 0), V(20, 10), V(-20, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped().rotateX(-PI / 4),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 4)
-		]).rotateY(PI / 2).translate(0, 0, 2)
-	
-		doTest(assert, face, brep.rotateZ(-PI / 2), [
-			StraightEdge.throughPoints(V(5 * sqrt(2), 5 * sqrt(2)), V(0, 0))], [V(0, 0)])
-		doTest(assert, face, brep.rotateZ(-PI / 2).flipped(), [
-			StraightEdge.throughPoints(V(0, 0), V(5 * sqrt(2), 5 * sqrt(2)))], [V(0, 0)])
-	},
-	
-	'V-shape with spine parallel to test face normal; one wing of V overlaps edge of test face'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, -10), V(10, -10), V(10, 10), V(-10, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped().rotateX(-PI / 4),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)])
-		]).rotateY(PI / 2).translate(10, 5, 2)
-	
-		doTest(assert, face, brep, [
-			StraightEdge.throughPoints(V(5, 10), V(10, 5))], [V(10, 5), V(5, 10), V(10, 10)])
-		doTest(assert, face, brep.flipped(), [
-			StraightEdge.throughPoints(V(10, 5), V(5, 10))], [V(10, 5), V(5, 10)])
-	},
-	
-	'V-shape with spine touching test face, overlapping edge of test face'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, -10), V(2, -10), V(2, 10), V(-10, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped(),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 2)
-		])
-	
-		doTest(assert, face, brep.rotateX(PI / 4), [], [])
-		doTest(assert, face, brep.rotateX(PI / 4).flipped(), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4), [StraightEdge.throughPoints(V(0, 0), V(2, 0))], [V(2, 0)])
-		doTest(assert, face, brep.rotateX(-PI / 4).flipped(), [StraightEdge.throughPoints(V(2, 0), V(0, 0))], [V(2, 0)])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3).flipped(), [StraightEdge.throughPoints(V(2, 0), V(0, 0)), StraightEdge.throughPoints(V(0, 0), V(2, 0))], [])
-	},
-	
-	'V-shape with spine touching test face, touching edge of test face'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, -10), V(5, -10), V(5, 10), V(-10, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped(),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 2)
-		])
-		doTest(assert, face, brep.rotateX(PI / 4), [], [])
-		doTest(assert, face, brep.rotateX(PI / 4).flipped(), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4), [StraightEdge.throughPoints(V(0, 0), V(5, 0))], [V(5, 0)])
-		doTest(assert, face, brep.rotateX(-PI / 4).flipped(), [StraightEdge.throughPoints(V(5, 0), V(0, 0))], [V(5, 0)])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3).flipped(), [StraightEdge.throughPoints(V(5, 0), V(0, 0)), StraightEdge.throughPoints(V(0, 0), V(5, 0))], [])
-	},
-	
-	'V-shape with spine touching test face edge middle'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, 0), V(10, 0), V(10, 10), V(-10, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped(),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 2)
-		])
-	
-		doTest(assert, face, brep.rotateX(PI / 4), [], [])
-		doTest(assert, face, brep.rotateX(PI / 4).flipped(), [], [V(0, 0), V(5, 0)]) // StraightEdge.throughPoints(V(0, 0),
-		                                                                            // V(5, 0)),
-		                                                                            // StraightEdge.throughPoints(V(0, 0),
-		                                                                            // V(5, 0))
-		doTest(assert, face, brep.rotateX(-PI / 4), [], [V(0, 0), V(5, 0)]) // StraightEdge.throughPoints(V(0, 0), V(5, 0)),
-		                                                                   // StraightEdge.throughPoints(V(0, 0), V(5, 0))
-		doTest(assert, face, brep.rotateX(-PI / 4).flipped(), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3).flipped(), [], [V(0, 0), V(5, 0)]) // StraightEdge.throughPoints(V(0,
-		                                                                                 // 0), V(5, 0)),
-		                                                                                 // StraightEdge.throughPoints(V(0,
-		                                                                                 // 0), V(5, 0))
-	},
-	
-	'V-shape with spine overlapping test face edge'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(-10, 0), V(3, 0), V(3, 10), V(-10, 10)])
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped(),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 2)
-		])
-	
-		doTest(assert, face, brep.rotateX(PI / 4), [], [])
-		doTest(assert, face, brep.rotateX(PI / 4).flipped(), [], [V(0, 0), V(3, 0)]) // StraightEdge.throughPoints(V(0, 0),
-		                                                                            // V(3, 0)),
-		                                                                            // StraightEdge.throughPoints(V(0, 0),
-		                                                                            // V(3, 0))
-		doTest(assert, face, brep.rotateX(-PI / 4), [], [V(0, 0), V(3, 0)]) // StraightEdge.throughPoints(V(0, 0), V(3, 0)),
-		                                                                   // StraightEdge.throughPoints(V(0, 0), V(3, 0))
-		doTest(assert, face, brep.rotateX(-PI / 4).flipped(), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3), [], [])
-		doTest(assert, face, brep.rotateX(-PI / 4 * 3).flipped(), [], [V(0, 0), V(3, 0)]) // StraightEdge.throughPoints(V(0,
-		                                                                                 // 0), V(3, 0)),
-		                                                                                 // StraightEdge.throughPoints(V(0,
-		                                                                                 // 0), V(3, 0))
-	},
-	
-	'V-shape with spine parallel to test face normal; touching test face corner'(assert) {
-		const face = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
-		// splitting contour in base position:
-		const brep = new B2([
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped().rotateX(-PI / 8),
-			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 8)
-		]).rotateY(PI / 2).translate(0, 0, 2)
-	
-		doTest(assert, face, brep, [
-			StraightEdge.throughPoints(V(0, 0), V3.polar(10, PI / 2 - PI / 8))], [])
-	},
-	
-	'tetrahedorn intersctions doTestWithBrep'(assert) {
+
+	'tetrahedron intersections doTestWithBrep'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
 		const face = box.faces.find(face => face.surface.plane.normal.like(V3.Z))
 		let testBrep
@@ -282,7 +128,7 @@ registerTests({
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
 	
 		testBrep = B2T.tetrahedron(V(-1, 1, 9), V(4, 1, 9), V(-1, -4, 14), V(-1, -4, 10)).flipped()
-		doTestWithBrep(assert, face, box, testBrep, [], [V(3, 0, 10), V(0, 0, 10)],
+		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 0, 10), V(3, 0, 10))], [V(3, 0, 10), V(0, 0, 10)],
 			'face of _flipped_ tetra touches edge of testface and also intersects main volume (expect point on edge)')
 	
 		testBrep = B2T.tetrahedron(V(-1, 0, 10), V(5, 0, 10), V(2, 0, 14), V(2, -4, 10))
@@ -290,13 +136,13 @@ registerTests({
 			'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
 	
 		testBrep = B2T.tetrahedron(V(-1, 0, 10), V(5, 0, 10), V(-1, -2, 8), V(-1, 2, 8)).flipped()
-		doTestWithBrep(assert, face, box, testBrep, [], [V(5, 0, 10), V(0, 0, 10)],
+		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 0, 10), V(5, 0, 10))], [V(5, 0, 10), V(0, 0, 10)],
 			'Tetrahedron is flipped, testface only touched at edge, needs point on edge as tetrahedron intersects side of volume')
 	
 	
 		testBrep = B2T.tetrahedron(V(-1, 0, 10), V(5, 0, 10), V(-1, 0, 14), V(-1, -4, 9)).flipped()
-		doTestWithBrep(assert, face, box, testBrep, [], [],
-			'volumes do not intersect, tetra is flipped, touches box edge-edge (result would be entire box, so no points)')
+		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 0, 10), V(5, 0, 10))], [V(0, 0, 10), V(5, 0, 10)],
+			'volumes do not intersect, tetra is flipped, touches box edge-edge (result would be entire box)')
 	},
 	
 	'tetrahedorn is point on line'(assert) {
@@ -314,7 +160,7 @@ registerTests({
 		doTestWithBrep(assert, face, box, testBrep.flipped(), [
 				StraightEdge.throughPoints(V(4, 0, 10), V(3, 3, 10)),
 				StraightEdge.throughPoints(V(5, 3, 10), V(4, 0, 10)),
-				StraightEdge.throughPoints(V(3, 3, 10), V(5, 3, 10))], [],
+				StraightEdge.throughPoints(V(3, 3, 10), V(5, 3, 10))], [V(4, 0, 10)],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
 	
 		doTestWithBrep(assert, face, box, testBrep.rotate(V(4, 0, 10), V3.Z, 90 * DEG), [
@@ -344,30 +190,32 @@ registerTests({
 				StraightEdge.throughPoints(V(0, 1, 10), V(8, 1, 10))], [V(0, 1, 10), V(8, 1, 10)],
 			'???')
 	},
-	
-	'face box 2'(assert) {
-		const box = B2T.box(1, 1, 6, 'box').flipped()
-		const face = box.faces.find(face => face.surface.plane.normal.like(V3.X))
-		// splitting contour in base position:
-	
-		const testBrep = B2T.box(5, 5, 5)
-		doTestWithBrep(assert, face, box, testBrep, [], [],
-			'???')
-	
-	},
+
+    'face box 2'(assert) {
+        const box = B2T.box(1, 1, 6, 'box').flipped()
+        const face = box.faces.find(face => face.surface.plane.normal.like(V3.X))
+        // splitting contour in base position:
+
+        const testBrep = B2T.box(5, 5, 5)
+        doTestWithBrep(assert, face, box, testBrep, [], [],
+            '???')
+
+    },
 	
 	'face box 3'(assert) {
 		const box = B2T.box(10, 10, 5, 'box')
-		const face = box.faces.find(face => face.surface.plane.normal.like(V3.Z))
+		const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal.like(V3.Z))
 		// splitting contour in base position:
-	
-		const testBrep = B2T.box(10, 10, 5, 'box').translate(3, 3, 0)
+
+        const testBrep = B2T.box(10, 10, 5, 'box').translate(3, 3, 0)
+        // this fails, because the point is added as the bounds of the edge in face, where the edge belongs to a neighborig face which isn't checked
+        doTestWithBrep(assert, face, box, testBrep, [
+                StraightEdge.throughPoints(V(3, 10, 5), V(3, 3, 5)),
+                StraightEdge.throughPoints(V(3, 3, 5), V(10, 3, 5))], [V(3, 10, 5), V(10, 3, 5)],
+            '???')
+
 		doTestWithBrep(assert, face, box, testBrep, [], [],
 			'???', true)
-		doTestWithBrep(assert, face, box, testBrep, [
-				StraightEdge.throughPoints(V(3, 10, 5), V(3, 3, 5)),
-				StraightEdge.throughPoints(V(3, 3, 5), V(10, 3, 5))], [V(3, 10, 5), V(10, 3, 5)],
-			'???')
 	
 	},
 
@@ -377,7 +225,11 @@ registerTests({
         // splitting contour in base position:
 
         const testBrep = box.translate(3, 3, 0)
-        doTestWithBrep(assert, face, box, testBrep, [], [V(3, 10, 5), V(10, 3, 5)],
+        doTestWithBrep(assert, face, box, testBrep, [
+                StraightEdge.throughPoints(V(3, 10, 5), V(3, 3, 5)),
+                StraightEdge.throughPoints(V(3, 3, 5), V(3, 10, 5)),
+                StraightEdge.throughPoints(V(3, 3, 5), V(10, 3, 5)),
+                StraightEdge.throughPoints(V(10, 3, 5), V(3, 3, 5))], [V(3, 10, 5), V(10, 3, 5)],
             '???')
         doTestWithBrep(assert, face, box, testBrep, [
                 StraightEdge.throughPoints(V(3, 10, 5), V(3, 3, 5)),
@@ -405,10 +257,28 @@ registerTests({
         // splitting contour in base position:
 
         const testBrep = box2.translate(0, 0, -2)
-        doTestWithBrep(assert, face, box, testBrep, [], [],
+        doTestWithBrep(assert, face, box, testBrep, [
+                new StraightEdge(new L3(V(0, 0, 10), V(0, -1, 0)), V(0, 0, 10), V(0, 10, 10), 0, -10),
+                new StraightEdge(new L3(V(10, 0, 10), V(0, 1, 0)), V(10, 10, 10), V(10, 0, 10), 10, 0),
+                new StraightEdge(new L3(V(0, 0, 10), V(1, 0, 0)), V(10, 0, 10), V(0, 0, 10), 10, 0)], [
+                V(0, 10, 10), V(0, 0, 10), V(10, 0, 10), V(10, 10, 10)
+            ],
             '???')
         doTestWithBrep(assert, face, box, testBrep, [], [],
             '???', true)
+
+    },
+    'face box 7'(assert) {
+        const box = B2T.box(1, 1, 1, 'box')
+        const face = box.faces.find(face => face.surface.plane.normal.like(V3.Z))
+        // splitting contour in base position:
+
+        const testBrep = B2T.box(1/3, 1/3, 1).flipped()
+        doTestWithBrep(assert, face, box, testBrep, [
+                new StraightEdge(new L3(V(0, 1/3, 1), V(1, 0, 0)), V(0, 1/3, 1), V(1/3, 1/3, 1), 0, 1/3),
+                new StraightEdge(new L3(V(1/3, 0, 1), V(0, -1, 0)), V(1/3, 1/3, 1), V(1/3, 0, 1), -1/3, 0)],
+            [V(1/3, 0, 1), V(0, 1/3, 1)],
+            '???')
 
     },
     'sphere face box'(assert) {
@@ -418,8 +288,31 @@ registerTests({
 
         const testBrep = B2T.box(10, 10, 10, 'box').translate(1, 2, 3).flipped()
         doTestWithBrep(assert, face, sphere, testBrep, [
-            //Edge.forCurveAndTs(face.surface.isCurvesWithPlane(P3.ZX.translate(1, 0, 0)), )
+            new PCurveEdge(
+                new SemiEllipseCurve(V(1, 0, 0), V(0, 0, 3.872983346207417), V(0, 3.872983346207417, 0), 0, 3.141592653589793),
+                V(1, 2, 3.3166247903554), V(1, 2.449489742783178, 3),
+                0.5426391022496527, 0.684719203002283, null,
+                V(0, 3.3166247903554003, -2), V(0, 3, -2.4494897427831783)),
+            new PCurveEdge(
+                new SemiEllipseCurve(V(0, 2, 0), V(0, 0, -3.4641016151377544), V(3.4641016151377544, 0, 0), 0, 3.141592653589793),
+                V(1.7320508075688767, 2, 3), V(1, 2, 3.3166247903554),
+                2.6179938779914944, 2.8487498818612176, null,
+                V(-3, 0, 1.732050807568877), V(-3.3166247903554, 0, 1)),
+            new PCurveEdge(
+                new SemiEllipseCurve(V(0, 0, 3), V(-2.6457513110645907, 0, 0), V(0, 2.6457513110645907, 0), 0, 3.141592653589793),
+                V(1, 2.449489742783178, 3), V(1.7320508075688767, 2, 3),
+                1.9583930134500773, 2.284520705739662, null,
+                V(2.449489742783178, -1, 0), V(2, -1.7320508075688765, 0))
         ], [], '???')
+
+    },
+    'sphere face box 2'(assert) {
+        const sphere = B2T.sphere(5, 'ball')
+        const face = sphere.faces.find(face => face.containsPoint(new V3(0, 5, 0)))
+        // splitting contour in base position:
+
+        const testBrep = B2T.box(4, 4, 4, 'box').translate(0,1,0).flipped()
+        doTestWithBrep(assert, face, sphere, testBrep, [], [], '???')
 
     },
 
@@ -480,7 +373,7 @@ registerTests({
 	
 		const extrude = B2T.extrudeVertices([V(5, -1), V(2, 2), V(8, 2)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result = PlaneFace.forVertices(P3.XY, [V(0, 0), V(4, 0), V(2, 2), V(8, 2), V(6, 0), V(10, 0), V(10, 10), V(0, 10)])
-		assert.doTest2(baseFace, extrude, [result], 'volume cuts edge of test face (twice)')
+		doTest2(assert, baseFace, extrude, [result], 'volume cuts edge of test face (twice)')
 	
 		const edges = StraightEdge.chain([V(5, 0), V(2, 3), V(8, 3)])
 		const result2 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)], [V(5, 0), V(2, 3), V(8, 3)])
@@ -499,31 +392,31 @@ registerTests({
 	
 		const extrude5 = B2T.extrudeVertices([V(0, 0), V(3, 2), V(2, 3)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result5 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(2, 3), V(3, 2), V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
-		assert.doTest2(baseFace, extrude5, [result5], 'volume touches inside of test face corner')
+		doTest2(assert, baseFace, extrude5, [result5], 'volume touches inside of test face corner')
 	
 		const edges6 = StraightEdge.chain([V(1, 0), V(8, 10), V(3, 0)], false)
-		const points6 = new Map().set(baseFace.edges.find(edge => edge.aDir.like(V3.X)), [V(1, 0), V(3, 0)])
+		const points6 = new Map().set(baseFace.contour.find(edge => edge.aDir.like(V3.X)), [V(1, 0), V(3, 0)])
 		const result6 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(1, 0), V(8, 10), V(3, 0), V(10, 0), V(10, 10), V(0, 10)])]
 		doTest3(assert, baseFace, edges6, points6, result6, 'volume touches inside of test face corner')
 
 		const edges7 = [StraightEdge.throughPoints(V(1, 0), V(7, 10)), StraightEdge.throughPoints(V(8, 10), V(3, 0))]
 		const points7 = new Map()
-			.set(baseFace.edges.find(edge => edge.aDir.like(V3.X)), [V(1, 0), V(3, 0)])
-			.set(baseFace.edges.find(edge => edge.aDir.like(V3.X.negated())), [V(7, 10), V(8, 10)])
+			.set(baseFace.contour.find(edge => edge.aDir.like(V3.X)), [V(1, 0), V(3, 0)])
+			.set(baseFace.contour.find(edge => edge.aDir.like(V3.X.negated())), [V(7, 10), V(8, 10)])
 		const result7 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(1, 0), V(7, 10), V(0, 10)]), PlaneFace.forVertices(P3.XY, [V(10, 10), V(8, 10), V(3, 0), V(10, 0)])]
 		doTest3(assert, baseFace, edges7, points7, result7, 'volume touches inside of test face corner')
 
 
 		const edges8 = [StraightEdge.throughPoints(V(1, 0), V(8, 10)), StraightEdge.throughPoints(V(8, 10), V(1, 0))]
 		const points8 = new Map()
-			.set(baseFace.edges.find(edge => edge.aDir.like(V3.X)), [V(1, 0)])
-			.set(baseFace.edges.find(edge => edge.aDir.like(V3.X.negated())), [V(8, 10)])
+			.set(baseFace.contour.find(edge => edge.aDir.like(V3.X)), [V(1, 0)])
+			.set(baseFace.contour.find(edge => edge.aDir.like(V3.X.negated())), [V(8, 10)])
 		const result8 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(1, 0), V(8, 10), V(0, 10)]), PlaneFace.forVertices(P3.XY, [V(10, 10), V(8, 10), V(1, 0), V(10, 0)])]
 		doTest3(assert, baseFace, edges8, points8, result8, 'volume touches inside of test face corner')
 
 
 		const edges9 = [StraightEdge.throughPoints(V(1, 0), V(8, 5)), StraightEdge.throughPoints(V(8, 5), V(1, 0))]
-		const points9 = new Map().set(baseFace.edges.find(edge => edge.aDir.like(V3.X)), [V(1, 0)])
+		const points9 = new Map().set(baseFace.contour.find(edge => edge.aDir.like(V3.X)), [V(1, 0)])
 		const result9 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(1, 0), V(8, 5), V(1, 0), V(10, 0), V(10, 10), V(0, 10)])]
 		doTest3(assert, baseFace, edges9, points9, result9, 'volume touches inside of test face corner')
 
@@ -535,35 +428,35 @@ registerTests({
 	
 		const extrude7 = B2T.extrudeVertices([V(0, 0), V(5, 8), V(8, 5)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result7 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 8), V(8, 5), V(0, 0), V(10, 0), V(10, 10), V(0, 10)])]
-		assert.doTest2(baseFace, extrude7, result7, 'volume touches inside of test face corner')
+		doTest2(assert, baseFace, extrude7, result7, 'volume touches inside of test face corner')
 	
 		const extrude8 = B2T.extrudeVertices([V(1, 1), V(1, -1), V(-1, 1)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result8 = [PlaneFace.forVertices(P3.XY, [V(1, 0), V(10, 0), V(10, 10), V(0, 10), V(0, 1), V(1, 1)])]
-		assert.doTest2(baseFace, extrude8, result8, 'volume touches inside of test face corner')
+		doTest2(assert, baseFace, extrude8, result8, 'volume touches inside of test face corner')
 	
 		const extrude9 = B2T.extrudeVertices([V(-1, -1), V(1, 1), V(1, -1)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result9 = [PlaneFace.forVertices(P3.XY, [V(1, 0), V(10, 0), V(10, 10), V(0, 10), V(0, 0), V(1, 1)])]
-		assert.doTest2(baseFace, extrude9, result9, 'volume touches inside of test face corner')
+		doTest2(assert, baseFace, extrude9, result9, 'volume touches inside of test face corner')
 	
 		const extrude10 = B2T.extrudeVertices([V(1, 1), V(2, 2), V(2, 1)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result10 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(2, 2), V(2, 1)])]
-		assert.doTest2(baseFace, extrude10, result10, 'adding a hole')
+		doTest2(assert, baseFace, extrude10, result10, 'adding a hole')
 	
 		const baseFace11 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(2, 2), V(2, 1)])
 		const extrude11 = B2T.extrudeVertices([V(5, 5), V(6, 6), V(6, 5)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result11 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(2, 2), V(2, 1)], [V(5, 5), V(6, 6), V(6, 5)])]
-		assert.doTest2(baseFace11, extrude11, result11, 'adding a hole to a face which already has one')
+		doTest2(assert, baseFace11, extrude11, result11, 'adding a hole to a face which already has one')
 	
 	
 		let baseFace12 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(5, 5), V(5, 1)])
 		const extrude12 = B2T.extrudeVertices([V(2, 1.5), V(2, 4), V(4.5, 4)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result12 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(5, 5), V(5, 1), V(1, 1), V(2, 2), V(2, 4), V(4, 4)])]
-		assert.doTest2(baseFace12, extrude12, result12, 'extending an existing hole')
+		doTest2(assert, baseFace12, extrude12, result12, 'extending an existing hole')
 	
 		const baseFace13 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(5, 5), V(5, 1)])
 		const extrude13 = B2T.extrudeVertices([V(3, -1), V(4, -1), V(4, 2), V(3, 2)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result13 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0), V(3, 0), V(3, 1), V(1, 1), V(5, 5), V(5, 1), V(4, 1), V(4, 0)])]
-		assert.doTest2(baseFace13, extrude13, result13, 'removing a hole by cutting a channel')
+		doTest2(assert, baseFace13, extrude13, result13, 'removing a hole by cutting a channel')
 	
 		const baseFace14 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(5, 5), V(5, 1)])
 		const edges14 = StraightEdge.chain([V(1, 1), V(1, 5), V(5, 5)], false)
@@ -580,13 +473,13 @@ registerTests({
 		let result = B2T.extrudeEdges([
 				StraightEdge.throughPoints(V(8, 0, 0), V(1, 0, 0)),
 				StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
-				PCurveEdge.forCurveAndTs(EllipseCurve.circle(8), Math.acos(1 / 8), 0)],
+				PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
 		b2Equal(assert, pie, boxKnife, pie.minus(boxKnife), result)
 	
 	
 		{
-			const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal.like(V3.Y.negated()) && face.edges.some(edge => edge.a.x > 1))
+			const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
 			const k2 = boxKnife.translate(-1, 0, 0)
 			doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.ZERO, V(0, 0, 5)],
 				'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
@@ -597,15 +490,15 @@ registerTests({
 		let pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 		let result = new B2([
-            new RotationFace(new CylinderSurface(new EllipseCurve(V(0, 0, 0), V(-8, 0, 0), V(0, -8, 0)), V3.Z), [
+            new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V3.Z), [
                 new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 5), V(8, 0, 0), 5, 0),
-                new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(-8, 0, 0), V(0, -8, 0)), V(8, 0, 0), V(-8, -9.797174393178826e-16, 0), -3.141592653589793, 0, null, V(-9.797174393178826e-16, 8, 0), V(0, -8, 0)),
-                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 0), V(0, 0, 1)), V(-8, -9.797174393178826e-16, 0), V(-8, -9.797174393178826e-16, 5), 0, 5),
-                new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(-8, 0, 0), V(0, -8, 0)), V(-8, -9.797174393178826e-16, 5), V(8, 0, 5), 0, -3.141592653589793, null, V(0, 8, 0), V(9.797174393178826e-16, -8, 0))], [[
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 0), V(-8, 0, 0), 0, 3.141592653589793, null, V(0, 8, 0), V(-0, -8, 0)),
+                new StraightEdge(new L3(V(-8, 0, 0), V(0, 0, 1)), V(-8, 0, 0), V(-8, 0, 5), 0, 5),
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, 8, 0)), V(-8, 0, 5), V(8, 0, 5), 3.141592653589793, 0, null, V(0, 8, 0), V(0, -8, 0))], [[
                 new StraightEdge(new L3(V(1, 7.937253933193772, 0), V(0, 0, -1)), V(1, 7.937253933193773, 4), V(1, 7.937253933193773, 1), -4, -1),
-                new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), 1.696124157962962, 2.4188584057763776, null, V(7.937253933193772, -0.9999999999999999, 0), V(5.291502622129181, -6, 0)),
-                new StraightEdge(new L3(V(6, 5.291502622129181, 0), V(0, 0, 1)), V(6, 5.291502622129181, 1), V(6, 5.291502622129181, 4), 1, 4),
-                new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(-8, 0, 0), V(0, -8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), -2.4188584057763776, -1.696124157962962, null, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 0.9999999999999999, 0))]]),
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), 1.696124157962962, 2.4188584057763776, null, V(7.937253933193772, -1, 0), V(5.291502622129181, -6, 0)),
+                new StraightEdge(new L3(V(6, 5.2915026221291805, 0), V(0, 0, 1)), V(6, 5.291502622129181, 1), V(6, 5.291502622129181, 4), 1, 4),
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), 0.7227342478134156, 1.4454684956268313, null, V(-5.2915026221291805, 6, 0), V(-7.937253933193772, 1, 0))]]),
             new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
                 new StraightEdge(new L3(V(0, 0, 0), V(1, 0, 0)), V(0, 0, 0), V(8, 0, 0), 0, 8),
                 new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 0), V(8, 0, 5), 0, 5),
@@ -617,38 +510,38 @@ registerTests({
                 new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(6, 0, 1), V(1, 0, 1), -6, -1)]]),
             new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
                 new StraightEdge(new L3(V(0, 0, 0), V(1, 0, 0)), V(8, 0, 0), V(0, 0, 0), 8, 0),
-                new StraightEdge(new L3(V(0, 0, 0), V(-1, -1.2246467991473532e-16, 0)), V(0, 0, 0), V(-8, -9.797174393178826e-16, 0), 0, 8),
-                new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(-8, 0, 0), V(0, -8, 0)), V(-8, -9.797174393178826e-16, 0), V(8, 0, 0), 0, -3.141592653589793, null, V(0, 8, 0), V(9.797174393178826e-16, -8, 0))], []),
+                new StraightEdge(new L3(V(0, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(-8, 0, 0), 0, 8),
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(-8, 0, 0), V(8, 0, 0), 3.141592653589793, 0, null, V(0, 8, 0), V(0, -8, 0))], []),
             new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
                 new StraightEdge(new L3(V(8, 0, 5), V(-1, 0, 0)), V(0, 0, 5), V(8, 0, 5), 8, 0),
-                new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(-8, 0, 0), V(0, -8, 0)), V(8, 0, 5), V(-8, -9.797174393178826e-16, 5), -3.141592653589793, 0, null, V(-9.797174393178826e-16, 8, 0), V(0, -8, 0)),
-                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 5), V(1, 1.2246467991473532e-16, 0)), V(-8, -9.797174393178826e-16, 5), V(0, 0, 5), 0, 8)], []),
-            new PlaneFace(new PlaneSurface(new P3(V(-1.2246467991473515e-16, -1, 0), -3.549874073494553e-30)), [
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 5), V(-8, 0, 5), 0, 3.141592653589793, null, V(0, 8, 0), V(-0, -8, 0)),
+                new StraightEdge(new L3(V(-8, 0, 5), V(1, -0, 0)), V(-8, 0, 5), V(0, 0, 5), 0, 8)], []),
+            new PlaneFace(new PlaneSurface(new P3(V(-0, -1, 0), 0)), [
                 new StraightEdge(new L3(V(0, 0, 5), V(0, 0, -1)), V(0, 0, 0), V(0, 0, 5), 5, 0),
-                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 5), V(1, 1.2246467991473532e-16, 0)), V(0, 0, 5), V(-8, -9.797174393178826e-16, 5), 8, 0),
-                new StraightEdge(new L3(V(-8, -9.797174393178826e-16, 0), V(0, 0, 1)), V(-8, -9.797174393178826e-16, 5), V(-8, -9.797174393178826e-16, 0), 5, 0),
-                new StraightEdge(new L3(V(0, 0, 0), V(-1, -1.2246467991473532e-16, 0)), V(-8, -9.797174393178826e-16, 0), V(0, 0, 0), 8, 0)], []),
+                new StraightEdge(new L3(V(-8, 0, 5), V(1, -0, 0)), V(0, 0, 5), V(-8, 0, 5), 8, 0),
+                new StraightEdge(new L3(V(-8, 0, 0), V(0, 0, 1)), V(-8, 0, 5), V(-8, 0, 0), 5, 0),
+                new StraightEdge(new L3(V(0, 0, 0), V(-1, 0, 0)), V(-8, 0, 0), V(0, 0, 0), 8, 0)], []),
             new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1)), [
                 new StraightEdge(new L3(V(1, 7.937253933193772, 0), V(0, 0, -1)), V(1, 7.937253933193773, 1), V(1, 7.937253933193773, 4), -1, -4),
                 new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 7.937253933193773, 4), V(1, 0, 4), 8.937253933193773, 1),
                 new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 4), V(1, 0, 1), 4, 1),
                 new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 0, 1), V(1, 7.937253933193773, 1), 1, 8.937253933193773)], []),
             new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6)), [
-                new StraightEdge(new L3(V(6, 5.291502622129181, 0), V(0, 0, 1)), V(6, 5.291502622129181, 4), V(6, 5.291502622129181, 1), 4, 1),
+                new StraightEdge(new L3(V(6, 5.2915026221291805, 0), V(0, 0, 1)), V(6, 5.291502622129181, 4), V(6, 5.291502622129181, 1), 4, 1),
                 new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 5.291502622129181, 1), V(6, 0, 1), 3.7084973778708186, 9),
                 new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 1), V(6, 0, 4), -1, -4),
                 new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 0, 4), V(6, 5.291502622129181, 4), 9, 3.7084973778708186)], []),
             new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
-                new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 1), V(1, 7.937253933193773, 1), 2.4188584057763776, 1.696124157962962, null, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 0.9999999999999999, 0)),
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 1), V(1, 7.937253933193773, 1), 2.4188584057763776, 1.696124157962962, null, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 1, 0)),
                 new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 7.937253933193773, 1), V(1, 0, 1), 8.937253933193773, 1),
                 new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(6, 0, 1), -1, -6),
                 new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 0, 1), V(6, 5.291502622129181, 1), 9, 3.7084973778708186)], []),
             new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
-                new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(-8, 0, 0), V(0, -8, 0)), V(1, 7.937253933193773, 4), V(6, 5.291502622129181, 4), -1.696124157962962, -2.4188584057763776, null, V(7.937253933193772, -0.9999999999999999, 0), V(5.291502622129181, -6, 0)),
+                new PCurveEdge(new SemiEllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 4), V(6, 5.291502622129181, 4), 1.4454684956268313, 0.7227342478134156, null, V(7.937253933193772, -1, 0), V(5.2915026221291805, -6, 0)),
                 new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 5.291502622129181, 4), V(6, 0, 4), 3.7084973778708186, 9),
                 new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
                 new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 7.937253933193773, 4), 1, 8.937253933193773)], [])], false)
-		b2Equal(assert, pie, punch, pie.minus(punch), result)
+        b2Equal(assert, pie, punch, pie.minus(punch), result)
 		console.log(pie.minus(punch).sce)
 	},
 	
@@ -709,7 +602,7 @@ registerTests({
 		b2Equal(assert, a, punch, a.minus(punch), result)
 	},
 
-	'test intersection of volumes where no faces intersect'(assert) {
+    'test intersection of volumes where no faces intersect'(assert) {
         /**
          * A in B:
          * A - B = 0
@@ -730,9 +623,20 @@ registerTests({
         b2Equal(assert, a, b, b.and(a), a)
 
         const c = B2T.box(2, 2, 2).translate(20)
-        b2Equal(assert, a, c, a.minus(b), a)
-        b2Equal(assert, a, c, b.plus(a), new B2(b.faces.concat(a.faces), false))
-        b2Equal(assert, a, c, b.and(a), B2.EMPTY)
+        b2Equal(assert, a, c, a.minus(c), a)
+        b2Equal(assert, a, c, c.plus(a), new B2(c.faces.concat(a.faces), false))
+        b2Equal(assert, a, c, c.and(a), B2.EMPTY)
+
+
+    },
+
+    'fuz test'(assert) {
+        const a = B2T.box(1,1,1,'box').minus(B2T.box(1 / 3, 1 / 3, 1,'cut'))
+        const b = B2T.box(3, 1 / 3, 1 / 3).translate(-1).flipped()
+        const c = a.and(b)
+        assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${c.translate(10).toSource()}'>link</a>`)
+        c.buildAdjacencies()
 
 
     }

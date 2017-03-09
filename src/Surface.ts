@@ -9,10 +9,10 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 
 	/**
 	 * IMPORTANT: The tangents of the resulting curves need to be equal to the cross product of this and surface in the
-	 * point. I.e.: for every point p p on a returned curve: curve.tangentAt(curve.pointLambda(p)) == this.normalAt(p)
+	 * point. I.e.: for every point p p on a returned curve: curve.tangentAt(curve.pointT(p)) == this.normalAt(p)
 	 * X surface.normalAt(p)
 	 *
-	 * Cross product is not commutative, so curve.tangentAt(curve.pointLambda(p)) == surface.normalAt(p) X
+	 * Cross product is not commutative, so curve.tangentAt(curve.pointT(p)) == surface.normalAt(p) X
 	 * this.normalAt(p) is not valid.
 	 *
 	 */
@@ -42,7 +42,13 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 
 	abstract like(object): boolean
 
-	abstract pointToParameterFunction?(): (pWC: V3, hint?: number)=>V3
+    parameters(pWC: V3): V3 {
+	    return this.pointToParameterFunction()(pWC)
+    }
+
+    pointToParameterFunction(): (pWC: V3) => V3 {
+        return this.parameters.bind(this)
+    }
 
 	abstract parametricFunction?(): (s: number, t: number)=>V3
 
@@ -60,7 +66,7 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 		let inside = false
 
 		function logIS(isP) {
-			const isT = testLine.pointLambda(isP)
+			const isT = testLine.pointT(isP)
 			if (NLA.eq0(isT)) {
 				return true
 			} else if (isT > 0) {
@@ -73,7 +79,7 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 			const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
 			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearEdges[edgeIndex]) {
-				const lineAT = testLine.pointLambda(edge.a), lineBT = testLine.pointLambda(edge.b)
+				const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b)
 				if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
 					return PointVsFace.ON_EDGE
 				}

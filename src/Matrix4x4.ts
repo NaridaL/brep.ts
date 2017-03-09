@@ -211,7 +211,7 @@ class M4 extends Matrix implements Transformable {
 		assertVectors(v)
 		const m = this.m
 		const w = v.x * m[12] + v.y * m[13] + v.z * m[14]
-		assert(w === 0, 'w != 0 needs to be true for this to make sense (w =' + w + this.str)
+		assert(w === 0, () => 'w != 0 needs to be true for this to make sense (w =' + w + this.str)
 		return new V3(m[0] * v.x + m[1] * v.y + m[2] * v.z, m[4] * v.x + m[5] * v.y + m[6] * v.z, m[8] * v.x + m[9] * v.y + m[10] * v.z)
 	}
 
@@ -1219,6 +1219,8 @@ class M4 extends Matrix implements Transformable {
 	static readonly BAR = M4.FOO.inversed()
 
 	static readonly IDENTITY = M4.identity()
+	static readonly YZX = M4.forSys(V3.Y, V3.Z, V3.X)
+	static readonly ZXY = M4.forSys(V3.Z, V3.X, V3.Y)
 
 	static IDENTITY3 = new M4(
 		1, 0, 0, 0,

@@ -2,5 +2,6 @@
     "rules": {
         "semicolon": [true, "never"]
 //        , "no-var-keyword": true
-    }
+    },
+    "no-unused-variable": [true, "check-parameters", {"ignore-pattern": "^_"}]
 }

@@ -96,10 +96,10 @@ class BezierCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		}
-		if (surface instanceof CylinderSurface) {
-			let projPlane = new P3(surface.dir1.normalized(), 0)
-			let projThis = this.project(projPlane)
-			let projEllipse = surface.baseEllipse.project(projPlane)
+		if (surface instanceof SemiCylinderSurface) {
+			const projPlane = new P3(surface.dir1.normalized(), 0)
+            const projThis = this.project(projPlane)
+            const projEllipse = surface.baseEllipse.project(projPlane)
 			return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
 		}
 		assert(false)
@@ -146,7 +146,7 @@ class BezierCurve extends Curve {
 		// then split this at curve.p0 --> curve.p3 to compare points p1 and p2
 		let curveP0T, curveP3T
 		// assign in if condition to exploit short-circuit
-		if (isNaN(curveP0T = this.pointLambda(curve.p0)) || isNaN(curveP3T = this.pointLambda(curve.p3))) {
+		if (isNaN(curveP0T = this.pointT(curve.p0)) || isNaN(curveP3T = this.pointT(curve.p3))) {
 			return false
 		}
 		let thisSplit
@@ -199,7 +199,7 @@ class BezierCurve extends Curve {
 		return [V3.ZERO, a, b, c]
 	}
 
-	pointLambda(p) {
+	pointT(p) {
 		const {p0, p1, p2, p3} = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -226,7 +226,7 @@ class BezierCurve extends Curve {
 		assert(false, 'multiple intersection ' + this.toString() + p.sce)
 	}
 
-	pointLambda2(p) {
+	pointT2(p) {
 		const {p0, p1, p2, p3} = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -310,7 +310,7 @@ class BezierCurve extends Curve {
 	}
 
 	containsPoint(p) {
-		return isFinite(this.pointLambda(p))
+		return isFinite(this.pointT(p))
 	}
 
 	roots(): number[][] {
@@ -386,7 +386,7 @@ class BezierCurve extends Curve {
 		// (this.at(t).x - anchor.x) / dir.x - (this.at(t).y - anchor.y) / dir.y == 0
 		// (this.at(t).x - anchor.x) * dir.y - (this.at(t).y - anchor.y) * dir.x == 0 (2)
 
-		// cubic equation params (see #pointLambda):
+		// cubic equation params (see #pointT):
 		let {p0, p1, p2, p3} = this
 		let a = p1.minus(p2).times(3).minus(p0).plus(p3)
 		let b = p0.plus(p2).times(3).minus(p1.times(6))
@@ -516,50 +516,6 @@ class BezierCurve extends Curve {
 	}
 
 	isInfosWithBezier(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number): {tThis: number, tOther: number, p: V3}[] {
-		// the recursive function finds good approximates for the intersection points
-		// this function uses newton iteration to improve the result as much as possible
-		// is declared as an arrow function so this will be bound correctly
-		const handleStartTS = (startT, startS) => {
-			if (!result.some(info => NLA.eq(info.tThis, startT) && NLA.eq(info.tOther, startS))) {
-				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
-				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
-				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
-				let dfdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
-				let dfdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
-				let ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
-					dfdt1.bind(undefined, this, bezier), dfdt2.bind(undefined, this, bezier),
-					(t, s) => -dfdt2(bezier, this, s, t), (t, s) => -dfdt1(bezier, this, s, t))
-				if (ni == null) console.log(startT, startS, this.sce, bezier.sce)
-				result.push({tThis: ni.x, tOther: ni.y, p: this.at(ni.x)})
-			}
-		}
-
-		// is declared as an arrow function so this will be bound correctly
-		// returns whether an intersection was immediately found (i.e. without further recursion)
-		// is declared as an arrow function so this will be bound correctly
-		const findRecursive = (tMin, tMax, sMin, sMax, thisAABB, otherAABB) => {
-			const EPS = NLA_PRECISION
-			if (thisAABB.touchesAABB(otherAABB)) {
-				let tMid = (tMin + tMax) / 2
-				let sMid = (sMin + sMax) / 2
-				if (Math.abs(tMax - tMin) < EPS && Math.abs(sMax - sMin) < EPS) {
-					// console.log("AAAAAABBSSS", thisAABB, otherAABB, tMax, tMin, sMax, sMin)
-					handleStartTS(tMid, sMid)
-					return true
-				} else {
-					let thisAABBleft = this.getAABB(tMin, tMid), thisAABBright
-					let bezierAABBleft = bezier.getAABB(sMin, sMid), bezierAABBright
-					// if one of the following calls immediately finds an intersection, we don't want to call the others
-					// as that will lead to the same intersection being output multiple times
-					findRecursive(tMin, tMid, sMin, sMid, thisAABBleft, bezierAABBleft)
-					|| findRecursive(tMin, tMid, sMid, sMax, thisAABBleft, bezierAABBright = bezier.getAABB(sMid, sMax))
-					|| findRecursive(tMid, tMax, sMin, sMid, thisAABBright = this.getAABB(tMid, tMax), bezierAABBleft)
-					|| findRecursive(tMid, tMax, sMid, sMax, thisAABBright, bezierAABBright)
-					return false
-				}
-			}
-			return false
-		}
 
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
@@ -569,28 +525,29 @@ class BezierCurve extends Curve {
 		assertf(() => sMin < sMax)
 		let result = []
 
-		let likeCurves = this.likeCurve(bezier), colinearCurves = this.isColinearTo(bezier)
+		const likeCurves = this.likeCurve(bezier), colinearCurves = this.isColinearTo(bezier)
 		if (likeCurves || colinearCurves) {
 			if (!likeCurves) {
 				// only colinear
 				// recalculate sMin and sMax so they are valid on this, from then on we can ignore bezier
-				sMin = this.pointLambda(bezier.at(sMin))
-				sMax = this.pointLambda(bezier.at(sMax))
+				sMin = this.pointT(bezier.at(sMin))
+				sMax = this.pointT(bezier.at(sMax))
 			}
 			tMin = Math.min(tMin, sMin)
 			tMax = Math.max(tMax, sMax)
-			let splits = NLA.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(NLA.minus)
+			const splits = NLA.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(NLA.minus)
 			console.log('splits', splits, this.roots().concatenated())
-			let aabbs = NLA.arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
+			//let aabbs = NLA.arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
 			Array.from(NLA.combinations(splits.length - 1)).forEach(({i, j}) => {
 				// adjacent curves can't intersect
 				if (Math.abs(i - j) > 2) {
 					// console.log(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
-					findRecursive(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
+					//findRecursive(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
+                    result.pushAll(Curve.ispsRecursive(this, splits[i], splits[i + 1], bezier, splits[j], splits[j + 1]))
 				}
 			})
 		} else {
-			findRecursive(tMin, tMax, sMin, sMax, this.getAABB(tMin, tMax), bezier.getAABB(sMin, sMax))
+		    return Curve.ispsRecursive(this, tMin, tMax, bezier, sMin, sMax)
 		}
 
 		return result

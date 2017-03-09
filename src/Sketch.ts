@@ -53,7 +53,7 @@ class Sketch {
 	constrainDistancePointFixedCurveWC(point: SegmentEndPoint, curve: Curve, distance: number): void {
 		if (curve instanceof L3) {
 			this.constrainDistancePointFixedLineWC(point, curve, distance)
-		} else if (curve instanceof EllipseCurve) {
+		} else if (curve instanceof SemiEllipseCurve) {
 			this.constrainDistancePointFixedEllipseWC(point, curve, distance)
 		} else if (curve instanceof BezierCurve) {
 			this.constrainDistancePointFixedGeneralCurveWC(point, curve, distance)
@@ -62,7 +62,7 @@ class Sketch {
 		}
 	}
 
-	constrainDistancePointFixedEllipseWC(point: SegmentEndPoint, curveWC: EllipseCurve, dist: number) {
+	constrainDistancePointFixedEllipseWC(point: SegmentEndPoint, curveWC: SemiEllipseCurve, dist: number) {
 		let ellSC = curveWC.transform(this.worldToSketchMatrix).project(P3.XY)
 		let ip = this.varMap.get(point)
 		console.log("p on ell")
@@ -659,15 +659,15 @@ class SketchArc {
 		let curve = this.getCurve()
 		return new PCurveEdge(curve,
 			this.a.V3(), this.b.V3(),
-			-PI, curve.pointLambda(this.b.V3()),
+			-PI, curve.pointT(this.b.V3()),
 			null,
-			curve.tangentAt(-PI), curve.tangentAt(curve.pointLambda(this.b.V3())),
+			curve.tangentAt(-PI), curve.tangentAt(curve.pointT(this.b.V3())),
 			this.name + 'Edge')
 	}
 
 	getCurve() {
 		let ca = this.getVectorCA()
-		return new EllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
+		return new SemiEllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
 	}
 }
 NLA.registerClass(SketchArc)
@@ -719,7 +719,7 @@ class SketchLineSeg {
 		assert(false)
 	}
 
-	pointLambda(v) {
+	pointT(v) {
 		if (this.b.x - this.a.x > this.b.y - this.a.y) {
 			return (v.x - this.a.x) / (this.b.x - this.a.x)
 		} else {

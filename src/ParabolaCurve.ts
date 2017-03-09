@@ -57,7 +57,7 @@ class ParabolaCurve extends Curve {
 
     equals(obj: any): boolean {
         return this == obj ||
-            Object.getPrototypeOf(obj) == EllipseCurve.prototype
+            Object.getPrototypeOf(obj) == SemiEllipseCurve.prototype
             && this.center.equals(obj.center)
             && this.f1.equals(obj.f1)
             && this.f2.equals(obj.f2)
@@ -85,7 +85,7 @@ class ParabolaCurve extends Curve {
 		return this.tangentAt(t).cross(this.normal)
 	}
 
-	pointLambda(p) {
+	pointT(p) {
 		assertVectors(p)
 		return this.inverseMatrix.transformPoint(p).x
 	}
@@ -145,7 +145,7 @@ class ParabolaCurve extends Curve {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof ConicSurface) {
 			const ParabolaProjected = surface.baseParabola.transform(M4.projection(this.getPlane(), surface.dir))
-			return this.intersectWithParabola(ParabolaProjected).map(p => this.pointLambda(p))
+			return this.intersectWithParabola(ParabolaProjected).map(p => this.pointT(p))
 		} else {
 			assert(false)
 		}

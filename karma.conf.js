@@ -26,7 +26,7 @@ module.exports = function(config) {
       'src/HyperbolaCurve.js',
       'src/ParabolaCurve.js',
       'src/Surface.js',
-      'src/EllipseCurve.js',
+      'src/SemiEllipseCurve.js',
       'src/BezierCurve.js',
       'src/ConicSurface.js',
       'src/CylinderSurface.js',

@@ -23,9 +23,10 @@ type int = number
 type FloatArray = Float32Array | Float64Array | number[]
 
 /** @define {boolean} */
-const NLA_DEBUG = true
+const NLA_DEBUG = false
 const NLA_PRECISION = 1 / (1 << 26)
 console.log("NLA_PRECISION", NLA_PRECISION)
+console.log("NLA_DEBUG", NLA_DEBUG)
 
 function SCE(o) {
 	return o.sce
@@ -194,16 +195,17 @@ namespace NLA {
 		return Math.max(min, Math.min(max, val))
 	}
 
-	export function randomColor() {
-		return Math.floor(Math.random() * 0x1000000)
-	}
-	export function mapPush<T, U>(map:Map<T, U[]>, key:T, val:U) {
-		const array = map.get(key)
-		if (array) {
-			array.push(val)
-		} else {
-			map.set(key, [val])
-		}
+    export function randomColor() {
+        return Math.floor(Math.random() * 0x1000000)
+    }
+
+    export function mapPush<T, U>(map: Map<T, U[]>, key: T, val: U) {
+        const array = map.get(key)
+        if (array) {
+            array.push(val)
+        } else {
+            map.set(key, [val])
+        }
 	}
 
 
@@ -461,6 +463,9 @@ interface Array<T> {
 	toggle: (el: T) => void
 	unique(): T[]
 	withMax(f: (el: T, elIndex: int, arr: T[]) => number): T
+
+    equals(obj: any): boolean
+    hashCode(): int
 }
 
 const ARRAY_UTILITIES = {
@@ -493,23 +498,41 @@ const ARRAY_UTILITIES = {
 				}
 			}
 		}
-	},
+    },
 
-	/**
-	 * Semantically identical to .map(f).filter(v => v)
-	 */
-		mapFilter(f) {
-		let length = this.length, result = []
-		for (let i = 0; i < length; i++) {
-			if (i in this) {
-				let val = f(this[i], i, this)
-				if (val) {
-					result.push(val)
-				}
-			}
+	equals(obj: any): boolean {
+        if (this === obj) return true
+        if (Object.getPrototypeOf(obj) !== Array.prototype) return false
+        if (this.length !== obj.length) return false
+		for (let i = 0; i < this.length; i++) {
+            if (!this[i].equals(obj[i])) return false
 		}
-		return result
-	},
+		return true
+    },
+
+    hashCode(): int {
+        let hashCode = 0
+        for (let i = 0; i < this.length; i++) {
+            hashCode = hashCode * 31 + this[i].hashCode() | 0
+        }
+        return hashCode | 0
+    },
+
+    /**
+     * Semantically identical to .map(f).filter(v => v)
+     */
+    mapFilter(f) {
+        let length = this.length, result = []
+        for (let i = 0; i < length; i++) {
+            if (i in this) {
+                let val = f(this[i], i, this)
+                if (val) {
+                    result.push(val)
+                }
+            }
+        }
+        return result
+    },
 
 	flatMap(f) {
 		return Array.prototype.concat.apply([], this.map(f))
@@ -869,10 +892,15 @@ function newtonIterateWithDerivative(f: (x: number) => number, xStart: number, s
 	}
 	return x
 }
-function newtonIterate2d(f1: (s: number, t: number)=>number, f2: (s: number, t: number)=>number, sStart: number, tStart: number, steps?: number): V3 {
-	const EPSILON = 1e-6
-	steps = steps || 4
-	let s = sStart, t = tStart
+function newtonIterate2d(
+    f1: (s: number, t: number) => number,
+    f2: (s: number, t: number) => number,
+    sStart: number,
+    tStart: number,
+    steps?: number): V3 {
+    const EPSILON = 1e-6
+    steps = steps || 4
+    let s = sStart, t = tStart
 	do {
 		/*
 		 | a b |-1                   |  d -b |

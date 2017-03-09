@@ -79,7 +79,7 @@ class HyperbolaCurve extends Curve {
         return this.tangentAt(t).cross(this.normal)
     }
 
-    pointLambda(p, hint) {
+    pointT(p, hint) {
         assertVectors(p)
         const p2 = this.inverseMatrix.transformPoint(p)
         return Math.asinh(p2.y)

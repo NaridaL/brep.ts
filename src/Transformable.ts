@@ -39,11 +39,15 @@ abstract class Transformable extends NLA.BaseObject {
 		return this.transform(M4.rotationZ(radians), `.rotateZ(${radians})`)
 	}
 
-	rotate(rotationCenter, rotationAxis, radians): this {
-		console.log(M4.rotationLine(rotationCenter, rotationAxis, radians).str)
-		return this.transform(M4.rotationLine(rotationCenter, rotationAxis, radians),
-			`.rotate(${rotationCenter.sce}, ${rotationAxis.sce}, ${radians})`)
-	}
+    rotate(rotationCenter, rotationAxis, radians): this {
+        console.log(M4.rotationLine(rotationCenter, rotationAxis, radians).str)
+        return this.transform(M4.rotationLine(rotationCenter, rotationAxis, radians),
+            `.rotate(${rotationCenter.sce}, ${rotationAxis.sce}, ${radians})`)
+    }
+
+    rotateAB(from: V3, to: V3): this {
+        return this.transform(M4.rotationAB(from, to), `.rotateAB(${from.sce}, ${to.sce})`)
+    }
 
 	eulerZXZ(alpha, beta, gamma): this {
 		return this.transform(M4.eulerZXZ(alpha, beta, gamma))

@@ -180,7 +180,7 @@ MODES.PLANE_DEFINITION = {
 				} else if (curve.containsPoint(p)) {
 					// if the curve is not a line, the point needs to be on the curve so we can get a specific vector
 					// TODO: closestTTOPoint instead, so we get a specific one in case of self intersection?
-					return P3.normalOnAnchor(curve.tangentAt(curve.pointLambda(p)), p)
+					return P3.normalOnAnchor(curve.tangentAt(curve.pointT(p)), p)
 				}
 			}
 		}

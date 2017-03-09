@@ -22,7 +22,7 @@ QUnit.assert.testIntersectFace = function (face, brep2, resultEdges, resultPoint
 		this.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
 	})
 	const uniquePoints = []
-	face.edges.forEach(edge => {
+	face.contour.forEach(edge => {
 		const em = edgeMap.get(edge)
 		em && em.forEach(info => info && !uniquePoints.some(up => up.like(info.p)) && assert(info.p) && uniquePoints.push(info.p))
 	})

@@ -107,7 +107,7 @@ class L3 extends Curve {
 	 *  @param x
 	 *  @returns {number}
 	 */
-	pointLambda(x: V3) {
+	pointT(x: V3) {
 		assertVectors(x)
 		const t = x.minus(this.anchor).dot(this.dir1)
 		return t
@@ -202,7 +202,7 @@ class L3 extends Curve {
 	}
 
 	closestTToPoint(p): number {
-		// similar logic as pointLambda; we project the vector (anchor -> p) onto dir1, then add anchor back to it
+		// similar logic as pointT; we project the vector (anchor -> p) onto dir1, then add anchor back to it
 		let nearestT = p.minus(this.anchor).dot(this.dir1)
 		return nearestT
 	}
@@ -299,7 +299,7 @@ class L3 extends Curve {
 	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.normalized())
 
 
-	static pointLambdaNotNormalized(anchor, dir, x) {
+	static pointTNotNormalized(anchor, dir, x) {
 		assertVectors(anchor, dir, x)
 		return x.minus(anchor).dot(dir) / dir.squared()
 	}

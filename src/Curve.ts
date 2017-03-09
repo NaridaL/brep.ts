@@ -5,7 +5,7 @@ abstract class Curve extends Transformable {
 	/**
 	 * Returns curve parameter t for point p on curve.
 	 */
-	abstract pointLambda(p:V3, hint?): number
+	abstract pointT(p:V3, hint?): number
 
 	/**
 	 * Returns the point on the line that is closest to the given point.
@@ -73,8 +73,8 @@ abstract class Curve extends Transformable {
 	 */
 	debugToMesh(mesh, bufferName) {
 		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
-		for (var t = -Math.PI; t < Math.PI; t += 0.1) {
-			var p = this.at(t);
+		for (let t = 0; t < Math.PI; t += 0.1) {
+			const p = this.at(t)
 			mesh[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
 			mesh[bufferName].push(p, p.plus(this.normalAt(t).toLength(1)))
 		}
@@ -85,7 +85,7 @@ abstract class Curve extends Transformable {
 
 	arcLength(startT: number, endT: number, steps?: int): number {
 		assert(startT < endT, 'startT < endT')
-		return glqInSteps(t => this.tangentAt(t).length(), startT, endT, 8)
+		return glqInSteps(t => this.tangentAt(t).length(), startT, endT, steps)
 	}
 
 	/**
@@ -108,7 +108,7 @@ abstract class Curve extends Transformable {
 	abstract isColinearTo(curve: Curve): boolean
 
 
-	getAABB(tMin, tMax): AABB {
+	getAABB(tMin?, tMax?): AABB {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
 		let tMinAt = this.at(tMin), tMaxAt = this.at(tMax)
@@ -132,4 +132,53 @@ abstract class Curve extends Transformable {
 	static hlol = 0
 
     abstract roots(): number[][]
+    
+    static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number) {
+        // the recursive function finds good approximates for the intersection points
+        // curve1 function uses newton iteration to improve the result as much as possible
+        const handleStartTS = (startT, startS) => {
+            if (!result.some(info => NLA.eq(info.tcurve1, startT) && NLA.eq(info.tOther, startS))) {
+                const f1 = (t, s) => curve1.tangentAt(t).dot(curve1.at(t).minus(curve2.at(s)))
+                const f2 = (t, s) => curve2.tangentAt(s).dot(curve1.at(t).minus(curve2.at(s)))
+                // f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
+                const dfdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
+                const dfdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
+                const ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
+                    dfdt1.bind(undefined, curve1, curve2), dfdt2.bind(undefined, curve1, curve2),
+                    (t, s) => -dfdt2(curve2, curve1, s, t), (t, s) => -dfdt1(curve2, curve1, s, t))
+                if (ni == null) console.log(startT, startS, curve1.sce, curve2.sce)
+                result.push({tThis: ni.x, tOther: ni.y, p: curve1.at(ni.x)})
+            }
+        }
+
+        // returns whether an intersection was immediately found (i.e. without further recursion)
+        function findRecursive(tMin, tMax, sMin, sMax, curve1AABB, curve2AABB, depth = 0) {
+            const EPS = NLA_PRECISION
+            if (curve1AABB.touchesAABB(curve2AABB)) {
+                const tMid = (tMin + tMax) / 2
+                const sMid = (sMin + sMax) / 2
+                if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
+                    handleStartTS(tMid, sMid)
+                    console.log(tMid, sMid, depth, curve1AABB, curve2AABB)
+                    return true
+                } else {
+                    const curve1AABBleft = curve1.getAABB(tMin, tMid)
+                    const curve2AABBleft = curve2.getAABB(sMin, sMid)
+                    let curve1AABBright, curve2AABBright
+                    // if one of the following calls immediately finds an intersection, we don't want to call the others
+                    // as that will lead to the same intersection being output multiple times
+                    findRecursive(tMin, tMid, sMin, sMid, curve1AABBleft, curve2AABBleft, depth + 1)
+                    || findRecursive(tMin, tMid, sMid, sMax, curve1AABBleft, curve2AABBright = curve2.getAABB(sMid, sMax), depth + 1)
+                    || findRecursive(tMid, tMax, sMin, sMid, curve1AABBright = curve1.getAABB(tMid, tMax), curve2AABBleft, depth + 1)
+                    || findRecursive(tMid, tMax, sMid, sMax, curve1AABBright, curve2AABBright, depth + 1)
+                }
+            }
+            return false
+        }
+        
+        const result = []
+        findRecursive(tMin, tMax, sMin, sMax, curve1.getAABB(tMin, tMax), curve2.getAABB(sMin, sMax))
+        return NLA.fuzzyUniquesF(result, info => info.tThis)
+    }
+    
 }

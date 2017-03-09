@@ -35,7 +35,7 @@ class Line {
 	 * This function returns lambda for a given point x
 	 * @param x
 	 */
-	pointLambda(x) {
+	pointT(x) {
 		assertVectors(x)
 		var t = x.minus(this.anchor).dot(this.dir1)
 		return t

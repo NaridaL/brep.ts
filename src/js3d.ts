@@ -218,8 +218,8 @@ function paintConstraints(sketch: Sketch) {
 					let ab = cst.segment.getVectorAB()
 					let cd = cst.other.getVectorAB()
 					let intersection = cst.segment.intersection(cst.other)
-					let abPos = cst.segment.pointLambda(intersection)
-					let cdPos = cst.other.pointLambda(intersection)
+					let abPos = cst.segment.pointT(intersection)
+					let cdPos = cst.other.pointT(intersection)
 					let abLine = ab.normalized().times(0.5 < abPos ? -16 : 16)
 					let cdLine = cd.normalized().times(0.5 < cdPos ? -16 : 16)
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
@@ -672,7 +672,7 @@ function drawPoints() {
 
 
 const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int, startT: number, endT: number, width: number) => void} = {}
-CURVE_PAINTERS[EllipseCurve.name] = function paintEllipseCurve(ellipse: EllipseCurve, color, startT, endT, width = 2) {
+CURVE_PAINTERS[SemiEllipseCurve.name] = function paintEllipseCurve(ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
 	shaders.ellipse3d.uniforms({
 		f1: ellipse.f1,
 		f2: ellipse.f2,
@@ -1193,7 +1193,7 @@ function initMeshes() {
 	meshes.sphere1 = GL.Mesh.sphere(2)
 	meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
 	meshes.text = GL.Mesh.plane()
-	meshes.vector = GL.Mesh.rotation([V3.ZERO, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, Math.PI * 2, 8, true)
+	meshes.vector = GL.Mesh.rotation([V3.ZERO, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, Math.PI * 2, 16, true)
 	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
 	meshes.xyLinePlane = GL.Mesh.plane()
 }
@@ -1319,8 +1319,8 @@ function initNavigationEvents() {
 		paintScreen()
 	})
 }
-const sFace = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah').faces.find(face => face.surface instanceof EllipsoidSurface)
-const face2 = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
+//const sFace = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah').faces.find(face => face.surface instanceof EllipsoidSurface)
+//const face2 = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
 //const cylface = cyl.faces.find(face => face instanceof RotationFace)//.rotateX(50 * DEG)
 //assert(cylface.surface.facesOutwards())
 //const cyl = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
@@ -1332,11 +1332,11 @@ window.onload = function () {
 	//const cyl2 = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.UNIT, PI, -PI)], P3.XY.flipped(), V3.Z, 'cyl')
 
 	const plane = new P3(V3.sphere(-170 * DEG, 0), cos(10 * DEG))
-	const isc = EllipsoidSurface.unitISCurvesWithPlane(plane)[0]
-	console.log(isc, EllipsoidSurface.UNIT.containsCurve(isc))
+	const isc = SemiEllipsoidSurface.unitISCurvesWithPlane(plane)[0]
+	console.log(isc, SemiEllipsoidSurface.UNIT.containsCurve(isc))
 
-	const face2 = new RotationFace(EllipsoidSurface.UNIT, [
-		Edge.forCurveAndTs(EllipsoidSurface.unitISCurvesWithPlane(new P3(V3.sphere(-170 * DEG, 0), cos(10 * DEG)))[0], -PI, PI)])
+	const face2 = new RotationFace(SemiEllipsoidSurface.UNIT, [
+		Edge.forCurveAndTs(SemiEllipsoidSurface.unitISCurvesWithPlane(new P3(V3.sphere(-170 * DEG, 0), cos(10 * DEG)))[0], -PI, PI)])
 	const face = sphereSlice.faces[0]
 	//console.log("asd", cylface.toMesh().calcVolume().area)
 	//console.log("asd", cylface.calcArea())
@@ -1529,14 +1529,14 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
 
 				if (closestElement && closestElement.distanceToCoords(sketchCoords) < 16) {
 					// subtract 0.001 so that sketch elements have priority over things in same plane
-					checkEl(closestElement, mouseLine.pointLambda(mouseLineIS) - 0.1)
+					checkEl(closestElement, mouseLine.pointT(mouseLineIS) - 0.1)
 				}
 			}
 		})
 	}
 	if (consider.includes('brepPoints')) {
 		brepPoints.forEach(p => {
-			let t = mouseLine.pointLambda(p)
+			let t = mouseLine.pointT(p)
 			if (mouseLine.at(t).distanceTo(p) < 20) {
 				checkEl(p, t - 0.1)
 			}
@@ -1551,7 +1551,7 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
 			if (curve instanceof L3) {
 				if (curve.dir1.isParallelTo(mouseLine.dir1)) {
 					let d = mouseLine.distanceToPoint(edge.a)
-					let t = mouseLine.pointLambda(edge.a)
+					let t = mouseLine.pointT(edge.a)
 
 					if (d < 16) {
 						checkEl(edge, t - prio)
@@ -1562,7 +1562,7 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
 					let tCurve = projPoint.minus(projAnchor).dot(projDir) / projDir.squared()
 					tCurve = edge.clampedT(tCurve)
 					let p = curve.at(tCurve)
-					let t = mouseLine.pointLambda(p)
+					let t = mouseLine.pointT(p)
 					if (mouseLine.at(t).distanceTo(p) < 16) {
 						checkEl(edge, t - prio)
 					}
@@ -1572,7 +1572,7 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
 				let tCurve = projCurve.closestTToPoint(projPoint)
 				tCurve = edge.clampedT(tCurve)
 				let p = curve.at(tCurve)
-				let t = mouseLine.pointLambda(p)
+				let t = mouseLine.pointT(p)
 				if (projCurve.at(tCurve).distanceTo(projPoint) < 16) {
 					checkEl(edge, t - prio)
 				}

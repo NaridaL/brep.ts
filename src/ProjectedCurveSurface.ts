@@ -102,7 +102,7 @@ class ProjectedCurveSurface extends Surface {
 		let _this = this
 		return function (pWC) {
 			let projPoint = projPlane.projectedPoint(pWC)
-			let t = projBaseCurve.pointLambda(projPoint)
+			let t = projBaseCurve.pointT(projPoint)
 			let z = pWC.minus(baseCurve.at(t)).dot(dir1)
 			return new V3(t, z, 0)
 		}
@@ -150,7 +150,7 @@ class ProjectedCurveSurface extends Surface {
 		if (surface instanceof PlaneSurface) {
 			return this.isCurvesWithPlane(surface.plane)
 		}
-		if (surface instanceof ProjectedCurveSurface || surface instanceof CylinderSurface) {
+		if (surface instanceof ProjectedCurveSurface || surface instanceof SemiCylinderSurface) {
 			let dir1 = surface instanceof ProjectedCurveSurface ? surface.dir1 : surface.dir.normalized()
 			if (this.dir1.isParallelTo(dir1)) {
 				let otherCurve = surface instanceof ProjectedCurveSurface ? surface.baseCurve : surface.baseEllipse
@@ -188,8 +188,8 @@ class ProjectedCurveSurface extends Surface {
 	 * @inheritDoc
 	 */
 	containsPoint(p) {
-		let pp = this.pointToParameterFunction()(p)
-		return this.parametricFunction()(pp.x, pp.y).like(p)
+		const uv = this.pointToParameterFunction()(p)
+		return this.parametricFunction()(uv.x, uv.y).like(p)
 	}
 
 	/**
@@ -198,15 +198,11 @@ class ProjectedCurveSurface extends Surface {
 	containsCurve(curve) {
 		if (curve instanceof BezierCurve) {
 			// project baseCurve and test curve onto a common plane and check if the curves are alike
-			let projectionPlane = new P3(this.dir1, 0)
-			let baseCurveProjection = this.baseCurve.project(projectionPlane)
-			if (curve instanceof L3 && curve.dir1.isParallelTo(this.dir1)) {
-				// projection onto basePlane would be single point
-				return baseCurveProjection.containsPoint(projectionPlane.projectedPoint(curve.anchor))
-			}
-			let curveProjection = curve.project(projectionPlane)
+			const projPlane = new P3(this.dir1, 0)
+			const projBaseCurve = this.baseCurve.project(projPlane)
+			const projCurve = curve.project(projPlane)
 
-			return baseCurveProjection.likeCurve(curveProjection)
+			return projBaseCurve.isColinearTo(projCurve)
 		}
 		if (curve instanceof L3) {
 			return this.dir1.isParallelTo(curve.dir1) && this.containsPoint(curve.anchor)

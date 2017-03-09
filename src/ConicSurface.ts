@@ -1,5 +1,5 @@
 class ConicSurface extends Surface {
-	baseEllipse: EllipseCurve
+	baseEllipse: SemiEllipseCurve
 	dir: V3
 	matrix: M4
 	inverseMatrix: M4
@@ -7,7 +7,7 @@ class ConicSurface extends Surface {
 	constructor(baseEllipse, dir) {
 		super()
 		assertVectors(dir)
-		assertInst(EllipseCurve, baseEllipse)
+		assertInst(SemiEllipseCurve, baseEllipse)
 		assert(!baseEllipse.normal.isPerpendicularTo(dir), !baseEllipse.normal.isPerpendicularTo(dir))
 		this.baseEllipse = baseEllipse
 		this.dir = dir
@@ -35,7 +35,7 @@ class ConicSurface extends Surface {
 		let inside = false
 
 		function logIS(p) {
-			if (line.pointLambda(p) > 0) {
+			if (line.pointT(p) > 0) {
 				inside = !inside
 			}
 		}
@@ -104,10 +104,10 @@ class ConicSurface extends Surface {
 		// at this point apexes are equal
 		const ell = surface.baseEllipse
 		return this.containsEllipse(
-			new EllipseCurve(ell.center.plus(surface.dir), ell.f1, ell.f2))
+			new SemiEllipseCurve(ell.center.plus(surface.dir), ell.f1, ell.f2))
 	}
 
-	containsEllipse(ellipse: EllipseCurve): boolean {
+	containsEllipse(ellipse: SemiEllipseCurve): boolean {
 		console.log(ellipse.toString())
 		const localEllipse = ellipse.transform(this.inverseMatrix)
 		if (localEllipse.center.z < 0) {
@@ -147,7 +147,7 @@ class ConicSurface extends Surface {
 	}
 
 	containsCurve(curve) {
-		if (curve instanceof EllipseCurve) {
+		if (curve instanceof SemiEllipseCurve) {
 			return this.containsEllipse(curve)
 		} else if (curve instanceof L3) {
 			return this.containsLine(curve)
@@ -285,7 +285,7 @@ class ConicSurface extends Surface {
 	calculateArea(edges: Edge[]): number {
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof EllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
+			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
 				const f = (t) => {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					console.log(t, at.distanceTo(this.baseEllipse.center), at.rejectedLength(this.dir), tangent.rejectedLength(this.dir))
@@ -293,7 +293,7 @@ class ConicSurface extends Surface {
 				}
 				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
 				// hyperbola normal can be perpendicular to
-				const sign = edge.curve instanceof EllipseCurve
+				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
 					: -Math.sign(this.baseEllipse.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
 				return glqInSteps(f, edge.aT, edge.bT, 4) * sign
@@ -325,7 +325,7 @@ class ConicSurface extends Surface {
 	zDirVolume(edges: Edge[]): {volume: number} {
 		// INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z
 		const totalVolume = edges.map(edge => {
-			if (edge.curve instanceof EllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
+			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
 				const f = (t) => {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					console.log("subarea", t, (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY(), tangent.dot(V3.Z.cross(this.dir).normalized()))
@@ -333,7 +333,7 @@ class ConicSurface extends Surface {
 						tangent.dot(V3.Z.cross(this.dir).normalized())
 				}
 				// ellipse with normal parallel to dir need to be counted negatively so CCW faces result in a positive area
-				const sign = edge.curve instanceof EllipseCurve
+				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
 					: -Math.sign(this.baseEllipse.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
@@ -360,13 +360,13 @@ class ConicSurface extends Surface {
 	 * @param normalDir 1 or -1. 1 if surface normals point outwards, -1 if not.
 	 */
 	static forApexF123(apex, f1, f2, f3, normalDir): ConicSurface {
-		return new ConicSurface(new EllipseCurve(apex, f1, f2), f3, normalDir)
+		return new ConicSurface(new SemiEllipseCurve(apex, f1, f2), f3, normalDir)
 	}
 
-	static atApexThroughEllipse(apex: V3, ellipse: EllipseCurve, normalDir: number): ConicSurface {
+	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve, normalDir: number): ConicSurface {
 		assertVectors(apex)
-		assertInst(EllipseCurve, ellipse)
-		return new ConicSurface(new EllipseCurve(apex, ellipse.f1, ellipse.f2), ellipse.center.minus(apex), normalDir)
+		assertInst(SemiEllipseCurve, ellipse)
+		return new ConicSurface(new SemiEllipseCurve(apex, ellipse.f1, ellipse.f2), ellipse.center.minus(apex), normalDir)
 	}
 
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
@@ -432,7 +432,7 @@ class ConicSurface extends Surface {
 					}
 					let p1 = new V3(d / (a - c), 0, -d / (a - c))
 					let p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(cc - aa), d * c / (cc - aa))
-					return [new EllipseCurve(center, p1.minus(center), p2.minus(center))]
+					return [new SemiEllipseCurve(center, p1.minus(center), p2.minus(center))]
 				} else if (aa > cc) {
 					// hyperbola
 					let center = new V3(-a * d / (cc - aa), 0, -d * c / (cc - aa))
@@ -453,5 +453,5 @@ class ConicSurface extends Surface {
 	/**
 	 * Unit cone. x² + y² = z², 0 <= z
 	 */
-	static readonly UNIT = new ConicSurface(EllipseCurve.UNIT, V3.Z, 1)
+	static readonly UNIT = new ConicSurface(SemiEllipseCurve.UNIT, V3.Z, 1)
 }

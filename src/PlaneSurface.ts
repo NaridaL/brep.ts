@@ -47,7 +47,7 @@ class PlaneSurface extends Surface {
 		    const ipp = (i + 1) % contour.length
 		    const edge = contour[i], nextEdge = contour[ipp]
 		    assert(edge.b.like(nextEdge.a), "edges dont form a loop")
-		    if (edge.curve instanceof EllipseCurve) {
+		    if (edge.curve instanceof SemiEllipseCurve) {
 			    totalAngle += edge.rotViaPlane(this.plane.normal)
 			    // console.log(edge.toString(), edge.rotViaPlane(this.plane.normal))
 		    }
@@ -68,7 +68,7 @@ class PlaneSurface extends Surface {
         let inside = false
 
         function logIS(p): boolean {
-        	const t = line.pointLambda(p)
+        	const t = line.pointT(p)
             if (NLA.eq0(t)) {
         		return true
             } else if (t > 0) {
@@ -82,7 +82,7 @@ class PlaneSurface extends Surface {
 		    const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
             //console.log(edge.toSource()) {p:V(2, -2.102, 0),
             if (colinearEdges[edgeIndex]) {
-            	const lineAT = line.pointLambda(edge.a), lineBT = line.pointLambda(edge.b)
+            	const lineAT = line.pointT(edge.a), lineBT = line.pointT(edge.b)
 	            if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
 	            	return PointVsFace.ON_EDGE
 	            }
@@ -90,7 +90,7 @@ class PlaneSurface extends Surface {
                 const nextInside = colinearEdges[nextEdgeIndex]
 	                    ? colinearEdgeInside[nextEdgeIndex]
                         : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
-                if (colinearEdgeInside[edgeIndex] != nextInside) {
+                if (!nextInside) {
                     if (logIS(edge.b)) return PointVsFace.ON_EDGE
                 }
             } else {
@@ -116,8 +116,8 @@ class PlaneSurface extends Surface {
     }
 
     pointToParameterFunction() {
-        var matrix = M4.forSys(this.right, this.up, this.normal, this.plane.anchor)
-        var matrixInverse = matrix.inversed()
+        const matrix = M4.forSys(this.right, this.up, this.normal, this.plane.anchor)
+        const matrixInverse = matrix.inversed()
         return function (pWC) {
             return matrixInverse.transformPoint(pWC)
         }

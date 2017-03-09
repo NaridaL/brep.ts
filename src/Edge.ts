@@ -26,6 +26,7 @@ abstract class Edge extends Transformable {
 		this.b = b
 		this.aT = aT
 		this.bT = bT
+        assert(!eq(aT, bT))
 		this.flippedOf = flippedOf
 		this.name = name
 		this.reversed = this.aT > this.bT
@@ -159,11 +160,10 @@ abstract class Edge extends Transformable {
 			: this
 	}
 
-	overlaps(edge: Edge) {
+	overlaps(edge: Edge): boolean {
 		assert(this.curve.isColinearTo(edge.curve))
-        const ellDir = this.curve instanceof EllipseCurve && this.curve.normal.dot(edge.curve.normal) * (edge.bT - edge.aT)
-		const edgeAT = this.curve.pointLambda(edge.a, sign(ellDir) * -PI)
-        const edgeBT = this.curve.pointLambda(edge.b, sign(ellDir) * PI)
+		const edgeAT = this.curve.pointT(edge.a)
+        const edgeBT = this.curve.pointT(edge.b)
 		const edgeMinT = Math.min(edgeAT, edgeBT), edgeMaxT = Math.max(edgeAT, edgeBT)
 		return !(NLA.le(edgeMaxT, this.minT) || NLA.le(this.maxT, edgeMinT))
 	}
@@ -292,9 +292,9 @@ abstract class Edge extends Transformable {
                     const center = M4.rotationZ(rads).transformPoint(centerTransformed).plus(currentPos.plus(endPos).times(0.5))
                     let f1 = new V3(rx * cos(rads), rx * sin(rads), 0)
                     const f2 = new V3(ry * -sin(rads), ry * cos(rads), 0)
-                    let curve = new EllipseCurve(center, f1, f2)
-                    let aT = curve.pointLambda(currentPos, PI)
-                    let bT = curve.pointLambda(endPos, PI)
+                    let curve = new SemiEllipseCurve(center, f1, f2)
+                    let aT = curve.pointT(currentPos, PI)
+                    let bT = curve.pointT(endPos, PI)
                     if (aT < bT != sweep) {
                         assert((aT != PI) || (bT != PI))
                         if (aT == PI) {
@@ -303,9 +303,9 @@ abstract class Edge extends Transformable {
                             bT = -PI
                         } else {
                             f1 = f1.negated()
-                            curve = new EllipseCurve(center, f1, f2)
-                            aT = curve.pointLambda(currentPos, PI)
-                            bT = curve.pointLambda(endPos, PI)
+                            curve = new SemiEllipseCurve(center, f1, f2)
+                            aT = curve.pointT(currentPos, PI)
+                            bT = curve.pointT(endPos, PI)
                         }
                     }
                     const edge = new PCurveEdge(curve, currentPos, endPos, aT, bT, undefined, curve.tangentAt(aT).times(sign(bT - aT)), curve.tangentAt(bT).times(sign(bT - aT)))
@@ -317,6 +317,10 @@ abstract class Edge extends Transformable {
             lastC2 = newLastC2
         }
         return path
+    }
+
+    deltaT() {
+        return this.bT - this.aT
     }
 }
 
@@ -363,46 +367,15 @@ class PCurveEdge extends Edge {
 	}
 
 	edgeISTsWithSurface(surface) {
-		const aT = this.aT, bT = this.bT
-		return this.curve.isTsWithSurface(surface)
-			.map(edgeT => NLA.snap(NLA.snap(edgeT, aT), bT))
-			.filter(edgeT => {
-				if (!this.reversed) {
-					// TODO: redundancy?
-					if (aT < bT) {
-						return aT <= edgeT && edgeT <= bT
-					} else {
-						return !(bT < edgeT && edgeT < aT)
-					}
-				} else {
-					if (aT > bT) {
-						return aT >= edgeT && edgeT >= bT
-					} else {
-						return !(bT > edgeT && edgeT > aT)
-					}
-				}
-			})
+        return this.curve.isTsWithSurface(surface)
+			.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
+			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
 	edgeISTsWithPlane(surface) {
-		const aT = this.aT, bT = this.bT
-		return this.curve.isTsWithPlane(surface)
-			.map(edgeT => NLA.snap(NLA.snap(edgeT, aT), bT))
-			.filter(edgeT => {
-				if (!this.reversed) {
-					if (aT < bT) {
-						return aT <= edgeT && edgeT <= bT
-					} else {
-						return !(bT < edgeT && edgeT < aT)
-					}
-				} else {
-					if (aT > bT) {
-						return aT >= edgeT && edgeT >= bT
-					} else {
-						return !(bT > edgeT && edgeT > aT)
-					}
-				}
-			})
+        return this.curve.isTsWithPlane(surface)
+			.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
+			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
 	tangentAt(t) {

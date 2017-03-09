@@ -210,7 +210,10 @@ class P3 extends Transformable {
     containsCurve(curve: Curve) {
         if (curve instanceof L3) {
             return this.containsLine(curve)
-        } else if (curve instanceof EllipseCurve || curve instanceof HyperbolaCurve || curve instanceof ParabolaCurve) {
+        } else if (curve instanceof SemiEllipseCurve ||
+            curve instanceof SemiEllipseCurve ||
+            curve instanceof HyperbolaCurve ||
+            curve instanceof ParabolaCurve) {
             return this.containsPoint(curve.center) && this.normal.isParallelTo(curve.normal)
         } else if (curve instanceof BezierCurve) {
             return curve.points.every(p => this.containsPoint(p))

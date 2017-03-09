@@ -208,6 +208,7 @@ namespace NLA {
 		}
 		set2(key: K, val: V): boolean {
 			const hashCode = key.hashCode(), bucket = this._map.get(hashCode)
+            assert(hashCode === (hashCode | 0))
 			if (bucket) {
 				const pairIndex = bucket.findIndex(pair => pair.key.equals(key))
 				if (-1 == pairIndex) {
@@ -225,6 +226,7 @@ namespace NLA {
 
 		has(key: K): boolean {
 			const hashCode = key.hashCode(), bucket = this._map.get(hashCode)
+            assert(hashCode === (hashCode | 0))
 			return bucket && bucket.some(pair => pair.key.equals(key))
 		}
 
@@ -311,22 +313,24 @@ namespace NLA {
 		}
 	}
 
-	export class Pair<L extends Equalable, R extends Equalable> implements Equalable {
+    export class Pair<L extends Equalable, R extends Equalable> implements Equalable {
 
-		constructor(public left: L, public right: R) {}
+        constructor(public left: L, public right: R) {}
 
-		hashCode() {
-			return this.left.hashCode() * 31 + this.right.hashCode()
-		}
-		equals(other: any) {
-			return this == other || Object.getPrototypeOf(other) == Pair.prototype && this.left.equals(other.left) && this.right.equals(other.right)
-		}
+        hashCode() {
+            return this.left.hashCode() * 31 + this.right.hashCode()
+        }
 
-		toString() {
-			return '('+this.left.toString() +', '+ this.right.toString()+')'
-		}
-		toSource() {
-			return 'new NLA.Pair('+this.left.toSource() +', '+ this.right.toSource()+')'
-		}
-	}
+        equals(other: any) {
+            return this == other || Object.getPrototypeOf(other) == Pair.prototype && this.left.equals(other.left) && this.right.equals(other.right)
+        }
+
+        toString() {
+            return '(' + this.left.toString() + ', ' + this.right.toString() + ')'
+        }
+
+        toSource() {
+            return 'new NLA.Pair(' + this.left.toSource() + ', ' + this.right.toSource() + ')'
+        }
+    }
 }

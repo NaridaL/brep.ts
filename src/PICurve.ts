@@ -101,7 +101,7 @@ class PICurve extends Curve {
 		assertVectors(point)
 		assert(this.containsPoint(point), 'this.containsPoint(point)' + this.containsPoint(point))
 		this.calcPoints(point)
-		const pIndex = this.pointLambda(point);
+		const pIndex = this.pointT(point);
 		return this.tangents[pIndex]
 	}
 
@@ -109,7 +109,7 @@ class PICurve extends Curve {
 		return this.tangents[Math.round(t)]
 	}
 
-	pointLambda(point) {
+	pointT(point) {
 		assertVectors(point)
 		assert(this.containsPoint(point), 'this.containsPoint(p)')
 		const pmPoint = this.parametricSurface.pointToParameterFunction()(point);
