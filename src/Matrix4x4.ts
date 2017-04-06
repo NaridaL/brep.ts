@@ -96,20 +96,20 @@ class M4 extends Matrix implements Transformable {
 
 			// mat[0] has rank 2, mat[1] has rank 1
 			let gauss0 = mats[0].gauss().U
-			let eigenVector0 = gauss0.row(0).cross(gauss0.row(1)).V3().normalized()
+			let eigenVector0 = gauss0.row(0).cross(gauss0.row(1)).V3().unit()
 
 			let planeNormal = mats[1].gauss().U.row(0).V3()
-			let eigenVector1 = planeNormal.getPerpendicular().normalized()
+			let eigenVector1 = planeNormal.getPerpendicular().unit()
 			let eigenVector2 = eigenVector0.cross(eigenVector1).rejectedFrom(planeNormal)
 
 			return [eigenVector0, eigenVector1, eigenVector2]
 		}
 		if (3 == eigenValues.length) {
 			mats.forEach((mat, i) => assert(2 == mat.rank(), i + ': ' + mat.rank()))
-			// the (A - lambda I) matrices map to a plane. This means, that there is an entire line in R³ which maps to the point V3.ZERO
+			// the (A - lambda I) matrices map to a plane. This means, that there is an entire line in R³ which maps to the point V3.O
 			return mats.map(mat => {
 				let gauss = mat.gauss().U
-				return gauss.row(0).cross(gauss.row(1)).V3().normalized()
+				return gauss.row(0).cross(gauss.row(1)).V3().unit()
 			})
 		}
 	}
@@ -361,7 +361,7 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	/**
-	 * Get the translation part of this matrix, i.e. the result of this.transformVector(V3.ZERO)
+	 * Get the translation part of this matrix, i.e. the result of this.transformVector(V3.O)
 	 */
 	getTranslation():V3 {
 		const m = this.m, w = m[15]
@@ -558,7 +558,7 @@ class M4 extends Matrix implements Transformable {
 		!origin || assertVectors(origin)
 
 		e2 = e2 || e0.cross(e1)
-		origin = origin || V3.ZERO
+		origin = origin || V3.O
 		return new M4(
 			e0.x, e1.x, e2.x, origin.x,
 			e0.y, e1.y, e2.y, origin.y,
@@ -569,7 +569,7 @@ class M4 extends Matrix implements Transformable {
 	static forRows(n0: V3, n1: V3, n2: V3, n3?: V3):M4 {
 		assertVectors(n0, n1, n2)
 		!n3 || assertVectors(n2)
-		n3 = n3 || V3.ZERO
+		n3 = n3 || V3.O
 		return new M4(
 			n0.x, n0.y, n0.z, 0,
 			n1.x, n1.y, n1.z, 0,
@@ -913,9 +913,9 @@ class M4 extends Matrix implements Transformable {
 		result = result || new M4()
 		const m = result.m
 
-		const f = eye.minus(focus).normalized()
-		const s = up.cross(f).normalized()
-		const t = f.cross(s).normalized()
+		const f = eye.minus(focus).unit()
+		const s = up.cross(f).unit()
+		const t = f.cross(s).unit()
 
 		m[0] = s.x
 		m[1] = s.y
@@ -987,12 +987,12 @@ class M4 extends Matrix implements Transformable {
 			return M4.identity(result)
 		}
 		const radians = Math.atan2(rotationAxisLength, a.dot(b))
-		return M4.rotationLine(V3.ZERO, rotationAxis, radians, result)
+		return M4.rotationLine(V3.O, rotationAxis, radians, result)
 	}
 
 	/**
 	 * Matrix for rotation about arbitrary line defined by an anchor point and direction.
-	 * rotationAxis does not need to be normalized
+	 * rotationAxis does not need to be unit
 	 */
 	static rotationLine(rotationAnchor: V3, rotationAxis: V3, radians: number, result?: M4): M4 {
 		// see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
@@ -1000,7 +1000,7 @@ class M4 extends Matrix implements Transformable {
 		assertNumbers(radians)
 		!result || assertInst(M4, result)
 		result = result || new M4()
-		rotationAxis = rotationAxis.normalized()
+		rotationAxis = rotationAxis.unit()
 
 		const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z,
 			  dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z

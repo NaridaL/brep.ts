@@ -16,7 +16,7 @@ class HyperbolaCurve extends Curve {
         this.center = center
         this.f1 = f1
         this.f2 = f2
-        this.normal = f1.cross(f2).normalized()
+        this.normal = f1.cross(f2).unit()
         this.matrix = M4.forSys(f1, f2, this.normal, center)
         this.inverseMatrix = this.matrix.inversed()
     }
@@ -120,8 +120,8 @@ class HyperbolaCurve extends Curve {
     }
 
     static forAB(a: number, b: number, center: V3): HyperbolaCurve {
-        return new HyperbolaCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
+        return new HyperbolaCurve(center || V3.O, V(a, 0, 0), V(0, b, 0))
     }
 
-    static UNIT = new HyperbolaCurve(V3.ZERO, V3.X, V3.Y)
+    static UNIT = new HyperbolaCurve(V3.O, V3.X, V3.Y)
 }

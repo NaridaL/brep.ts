@@ -2,10 +2,10 @@ abstract class Curve extends Transformable {
 	tIncrement: number
 	hlol: number
 
-	/**
-	 * Returns curve parameter t for point p on curve.
-	 */
-	abstract pointT(p:V3, hint?): number
+    /**
+     * Returns curve parameter t for point p on curve.
+     */
+    abstract pointT(p: V3, hint?): number
 
 	/**
 	 * Returns the point on the line that is closest to the given point.
@@ -132,8 +132,8 @@ abstract class Curve extends Transformable {
 	static hlol = 0
 
     abstract roots(): number[][]
-    
-    static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number) {
+
+    static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number): { tThis: number, tOther: number, p: V3 }[] {
         // the recursive function finds good approximates for the intersection points
         // curve1 function uses newton iteration to improve the result as much as possible
         const handleStartTS = (startT, startS) => {
@@ -146,20 +146,21 @@ abstract class Curve extends Transformable {
                 const ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
                     dfdt1.bind(undefined, curve1, curve2), dfdt2.bind(undefined, curve1, curve2),
                     (t, s) => -dfdt2(curve2, curve1, s, t), (t, s) => -dfdt1(curve2, curve1, s, t))
+                assert(isFinite(ni.x))
+                assert(isFinite(ni.y))
                 if (ni == null) console.log(startT, startS, curve1.sce, curve2.sce)
                 result.push({tThis: ni.x, tOther: ni.y, p: curve1.at(ni.x)})
             }
         }
 
         // returns whether an intersection was immediately found (i.e. without further recursion)
-        function findRecursive(tMin, tMax, sMin, sMax, curve1AABB, curve2AABB, depth = 0) {
+        function findRecursive(tMin, tMax, sMin, sMax, curve1AABB: AABB, curve2AABB: AABB, depth = 0) {
             const EPS = NLA_PRECISION
-            if (curve1AABB.touchesAABB(curve2AABB)) {
+            if (curve1AABB.fuzzyTouchesAABB(curve2AABB)) {
                 const tMid = (tMin + tMax) / 2
                 const sMid = (sMin + sMax) / 2
                 if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
                     handleStartTS(tMid, sMid)
-                    console.log(tMid, sMid, depth, curve1AABB, curve2AABB)
                     return true
                 } else {
                     const curve1AABBleft = curve1.getAABB(tMin, tMid)

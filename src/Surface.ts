@@ -38,8 +38,6 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 	 */
 	abstract isCoplanarTo(surface: Surface): boolean
 
-	abstract equals(object): boolean
-
 	abstract like(object): boolean
 
     parameters(pWC: V3): V3 {
@@ -93,7 +91,7 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 					if (edgeT == edge.bT) {
 						if (!testLine.containsPoint(edge.b)) continue
 						// endpoint lies on intersection line
-						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) < 0
+						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) > 0
 						const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
 						if (edgeInside != nextInside) {
 							if (logIS(edge.b)) return PointVsFace.ON_EDGE

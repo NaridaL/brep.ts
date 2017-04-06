@@ -31,7 +31,22 @@ QUnit.assert.testIntersectFace = function (face, brep2, resultEdges, resultPoint
 		this.ok(uniquePoints.some(up => up.like(p)), `edges.some(edge2 => edge.like(edge2)) [${uniquePoints.toSource()}]`)
 	})
 }
-
+{
+    new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(10, 0, 0), V(8, 0, 0), 0, 1.9999999999999984)[{
+        face: new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
+            new StraightEdge(new L3(V(0, 0, 0), V(0.7071067811865476, 0, 0.7071067811865475)), V(0, 0, 0), V(3.381197846482994, 0, 3.3811978464829933), 0, 4.781735851562952),
+            new StraightEdge(new L3(V(2.791322082992153, 0, 3.813016875511774), V(0.8068982213550735, 0, -0.5906904945688721)), V(3.381197846482994, 0, 3.3811978464829933), V(8, 0, 0), 0.7310411002024879, 6.45518577084059),
+            new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(8, 0, 0), V(10, 0, 0), 1.9999999999999984, 0),
+            new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 0), V(10, 0, 10), 0, 10),
+            new StraightEdge(new L3(V(10, 0, 10), V(-1, 0, 0)), V(10, 0, 10), V(0, 0, 10), 0, 10),
+            new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 10), V(0, 0, 0), 10, 0)], []),
+        edge: new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(8, 0, 0), V(10, 0, 0), 1.9999999999999984, 0),
+        normalAtCanonA: V(0, -1, 0),
+        reversed: true,
+        inside: V3.Z,
+        angle: 0
+    }]
+}
 {
 	QUnit.module('B2.assembleFacesFromLoops')
 	function ccwSquare(x, y, width, height) { return StraightEdge.chain([V(x, y), V(x + width, y), V(x + width, y + height), V(x, y + height)], true) }

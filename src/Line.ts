@@ -13,7 +13,7 @@ class Line {
 	 */
 	constructor(anchor, dir1) {
 		assertVectors(anchor, dir1)
-		assert(dir1.hasLength(1), "dir must be normalized")
+		assert(dir1.hasLength(1), "dir must be unit")
 		this.anchor = anchor
 		this.dir1 = dir1
 	}
@@ -65,5 +65,5 @@ class Line {
 
 
 	static throughPoints = (anchor, b) => new Line(anchor, b.minus(anchor).normalized())
-	static anchorDirection = (anchor, direction) => new Line(anchor, direction.normalized())
+	static anchorDirection = (anchor, direction) => new Line(anchor, direction.unit())
 }

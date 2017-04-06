@@ -5,8 +5,8 @@ class EllipseCurve extends Curve {
     normal: V3
     matrix: M4
     inverseMatrix: M4
-    minT: number
-    maxT: number
+    tMin: number
+    tMax: number
 
     constructor(center, f1, f2) {
         super()
@@ -16,11 +16,11 @@ class EllipseCurve extends Curve {
 		this.f2 = f2
 		this.normal = f1.cross(f2)
 		if (!this.normal.isZero()) {
-			this.normal = this.normal.normalized()
+			this.normal = this.normal.unit()
 			this.matrix = M4.forSys(f1, f2, this.normal, center)
 			this.inverseMatrix = this.matrix.inversed()
 		} else {
-			this.matrix = M4.forSys(f1, f2, f1.normalized(), center)
+			this.matrix = M4.forSys(f1, f2, f1.unit(), center)
 			let f1p = f1.getPerpendicular()
 			this.inverseMatrix = new M4(
 				1, 0, 0, 0,
@@ -42,7 +42,7 @@ class EllipseCurve extends Curve {
 			const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
 			return area
 		}
-		const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).normalized().z
+		const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
 		return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
 	}
 
@@ -57,7 +57,7 @@ class EllipseCurve extends Curve {
 		let localRight = localUp.cross(V3.Z)
 		let normTStart = tStart - localRight.angleXY()
 		let normTEnd = tEnd - localRight.angleXY()
-		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.normalized())
+		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.unit())
 		//console.log(localUp.str, localRight.str, normTStart, normTEnd, 'localUp.length()', localUp.length())
 		//console.log('transformedOriginY', transformedOriginY)
 		//assertf(() => localUp.hasLength(1), localUp.length())
@@ -349,7 +349,7 @@ class EllipseCurve extends Curve {
 				return []
 			}
 
-			//new EllipseCurve(V3.ZERO, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
+			//new EllipseCurve(V3.O, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
 			console.log(localEllipse, localEllipse.sce)
 			//localEllipse.debugToMesh(dMesh, 'curve3')
 			let angle = localEllipse.f1.angleXY()
@@ -364,7 +364,7 @@ class EllipseCurve extends Curve {
 				const lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY
 				return lex * lex / aSqr + ley * ley / bSqr - 1
 			}
-			const uc = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
+			const uc = new EllipseCurve(V3.O, V3.X, V3.Y)
 			//uc.debugToMesh(dMesh, 'curve4')
 			const f2 = (x, y) => 200 * (x * x + y * y - 1)
 			const f3 = (x, y) => 200 * ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1)
@@ -385,9 +385,9 @@ class EllipseCurve extends Curve {
 			return results.map(localP => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(localP)}))
 			/*
 			 // new rel center
-			 var mat = M4.forSys(localEllipse.f1.normalized(), localEllipse.f2.normalized(), V3.Z, localEllipse.center).inversed()
+			 var mat = M4.forSys(localEllipse.f1.unit(), localEllipse.f2.unit(), V3.Z, localEllipse.center).inversed()
 			 console.log(mat.toString())
-			 var newCenter = mat.transformPoint(V3.ZERO)
+			 var newCenter = mat.transformPoint(V3.O)
 			 var x0 = newCenter.x, y0 = newCenter.y
 			 var c = (1 - bSqr / aSqr) / 2/ y0, d = -x0 / y0, e = (bSqr + x0 * x0 + y0 * y0) / 2 / y0
 
@@ -409,7 +409,7 @@ class EllipseCurve extends Curve {
 			 localEllipse.debugToMesh(dMesh, 'curve2')
 			 */
 		} else {
-			return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.normalized(), ellipse.center)).mapFilter(t => {
+			return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter(t => {
 				const p = this.at(t)
 				if (ellipse.containsPoint(p)) {
 					return {tThis: t, tOther: ellipse.pointT(p), p}
@@ -464,23 +464,19 @@ class EllipseCurve extends Curve {
 		assert(false)
 	}
 
-	/**
-	 *
-	 * @param bezier
-	 */
-	isPointsWithBezier(bezier:BezierCurve) {
-		let localBezier = bezier.transform(this.inverseMatrix)
-		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
-			// up to 6 solutions possible
-			let f = t => localBezier.at(t).lengthSquaredXY() - 1
-			// f is polynome degree six, no explicit solutionis possble
-			let possibleTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8)).filter(t => f(t) < NLA_PRECISION)
-			return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
-		} else {
-			let possibleISPoints = localBezier.isTsWithPlane(P3.XY).map(t => bezier.at(t))
-			return possibleISPoints.filter(p => NLA.eq(1, p.lengthXY()))
-		}
-	}
+    isPointsWithBezier(bezier: BezierCurve): V3[] {
+        const bezierLC = bezier.transform(this.inverseMatrix)
+        if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
+            // up to 6 solutions possible
+            const f = t => bezierLC.at(t).squaredXY() - 1
+            // f is polynome degree six, no explicit solutionis possble
+            const possibleTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8)).filter(t => f(t) < NLA_PRECISION)
+            return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
+        } else {
+            const possibleISPoints = bezierLC.isTsWithPlane(P3.XY).map(t => bezier.at(t))
+            return possibleISPoints.filter(p => NLA.eq(1, p.lengthXY()))
+        }
+    }
 
 	isInfosWithBezier(bezier: BezierCurve): {tThis: number, tOther: number, p: V3}[] {
 		let localBezier = bezier.transform(this.inverseMatrix)
@@ -498,60 +494,11 @@ class EllipseCurve extends Curve {
 	}
 
 	isInfosWithBezier2D(bezier:BezierCurve, sMin?:number, sMax?:number):{tThis: number, tOther: number, p: V3}[] {
-		// the recursive function finds good approximates for the intersection points
-		// this function uses newton iteration to improve the result as much as possible
-		// is declared as an arrow function so this will be bound correctly
-		const handleStartTS = (startT, startS) => {
-			if (!result.some(info => NLA.eq(info.tThis, startT) && NLA.eq(info.tOther, startS))) {
-				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
-				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
-				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
-				let dfdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
-				let dfdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
-				let ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
-					dfdt1.bind(undefined, this, bezier), dfdt2.bind(undefined, this, bezier),
-					(t, s) => -dfdt2(bezier, this, s, t), (t, s) => -dfdt1(bezier, this, s, t))
-				if (ni == null) console.log(startT, startS, this.sce, bezier.sce)
-				result.push({tThis: ni.x, tOther: ni.y, p: this.at(ni.x)})
-			}
-		}
-
-		// is declared as an arrow function so this will be bound correctly
-		// returns whether an intersection was immediately found (i.e. without further recursion)
-		// is declared as an arrow function so this will be bound correctly
-		const findRecursive = (tMin, tMax, sMin, sMax, thisAABB, otherAABB) => {
-			const EPS = NLA_PRECISION
-			if (thisAABB.touchesAABB(otherAABB)) {
-				let tMid = (tMin + tMax) / 2
-				let sMid = (sMin + sMax) / 2
-				if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
-					handleStartTS(tMid, sMid)
-					return true
-				} else {
-					let thisAABBleft = this.getAABB(tMin, tMid), thisAABBright
-					let bezierAABBleft = bezier.getAABB(sMin, sMid), bezierAABBright
-					// if one of the following calls immediately finds an intersection, we don't want to call the others
-					// as that will lead to the same intersection being output multiple times
-					findRecursive(tMin, tMid, sMin, sMid, thisAABBleft, bezierAABBleft)
-					|| findRecursive(tMin, tMid, sMid, sMax, thisAABBleft, bezierAABBright = bezier.getAABB(sMid, sMax))
-					|| findRecursive(tMid, tMax, sMin, sMid, thisAABBright = this.getAABB(tMid, tMax), bezierAABBleft)
-					|| findRecursive(tMid, tMax, sMid, sMax, thisAABBright, bezierAABBright)
-					return false
-				}
-			}
-			return false
-		}
-
-		let tMin = -Math.PI
-		let tMax = Math.PI
-		sMin = isFinite(sMin) ? sMin : bezier.tMin
-		sMax = isFinite(sMax) ? sMax : bezier.tMax
-		assertf(() => tMin < tMax)
-		assertf(() => sMin < sMax)
-		let result = []
-		findRecursive(tMin, tMax, sMin, sMax, this.getAABB(tMin, tMax), bezier.getAABB(sMin, sMax))
-
-		return result
+        sMin = isFinite(sMin) ? sMin : bezier.tMin
+        sMax = isFinite(sMax) ? sMax : bezier.tMax
+        assertf(() => 0 < Math.PI)
+        assertf(() => sMin < sMax)
+        return Curve.ispsRecursive(this, this.tMin, this.tMax, bezier, sMin, sMax)
 	}
 
 
@@ -586,16 +533,16 @@ class EllipseCurve extends Curve {
 	 *
 	 * @param a length of the axis parallel to X axis
 	 * @param b length of the axis parallel to Y axis
-	 * @param center Defaults to V3.ZERO
+	 * @param center Defaults to V3.O
 	 */
-	static forAB(a: number, b: number, center: V3 = V3.ZERO): EllipseCurve {
+	static forAB(a: number, b: number, center: V3 = V3.O): EllipseCurve {
 		return new EllipseCurve(center, new V3(a, 0, 0), new V3(0, b, 0))
 	}
 
 	/**
 	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
 	 */
-	static circle(radius: number, center: V3 = V3.ZERO): EllipseCurve {
+	static circle(radius: number, center: V3 = V3.O): EllipseCurve {
 		return new EllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
 	}
 
@@ -605,16 +552,16 @@ class EllipseCurve extends Curve {
 		return Math.PI * this.f1.cross(this.f2).length()
 	}
 
-	static readonly UNIT = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
-
 	angleToT(phi: number): number {
 		// atan2(y, x) = phi
-		const phiDir = this.f1.normalized().times(Math.cos(phi)).plus(this.f2.rejectedFrom(this.f1).normalized().times(Math.sin(phi)))
+		const phiDir = this.f1.unit().times(Math.cos(phi)).plus(this.f2.rejectedFrom(this.f1).unit().times(Math.sin(phi)))
 		const localDir = this.inverseMatrix.transformVector(phiDir)
 		return localDir.angleXY()
 	}
+
+    static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)
 }
 EllipseCurve.prototype.hlol = Curve.hlol++
 EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 8)
-EllipseCurve.prototype.minT = -PI
-EllipseCurve.prototype.maxT = PI
+EllipseCurve.prototype.tMin = -PI
+EllipseCurve.prototype.tMax = PI

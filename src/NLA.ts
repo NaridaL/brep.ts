@@ -23,7 +23,7 @@ type int = number
 type FloatArray = Float32Array | Float64Array | number[]
 
 /** @define {boolean} */
-const NLA_DEBUG = false
+const NLA_DEBUG = true
 const NLA_PRECISION = 1 / (1 << 26)
 console.log("NLA_PRECISION", NLA_PRECISION)
 console.log("NLA_DEBUG", NLA_DEBUG)
@@ -58,15 +58,15 @@ function enableConsole() {
 }
 
 
-function assertVectors(...vectors: (Vector|V3)[]) {
-	if (NLA_DEBUG) {
-		for (let i = 0; i < arguments.length; i++) {
-			if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
-				throw new Error("assertVectors arguments[" + (i) + "] is not a vector. " + typeof arguments[i] + " == typeof " + arguments[i])
-			}
-		}
-	}
-	return true
+function assertVectors(...vectors: (Vector | V3)[]) {
+    if (NLA_DEBUG) {
+        for (let i = 0; i < arguments.length; i++) {
+            if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
+                throw new Error('assertVectors arguments[' + (i) + '] is not a vector. ' + typeof arguments[i] + ' == typeof ' + arguments[i])
+            }
+        }
+    }
+    return true
 }
 function assertInst(what, ...objs) {
 	if (NLA_DEBUG) {
@@ -76,24 +76,24 @@ function assertInst(what, ...objs) {
 			}
 		}
 	}
-	return true
+    return true
 }
 function assertNumbers(...numbers) {
-	if (NLA_DEBUG) {
-		for (let i = 0; i < numbers.length; i++) {
-			if (typeof numbers[i] !== 'number') {
-				throw new Error("assertNumbers arguments[" + (i) + "] is not a number. " + typeof numbers[i] + " == typeof " + numbers[i])
-			}
-		}
-	}
-	return true
+    if (NLA_DEBUG) {
+        for (let i = 0; i < numbers.length; i++) {
+            if (typeof numbers[i] !== 'number') {
+                throw new Error('assertNumbers arguments[' + (i) + '] is not a number. ' + typeof numbers[i] + ' == typeof ' + numbers[i])
+            }
+        }
+    }
+    return true
 }
-function assert(value:any, ...messages:(any|(() => string))[]):boolean {
-	if (NLA_DEBUG && !value) {
-		throw new Error("NLA.assert failed: "
-			+ messages.map(message => ('function' === typeof message ? message() : message || '')).join('\n'))
-	}
-	return true
+function assert(value: any, ...messages: (any | (() => string))[]): boolean {
+    if (NLA_DEBUG && !value) {
+        throw new Error('NLA.assert failed: '
+            + messages.map(message => ('function' === typeof message ? message() : message || '')).join('\n'))
+    }
+    return true
 }
 function assertNever(value?: never): never {
     throw new Error()
@@ -195,6 +195,13 @@ namespace NLA {
 		return Math.max(min, Math.min(max, val))
 	}
 
+    export function between(val, min, max) {
+        return min <= val && val <= max
+    }
+    export function fuzzyBetween(val, min, max) {
+        return le(min, val) && le(val, max)
+    }
+
     export function randomColor() {
         return Math.floor(Math.random() * 0x1000000)
     }
@@ -221,15 +228,16 @@ namespace NLA {
 			NLA.arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize)
 		}
 	}
-	export function arrayRange(startInclusive: int, endExclusive: int, step: int) {
-		assertNumbers(startInclusive, step)
-		//console.log(Math.ceil((endExclusive - startInclusive) / step))
-		const result = new Array(Math.ceil((endExclusive - startInclusive) / step)) // "- startInclusive" so that chunk in the last row will also be selected, even if the row is not complete
-		for (let i = 0, index = 0; i < endExclusive; i += step, index++) {
-			result[index] = i
-		}
-		return result
-	}
+    export function arrayRange(startInclusive: int, endExclusive: int, step: int) {
+        assertNumbers(startInclusive, step)
+        //console.log(Math.ceil((endExclusive - startInclusive) / step))
+        const arrLength = Math.ceil((endExclusive - startInclusive) / step)
+        const result = new Array(arrLength) // "- startInclusive" so that chunk in the last row will also be selected, even if the row is not complete
+        for (let i = startInclusive, index = 0; index < arrLength; i += step, index++) {
+            result[index] = i
+        }
+        return result
+    }
 
 	export function arrayFromFunction<T>(length:number, f:(i:number) => T):T[] {
 		assertNumbers(length)
@@ -438,6 +446,13 @@ function numberToStr(value: number, length: int) {
 }
 console.log(numberToStr(29 / 99, 4))
 console.log(numberToStr(77 / 99, 4))
+
+//interface Object {
+//    cw(f: (x: any) => any): any
+//}
+//Object.prototype.cw = function (f) {
+//    return f(this)
+//}
 
 interface Array<T> {
 	absSum: () => number
@@ -797,9 +812,50 @@ function pqFormula(p: number, q: number): number[] {
     }
 }
 
+function solveCubic(pa,pb,pc,pd) {
+    var reduce = function(t) { return 0<=t && t <=1; };
+    const tau = TAU, crt = Math.cbrt
+
+    // see http://www.trans4mind.com/personal_development/mathematics/polynomials/cubicAlgebra.htm
+    var
+        a = pb / pa,
+        b = pc / pa,
+        c = pd / pa,
+        p = (3*b - a*a)/3,
+        p3 = p/3,
+        q = (2*a*a*a - 9*a*b + 27*c)/27,
+        q2 = q/2,
+        discriminant = q2*q2 + p3*p3*p3,
+        u1,v1,x1,x2,x3;
+    if (discriminant < 0) {
+        var mp3 = -p/3,
+            mp33 = mp3*mp3*mp3,
+            r = sqrt( mp33 ),
+            t = -q/(2*r),
+            cosphi = t<-1 ? -1 : t>1 ? 1 : t,
+            phi = Math.acos(cosphi),
+            crtr = Math.cbrt(r),
+            t1 = 2*crtr;
+        x1 = t1 * cos(phi/3) - a/3;
+        x2 = t1 * cos((phi+tau)/3) - a/3;
+        x3 = t1 * cos((phi+2*tau)/3) - a/3;
+        return [x1, x2, x3].filter(reduce);
+    } else if(discriminant === 0) {
+        u1 = q2 < 0 ? crt(-q2) : -crt(q2);
+        x1 = 2*u1-a/3;
+        x2 = -u1 - a/3;
+        return [x1,x2].filter(reduce);
+    } else {
+        var sd = sqrt(discriminant);
+        u1 = crt(-q2+sd);
+        v1 = crt(q2+sd);
+        return [u1-v1-a/3].filter(reduce);;
+    }
+}
+
 /**
  * solves ax³ + bx² + cx + d = 0
- *
+ * This function from pomax' utils
  * @returns 0-3 roots
  */
 function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
@@ -836,7 +892,7 @@ function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
             // TODO: compare with NLA.isZero?
             return [-a / 3]
         }
-		const u1 = Math.cbrt(Math.abs(qDiv2))
+		const u1 = qDiv2 < 0 ? Math.cbrt(-qDiv2) : -Math.cbrt(qDiv2)
 		const x1 = 2 * u1 - a / 3
 		const x2 = -u1 - a / 3
         return [x1, x2]
@@ -847,10 +903,57 @@ function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
         return [u1 - v1 - a / 3]
     }
 }
+function checkDerivate(f, df, a, b) {
+    const eps = 1e-6
+    for (let t = a; t < b; t += (b - a) / 100) {
+        const df2 = (f(t + eps) - f(t)) / eps
+        assert(NLA.eq2(df2, df(t), 0.1 ), `df2 == ${df2} != ${df(t)} = df(t)`)
+    }
+}
+function getRoots(f, a, b, stepSize, df) {
+    const STEPS = (b - a) / stepSize
+    const results = []
+    for (let startT = a; startT <= b; startT += stepSize) {
+        const dt = stepSize * abs(df(startT))
+        if (abs(f(startT)) <= dt) {
+            //const t = newtonIterate1d(f, startT, 16)
+            let t = newtonIterateWithDerivative(f, startT, 16, df)
+            if (!eq0(f(t)) || eq0(df(t))) {
+                const a = startT - dt, b = startT + dt
+                t = newtonIterate1d(df, startT, 16)
+                //if (f(a) * f(b) < 0) {
+                //    t = bisect(f, a, b, 16)
+                //} else if (df(a) * df(b) < 0) {
+                //    t = bisect(df, a, b, 16)
+                //}
+            }
+            if (eq0(f(t)) && !results.some(r => eq(r, t))) {
+                results.push(t)
+            }
+        }
+    }
+    return results
+}
 
 NLA.addOwnProperties(Array.prototype, ARRAY_UTILITIES)
-
-
+function bisect(f: (number) => number, a: number, b: number, steps: int) {
+    assert(a < b)
+    let fA = f(a), fB = f(b)
+    while (steps--) {
+        const c = (b + a) / 2
+        const fC = f(c)
+        if (sign(fA) == sign(fC)) {
+            a = c
+            fA = fC
+        } else {
+            b = c
+            fB = fC
+        }
+    }
+    assert(a <= (b + a) / 2)
+    assert(b >= (b + a) / 2)
+    return (b - a) / 2
+}
 function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps: int = 4, EPSILON?: number): number[] {
 	EPSILON = EPSILON || 1e-8
 
@@ -927,7 +1030,7 @@ function newtonIterate2d(
 		//console.log(f1ts * f1ts + f2ts * f2ts)
 		return null
 	}
-	return new V(s, t, 0)
+	return new V3(s, t, 0)
 }
 function newtonIterate2dWithDerivatives(f, g, sStart, tStart, steps, dfds, dfdt, dgds, dgdt) {
 	steps = steps || 4

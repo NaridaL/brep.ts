@@ -27,17 +27,17 @@ class RotationReqFofZ extends Surface {
 			var z = zStart + i * zStep
 			var fz = this.FofR(z)
 			var dfz = (this.FofR(z + eps) - fz) / eps
-			return new V3(1, 0, -dfz).normalized()
+			return new V3(1, 0, -dfz).unit()
 		})
-		let z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		let z = this.l3Axis.dir1, x = z.getPerpendicular().unit(), y = z.cross(x)
 		let matrix = M4.forSys(x, y, z, this.l3Axis.anchor);
 		vertices = matrix.transformedPoints(vertices)
-		normals = matrix.inversed().transposed().transformedVectors(normals).map(v => v.normalized())
+		normals = matrix.inversed().transposed().transformedVectors(normals).map(v => v.unit())
 		return GL.Mesh.rotation(vertices, this.l3Axis, 2 * Math.PI, 64, true, normals)
 	}
 
 	parametricFunction() {
-		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		var z = this.l3Axis.dir1, x = z.getPerpendicular().unit(), y = z.cross(x)
 		var matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
 		var f = this.FofR
 		return function (d, z) {
@@ -47,17 +47,17 @@ class RotationReqFofZ extends Surface {
 	}
 
 	parametricNormal() {
-		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		var z = this.l3Axis.dir1, x = z.getPerpendicular().unit(), y = z.cross(x)
 		var matrix = M4.forSys(x, y, z, this.l3Axis.anchor).inversed().transposed()
 		return (d, z) => {
 			var fz = this.FofR(z)
 			var dfz = (this.FofR(z + eps) - fz) / eps
-			return matrix.transformVector(new V3(cos(d), sin(d), -dfz)).normalized()
+			return matrix.transformVector(new V3(cos(d), sin(d), -dfz)).unit()
 		}
 	}
 
 	implicitFunction() {
-		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		var z = this.l3Axis.dir1, x = z.getPerpendicular().unit(), y = z.cross(x)
 		var matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
 		var matrixInverse = matrix.inversed()
 		var f = this.FofR
@@ -69,7 +69,7 @@ class RotationReqFofZ extends Surface {
 	}
 
 	boundsFunction() {
-		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		var z = this.l3Axis.dir1, x = z.getPerpendicular().unit(), y = z.cross(x)
 		var matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
 		var matrixInverse = matrix.inversed()
 		var f = this.FofR, minZ = this.minZ, maxZ = this.maxZ
@@ -80,7 +80,7 @@ class RotationReqFofZ extends Surface {
 	}
 
 	pointToParameterFunction(p) {
-		var z = this.l3Axis.dir1, x = z.getPerpendicular().normalized(), y = z.cross(x)
+		var z = this.l3Axis.dir1, x = z.getPerpendicular().unit(), y = z.cross(x)
 		var matrix = M4.forSys(x, y, z, this.l3Axis.anchor)
 		var matrixInverse = matrix.inversed()
 		var f = this.FofR

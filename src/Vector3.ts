@@ -150,9 +150,9 @@ class V3 implements Equalable {
 	}
 
 	/**
-	 * Documentation stub. You want {@link normalized}
+	 * Documentation stub. You want {@link unit}
 	 */
-	unit(): V3 { throw new Error() }
+	normalized(): V3 { throw new Error() }
 
 	minElement(): number {
 		return Math.min(this.x, this.y, this.z)
@@ -279,7 +279,7 @@ class V3 implements Equalable {
 	 * Returns the length of this NLA.Vector, i.e. the euclidean norm.
 	 *
 	 * Note that the partial derivatives of the euclidean norm at point x are equal to the
-	 * components of the normalized vector x.
+	 * components of the unit vector x.
 	 */
 	length(): number {
 		return Math.hypot(this.x, this.y, this.z)
@@ -287,10 +287,10 @@ class V3 implements Equalable {
 	}
 
 	/**
-	 * Definition: V3.isZero == V3.like(V3.ZERO)
+	 * Definition: V3.isZero == V3.like(V3.O)
 	 */
 	isZero(): boolean {
-		return this.like(V3.ZERO)
+		return this.like(V3.O)
 	}
 
 	like(obj): boolean {
@@ -312,7 +312,7 @@ class V3 implements Equalable {
 	 * Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector. Throws a
 	 * NLA.DebugError if this has a length of 0.
 	 */
-	normalized(): V3 {
+	unit(): V3 {
 		assert(!this.isZero(), 'cannot normalize zero vector')
 		return this.div(this.length())
 	}
@@ -525,7 +525,7 @@ class V3 implements Equalable {
 	}
 
 
-	static readonly ZERO: V3 = new V3(0, 0, 0)
+	static readonly O: V3 = new V3(0, 0, 0)
 	static readonly ONES: V3 = new V3(1, 1, 1)
     static readonly X: V3 = new V3(1, 0, 0)
     static readonly Y: V3 = new V3(0, 1, 0)
@@ -535,7 +535,7 @@ class V3 implements Equalable {
 	static readonly XYZ: V3[] = [V3.X, V3.Y, V3.Z]
 	
 	static readonly NAMEMAP = new NLA.CustomMap<V3, string>()
-		.set(V3.ZERO, 'V3.ZERO')
+		.set(V3.O, 'V3.O')
 		.set(V3.ONES, 'V3.ONES')
 		.set(V3.X, 'V3.X')
 		.set(V3.Y, 'V3.Y')

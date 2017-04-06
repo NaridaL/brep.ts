@@ -160,11 +160,14 @@ abstract class Edge extends Transformable {
 			: this
 	}
 
-	overlaps(edge: Edge): boolean {
+	overlaps(edge: Edge, noback?: boolean): boolean {
 		assert(this.curve.isColinearTo(edge.curve))
-		const edgeAT = this.curve.pointT(edge.a)
-        const edgeBT = this.curve.pointT(edge.b)
-		const edgeMinT = Math.min(edgeAT, edgeBT), edgeMaxT = Math.max(edgeAT, edgeBT)
+		const edgeAT = this.curve.containsPoint(edge.a) && this.curve.pointT(edge.a)
+        const edgeBT = this.curve.containsPoint(edge.b) && this.curve.pointT(edge.b)
+        if (false === edgeAT && false === edgeBT) {
+		    return noback ? false : edge.overlaps(this, true)
+        }
+        const flipped = false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edgeBT).dot(edge.bDir)
 		return !(NLA.le(edgeMaxT, this.minT) || NLA.le(this.maxT, edgeMinT))
 	}
 
@@ -192,7 +195,6 @@ abstract class Edge extends Transformable {
     static pathFromSVG(pathString: String): Edge[] {
         let currentPos, subPathStart, lastC2, lastC
         const parsed: {code: string, x: number, y: number, relative?: boolean}[] = parser.parse(pathString)
-        console.log(parsed)
         const path: Edge[] = []
         for (const c of parsed) {
             let endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
@@ -205,7 +207,9 @@ abstract class Edge extends Transformable {
                     subPathStart = currentPos = currentPos.plus(endPos)
                     break
                 case 'L':
-                    path.push(StraightEdge.throughPoints(currentPos, endPos))
+                    if (!endPos.like(currentPos)) {
+                        path.push(StraightEdge.throughPoints(currentPos, endPos))
+                    }
                     break
                 case 'l':
                     endPos = currentPos.plus(endPos)
@@ -230,7 +234,9 @@ abstract class Edge extends Transformable {
                 case 'Z':
                 case 'z':
                     endPos = subPathStart
-                    path.push(StraightEdge.throughPoints(currentPos, endPos))
+                    if (!endPos.like(currentPos)) {
+                        path.push(StraightEdge.throughPoints(currentPos, endPos))
+                    }
                     break
                 case 'S':
                 case 's':
@@ -245,7 +251,7 @@ abstract class Edge extends Transformable {
                         endPos = endPos.plus(currentPos)
                         c2 = c2.plus(currentPos)
                     }
-                    const curve = new BezierCurve(currentPos, c1, c2, endPos)
+                    const curve = new BezierCurve(currentPos, c1, c2, endPos, 0, 1)
                     const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1))
                     path.push(edge)
                     newLastC2 = c2
@@ -263,9 +269,15 @@ abstract class Edge extends Transformable {
                     if ('t' == c.code) {
                         endPos = endPos.plus(currentPos)
                     }
-                    const curve = new BezierCurve(currentPos, c12, c12, endPos)
-                    const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1))
-                    path.push(edge)
+                    const line = L3.throughPoints(currentPos, endPos)
+                    if (line.containsPoint(c12)) {
+                        const edge = StraightEdge.throughPoints(currentPos,endPos)
+                        path.push(edge)
+                    } else {
+                        const curve = BezierCurve.quadratic(currentPos, c12, endPos, 0, 1)
+                        const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1))
+                        path.push(edge)
+                    }
                     newLastC = c12
                     break
                 }
@@ -335,7 +347,9 @@ class PCurveEdge extends Edge {
 		assertf(() => curve.at(bT).like(b), curve.at(bT) + b)
 		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce)
 		assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
-		super(curve, a, b, aT, bT, flippedOf, name)
+        assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax))
+        assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax))
+		super(curve, a, b, clamp(aT, curve.tMin, curve.tMax), clamp(bT, curve.tMin, curve.tMax), flippedOf, name)
 		this.aDir = aDir
 		this.bDir = bDir
 		assert(this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
@@ -538,7 +552,7 @@ class StraightEdge extends Edge {
 	}
 
 }
-StraightEdge.prototype.aDDT = V3.ZERO
-StraightEdge.prototype.bDDT = V3.ZERO
+StraightEdge.prototype.aDDT = V3.O
+StraightEdge.prototype.bDDT = V3.O
 
 NLA.registerClass(StraightEdge)

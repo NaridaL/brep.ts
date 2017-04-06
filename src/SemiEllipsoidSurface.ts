@@ -8,18 +8,39 @@ class SemiEllipsoidSurface extends Surface {
     normalMatrix: M4
 
 	edgeLoopCCW(contour) {
-        //return EllipsoidSurface.unitArea(contour.map(edge => this.inverseMatrix.transform(edge)))
-        let totalAngle = 0
-        for (let i = 0; i < contour.length; i++) {
-            const ipp = (i + 1) % contour.length
-            const edge = contour[i], nextEdge = contour[ipp]
-            totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
-        }
-        return le(0, totalAngle)
+        return SemiEllipsoidSurface.unitArea(contour.map(edge => edge.transform(this.inverseMatrix))) > 0
+        //let totalAngle = 0
+        //for (let i = 0; i < contour.length; i++) {
+        //    const ipp = (i + 1) % contour.length
+        //    const edge = contour[i], nextEdge = contour[ipp]
+        //    totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
+        //}
+        //return le(0, totalAngle)
 	}
 
-	static unitArea(contour: Edge[]) {
+    like(object) {
+        if (!this.isCoplanarTo(object)) return false
+        // normals need to point in the same direction (outwards or inwards) for both
+        return this.matrix.determinant3() * object.matrix.determinant3() > 0
+    }
 
+	static unitArea(contour: Edge[]) {
+        const totalArea = contour.map(edge => {
+            if (edge.curve instanceof SemiEllipseCurve) {
+                const f = (t) => {
+                    const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
+                    const angleXY = abs(at.angleXY())
+                    //const arcLength = angleXY * Math.sqrt(1 - at.z ** 2) ( == at.lengthXY())
+                    //const scaling = tangent.z / at.lengthXY()
+                    return angleXY * tangent.z
+                }
+                const val = glqInSteps(f, edge.aT, edge.bT, 1)
+                return val
+            } else {
+                assertNever()
+            }
+        }).sum()
+        return totalArea
     }
 
 	rootPoints() {
@@ -39,22 +60,116 @@ class SemiEllipsoidSurface extends Surface {
     }
 
     toSource() {
-        return `new EllipsoidSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
+        return `new SemiEllipsoidSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
     }
 
     isCurvesWithSurface(surface: Surface) {
-        if (surface instanceof PlaneSurface) {
-            const planeLC = surface.plane.transform(this.inverseMatrix)
-            return SemiEllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
-        } else if (surface instanceof SemiCylinderSurface) {
-            if (surface.dir1.isParallelTo(this.dir1)) {
-                const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
-                return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
-            } else if (NLA.eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
-                assert(false)
-            } else {
-                assert(false)
+        function iii(ists, surface, curve, min, max) {
+            ists.sort((a, b) => a - b)
+            if (!eq(ists[0], min)) {
+                ists.splice(0, 0, min)
             }
+            if (!eq(ists.last(), max)) {
+                ists.push(max)
+            }
+            const result = []
+            for (let i = 0; i < ists.length - 1; i++) {
+                const aT = ists[i], bT = ists[i + 1]
+                const a = curve.at(aT), b = curve.at(bT)
+                const aNormal = surface.normalAt(a), bNormal = surface.normalAt(b)
+                const aInside = dotCurve2(curve, aT, aNormal, 1) < 0
+                const bInside = dotCurve2(curve, bT, bNormal, -1) < 0
+                //assert(bInside == aInside)
+                if (surface.containsPoint(a) ? aInside : bInside) {
+                    result.push([aT, ists[i + 1]])
+                }
+            }
+            return result
+        }
+
+
+
+        if (surface instanceof PlaneSurface) {
+            return this.isCurvesWithPlane(surface.plane)
+        } else if (surface instanceof SemiCylinderSurface) {
+            return this.isCurvesWithSemiCylinderSurface(surface)
+        } else if (surface instanceof SemiEllipsoidSurface) {
+            const surfaceLC = surface.transform(this.inverseMatrix)
+            return SemiEllipsoidSurface.unitISCurvesWithEllipsoidSurface(surfaceLC)
+                .map(c => c.transform(this.matrix))
+        } else if (surface instanceof ProjectedCurveSurface) {
+            const surfaceLC = surface.transform(this.inverseMatrix)
+            const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir1, 0))
+            const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
+            const insideIntervals = iii(ists, EllipsoidSurface.UNIT, baseCurveLC, baseCurveLC.tMin, baseCurveLC.tMax)
+            const projectedCurves = [0, 1].map(id => {
+                return t => {
+                    const lineISTs = /* +- */ sqrt(1 - baseCurveLC.at(t).squared())
+                    assert(!isNaN(lineISTs))
+                    return eq0(lineISTs) ? baseCurveLC.at(t) : baseCurveLC.at(t).plus(surfaceLC.dir1.times(sign(id - 0.5) * lineISTs))
+                }
+            })
+            const dProjectedCurves = [0, 1].map(id => {
+                return t => {
+                    // d/dt sqrt(1 - baseCurveLC.at(t).squared())
+                    // = -1/2 * 1/sqrt(1 - baseCurveLC.at(t).squared()) * -2*baseCurveLC.at(t) * baseCurveLC.tangentAt(t)
+                    const lineISTs = /* +- */ baseCurveLC.at(t).times(-1/sqrt(1 - baseCurveLC.at(t).squared())).dot(baseCurveLC.tangentAt(t))
+                    assert(!isNaN(lineISTs))
+                    return baseCurveLC.tangentAt(t).plus(surfaceLC.dir1.times(sign(id - 0.5) * lineISTs))
+                }
+            })
+            const f2 = t => sqrt(1 - baseCurveLC.at(t).squared())
+            const df2 = t => baseCurveLC.at(t).times(-1/sqrt(1 - baseCurveLC.at(t).squared())).dot(baseCurveLC.tangentAt(t))
+            checkDerivate(f2, df2, 0.31, 0.60)
+            const curves = []
+            insideIntervals.map(([aT, bT]) => {
+                const aLine = new L3(baseCurveLC.at(aT), surfaceLC.dir1)
+                const a = EllipsoidSurface.UNIT.isTsForLine(aLine).map(t => aLine.at(t))
+                const bLine = new L3(baseCurveLC.at(bT), surfaceLC.dir1)
+                const b = EllipsoidSurface.UNIT.isTsForLine(bLine).map(t => bLine.at(t))
+                for (const i of [0, 1]) {
+                    const f = t => projectedCurves[i](t).y
+                    const df = t => dProjectedCurves[i](t).y
+                    checkDerivate(f, df, aT + 0.1, bT - 0.1)
+                    const valids = getRoots(f, aT + NLA_PRECISION, bT - NLA_PRECISION, 1 / (1 << 11), df)
+                    const ii2 = iii(valids, new PlaneSurface(P3.ZX.flipped()), baseCurveLC, aT, bT)
+                    for (const [aT2, bT2] of ii2) {
+                        let aP = projectedCurves[i](aT2), bP = projectedCurves[i](bT2)
+                        0 !== i && ([aP, bP] = [bP, aP])
+                        assert(EllipsoidSurface.UNIT.containsPoint(aP))
+                        assert(EllipsoidSurface.UNIT.containsPoint(bP))
+                        curves.push(new PICurve(surface, this.asEllipsoidSurface(), aP, bP))
+                    }
+                }
+            }).concatenated()
+            const f = (t) => baseCurveLC.at(t).length() - 1
+            const fRoots = null
+            return curves
+        } else {
+            assert(false)
+        }
+    }
+
+    isCurvesWithPlane(p: P3) {
+        const planeLC = p.transform(this.inverseMatrix)
+        return SemiEllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
+    }
+
+    isCurvesWithSemiCylinderSurface(surface: SemiCylinderSurface): Curve[] {
+        if (new L3(surface.baseEllipse.center, surface.dir1).containsPoint(this.center)) {
+            assert(this.isSphere())
+            const ellipseProjected = surface.baseEllipse.transform(M4.projection(surface.baseEllipse.getPlane(), surface.dir1))
+            assert(ellipseProjected.isCircular())
+            const thisRadius = this.f1.length()
+            const surfaceRadius = ellipseProjected.f1.length()
+            // sphereRadius² = distanceISFromCenter² + isRadius²
+            if (eq(thisRadius, surfaceRadius)) {
+                // return
+            } else if (surfaceRadius < thisRadius) {
+
+            }
+        } else {
+            assert(false)
         }
     }
 
@@ -85,7 +200,7 @@ class SemiEllipsoidSurface extends Surface {
 		return NLA.lt(distEllipseLCCenter, 1)
             && ellipseLC.isCircular()
             && ellipseLC.f1.hasLength(correctRadius)
-            && le(0, ellipseLC.getAABB().min.y)
+            //&& le(0, ellipseLC.getAABB().min.y)
 	}
 
     containsCurve(curve) {
@@ -147,13 +262,13 @@ class SemiEllipsoidSurface extends Surface {
                 .plus(f3.cross(f1).times(Math.cos(b) * Math.sin(a)))
                 .plus(f1.cross(f2).times(Math.sin(b)))
                 //.times(Math.cos(b))
-                .normalized()
+                .unit()
             return normal
         }
     }
 
     normalAt(p) {
-    	return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p)).normalized()
+    	return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit()
     }
 
     normalST(s, t) {
@@ -168,14 +283,12 @@ class SemiEllipsoidSurface extends Surface {
     }
 
 	pointToParameterFunction() {
-		return (pWC: V3, hint) => {
+		return (pWC: V3) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
-			let alpha = pLC.angleXY()
-			if (abs(alpha) > Math.PI - NLA_PRECISION) {
-				assert(hint == -PI || hint == PI)
-				alpha = hint
-			}
-			let beta = Math.asin(pLC.z)
+			const alpha = abs(pLC.angleXY())
+			const beta = Math.asin(NLA.clamp(pLC.z, -1, 1))
+            assert(isFinite(alpha))
+            assert(isFinite(beta))
 			return new V3(alpha, beta, 0)
 		}
     }
@@ -198,8 +311,10 @@ class SemiEllipsoidSurface extends Surface {
 
     implicitFunction() {
         return (pWC) => {
-            let pLC = this.inverseMatrix.transformPoint(pWC)
-            return pLC.length() - 1
+            const pLC = this.inverseMatrix.transformPoint(pWC)
+            return pLC.y > 0
+                ? pLC.length() - 1
+                : (-pLC.y + Math.hypot(pLC.x, pLC.z) - 1)
         }
     }
 
@@ -254,7 +369,7 @@ class SemiEllipsoidSurface extends Surface {
     }
 
     boundsFunction() {
-        assert(false)
+        return (a, b) => NLA.between(a, 0, PI) && NLA.between(b, -PI, PI)
     }
 
     /**
@@ -291,31 +406,68 @@ class SemiEllipsoidSurface extends Surface {
             } else if (le(anchorY, 0) && !plane.normal.isParallelTo(V3.Y)) {
                 let f1 = plane.normal.isParallelTo(V3.Y) ? V3.Z : plane.normal.cross(V3.Y).toLength(isCircleRadius)
                 const f2 = f1.cross(plane.normal)
-                const minEta = -anchorY / f2.y, minT = Math.asin(minEta)
+                const minEta = -anchorY / f2.y, minT = max(0, Math.asin(minEta))
                 return [new SemiEllipseCurve(plane.anchor, f1, f2, minT, PI - minT)]
             } else {
                 const f2 = (plane.normal.isParallelTo(V3.Y) ? V3.X : plane.normal.cross(V3.Y)).toLength(isCircleRadius)
                 const f1 = f2.cross(plane.normal)
                 const minXi = 0 == anchorY ? -1 : -anchorY / f1.y, maxT = Math.acos(max(-1, minXi))
                 return [new SemiEllipseCurve(plane.anchor, f1.negated(), f2, PI - maxT, PI),
-                        new SemiEllipseCurve(plane.anchor, f1, f2.negated(), 0, maxT)]
+                    new SemiEllipseCurve(plane.anchor, f1, f2.negated(), 0, maxT)]
             }
         } else {
             return []
         }
     }
 
-    static sphere(radius: number, center?: V3): SemiEllipsoidSurface {
+    static unitISCurvesWithEllipsoidSurface(surface: SemiEllipsoidSurface) {
+        if (surface.isSphere()) {
+            const surfaceRadius = surface.f1.length()
+            const surfaceCenterDist = surface.center.length()
+            if (le(1 + surfaceRadius, surfaceCenterDist)) {
+                return []
+            } else {
+                // origin, surface.center and points on the intersection curves form a triangle.
+                // the height on the segment origin - surface.center is the radius of the is curves
+                // the distance from the origin to the lot point is the distance to the intersection plane
+                function heron(a, b, c) {
+                    const p = (a + b + c) / 2
+                    return (p * (p - a) * (p - b) * (p - c)) ** 0.5
+                }
+                const triangleArea = heron(1, surfaceRadius, surfaceCenterDist)
+                const radius = triangleArea * 2 / surfaceCenterDist
+                const isCurvesCenterDist = (1 - radius ** 2) ** 0.5
+                return SemiEllipsoidSurface.unitISCurvesWithPlane(new P3(surface.center.unit(), isCurvesCenterDist))
+            }
+        }
+        assertNever()
+    }
+
+    static unitISCurvesWithSemiCylinderSurface(surface: SemiCylinderSurface): SemiEllipseCurve[] {
+        if (new L3(surface.baseEllipse.center, surface.dir1).containsPoint(V3.O)) {
+            const ellipseProjected = surface.baseEllipse.transform(M4.projection(new P3(surface.dir1, 0)))
+            const f1Length = ellipseProjected.f1.length(), f2Length = ellipseProjected.f2.length()
+            if (lt(1, min(f1Length, f2Length))) return []
+            if (ellipseProjected.isCircular()) {
+                const distISCurveCenter = Math.sqrt(1 - min(1, f1Length) ** 2)
+                const isCurveCenter = (surface.dir1.y < 0 ? surface.dir1.negated() : surface.dir1).times(distISCurveCenter)
+                // isCurve.at(t).y = isCurveCenter.y + ellipseProjected.f1.y * cos(t) + ellipseProjected.f2.y * sin(t) = 0
+                return [new SemiEllipseCurve(isCurveCenter, ellipseProjected.f1, ellipseProjected.f2)]
+            }
+        }
+        assert(false)
+    }
+
+    static sphere(radius: number, center: V3 = V3.O): SemiEllipsoidSurface {
         assertNumbers(radius)
-        center && assertVectors(center)
-        return new SemiEllipsoidSurface(center || V3.ZERO, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius))
+        return new SemiEllipsoidSurface(center, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius))
     }
 
     /**
      * x²/a² + y²/b² + z²/c² = 1
      */
-    static forABC(a: number, b: number, c: number, center?: V3): SemiEllipsoidSurface {
-        return new SemiEllipsoidSurface(center || V3.ZERO, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c))
+    static forABC(a: number, b: number, c: number, center: V3 = V3.O): SemiEllipsoidSurface {
+        return new SemiEllipsoidSurface(center, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c))
     }
 
     volume(): number {
@@ -332,7 +484,7 @@ class SemiEllipsoidSurface extends Surface {
 	    // "rotate" the edge so that there are no overlaps
     	const matrix = M4.forSys(a, b, c), inverseMatrix = matrix.inversed()
 	    const circleRadius = a.length()
-	    const c1 = c.normalized()
+	    const c1 = c.unit()
 	    const totalArea = edges.map(edge => {
 		    if (edge.curve instanceof SemiEllipseCurve) {
 			    const f = (t) => {
@@ -356,7 +508,7 @@ class SemiEllipsoidSurface extends Surface {
     }
 
     meshSphere(edges: Edge[], subdivisions: int = 3) {
-	    const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).normalized(), s = u.x, t = u.y
+	    const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).unit(), s = u.x, t = u.y
 	    // base vertices of isocahedron
 	    const vertices = [
 		    new V3(-s, t, 0),
@@ -425,7 +577,7 @@ class SemiEllipsoidSurface extends Surface {
 				    edgeIntersectsTriangle = edgeIntersectsTriangle || edges.some(edge => {
 					    return edge.edgeISTsWithPlane(plane).some(t => {
 						    const p = edge.curve.at(t)
-						    const v01 = v0.to(v1), v0p_1 = v0.to(p).normalized(), dot = v01.dot(v0p_1)
+						    const v01 = v0.to(v1), v0p_1 = v0.to(p).unit(), dot = v01.dot(v0p_1)
 						    if (0 <= dot && dot <= 1) {
 							    return true
 						    }
@@ -469,9 +621,13 @@ class SemiEllipsoidSurface extends Surface {
         const testLine = new SemiEllipseCurve(
 			this.center,
 			this.f3,
-            pLCXY.isZero() ? this.f2 : this.matrix.transformVector(pLCXY.normalized()))
+            pLCXY.isZero() ? this.f2 : this.matrix.transformVector(pLCXY.unit()))
 		const pT = testLine.pointT(p)
 
+        if (P3.normalOnAnchor(this.f2.unit(), this.center).containsPoint(p)) {
+            let edgeT
+            return loop.some(edge => edge.curve.containsPoint(p) && le(edge.minT, edgeT = edge.curve.pointT(p)) && le(edgeT, edge.maxT)) ? PointVsFace.ON_EDGE : PointVsFace.OUTSIDE
+        }
 
 		const lineOut = testLine.normal
 		const testPlane = P3.normalOnAnchor(testLine.normal, p)
@@ -492,13 +648,13 @@ class SemiEllipsoidSurface extends Surface {
 			const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
 			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearEdges[edgeIndex]) {
-				const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b)
-				if (NLA.le(Math.min(lineAT, lineBT), pT) && NLA.ge(pT, Math.max(lineAT, lineBT))) {
+                let edgeT
+				if (edge.curve.containsPoint(p) && le(edge.minT, edgeT = edge.curve.pointT(p)) && le(edgeT, edge.maxT)) {
 					return PointVsFace.ON_EDGE
 				}
 				// edge colinear to intersection
 				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
-				if (!nextInside) {
+				if (!nextInside && testLine.containsPoint(edge.b)) {
 					if (logIS(edge.b)) return PointVsFace.ON_EDGE
 				}
 			} else {
@@ -531,7 +687,7 @@ class SemiEllipsoidSurface extends Surface {
     	const {f1, f2, f3} = this
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const circleRadius = f1.length()
-		const f31 = f3.normalized()
+		const f31 = f3.unit()
 		const totalArea = edges.map(edge => {
 			if (edge.curve instanceof SemiEllipseCurve) {
 				const f = (t) => {
@@ -547,7 +703,7 @@ class SemiEllipsoidSurface extends Surface {
 						console.log(angleXY)
 					}
 					const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
-					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).normalized()
+					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit()
 					const df3 = tangent.dot(f31)
 					//const scaling = df3 / localAt.lengthXY()
 					const scaling = dotter.dot(tangent)
@@ -623,7 +779,7 @@ class SemiEllipsoidSurface extends Surface {
 		iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
 		iss.sort((a, b) => a.t - b.t)
 		let i = ccw == iss[0].out ? 1 : 0
-		const curve = new SemiEllipseCurve(V3.ZERO, V3.X.negated(), V3.Z)
+		const curve = new SemiEllipseCurve(V3.O, V3.X.negated(), V3.Z)
 		//if (1 == i) {
         	//frontParts.push(
         	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(), curve.tangentAt(iss[0].t)),
@@ -651,7 +807,7 @@ class SemiEllipsoidSurface extends Surface {
 	// now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
 	// we need to split the transformed loop along the local seam plane
 	// and then sum the zDir volumes of the resulting loops
-    zDirVolume(loop: Edge[]): number {
+    zDirVolume(loop: Edge[]): {volume: number, centroid: V3} {
 	    const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
 	    const T = M4.rotationAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
 	    function calc(loop) {
@@ -666,8 +822,8 @@ class SemiEllipsoidSurface extends Surface {
 				    const r = at.lengthXY()
 				    const at2d = at.withElement('z', 0)
 				    const angleAdjusted = (at.angleXY() + TAU - NLA_PRECISION) % TAU + NLA_PRECISION
-				    const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.normalized())) * Math.sign(tangent.z)
-				    //console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.normalized())', edge.tangentAt(t).dot(at2d.normalized()))
+				    const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.unit())) * Math.sign(tangent.z)
+				    //console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
 				    return result
 			    }
 
@@ -680,7 +836,7 @@ class SemiEllipsoidSurface extends Surface {
 	    const [front, back] = SemiEllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
 	    const localVolume = calc(front, PI) + calc(back, -PI)
 
-	    return localVolume * this.f1.dot(this.f2.cross(this.f3))
+	    return {volume: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: null}
 	}
     zDirVolumeForLoop2(loop: Edge[]): number {
     	const angles = this.inverseMatrix.getZ().toAngles()
@@ -693,7 +849,7 @@ class SemiEllipsoidSurface extends Surface {
 		    const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
 		    function f (t) {
 	    		const at2d = edge.curve.at(t).withElement('x', 0)
-			    const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.normalized()))
+			    const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()))
 			    console.log("at2d", at2d.sce, "result", result)
 			    return result
 		    }
@@ -765,7 +921,11 @@ class SemiEllipsoidSurface extends Surface {
     	return P3.forAnchorAndPlaneVectors(this.center, this.f1, this.f3)
 	}
 
-	static readonly UNIT = new SemiEllipsoidSurface(V3.ZERO, V3.X, V3.Y, V3.Z)
+	static readonly UNIT = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
+
+    asEllipsoidSurface() {
+        return new EllipsoidSurface(this.center, this.f1, this.f2, this.f3)
+    }
 }
 SemiEllipsoidSurface.prototype.uStep = PI / 32
 SemiEllipsoidSurface.prototype.vStep = PI / 32

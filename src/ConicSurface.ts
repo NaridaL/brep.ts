@@ -126,7 +126,7 @@ class ConicSurface extends Surface {
 	containsLine(line: L3): boolean {
 		const localLine = line.transform(this.inverseMatrix)
 		const d = localLine.dir1
-		return localLine.containsPoint(V3.ZERO) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
+		return localLine.containsPoint(V3.O) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
 	}
 
 	containsParabola(parabola: ParabolaCurve): boolean {
@@ -320,7 +320,7 @@ class ConicSurface extends Surface {
 	 *
 	 *
 	 * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
-	 * scaling = tangentAt(t) DOT dir.cross(V3.Z).normalized()
+	 * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
 	 */
 	zDirVolume(edges: Edge[]): {volume: number} {
 		// INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z
@@ -328,9 +328,9 @@ class ConicSurface extends Surface {
 			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
 				const f = (t) => {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					console.log("subarea", t, (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY(), tangent.dot(V3.Z.cross(this.dir).normalized()))
+					console.log("subarea", t, (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY(), tangent.dot(V3.Z.cross(this.dir).unit()))
 					return (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY() *
-						tangent.dot(V3.Z.cross(this.dir).normalized())
+						tangent.dot(V3.Z.cross(this.dir).unit())
 				}
 				// ellipse with normal parallel to dir need to be counted negatively so CCW faces result in a positive area
 				const sign = edge.curve instanceof SemiEllipseCurve
@@ -393,9 +393,9 @@ class ConicSurface extends Surface {
 			// z² - y² = d²/a²
 			if (NLA.eq0(d)) {
 				// d = 0 => z² - y² = 0 => z² = y² => z = y
-				// plane goes through origin/V3.ZERO
-				return [new L3(V3.ZERO, new V3(0, Math.sqrt(2) / 2, Math.sqrt(2) / 2)),
-					new L3(V3.ZERO, new V3(0, Math.sqrt(2) / 2, -Math.sqrt(2) / 2))]
+				// plane goes through origin/V3.O
+				return [new L3(V3.O, new V3(0, Math.sqrt(2) / 2, Math.sqrt(2) / 2)),
+					new L3(V3.O, new V3(0, Math.sqrt(2) / 2, -Math.sqrt(2) / 2))]
 			} else {
 				// hyperbola
 				const center = new V3(d / a, 0, 0)
@@ -409,12 +409,12 @@ class ConicSurface extends Surface {
 			const aa = a * a, cc = c * c
 			if (NLA.eq0(d)) {
 				if (NLA.eq(aa, cc)) {
-					return [new L3(V3.ZERO, new V3(c, 0, -a).normalized())]
+					return [new L3(V3.O, new V3(c, 0, -a).unit())]
 				} else if (aa < cc) {
-					assert(false, 'intersection is single point V3.ZERO')
+					assert(false, 'intersection is single point V3.O')
 				} else if (aa > cc) {
-					return [new L3(V3.ZERO, new V3(c, Math.sqrt(aa - cc), -a).normalized()),
-						new L3(V3.ZERO, new V3(c, -Math.sqrt(aa - cc), -a).normalized())]
+					return [new L3(V3.O, new V3(c, Math.sqrt(aa - cc), -a).unit()),
+						new L3(V3.O, new V3(c, -Math.sqrt(aa - cc), -a).unit())]
 				}
 			} else {
 				if (NLA.eq(aa, cc)) {

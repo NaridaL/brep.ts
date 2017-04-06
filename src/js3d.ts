@@ -194,14 +194,14 @@ function paintConstraints(sketch: Sketch) {
 				paintArc(point.V3(), 1.5, 3, colorFor(highlighted.includes(point) || hoverHighlight == point, selected.includes(point)), 0, 2 * Math.PI)
 				break
 			case 'parallel': {
-				let dir1 = cst.segments[0].getVectorAB().normalized()
-				let dir90 = dir1.getPerpendicular().normalized()
+				let dir1 = cst.segments[0].getVectorAB().unit()
+				let dir90 = dir1.getPerpendicular().unit()
 				let ARR_SPACING = 5
 				for (let c = 0; c < cst.segments.length; c++) {
 					let line = cst.segments[c]
 					let ab = line.getVectorAB()
 					let abLength = ab.length()
-					let ab1 = ab.normalized()
+					let ab1 = ab.unit()
 					for (let i = 0; i < parallelCrossCount; i++) {
 						let s = abLength / 2 - ARR_SPACING * parallelCrossCount / 2 + i * ARR_SPACING - 10
 						let arrPoint = line.a.V3().plus(ab1.times(s))
@@ -220,8 +220,8 @@ function paintConstraints(sketch: Sketch) {
 					let intersection = cst.segment.intersection(cst.other)
 					let abPos = cst.segment.pointT(intersection)
 					let cdPos = cst.other.pointT(intersection)
-					let abLine = ab.normalized().times(0.5 < abPos ? -16 : 16)
-					let cdLine = cd.normalized().times(0.5 < cdPos ? -16 : 16)
+					let abLine = ab.unit().times(0.5 < abPos ? -16 : 16)
+					let cdLine = cd.unit().times(0.5 < cdPos ? -16 : 16)
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
 				} else {
@@ -235,7 +235,7 @@ function paintConstraints(sketch: Sketch) {
 					let abPos = anchorDiff.cross(dir).dot(abXcd) / div
 					let linePos = anchorDiff.cross(ab).dot(abXcd) / div
 					let intersection = p.plus(dir.times(linePos))
-					let abLine = ab.normalized().times(0.5 < abPos ? -16 : 16)
+					let abLine = ab.unit().times(0.5 < abPos ? -16 : 16)
 					let cdLine = dir.times(16)
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
@@ -244,7 +244,7 @@ function paintConstraints(sketch: Sketch) {
 			case 'colinear':
 				// assume segments dont overlap
 				let segments = cst.segments
-				let ab = segments[0].getVectorAB().normalized()
+				let ab = segments[0].getVectorAB().unit()
 				let coord = ab.x > ab.y ? 'x' : 'y'
 				if (ab[coord] < 0) {
 					ab = ab.times(-1)
@@ -265,7 +265,7 @@ function paintConstraints(sketch: Sketch) {
 			case 'pointDistance': {
 				let a = cst.cs[0].V3(), b = cst.cs[1].V3()
 				let ab = b.minus(a)
-				let ab1 = ab.normalized()
+				let ab1 = ab.unit()
 				let abLength = ab.length()
 				let ab90 = ab1.getPerpendicular()
 				let texture = getTextureForString(cst.distance)
@@ -288,7 +288,7 @@ function paintConstraints(sketch: Sketch) {
 			case 'pointLineDistance': {
 				let texture = getTextureForString(cst.distance)
 				let p = cst.point.V3(), ab = cst.other.getVectorAB(), a = cst.other.a.V3()
-				let ab1 = ab.normalized()
+				let ab1 = ab.unit()
 				let abLength = ab.length()
 				let ab90 = ab1.getPerpendicular()
 				let ap = p.minus(a)
@@ -300,7 +300,7 @@ function paintConstraints(sketch: Sketch) {
 				gl.pushMatrix()
 				gl.translate(textCenter)
 				gl.scale(20, 20, 10)
-				gl.multMatrix(M4.forSys(apProj.normalized(), ab1, V3.Z))
+				gl.multMatrix(M4.forSys(apProj.unit(), ab1, V3.Z))
 				gl.translate(-textLength / 2 / 20, -0.5, 0)
 				renderText(cst.distance, 0xff0000)
 				gl.popMatrix()
@@ -344,8 +344,8 @@ function paintConstraints(sketch: Sketch) {
 					let line = cst.segments[c]
 					let ab = line.getVectorAB()
 					let abLength = ab.length()
-					let ab1 = ab.normalized()
-					let ab90 = ab.getPerpendicular().normalized()
+					let ab1 = ab.unit()
+					let ab90 = ab.getPerpendicular().unit()
 					let crossLength = 10
 					let crossSpacing = 3
 					for (let i = 0; i < crossCount; i++) {
@@ -371,14 +371,14 @@ class PlaneDefinition {
 	/*
 	 if ("face" == feature.planeType && feature.faceName) {
 	 var face = modelBREP.faces.find(face => face.name == feature.faceName)
-	 var plane = face.surface.plane, right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
+	 var plane = face.surface.plane, right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
 
 	 var cp
 	 planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal.times(feature.offset)),
 	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 	 }
 	 if ("immediate" == feature.planeType) {
-	 var plane = eval(feature.source), right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
+	 var plane = eval(feature.source), right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
 
 	 planes.push(new CustomPlane(plane.anchor,
 	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
@@ -494,9 +494,9 @@ function rebuildModel() {
 	brepEdges = []
 
 	planes = [
-		new CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
-		new CustomPlane(V3.ZERO, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
-		new CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
+		new CustomPlane(V3.O, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
+		new CustomPlane(V3.O, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
+		new CustomPlane(V3.O, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
 	]
 	planes.forEach(customPlane => publish(customPlane.name, customPlane))
 
@@ -535,7 +535,7 @@ function rebuildModel() {
 
 			if (modelBREP) {
 				// isEdges = modelBREP.getIntersectionEdges(brep)
-				// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).normalized()}))
+				// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).unit()}))
 				modelBREP = modelBREP[feature.operation](brep)
 			} else {
 				modelBREP = brep
@@ -550,14 +550,14 @@ function rebuildModel() {
 			let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
 			if (plane) {
 				if (feature.flipped) plane = plane.flipped()
-				let right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
+				let right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
 
 				var cp
 				planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal.times(feature.offset)),
 					right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 			}
 			if ("immediate" == feature.planeType) {
-				let plane = eval(feature.source), right = plane.normal.getPerpendicular().normalized(), up = plane.normal.cross(right)
+				let plane = eval(feature.source), right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
 
 				planes.push(new CustomPlane(plane.anchor,
 					right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
@@ -608,7 +608,7 @@ var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges = []
 var rebuildLimit = -1, rollBackIndex = -1
 var drPs = [], drVs = []
 
-var eyePos = V(1000, 1000, 1000), eyeFocus = V3.ZERO, eyeUp = V3.Z
+var eyePos = V(1000, 1000, 1000), eyeFocus = V3.O, eyeUp = V3.Z
 var hoverHighlight = undefined
 // console.log = oldConsole;
 var modeStack = []
@@ -650,9 +650,9 @@ function drawVector(vector, anchor, color = 0x0000ff, size = 50) {
 	gl.popMatrix()
 }
 function drawVectors() {
-	drawVector(V3.X, V3.ZERO, 0xff0000)
-	drawVector(V3.Y, V3.ZERO, 0x00ff00)
-	drawVector(V3.Z, V3.ZERO, 0x0000ff)
+	drawVector(V3.X, V3.O, 0xff0000)
+	drawVector(V3.Y, V3.O, 0x00ff00)
+	drawVector(V3.Z, V3.O, 0x0000ff)
 
 	drVs.forEach(vi => drawVector(vi.dir1, vi.anchor, vi.color))
 }
@@ -664,8 +664,8 @@ function drawPoint(p, color = 0x000000, size = 5) {
 	shaders.singleColor.uniforms({color: rgbToVec4(color)}).draw(meshes.sphere1)
 	gl.popMatrix()
 }
-function drawPoints() {
-	drPs.forEach(info => drawPoint(info.p || info, 0xcc0000, 1))
+function drawPoints(size: number) {
+	drPs.forEach(info => drawPoint(info.p || info, 0xcc0000, size))
 	brepPoints && brepPoints.forEach(p =>
 		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.includes(p) ? 0xff0000 : 0xcccc00), 2))
 }
@@ -700,8 +700,8 @@ CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve: BezierCurve,
 CURVE_PAINTERS[L3.name] = function (curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
 	gl.pushMatrix()
 	let a = curve.at(startT), b = curve.at(endT)
-	let ab = b.minus(a), abT = ab.getPerpendicular().normalized()
-	let m = M4.forSys(ab, abT, ab.cross(abT).normalized(), a)
+	let ab = b.minus(a), abT = ab.getPerpendicular().unit()
+	let m = M4.forSys(ab, abT, ab.cross(abT).unit(), a)
 	gl.multMatrix(m)
 	gl.scale(1, width, width)
 	shaders.singleColor.uniforms({
@@ -1193,7 +1193,7 @@ function initMeshes() {
 	meshes.sphere1 = GL.Mesh.sphere(2)
 	meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
 	meshes.text = GL.Mesh.plane()
-	meshes.vector = GL.Mesh.rotation([V3.ZERO, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, Math.PI * 2, 16, true)
+	meshes.vector = GL.Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, Math.PI * 2, 16, true)
 	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
 	meshes.xyLinePlane = GL.Mesh.plane()
 }
@@ -1319,17 +1319,28 @@ function initNavigationEvents() {
 		paintScreen()
 	})
 }
-//const sFace = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah').faces.find(face => face.surface instanceof EllipsoidSurface)
+//const sFace = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.XY, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah').faces.find(face => face.surface instanceof EllipsoidSurface)
 //const face2 = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
 //const cylface = cyl.faces.find(face => face instanceof RotationFace)//.rotateX(50 * DEG)
 //assert(cylface.surface.facesOutwards())
 //const cyl = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
 window.onload = function () {
+    const rt = RangeTree.fromArray([-2, -1, 0,2,3,4,7-1,7])
+    rt.addIntervals([
+        {left: -1, right: 6},
+        {left: -2, right: 3},
+        {left: 0, right: 4},
+        {left: 2, right: 7},
+        {left: 3, right: 4},
+        {left: -2, right: -1}])
+    console.log(rt.str)
+
+    return
 	gl = GL.create({canvas: document.getElementById('mainCanvas') as HTMLCanvasElement})
 
-	const sphereSlice = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah')
+	const sphereSlice = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.XY, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah')
 
-	//const cyl2 = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.UNIT, PI, -PI)], P3.XY.flipped(), V3.Z, 'cyl')
+	//const cyl2 = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.XY, PI, -PI)], P3.XY.flipped(), V3.Z, 'cyl')
 
 	const plane = new P3(V3.sphere(-170 * DEG, 0), cos(10 * DEG))
 	const isc = SemiEllipsoidSurface.unitISCurvesWithPlane(plane)[0]
@@ -1341,18 +1352,18 @@ window.onload = function () {
 	//console.log("asd", cylface.toMesh().calcVolume().area)
 	//console.log("asd", cylface.calcArea())
 	return
-	//console.log("ASHD", ConicSurface.UNIT.calculateArea([
-	//	Edge.forCurveAndTs(EllipseCurve.UNIT.translate(0, 0, 1).shearedX(0, 1), -PI, +PI)
+	//console.log("ASHD", ConicSurface.XY.calculateArea([
+	//	Edge.forCurveAndTs(EllipseCurve.XY.translate(0, 0, 1).shearedX(0, 1), -PI, +PI)
 	//]))
-	//console.log(ConicSurface.UNIT.shearedX(0, 1).toMesh(0, 1).calcVolume().area)
+	//console.log(ConicSurface.XY.shearedX(0, 1).toMesh(0, 1).calcVolume().area)
 	////console.log(BezierCurve.EX2D.getAreaInDirSurface(V3.Y, new PlaneSurface(P3.XY), 0, 1))
-	//console.log(M4.rotationLine(V3.ZERO, V3.X, 3).str)
-	//console.log(M4.rotationLine(V3.ZERO, V3.X.times(2), 3).str)
+	//console.log(M4.rotationLine(V3.O, V3.X, 3).str)
+	//console.log(M4.rotationLine(V3.O, V3.X.times(2), 3).str)
 	//console.log("4/3 PI = " + 4 / 3 * PI)
-	//const cxz = new EllipseCurve(V3.ZERO, V3.X, V3.Z), cxy = new EllipseCurve(V3.ZERO, V3.X, V3.Y)
+	//const cxz = new EllipseCurve(V3.O, V3.X, V3.Z), cxy = new EllipseCurve(V3.O, V3.X, V3.Y)
 	//const loop = [Edge.forCurveAndTs(cxz, -PI/2, PI/2), Edge.forCurveAndTs(cxz, PI/2, -PI/2)]
-	//console.log('EllipsoidSurface.UNIT.zDirVolumeForLoop(loop)', EllipsoidSurface.UNIT.zDirVolumeForLoop(loop))
-	////console.log('EllipsoidSurface.UNIT.zDirVolumeForLoop(loop)', EllipsoidSurface.UNIT.zDirVolumeForLoop([
+	//console.log('EllipsoidSurface.XY.zDirVolumeForLoop(loop)', EllipsoidSurface.XY.zDirVolumeForLoop(loop))
+	////console.log('EllipsoidSurface.XY.zDirVolumeForLoop(loop)', EllipsoidSurface.XY.zDirVolumeForLoop([
 	////	Edge.forCurveAndTs(cxz, 0, PI/2),
 	////	Edge.forCurveAndTs(cxz, PI/2, 0),
 	////	Edge.forCurveAndTs(cxy, 2 * PI, 0),
@@ -2004,7 +2015,7 @@ function makeSelCoincident() {
 function faceSketchPlane() {
 	var plane = editingSketch.plane
 	var viewLine = L3.throughPoints(eyePos, eyeFocus)
-	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.ZERO)
+	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.O)
 	eyePos = eyeFocus.plus(plane.normal.times(100))
 	eyeUp = plane.up
 	setupCamera()

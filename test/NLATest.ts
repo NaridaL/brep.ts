@@ -1,5 +1,5 @@
 window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-	console.log(errorMsg, url, lineNumber, column, errorObj);
+	console.log(errorMsg, url, lineNumber, column, errorObj)
 }
 QUnit.assert.matrixEquals = function (actual, expected, message, precision) {
 	this.push(actual.equalsMatrix(expected, precision), actual.toString(), expected.toString(), message)
@@ -105,7 +105,9 @@ QUnit.testDifferentSystems('BezierCurve.isTsWithSurface(SemiCylinderSurface)', f
 })
 function testISCurves(assert: Assert, surface1: Surface, surface2: Surface, curveCount: int) {
     const isCurves = surface1.isCurvesWithSurface(surface2)
-    assert.ok(true, `<html><a href='../brep2.html?mesh=${surface1}.toMesh()&edges=${isCurves.map(c => Edge.forCurveAndTs(c, c.tMin, c.tMax)).sce}'>view</a>`)
+    console.log("http://google.com")
+    assert.ok(true, `<html><a href='../brep2.html?meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]`
+    + `&edges=${isCurves.map(c => Edge.forCurveAndTs(c, c.tMin, c.tMax)).sce}'>view</a>`)
     assert.equal(isCurves.length, curveCount, 'number of curves = ' +  curveCount)
     for (const curve of isCurves) {
         assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
@@ -118,6 +120,18 @@ function testISCurves(assert: Assert, surface1: Surface, surface2: Surface, curv
         const pN2 = surface2.normalAt(p)
         assert.ok(pN1.cross(pN2).isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
         assert.ok(pN1.cross(pN2).dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
+    }
+}
+function testISTs(assert: Assert, curve: Curve, surface: Surface, curveCount: int) {
+    const ists = curve.isTsWithSurface(surface)
+    const points = ists.map(t => curve.at(t))
+    assert.ok(true, `<html><a href='../brep2.html?meshes=[${surface}.toMesh()]&edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}]&points=${points.sce}'>view</a>`)
+    assert.equal(ists.length, curveCount, 'number of curves = ' +  curveCount)
+    for (const t of ists) {
+        const p = curve.at(t)
+        assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
+                + ' t: ' + t
+            + ' dist: ' + surface.implicitFunction()(p))
     }
 }
 QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert, m4) {
@@ -162,7 +176,7 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 		const loop = [
 			StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
 			Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, -1), 0, -PI / 2),
-			Edge.forCurveAndTs(new SemiEllipseCurve(V3.ZERO, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4))
+			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4))
 		const face = Face.create(surface, loop)
 		assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
@@ -193,8 +207,8 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 	// loop which is 1 high and goes around a quarter of the cylinder
 	const loop = [
 		Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 10 * DEG, 40 * DEG),
-		Edge.forCurveAndTs(new SemiEllipseCurve(V3.ZERO, V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2),
-		Edge.forCurveAndTs(new SemiEllipseCurve(V3.ZERO, V3.sphere(10 * DEG, 0), V3.Z), PI / 2, 0)].map(edge => edge.transform(m4))
+		Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2),
+		Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(10 * DEG, 0), V3.Z), PI / 2, 0)].map(edge => edge.transform(m4))
 	const face = Face.create(surface, loop)
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
@@ -225,7 +239,7 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 	//	const loop = [
 	//		StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
 	//		Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, -1), 0, -PI / 2),
-	//		Edge.forCurveAndTs(new SemiEllipseCurve(V3.ZERO, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4))
+	//		Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4))
 	//	const face = Face.create(surface, loop)
 	//	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 	//					href='../brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
@@ -267,7 +281,7 @@ QUnit.testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4
 				let areaFactor = m4.transformVector(V3.X).cross(m4.transformVector(V3.Y)).length()
 				console.log(areaFactor)
 				const ell = SemiEllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
-				let up = m4.transformVector(test.up).normalized()
+				let up = m4.transformVector(test.up).unit()
 				let offsetArea = yDiff * ((1 - cos(test.t)) - (1 - cos(test.s))) * test.up.dot(V3.Y)
 				const totalArea = test.result + offsetArea
 				const expectedArea = totalArea * areaFactor
@@ -337,7 +351,7 @@ registerTests({
 	},
 
 	'Vector.isParallelTo'(assert) {
-		assert.equal(new Line(V3.ZERO, V3.X).distanceToPoint(V(1, 1, 0)), 1)
+		assert.equal(new Line(V3.O, V3.X).distanceToPoint(V(1, 1, 0)), 1)
 	},
 	'NLA.eq etc'(assert) {
 		assert.notOk(NLA.lt(2, 2 + NLA_PRECISION / 2))
@@ -359,29 +373,29 @@ registerTests({
 		assert.ok(NLA.eq(2, 2 + NLA_PRECISION) == NLA.ge(2, 2 + NLA_PRECISION))
 	},
 	'arrayCopyStep'(assert) {
-		const a = [1, 2, 3, 4, 5, 6, 7, 8];
-		const b = [-1, -2, -3, -4];
+		const a = [1, 2, 3, 4, 5, 6, 7, 8]
+		const b = [-1, -2, -3, -4]
 		NLA.arrayCopyStep(b, 0, 1, a, 1, 2, 3)
 		assert.deepEqual(a, [1, -1, 3, -2, 5, -3, 7, 8])
 	},
 	'arrayCopy'(assert) {
-		const a = [1, 2, 3, 4, 5, 6, 7, 8];
-		const b = [-1, -2, -3, -4];
+		const a = [1, 2, 3, 4, 5, 6, 7, 8]
+		const b = [-1, -2, -3, -4]
 		NLA.arrayCopy(b, 1, a, 2, 2)
 		assert.deepEqual(a, [1, 2, -2, -3, 5, 6, 7, 8])
 	},
 	'matrix rowArrays'(assert) {
-		const a = Matrix.fromRowArrays([6, 3], [4, 3]);
+		const a = Matrix.fromRowArrays([6, 3], [4, 3])
 		assert.deepEqual(a.rowArray(0, Array), [6, 3])
 		assert.deepEqual(a.rowArray(1, Array), [4, 3])
 		assert.deepEqual(a.asRowArrays(Array), [[6, 3], [4, 3]])
 	},
 	'matrix transposed'(assert) {
-		const a = Matrix.fromRowArrays([6, 3], [4, 3]);
+		const a = Matrix.fromRowArrays([6, 3], [4, 3])
 		assert.deepEqual(a.transposed().asRowArrays(Array), [[6, 4], [3, 3]])
 	},
 	'matrix transpose'(assert) {
-		let a = Matrix.fromRowArrays([6, 3], [4, 3]);
+		let a = Matrix.fromRowArrays([6, 3], [4, 3])
 		a.transpose()
 		assert.deepEqual(a.asRowArrays(Array), [[6, 4], [3, 3]])
 
@@ -392,35 +406,35 @@ registerTests({
 		assert.deepEqual(a.asRowArrays(Array), [[6, 3, 4, 3]])
 	},
 	'Matrix.prototype.times'(assert) {
-		const a = Matrix.fromRowArrays([6, 3], [4, 3]);
+		const a = Matrix.fromRowArrays([6, 3], [4, 3])
 		assert.deepEqual(Matrix.identity(2).times(a).asRowArrays(Array), [[6, 3], [4, 3]])
 		assert.deepEqual(a.times(Matrix.identity(2)).asRowArrays(Array), [[6, 3], [4, 3]])
 	},
 	'Matrix.identity'(assert) {
-		const a = Matrix.identity(2);
+		const a = Matrix.identity(2)
 		assert.deepEqual(a.asRowArrays(Array), [[1, 0], [0, 1]])
 	},
 	'Matrix.prototype.rowsIndependent'(assert) {
-		const a = Matrix.fromRowArrays([6, 3], [4, 3]);
-		const b = Matrix.fromRowArrays([6, 3], [12, 6]);
+		const a = Matrix.fromRowArrays([6, 3], [4, 3])
+		const b = Matrix.fromRowArrays([6, 3], [12, 6])
 
 		// all rows on plane through origin with normal = V(1, -1, 0)
-		const c = Matrix.fromRowArrays([1, -1, 1], [1, 1, 1], [-1, 0, -1]);
+		const c = Matrix.fromRowArrays([1, -1, 1], [1, 1, 1], [-1, 0, -1])
 		assert.ok(a.rowsIndependent())
 		assert.notOk(b.rowsIndependent())
 		assert.notOk(c.rowsIndependent())
 	},
 	'Matrix.prototype.rank'(assert) {
-		const a = Matrix.fromRowArrays([6, 3], [4, 3]);
-		const b = Matrix.fromRowArrays([6, 3], [12, 6]);
+		const a = Matrix.fromRowArrays([6, 3], [4, 3])
+		const b = Matrix.fromRowArrays([6, 3], [12, 6])
 
 		// all rows on plane through origin with normal = V(1, -1, 0)
-		const c = Matrix.fromRowArrays([1, -1, 1], [1, 1, 1], [-1, 0, -1]);
+		const c = Matrix.fromRowArrays([1, -1, 1], [1, 1, 1], [-1, 0, -1])
 		assert.equal(a.rank(), 2)
 		assert.equal(b.rank(), 1)
 		assert.equal(c.rank(), 2)
 
-		const d = Matrix.fromRowArrays([1, 1, 0, 2], [-1, -1, 0, -2]);
+		const d = Matrix.fromRowArrays([1, 1, 0, 2], [-1, -1, 0, -2])
 		assert.equal(d.rank(), 1)
 		assert.equal(d.transposed().rank(), 1)
 
@@ -435,65 +449,65 @@ registerTests({
 
 	},
 	'LU Decomposition'(assert) {
-		const a = Matrix.fromRowArrays([6, 3], [4, 3]);
-		const aLU = a.luDecomposition();
+		const a = Matrix.fromRowArrays([6, 3], [4, 3])
+		const aLU = a.luDecomposition()
 		assert.deepEqual(aLU.L.asRowArrays(Array), [[1, 0], [4 / 6, 1]])
 		assert.deepEqual(aLU.U.asRowArrays(Array), [[6, 3], [0, 1]])
 		assert.deepEqual(aLU.P.asRowArrays(Array), [[1, 0], [0, 1]])
 		assert.matrixEquals(aLU.P.times(a), aLU.L.times(aLU.U))
 	},
 	'LU Decomposition 2'(assert) {
-		const a = Matrix.fromFunction(8, 8, (i, j) => Math.round((Math.random() - 0.5) * 4096));
+		const a = Matrix.fromFunction(8, 8, (i, j) => Math.round((Math.random() - 0.5) * 4096))
 		//var a = Matrix.fromRowArrays2([[-1636, 1740, -516], [-708, 403, 1986], [-1256, -1493, 996]])
 		assert.ok(a.rowsIndependent())
-		const aLU = a.luDecomposition();
+		const aLU = a.luDecomposition()
 		assert.ok(aLU.P.isPermutation())
 		assert.ok(aLU.L.isLowerTriangular())
 		assert.ok(aLU.U.isUpperTriangular())
 		assert.matrixEquals(aLU.P.times(a), aLU.L.times(aLU.U))
 	},
 	'LU Decomposition 3'(assert) {
-		const a = Matrix.fromRowArrays([0, 1, 1], [1, 1, 1], [1, 2, 3]);
-		const aLU = a.luDecomposition();
+		const a = Matrix.fromRowArrays([0, 1, 1], [1, 1, 1], [1, 2, 3])
+		const aLU = a.luDecomposition()
 		assert.deepEqual(aLU.U.asRowArrays(Array), [[1, 1, 1], [0, 1, 1], [0, 0, 1]])
 		assert.deepEqual(aLU.L.asRowArrays(Array), [[1, 0, 0], [0, 1, 0], [1, 1, 1]])
 		assert.deepEqual(aLU.P.asRowArrays(Array), [[0, 1, 0], [1, 0, 0], [0, 0, 1]])
 		assert.matrixEquals(aLU.P.times(a), aLU.L.times(aLU.U))
 	},
 	'Matrix.isOrthogonal'(assert) {
-		const a = Matrix.identity(4);
+		const a = Matrix.identity(4)
 		assert.ok(a.isOrthogonal())
-		let b = Matrix.fromRowArrays([Math.sqrt(2) / 2, Math.sqrt(2) / 2], [-Math.sqrt(2) / 2, Math.sqrt(2) / 2]);
+		let b = Matrix.fromRowArrays([Math.sqrt(2) / 2, Math.sqrt(2) / 2], [-Math.sqrt(2) / 2, Math.sqrt(2) / 2])
 		assert.ok(a.isOrthogonal())
 	},
 	'Matrix.prototype.solveLinearSystem'(assert) {
-		const a = Matrix.fromRowArrays([0, 1, 1], [1, 1, 1], [1, 2, 3]);
-		const b = NLA.Vector.from(1, 2, 3);
-		const x = a.solveLinearSystem(b);
+		const a = Matrix.fromRowArrays([0, 1, 1], [1, 1, 1], [1, 2, 3])
+		const b = NLA.Vector.from(1, 2, 3)
+		const x = a.solveLinearSystem(b)
 		assert.push(x.equals(NLA.Vector.from(1, 1, 0)), x, NLA.Vector.from(1, 1, 0))
 		assert.push(a.timesVector(x).equals(b), a.timesVector(x), b)
 	},
 	'Matrix.prototype.inverse'(assert) {
-		const a = Matrix.fromRowArrays([0, 1, 1], [1, 1, 1], [1, 2, 3]);
-		const aInverse = a.inversed();
+		const a = Matrix.fromRowArrays([0, 1, 1], [1, 1, 1], [1, 2, 3])
+		const aInverse = a.inversed()
 		console.log(aInverse.toString())
 		assert.matrixEquals(a.times(aInverse), Matrix.identity(3))
 	},
 	'Matrix.prototype.inverse 2'(assert) {
-		const a = Matrix.random(8, 8);
-		const aInverse = a.inversed();
+		const a = Matrix.random(8, 8)
+		const aInverse = a.inversed()
 		assert.matrixEquals(a.times(aInverse), Matrix.identity(8))
 	},
 	'Matrix.prototype.inverse 3'(assert) {
-		const a = new Matrix(1, 1, new Float64Array([5]));
-		const aInverse = a.inversed();
+		const a = new Matrix(1, 1, new Float64Array([5]))
+		const aInverse = a.inversed()
 		console.log(a.luDecomposition())
 		assert.equal(aInverse.m[0], 1 / 5)
 	},
 	'Matrix.prototype.qrDecompositionGivensRotation'(assert) {
-		const sqrt = Math.sqrt;
-		let m = Matrix.fromRowArrays([3, 5], [0, 2], [0, 0], [4, 5]);
-		let Q, R;
+		const sqrt = Math.sqrt
+		let m = Matrix.fromRowArrays([3, 5], [0, 2], [0, 0], [4, 5])
+		let Q, R
 		assert.matrixEquals(Q, Matrix.fromRowArrays(
 			[3 / 5, 4 / 5 / sqrt(5), 0, -8 / 5 / sqrt(5)],
 			[0, 2 / sqrt(5), 0, 1 / sqrt(5)],
@@ -511,7 +525,7 @@ registerTests({
 	},
 
 	'Plane3.prototype.projectedVector'(assert) {
-		const p = new P3(V(0, 0, 1), 2);
+		const p = new P3(V(0, 0, 1), 2)
 		assert.ok(V(1, 1, 0).like(p.projectedVector(V(1, 1, 1))))
 	},
 	'Line3.prototype.distanceToLine'(assert) {
@@ -519,7 +533,7 @@ registerTests({
 		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.X)), 1)
 	},
 	'Plane3.prototype.transformed'(assert) {
-		let p = new P3(V(0, 0, 1), 2);
+		let p = new P3(V(0, 0, 1), 2)
 		assert.ok(P3.XY.like(P3.XY.transform(M4.identity())))
 	},
 	'Matrix4x4.prototype.isAxisAligned'(assert) {
@@ -529,13 +543,13 @@ registerTests({
 		assert.notOk(M4.rotationX(Math.PI / 4).isAxisAligned())
 	},
 	'Matrix4x4.prototype.rotationLine'(assert) {
-		assert.matrixEquals(M4.rotationLine(V3.ZERO, V3.X, 1), M4.rotationX(1))
-		assert.matrixEquals(M4.rotationLine(V3.ZERO, V3.Y, 1), M4.rotationY(1))
-		assert.matrixEquals(M4.rotationLine(V3.ZERO, V3.Z, 1), M4.rotationZ(1))
+		assert.matrixEquals(M4.rotationLine(V3.O, V3.X, 1), M4.rotationX(1))
+		assert.matrixEquals(M4.rotationLine(V3.O, V3.Y, 1), M4.rotationY(1))
+		assert.matrixEquals(M4.rotationLine(V3.O, V3.Z, 1), M4.rotationZ(1))
 
-		const a = V(1, 2, 3), PI = Math.PI;
+		const a = V(1, 2, 3), PI = Math.PI
 		assert.matrixEquals(
-			M4.rotationLine(a, V(1, 1, 0).normalized(), 1),
+			M4.rotationLine(a, V(1, 1, 0).unit(), 1),
 			M4.multiplyMultiple(M4.translation(a), M4.rotationZ(PI / 4), M4.rotationX(1), M4.rotationZ(-PI / 4), M4.translation(a.negated())),
 			'',
 			1e-6)
@@ -544,12 +558,12 @@ registerTests({
 		assert.matrixEquals(M4.multiplyMultiple(M4.rotationX(1), M4.rotationZ(1)), M4.rotationX(1).times(M4.rotationZ(1)))
 	},
 	'NLA.M4.projection'(assert) {
-		const plane = new P3(V(1, 2, 3).normalized(), 5);
-		const proj = M4.projection(plane);
+		const plane = new P3(V(1, 2, 3).unit(), 5)
+		const proj = M4.projection(plane)
 		console.log(proj.transformPoint(V(2, 4, 6)))
 		assert.V3like(proj.transformPoint(V(2, 4, 6)), plane.anchor)
-		assert.V3like(proj.transformVector(V(2, 4, 6)), V3.ZERO)
-		const p2 = V(3, 5, 22);
+		assert.V3like(proj.transformVector(V(2, 4, 6)), V3.O)
+		const p2 = V(3, 5, 22)
 		assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(plane.normal))
 		assert.ok(plane.containsPoint(proj.transformPoint(p2)))
 		assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(plane.normal))
@@ -557,9 +571,9 @@ registerTests({
 	},
 	'NLA.M4.projection 2'(assert) {
 		[V(1, 1, 1), V(0, 0, -1)].forEach(dir => {
-			const plane = new P3(V(1, 2, 3).normalized(), 5);
-			const proj = M4.projection(plane, dir);
-			const p2 = V(3, 5, 22);
+			const plane = new P3(V(1, 2, 3).unit(), 5)
+			const proj = M4.projection(plane, dir)
+			const p2 = V(3, 5, 22)
 			assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
 			assert.ok(plane.containsPoint(proj.transformPoint(p2)))
 			assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(dir))
@@ -582,26 +596,26 @@ registerTests({
 		assert.ok(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).equals(V3.X))
 	},
 	'V3.prototype.zip'(assert) {
-		const a = V(1, 2, 3), b = V(4, 5, 6);
+		const a = V(1, 2, 3), b = V(4, 5, 6)
 		assert.ok(V3.zip((a, b) => a + 3 * b, a, b).equals(a.plus(b.times(3))))
 	},
 	'NLA.magic'(assert) {
 		assert.expect(0)
-		let a = V(1, 2, 3), b = V(4, 5, 6);
+		let a = V(1, 2, 3), b = V(4, 5, 6)
 		//assert.ok(NLA.magic('a b c s => abs(a) x b .. c + 3 + ')(a, b, c, 3).equals(a.abs().cross(b).dot(c) + 3))
 	},
 	'AABB'(assert) {
-		const a = new AABB(V3.ZERO, V(20, 10, 30));
-		const b = new AABB(V3.ZERO, V(1, 1, 1));
+		const a = new AABB(V3.O, V(20, 10, 30))
+		const b = new AABB(V3.O, V(1, 1, 1))
 		assert.ok(a.likeAABB(a))
 		assert.notOk(a.likeAABB(a.translate(10, 0, 0)))
 		assert.ok(a.withoutAABB(b).likeAABB(new AABB(V(0, 0, 1), V(20, 10, 30))))
 	},
 // QUnit.test( 'V3.areDisjoint', function(assert ) {
-// 	assert.ok(V3.areDisjoint([V3.ZERO, V3.X, V3.Y]))
-// 	assert.ok(V3.areDisjoint([V3.ZERO, V3.X, V3.X, V3.Y])) // same value twice is ok, as same reference
-// 	assert.notOk(V3.areDisjoint([V3.ZERO, V3.X, V(0, 0, 0), V3.Y])) // not ok as V3.ZERO != V(0, 0, 0)
-// 	assert.notOk(V3.areDisjoint([V3.ZERO, V3.X, V(NLA_PRECISION / 2, 0, 0), V3.Y])) // not ok as !V3.ZERO.like(V(...))
+// 	assert.ok(V3.areDisjoint([V3.O, V3.X, V3.Y]))
+// 	assert.ok(V3.areDisjoint([V3.O, V3.X, V3.X, V3.Y])) // same value twice is ok, as same reference
+// 	assert.notOk(V3.areDisjoint([V3.O, V3.X, V(0, 0, 0), V3.Y])) // not ok as V3.O != V(0, 0, 0)
+// 	assert.notOk(V3.areDisjoint([V3.O, V3.X, V(NLA_PRECISION / 2, 0, 0), V3.Y])) // not ok as !V3.O.like(V(...))
 // 	assert.ok(V3.areDisjoint([V(NLA_PRECISION * -0.7, 0, 0), V(NLA_PRECISION * 0.7, 0, 0)]))
 // })
 	'V3.areDisjoint2'(assert) {
@@ -613,11 +627,11 @@ registerTests({
 		assert.ok(s.canonicalizeLike(b) == a)
 	},
 	'NLA.arrayBinaryInsert'(assert) {
-		const arr = [1, 2, 3, 4];
+		const arr = [1, 2, 3, 4]
 		NLA.arrayBinaryInsert(arr, 2.5, (a, b) => a - b)
 		assert.deepEqual(arr, [1, 2, 2.5, 3, 4])
 
-		const arr2 = [];
+		const arr2 = []
 		NLA.arrayBinaryInsert(arr2, -2, NLA.minus)
 		NLA.arrayBinaryInsert(arr2, 5, NLA.minus)
 		assert.deepEqual(arr2, [-2, 5])
@@ -627,7 +641,7 @@ registerTests({
 		assert.equal([1, 2, 2.5, 3, 4].binaryIndexOf(2.6, (a, b) => a - b), -3 - 1)
 	},
 	'newtonIterate2d'(assert) {
-		const res = newtonIterate2d((s, t) => s - 2, (s, t) => t - 4, 5, 5);
+		const res = newtonIterate2d((s, t) => s - 2, (s, t) => t - 4, 5, 5)
 		assert.push(res.like(V(2, 4)), res.sce, V(2, 4).sce)
 	},
 
@@ -639,7 +653,7 @@ registerTests({
 			StraightEdge.throughPoints(V(142.87578921496748, -191.46078243076332, 0), V(142.87578921496748, -191.46078243076332, -100)),
 			PCurveEdge.forCurveAndTs(new BezierCurve(V(142.87578921496748, -191.46078243076332, -100), V(161.78547089700214, -252.13248349581008, -100), V(284.63214994898954, -163.59789158697575, -100), V(372.40411211189405, -210.3992206435476, -100)), 0, 1),
 			StraightEdge.throughPoints(V(372.40411211189405, -210.3992206435476, -100), V(372.40411211189405, -210.3992206435476, 0))], [])
-		let line = new L3(V(1241.5987, -1214.1894, 38.9886), V(-0.6705, 0.7386, -0.0696).normalized())
+		let line = new L3(V(1241.5987, -1214.1894, 38.9886), V(-0.6705, 0.7386, -0.0696).unit())
 		let ists = face.surface.isTsForLine(line)
 		assert.equal(ists.length, 3)
 		ists.forEach(t => {
@@ -659,14 +673,13 @@ registerTests({
 			let p = info.p
 			assert.ok(curve1.containsPoint(p), `curve1.distanceToPoint(${p}) = ${curve1.distanceToPoint(p, -2, 3)}`)
 			assert.ok(curve2.containsPoint(p), `curve2.distanceToPoint(${p}) = ${curve2.distanceToPoint(p, -2, 3)}`)
-		}
+		})
 
 		// test self-intersections
-		;
-		[new BezierCurve(V(133, 205, 0), V(33, 240, 0), V(63, 168, 0), V(151, 231, 0)),
-			new BezierCurve(V3.ZERO, V(10, 10), V(-9, 10), V3.X)].forEach(curve => {
-			assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
-			let isInfos = curve.isInfosWithBezier(curve, 0, 1, 0, 1)
+        ;[  new BezierCurve(V(133, 205, 0), V(33, 240, 0), V(63, 168, 0), V(151, 231, 0)),
+            new BezierCurve(V3.O, V(10, 10), V(-9, 10), V3.X)].forEach(curve => {
+            assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
+			const isInfos = curve.isInfosWithBezier(curve, 0, 1, 0, 1)
 			assert.equal(isInfos.length, 1)
 			console.log(isInfos.map(SCE))
 			isInfos.forEach(info => {
@@ -677,45 +690,63 @@ registerTests({
 	},
 
 	'ParabolaCurve'(assert) {
-		const curve = new ParabolaCurve(V(1, 1), V(4, 1, -2), V(1, 10, 2));
+		const curve = new ParabolaCurve(V(1, 1), V(4, 1, -2), V(1, 10, 2))
 		assert.ok(curve.containsPoint(curve.at(0)))
 		assert.ok(curve.containsPoint(curve.at(1)))
 		assert.ok(curve.containsPoint(curve.at(-1)))
-		const plane = new P3(V(2, 7, 1).normalized(), 10);
-		const iss = curve.isTsWithPlane(plane);
+		const plane = new P3(V(2, 7, 1).unit(), 10)
+		const iss = curve.isTsWithPlane(plane)
 		assert.equal(iss.length, 2)
 		assert.ok(plane.containsPoint(curve.at(iss[0])), plane.distanceToPointSigned(curve.at(iss[0])))
 		assert.ok(plane.containsPoint(curve.at(iss[1])), plane.distanceToPointSigned(curve.at(iss[1])))
 
 
-		const curveRA = curve.rightAngled();
+		const curveRA = curve.rightAngled()
 		NLA.arrayRange(-10, 10, 1).forEach(t => assert.ok(curveRA.containsPoint(curve.at(t))))
 
 		//var curve = ParabolaCurve.forAB(10, 20)
-		const startT = -2, endT = 3, steps = 1000;
+		const startT = -2, endT = 3, steps = 1000
 		console.log(integrateCurve(curve, startT, endT, 1000))
 		console.log(curve.arcLength(startT, endT))
 	},
 	'BezierCurve'(assert) {
-		const curve = BezierCurve.graphXY(2, -3, -3, 2);//.rotateZ(PI/3)
+		const curve = BezierCurve.graphXY(2, -3, -3, 2)//.rotateZ(PI/3)
 		//NLA.arrayRange(-1, 1, 0.1).forEach(t => assert.ok(NLA.eq(curve.at(t).x, t)))
-		//curve.pointT(V3.ZERO)//(V(1,-2))
-		NLA.arrayRange(-1, 1, 0.1).forEach(t => assert.push(NLA.eq(t, curve.pointT(curve.at(t))), t, curve.pointT(curve.at(t))))
+		//curve.pointT(V3.O)//(V(1,-2))
+		NLA.arrayRange(-1, 1, 0.1).forEach(t => {
+		    assert.push(NLA.eq(t, curve.pointT(curve.at(t))), t, curve.pointT(curve.at(t)))
+        })
 	},
-	'BezierCurve.pointT'(assert) {
-		let curve = new BezierCurve(
-			V(92.48132002394416, 253.35277539335377, 0),
-			V(99.18055157018783, 225.4322156490681, 0),
-			V(63.52151476563836, 168.59279980361327, 0),
-			V(151.89049176954802, 231.21343792479922, 0))
-		let p = V(90.8280915025532, 214.7764313721318, 0)
-		assert.ok(NLA.eq0(curve.distanceToPoint(p)))
-		assert.ok(isFinite(curve.pointT(p)))
+    'BezierCurve.pointT'(assert) {
+        let curve = new BezierCurve(
+            V(92.48132002394416, 253.35277539335377, 0),
+            V(99.18055157018783, 225.4322156490681, 0),
+            V(63.52151476563836, 168.59279980361327, 0),
+            V(151.89049176954802, 231.21343792479922, 0))
+        let p = V(90.8280915025532, 214.7764313721318, 0)
+        assert.ok(NLA.eq0(curve.distanceToPoint(p)))
+        assert.ok(isFinite(curve.pointT(p)))
 
 
-	},
+    },
+    'BezierCurve.pointT 2'(assert) {
+        const curve = new BezierCurve(V(67.44, 3.02, 0), V(67.42, 2.8200000000000003, 0), V(67.39333333333333, 2.64, 0), V(67.36, 2.48, 0), 0, 1)
+        const t = 56.58829486216517
+        const p = curve.at(t)
+        assert.push(eq(t, curve.pointT2(p)), curve.pointT(p), t)
+    },
+    'BezierCurve.pointT 3'(assert) {
+        const curve = new BezierCurve(V(75.07, 17.86, 0), V(75.07, 28.16, 0), V(70.27, 34.5, 0), V(61.44, 34.5, 0), 0, 1)
+        const p = curve.p3
+        assert.push(eq(1, curve.pointT(p)), curve.pointT(p), 1)
+    },
+    'BezierCurve.pointT 4'(assert) {
+        const curve = new BezierCurve(V(11.74, 11.49, 0), V(14.18, 12.74, 0), V(15.39, 14.34, 0), V(15.39, 16.29, 0), 0, 1)
+        const p = curve.p3
+        assert.push(eq(1, curve.pointT(p)), curve.pointT(p), 1)
+    },
 	'BezierCurve.distanceToPoint'(assert) {
-		let curve = BezierCurve.graphXY(0, 0, 0, 1);//.rotateZ(PI/3)
+		let curve = BezierCurve.graphXY(0, 0, 0, 1)//.rotateZ(PI/3)
 //        assert.ok(NLA.eq2(curve.distanceToPoint(V(0.5, 0)), 1, NLA_PRECISION))
 
 		let curve2 = BezierCurve.graphXY(2, -3, -3, 2)
@@ -808,22 +839,43 @@ registerTests({
 		assert.equal(curve.isInfosWithLine(line3.anchor, line3.dir1).length, 0)
 
 	},
-	'BezierCurve.isTsWithPlane'(assert) {
-		let curve = BezierCurve.graphXY(2, -3, -3, 2)
-		let plane = new P3(V(0, 1, 1).normalized(), 1)
+    'BezierCurve.isTsWithPlane'(assert) {
+        let curve = BezierCurve.graphXY(2, -3, -3, 2)
+        let plane = new P3(V(0, 1, 1).unit(), 1)
 
-		let iss = curve.isTsWithPlane(plane)
-		assert.equal(iss.length, 3)
-		iss.forEach(t => {
-			assert.ok(plane.containsPoint(curve.at(t)))
-		})
-	},
-	'solveCubicReal2()'(assert) {
-		assert.deepEqual(solveCubicReal2(0, 1, 0, 0), [0])
-		assert.deepEqual(solveCubicReal2(1, 0, 0, 0), [0])
-	},
+        let iss = curve.isTsWithPlane(plane)
+        assert.equal(iss.length, 3)
+        iss.forEach(t => {
+            assert.ok(plane.containsPoint(curve.at(t)))
+        })
+    },
+    'BezierCurve.isTsWithEllipsoidSurface'(assert) {
+        //const curve = ParabolaCurve.XY.asBezier().scale(5).translate(0, 1)
+        const curve = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
+        const s = EllipsoidSurface.UNIT
+
+
+        testISTs(assert, curve.translate(0.2), s, 4)
+        testISTs(assert, curve, s, 4)
+        testISTs(assert, curve.translate(-0.00635), s, 3)
+        console.log(NLA.arrayRange(-0.00640, -0.00630, 0.000005).map(i => curve.translate(i).isTsWithSurface(s).length))
+    },
+    'solveCubicReal2()'(assert) {
+        assert.deepEqual(solveCubicReal2(0, 1, 0, 0), [0])
+        assert.deepEqual(solveCubicReal2(1, 0, 0, 0), [0])
+    },
+    'solveCubicReal2() 2'(assert) {
+        const [a, b, c, d] = [-2.38, -11.88, +30.9, -16.64]
+        const results = solveCubicReal2(a,b,c,d)
+        const results2 = solveCubic(a,b,c,d)
+        assert.equal(results.length, 2)
+        results.forEach(x => {
+            const y = a * x ** 3 + b * x ** 2 + c * x + d
+            assert.push(eq0(y), y, 0)
+        })
+    },
 	'M4.projectPlanePoint()'(assert) {
-		const m4 = M4.projectPlanePoint(V3.Z.negated(), P3.XY);
+		const m4 = M4.projectPlanePoint(V3.Z.negated(), P3.XY)
 		assert.V3like(m4.transformPoint(V(4, 0, 1)), V(2, 0, 0))
 		assert.V3like(m4.transformPoint(V(4, 8, 1)), V(2, 4, 0))
 		assert.V3like(m4.transformPoint(V(4, 8, 2)), V(4 / 3, 8 / 3, 0))
@@ -833,25 +885,25 @@ registerTests({
 
 	},
 	'ConicSurface.coplanar'(assert) {
-		const unitCone = ConicSurface.UNIT;
+		const unitCone = ConicSurface.UNIT
 		assert.ok(unitCone.matrix.isIdentity(), 'unitCone.matrix.isIdentity()')
 		assert.V3like(unitCone.parametricFunction()(0, 3), V(3, 0, 3))
-		const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3);
-		const planeAtZ3 = P3.XY.translate(0, 0, 3);
-		const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3);
+		const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
+		const planeAtZ3 = P3.XY.translate(0, 0, 3)
+		const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3)
 		assert.equal(issAtZ3.length, 1)
 		assert.push(ellipseAtZ3.isColinearTo(issAtZ3[0]), issAtZ3.toString(), ellipseAtZ3.toString())
 		assert.ok(unitCone.containsEllipse(ellipseAtZ3))
 
 
-		const scaledUnit = ConicSurface.UNIT.scale(2, 2, 1);
+		const scaledUnit = ConicSurface.UNIT.scale(2, 2, 1)
 		assert.notOk(scaledUnit.isCoplanarTo(unitCone))
 		assert.notOk(unitCone.isCoplanarTo(scaledUnit))
-		const ell1 = unitCone.isCurvesWithPlane(new P3(V(2, 3, 10).normalized(), 10))[0];
+		const ell1 = unitCone.isCurvesWithPlane(new P3(V(2, 3, 10).unit(), 10))[0]
 		assert.ok(unitCone.containsEllipse(ell1), 'unitCone.containsEllipse(ell1)')
-		const ell2 = unitCone.isCurvesWithPlane(new P3(V(1, 1, 2).normalized(), 4))[0];
-		const ell1Cone = ConicSurface.atApexThroughEllipse(V3.ZERO, ell1, 1);
-		const ell2Cone = ConicSurface.atApexThroughEllipse(V3.ZERO, ell2, 1);
+		const ell2 = unitCone.isCurvesWithPlane(new P3(V(1, 1, 2).unit(), 4))[0]
+		const ell1Cone = ConicSurface.atApexThroughEllipse(V3.O, ell1, 1)
+		const ell2Cone = ConicSurface.atApexThroughEllipse(V3.O, ell2, 1)
 		console.log(ell1Cone)
 		assert.ok(unitCone.isCoplanarTo(ell1Cone))
 		assert.ok(unitCone.isCoplanarTo(ell2Cone))
@@ -860,21 +912,21 @@ registerTests({
 		assert.ok(ell1Cone.foo().isCoplanarTo(ell2Cone.foo()))
 	},
 	'ConicSurface.containsParabola'(assert) {
-		const unitCone = ConicSurface.UNIT;
-		const pb = unitCone.isCurvesWithPlane(new P3(V(1, 0, 1).normalized(), 4))[0];
+		const unitCone = ConicSurface.UNIT
+		const pb = unitCone.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]
 		assert.ok(unitCone.containsParabola(pb))
 
-		const c2 = unitCone.shearedX(2, 3);
-		const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).normalized(), 4).shearedX(2, 3))[0];
+		const c2 = unitCone.shearedX(2, 3)
+		const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearedX(2, 3))[0]
 		assert.ok(c2.containsParabola(pb2))
 	},
 	'HyperbolaCurve'(assert) {
-		const hb = HyperbolaCurve.UNIT;
+		const hb = HyperbolaCurve.UNIT
 		NLA.arrayRange(-10, 10, 1).forEach(t => assert.ok(hb.containsPoint(hb.at(t))))
 
-		const hbSheared = hb.shearedX(2, 3);
+		const hbSheared = hb.shearedX(2, 3)
 		assert.notOk(hbSheared.isOrthogonal())
-		const hbScaledRA = hbSheared.rightAngled();
+		const hbScaledRA = hbSheared.rightAngled()
 		NLA.arrayRange(-10, 10, 1).forEach(t => assert.ok(hbScaledRA.containsPoint(hbSheared.at(t))))
 
 		assert.deepEqual(intersectionUnitHyperbolaLine(1, 0, 2), {x1: 2, y1: sqrt(3), x2: 2, y2: -sqrt(3)})
@@ -919,7 +971,7 @@ registerTests({
 		assert.ok(line.containsPoint(isPoints[1]), '' + line.distanceToPoint(isPoints[1]))
 	},
 	'SemiCylinderSurface.intersectionLine 2'(assert) {
-		const cylSurface = new SemiCylinderSurface(new SemiEllipseCurve(V3.ZERO, V(8, 0, 0), V(0, 5, 0)), V3.Z)
+		const cylSurface = new SemiCylinderSurface(new SemiEllipseCurve(V3.O, V(8, 0, 0), V(0, 5, 0)), V3.Z)
 		const line = L3.throughPoints(V(10, 0, 0), V(-10, 2, 10))
 		const isPoints = cylSurface.isTsForLine(line).map(line.at, line)
 		console.log(isPoints.toSource())
@@ -943,7 +995,7 @@ registerTests({
 	'SemiCylinderSurface.zDirVolume'(assert) {
 		const face = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
 		const face2 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
-		const face3 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0).rotateY(-80 * DEG), StraightEdge.throughPoints(V3.X, V3.X.negated()).rotateY(-80 * DEG)], P3.XY.flipped().rotateY(-80 * DEG), new V3(-10, -1, 0).normalized(), 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
+		const face3 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0).rotateY(-80 * DEG), StraightEdge.throughPoints(V3.X, V3.X.negated()).rotateY(-80 * DEG)], P3.XY.flipped().rotateY(-80 * DEG), new V3(-10, -1, 0).unit(), 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
 		const modface = face.rotateY(-45 * DEG).translate(1, 0, 2)
 		const e0 = modface.contour[0].project(new P3(modface.surface.dir1, 0))
 		const face4 = Face.create(modface.surface, [e0, StraightEdge.throughPoints(e0.b, modface.contour[2].a), modface.contour[2], StraightEdge.throughPoints(modface.contour[2].b, e0.a)])
@@ -1042,7 +1094,7 @@ registerTests({
 		assert.equal([1, 2, 3, 4].sumInPlaceTree(), 10)
 	},
 	'EllipsoidSurface.mainAxes'(assert) {
-		const es = new SemiEllipsoidSurface(V3.ZERO, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
+		const es = new SemiEllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
 		assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 						href='../brep2.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[
 						StraightEdge.throughPoints(V(-5, 1, -1), ${V(-5, 1, -1).plus(V(-9.660064978873681e-7, 0.999999999962889, 0.000008560880502697739).times(100)).sce}),
@@ -1069,15 +1121,53 @@ registerTests({
         const expectedFront = []
         const expectedBack = [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)]
     },
+    'SemiEllipsoidSurface.loopContainsPoint'(assert) {
+        const s = new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5))
+        const loop = [
+            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0)), V(0, 0, 5), V(0, 0, -5), PI, 0, null, V(5, 0, 0), V(-5, 0, 0)),
+            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(-5, 0, 0)), V(0, 0, -5), V(0, 0, 5), 0, PI, null, V(-5, 0, 0), V(5, 0, 0))]
+        const p = V(5, 0, 0)
+        assert.equal(s.loopContainsPoint(loop, p), PointVsFace.ON_EDGE)
+    },
+    'SemiEllipsoidSurface.loopContainsPoint 3'(assert) {
+        const s = new SemiEllipsoidSurface(V3.O, V(-5, 6.123233995736766e-16, 0), V(-6.123233995736766e-16, -5, 0), V(0, 0, 5))
+        const loop = [
+            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0), 0, 3.141592653589793), V(0, 0, -5), V(1.1291713066130296, 0, -4.87082869338697), 0, 0.22779933669791175, null, V(5, 0, 0), V(4.87082869338697, 0, 1.1291713066130296)),
+            new PCurveEdge(new SemiEllipseCurve(V(1.411764705882352, -2.1176470588235303, -1.4117647058823533), V(2.0917534572581817, 2.7890046096775745, -2.091753457258183), V(-2.874840149008801, 3.5206637865439285e-16, -2.874840149008799), 0.7085839061491113, 3.141592653589793), V(1.1291713066130291, 0, -4.87082869338697), V(0, -0.6994424542963525, -4.950836318555471), 0.7085839061491117, 1.0373562345961393, null, V(-3.544048444786543, -1.8149704259460577, -0.821592805867452), V(-3.262983117260863, -2.401508361946856, 0.3392794256594245)),
+            new PCurveEdge(new SemiEllipseCurve(V(-1.4117647058823535, -2.117647058823529, -1.4117647058823533), V(2.0917534572581813, -2.789004609677577, 2.0917534572581813), V(2.8748401490088, -3.520663786543927e-16, -2.8748401490088007), 0, 2.43300874744068), V(0, -0.6994424542963525, -4.950836318555471), V(-1.1291713066130296, 1.382836026332681e-16, -4.87082869338697), 2.1042364189936533, 2.4330087474406805, null, V(-3.2629831172608608, 2.401508361946859, -0.33927942565942426), V(-3.5440484447865406, 1.8149704259460617, 0.8215928058674513)),
+            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, 5), V(-5, 0, 0), 0, 3.141592653589793), V(-1.1291713066130296, 0, -4.87082869338697), V(0, 0, -5), 2.9137933168918817, 3.141592653589793, null, V(4.870828693386971, 0, -1.1291713066130287), V(5, 0, -6.123233995736766e-16))]
+        const p = V(-4.999999999999999, 0, 0)
+        assert.equal(s.loopContainsPoint(loop, p), PointVsFace.OUTSIDE)
+    },
+    'SemiEllipsoidSurface.intersect SES'(assert) {
+        const a = SemiEllipsoidSurface.sphere(5)
+        const b = SemiEllipsoidSurface.sphere(1).rotateAB(V3.Y, V3.X.negated()).translate(5,2)
+        const isCurves = a.isCurvesWithSurface(b)
+        assert.equal(isCurves.length, 2, 'isCurves.length')
+        isCurves.forEach(c => {
+            assert.ok(a.containsCurve(c))
+            assert.ok(b.containsCurve(c))
+        })
+    },
+    'SemiEllipseCurve.isTsWithSurface(SemiEllipsoidSurface)'(assert) {
+        const s = SemiEllipsoidSurface.sphere(5)
+        const c = new SemiEllipseCurve(V(5, 2), V3.Z.negated(), V(-1, 1.2246467991473532e-16, 0), 0, PI)
+        const ists = c.isTsWithSurface(s)
+        assert.equal(ists.length, 2, 'ists.length')
+        ists.forEach(t => {
+            assert.ok(c.isValidT(t))
+            assert.ok(s.containsPoint(c.at(t)))
+        })
+    },
     'EllipsoidSurface.isCurvesWithPlane'(assert) {
         const es = SemiEllipsoidSurface.sphere(5)
-	    testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).normalized(), 4)), 0)
-	    testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).normalized(), 4)).flipped(), 0)
-	    testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI/2, sin(3/5)), 4)), 0)
-	    testISCurves(assert, es, new PlaneSurface(new P3(V(0, -0.1, 1).normalized(), 4)), 1)
-	    testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0, 1), 4)), 1)
-	    testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0.1, 1).normalized(), 4)), 2)
-        testISCurves(assert, es, new PlaneSurface(new P3(V(0, 1, 0.1).normalized(), 4)), 2)
+        testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)), 0)
+        testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)).flipped(), 0)
+        testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI/2, sin(3/5)), 4)), 0)
+        testISCurves(assert, es, new PlaneSurface(new P3(V(0, -0.1, 1).unit(), 4)), 1)
+        testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0, 1), 4)), 1)
+        testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0.1, 1).unit(), 4)), 2)
+        testISCurves(assert, es, new PlaneSurface(new P3(V(0, 1, 0.1).unit(), 4)), 2)
         testISCurves(assert, es, new PlaneSurface(P3.XY), 1)
         testISCurves(assert, es, new PlaneSurface(P3.XY.flipped()), 1)
 
@@ -1089,5 +1179,14 @@ registerTests({
 
         // slices perpendicular to V3.X
         testISCurves(assert, es, new PlaneSurface(P3.YZ), 1)
-    }
+    },
+    'EllipsoidSurface.isCurvesWithProjectedCurveSurface'(assert) {
+        const s1 = SemiEllipsoidSurface.UNIT
+        const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
+        const s3 = new ProjectedCurveSurface(BezierCurve.graphXY(2, -3, -3, 2, -1, 2), V3.Z, undefined, undefined, -2, 2)
+
+        testISCurves(assert, s1, s2.translate(0.2).rotateY(-50*DEG), 3)
+        testISCurves(assert, s1, s2.translate(0.2), 4)
+        testISCurves(assert, s1, s3.translate(0.2), 4)
+    },
 })

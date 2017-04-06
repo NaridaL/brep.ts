@@ -1,4 +1,7 @@
 import eq = NLA.eq
+import between = NLA.between
+import fuzzyBetween = NLA.fuzzyBetween
+import clamp = NLA.clamp
 import eq0 = NLA.eq0
 import lt = NLA.lt
 import le = NLA.le
@@ -13,7 +16,7 @@ class P3 extends Transformable {
 	 *
 	 * Points x on the plane fulfill the equation: normal DOT x = w
 	 *
-	 * @param normal1 normalized plane normal
+	 * @param normal1 unit plane normal
 	 * @param w signed (rel to normal1) distance from the origin
 	 * @param prototype object to set as prototype of the new Plane3 object. Defaults to P3.prototype
 	 */
@@ -144,14 +147,14 @@ class P3 extends Transformable {
 		assertInst(P3, plane)
 		assert(!this.isParallelToPlane(plane), "!this.isParallelToPlane(plane)")
 		/*
-		 var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized(), m = M4.forSys(n0, n1, n2)
-		 var x0 = this.anchor, x1 = plane.anchor, x2 = V3.ZERO
+		 var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).unit(), m = M4.forSys(n0, n1, n2)
+		 var x0 = this.anchor, x1 = plane.anchor, x2 = V3.O
 		 var p = n2.times(x2.dot(n2))
 		 .plus(n1.cross(n2).times(x0.dot(n0)))
 		 .plus(n2.cross(n0).times(x1.dot(n1)))
 		 .div(m.determinant())
 		 */
-		const n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).normalized()
+		const n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).unit()
 		const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0))
 		return new L3(p, n2)
 	}
@@ -177,13 +180,13 @@ class P3 extends Transformable {
 
 	static throughPoints(a: V3, b: V3, c: V3, prototype?): P3 {
 		assertVectors(a, b, c)
-		const n1 = b.minus(a).cross(c.minus(a)).normalized()
+		const n1 = b.minus(a).cross(c.minus(a)).unit()
 		return new P3(n1, n1.dot(a), prototype)
 	}
 
 	static normalOnAnchor(normal: V3, anchor: V3, prototype?): P3 {
 		assertVectors(normal, anchor)
-		const n1 = normal.normalized()
+		const n1 = normal.unit()
 		return new P3(n1, n1.dot(anchor), prototype)
 	}
 
@@ -194,7 +197,7 @@ class P3 extends Transformable {
 	static forAxisIntercepts(x0: number, y0: number, z0: number): P3 {
 		assertNumbers(x0, y0, z0)
 		let normal = new V3(1 / x0, 1 / y0, 1 / z0)
-		return new P3(normal.normalized(), normal.length())
+		return new P3(normal.unit(), normal.length())
 	}
 
 	static forAnchorAndPlaneVectors(anchor: V3, v0: V3, v1: V3, prototype?): P3 {

@@ -2,12 +2,12 @@
  * eta = xi²
  */
 class ParabolaCurve extends Curve {
-	normal: V3
-	center: V3
-	f1: V3
-	f2: V3
-	matrix: M4
-	inverseMatrix: M4
+	readonly normal: V3
+    readonly center: V3
+    readonly f1: V3
+    readonly f2: V3
+    readonly matrix: M4
+    readonly inverseMatrix: M4
 
 	constructor(center, f1, f2) {
 		super()
@@ -15,7 +15,7 @@ class ParabolaCurve extends Curve {
 		this.center = center
 		this.f1 = f1
 		this.f2 = f2
-		this.normal = f1.cross(f2).normalized()
+		this.normal = f1.cross(f2).unit()
 		this.matrix = M4.forSys(f1, f2, this.normal, center)
 		this.inverseMatrix = this.matrix.inversed()
 	}
@@ -25,6 +25,7 @@ class ParabolaCurve extends Curve {
 	}
 
 	at(t) {
+	    // center + f1 t + f2 t²
 		return this.center.plus(this.f1.times(t)).plus(this.f2.times(t * t))
 	}
 
@@ -34,6 +35,7 @@ class ParabolaCurve extends Curve {
 
 	tangentAt(t) {
 		assertNumbers(t)
+        // f1 + f2 2 t
 		return this.f1.plus(this.f2.times(2 * t))
 	}
 
@@ -102,13 +104,12 @@ class ParabolaCurve extends Curve {
 		// f1 DOT f2 + f2 DOT f2 * 2 * t0 == 0
 		// t0 == -(f1 DOT f2) / (f2 DOT f2 * 2)
 		const f1 = this.f1, f2 = this.f2
-		let f1DOTf2 = f1.dot(f2)
+        const f1DOTf2 = f1.dot(f2)
 		if (NLA.eq0(f1DOTf2)) {
 			return this
 		}
 		const t0 = -f1DOTf2 / f2.squared() / 2
-		// can't use .tangentAt as that gets normalized
-		return new ParabolaCurve(this.at(t0), f1.plus(f2.times(2 * t0)), f2)
+		return new ParabolaCurve(this.at(t0), this.tangentAt(t0), f2)
 	}
 
 	arcLength(startT: number, endT: number): number {
@@ -204,15 +205,34 @@ class ParabolaCurve extends Curve {
 	}
 
 	containsPoint(p) {
-		const localP = this.inverseMatrix.transformPoint(p)
-		return NLA.eq(localP.x * localP.x, localP.y)
+		const pLC = this.inverseMatrix.transformPoint(p)
+		return NLA.eq(pLC.x ** 2, pLC.y)
 	}
 
-	static forAB(a, b, center):ParabolaCurve {
-		return new ParabolaCurve(center || V3.ZERO, V(a, 0, 0), V(0, b, 0))
-	}
+    static forAB(a: V3, b: V3, center: V3 = V3.O): ParabolaCurve {
+        return new ParabolaCurve(center, V(a, 0, 0), V(0, b, 0))
+    }
 
-	static XY = new ParabolaCurve(V3.ZERO, V3.X, V3.Y)
-	static YZ = new ParabolaCurve(V3.ZERO, V3.Y, V3.Z)
-	static ZX = new ParabolaCurve(V3.ZERO, V3.Z, V3.X)
+	static quadratic(a: V3, b: V3, c: V3): ParabolaCurve {
+        // (1 - t)² a + t * (1 - t) b + t² c
+        // = t²(a - b + c) + t (-2a + b) + a
+        // (2t - 2) a + (1 - 2t) b + 2t c = t(2a + 2b - 2c) - 2a + b
+        // 2 a + -2 b + 2 c
+        const f2 = a.plus(c).minus(b)
+        const f1 = a.times(-2).plus(b)
+        const center = a
+        return new ParabolaCurve(center, f1, f2)
+    }
+
+    asBezier() {
+	    return BezierCurve.quadratic(
+	        this.at(-1),
+            new L3(this.at(-1), this.tangentAt(-1).unit()).isInfoWithLine(new L3(this.at(1), this.tangentAt(1).unit())),
+            this.at(1))
+    }
+
+	static readonly XY = new ParabolaCurve(V3.O, V3.X, V3.Y)
+	static readonly YZ = new ParabolaCurve(V3.O, V3.Y, V3.Z)
+	static readonly ZX = new ParabolaCurve(V3.O, V3.Z, V3.X)
 }
+ParabolaCurve.prototype.tIncrement = 1/32

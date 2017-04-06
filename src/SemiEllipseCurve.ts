@@ -21,12 +21,12 @@ class SemiEllipseCurve extends Curve {
         assert(undefined == minT || undefined == maxT || 0 < this.tMax && this.tMax <= PI)
 		this.normal = f1.cross(f2)
 		if (!this.normal.isZero()) {
-			this.normal = this.normal.normalized()
+			this.normal = this.normal.unit()
 			this.matrix = M4.forSys(f1, f2, this.normal, center)
 			this.inverseMatrix = this.matrix.inversed()
 		} else {
-			this.matrix = M4.forSys(f1, f2, f1.normalized(), center)
-			let f1p = f1.getPerpendicular()
+			this.matrix = M4.forSys(f1, f2, f1.unit(), center)
+			const f1p = f1.getPerpendicular()
 			this.inverseMatrix = new M4(
 				1, 0, 0, 0,
 				0, 0, 0, 0,
@@ -47,7 +47,7 @@ class SemiEllipseCurve extends Curve {
 			const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
 			return area
 		}
-		const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).normalized().z
+		const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
 		return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
 	}
 
@@ -62,7 +62,7 @@ class SemiEllipseCurve extends Curve {
 		let localRight = localUp.cross(V3.Z)
 		let normTStart = tStart - localRight.angleXY()
 		let normTEnd = tEnd - localRight.angleXY()
-		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.normalized())
+		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.unit())
 		//console.log(localUp.str, localRight.str, normTStart, normTEnd, 'localUp.length()', localUp.length())
 		//console.log('transformedOriginY', transformedOriginY)
 		//assertf(() => localUp.hasLength(1), localUp.length())
@@ -116,6 +116,7 @@ class SemiEllipseCurve extends Curve {
 	at(t) {
         assertNumbers(t)
         assert(this.isValidT(t))
+        // center + f1 cos t + f2 sin t
 		return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
 	}
 
@@ -297,13 +298,28 @@ class SemiEllipseCurve extends Curve {
         return new SemiEllipseCurve(this.center, f1, f2)
     }
 
-    isTsWithSurface(surface) {
+    isTsWithSurface(surface): number[] {
         if (surface instanceof PlaneSurface) {
             return this.isTsWithPlane(surface.plane)
         } else if (surface instanceof SemiCylinderSurface) {
             const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir1))
             return this.isInfosWithEllipse(ellipseProjected).map(info => info.tThis)
-		} else {
+        } else if (surface instanceof EllipsoidSurface) {
+            const isEllipse = surface.isCurvesWithPlane(this.getPlane())
+            if (isEllipse.length < 1) return
+            const infos = this.isInfosWithEllipse(isEllipse[0] as EllipseCurve)
+            return infos.map(info => info.tThis)
+        } else if (surface instanceof SemiEllipsoidSurface) {
+            const isEllipse = surface.asEllipsoidSurface().isCurvesWithSurface(new PlaneSurface(this.getPlane()))
+            if (isEllipse.length < 1) return []
+            const possibleInfos = this.isInfosWithEllipse(isEllipse[0] as EllipseCurve)
+            return possibleInfos.filter(info => surface.containsPoint(info.p)).map(info => info.tThis)
+        } else if (surface instanceof ProjectedCurveSurface) {
+            return surface.isCurvesWithPlane(this.getPlane())
+                .map(curve => this.isInfosWithCurve(curve))
+                .concatenated()
+                .map(info => info.tThis)
+        } else {
 			assert(false)
 		}
 	}
@@ -339,8 +355,9 @@ class SemiEllipseCurve extends Curve {
 
 		const {x1: xi1, y1: eta1, x2: xi2, y2: eta2} = intersectionUnitCircleLine(g1, g2, g3)
         const result = []
-        le(0, eta1) && result.push(SemiEllipseCurve.unitT(new V3(xi1, eta1, 0)))
-        le(0, eta2) && result.push(SemiEllipseCurve.unitT(new V3(xi2, eta2, 0)))
+        let t
+        le(0, eta1) && this.isValidT(t = SemiEllipseCurve.unitT(new V3(xi1, eta1, 0))) && result.push(t)
+        le(0, eta2) && this.isValidT(t = SemiEllipseCurve.unitT(new V3(xi2, eta2, 0))) && result.push(t)
         for (const t of result) {
 		    assert(plane.containsPoint(this.at(t)))
         }
@@ -357,7 +374,7 @@ class SemiEllipseCurve extends Curve {
 		return NLA.eq0(pLC.z) && SemiEllipseCurve.validPlanePoint(pLC.x, pLC.y)
 	}
 
-	isInfosWithEllipse(ellipse: SemiEllipseCurve): {tThis: number, tOther: number, p: V3}[] {
+	isInfosWithEllipse(ellipse: EllipseCurve | SemiEllipseCurve): {tThis: number, tOther: number, p: V3}[] {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
@@ -369,7 +386,7 @@ class SemiEllipseCurve extends Curve {
 			}
             return Curve.ispsRecursive(this, this.tMin, this.tMax, ellipse, ellipse.tMin, ellipse.tMax)
 
-			//new SemiEllipseCurve(V3.ZERO, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
+			//new SemiEllipseCurve(V3.O, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
 			console.log(ellipseLC, ellipseLC.sce)
 			//ellipseLC.debugToMesh(dMesh, 'curve3')
 			const angle = ellipseLC.f1.angleXY()
@@ -404,9 +421,9 @@ class SemiEllipseCurve extends Curve {
 			return results.map(localP => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(localP)}))
 			/*
 			 // new rel center
-			 var mat = M4.forSys(ellipseLC.f1.normalized(), ellipseLC.f2.normalized(), V3.Z, ellipseLC.center).inversed()
+			 var mat = M4.forSys(ellipseLC.f1.unit(), ellipseLC.f2.unit(), V3.Z, ellipseLC.center).inversed()
 			 console.log(mat.toString())
-			 var newCenter = mat.transformPoint(V3.ZERO)
+			 var newCenter = mat.transformPoint(V3.O)
 			 var x0 = newCenter.x, y0 = newCenter.y
 			 var c = (1 - bSqr / aSqr) / 2/ y0, d = -x0 / y0, e = (bSqr + x0 * x0 + y0 * y0) / 2 / y0
 
@@ -428,7 +445,7 @@ class SemiEllipseCurve extends Curve {
 			 ellipseLC.debugToMesh(dMesh, 'curve2')
 			 */
 		} else {
-			return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.normalized(), ellipse.center)).mapFilter(t => {
+			return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter(t => {
 				const p = this.at(t)
 				if (ellipse.containsPoint(p)) {
 					return {tThis: t, tOther: ellipse.pointT(p), p}
@@ -484,15 +501,11 @@ class SemiEllipseCurve extends Curve {
         assert(false)
     }
 
-	/**
-	 *
-	 * @param bezier
-	 */
-    isPointsWithBezier(bezier: BezierCurve) {
+    isPointsWithBezier(bezier: BezierCurve): V3[] {
         const bezierLC = bezier.transform(this.inverseMatrix)
         if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
             // up to 6 solutions possible
-            let f = t => bezierLC.at(t).squaredXY() - 1
+            const f = t => bezierLC.at(t).squaredXY() - 1
             // f is polynome degree six, no explicit solution is possble
             const possibleOtherTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8))
                 .filter(t => SemiEllipseCurve.validPlanePoint(bezierLC.at(t).x, bezierLC.at(t).y))
@@ -558,16 +571,16 @@ class SemiEllipseCurve extends Curve {
 	 *
 	 * @param a length of the axis parallel to X axis
 	 * @param b length of the axis parallel to Y axis
-	 * @param center Defaults to V3.ZERO
+	 * @param center Defaults to V3.O
 	 */
-	static forAB(a: number, b: number, center: V3 = V3.ZERO): SemiEllipseCurve {
+	static forAB(a: number, b: number, center: V3 = V3.O): SemiEllipseCurve {
 		return new SemiEllipseCurve(center, new V3(a, 0, 0), new V3(0, b, 0))
 	}
 
 	/**
 	 * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
 	 */
-	static semicircle(radius: number, center: V3 = V3.ZERO): SemiEllipseCurve {
+	static semicircle(radius: number, center: V3 = V3.O): SemiEllipseCurve {
 		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
 	}
 
@@ -577,16 +590,16 @@ class SemiEllipseCurve extends Curve {
 		return Math.PI * this.f1.cross(this.f2).length()
 	}
 
-	static readonly UNIT = new SemiEllipseCurve(V3.ZERO, V3.X, V3.Y)
+	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
 
 	angleToT(phi: number): number {
 		// atan2(y, x) = phi
-		const phiDir = this.f1.normalized().times(Math.cos(phi)).plus(this.f2.rejectedFrom(this.f1).normalized().times(Math.sin(phi)))
+		const phiDir = this.f1.unit().times(Math.cos(phi)).plus(this.f2.rejectedFrom(this.f1).unit().times(Math.sin(phi)))
 		const localDir = this.inverseMatrix.transformVector(phiDir)
 		return localDir.angleXY()
 	}
 }
 SemiEllipseCurve.prototype.hlol = Curve.hlol++
-SemiEllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 80)
+SemiEllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 32)
 SemiEllipseCurve.prototype.tMin = 0
 SemiEllipseCurve.prototype.tMax = PI

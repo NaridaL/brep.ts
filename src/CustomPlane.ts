@@ -50,7 +50,7 @@ class CustomPlane extends P3 {
 
 	static forPlane(plane, color, name) {
 		var p = new P3(plane.normal, plane.w, CustomPlane.prototype) as CustomPlane
-		p.up = plane.normal.getPerpendicular().normalized()
+		p.up = plane.normal.getPerpendicular().unit()
 		p.right = p.up.cross(p.normal)
 		p.upStart = -500
 		p.upEnd = 500

@@ -10,7 +10,7 @@ class L3 extends Curve {
 	constructor(anchor, dir1) {
 		super()
 		assertVectors(anchor, dir1)
-		assert(dir1.hasLength(1), 'dir must be normalized' + dir1)
+		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
 		assertf(() => !Number.isNaN(anchor.x))
 		const l = Object.create(L3.prototype)
 		l.dir1 = dir1
@@ -54,7 +54,7 @@ class L3 extends Curve {
 		if (this.isParallelToLine(line)) {
 			return this.distanceToPoint(line.anchor)
 		}
-		const dirCross1 = this.dir1.cross(line.dir1).normalized()
+		const dirCross1 = this.dir1.cross(line.dir1).unit()
 		const anchorDiff = this.anchor.minus(line.anchor)
 		return Math.abs(anchorDiff.dot(dirCross1))
 	}
@@ -83,7 +83,7 @@ class L3 extends Curve {
 		} // lines parallel
 		const anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
-		if (!NLA.eq0(anchorDiff.dot(dirCross.normalized()))) {
+		if (!NLA.eq0(anchorDiff.dot(dirCross.unit()))) {
 			return null
 		}
 		let t = this.infoClosestToLine(line).t
@@ -166,7 +166,7 @@ class L3 extends Curve {
 		} // lines parallel
 		const anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
-		if (!NLA.eq0(anchorDiff.dot(dirCross.normalized()))) {
+		if (!NLA.eq0(anchorDiff.dot(dirCross.unit()))) {
 			return null
 		}
 		const t = anchorDiff.cross(line.dir1).dot(dirCross) / div
@@ -193,7 +193,7 @@ class L3 extends Curve {
 	}
 
 	ddt(t) {
-		return V3.ZERO
+		return V3.O
 	}
 
 	toString(roundFunction?) {
@@ -282,12 +282,12 @@ class L3 extends Curve {
 	transform(m4: M4): this {
 		const newAnchor = m4.transformPoint(this.anchor)
 		const newDir = m4.transformVector(this.dir1)
-		return new L3(newAnchor, newDir.normalized()) as this
+		return new L3(newAnchor, newDir.unit()) as this
 	}
 
 	projectedOnPlane(plane) {
 		assertInst(P3, plane)
-		return new L3(plane.projectedPoint(this.anchor), plane.projectedVector(this.dir1).normalized())
+		return new L3(plane.projectedPoint(this.anchor), plane.projectedVector(this.dir1).unit())
 	}
 
 	debugToMesh(mesh, bufferName) {
@@ -295,8 +295,8 @@ class L3 extends Curve {
 		mesh[bufferName].push(this.at(-1000), this.at(2000))
 	}
 
-	static throughPoints = (anchor: V3, b: V3): L3 => new L3(anchor, b.minus(anchor).normalized())
-	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.normalized())
+	static throughPoints = (anchor: V3, b: V3): L3 => new L3(anchor, b.minus(anchor).unit())
+	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
 
 
 	static pointTNotNormalized(anchor, dir, x) {
@@ -319,9 +319,9 @@ class L3 extends Curve {
 		return p1.intersectionWithPlane(p2)
 	}
 
-	static readonly X: L3 = new L3(V3.ZERO, V3.X)
-	static readonly Y: L3 = new L3(V3.ZERO, V3.Y)
-	static readonly Z: L3 = new L3(V3.ZERO, V3.Z)
+	static readonly X: L3 = new L3(V3.O, V3.X)
+	static readonly Y: L3 = new L3(V3.O, V3.Y)
+	static readonly Z: L3 = new L3(V3.O, V3.Z)
 
 }
 L3.prototype.hlol = Curve.hlol++

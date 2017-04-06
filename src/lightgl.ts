@@ -739,7 +739,7 @@ void main() {
 		}
 
 		calcVolume(): {volume: number, centroid: V3, area: number} {
-			let totalVolume = 0, totalCentroid = V3.ZERO, totalAreaX2 = 0
+			let totalVolume = 0, totalCentroid = V3.O, totalAreaX2 = 0
 			const triangles = this.triangles
 			const vertices = this.vertices
 			for (let i = 0; i < triangles.length; i += 3) {
@@ -748,14 +748,14 @@ void main() {
 				const v01 = v1.minus(v0), v02 = v2.minus(v0)
 				const normal = v01.cross(v02)
 				//const centroidZ = (v0.z + v1.z + v2.z) / 3
-				//totalVolume += centroidZ * (area === v01.cross(v02).length() / 2) * v01.cross(v02).normalized().z
+				//totalVolume += centroidZ * (area === v01.cross(v02).length() / 2) * v01.cross(v02).unit().z
 				const faceCentroid = v0.plus(v1.plus(v2)).div(3)
 				totalVolume += faceCentroid.z * normal.z / 2
 				const faceAreaX2 = normal.length()
 				totalAreaX2 += faceAreaX2
 				totalCentroid = totalCentroid.plus(new V3(faceCentroid.x, faceCentroid.y, faceCentroid.z / 2).times(faceCentroid.z * normal.z / 2))
 			}
-			// sumInPlaceTree adds negligible additional accuracy for UNIT sphere
+			// sumInPlaceTree adds negligible additional accuracy for XY sphere
 			return {volume: totalVolume, centroid: totalCentroid.div(triangles.length / 3), area: totalAreaX2 / 2}
 		}
 
@@ -893,7 +893,7 @@ void main() {
 		 */
 		computeNormals(): this {
 			if (!this.normals) this.addVertexBuffer('normals', 'LGL_Normal')
-			this.vertexBuffers['LGL_Normal'].data = NLA.arrayFromFunction(this.vertices.length, i => V3.ZERO)
+			this.vertexBuffers['LGL_Normal'].data = NLA.arrayFromFunction(this.vertices.length, i => V3.O)
 
 			let {triangles, vertices, normals} = this
 			for (let i = 0; i < triangles.length; i++) {
@@ -901,13 +901,13 @@ void main() {
 				let a = vertices[t[0]]
 				let b = vertices[t[1]]
 				let c = vertices[t[2]]
-				let normal = b.minus(a).cross(c.minus(a)).normalized()
+				let normal = b.minus(a).cross(c.minus(a)).unit()
 				normals[t[0]] = normals[t[0]].plus(normal)
 				normals[t[1]] = normals[t[1]].plus(normal)
 				normals[t[2]] = normals[t[2]].plus(normal)
 			}
 			for (let i = 0; i < vertices.length; i++) {
-				normals[i] = normals[i].normalized()
+				normals[i] = normals[i].unit()
 			}
 			return this
 		}
@@ -977,10 +977,10 @@ void main() {
 
 		computeNormalLines(length: number): this {
 			length = length || 1
-			var vs = this.vertices, si = this.vertices.length
+			const vs = this.vertices, si = this.vertices.length
 			if (!this.lines) this.addIndexBuffer('LINES')
 
-			for (var i = 0; i < this.normals.length; i++) {
+			for (let i = 0; i < this.normals.length; i++) {
 				vs[si + i] = vs[i].plus(this.normals[i].toLength(length))
 				this.lines.push(si + i, i)
 			}
@@ -1076,7 +1076,7 @@ void main() {
 
 		// unique corners of a unit cube. Used by Mesh.cube to generate a cube mesh.
 		static UNIT_CUBE_CORNERS = [
-			V3.ZERO,
+			V3.O,
 			new V3(0, 0, 1),
 			new V3(0, 1, 0),
 			new V3(0, 1, 1),
@@ -1089,7 +1089,7 @@ void main() {
 
 		/**
 		 * Generates a unit cube (1x1x1) starting at the origin and extending into the (+ + +) octant.
-		 * I.e. box from V3.ZERO to V3(1,1,1)
+		 * I.e. box from V3.O to V3(1,1,1)
 		 * Creates line, triangle, vertex and normal buffers.
 		 */
 		static cube(): Mesh {
@@ -1158,7 +1158,7 @@ void main() {
 		 *      Contains vertex and normal buffers and index buffers for triangles and lines
 		 */
 		static sphere(subdivisions: int = 3): Mesh {
-			const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).normalized(), s = u.x, t = u.y
+			const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).unit(), s = u.x, t = u.y
 			// base vertices of isocahedron
 			const vertices = [
 				new V3(-s, t, 0),
@@ -1221,9 +1221,9 @@ void main() {
 				} else {
 					// subdivide the triangle abc into 4 by adding a vertex (with the correct distance from the origin)
 					// between each segment ab, bc and cd, then calling the function recursively
-					var abMid1 = a.plus(b).toLength(1), bcMid1 = b.plus(c).toLength(1), caMid1 = c.plus(a).toLength(1)
+					const abMid1 = a.plus(b).toLength(1), bcMid1 = b.plus(c).toLength(1), caMid1 = c.plus(a).toLength(1)
 					// indexes of new vertices:
-					var iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
+					const iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
 					vertices.push(abMid1, bcMid1, caMid1)
 					tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, iabm, ibcm, icam, lines)
 					tesselateRecursively(a, abMid1, caMid1, res - 1, vertices, triangles, ia, iabm, icam, lines)

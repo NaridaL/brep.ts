@@ -90,7 +90,7 @@ class CylinderSurface extends Surface {
 	transform(m4) {
 		return new CylinderSurface(
 			this.baseEllipse.transform(m4),
-			m4.transformVector(this.dir1).normalized())
+			m4.transformVector(this.dir1).unit())
 	}
 
 	flipped() {
@@ -121,7 +121,7 @@ class CylinderSurface extends Surface {
 
 	parametricNormal() {
 		return (d, z) => {
-			return this.baseEllipse.tangentAt(d).cross(this.dir1).normalized()
+			return this.baseEllipse.tangentAt(d).cross(this.dir1).unit()
 		}
 	}
 
@@ -220,13 +220,13 @@ class CylinderSurface extends Surface {
 	}
 
 	static cylinder(radius: number): CylinderSurface {
-		return new CylinderSurface(new EllipseCurve(V3.ZERO, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z)
+		return new CylinderSurface(new EllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z)
 	}
 
 	/**
 	 *
 	 * @param anchor
-	 * @param dir not necessarily normalized
+	 * @param dir not necessarily unit
 	 */
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
 		const {x: ax, y: ay} = anchor
@@ -285,14 +285,14 @@ class CylinderSurface extends Surface {
 	 *
 	 *
 	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
-	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).normalized()
+	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
 	 */
 	zDirVolume(edges: Edge[]): {volume: number} {
 		if (V3.Z.cross(this.dir1).isZero()) return {volume: 0}
 		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
-		const scalingVector = this.dir1.cross(V3.Z).normalized()
+		const scalingVector = this.dir1.cross(V3.Z).unit()
 		// the length of the base of the trapezoid is calculated by dotting with the baseVector
-		const baseVector = this.dir1.rejectedFrom(V3.Z).normalized()
+		const baseVector = this.dir1.rejectedFrom(V3.Z).unit()
 		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
 		console.log("scalingVector", scalingVector.sce)
 		const totalArea = edges.map(edge => {
@@ -333,7 +333,7 @@ class CylinderSurface extends Surface {
 		return P3.forAnchorAndPlaneVectors(this.baseEllipse.center, this.baseEllipse.f1, this.dir1)
 	}
 
-	static readonly UNIT = new CylinderSurface(EllipseCurve.UNIT, V3.Z)
+	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)
 }
 CylinderSurface.prototype.uStep = TAU  / 128
 CylinderSurface.prototype.vStep = 256

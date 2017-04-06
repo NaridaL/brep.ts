@@ -57,13 +57,21 @@ class AABB extends Transformable {
 		return new AABB(this.min.max(aabb.min), this.max.min(aabb.max))
 	}
 
-	touchesAABB(aabb) {
-		assertInst(AABB, aabb)
-		return !(
-		this.min.x > aabb.max.x || this.max.x < aabb.min.x
-		|| this.min.y > aabb.max.y || this.max.y < aabb.min.y
-		|| this.min.z > aabb.max.z || this.max.z < aabb.min.z)
-	}
+    touchesAABB(aabb) {
+        assertInst(AABB, aabb)
+        return !(
+        this.min.x > aabb.max.x || this.max.x < aabb.min.x
+        || this.min.y > aabb.max.y || this.max.y < aabb.min.y
+        || this.min.z > aabb.max.z || this.max.z < aabb.min.z)
+    }
+
+    fuzzyTouchesAABB(aabb) {
+        assertInst(AABB, aabb)
+        return !(
+        lt(aabb.max.x, this.min.x) || lt(this.max.x, aabb.min.x)
+        || lt(aabb.max.y, this.min.y) || lt(this.max.y, aabb.min.y)
+        || lt(aabb.max.z, this.min.z) || lt(this.max.z, aabb.min.z))
+    }
 
 	intersectsAABB(aabb) {
 		assertInst(AABB, aabb)
@@ -217,10 +225,10 @@ class AABB extends Transformable {
 	}
 
 	static forXYZ(x: number, y: number, z: number): AABB {
-	    return new AABB(V3.ZERO, new V3(x, y, z))
+	    return new AABB(V3.O, new V3(x, y, z))
     }
 
-    static forAAABBs(aabbs: AABB[]) {
+    static forAABBs(aabbs: AABB[]) {
 	    const result = new AABB()
         for (const aabb of aabbs) {
 	        result.addAABB(aabb)

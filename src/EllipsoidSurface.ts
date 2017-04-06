@@ -44,6 +44,27 @@ class EllipsoidSurface extends Surface {
             } else {
                 assert(false)
             }
+        } else if (surface instanceof ProjectedCurveSurface) {
+            const surfaceLC = surface.transform(this.inverseMatrix)
+            const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir1, 0))
+            const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
+            const insideIntervals = iii(ists, EllipsoidSurface.UNIT, baseCurveLC)
+            const curves = insideIntervals.map(ii => {
+                const aLine = new L3(baseCurveLC.at(ii[0]), surfaceLC.dir1)
+                const a = EllipsoidSurface.UNIT.isTsForLine(aLine).map(t => aLine.at(t))
+                const bLine = new L3(baseCurveLC.at(ii[1]), surfaceLC.dir1)
+                const b = EllipsoidSurface.UNIT.isTsForLine(bLine).map(t => bLine.at(t))
+                return [0, 1].map(i => {
+                    let aP = a[i] || a[0], bP = b[i] || b[0]
+                    0 !== i && ([aP, bP] = [bP, aP])
+                    assert(EllipsoidSurface.UNIT.containsPoint(aP))
+                    assert(EllipsoidSurface.UNIT.containsPoint(bP))
+                    return new PICurve(surface, this.asEllipsoidSurface(), aP, bP)
+                })
+            }).concatenated()
+            const f = (t) => baseCurveLC.at(t).length() - 1
+            const fRoots = null
+            return curves
         }
     }
 
@@ -51,9 +72,9 @@ class EllipsoidSurface extends Surface {
         assertInst(L3, line)
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
-        const localAnchor = this.inverseMatrix.transformPoint(line.anchor)
-	    const localDir = this.inverseMatrix.transformVector(line.dir1)
-	    return EllipsoidSurface.unitISTsWithLine(localAnchor, localDir)
+        const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
+	    const dirLC = this.inverseMatrix.transformVector(line.dir1)
+	    return EllipsoidSurface.unitISTsWithLine(anchorLC, dirLC)
     }
 
 	isCoplanarTo(surface) {
@@ -133,7 +154,7 @@ class EllipsoidSurface extends Surface {
                 .plus(f3.cross(f1).times(Math.cos(b) * Math.sin(a)))
                 .plus(f1.cross(f2).times(Math.sin(b)))
                 //.times(Math.cos(b))
-                .normalized()
+                .unit()
             return normal
         }
     }
@@ -184,7 +205,7 @@ class EllipsoidSurface extends Surface {
 
     implicitFunction() {
         return (pWC) => {
-            let pLC = this.inverseMatrix.transformPoint(pWC)
+            const pLC = this.inverseMatrix.transformPoint(pWC)
             return pLC.length() - 1
         }
     }
@@ -235,12 +256,12 @@ class EllipsoidSurface extends Surface {
 	    return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
     }
 
-    containsPoint(p) {
+    containsPoint(p: V3): boolean {
         return NLA.eq0(this.implicitFunction()(p))
     }
 
     boundsFunction() {
-        assert(false)
+        return (a, b) => NLA.between(b, -PI, PI)
     }
 
     /**
@@ -252,9 +273,9 @@ class EllipsoidSurface extends Surface {
      */
     static unitISTsWithLine(anchor: V3, dir: V3):number[] {
         // for 0 = a t² + b t + c
-        let a = dir.dot(dir)
-        let b = 2 * anchor.dot(dir)
-        let c = anchor.dot(anchor) - 1
+        const a = dir.dot(dir)
+        const b = 2 * anchor.dot(dir)
+        const c = anchor.dot(anchor) - 1
         return pqFormula(b / a, c / a)
     }
 
@@ -281,14 +302,14 @@ class EllipsoidSurface extends Surface {
     static sphere(radius: number, center?: V3): EllipsoidSurface {
         assertNumbers(radius)
         center && assertVectors(center)
-        return new EllipsoidSurface(center || V3.ZERO, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius))
+        return new EllipsoidSurface(center || V3.O, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius))
     }
 
     /**
      * x²/a² + y²/b² + z²/c² = 1
      */
     static forABC(a: number, b: number, c: number, center?: V3): EllipsoidSurface {
-        return new EllipsoidSurface(center || V3.ZERO, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c))
+        return new EllipsoidSurface(center || V3.O, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c))
     }
 
     volume(): number {
@@ -305,7 +326,7 @@ class EllipsoidSurface extends Surface {
 	    // "rotate" the edge so that there are no overlaps
     	const matrix = M4.forSys(a, b, c), inverseMatrix = matrix.inversed()
 	    const circleRadius = a.length()
-	    const c1 = c.normalized()
+	    const c1 = c.unit()
 	    const totalArea = edges.map(edge => {
 		    if (edge.curve instanceof EllipseCurve) {
 			    const f = (t) => {
@@ -329,7 +350,7 @@ class EllipsoidSurface extends Surface {
     }
 
     meshSphere(edges: Edge[], subdivisions: int = 3) {
-	    const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).normalized(), s = u.x, t = u.y
+	    const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).unit(), s = u.x, t = u.y
 	    // base vertices of isocahedron
 	    const vertices = [
 		    new V3(-s, t, 0),
@@ -398,14 +419,14 @@ class EllipsoidSurface extends Surface {
 				    edgeIntersectsTriangle = edgeIntersectsTriangle || edges.some(edge => {
 					    return edge.edgeISTsWithPlane(plane).some(t => {
 						    const p = edge.curve.at(t)
-						    const v01 = v0.to(v1), v0p_1 = v0.to(p).normalized(), dot = v01.dot(v0p_1)
+						    const v01 = v0.to(v1), v0p_1 = v0.to(p).unit(), dot = v01.dot(v0p_1)
 						    if (0 <= dot && dot <= 1) {
 							    return true
 						    }
 					    })
 				    })
 			    }
-			    fullyInside = !edgeIntersectsTriangle && EllipseCurve.UNIT.con
+			    fullyInside = !edgeIntersectsTriangle && EllipseCurve.XY.con
 
 			    // subdivide the triangle abc into 4 by adding a vertex (with the correct distance from the origin)
 			    // between each segment ab, bc and cd, then calling the function recursively
@@ -439,7 +460,7 @@ class EllipsoidSurface extends Surface {
 		assertVectors(p)
 		const testLine = new EllipseCurve(
 			this.center,
-			this.matrix.transformVector(this.inverseMatrix.transformPoint(p).withElement('z', 0).normalized()),
+			this.matrix.transformVector(this.inverseMatrix.transformPoint(p).withElement('z', 0).unit()),
 			this.f3)
 		const pT = testLine.pointT(p)
 
@@ -502,7 +523,7 @@ class EllipsoidSurface extends Surface {
     	const {f1, f2, f3} = this
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const circleRadius = f1.length()
-		const f31 = f3.normalized()
+		const f31 = f3.unit()
 		const totalArea = edges.map(edge => {
 			if (edge.curve instanceof EllipseCurve) {
 				const f = (t) => {
@@ -518,7 +539,7 @@ class EllipsoidSurface extends Surface {
 						console.log(angleXY)
 					}
 					const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
-					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).normalized()
+					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit()
 					const df3 = tangent.dot(f31)
 					//const scaling = df3 / localAt.lengthXY()
 					const scaling = dotter.dot(tangent)
@@ -594,7 +615,7 @@ class EllipsoidSurface extends Surface {
 		iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
 		iss.sort((a, b) => a.t - b.t)
 		let i = ccw == iss[0].out ? 1 : 0
-		const curve = new EllipseCurve(V3.ZERO, V3.X.negated(), V3.Z)
+		const curve = new EllipseCurve(V3.O, V3.X.negated(), V3.Z)
 		//if (1 == i) {
         	//frontParts.push(
         	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(), curve.tangentAt(iss[0].t)),
@@ -637,8 +658,8 @@ class EllipsoidSurface extends Surface {
 				    const r = at.lengthXY()
 				    const at2d = at.withElement('z', 0)
 				    const angleAdjusted = (at.angleXY() + TAU - NLA_PRECISION) % TAU + NLA_PRECISION
-				    const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.normalized())) * Math.sign(tangent.z)
-				    //console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.normalized())', edge.tangentAt(t).dot(at2d.normalized()))
+				    const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.unit())) * Math.sign(tangent.z)
+				    //console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
 				    return result
 			    }
 
@@ -664,7 +685,7 @@ class EllipsoidSurface extends Surface {
 		    const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
 		    function f (t) {
 	    		const at2d = edge.curve.at(t).withElement('x', 0)
-			    const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.normalized()))
+			    const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()))
 			    console.log("at2d", at2d.sce, "result", result)
 			    return result
 		    }
@@ -736,7 +757,7 @@ class EllipsoidSurface extends Surface {
     	return P3.forAnchorAndPlaneVectors(this.center, this.f1, this.f3)
 	}
 
-	static readonly UNIT = new EllipsoidSurface(V3.ZERO, V3.X, V3.Y, V3.Z)
+	static readonly UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
 }
 EllipsoidSurface.prototype.uStep = PI / 32
 EllipsoidSurface.prototype.vStep = PI / 32

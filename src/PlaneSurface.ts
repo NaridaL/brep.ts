@@ -7,8 +7,8 @@ class PlaneSurface extends Surface {
         super()
         assertInst(P3, plane)
         this.plane = plane
-        this.up = up || plane.normal.getPerpendicular().normalized()
-        this.right = right || this.up.cross(this.plane.normal).normalized()
+        this.up = up || plane.normal.getPerpendicular().unit()
+        this.right = right || this.up.cross(this.plane.normal).unit()
         assert(this.right.cross(this.up).like(this.plane.normal))
     }
 
@@ -42,6 +42,7 @@ class PlaneSurface extends Surface {
     }
 
     edgeLoopCCW(contour: Edge[]): boolean {
+        return isCCW(contour.map(edge => edge.points()).concatenated(), this.plane.normal)
 	    let totalAngle = 0
 	    for (let i = 0; i < contour.length; i++) {
 		    const ipp = (i + 1) % contour.length
@@ -53,66 +54,17 @@ class PlaneSurface extends Surface {
 		    }
 		    totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal)
 	    }
-	    return totalAngle > 0
+	    const result = totalAngle > 0
+        const result2 = PlaneFace.prototype.calculateArea.apply({surface: this, contour: contour}).area > 0
+        //assert (result == result2)
+	    return result2
     }
 
     loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
-        assert(loop)
-        assertVectors(p)
-        const dir = this.right.plus(this.up.times(0.123)).normalized()
+        const dir = this.right.plus(this.up.times(0.123)).unit()
         const line = new L3(p, dir)
-	    const lineOut = dir.cross(this.plane.normal)
-        const plane2 = P3.normalOnAnchor(lineOut, p)
-        const colinearEdges = loop.map((edge) => edge.colinearToLine(line))
-        const colinearEdgeInside = loop.map((edge, i) => colinearEdges[i] && edge.aDir.dot(dir) > 0)
-        let inside = false
-
-        function logIS(p): boolean {
-        	const t = line.pointT(p)
-            if (NLA.eq0(t)) {
-        		return true
-            } else if (t > 0) {
-	            inside = !inside
-            }
-        }
-
-
-	    for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-		    const edge = loop[edgeIndex]
-		    const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
-            //console.log(edge.toSource()) {p:V(2, -2.102, 0),
-            if (colinearEdges[edgeIndex]) {
-            	const lineAT = line.pointT(edge.a), lineBT = line.pointT(edge.b)
-	            if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
-	            	return PointVsFace.ON_EDGE
-	            }
-                // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex]
-	                    ? colinearEdgeInside[nextEdgeIndex]
-                        : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
-                if (!nextInside) {
-                    if (logIS(edge.b)) return PointVsFace.ON_EDGE
-                }
-            } else {
-	            for (const edgeT of edge.edgeISTsWithPlane(plane2)) {
-                    if (edgeT == edge.bT) {
-                        // endpoint lies on intersection line
-	                    const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT)
-	                    const nextInside = colinearEdges[nextEdgeIndex]
-		                    ? colinearEdgeInside[nextEdgeIndex]
-		                    : dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT)
-	                    if (edgeInside != nextInside) {
-		                    if (logIS(edge.b)) return PointVsFace.ON_EDGE
-	                    }
-                    } else if (edgeT != edge.aT) {
-                        // edge crosses line, neither starts nor ends on it
-	                    if (logIS(edge.curve.at(edgeT))) return PointVsFace.ON_EDGE// TODO: tangents?
-                    }
-                }
-            }
-        }
-        return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
-
+        const lineOut = dir.cross(this.plane.normal)
+        return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
     }
 
     pointToParameterFunction() {

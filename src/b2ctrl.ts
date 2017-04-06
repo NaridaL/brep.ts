@@ -1,68 +1,77 @@
 function parseGetParams() {
-	const result = {}
-	window.location.search
-		.substr(1)
-		.split("&")
-		.forEach(function (item) {
-			const tmp = item.split("=")
-			result[tmp[0]] = decodeURI(tmp[1])
-		})
-	return result
+    const result = {}
+    window.location.search
+        .substr(1)
+        .split("&")
+        .forEach(function (item) {
+            const tmp = item.split("=")
+            result[tmp[0]] = decodeURI(tmp[1])
+        })
+    return result
 }
-let a, b, c, edges
+let a, b, c, d, edges, font
 function initB2() {
-	dMesh = new GL.Mesh()
-	/*
-	var c1 = SemiEllipseCurve.circle(5), c2 = SemiEllipseCurve.circle(5, V3(3, 0))
-	var test = new SemiEllipseCurve(V3(6, 1, 0), V3(3, 1, 0), V3(4, 0, 0))
-	var cyl = new SemiCylinderSurface(new SemiEllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 5, 0)), V3.Z, 1)
-	var ell = new SemiCylinderSurface(new SemiEllipseCurve(V3.ZERO, V3(5, 5, 0), V3(0, 2, 0)), V3.Z, 1).rotateX(PI/3)
+    dMesh = new GL.Mesh()
+    /*
+     var c1 = SemiEllipseCurve.circle(5), c2 = SemiEllipseCurve.circle(5, V3(3, 0))
+     var test = new SemiEllipseCurve(V3(6, 1, 0), V3(3, 1, 0), V3(4, 0, 0))
+     var cyl = new SemiCylinderSurface(new SemiEllipseCurve(V3.O, V3(5, 5, 0), V3(0, 5, 0)), V3.Z, 1)
+     var ell = new SemiCylinderSurface(new SemiEllipseCurve(V3.O, V3(5, 5, 0), V3(0, 2, 0)), V3.Z, 1).rotateX(PI/3)
 
-	aMesh = cyl.toMesh()
-	bMesh = ell.toMesh()
-	c1.isPointsWithEllipse(test)
-	dMesh.compile()
-	*/
-	eyePos = V(0, 100, 100)
-	eyeFocus = V(0, 100, 0)
-	eyeUp = V(0, 1, 0)
-	zoomFactor = 1
+     aMesh = cyl.toMesh()
+     bMesh = ell.toMesh()
+     c1.isPointsWithEllipse(test)
+     dMesh.compile()
+     */
+    eyePos = V(0, 100, 100)
+    eyeFocus = V(0, 100, 0)
+    eyeUp = V(0, 1, 0)
+    zoomFactor = 1
 
-	const gets = parseGetParams()
+    const gets = parseGetParams()
     "abcd".split('').forEach(k => gets[k] && (console.log(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()'), eval(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()')))
 
-	if (gets['points']) {
-		console.log("drPs from GET")
-		drPs = eval(gets['points'])
-	}
+    cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()
+    if (gets['points']) {
+        console.log("drPs from GET")
+        drPs = eval(gets['points'])
+    }
 
-	if (gets['edges']) {
-		console.log("edges from GET")
-		dMesh = new GL.Mesh({triangles: false})
-		edges = eval(gets['edges'])
-		edges && dMesh.addVertexBuffer('curve1', 'curve1')
-		edges.forEach(edge => {
-			const points = edge.points()
-			console.log(points)
-			for (let i = 0; i < points.length - 1; i++) {
-				dMesh.curve1.push(points[i], points[i + 1])
-			}
-		})
-		console.log(dMesh.curve1)
-	}
-	if (gets['mesh']) {
-		console.log("mesh from GET")
-		sMesh = eval(gets['mesh'])
-		sMesh.computeWireframeFromFlatTriangles()
-		//sMesh.computeNormalLines()
-		sMesh.compile()
-	}
-	if (gets['vectors']) {
-		console.log("vectors from GET")
-		drVs.pushAll(eval(gets['vectors']))
-	}
+    if (gets['edges']) {
+        console.log("edges from GET")
+        dMesh = new GL.Mesh({triangles: false})
+        edges = eval(gets['edges'])
+        edges && dMesh.addVertexBuffer('curve1', 'curve1')
+        edges.forEach(edge => {
+            const points = edge.points()
+            console.log(points)
+            for (let i = 0; i < points.length - 1; i++) {
+                dMesh.curve1.push(points[i], points[i + 1])
+            }
+        })
+        console.log(dMesh.curve1)
+    }
+    if (gets['mesh']) {
+        console.log("mesh from GET")
+        sMesh = eval(gets['mesh'])
+        sMesh.computeWireframeFromFlatTriangles()
+        //sMesh.computeNormalLines()
+        sMesh.compile()
+    }
+    if (gets['meshes']) {
+        console.log("meshes from GET")
+        b2meshes = eval(gets['meshes']) || []
+        b2meshes.forEach(m => m.computeWireframeFromFlatTriangles())
+        b2meshes.forEach(m => m.compile())
+        console.log("meshes from GET", b2meshes)
+        //sMesh.computeNormalLines()
+    }
+    if (gets['vectors']) {
+        console.log("vectors from GET")
+        drVs.pushAll(eval(gets['vectors']))
+    }
 
-	dMesh.compile()
+    dMesh.compile()
 }
 
 
@@ -70,14 +79,14 @@ function initB2() {
 
 
 const randomColors = NLA.arrayFromFunction(20, i => NLA.randomColor())
-let aMesh, bMesh, cMesh, dMesh, sMesh
+let aMesh: GL.Mesh, bMesh: GL.Mesh, cMesh: GL.Mesh, dMesh: GL.Mesh, sMesh: GL.Mesh, b2meshes: GL.Mesh[]
 paintScreen = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
 
     drawVectors()
 
-	gl.scale(100, 100, 100)
+    gl.scale(100, 100, 100)
 
     if (aMesh) {
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
@@ -108,20 +117,18 @@ paintScreen = function() {
         cMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.TS_STROKE) }).draw(cMesh, 'LINES')
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
 
-	    let faceIndex = c.faces.length
-	    while (faceIndex--) {
+        let faceIndex = c.faces.length
+        while (faceIndex--) {
 
-		    const face = c.faces[faceIndex]
-		    const faceTriangleIndexes = cMesh.faceIndexes.get(face)
-		    shaders.lighting.uniforms({
-			    color: rgbToVec4(randomColors[faceIndex])
-		    }).draw(cMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
-		    /*
-		     shaders.singleColor.uniforms({
-		     color: rgbToVec4(0x0000ff)
-		     }).draw(brepMesh, 'LINES');
-		     */
-	    }
+            const face = c.faces[faceIndex]
+            const faceTriangleIndexes = cMesh.faceIndexes.get(face)
+            shaders.lighting.uniforms({
+                color: rgbToVec4(randomColors[faceIndex % randomColors.length])
+            }).draw(cMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
+            //shaders.singleColor.uniforms({
+            //color: rgbToVec4(0x0000ff)
+            //}).draw(brepMesh, 'LINES')
+        }
 
         gl.popMatrix()
     }
@@ -165,9 +172,29 @@ paintScreen = function() {
             .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve4}, null, gl.LINES)
         gl.popMatrix()
     }
+    for (const sMesh of b2meshes) {
+        gl.pushMatrix()
+        //gl.scale(10, 10, 10)
+        gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
+        sMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(0xFF6600) }).draw(sMesh, 'LINES')
+        gl.projectionMatrix.m[11] += 1 / (1 << 20)
+        sMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
+            camPos: eyePos }).draw(sMesh)
+
+        sMesh.curve1 && shaders.singleColor.uniforms({ color: rgbToVec4(0xff00000) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve1}, null, gl.LINES)
+        sMesh.curve2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve2}, null, gl.LINES)
+
+        sMesh.curve3 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.PP_STROKE) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve3}, null, gl.LINES)
+        sMesh.curve4 && shaders.singleColor.uniforms({ color: rgbToVec4(0x00ff00) })
+            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve4}, null, gl.LINES)
+        gl.popMatrix()
+    }
 
     //drPs.forEach(v => drawPoint(v, undefined, 0.3))
-	drawPoints()
+    drawPoints(0.05)
     planes.forEach(plane => drawPlane(plane))
 }
 
@@ -191,14 +218,22 @@ paintScreen = function() {
 
 //var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
 var planes = [
-    new CustomPlane(V3.ZERO, V3.Y, V3.Z, -500, 500, -500, 500, 0xff0000),
-    new CustomPlane(V3.ZERO, V3.X, V3.Z, -500, 500, -500, 500, 0x00ff00),
-    new CustomPlane(V3.ZERO, V3.X, V3.Y, -500, 500, -500, 500, 0x0000ff),
+    new CustomPlane(V3.O, V3.Y, V3.Z, -500, 500, -500, 500, 0xff0000),
+    new CustomPlane(V3.O, V3.X, V3.Z, -500, 500, -500, 500, 0x00ff00),
+    new CustomPlane(V3.O, V3.X, V3.Y, -500, 500, -500, 500, 0x0000ff),
     //	sketchPlane
 ]
 
-window.onload = function () {
-	modeStack.push({})
+//const font = opentype.loadSync('fonts/Verdana.ttf')
+//opentype.load('fonts/calibri.ttf', function(err, font) {
+//opentype.load('fonts/FiraSans-Medium.woff', function(err, font) {
+window.onload = opentype.load('fonts/FiraSansMedium.woff', function(err, f) {
+    if (err) {
+        console.log("EROR")
+        throw new Error('Could not load font: ' + err)
+    }
+    font = f
+    modeStack.push({})
     window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
         console.log(errorMsg, url, lineNumber, column, errorObj)
     }
@@ -222,12 +257,11 @@ window.onload = function () {
     gl.loadIdentity()
 
 
-	initMeshes()
-	initShaders()
+    initMeshes()
+    initShaders()
     initNavigationEvents()
-	initPointInfoEvents()
+    initPointInfoEvents()
     initB2()
     setupCamera()
     paintScreen()
-
-}
+})

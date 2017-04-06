@@ -481,7 +481,7 @@ registerTests({
 		{
 			const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
 			const k2 = boxKnife.translate(-1, 0, 0)
-			doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.ZERO, V(0, 0, 5)],
+			doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.O, V(0, 0, 5)],
 				'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
 			b2Equal(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
 		}
@@ -550,7 +550,7 @@ registerTests({
 		let s2 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		let a = B2T.extrudeEdges([
 				StraightEdge.throughPoints(V(10, 0, 0), V(0, 0, 0)),
-				PCurveEdge.forCurveAndTs(new BezierCurve(V3.ZERO, V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0)), 0, 1)],
+				PCurveEdge.forCurveAndTs(new BezierCurve(V3.O, V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0)), 0, 1)],
 			P3.XY.flipped(), V(0, 0, 5), 'a/4')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 	
@@ -629,15 +629,4 @@ registerTests({
 
 
     },
-
-    'fuz test'(assert) {
-        const a = B2T.box(1,1,1,'box').minus(B2T.box(1 / 3, 1 / 3, 1,'cut'))
-        const b = B2T.box(3, 1 / 3, 1 / 3).translate(-1).flipped()
-        const c = a.and(b)
-        assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${c.translate(10).toSource()}'>link</a>`)
-        c.buildAdjacencies()
-
-
-    }
 })

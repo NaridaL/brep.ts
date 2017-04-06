@@ -1,15 +1,15 @@
 function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	if (curve instanceof L3) {
-		let surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
+		const surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
 		return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor))
 	}
 	if (curve instanceof SemiEllipseCurve) {
-		let curveDir = flipped ? offset : offset.negated()
-		return new SemiCylinderSurface(curve, curveDir.normalized())
+		const curveDir = flipped ? offset : offset.negated()
+		return new SemiCylinderSurface(curve, curveDir.unit())
 	}
-	if (curve instanceof BezierCurve) {
-		let curveDir = flipped ? offset : offset.negated()
-		return new ProjectedCurveSurface(curve, curveDir.normalized(), 0, 1)
+	if (curve instanceof BezierCurve || curve instanceof ParabolaCurve) {
+		const curveDir = flipped ? offset : offset.negated()
+		return new ProjectedCurveSurface(curve, curveDir.unit(), 0, 1)
 	}
 	assertNever()
 }
@@ -64,11 +64,11 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	}
 	if (curve instanceof SemiEllipseCurve) {
 		let curveDir = flipped ? offset : offset.negated()
-		return new SemiCylinderSurface(curve, curveDir.normalized())
+		return new SemiCylinderSurface(curve, curveDir.unit())
 	}
 	if (curve instanceof BezierCurve) {
 		let curveDir = flipped ? offset : offset.negated()
-		return new ProjectedCurveSurface(curve, curveDir.normalized(), 0, 1)
+		return new ProjectedCurveSurface(curve, curveDir.unit(), 0, 1)
 	}
 	assertNever()
 }
@@ -91,7 +91,7 @@ namespace B2T {
 		assertf(() => NLA.lt(0, radius))
 		assertf(() => NLA.lt(0, rads) && NLA.le(rads, TAU))
 		assertf(() => NLA.lt(0, height))
-		const edges = StraightEdge.chain([V3.ZERO, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true)
+		const edges = StraightEdge.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true)
 		return B2T.rotateEdges(edges, rads, name || 'puckman' + globalId++)
 	}
 
@@ -102,18 +102,18 @@ namespace B2T {
 		}
 	}
 
-	export function extrudeEdges(baseFaceEdges: Edge[], baseFacePlane: P3, offset: V3, name: string, gen?: string): B2 {
-		Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
-			assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce + baseFaceEdges[j].sce)
-		})
+	export function extrudeEdges(baseFaceEdges: Edge[], baseFacePlane: P3, offset: V3, name?: string, gen?: string): B2 {
+		//Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
+		//	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce + baseFaceEdges[j].sce)
+		//})
 		assertf(() => Edge.isLoop(baseFaceEdges))
 		// TODO checks..
-		if (offset.dot(baseFacePlane.normal) > 0) {
-			baseFacePlane = baseFacePlane.flipped()
-		}
-		let vertexNames = new Map()
-		let basePlaneSurface = new PlaneSurface(baseFacePlane)
-		assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), "edges not CCW on baseFacePlane")
+		//if (offset.dot(baseFacePlane.normal) > 0) {
+		//	baseFacePlane = baseFacePlane.flipped()
+		//}
+		const vertexNames = new Map()
+		const basePlaneSurface = new PlaneSurface(baseFacePlane)
+		//assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), "edges not CCW on baseFacePlane")
 		const translationMatrix = M4.translation(offset)
 		const topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix, 'top'))
 		const edgeCount = baseFaceEdges.length
@@ -146,9 +146,14 @@ namespace B2T {
 		return B2T.rotateEdges(StraightEdge.chain(vertices, true), rads || 2 * PI, name)
 	}
 
-    export function sphere(radius: number, name: string = 'sphere' + globalId++): B2 {
-        const ee = PCurveEdge.forCurveAndTs(new SemiEllipseCurve(V3.ZERO, new V3(0, 0, -radius), new V3(radius, 0, 0)), 0, PI)
-        return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], TAU, name)
+    export function sphere(radius: number = 1, name: string = 'sphere' + globalId++, rot: number = TAU): B2 {
+        const ee = PCurveEdge.create(
+            new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
+            new V3(0, 0, -radius), new V3(0, 0, radius),
+            0, PI,
+            undefined,
+            new V3(radius, 0, 0), new V3(-radius, 0, 0))
+        return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name)
     }
 
     export function menger(res: int = 2, name: string = 'menger' + globalId++): B2 {
@@ -170,6 +175,29 @@ namespace B2T {
         recurse(res, M4.YZX)
         recurse(res, M4.ZXY)
         return result
+    }
+    export function menger2(res: int = 2, name: string = 'menger' + globalId++): B2 {
+        let result = B2T.box(1,1,1)
+        if (0 == res) return result
+        const punch = B2T.box(1/3, 1/3, 2).translate(1/3, 1/3, -1/2).flipped()
+        const stencilFaces = []
+        function recurse(steps: int, m4: M4) {
+            stencilFaces.pushAll(punch.transform(m4).faces)
+            if (steps > 1) {
+                const scaled = m4.times(M4.scaling(1/3, 1/3, 1))
+                for (let i = 0; i < 9; i++) {
+                    if (4 == i) continue
+                    recurse(steps - 1, scaled.times(M4.translation(i % 3, i / 3 | 0, 0)))
+                }
+            }
+        }
+        recurse(res, M4.IDENTITY)
+        const stencil = new B2(stencilFaces, true)
+
+        return B2T.box()
+            .and(stencil)
+            .and(stencil.transform(M4.YZX))
+            .and(stencil.transform(M4.ZXY))
     }
 
 	export function torus(rSmall: number, rLarge: number, rads: number, name: string): B2 {
@@ -375,6 +403,70 @@ namespace B2T {
 		return new B2(faces)
 	}
 
+	export function quaffle() {
+	    //const baseK = B2T.sphere(0.2).translate(0, 0.95).flipped()
+	    const baseK = B2T.box().scale(0.2).translate(0, 0.95).flipped()
+        const vs = B2T.DODECAHEDRON_VERTICES.concat(
+            B2T.DODECAHEDRON_FACE_VERTICES.map(fis => fis
+                    .map(vi => B2T.DODECAHEDRON_VERTICES[vi])
+                    .reduce((a,b) => a.plus(b), V3.O)
+                    .unit()))
+        vs.forEach(v => B2T.sphere().and(baseK.rotateAB(V3.Y, v)))
+        const ss = new B2(vs.map(v => baseK.rotateAB(V3.Y, v).faces).concatenated(), false)
+        return ss
+    }
+
+    export function extrudeFace(face, dir) {
+	    return new B2(
+            extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(
+	        face, face.translate(dir.x,dir.y,dir.z).flipped(),
+	        face.holes.map(
+	            hole =>
+                    extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2)).concatenated()), false)
+    }
+
+    export function text(text: string, size: number, depth: number) {
+        const path = font.getPath(text, 0, 0, size)
+        const subpaths = []
+        path.commands.forEach(c => {
+            if (c.type == 'M') {
+                subpaths.push([])
+            }
+            subpaths.last().push(c)
+        })
+        const loops = subpaths.map(sp => {
+            const path = new opentype.Path()
+            path.commands = sp
+            const loop = Edge.reverseLoop(Edge.pathFromSVG(path.toPathData())).map(e => e.mirroredY())
+            assert(Edge.isLoop(loop))
+            return loop
+        })
+        const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace)
+        console.log(faces)
+        console.log(loops.map(l => new PlaneSurface(P3.XY).edgeLoopCCW(l)))
+        const hello = B2.join(faces.map(face => B2T.extrudeFace(face, V(0,0,-depth))))
+        return hello
+
+    }
+
+    export function whatever() {
+        const iso = isocahedron()
+        const nos = B2.join(iso.faces.map((face, i) => {
+            const not = text('' + (i + 1), 0.5, -2)
+            const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
+
+            const sys = M4.forSys(
+                face.contour[0].aDir,
+                centroid.cross(face.contour[0].aDir),
+                centroid.unit(),
+                centroid)
+            return not.transform(sys.times(M4.translation(-not.getAABB().size().x / 2, -0.1, -0.04)))
+        }))
+        const s = sphere(0.9)
+        return iso.and(s).and(nos)
+        //return nos
+    }
+
 	export function rotStep(edges: Edge[], totalRads: number, count: int) {
 		const radStep = totalRads / count
 		const open = !NLA.eq(totalRads, 2 * PI)
@@ -448,7 +540,7 @@ namespace B2T {
 		return new B2(faces)
 	}
 
-	export function extrudeVertices(baseVertices, baseFacePlane, offset, name?, source?) {
+	export function extrudeVertices(baseVertices: V3[], baseFacePlane: P3, offset: V3, name?, source?) {
 		assert(baseVertices.every(v => v instanceof V3), "baseVertices.every(v => v instanceof V3)")
 		assertInst(P3, baseFacePlane)
 		assertVectors(offset)
@@ -525,8 +617,7 @@ namespace B2T {
         new V3(-1,  c,  0),
         new V3(-1, -c,  0),
         new V3( 1, -c,  0)
-    ].map(v => v.normalized())
-
+    ].map(v => v.unit())
     export const DODECAHEDRON_FACE_VERTICES = [
         [  4,  3,  2,  1,  0 ],
         [  7,  6,  5,  0,  1 ],
@@ -539,7 +630,7 @@ namespace B2T {
         [  4,  0,  5, 19, 16 ],
         [ 12,  8, 13, 16, 19 ],
         [ 15,  9, 10, 18, 17 ],
-        [  7,  1,  2, 17, 18 ]].concatenated()
+        [  7,  1,  2, 17, 18 ]]
 
     export const OCTAHEDRON_VERTICES = [
         new V3( 1,  0,  0),
@@ -548,41 +639,86 @@ namespace B2T {
         new V3( 0,  -1,  0),
         new V3( 0,  0,  1),
         new V3( 0,  0,  -1)]
-
     export const OCTAHEDRON_FACE_VERTICES = [
-        0, 2, 4,
-        2, 1, 4,
-        1, 3, 4,
-        3, 0, 4,
+        [0, 2, 4],
+        [2, 1, 4],
+        [1, 3, 4],
+        [3, 0, 4],
 
-        2, 0, 5,
-        1, 2, 5,
-        3, 1, 5,
-        0, 3, 5]
+        [2, 0, 5],
+        [1, 2, 5],
+        [3, 1, 5],
+        [0, 3, 5]]
+
+    const {x: s, y: t} = new V3(1, NLA.GOLDEN_RATIO, 0).unit()
+    export const ISOCAHEDRON_VERTICES = [
+        new V3(-s, t, 0),
+        new V3(s, t, 0),
+        new V3(-s, -t, 0),
+        new V3(s, -t, 0),
+
+        new V3(0, -s, t),
+        new V3(0, s, t),
+        new V3(0, -s, -t),
+        new V3(0, s, -t),
+
+        new V3(t, 0, -s),
+        new V3(t, 0, s),
+        new V3(-t, 0, -s),
+        new V3(-t, 0, s)]
+    export const ISOCAHEDRON_FACE_VERTICES = [
+        // 5 faces around point 0
+        [0, 11, 5],
+        [0, 5, 1],
+        [0, 1, 7],
+        [0, 7, 10],
+        [0, 10, 11],
+
+        // 5 adjacent faces
+        [1, 5, 9],
+        [5, 11, 4],
+        [11, 10, 2],
+        [10, 7, 6],
+        [7, 1, 8],
+
+        // 5 faces around point 3
+        [3, 9, 4],
+        [3, 4, 2],
+        [3, 2, 6],
+        [3, 6, 8],
+        [3, 8, 9],
+
+        // 5 adjacent faces
+        [4, 9, 5],
+        [2, 4, 11],
+        [6, 2, 10],
+        [8, 6, 7],
+        [9, 8, 1]]
 
     export function dodecahedron() {
-        return makePlatonic(DODECAHEDRON_VERTICES, DODECAHEDRON_FACE_VERTICES, 5, 'B2T.dodecahedron()')
+        return makePlatonic(DODECAHEDRON_VERTICES, DODECAHEDRON_FACE_VERTICES, 'B2T.dodecahedron()')
     }
     export function octahedron() {
-        return makePlatonic(OCTAHEDRON_VERTICES, OCTAHEDRON_FACE_VERTICES, 3, 'B2T.octahedron()')
+        return makePlatonic(OCTAHEDRON_VERTICES, OCTAHEDRON_FACE_VERTICES, 'B2T.octahedron()')
     }
-	function makePlatonic(VS, FVIS, FACE_EDGE_COUNT, generator) {
-	    const edgeMap = new Map(), faces = []
-        for (let start = 0; start < FVIS.length; start += FACE_EDGE_COUNT) {
-            console.log(start + 1, FVIS[start + 1], VS[FVIS[start + 1]])
-            const surface = PlaneSurface.throughPoints(VS[FVIS[start]], VS[FVIS[start + 1]], VS[FVIS[start + 2]])
-            const contour = []
-	        for (let i = 0; i < FACE_EDGE_COUNT; i++) {
-                const ipp = (i + 1) % FACE_EDGE_COUNT
-                const iA = FVIS[start + i], iB = FVIS[start + ipp]
+    export function isocahedron() {
+        return makePlatonic(ISOCAHEDRON_VERTICES, ISOCAHEDRON_FACE_VERTICES, 'B2T.octahedron()')
+    }
+	function makePlatonic(VS: V3[], FVIS: int[][], generator: string) {
+	    const edgeMap = new Map()
+        const faces = FVIS.map(faceIndexes => {
+            const surface = PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]])
+            const contour = NLA.arrayFromFunction(faceIndexes.length, i => {
+                const ipp = (i + 1) % faceIndexes.length
+                const iA = faceIndexes[i], iB = faceIndexes[ipp]
                 const iMin = min(iA, iB), iMax = max(iA, iB), edgeID = iMin * VS.length + iMax
                 let edge = edgeMap.get(edgeID)
                 !edge && edgeMap.set(edgeID, edge = StraightEdge.throughPoints(VS[iMin], VS[iMax]))
-                contour.push(iA < iB ? edge : edge.flipped())
-            }
-            faces.push(new PlaneFace(surface, contour))
-        }
-        return new B2(faces, false, 'B2T.dodecahedron()')
+                return iA < iB ? edge : edge.flipped()
+            })
+            return new PlaneFace(surface, contour)
+        })
+        return new B2(faces, false, generator)
     }
 
 	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + globalId++): B2 {
@@ -590,10 +726,10 @@ namespace B2T {
 		assertVectors(apex)
 
 		const ribs = baseEdges.map(baseEdge => StraightEdge.throughPoints(apex, baseEdge.a))
-		const faces = baseEdges.map((baseEdge, index) => {
-			const faceName = name + 'Wall' + index
-			const nextIndex = (index + 1) % baseEdges.length
-			const faceEdges = [ribs[index], baseEdge, ribs[nextIndex].flipped()]
+		const faces = baseEdges.map((baseEdge, i) => {
+			const faceName = name + 'Wall' + i
+			const ipp = (i + 1) % baseEdges.length
+			const faceEdges = [ribs[i], baseEdge, ribs[ipp].flipped()]
 			const surface = undefined // TODO
 			return Face.create(surface, faceEdges, undefined, faceName)
 		})

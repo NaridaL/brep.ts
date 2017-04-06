@@ -9,6 +9,7 @@ class BezierCurve extends Curve {
 	constructor(p0: V3, p1: V3, p2: V3, p3: V3, tMin?: number, tMax?: number) {
 		super()
 		assertVectors(p0, p1, p2, p3)
+        //assert(!L3.throughPoints(p0, p3).containsPoint(p1) || !L3.throughPoints(p0, p3).containsPoint(p2))
 		this.p0 = p0
 		this.p1 = p1
 		this.p2 = p2
@@ -90,6 +91,7 @@ class BezierCurve extends Curve {
 		const d = p0
 
 		return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - plane.w)
+            .filter(t => between(t, this.tMin, this.tMax))
 	}
 
 	isTsWithSurface(surface) {
@@ -97,17 +99,43 @@ class BezierCurve extends Curve {
 			return this.isTsWithPlane(surface.plane)
 		}
 		if (surface instanceof SemiCylinderSurface) {
-			const projPlane = new P3(surface.dir1.normalized(), 0)
+			const projPlane = new P3(surface.dir1.unit(), 0)
             const projThis = this.project(projPlane)
             const projEllipse = surface.baseEllipse.project(projPlane)
 			return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
 		}
+		if (surface instanceof EllipsoidSurface) {
+            const thisOC = this.transform(surface.inverseMatrix)
+            const f = t => thisOC.at(t).length() - 1
+            const df = t => thisOC.at(t).unit().dot(thisOC.tangentAt(t))
+
+            const stepSize = 1 / (1 << 11)
+            const STEPS = (this.tMax - this.tMin) / stepSize
+            const results = []
+            for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
+                const dt = stepSize * thisOC.tangentAt(startT).length()
+                if (abs(f(startT)) <= dt) {
+                    //const t = newtonIterate1d(f, startT, 16)
+                    let t = newtonIterateWithDerivative(f, startT, 16, df)
+                    if (!eq0(f(t)) || eq0(df(t))) {
+                        const a = startT - dt, b = startT + dt
+                        t = newtonIterate1d(df, startT, 16)
+                        //if (f(a) * f(b) < 0) {
+                        //    t = bisect(f, a, b, 16)
+                        //} else if (df(a) * df(b) < 0) {
+                        //    t = bisect(df, a, b, 16)
+                        //}
+                    }
+                    if (eq0(f(t)) && !results.some(r => eq(r, t))) {
+                        results.push(t)
+                    }
+                }
+            }
+            return results
+        }
 		assert(false)
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	likeCurve(obj) {
 		return this == obj ||
 			Object.getPrototypeOf(obj) == BezierCurve.prototype
@@ -140,7 +168,7 @@ class BezierCurve extends Curve {
 	 * for every t:number there exists a s:number with this.at(t) = curve.at(s)
 	 */
 	isColinearTo(curve: BezierCurve): boolean {
-		if (curve == this) return true
+		if (this === curve || this.likeCurve(curve)) return true
 		if (!(curve instanceof BezierCurve)) return false
 		// first, find out where/if curve.p0 and curve.p3 are on this
 		// then split this at curve.p0 --> curve.p3 to compare points p1 and p2
@@ -171,7 +199,7 @@ class BezierCurve extends Curve {
 	}
 
 	reversed(): BezierCurve {
-		return new BezierCurve(this.p3, this.p2, this.p1, this.p0, -this.tMax, -this.tMin)
+		return new BezierCurve(this.p3, this.p2, this.p1, this.p0, 1-this.tMax, 1-this.tMin)
 	}
 
 	getCoefficients() {
@@ -196,10 +224,13 @@ class BezierCurve extends Curve {
 		const a = p01.plus(p23).times(3).minus(p12.times(6))
 		const b = p12.minus(p01).times(6)
 		const c = p01.times(3)
-		return [V3.ZERO, a, b, c]
+		return [V3.O, a, b, c]
 	}
 
 	pointT(p) {
+	    return this.closestTToPoint(p)
+    }
+	pointT3(p) {
 		const {p0, p1, p2, p3} = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -347,11 +378,11 @@ class BezierCurve extends Curve {
 		// f = (this.at(t) - p) . (this.tangentAt(t)
 		// df = this.tangentAt(t) . this.tangentAt(t) + (this.at(t) - p) . this.ddt(t)
 		//    = this.tangentAt(t)² + (this.at(t) - p) . this.ddt(t)
-		let f = t => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
-		let df = t => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
+		const f = t => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
+		const df = t => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
 
 		const STEPS = 32
-		let startT = 'undefined' === typeof tStart
+		const startT = 'undefined' === typeof tStart
 			? NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
 			.withMax(t => -this.at(t).distanceTo(p))
 			: tStart
@@ -557,7 +588,6 @@ class BezierCurve extends Curve {
 		return this.isInfosWithBezier(this)
 	}
 
-	/** @inheritDoc */
 	isInfosWithCurve(curve) {
 		if (curve instanceof L3) {
 			return this.isInfosWithLine(curve.anchor, curve.dir1)
@@ -568,7 +598,7 @@ class BezierCurve extends Curve {
 		assert(false)
 	}
 
-	getAreaInDirSurface(dir1: V3, surface: Surface, aT: number, bT: number) {
+	getAreaInDirSurface(dir1: V3, surface: Surface, aT: number, bT: number): {centroid: V3, area: number} {
 		assertf(() => dir1.hasLength(1))
 		// INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
 		const f = t => {
@@ -581,7 +611,7 @@ class BezierCurve extends Curve {
 		}
 		const cx = t => {
 			const height = this.at(t).dot(dir1)
-			console.log(t, this.at(t).minus(dir1.times(height / 2)).sce, f(t))
+			//console.log(t, this.at(t).minus(dir1.times(height / 2)).sce, f(t))
 			return this.at(t).minus(dir1.times(height / 2))
 		}
 
@@ -608,6 +638,17 @@ class BezierCurve extends Curve {
 		return new BezierCurve(V(0, p0y), V(1 / 3, p1y), V(2 / 3, p2y), V(1, p3y), tMin, tMax)
 	}
 
+	static quadratic(a: V3, b: V3, c: V3, tMin: number = 0, tMax: number = 1): BezierCurve | L3 {
+        const line = L3.throughPoints(a, c)
+        if (line.containsPoint(b)) {
+            return line
+        } else {
+            // p1 = 1/3 a + 2/3 b
+            // p2 = 1/3 c + 2/3 b
+            return new BezierCurve(a, b.times(2).plus(a).div(3), b.times(2).plus(c).div(3), c, tMin, tMax)
+        }
+    }
+
 	/**
 	 * Returns a bezier curve which approximates a CCW unit circle arc starting at V3.X of angle phi
 	 * phi <= PI / 2 is recommended
@@ -624,9 +665,9 @@ class BezierCurve extends Curve {
 	 */
 	static readonly EX2D = BezierCurve.graphXY(2, -3, -3, 2)
 
-	static readonly EX3D = new BezierCurve(V3.ZERO, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X)
+	static readonly EX3D = new BezierCurve(V3.O, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X)
 
 	static readonly QUARTER_CIRCLE = BezierCurve.approximateUnitArc(PI / 2)
 }
 BezierCurve.prototype.hlol = Curve.hlol++
-BezierCurve.prototype.tIncrement = 1 / (64)
+BezierCurve.prototype.tIncrement = 1 / 16
