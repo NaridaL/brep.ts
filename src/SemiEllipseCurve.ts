@@ -1,24 +1,19 @@
 class SemiEllipseCurve extends Curve {
-    center: V3
-    f1: V3
-    f2: V3
-    normal: V3
-    matrix: M4
-    inverseMatrix: M4
-    tMin: number
-    tMax: number
+	readonly normal: V3
+	readonly center: V3
+	readonly f1: V3
+	readonly f2: V3
+	readonly matrix: M4
+	readonly inverseMatrix: M4
 
-    constructor(center, f1, f2, minT?, maxT?) {
-        super()
+	constructor(center, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
+        super(tMin, tMax)
         assertVectors(center, f1, f2)
         this.center = center
 		this.f1 = f1
 		this.f2 = f2
-        undefined != minT && (this.tMin = minT)
-        undefined != maxT && (this.tMax = maxT)
-        assert(undefined == minT || undefined == maxT || this.tMin < this.tMax)
-        assert(undefined == minT || undefined == maxT || 0 <= this.tMin && this.tMin < PI)
-        assert(undefined == minT || undefined == maxT || 0 < this.tMax && this.tMax <= PI)
+        assert(0 <= this.tMin && this.tMin < PI)
+        assert(0 < this.tMax && this.tMax <= PI)
 		this.normal = f1.cross(f2)
 		if (!this.normal.isZero()) {
 			this.normal = this.normal.unit()
@@ -35,21 +30,22 @@ class SemiEllipseCurve extends Curve {
 		}
 	}
 
-	getVolZAnd(dir1: V3, tStart: number, tEnd: number): {volume: number, centroid: V3} {
-		// let p = at(t)
-		// integrate area [p -> plane.projectPoint(p)] to x axis...
-		// INTEGRATE[tStart, tEnd] fp(this.at(t)) dt
-		const ft = t => this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
-		// f(t) = c + f1 cos + f2 sin
-		// p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
-		function fp(p) {
-			const p0ToP = dir1.times(dir1.dot(p))
-			const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
-			return area
-		}
-		const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
-		return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
-	}
+	// TODO: there'S alsoa commented out test
+	//getVolZAnd(dir1: V3, tStart: number, tEnd: number): {volume: number, centroid: V3} {
+	//	// let p = at(t)
+	//	// integrate area [p -> plane.projectPoint(p)] to x axis...
+	//	// INTEGRATE[tStart, tEnd] fp(this.at(t)) dt
+	//	const ft = t => this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
+	//	// f(t) = c + f1 cos + f2 sin
+	//	// p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
+	//	function fp(p) {
+	//		const p0ToP = dir1.times(dir1.dot(p))
+	//		const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
+	//		return area
+	//	}
+	//	const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
+	//	return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
+	//}
 
 	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): {area: number, centroid: V3} {
 		//assertf(() => tStart < tEnd)
@@ -109,10 +105,6 @@ class SemiEllipseCurve extends Curve {
 		    this.hasOwnProperty('tMin') || this.hasOwnProperty('tMax') ? `, ${this.tMin}, ${this.tMax}` : ''})`
 	}
 
-	isValidT(t) {
-		return le(this.tMin, t) && le(t, this.tMax)
-	}
-
 	at(t) {
         assertNumbers(t)
         assert(this.isValidT(t))
@@ -166,9 +158,6 @@ class SemiEllipseCurve extends Curve {
         return hashCode | 0
     }
 
-	/**
-	 * @inheritDoc
-	 */
 	likeCurve(curve) {
 		return curve.constructor == SemiEllipseCurve
 			&& this.center.like(curve.center)
@@ -302,7 +291,7 @@ class SemiEllipseCurve extends Curve {
         if (surface instanceof PlaneSurface) {
             return this.isTsWithPlane(surface.plane)
         } else if (surface instanceof SemiCylinderSurface) {
-            const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir1))
+            const ellipseProjected = surface.baseCurve.transform(M4.projection(this.getPlane(), surface.dir1))
             return this.isInfosWithEllipse(ellipseProjected).map(info => info.tThis)
         } else if (surface instanceof EllipsoidSurface) {
             const isEllipse = surface.isCurvesWithPlane(this.getPlane())
@@ -418,7 +407,7 @@ class SemiEllipseCurve extends Curve {
 			//var rotEl = ellipseLC.transform(resetMatrix)
 			console.log(rotEl, rotEl.sce)
 			//rotEl.debugToMesh(dMesh, 'curve2')
-			return results.map(localP => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(localP)}))
+			return results.map(pLC => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(pLC)}))
 			/*
 			 // new rel center
 			 var mat = M4.forSys(ellipseLC.f1.unit(), ellipseLC.f2.unit(), V3.Z, ellipseLC.center).inversed()
@@ -468,9 +457,9 @@ class SemiEllipseCurve extends Curve {
 				const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv)
 				return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y))
                     .map(tOther => ({
-					tThis: SemiEllipseCurve.unitT(dirLC.times(tOther).plus(anchorLC)),
-					tOther: tOther,
-					p: line.at(tOther)}))
+                        tThis: SemiEllipseCurve.unitT(dirLC.times(tOther).plus(anchorLC)),
+                        tOther: tOther,
+                        p: line.at(tOther)}))
 			}
 		} else {
 			// if the line intersects the XY-plane in a single point, there can be an intersection there

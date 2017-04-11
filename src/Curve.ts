@@ -1,6 +1,18 @@
 abstract class Curve extends Transformable {
+	tMin: number
+	tMax: number
 	tIncrement: number
 	hlol: number
+
+	constructor(tMin:  number, tMax: number) {
+		super()
+		this.tMin = tMin
+		this.tMax = tMax
+		assertNumbers(tMin, tMax)
+		assert(!isNaN(tMin))
+		assert(!isNaN(tMax))
+		assert(tMin < tMax)
+	}
 
     /**
      * Returns curve parameter t for point p on curve.
@@ -12,6 +24,10 @@ abstract class Curve extends Transformable {
 	 */
 	closestPointToPoint(p: V3): V3 {
 		return this.at(this.closestTToPoint(p))
+	}
+
+	isValidT(t) {
+		return le(this.tMin, t) && le(t, this.tMax)
 	}
 
 	abstract closestTToPoint(p: V3): number
@@ -108,7 +124,7 @@ abstract class Curve extends Transformable {
 	abstract isColinearTo(curve: Curve): boolean
 
 
-	getAABB(tMin?, tMax?): AABB {
+	getAABB(tMin = this.tMin, tMax = this.tMax): AABB {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
 		let tMinAt = this.at(tMin), tMaxAt = this.at(tMax)

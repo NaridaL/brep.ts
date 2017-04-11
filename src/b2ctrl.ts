@@ -9,7 +9,7 @@ function parseGetParams() {
         })
     return result
 }
-let a, b, c, d, edges, font
+let a, b, c, d, edges
 function initB2() {
     dMesh = new GL.Mesh()
     /*
@@ -31,7 +31,7 @@ function initB2() {
     const gets = parseGetParams()
     "abcd".split('').forEach(k => gets[k] && (console.log(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()'), eval(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()')))
 
-    cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()
+    //cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()
     if (gets['points']) {
         console.log("drPs from GET")
         drPs = eval(gets['points'])
@@ -79,7 +79,7 @@ function initB2() {
 
 
 const randomColors = NLA.arrayFromFunction(20, i => NLA.randomColor())
-let aMesh: GL.Mesh, bMesh: GL.Mesh, cMesh: GL.Mesh, dMesh: GL.Mesh, sMesh: GL.Mesh, b2meshes: GL.Mesh[]
+let aMesh: GL.Mesh, bMesh: GL.Mesh, cMesh: GL.Mesh, dMesh: GL.Mesh, sMesh: GL.Mesh, b2meshes: GL.Mesh[] = []
 paintScreen = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
@@ -227,41 +227,38 @@ var planes = [
 //const font = opentype.loadSync('fonts/Verdana.ttf')
 //opentype.load('fonts/calibri.ttf', function(err, font) {
 //opentype.load('fonts/FiraSans-Medium.woff', function(err, font) {
-window.onload = opentype.load('fonts/FiraSansMedium.woff', function(err, f) {
-    if (err) {
-        console.log("EROR")
-        throw new Error('Could not load font: ' + err)
-    }
-    font = f
-    modeStack.push({})
-    window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-        console.log(errorMsg, url, lineNumber, column, errorObj)
-    }
-    gl = GL.create({canvas: document.getElementById("testcanvas") as HTMLCanvasElement})
-    gl.fullscreen()
-    gl.canvas.oncontextmenu = () => false
+window.onload = function () {
+    B2T.loadFonts().then(function () {
+        modeStack.push({})
+        window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
+            console.log(errorMsg, url, lineNumber, column, errorObj)
+        }
+        gl = GL.create({canvas: document.getElementById("testcanvas") as HTMLCanvasElement})
+        gl.fullscreen()
+        gl.canvas.oncontextmenu = () => false
 
-    setupCamera()
-    //gl.cullFace(gl.FRONT_AND_BACK);
-    gl.clearColor(1.0, 1.0, 1.0, 0.0)
-    gl.enable(gl.BLEND)
-    gl.enable(gl.DEPTH_TEST)
-    gl.enable(gl.CULL_FACE)
-    gl.depthFunc(gl.LEQUAL)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA) // TODO ?!
+        setupCamera()
+        //gl.cullFace(gl.FRONT_AND_BACK);
+        gl.clearColor(1.0, 1.0, 1.0, 0.0)
+        gl.enable(gl.BLEND)
+        gl.enable(gl.DEPTH_TEST)
+        gl.enable(gl.CULL_FACE)
+        gl.depthFunc(gl.LEQUAL)
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA) // TODO ?!
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    gl.loadIdentity()
-    gl.scale(10, 10, 10)
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        gl.loadIdentity()
+        gl.scale(10, 10, 10)
 
-    gl.loadIdentity()
+        gl.loadIdentity()
 
 
-    initMeshes()
-    initShaders()
-    initNavigationEvents()
-    initPointInfoEvents()
-    initB2()
-    setupCamera()
-    paintScreen()
-})
+        initMeshes()
+        initShaders()
+        initNavigationEvents()
+        initPointInfoEvents()
+        initB2()
+        setupCamera()
+        paintScreen()
+    })
+}

@@ -224,7 +224,6 @@ namespace B2T {
 		assertf(() => Edge.isLoop(baseLoop))
 		const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
 		const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
-		console.log("angles", angles)
 		const open = !NLA.eq(totalRads, 2 * PI)
 		const baseRibCurves = baseLoop.map(edge =>  {
 			const a = edge.a, radius = a.lengthXY()
@@ -307,7 +306,6 @@ namespace B2T {
 						stepEndEdges[edgeIndex],
 						!NLA.eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
                     const surface = 0 == rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
-					console.log("ljl", edgeIndex, ipp, ribs, surface, faceEdges)
 					faces.push(Face.create(surface, faceEdges))
 				}
 			}
@@ -425,7 +423,43 @@ namespace B2T {
                     extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2)).concatenated()), false)
     }
 
-    export function text(text: string, size: number, depth: number) {
+    let defaultFont: opentypejs.Font
+    export function loadFonts(): Promise<opentypejs.Font> {
+		return loadFont('fonts/FiraSansMedium.woff').then(font => defaultFont = font)
+    }
+    const loadedFonts = new Map<string, opentypejs.Font>()
+    export function loadFont(fontPath): Promise<opentypejs.Font> {
+        return new Promise(function (executor, reject) {
+        	const font = loadedFonts.get(fontPath)
+            if (font) {
+                executor(font)
+            } else {
+                opentype.load(fontPath, function (err, f) {
+                    if (err) {
+                        reject(err)
+                    } else {
+                        loadedFonts.set(fontPath, f)
+                        executor(f)
+                    }
+                })
+            }
+        })
+    }
+    export function loadFontsAsync(callback) {
+        if (defaultFont) {
+            callback()
+        } else {
+            opentype.load('fonts/FiraSansMedium.woff', function (err, font) {
+                if (err) {
+                    throw new Error('Could not load font: ' + err)
+                } else {
+                    defaultFont = font
+                    callback()
+                }
+            })
+        }
+    }
+    export function text(text: string, size: number, depth: number = 1, font: opentypejs.Font = defaultFont) {
         const path = font.getPath(text, 0, 0, size)
         const subpaths = []
         path.commands.forEach(c => {
@@ -442,17 +476,22 @@ namespace B2T {
             return loop
         })
         const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace)
-        console.log(faces)
-        console.log(loops.map(l => new PlaneSurface(P3.XY).edgeLoopCCW(l)))
         const hello = B2.join(faces.map(face => B2T.extrudeFace(face, V(0,0,-depth))))
         return hello
 
     }
 
+    export function minorityReport() {
+	    const a = B2T.sphere()
+	    const b = B2T.text('LEO CROW', 64, 128).scale(0.1 / 32).translate(-0.5, -0.05, 1.2).flipped()
+	    const c = B2T.sphere(0.98)
+	    return a.and(b).plus(c)
+    }
+
     export function whatever() {
         const iso = isocahedron()
-        const nos = B2.join(iso.faces.map((face, i) => {
-            const not = text('' + (i + 1), 0.5, -2)
+        const numbersB2 = B2.join(iso.faces.map((face, i) => {
+            const numberB2 = text('' + (i + 1), 0.4, -2)
             const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
 
             const sys = M4.forSys(
@@ -460,11 +499,31 @@ namespace B2T {
                 centroid.cross(face.contour[0].aDir),
                 centroid.unit(),
                 centroid)
-            return not.transform(sys.times(M4.translation(-not.getAABB().size().x / 2, -0.1, -0.04)))
+            return numberB2.transform(sys.times(M4.translation(-numberB2.getAABB().size().x / 2, -0.1, -0.04)))
         }))
         const s = sphere(0.9)
-        return iso.and(s).and(nos)
-        //return nos
+        //return iso.and(numbersB2)
+        return iso.and(s).and(numbersB2)
+        //return numbersB2
+    }
+
+    export function d20() {
+        const iso = isocahedron()
+        const numbersB2 = B2.join(iso.faces.map((face, i) => {
+            const numberB2 = text('' + (i + 1), 0.4, -2)
+            const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
+
+            const sys = M4.forSys(
+                face.contour[0].aDir,
+                centroid.cross(face.contour[0].aDir),
+                centroid.unit(),
+                centroid)
+            return numberB2.transform(sys.times(M4.translation(-numberB2.getAABB().size().x / 2, -0.1, -0.04)))
+        }))
+        const s = sphere(0.9)
+        //return iso.and(numbersB2)
+        return iso.and(s).and(numbersB2)
+        //return numbersB2
     }
 
 	export function rotStep(edges: Edge[], totalRads: number, count: int) {

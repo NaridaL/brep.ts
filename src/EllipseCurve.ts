@@ -1,15 +1,15 @@
 class EllipseCurve extends Curve {
-    center: V3
-    f1: V3
-    f2: V3
-    normal: V3
-    matrix: M4
-    inverseMatrix: M4
-    tMin: number
-    tMax: number
+	readonly normal: V3
+	readonly center: V3
+	readonly f1: V3
+	readonly f2: V3
+	readonly matrix: M4
+	readonly inverseMatrix: M4
 
-    constructor(center, f1, f2) {
-        super()
+	constructor(center: V3, f1: V3, f2: V3, tMin: number = -PI, tMax: number = PI) {
+		super(tMin, tMax)
+		assert(EllipseCurve.isValidT(tMin))
+		assert(EllipseCurve.isValidT(tMax))
         assertVectors(center, f1, f2)
         this.center = center
 		this.f1 = f1
@@ -283,7 +283,7 @@ class EllipseCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof CylinderSurface) {
-			const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.getPlane(), surface.dir1))
+			const ellipseProjected = surface.baseCurve.transform(M4.projection(this.getPlane(), surface.dir1))
 			return this.isInfosWithEllipse(ellipseProjected).map(info => info.tThis)
 		} else {
 			assert(false)
@@ -334,8 +334,8 @@ class EllipseCurve extends Curve {
 	}
 
 	containsPoint(p) {
-		const localP = this.inverseMatrix.transformPoint(p)
-		return NLA.eq(1, localP.lengthXY()) && NLA.eq0(localP.z)
+		const pLC = this.inverseMatrix.transformPoint(p)
+		return NLA.eq(1, pLC.lengthXY()) && NLA.eq0(pLC.z)
 	}
 
 	isInfosWithEllipse(ellipse: EllipseCurve): {tThis: number, tOther: number, p: V3}[] {
@@ -382,7 +382,7 @@ class EllipseCurve extends Curve {
 			//var rotEl = localEllipse.transform(resetMatrix)
 			console.log(rotEl, rotEl.sce)
 			//rotEl.debugToMesh(dMesh, 'curve2')
-			return results.map(localP => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(localP)}))
+			return results.map(pLC => ({tThis: undefined, tOther: undefined, p: resetMatrix.transformPoint(pLC)}))
 			/*
 			 // new rel center
 			 var mat = M4.forSys(localEllipse.f1.unit(), localEllipse.f2.unit(), V3.Z, localEllipse.center).inversed()
@@ -484,9 +484,9 @@ class EllipseCurve extends Curve {
 			return this.isInfosWithBezier2D(bezier)
 		} else {
 			let infos = localBezier.isTsWithPlane(P3.XY).mapFilter(tOther => {
-				let localP = localBezier.at(tOther)
-				if (NLA.eq(1, localP.lengthXY())) {
-					return {tOther: tOther, p: bezier.at(tOther), tThis: localP.angleXY()}
+				let pLC = localBezier.at(tOther)
+				if (NLA.eq(1, pLC.lengthXY())) {
+					return {tOther: tOther, p: bezier.at(tOther), tThis: pLC.angleXY()}
 				}
 			})
 			return infos

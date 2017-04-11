@@ -69,7 +69,7 @@ abstract class Edge extends Transformable {
 	}
 
 
-	static forCurveAndTs(curve: Curve, aT: number, bT: number): Edge {
+	static forCurveAndTs(curve: Curve, aT: number = curve.tMin, bT: number = curve.tMax): Edge {
 		return Edge.create(curve, curve.at(aT), curve.at(bT), aT, bT, undefined,
 			aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(),
 			aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated())
@@ -193,140 +193,75 @@ abstract class Edge extends Transformable {
 		return NLA.arrayFromFunction(loop.length, i => loop[loop.length - 1 - i].flipped())
 	}
     static pathFromSVG(pathString: String): Edge[] {
-        let currentPos, subPathStart, lastC2, lastC
-        const parsed: {code: string, x: number, y: number, relative?: boolean}[] = parser.parse(pathString)
+        let currentPos
+        const parsed: {type: int, x: number, y: number, relative?: boolean}[] =
+	        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).commands
         const path: Edge[] = []
         for (const c of parsed) {
-            let endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
-            let newLastC2, newLastC
-            switch (c.code) {
-                case 'M':
-                    subPathStart = currentPos = endPos
-                    break
-                case 'm':
-                    subPathStart = currentPos = currentPos.plus(endPos)
-                    break
-                case 'L':
-                    if (!endPos.like(currentPos)) {
-                        path.push(StraightEdge.throughPoints(currentPos, endPos))
-                    }
-                    break
-                case 'l':
-                    endPos = currentPos.plus(endPos)
+            const endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
+            switch (c.type) {
+	            case SVGPathData.LINE_TO:
                     path.push(StraightEdge.throughPoints(currentPos, endPos))
                     break
-                case 'V':
-                    endPos = V(currentPos.x, c.y)
-                    path.push(StraightEdge.throughPoints(currentPos, endPos))
-                    break
-                case 'v':
-                    endPos = V(currentPos.x, currentPos.y + c.y)
-                    path.push(StraightEdge.throughPoints(currentPos, endPos))
-                    break
-                case 'H':
-                    endPos = V(c.x, currentPos.y)
-                    path.push(StraightEdge.throughPoints(currentPos, endPos))
-                    break
-                case 'h':
-                    endPos = V(currentPos.x + c.x, currentPos.y)
-                    path.push(StraightEdge.throughPoints(currentPos, endPos))
-                    break
-                case 'Z':
-                case 'z':
-                    endPos = subPathStart
-                    if (!endPos.like(currentPos)) {
-                        path.push(StraightEdge.throughPoints(currentPos, endPos))
-                    }
-                    break
-                case 'S':
-                case 's':
-                case 'C':
-                case 'c': {
-                    let c1 = ('c' == c.code || 'C' == c.code) ? new V3(c.x1, c.y1, 0) : (lastC2 || currentPos)
-                    let c2 = new V3(c.x2, c.y2, 0)
-                    if ('c' == c.code) {
-                        c1 = c1.plus(currentPos)
-                    }
-                    if ('c' == c.code || 's' == c.code) {
-                        endPos = endPos.plus(currentPos)
-                        c2 = c2.plus(currentPos)
-                    }
+                case SVGPathData.CURVE_TO: {
+                    const c1 = new V3(c.x1, c.y1, 0)
+                    const c2 = new V3(c.x2, c.y2, 0)
                     const curve = new BezierCurve(currentPos, c1, c2, endPos, 0, 1)
                     const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1))
                     path.push(edge)
-                    newLastC2 = c2
                     break
                 }
-                case 'Q':
-                case 'q':
-                case 'T':
-                case 't': {
-                    let c12 = ('Q' == c.code || 'q' == c.code) ? new V3(c.x1, c.y1, 0) : (lastC || currentPos)
-                    if ('q' == c.code) {
-                        c12 = c12.plus(currentPos)
-                        endPos = endPos.plus(currentPos)
-                    }
-                    if ('t' == c.code) {
-                        endPos = endPos.plus(currentPos)
-                    }
-                    const line = L3.throughPoints(currentPos, endPos)
-                    if (line.containsPoint(c12)) {
-                        const edge = StraightEdge.throughPoints(currentPos,endPos)
-                        path.push(edge)
-                    } else {
-                        const curve = BezierCurve.quadratic(currentPos, c12, endPos, 0, 1)
-                        const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1))
-                        path.push(edge)
-                    }
-                    newLastC = c12
-                    break
+	            case SVGPathData.QUAD_TO: {
+		            const c1 = new V3(c.x1, c.y1, 0)
+		            const curve = ParabolaCurve.quadratic(currentPos, c1, endPos).rightAngled()
+		            const edge = new PCurveEdge(curve, currentPos, endPos, curve.tMin, curve.tMax, undefined, curve.tangentAt(curve.tMin), curve.tangentAt(curve.tMax))
+		            path.push(edge)
+		            break
+	            }
+                case SVGPathData.ARC_TO: {
+	                let {rx, ry, xAxisRotation, largeArc, sweep} = c
+	                rx = abs(rx)
+	                ry = abs(ry)
+	                if ('a' == c.code) {
+		                endPos = endPos.plus(currentPos)
+	                }
+	                const rads = xAxisRotation * DEG
+	                const midPoint = currentPos.minus(endPos).times(0.5)
+	                const midPointTransformed = M4.rotationZ(-rads).transformPoint(midPoint)
+	                const testValue = midPointTransformed.x ** 2 / rx ** 2 + midPointTransformed.y ** 2 / ry ** 2
+	                console.log(testValue)
+	                if (testValue > 1) {
+		                rx *= Math.sqrt(testValue)
+		                ry *= Math.sqrt(testValue)
+	                }
+	                const temp = (rx ** 2 * midPointTransformed.y ** 2 + ry ** 2 * midPointTransformed.x ** 2)
+	                const centerTransformedScale = (largeArc != sweep ? 1 : -1) * Math.sqrt(max(0, (rx ** 2 * ry ** 2 - temp) / temp))
+	                const centerTransformed = V(rx * midPointTransformed.y / ry, -ry * midPointTransformed.x / rx).times(centerTransformedScale)
+	                const center = M4.rotationZ(rads).transformPoint(centerTransformed).plus(currentPos.plus(endPos).times(0.5))
+	                let f1 = new V3(rx * cos(rads), rx * sin(rads), 0)
+	                const f2 = new V3(ry * -sin(rads), ry * cos(rads), 0)
+	                let curve = new SemiEllipseCurve(center, f1, f2)
+	                let aT = curve.pointT(currentPos, PI)
+	                let bT = curve.pointT(endPos, PI)
+	                if (aT < bT != sweep) {
+		                assert((aT != PI) || (bT != PI))
+		                if (aT == PI) {
+			                aT = -PI
+		                } else if (bT == PI) {
+			                bT = -PI
+		                } else {
+			                f1 = f1.negated()
+			                curve = new SemiEllipseCurve(center, f1, f2)
+			                aT = curve.pointT(currentPos, PI)
+			                bT = curve.pointT(endPos, PI)
+		                }
+	                }
+	                const edge = new PCurveEdge(curve, currentPos, endPos, aT, bT, undefined, curve.tangentAt(aT).times(sign(bT - aT)), curve.tangentAt(bT).times(sign(bT - aT)))
+	                path.push(edge)
+	                break
                 }
-                case 'A':
-                case 'a':
-                    let {rx, ry, xAxisRotation, largeArc, sweep} = c
-                    rx = abs(rx)
-                    ry = abs(ry)
-                    if ('a' == c.code) {
-                        endPos = endPos.plus(currentPos)
-                    }
-                    const rads = xAxisRotation * DEG
-                    const midPoint = currentPos.minus(endPos).times(0.5)
-                    const midPointTransformed = M4.rotationZ(-rads).transformPoint(midPoint)
-                    const testValue = midPointTransformed.x ** 2 / rx ** 2 + midPointTransformed.y ** 2 / ry ** 2
-                    console.log(testValue)
-                    if (testValue > 1) {
-                        rx *= Math.sqrt(testValue)
-                        ry *= Math.sqrt(testValue)
-                    }
-                    const temp = (rx ** 2 * midPointTransformed.y ** 2 + ry ** 2 * midPointTransformed.x ** 2)
-                    const centerTransformedScale = (largeArc != sweep ? 1 : -1) * Math.sqrt(max(0, (rx ** 2 * ry ** 2 - temp) / temp))
-                    const centerTransformed = V(rx * midPointTransformed.y / ry, -ry * midPointTransformed.x / rx).times(centerTransformedScale)
-                    const center = M4.rotationZ(rads).transformPoint(centerTransformed).plus(currentPos.plus(endPos).times(0.5))
-                    let f1 = new V3(rx * cos(rads), rx * sin(rads), 0)
-                    const f2 = new V3(ry * -sin(rads), ry * cos(rads), 0)
-                    let curve = new SemiEllipseCurve(center, f1, f2)
-                    let aT = curve.pointT(currentPos, PI)
-                    let bT = curve.pointT(endPos, PI)
-                    if (aT < bT != sweep) {
-                        assert((aT != PI) || (bT != PI))
-                        if (aT == PI) {
-                            aT = -PI
-                        } else if (bT == PI) {
-                            bT = -PI
-                        } else {
-                            f1 = f1.negated()
-                            curve = new SemiEllipseCurve(center, f1, f2)
-                            aT = curve.pointT(currentPos, PI)
-                            bT = curve.pointT(endPos, PI)
-                        }
-                    }
-                    const edge = new PCurveEdge(curve, currentPos, endPos, aT, bT, undefined, curve.tangentAt(aT).times(sign(bT - aT)), curve.tangentAt(bT).times(sign(bT - aT)))
-                    path.push(edge)
-                    break
             }
             currentPos = endPos
-            lastC = newLastC
-            lastC2 = newLastC2
         }
         return path
     }

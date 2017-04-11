@@ -1,16 +1,12 @@
 QUnit.module('B2TestMore')
 
-interface Assert {
-	dotTest2(face: Face, brep: B2, resultFaces: Face[], desc: string)
-	dotTest(face: Face, brep: B2, resultFaces: Face[], desc: string)
-}
 function doTest(test, face: PlaneFace, brep2: B2, resultEdges: Edge[], resultPoints: V3[], desc?: string) {
 	if (brep2 instanceof Face) {
 		brep2 = new B2([brep2])
 	}
 	brep2.buildAdjacencies()
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='../brep2.html?a=${new B2([face]).toSource()}&b=${brep2.toSource()}
+						href='brep2.html?a=${new B2([face]).toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
 	const faceMap = new Map(), edgeMap = new Map(), colinearEdgePairs = new NLA.CustomSet()
@@ -37,7 +33,7 @@ function doTestWithBrep(test: Assert, face: Face, faceBrep: B2, brep2: B2, resul
 	faceBrep.buildAdjacencies()
 	brep2.buildAdjacencies()
     test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='../brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
+						href='brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>expected ${desc}</a>`)
 	const faceMap = new Map(), faceEdgePoints = new NLA.CustomMap(), checkedPairs = new NLA.CustomSet()
@@ -67,7 +63,7 @@ function doTestWithBrep(test: Assert, face: Face, faceBrep: B2, brep2: B2, resul
 	edgePointInfos && edgePointInfos.forEach(info => !uniquePoints.some(up => up.like(info.p)) && assert(info.p) && uniquePoints.push(info.p))
 	console.log('edgePointInfos', edgePointInfos)
     test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='../brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
+						href='brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
 						&edges=[${edges.map(e => e.toSource()).join(',')}]
 						&points=[${uniquePoints.map(e => e.toSource()).join(',')}]'>actual ${desc}</a>`)
 	test.equal(uniquePoints.length, resultPoints.length, resultPoints.length + ' == resultPoints.length == uniquePoints.length'+ uniquePoints.toSource())
@@ -83,7 +79,7 @@ function doTest2 (test, face, brep, resultFaces, desc) {
 	const faceMap = new Map(), edgeMap = new NLA.CustomMap()
 	const faceBrep = new B2([face])
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='../brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
+href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	brep.faces.forEach(face2 => {
 		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap, new NLA.CustomMap(), new NLA.CustomSet())
 	})
@@ -93,7 +89,7 @@ href='../brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(res
 	B2.reconstituteFaces([face], edgeLooseSegments, faceMap, newFaces)
 	test.equal(newFaces.length, resultFaces.length, 'number of new faces')
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='../brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
+href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
 	resultFaces.forEach(face => {
 		test.ok(newFaces.some(newFace => newFace.likeFace(face)), `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`)
 	})
@@ -101,7 +97,7 @@ href='../brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(new
 function doTest3(assert, face: Face, newEdges: Edge[], points: Map<Edge, V3[]>, resultFaces: Face[], desc: string) {
     const faceBrep = new B2([face])
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='../brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
+href='brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	const isps = Array.from(points.entries()).map(([edge, ps]) =>
 		ps.map(p => ({edge: edge, p: p, edgeT: NLA.snap(NLA.snap(edge.curve.pointT(p), edge.aT), edge.bT)}))
 	).concatenated()
@@ -109,7 +105,7 @@ href='../brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}
 	const newFaces = []
 	B2.reconstituteFaces([face], edgeLooseSegments, new Map().set(face, newEdges), newFaces)
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank' 
-        href='../brep2.html?a=${faceBrep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
+        href='brep2.html?a=${faceBrep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
 	assert.equal(newFaces.length, resultFaces.length, 'number of new faces')
 	resultFaces.forEach(face => {
 		assert.ok(newFaces.some(newFace => newFace.likeFace(face)), `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`)
@@ -555,50 +551,50 @@ registerTests({
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 	
 		let result = new B2([
-            new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
-                new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(10, 0, 0), 10, 0),
-                new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 0), V(10, 0, 5), 0, 5),
-                new StraightEdge(new L3(V(10, 0, 5), V(-1, 0, 0)), V(10, 0, 5), V(0, 0, 5), 0, 10),
-                new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 5), V(0, 0, 0), 5, 0)], [[
-                new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 1), V(1, 0, 4), 1, 4),
-                new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(1, 0, 4), V(6, 0, 4), 1, 6),
-                new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 4), V(6, 0, 1), -4, -1),
-                new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(6, 0, 1), V(1, 0, 1), -6, -1)]]),
-            new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1), [
-                new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(10, 0, 0), V(0, 0, 0), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
-                new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 0), V(0, 0, 5), 0, 5),
-                new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(0, 0, 5), V(10, 0, 5), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0)),
-                new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 5), V(10, 0, 0), 5, 0)], [[
-                new StraightEdge(new L3(V(1, 3.1854361043800057, 0), V(0, 0, -1)), V(1, 3.185436104380006, 4), V(1, 3.185436104380006, 1), -4, -1),
-                new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(1, 3.185436104380006, 1), V(6, 3.720106174228432, 1), 0.3059958942668146, 0.5446421518086271, null, V(16.854361043800058, 5.8201231719955615, 0), V(22.201061742284324, -1.3392645542588122, 0)),
-                new StraightEdge(new L3(V(6, 3.7201061742284325, 0), V(0, 0, 1)), V(6, 3.720106174228432, 1), V(6, 3.720106174228432, 4), 1, 4),
-                new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -1.1, 0.1), V(6, 3.720106174228432, 4), V(1, 3.185436104380006, 4), 0.45535784819137265, 0.6940041057331852, null, V(-22.201061742284324, 1.3392645542588197, 0), V(-16.854361043800065, -5.820123171995554, 0))]]),
-            new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
-                new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(10, 0, 0), V(0, 0, 0), 0, 10),
-                new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, 0), V(10, 0, 0), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0))], []),
-            new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
-                new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(10, 0, 5), V(0, 0, 5), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
-                new StraightEdge(new L3(V(10, 0, 5), V(-1, 0, 0)), V(0, 0, 5), V(10, 0, 5), 10, 0)], []),
-            new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1)), [
-                new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 4), V(1, 0, 1), 4, 1),
-                new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 0, 1), V(1, 3.185436104380006, 1), 1, 4.185436104380006),
-                new StraightEdge(new L3(V(1, 3.1854361043800057, 0), V(0, 0, -1)), V(1, 3.185436104380006, 1), V(1, 3.185436104380006, 4), -1, -4),
-                new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 3.185436104380006, 4), V(1, 0, 4), 4.185436104380006, 1)], []),
-            new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6)), [
-                new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 1), V(6, 0, 4), -1, -4),
-                new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 0, 4), V(6, 3.720106174228432, 4), 9, 5.279893825771568),
-                new StraightEdge(new L3(V(6, 3.7201061742284325, 0), V(0, 0, 1)), V(6, 3.720106174228432, 4), V(6, 3.720106174228432, 1), 4, 1),
-                new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 3.720106174228432, 1), V(6, 0, 1), 5.279893825771568, 9)], []),
-            new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
-                new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(6, 0, 1), -1, -6),
-                new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 0, 1), V(6, 3.720106174228432, 1), 9, 5.279893825771568),
-                new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(6, 3.720106174228432, 1), V(1, 3.185436104380006, 1), 0.5446421518086271, 0.3059958942668146, null, V(-22.201061742284324, 1.3392645542588122, 0), V(-16.854361043800058, -5.8201231719955615, 0)),
-                new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 3.185436104380006, 1), V(1, 0, 1), 4.185436104380006, 1)], []),
-            new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
-                new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
-                new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 3.185436104380006, 4), 1, 4.185436104380006),
-                new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -1.1, 0.1), V(1, 3.185436104380006, 4), V(6, 3.720106174228432, 4), 0.6940041057331852, 0.45535784819137265, null, V(16.854361043800065, 5.820123171995554, 0), V(22.201061742284324, -1.3392645542588197, 0)),
-                new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 3.720106174228432, 4), V(6, 0, 4), 5.279893825771568, 9)], [])], false)
+			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V(0, 0, -1), V(1, 0, 0)), [
+				new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(10, 0, 0), 10, 0),
+				new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 0), V(10, 0, 5), 0, 5),
+				new StraightEdge(new L3(V(10, 0, 5), V(-1, 0, 0)), V(10, 0, 5), V(0, 0, 5), 0, 10),
+				new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 5), V(0, 0, 0), 5, 0)], [[
+				new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 1), V(1, 0, 4), 1, 4),
+				new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(1, 0, 4), V(6, 0, 4), 1, 6),
+				new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 4), V(6, 0, 1), -4, -1),
+				new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(6, 0, 1), V(1, 0, 1), -6, -1)]]),
+			new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1, -Infinity, Infinity), [
+				new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(10, 0, 0), V(0, 0, 0), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
+				new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 0), V(0, 0, 5), 0, 5),
+				new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(0, 0, 5), V(10, 0, 5), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0)),
+				new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 5), V(10, 0, 0), 5, 0)], [[
+				new StraightEdge(new L3(V(0.9999999999999971, 3.1854361043800057, 0), V(0, 0, -1)), V(1, 3.185436104380006, 4), V(1, 3.185436104380006, 1), -4, -1),
+				new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(1, 3.185436104380006, 1), V(6, 3.720106174228432, 1), 0.3059958942668148, 0.5446421518086274, null, V(16.854361043800058, 5.820123171995554, 0), V(22.201061742284324, -1.339264554258822, 0)),
+				new StraightEdge(new L3(V(5.999999999999993, 3.7201061742284325, 0), V(0, 0, 1)), V(6, 3.720106174228432, 1), V(6, 3.720106174228432, 4), 1, 4),
+				new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -0.10000000000000009, 1.1), V(6, 3.720106174228432, 4), V(1, 3.185436104380006, 4), 0.4553578481913726, 0.6940041057331853, null, V(-22.20106174228432, 1.339264554258822, 0), V(-16.85436104380006, -5.820123171995558, 0))]]),
+			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0), V(-1, 0, 0), V(0, 1, 0)), [
+				new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(10, 0, 0), V(0, 0, 0), 0, 10),
+				new PCurveEdge(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, 0), V(10, 0, 0), 0, 1, null, V(-15, 15, 0), V(-15, -15, 0))], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5), V(1, 0, 0), V(0, 1, 0)), [
+				new PCurveEdge(new BezierCurve(V(0, 0, 5), V(-5, 5, 5), V(15, 5, 5), V(10, 0, 5), -0.1, 1.1), V(10, 0, 5), V(0, 0, 5), 1, 0, null, V(15, 15, 0), V(15, -15, 0)),
+				new StraightEdge(new L3(V(10, 0, 5), V(-1, 0, 0)), V(0, 0, 5), V(10, 0, 5), 10, 0)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1), V(0, 0, -1), V(0, 1, 0)), [
+				new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 4), V(1, 0, 1), 4, 1),
+				new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 0, 1), V(1, 3.185436104380006, 1), 1, 4.185436104380006),
+				new StraightEdge(new L3(V(0.9999999999999971, 3.1854361043800057, 0), V(0, 0, -1)), V(1, 3.185436104380006, 1), V(1, 3.185436104380006, 4), -1, -4),
+				new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 3.185436104380006, 4), V(1, 0, 4), 4.185436104380006, 1)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), -6), V(0, 0, -1), V(0, -1, 0)), [
+				new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 1), V(6, 0, 4), -1, -4),
+				new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 0, 4), V(6, 3.720106174228432, 4), 9, 5.279893825771568),
+				new StraightEdge(new L3(V(5.999999999999993, 3.7201061742284325, 0), V(0, 0, 1)), V(6, 3.720106174228432, 4), V(6, 3.720106174228432, 1), 4, 1),
+				new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 3.720106174228432, 1), V(6, 0, 1), 5.279893825771568, 9)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1), V(-1, 0, 0), V(0, -1, 0)), [
+				new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(6, 0, 1), -1, -6),
+				new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 0, 1), V(6, 3.720106174228432, 1), 9, 5.279893825771568),
+				new PCurveEdge(new BezierCurve(V(0, 0, 1), V(-5, 5, 1), V(15, 5, 1), V(10, 0, 1), -0.1, 1.1), V(6, 3.720106174228432, 1), V(1, 3.185436104380006, 1), 0.5446421518086274, 0.3059958942668148, null, V(-22.201061742284324, 1.339264554258822, 0), V(-16.854361043800058, -5.820123171995554, 0)),
+				new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 3.185436104380006, 1), V(1, 0, 1), 4.185436104380006, 1)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4), V(1, 0, 0), V(0, -1, 0)), [
+				new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
+				new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 3.185436104380006, 4), 1, 4.185436104380006),
+				new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -0.10000000000000009, 1.1), V(1, 3.185436104380006, 4), V(6, 3.720106174228432, 4), 0.6940041057331853, 0.4553578481913726, null, V(16.85436104380006, 5.820123171995558, 0), V(22.20106174228432, -1.339264554258822, 0)),
+				new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 3.720106174228432, 4), V(6, 0, 4), 5.279893825771568, 9)], [])], false)
 		b2Equal(assert, a, punch, a.minus(punch), result)
 	},
 

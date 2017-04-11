@@ -1,25 +1,21 @@
 
-class CylinderSurface extends Surface {
-	baseEllipse: EllipseCurve
-	dir1: V3
-	matrix: M4
-	inverseMatrix: M4
+class CylinderSurface extends ProjectedCurveSurface {
+	readonly matrix: M4
+	readonly inverseMatrix: M4
 
-	constructor(baseEllipse: EllipseCurve, dir1: V3) {
-		super()
+	constructor(baseEllipse: SemiEllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
+		super(baseEllipse, dir1, undefined, undefined, zMin, zMax)
 		assert(2 == arguments.length)
 		assertVectors(dir1)
 		assertInst(EllipseCurve, baseEllipse)
-		//assert(!baseEllipse.normal.isPerpendicularTo(dir1), !baseEllipse.normal.isPerpendicularTo(dir1))
+		//assert(!baseCurve.normal.isPerpendicularTo(dir1), !baseCurve.normal.isPerpendicularTo(dir1))
 		assert(dir1.hasLength(1))
-		this.baseEllipse = baseEllipse
-		this.dir1 = dir1
 		this.matrix = M4.forSys(baseEllipse.f1, baseEllipse.f2, dir1, baseEllipse.center)
 		this.inverseMatrix = this.matrix.inversed()
 	}
 
 	toSource() {
-		return `new CylinderSurface(${this.baseEllipse.toSource()}, ${this.dir1.toSource()})`
+		return `new CylinderSurface(${this.baseCurve.toSource()}, ${this.dir1.toSource()})`
 	}
 
 
@@ -28,7 +24,7 @@ class CylinderSurface extends Surface {
 
 		// create plane that goes through cylinder seam
 		const line = new L3(p, this.dir1)
-		const seamBase = this.baseEllipse.at(PI)
+		const seamBase = this.baseCurve.at(PI)
 		const lineOut = this.dir1.cross(this.normalAt(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
@@ -54,24 +50,20 @@ class CylinderSurface extends Surface {
 		return this == surface ||
 			surface instanceof CylinderSurface
 			&& this.dir1.isParallelTo(surface.dir1)
-			&& this.containsEllipse(surface.baseEllipse)
+			&& this.containsEllipse(surface.baseCurve)
 	}
 
 	like(object) {
 		if (!this.isCoplanarTo(object)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
-		let thisFacesOut = 0 < this.baseEllipse.normal.dot(this.dir1)
-		let objectFacesOut = 0 < object.baseEllipse.normal.dot(object.dir1)
+		let thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir1)
+		let objectFacesOut = 0 < object.baseCurve.normal.dot(object.dir1)
 		return thisFacesOut == objectFacesOut
 	}
 
 	containsEllipse(ellipse) {
-		const ellipseProjected = ellipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
-		return this == ellipse || this.baseEllipse.isColinearTo(ellipseProjected)
-	}
-
-	containsLine(line) {
-		return this.dir1.isParallelTo(line.dir1) && this.containsPoint(line.anchor)
+		const ellipseProjected = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
+		return this == ellipse || this.baseCurve.isColinearTo(ellipseProjected)
 	}
 
 	containsCurve(curve) {
@@ -79,78 +71,45 @@ class CylinderSurface extends Surface {
 			return this.containsEllipse(curve)
 		} else if (curve instanceof L3) {
 			return this.containsLine(curve)
+		} else if (curve instanceof SemiEllipseCurve) {
+			return this.containsEllipse(curve)
 		} else {
 			assert(false)
 		}
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	transform(m4) {
 		return new CylinderSurface(
-			this.baseEllipse.transform(m4),
+			this.baseCurve.transform(m4),
 			m4.transformVector(this.dir1).unit())
 	}
 
 	flipped() {
 		return new CylinderSurface(
-			this.baseEllipse,
+			this.baseCurve,
 			this.dir1.negated())
 	}
 
-	toMesh(zStart, zEnd) {
-		zStart = zStart || -30
-		zEnd = zEnd || 30
-		const mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
-		const pF = this.parametricFunction(), pN = this.parametricNormal()
-		const split = 4 * 10, inc = 2 * PI / split
-		const c = split * 2
-		for (let i = 0; i < split; i++) {
-			let v = pF(i * inc, zStart)
-			mesh.vertices.push(pF(i * inc, zStart), pF(i * inc, zEnd))
-			pushQuad(mesh.triangles, false, 2 * i, (2 * i + 2) % c, (2 * i + 1), (2 * i + 3) % c)
-			const normal = pN(i * inc, 0)
-			mesh.normals.push(normal, normal)
-		}
-		console.log(mesh)
-		//mesh.computeNormalLi00nes()
-		mesh.compile()
-		return mesh
-	}
-
-	parametricNormal() {
-		return (d, z) => {
-			return this.baseEllipse.tangentAt(d).cross(this.dir1).unit()
-		}
+	toMesh(zStart: number = -30, zEnd: number = 30) {
+		return GL.Mesh.parametric(this.parametricFunction(), this.parametricNormal(), -PI, PI, zStart, zEnd, 16, 1)
 	}
 
 	normalAt(p) {
-		const localP = this.inverseMatrix.transformPoint(p)
-		return this.parametricNormal()(localP.angleXY(), localP.z)
-	}
-
-	parametricFunction() {
-		return (d, z) => {
-			return this.baseEllipse.at(d).plus(this.dir1.times(z))
-		}
+		const pLC = this.inverseMatrix.transformPoint(p)
+		return this.parametricNormal()(pLC.angleXY(), pLC.z)
 	}
 
 	implicitFunction() {
 		return (pWC) => {
 			const p = this.inverseMatrix.transformPoint(pWC)
 			const radiusLC = p.lengthXY()
-			const normalDir = Math.sign(this.baseEllipse.normal.dot(this.dir1))
+			const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir1))
 			return normalDir * (1 - radiusLC)
 		}
 	}
 
 	containsPoint(p) {
 		return NLA.eq0(this.implicitFunction()(p))
-	}
-
-	boundsFunction() {
-		assert(false)
 	}
 
 	pointToParameterFunction() {
@@ -170,8 +129,8 @@ class CylinderSurface extends Surface {
 			return this.isCurvesWithPlane(surface2.plane)
 		} else if (surface2 instanceof CylinderSurface) {
 			if (surface2.dir1.isParallelTo(this.dir1)) {
-				const ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
-				return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
+				const ellipseProjected = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
+				return this.baseCurve.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
 			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
 			} else {
@@ -181,27 +140,7 @@ class CylinderSurface extends Surface {
 	}
 
 	getCenterLine() {
-		return new L3(this.baseEllipse.center, this.dir1)
-	}
-
-	isCurvesWithPlane(plane): Curve[] {
-		assertInst(P3, plane)
-		if (this.dir1.isPerpendicularTo(plane.normal)) {
-			const ellipseTs = this.baseEllipse.isTsWithPlane(plane)
-			return ellipseTs.map(t => {
-				let l3dir = 0 < this.baseEllipse.tangentAt(t).dot(plane.normal)
-					? this.dir1
-					: this.dir1.negated()
-				return new L3(this.baseEllipse.at(t), l3dir)
-			})
-		} else {
-			let projEllipse = this.baseEllipse.transform(M4.projection(plane, this.dir1))
-			if (this.dir1.dot(plane.normal) > 0) {
-				// we need to flip the ellipse so the tangent is correct
-				projEllipse = new EllipseCurve(projEllipse.center, projEllipse.f1, projEllipse.f2.negated())
-			}
-			return [projEllipse]
-		}
+		return new L3(this.baseCurve.center, this.dir1)
 	}
 
 	edgeLoopCCW(contour) {
@@ -270,7 +209,7 @@ class CylinderSurface extends Surface {
 		}).sum()
 		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
 		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.baseEllipse.normal.dot(this.dir1))
+		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))
 	}
 
 	/**
@@ -322,15 +261,15 @@ class CylinderSurface extends Surface {
 			}
 		}).sum()
 
-		return {volume: totalArea * Math.sign(this.baseEllipse.normal.dot(this.dir1))}
+		return {volume: totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))}
 	}
 
 	facesOutwards(): boolean {
-		return this.baseEllipse.normal.dot(this.dir1) > 0
+		return this.baseCurve.normal.dot(this.dir1) > 0
 	}
 
 	getSeamPlane(): P3 {
-		return P3.forAnchorAndPlaneVectors(this.baseEllipse.center, this.baseEllipse.f1, this.dir1)
+		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir1)
 	}
 
 	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)

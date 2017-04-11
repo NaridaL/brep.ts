@@ -236,8 +236,8 @@ class V3 implements Equalable {
 		assertf(() => 2 == arguments.length)
 		assertVectors(vector, normal1)
 		assertf(() => normal1.hasLength(1))
-		assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
-		assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector))
+		//assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
+		//assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector)) // -0.000053600770598683675
 		return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector))
 	}
 
@@ -509,14 +509,14 @@ class V3 implements Equalable {
 		}
 	}
 
-	compareTo2(other: V3, precision: number = 0): number {
-		if (!NLA.eq2(this.x, other.x, precision)) {
+	compareTo2(other: V3, eps: number = NLA_PRECISION): number {
+		if (!NLA.eq2(this.x, other.x, eps)) {
 			return this.x - other.x
 		}
-		else if (!NLA.eq2(this.y, other.y, precision)) {
+		else if (!NLA.eq2(this.y, other.y, eps)) {
 			return this.y - other.y
 		}
-		else if (!NLA.eq2(this.z, other.z, precision)) {
+		else if (!NLA.eq2(this.z, other.z, eps)) {
 			return this.z - other.z
 		}
 		else {
@@ -526,22 +526,14 @@ class V3 implements Equalable {
 
 
 	static readonly O: V3 = new V3(0, 0, 0)
-	static readonly ONES: V3 = new V3(1, 1, 1)
     static readonly X: V3 = new V3(1, 0, 0)
     static readonly Y: V3 = new V3(0, 1, 0)
-	static readonly Z: V3 = new V3(0, 0, 1)
+    static readonly Z: V3 = new V3(0, 0, 1)
     static readonly XY: V3 = new V3(1, 1, 0)
+    static readonly XYZ: V3 = new V3(1, 1, 1)
     static readonly INF: V3 = new V3(Infinity, Infinity, Infinity)
-	static readonly XYZ: V3[] = [V3.X, V3.Y, V3.Z]
+	static readonly UNITS: V3[] = [V3.X, V3.Y, V3.Z]
 	
-	static readonly NAMEMAP = new NLA.CustomMap<V3, string>()
-		.set(V3.O, 'V3.O')
-		.set(V3.ONES, 'V3.ONES')
-		.set(V3.X, 'V3.X')
-		.set(V3.Y, 'V3.Y')
-		.set(V3.Z, 'V3.Z')
-		.set(V3.INF, 'V3.INF')
-
 	static random(): V3 {
 		return new V3(Math.random(), Math.random(), Math.random())
 	}
@@ -550,6 +542,14 @@ class V3 implements Equalable {
 		return a.dot(b) - a.length() * b.length()
 	}
 
+    static readonly NAMEMAP = new NLA.CustomMap<V3, string>()
+        .set(V3.O, 'V3.O')
+        .set(V3.X, 'V3.X')
+        .set(V3.Y, 'V3.Y')
+        .set(V3.Z, 'V3.Z')
+        .set(V3.XYZ, 'V3.XYZ')
+        .set(V3.INF, 'V3.INF')
+
 	/**
 	 * See http://math.stackexchange.com/questions/44689/how-to-find-a-random-axis-or-unit-vector-in-3d
 	 * @returns A random point on the unit sphere with uniform distribution across the surface.
@@ -557,7 +557,7 @@ class V3 implements Equalable {
 	static randomUnit(): V3 {
 		const zRotation = Math.random() * 2 * Math.PI
 		const z = Math.random() * 2 - 1
-		const zRadius = Math.sqrt(1 - z * z)
+		const zRadius = Math.sqrt(1 - z ** 2)
 		return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z)
 	}
 
@@ -597,9 +597,9 @@ class V3 implements Equalable {
 			f.apply(undefined, args.map(x => x.z)))
 	}
 
-	static normalOnPoints(v0: V3, v1: V3, v2: V3): V3 {
-		assertVectors(v0, v1, v2)
-		return v1.minus(v0).cross(v2.minus(v0))
+	static normalOnPoints(a: V3, b: V3, c: V3): V3 {
+		assertVectors(a, b, c)
+		return a.to(b).cross(a.to(c))
 	}
 
 	static add(...vs: V3[]): V3 {
@@ -680,6 +680,11 @@ class V3 implements Equalable {
             Math.cos(latitude) * Math.cos(longitude),
             Math.cos(latitude) * Math.sin(longitude),
             Math.sin(latitude))
+    }
+
+    static inverseLerp(a: V3, b: V3, x: V3) {
+        const ab = a.to(b)
+        return a.to(x).dot(ab) / ab.squared()
     }
 }
 

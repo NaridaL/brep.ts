@@ -1,13 +1,14 @@
 let eps = 1e-5
 
 abstract class Face extends Transformable {
-    surface: Surface
-    contour: Edge[]
-    holes: Edge[][]
+    readonly surface: Surface
+	readonly contour: Edge[]
+	readonly holes: Edge[][]
     id: int
     name: string
     "constructor": { new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string): Face }
     allEdges: Edge[]
+	protected aabb: AABB
     constructor(surface: Surface, contour: Edge[], holes?: Edge[][], name?: string) {
         super()
         Edge.assertLoop(contour)
@@ -110,15 +111,15 @@ abstract class Face extends Transformable {
     }
 
 
-abstract intersectFace(face2: Face,
-                           thisBrep: B2,
-                           face2Brep: B2,
-                           faceMap: Map<Face, Edge[]>,
-                           thisEdgePoints: Map<Edge, any[]>,
-                           otherEdgePoints: Map<Edge, any[]>,
-                           likeSurfaceFaces: Set<string>)
+	abstract intersectFace(face2: Face,
+			thisBrep: B2,
+			face2Brep: B2,
+			faceMap: Map<Face, Edge[]>,
+			thisEdgePoints: Map<Edge, any[]>,
+			otherEdgePoints: Map<Edge, any[]>,
+			likeSurfaceFaces: Set<string>)
 
-    transform(m4: M4): this {
+		transform(m4: M4): this {
         const newEdges = this.contour.map(e => e.transform(m4))
         const newHoles = this.holes.map(hole => hole.map(e => e.transform(m4)))
         return new this.constructor(this.surface.transform(m4), newEdges, newHoles) as this
@@ -233,7 +234,7 @@ abstract intersectFace(face2: Face,
     }
 
     toMesh() {
-        let mesh = new GL.Mesh({triangles: true, normals: true, lines: true})
+        const mesh = new GL.Mesh({triangles: true, normals: true, lines: true})
         this.addToMesh(mesh)
         //mesh.compile()
 	    return mesh
@@ -254,7 +255,7 @@ abstract intersectFace(face2: Face,
     }
 
     getAABB(): AABB {
-        return AABB.forAABBs(this.contour.map(e => e.getAABB()))
+        return this.aabb || (this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB())))
     }
 
 	static create(surface: Surface, faceEdges: Edge[], holes?: Edge[][], faceName?: string) {
@@ -675,6 +676,17 @@ class RotationFace extends Face {
 		    }
 	    }
 	    return true
+    }
+
+    getAABB() {
+    	if (this.aabb) return this.aabb
+	    if (this.surface instanceof SemiEllipsoidSurface || this.surface instanceof EllipsoidSurface) {
+			const aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()))
+		    aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)))
+		    return aabb
+	    } else {
+    		return super.getAABB()
+	    }
     }
 
 	getCanonSeamU(): number {
@@ -1492,6 +1504,10 @@ class RotationFace extends Face {
 
         assertInst(Face, face2)
 
+	    if (!this.getAABB().touchesAABB(face2.getAABB())) {
+        	return
+	    }
+
         const face = this
         const surface = face.surface, surface2 = face2.surface
         if (surface.isCoplanarTo(surface2)) {
@@ -2180,7 +2196,7 @@ class B2 extends Transformable {
 
         if (0 == faceMap.size && 0 == thisEdgePoints.size && 0 == otherEdgePoints.size) {
             const thisInOther = other.containsPoint(this.faces[0].contour[0].a)
-            const otherInThis = !thisInOther && contians(other, this)
+            const otherInThis = !thisInOther && contains(other, this)
         } else {
             if (buildThis) {
                 const edgeLooseSegments = this.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces)
@@ -2368,7 +2384,6 @@ function planeFaceEdgeISPsWithPlane(face: PlaneFace, isLine: L3, plane2: P3): In
 function faceEdgeISPsWithSurface(face: Face, isCurves: Curve[], surface2: Surface): IntersectionPointInfo[][] {
     const surface = face.surface
     const pss = NLA.arrayFromFunction(isCurves.length, i => [])
-
     const loops = face.holes.concat([face.contour])
     for (let isCurveIndex = 0; isCurveIndex < isCurves.length; isCurveIndex++) {
         const ps = pss[isCurveIndex]
@@ -2747,28 +2762,55 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
 
 
 
-function curvePoint(implicitCurve, startPoint) {
-    const eps = 1e-5
+function curvePoint(implicitCurve: (s: number, t: number) => number, startPoint: V3) {
+    const eps = 1 / (1 << 20)
     let p = startPoint
     for (let i = 0; i < 4; i++) {
         const fp = implicitCurve(p.x, p.y)
         const dfpdx = (implicitCurve(p.x + eps, p.y) - fp) / eps,
-            dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
+              dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
         const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
         //console.log(p.$)
         p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
     }
     return p
 }
-function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, startDir, tangentEndPoints, boundsFunction) {
+function followAlgorithm2 (implicitCurve, startPoint, endPoint, stepLength, startDir, tangents, boundsFunction, dir, didx, didy) {
     assertNumbers(stepLength, implicitCurve(0, 0))
     assertVectors(startPoint, endPoint)
     assert (!startDir || startDir instanceof V3)
     const points = []
-    tangentEndPoints = tangentEndPoints || []
+    tangents = tangents || []
     assert (NLA.eq0(implicitCurve(startPoint.x, startPoint.y)), 'NLA.isZero(implicitCurve(startPoint.x, startPoint.y))')
     stepLength = stepLength || 0.5
-    const eps = 1e-5
+    const eps = stepLength / 32
+    let p = startPoint, prevp = startDir ? p.minus(startDir) : p
+    let i = 0
+    do {
+        const fp = implicitCurve(p.x, p.y)
+        const dfpdx = didx(p.x, p.y), dfpdy = didy(p.x, p.y)
+        let tangent = new V3(-dfpdy, dfpdx, 0)
+        const reversedDir = p.minus(prevp).dot(tangent) < 0
+        tangent = tangent.toLength(dir * stepLength)
+        const tangentEndPoint = p.plus(tangent)
+        points.push(p)
+        tangents.push(tangent)
+        prevp = p
+        p = curvePoint(implicitCurve, tangentEndPoint)
+    } while (i++ < 1000 && (i < 4 || prevp.distanceTo(endPoint) > 0.5 * stepLength) && boundsFunction(p.x, p.y))
+    //assert(points.length > 6)
+    // TODO gleichmäßige Verteilung der Punkte
+    return points
+}
+function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, startDir, tangents, boundsFunction, dir) {
+    assertNumbers(stepLength, implicitCurve(0, 0))
+    assertVectors(startPoint, endPoint)
+    assert (!startDir || startDir instanceof V3)
+    const points = []
+    tangents = tangents || []
+    assert (NLA.eq0(implicitCurve(startPoint.x, startPoint.y)), 'NLA.isZero(implicitCurve(startPoint.x, startPoint.y))')
+    stepLength = stepLength || 0.5
+    const eps = stepLength / 32
     let p = startPoint, prevp = startDir ? p.minus(startDir) : p
     let i = 0
     do {
@@ -2777,14 +2819,14 @@ function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, start
             dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
         let tangent = new V3(-dfpdy, dfpdx, 0)
         const reversedDir = p.minus(prevp).dot(tangent) < 0
-        tangent = tangent.toLength(reversedDir ? -stepLength : stepLength)
+        tangent = tangent.toLength(dir * stepLength)
         const tangentEndPoint = p.plus(tangent)
         points.push(p)
-        tangentEndPoints.push(tangentEndPoint)
+        tangents.push(tangent)
         prevp = p
         p = curvePoint(implicitCurve, tangentEndPoint)
-    } while (i++ < 100 && (i < 4 || prevp.distanceTo(endPoint) > 1.1 * stepLength) && boundsFunction(p.x, p.y))
-    assert(points.length > 6)
+    } while (i++ < 1000 && (i < 4 || prevp.distanceTo(endPoint) > 0.5 * stepLength) && boundsFunction(p.x, p.y))
+    //assert(points.length > 6)
     // TODO gleichmäßige Verteilung der Punkte
     return points
 }

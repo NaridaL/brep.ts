@@ -30,7 +30,7 @@ class PPCurve extends Curve {
 	containsPoint(p) {
 		assertVectors(p)
 		// TODO: wrong, as there could be another curve
-		return this.parametricSurface1.containsPoint(p) && this.parametricSurface2.containsPoint(p)
+		return this.parametricSurface1.containsPoint(p) && this.parametricSurface2.containsPoint(p) && !isNaN(this.pointT(p))
 	}
 
 	getVerticesNo0() {

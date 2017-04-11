@@ -150,12 +150,13 @@ class Matrix implements Equalable {
 	}
 
 	equals(obj): boolean {
-		if (obj.constructor != Matrix) return false
+		if (obj.constructor != this.constructor) return false
 		if (this.width != obj.width || this.height != obj.height) return false
 		let elIndex = this.m.length
 		while (elIndex--) {
 			if (this.m[elIndex] != obj.m[elIndex]) return false
 		}
+		return true
 	}
 
 	equalsMatrix(matrix: Matrix, precision?: number): boolean {

@@ -96,12 +96,19 @@ class PlaneSurface extends Surface {
     }
 
     toString() {
-        return this.plane.toString()
+        return `new PlaneSurface(${this.plane}, ${this.right}, ${this.up})`
     }
 
-    toSource() {
-        return `new PlaneSurface(${this.plane})`
+    toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {
+        const mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
+        const matrix = M4.forSys(this.right, this.up, this.plane.normal, this.plane.anchor)
+        mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p))
+        mesh.normals = NLA.arrayFromFunction(4, i => this.plane.normal)
+        pushQuad(mesh.triangles, false, 0, 1, 2, 3)
+        mesh.compile()
+        return mesh
     }
+
 
     static throughPoints(a, b, c): PlaneSurface {
         return new PlaneSurface(P3.throughPoints(a, b, c))

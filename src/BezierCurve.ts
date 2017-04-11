@@ -1,21 +1,18 @@
 class BezierCurve extends Curve {
-	tMin: number
-	tMax: number
-	p0: V3
-	p1: V3
-	p2: V3
-	p3: V3
+	readonly p0: V3
+	readonly p1: V3
+	readonly p2: V3
+	readonly p3: V3
 
-	constructor(p0: V3, p1: V3, p2: V3, p3: V3, tMin?: number, tMax?: number) {
-		super()
+	constructor(p0: V3, p1: V3, p2: V3, p3: V3, tMin: number = -0.1, tMax: number = 1.1) {
+		super(tMin, tMax)
 		assertVectors(p0, p1, p2, p3)
+		assert(isFinite(tMin) && isFinite(tMax))
         //assert(!L3.throughPoints(p0, p3).containsPoint(p1) || !L3.throughPoints(p0, p3).containsPoint(p2))
 		this.p0 = p0
 		this.p1 = p1
 		this.p2 = p2
 		this.p3 = p3
-		this.tMin = isFinite(tMin) ? tMin : -0.1
-		this.tMax = isFinite(tMax) ? tMax : 1.1
 	}
 
 	get points(): V3[] {
@@ -98,12 +95,18 @@ class BezierCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		}
-		if (surface instanceof SemiCylinderSurface) {
-			const projPlane = new P3(surface.dir1.unit(), 0)
+        if (surface instanceof SemiCylinderSurface) {
+            const projPlane = new P3(surface.dir1.unit(), 0)
             const projThis = this.project(projPlane)
-            const projEllipse = surface.baseEllipse.project(projPlane)
-			return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
-		}
+            const projEllipse = surface.baseCurve.project(projPlane)
+            return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
+        }
+        if (surface instanceof ProjectedCurveSurface) {
+            const projPlane = new P3(surface.dir1.unit(), 0)
+            const projThis = this.project(projPlane)
+            const projEllipse = surface.baseCurve.project(projPlane)
+            return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther)
+        }
 		if (surface instanceof EllipsoidSurface) {
             const thisOC = this.transform(surface.inverseMatrix)
             const f = t => thisOC.at(t).length() - 1
@@ -132,6 +135,9 @@ class BezierCurve extends Curve {
                 }
             }
             return results
+        }
+        if (surface instanceof SemiEllipsoidSurface) {
+		    return this.isTsWithSurface(surface.asEllipsoidSurface()).filter(t => surface.containsPoint(this.at(t)))
         }
 		assert(false)
 	}
@@ -657,7 +663,12 @@ class BezierCurve extends Curve {
 	 */
 	static approximateUnitArc(phi: number): BezierCurve {
 		const f = 4 / 3 * Math.tan(phi / 4)
-		return new BezierCurve(V3.X, new V3(1, f, 0), new V3(cos(phi) + f * sin(phi), sin(phi) - f * cos(phi), 0), V3.sphere(phi, 0))
+		return new BezierCurve(
+		    V3.X,
+            new V3(1, f, 0),
+            new V3(cos(phi) + f * sin(phi), sin(phi) - f * cos(phi), 0),
+            V3.sphere(phi, 0),
+            0, 1)
 	}
 
 	/**

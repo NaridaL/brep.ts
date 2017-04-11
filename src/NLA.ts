@@ -106,15 +106,20 @@ function assertf(f:() => any, ...messages:(any|(() => any))[]) {
 	}
 }
 
+function lerp(a: number, b: number, t: number) {
+	return a * (1 - t) + b * t
+}
+
 namespace NLA {
+	// TODO: ensure consistency
 	export const eq0 = (x: number): boolean => Math.abs(x) < NLA_PRECISION
 	export const eq02 = (x: number, precision: number) => Math.abs(x) < precision
 	export const eq = (x: number, y: number) => Math.abs(x - y) <= NLA_PRECISION
+	export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
 	export const lt = (x: number, y: number): boolean => x + NLA_PRECISION < y
 	export const gt = (x: number, y: number): boolean => x > y + NLA_PRECISION
 	export const le = (x: number, y: number): boolean => x <= y + NLA_PRECISION
 	export const ge = (x: number, y: number): boolean => x + NLA_PRECISION >= y
-	export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
 	export const eqAngle = (x: number, y: number): boolean => zeroAngle(x - y)
 	export const zeroAngle = (x: number): boolean => ((x % (2 * Math.PI)) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) < 2 * NLA_PRECISION
 	export const snap = (x: number, to: number): number => Math.abs(x - to) <= NLA_PRECISION ? to : x
@@ -228,7 +233,7 @@ namespace NLA {
 			NLA.arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize)
 		}
 	}
-    export function arrayRange(startInclusive: int, endExclusive: int, step: int) {
+    export function arrayRange(startInclusive: int, endExclusive: int, step: int = 1) {
         assertNumbers(startInclusive, step)
         //console.log(Math.ceil((endExclusive - startInclusive) / step))
         const arrLength = Math.ceil((endExclusive - startInclusive) / step)
@@ -239,22 +244,21 @@ namespace NLA {
         return result
     }
 
-	export function arrayFromFunction<T>(length:number, f:(i:number) => T):T[] {
-		assertNumbers(length)
-		assert("function" == typeof f)
-		const a = new Array(length)
-		let elIndex = length
-		while (elIndex--) {
-			a[elIndex] = f(elIndex)
-		}
-		return a
-	}
+	export function arrayFromFunction<T>(length: number, f: (i: number) => T): T[] {
+        assertNumbers(length)
+        assert('function' == typeof f)
+        const a = new Array(length)
+        let elIndex = length
+        while (elIndex--) {
+            a[elIndex] = f(elIndex)
+        }
+        return a
+    }
 
 	export function fuzzyUniques(vals: number[]): number[] {
-		let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
-		let map = new Map()
-		map.set(round(vals[0]), vals[0])
-		for (let i = 1; i < vals.length; i++) {
+		const round = val => Math.floor(val * (1 << 26)) / (1 << 26)
+		const map = new Map()
+		for (let i = 0; i < vals.length; i++) {
 			let val = vals[i], roundVal = round(val)
 			let key
 			if (!map.has(roundVal)
@@ -903,11 +907,12 @@ function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
         return [u1 - v1 - a / 3]
     }
 }
-function checkDerivate(f, df, a, b) {
+function checkDerivate(f, df, a, b, maxFaults = 1) {
     const eps = 1e-6
+    let faults = 0
     for (let t = a; t < b; t += (b - a) / 100) {
         const df2 = (f(t + eps) - f(t)) / eps
-        assert(NLA.eq2(df2, df(t), 0.1 ), `df2 == ${df2} != ${df(t)} = df(t)`)
+        assert((faults += +!NLA.eq2(df2, df(t), 0.1 )) < maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`)
     }
 }
 function getRoots(f, a, b, stepSize, df) {

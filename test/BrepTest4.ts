@@ -8,7 +8,7 @@ QUnit.assert.testIntersectFace = function (face, brep2, resultEdges, resultPoint
 		brep2 = new B2([brep2])
 	}
 	this.ok(true, `<html><a style='color: #0000ff text-decoration: underline' target='blank'
-						href='file:///C:/Users/aval/Desktop/cs/brep2.html?a=${new B2([face]).toSource()}&b=${brep2.toSource()}
+						href='brep2.html?a=${new B2([face]).toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
 	const faceMap = new Map(), edgeMap = new Map()

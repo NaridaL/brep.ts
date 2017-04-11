@@ -3,12 +3,12 @@
  */
 class L3 extends Curve {
 	// Anchor of the line.
-	anchor: V3
+	readonly anchor: V3
 	// Normalized direction of the line.
-	dir1: V3
+	readonly dir1: V3
 
 	constructor(anchor, dir1) {
-		super()
+		super(-Infinity, Infinity)
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
 		assertf(() => !Number.isNaN(anchor.x))

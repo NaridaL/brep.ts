@@ -188,13 +188,13 @@ class ConicSurface extends Surface {
 	parametricNormal() {
 		const {f1, f2} = this.baseEllipse, f3 = this.dir
 		return (d, z) => {
-			return f2.cross(f1).plus(f2.cross(f3.times(Math.cos(d)))).plus(f3.cross(f1.times(Math.sin(d))))
+			return f2.cross(f1).plus(f2.cross(f3.times(Math.cos(d)))).plus(f3.cross(f1.times(Math.sin(d)))).unit()
 		}
 	}
 
 	normalAt(p) {
-		const localP = this.inverseMatrix.transformPoint(p)
-		return this.parametricNormal()(localP.angleXY(), localP.z)
+		const pLC = this.inverseMatrix.transformPoint(p)
+		return this.parametricNormal()(pLC.angleXY(), pLC.z)
 	}
 
 	parametricFunction() {

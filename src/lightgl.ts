@@ -1084,7 +1084,7 @@ void main() {
 			new V3(1, 0, 0),
 			new V3(1, 0, 1),
 			new V3(1, 1, 0),
-			V3.ONES
+			V3.XYZ
 		]
 
 		/**
@@ -1323,6 +1323,26 @@ void main() {
 				}
 			}
 
+			mesh.compile()
+			return mesh
+		}
+
+		static parametric(pF: (d, z) => V3, pN: (d, z) => V3, sMin: number, sMax: number, tMin: number, tMax: number, sRes: number, tRes: number) {
+			const mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
+			const split = 4 * 10, inc = 2 * PI / split
+			for (let si = 0; si <= sRes; si++) {
+				const s = lerp(sMin, sMax, si / sRes)
+				for (let ti = 0; ti <= tRes; ti++) {
+					const t = lerp(tMin, tMax, ti / tRes)
+					mesh.vertices.push(pF(s, t))
+					mesh.normals.push(pN(s, t))
+					if (ti < tRes && si < sRes) {
+						let offset = ti + si * (tRes + 1)
+						pushQuad(mesh.triangles, false,
+							offset, offset + tRes + 1, offset + 1, offset + tRes + 2)
+					}
+				}
+			}
 			mesh.compile()
 			return mesh
 		}

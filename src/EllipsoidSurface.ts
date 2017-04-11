@@ -31,13 +31,19 @@ class EllipsoidSurface extends Surface {
         return `new EllipsoidSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
     }
 
+	equals(obj: any): boolean {
+		return this == obj ||
+			Object.getPrototypeOf(obj) == this.constructor.prototype
+			&& this.matrix.equals(obj.matrix)
+	}
+
     isCurvesWithSurface(surface: Surface) {
         if (surface instanceof PlaneSurface) {
             const localPlane = surface.plane.transform(this.inverseMatrix)
             return EllipsoidSurface.unitISCurvesWithPlane(localPlane).map(c => c.transform(this.matrix))
         } else if (surface instanceof CylinderSurface) {
             if (surface.dir1.isParallelTo(this.dir1)) {
-                const ellipseProjected = surface.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
+                const ellipseProjected = surface.baseCurve.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
                 return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
             } else if (NLA.eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
                 assert(false)
@@ -208,6 +214,14 @@ class EllipsoidSurface extends Surface {
             const pLC = this.inverseMatrix.transformPoint(pWC)
             return pLC.length() - 1
         }
+    }
+    //   d/dp (this.implicitFunction(p)) =
+    // = d/dp (this.inverseMatrix.transformPoint(p).length() - 1)
+    // = d/dp (this.inverseMatrix.transformPoint(p) * this.inverseMatrix.transformPoint(pWC).unit()
+    // = this.inverseMatrix.transformPoint(this.inverseMatrix.transformPoint(pWC).unit())
+    didp(pWC) {
+        const pLC = this.inverseMatrix.transformPoint(pWC)
+        return this.inverseMatrix.transformVector(pLC.unit())
     }
 
     mainAxes(): EllipsoidSurface {
@@ -559,83 +573,84 @@ class EllipsoidSurface extends Surface {
 		return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
 	}
 
-	static splitOnPlaneLoop(loop: Edge[], ccw: boolean): [Edge[], Edge[]] {
-		const seamPlane = P3.ZX, seamSurface = new PlaneSurface(seamPlane)
-		const frontParts = [], backParts = [], iss = []
-		const colinearEdges = loop.map((edge) => seamSurface.containsCurve(edge.curve))
-		// a colinear edge is in front when
-		// ccw is true
-		// the edge curve is CCW on the seamPlane
-		// the edge is the same dir as the curve (bT > aT)
-		const colinearEdgesSide = loop.map((edge, i) => colinearEdges[i] &&
-				(ccw ? 1 : -1) * seamPlane.normal.dot(edge.curve.normal) * (edge.bT - edge.aT))
-
-		for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-			const edge = loop[edgeIndex]
-			const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
-			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-			if (colinearEdges[edgeIndex]) {
-				const nextSide = colinearEdges[nextEdgeIndex] ? colinearEdgesSide[nextEdgeIndex]
-					: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal, nextEdge.bT - nextEdge.aT)
-				if (nextSide * colinearEdgesSide[edgeIndex] < 0) {
-					iss.push({p: edge.b, t: 0, out: nextSide > 0})
-				}
-				(colinearEdgesSide[edgeIndex] > 0 ? frontParts : backParts).push(edge)
-			} else {
-				const f = sign(edge.bT - edge.aT)
-				const ists = edge.edgeISTsWithPlane(seamPlane).sort((a, b) => f * (a - b))
-				let prevT = edge.aT,
-					prevP = edge.a,
-					prevDir = edge.aDir,
-					prevSide = NLA.snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y, f)
-				for (let i = 0; i < ists.length; i++) {
-					const t = ists[i]
-					if (edge.aT == t || edge.bT == t) {
-						edge.bT == t && iss.push({p: edge.b, t: 0, out: true})
-						continue
-					}
-					const nextSide = dotCurve2(edge.curve, t, V3.Y, 1)
-					if (prevSide * nextSide < 0) {
-						// switches sides, so:
-						const newP = edge.curve.at(t)
-						const newDir = edge.tangentAt(t)
-						const newEdge = Edge.create(edge.curve, prevP, newP, prevT, t, undefined, prevDir, newDir)
-						;(prevSide > 0 ? frontParts : backParts).push(newEdge)
-						iss.push({p: newP, t: 0, out: nextSide > 0})
-						prevP = newP
-						prevDir = newDir
-						prevT = t
-						prevSide = nextSide
-					}
-				}
-				const lastEdge = Edge.create(edge.curve, prevP, edge.b, prevT, edge.bT, undefined, prevDir, edge.bDir)
-				;(prevSide > 0 ? frontParts : backParts).push(lastEdge)
-			}
-		}
-		iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
-		iss.sort((a, b) => a.t - b.t)
-		let i = ccw == iss[0].out ? 1 : 0
-		const curve = new EllipseCurve(V3.O, V3.X.negated(), V3.Z)
-		//if (1 == i) {
-        	//frontParts.push(
-        	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(), curve.tangentAt(iss[0].t)),
-		//        Edge.create(curve, iss.last().p, V3.Y.negated(), iss.last().t, PI, undefined, curve.tangentAt(iss.last().t), V3.Z.negated()))
+	// TODO: also a commented out test
+    //static splitOnPlaneLoop(loop: Edge[], ccw: boolean): [Edge[], Edge[]] {
+		//const seamPlane = P3.ZX, seamSurface = new PlaneSurface(seamPlane)
+		//const frontParts = [], backParts = [], iss = []
+		//const colinearEdges = loop.map((edge) => seamSurface.containsCurve(edge.curve))
+		//// a colinear edge is in front when
+		//// ccw is true
+		//// the edge curve is CCW on the seamPlane
+		//// the edge is the same dir as the curve (bT > aT)
+		//const colinearEdgesSide = loop.map((edge, i) => colinearEdges[i] &&
+		//		(ccw ? 1 : -1) * seamPlane.normal.dot(edge.curve.normal) * (edge.bT - edge.aT))
+    //
+		//for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
+		//	const edge = loop[edgeIndex]
+		//	const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
+		//	//console.log(edge.toSource()) {p:V(2, -2.102, 0),
+		//	if (colinearEdges[edgeIndex]) {
+		//		const nextSide = colinearEdges[nextEdgeIndex] ? colinearEdgesSide[nextEdgeIndex]
+		//			: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal, nextEdge.bT - nextEdge.aT)
+		//		if (nextSide * colinearEdgesSide[edgeIndex] < 0) {
+		//			iss.push({p: edge.b, t: 0, out: nextSide > 0})
+		//		}
+		//		(colinearEdgesSide[edgeIndex] > 0 ? frontParts : backParts).push(edge)
+		//	} else {
+		//		const f = sign(edge.bT - edge.aT)
+		//		const ists = edge.edgeISTsWithPlane(seamPlane).sort((a, b) => f * (a - b))
+		//		let prevT = edge.aT,
+		//			prevP = edge.a,
+		//			prevDir = edge.aDir,
+		//			prevSide = NLA.snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y, f)
+		//		for (let i = 0; i < ists.length; i++) {
+		//			const t = ists[i]
+		//			if (edge.aT == t || edge.bT == t) {
+		//				edge.bT == t && iss.push({p: edge.b, t: 0, out: true})
+		//				continue
+		//			}
+		//			const nextSide = dotCurve2(edge.curve, t, V3.Y, 1)
+		//			if (prevSide * nextSide < 0) {
+		//				// switches sides, so:
+		//				const newP = edge.curve.at(t)
+		//				const newDir = edge.tangentAt(t)
+		//				const newEdge = Edge.create(edge.curve, prevP, newP, prevT, t, undefined, prevDir, newDir)
+		//				;(prevSide > 0 ? frontParts : backParts).push(newEdge)
+		//				iss.push({p: newP, t: 0, out: nextSide > 0})
+		//				prevP = newP
+		//				prevDir = newDir
+		//				prevT = t
+		//				prevSide = nextSide
+		//			}
+		//		}
+		//		const lastEdge = Edge.create(edge.curve, prevP, edge.b, prevT, edge.bT, undefined, prevDir, edge.bDir)
+		//		;(prevSide > 0 ? frontParts : backParts).push(lastEdge)
+		//	}
 		//}
-		for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i += 2) {
-        	let is0 = iss[i], is1 = iss[(i + 1) % iss.length]
-			if (NLA.lt(is0.t, -PI) && NLA.lt(-PI, is1.t)) {
-        		iss.splice(i + 1, 0, is1 = {p: V3.Y.negated(), t: -PI, out: true}, {p: V3.Y.negated(), t: -PI, out: true})
-			} else if (NLA.lt(is0.t, PI) && NLA.lt(PI, is1.t)) {
-				iss.splice(i + 1, 0, is1 = {p: V3.Y, t: -PI, out: true}, {p: V3.Y, t: PI, out: true})
-			}
-			const edge = Edge.create(curve, is0.p, is1.p, is0.t, is1.t, undefined,
-				curve.tangentAt(is0.t).times(sign(is1.t - is0.t)),
-				curve.tangentAt(is1.t).times(sign(is1.t - is0.t)))
-			frontParts.push(edge)
-			backParts.push(edge.flipped())
-		}
-		return [frontParts, backParts]
-    }
+		//iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
+		//iss.sort((a, b) => a.t - b.t)
+		//let i = ccw == iss[0].out ? 1 : 0
+		//const curve = new EllipseCurve(V3.O, V3.X.negated(), V3.Z)
+		////if (1 == i) {
+    //    	//frontParts.push(
+    //    	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(), curve.tangentAt(iss[0].t)),
+		////        Edge.create(curve, iss.last().p, V3.Y.negated(), iss.last().t, PI, undefined, curve.tangentAt(iss.last().t), V3.Z.negated()))
+		////}
+		//for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i += 2) {
+    //    	let is0 = iss[i], is1 = iss[(i + 1) % iss.length]
+		//	if (NLA.lt(is0.t, -PI) && NLA.lt(-PI, is1.t)) {
+    //    		iss.splice(i + 1, 0, is1 = {p: V3.Y.negated(), t: -PI, out: true}, {p: V3.Y.negated(), t: -PI, out: true})
+		//	} else if (NLA.lt(is0.t, PI) && NLA.lt(PI, is1.t)) {
+		//		iss.splice(i + 1, 0, is1 = {p: V3.Y, t: -PI, out: true}, {p: V3.Y, t: PI, out: true})
+		//	}
+		//	const edge = Edge.create(curve, is0.p, is1.p, is0.t, is1.t, undefined,
+		//		curve.tangentAt(is0.t).times(sign(is1.t - is0.t)),
+		//		curve.tangentAt(is1.t).times(sign(is1.t - is0.t)))
+		//	frontParts.push(edge)
+		//	backParts.push(edge.flipped())
+		//}
+		//return [frontParts, backParts]
+    //}
 
 	// volume does scale linearly, so this can be done in the local coordinate system
 	// first transform edges with inverse matrix

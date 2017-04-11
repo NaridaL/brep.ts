@@ -21,9 +21,9 @@ QUnit.assert.fuzzyEquals = function(actual, expected, message) {
 function b2Equal(test, a, b, actual, expected) {
 
     test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'>link</a>`)
+						href='brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'>expected</a>`)
     test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='../brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>link</a>`)
+						href='brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>actual</a>`)
     test.B2equals(actual, expected)
 }
 
@@ -33,7 +33,7 @@ QUnit.assert.V3ArraysLike = function (actual, expected, message) {
 }
 
 
-function registerTests(o: {[key: string]: (assert:Assert) => void}) {
+function registerTests(o: { [key: string]: (assert: Assert) => void }) {
 	for (const key in o) {
 		QUnit.test(key, o[key])
 	}

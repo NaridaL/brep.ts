@@ -3,15 +3,15 @@
  *
  */
 class HyperbolaCurve extends Curve {
-    normal: V3
-    center: V3
-    f1: V3
-    f2: V3
-    matrix: M4
-    inverseMatrix: M4
+	readonly normal: V3
+	readonly center: V3
+	readonly f1: V3
+	readonly f2: V3
+	readonly matrix: M4
+	readonly inverseMatrix: M4
 
-    constructor(center: V3, f1: V3, f2: V3) {
-        super()
+	constructor(center: V3, f1: V3, f2: V3, tMin: number = -1, tMax: number = 1) {
+		super(tMin, tMax)
         assertVectors(center, f1, f2)
         this.center = center
         this.f1 = f1
@@ -85,7 +85,7 @@ class HyperbolaCurve extends Curve {
         return Math.asinh(p2.y)
     }
 
-    isOrthogonal(p): boolean {
+    isOrthogonal(): boolean {
         return this.f1.isPerpendicularTo(this.f2)
     }
 
@@ -100,7 +100,11 @@ class HyperbolaCurve extends Curve {
     }
 
     transform(m4) {
-        return new HyperbolaCurve(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2))
+        return new HyperbolaCurve(
+        	m4.transformPoint(this.center),
+	        m4.transformVector(this.f1),
+	        m4.transformVector(this.f2),
+            this.tMin, this.tMax) as this
     }
 
     eccentricity(): number {
@@ -115,8 +119,8 @@ class HyperbolaCurve extends Curve {
     }
 
     containsPoint(p) {
-        const localP = this.inverseMatrix.transformPoint(p)
-        return localP.x > 0 && NLA.eq0(localP.z) && NLA.eq(1, localP.x * localP.x - localP.y * localP.y)
+        const pLC = this.inverseMatrix.transformPoint(p)
+        return pLC.x > 0 && NLA.eq0(pLC.z) && NLA.eq(1, pLC.x * pLC.x - pLC.y * pLC.y)
     }
 
     static forAB(a: number, b: number, center: V3): HyperbolaCurve {

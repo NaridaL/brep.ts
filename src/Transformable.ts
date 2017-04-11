@@ -20,7 +20,7 @@ abstract class Transformable extends NLA.BaseObject {
 	}
 
 	scale(f): this
-	scale(x: number, y: number, z: number)
+	scale(x: number, y: number, z: number): this
 	scale(x, y?, z?): this {
         return 1 == arguments.length
             ? this.transform(M4.scaling(x), `.scale(${x})`)

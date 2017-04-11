@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "ES2017",
     "outDir": "out/",
+//    "outFile": "out/complete.js",
     "sourceMap": true,
     "allowJs": true
 //    "noImplicitAny": true,
@@ -9,9 +10,9 @@
 
   },
   "include": [
-    "src/B2.ts",
     "src/*.ts",
     "test/*.ts",
+//    "test/ConicSurface.ts",
     "C:\\Users\\aval\\.WebStorm2016.2\\config\\javascript\\extLibs\\http_github.com_DefinitelyTyped_DefinitelyTyped_raw_master_qunit_qunit.d.ts",
     "FileSaver"
   ]

@@ -9,8 +9,8 @@ class ParabolaCurve extends Curve {
     readonly matrix: M4
     readonly inverseMatrix: M4
 
-	constructor(center, f1, f2) {
-		super()
+	constructor(center: V3, f1: V3, f2: V3, tMin: number = -100, tMax: number = 100) {
+		super(tMin, tMax)
 		assertVectors(center, f1, f2)
 		this.center = center
 		this.f1 = f1
@@ -59,7 +59,7 @@ class ParabolaCurve extends Curve {
 
     equals(obj: any): boolean {
         return this == obj ||
-            Object.getPrototypeOf(obj) == SemiEllipseCurve.prototype
+            Object.getPrototypeOf(obj) == ParabolaCurve.prototype
             && this.center.equals(obj.center)
             && this.f1.equals(obj.f1)
             && this.f2.equals(obj.f2)
@@ -109,7 +109,12 @@ class ParabolaCurve extends Curve {
 			return this
 		}
 		const t0 = -f1DOTf2 / f2.squared() / 2
-		return new ParabolaCurve(this.at(t0), this.tangentAt(t0), f2)
+		// we need to rearange tMin/tMax
+		// tMin' = pointT(at(tMin)) =
+		const raCenter = this.at(t0)
+		const raF1 = this.tangentAt(t0)
+		const repos = t => this.at(t).minus(raCenter).dot(raF1) / raF1.squared()
+		return new ParabolaCurve(raCenter, raF1, f2, repos(this.tMin), repos(this.tMax))
 	}
 
 	arcLength(startT: number, endT: number): number {
@@ -131,16 +136,17 @@ class ParabolaCurve extends Curve {
 	}
 
 	transform(m4) {
-		return new ParabolaCurve(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2))
+		return new ParabolaCurve(
+			m4.transformPoint(this.center),
+			m4.transformVector(this.f1),
+			m4.transformVector(this.f2),
+			this.tMin, this.tMax) as this
 	}
 
 	static eccentricity() {
 		return 1
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	isTsWithSurface(surface) {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
@@ -152,9 +158,42 @@ class ParabolaCurve extends Curve {
 		}
 	}
 
-	/**
-	 * @inheritDoc
-	 */
+	isInfosWithLine(line: L3) {
+		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
+		const dirLC = this.inverseMatrix.transformVector(line.dir1)
+		if (NLA.eq0(dirLC.z)) {
+			// local line parallel to XY-plane
+			if (NLA.eq0(anchorLC.z)) {
+				// local line lies in XY-plane
+				// para: x² = y
+				// line(t) = anchor + t dir
+				// (ax + t dx)² = ay + t dy
+				// ax² + t ax dx + t² dx² = ay + t dy
+				// t² dx² + t (ax dx + dy) + ay² + ay = 0
+				const pqDiv = dirLC.x ** 2
+				const lineTs = pqFormula((anchorLC.x * dirLC.x + dirLC.y) / pqDiv, (anchorLC.x ** 2 + anchorLC.y) / pqDiv)
+				return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y))
+					.map(tOther => ({
+						tThis: dirLC.x * tOther + anchorLC.x,
+						tOther: tOther,
+						p: line.at(tOther)}))
+			}
+		} else {
+			// if the line intersects the XY-plane in a single point, there can be an intersection there
+			// find point, then check if distance from circle = 1
+			const otherTAtZ0 = anchorLC.z / dirLC.z
+			const isp = dirLC.times(otherTAtZ0).plus(anchorLC)
+			if (fuzzyBetween(isp.x, this.tMin, this.tMax)) {
+				// point lies on unit circle
+				return [{
+					tThis: isp.x,
+					tOther: otherTAtZ0,
+					p: line.at(otherTAtZ0)}]
+			}
+		}
+		return []
+	}
+
 	isTsWithPlane(plane) {
 		assertInst(P3, plane)
 		/*
@@ -189,7 +228,6 @@ class ParabolaCurve extends Curve {
 		let p = g1 / g2
 		const q = -g3 / g2
 		const discriminant4 = p * p / 4 - q
-		console.log('pq', p, q, discriminant4)
 		if (discriminant4 < -NLA_PRECISION) {
 			return []
 		} else if (discriminant4 <= NLA_PRECISION) {
@@ -214,14 +252,15 @@ class ParabolaCurve extends Curve {
     }
 
 	static quadratic(a: V3, b: V3, c: V3): ParabolaCurve {
-        // (1 - t)² a + t * (1 - t) b + t² c
-        // = t²(a - b + c) + t (-2a + b) + a
+        // (1 - t)² a + 2 * t * (1 - t) b + t² c
+        // (1 -2t +t²)a + (2t -2t²) b + t² c
+        // = t²(a - 2b + c) + t (-2a + 2b) + a
         // (2t - 2) a + (1 - 2t) b + 2t c = t(2a + 2b - 2c) - 2a + b
         // 2 a + -2 b + 2 c
-        const f2 = a.plus(c).minus(b)
-        const f1 = a.times(-2).plus(b)
+        const f2 = a.plus(c).minus(b.times(2))
+        const f1 = b.minus(a).times(2)
         const center = a
-        return new ParabolaCurve(center, f1, f2)
+        return new ParabolaCurve(center, f1, f2, 0, 1)
     }
 
     asBezier() {
