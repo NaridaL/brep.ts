@@ -1623,6 +1623,13 @@ registerTests({
 		b2Equal(assert, a, b, a.and(b), result)
 	},
 
+	'B2T.cylinder(1,2) AND B2T.cylinder(1,2).rotateZ(PI/2).translate(0,0,1)'(assert) {
+		const a = B2T.cylinder(1,2)
+		const b = B2T.cylinder(1,2).rotateZ(PI/2).translate(0,0,1)
+		const result = B2.EMPTY
+		b2Equal(assert, a, b, a.and(b), result)
+	},
+
 	//async 'B2T.sphere() - "a" - B2T.sphere(0.9)'(assert) {
 	//	const a = B2T.sphere(0.9).flipped()
 	//	const b = B2T.text('a', await B2T.loadFont('fonts/FiraSansMedium.woff'), 64, 64).scale(0.5/32).translate(-0.25,-0.25,1.2).flipped()

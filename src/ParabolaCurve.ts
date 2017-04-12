@@ -9,7 +9,7 @@ class ParabolaCurve extends Curve {
     readonly matrix: M4
     readonly inverseMatrix: M4
 
-	constructor(center: V3, f1: V3, f2: V3, tMin: number = -100, tMax: number = 100) {
+	constructor(center: V3, f1: V3, f2: V3, tMin: number = -10, tMax: number = 10) {
 		super(tMin, tMax)
 		assertVectors(center, f1, f2)
 		this.center = center

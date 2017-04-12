@@ -20,10 +20,8 @@ QUnit.assert.fuzzyEquals = function(actual, expected, message) {
 
 function b2Equal(test, a, b, actual, expected) {
 
-    test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'>expected</a>`)
-    test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='brep2.html?a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}'>actual</a>`)
+    linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'`, 'expected')
+    linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}`, 'actual')
     test.B2equals(actual, expected)
 }
 

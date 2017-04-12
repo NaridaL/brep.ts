@@ -4,8 +4,9 @@
     "outDir": "out/",
 //    "outFile": "out/complete.js",
     "sourceMap": true,
-    "allowJs": true
-//    "noImplicitAny": true,
+    "allowJs": true,
+    "lib": ["DOM","ES2017"]
+    //    "noImplicitAny": true,
 //    "noImplicitReturns": true
 
   },

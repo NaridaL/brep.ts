@@ -1,5 +1,5 @@
 namespace GL {
-	var gl: LightGLContext
+	let gl: LightGLContext
 	const WGL = WebGLRenderingContext
 
 
@@ -123,7 +123,7 @@ void main() {
 
 		multMatrix(m) {
 			M4.multiply(this[this.currentMatrixName], m, this.resultMatrix)
-			var temp = this.resultMatrix
+			const temp = this.resultMatrix
 			this.resultMatrix = this[this.currentMatrixName]
 			this[this.currentMatrixName] = temp
 		}
@@ -176,7 +176,7 @@ void main() {
 			modelview = modelview || this.modelViewMatrix
 			projection = projection || this.projectionMatrix
 			viewport = viewport || this.getParameter(this.VIEWPORT)
-			var point = projection.transformPoint(modelview.transformPoint(new V3(objX, objY, objZ)))
+			const point = projection.transformPoint(modelview.transformPoint(new V3(objX, objY, objZ)))
 			return new V3(
 				viewport[0] + viewport[2] * (point.x * 0.5 + 0.5),
 				viewport[1] + viewport[3] * (point.y * 0.5 + 0.5),
@@ -188,7 +188,7 @@ void main() {
 			modelview = modelview || this.modelViewMatrix
 			projection = projection || this.projectionMatrix
 			viewport = viewport || this.getParameter(this.VIEWPORT)
-			var point = new V3(
+			const point = new V3(
 				(winX - viewport[0]) / viewport[2] * 2 - 1,
 				(winY - viewport[1]) / viewport[3] * 2 - 1,
 				winZ * 2 - 1
@@ -294,9 +294,9 @@ void main() {
 				function (callback) {
 					setTimeout(callback, 1000 / 60)
 				}
-			var time = new Date().getTime()
+			let time = new Date().getTime()
 			const update = () => {
-				var now = new Date().getTime()
+				const now = new Date().getTime()
 				if (this.onupdate) this.onupdate(now - time)
 				if (this.ondraw) this.ondraw()
 				requestAnimationFrame(update)
@@ -333,10 +333,10 @@ void main() {
 			near?: number,
 			far?: number} = {}): void {
 
-			var top = options.paddingTop || 0
-			var left = options.paddingLeft || 0
-			var right = options.paddingRight || 0
-			var bottom = options.paddingBottom || 0
+			const top = options.paddingTop || 0
+			const left = options.paddingLeft || 0
+			const right = options.paddingRight || 0
+			const bottom = options.paddingBottom || 0
 			if (!document.body) {
 				throw new Error('document.body doesn\'t exist yet (call gl.fullscreen() from ' +
 					'window.onload() or from inside the <body> tag)')
@@ -425,11 +425,11 @@ void main() {
 // `gl.onmousedown()`, `gl.onmousemove()`, and `gl.onmouseup()` with an
 // augmented event object. The event object also has the properties `x`, `y`,
 // `deltaX`, `deltaY`, and `dragging`.
-	function addEventListeners(gl:LightGLContext) {
-		var oldX = 0, oldY = 0, buttons = {}, hasOld = false
+	function addEventListeners(gl: LightGLContext) {
+		let oldX = 0, oldY = 0, buttons = {}, hasOld = false
 
 		function isDragging() {
-			for (var b in buttons) {
+			for (let b in buttons) {
 				if (b in buttons && buttons[b]) return true
 			}
 			return false
@@ -442,8 +442,8 @@ void main() {
 			// duplicates of `pageX` and `pageY`). We can't just use
 			// `Object.create(original)` because some `MouseEvent` functions must be
 			// called in the context of the original event object.
-			var e: GL_EVENT = {} as any
-			for (var name in original) {
+			const e: GL_EVENT = {} as any
+			for (let name in original) {
 				if (typeof original[name] == 'function') {
 					e[name] = (function (callback) {
 						return function () {
@@ -540,7 +540,7 @@ void main() {
 // `!!GL.KEYS.SPACE`).
 
 	function mapKeyCode(code) {
-		var named = {
+		const named = {
 			8: 'BACKSPACE',
 			9: 'TAB',
 			13: 'ENTER',
@@ -557,14 +557,14 @@ void main() {
 
 	document.addEventListener('keydown', function (e) {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey) {
-			var key = mapKeyCode(e.keyCode)
+			const key = mapKeyCode(e.keyCode)
 			if (key) KEYS[key] = true
 			KEYS[e.keyCode] = true
 		}
 	})
 	document.addEventListener('keyup', function (e) {
 		if (!e.altKey && !e.ctrlKey && !e.metaKey) {
-			var key = mapKeyCode(e.keyCode)
+			const key = mapKeyCode(e.keyCode)
 			if (key) KEYS[key] = false
 			KEYS[e.keyCode] = false
 		}
@@ -631,7 +631,7 @@ void main() {
 		compile(type?:int) {
 			assert('undefined' == typeof type || WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type, 'WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type')
 			this.buffer = this.buffer || gl.createBuffer()
-			var buffer
+			let buffer
 			if (this.data.length == 0) {
 				console.warn("empty buffer " + this.name)
 				//console.trace()
@@ -642,12 +642,14 @@ void main() {
 				this.count = this.data.length
 			} else {
 				assert(Array != this.data[0].constructor, this.name + this.data[0])
-				var data = []
-				for (var i = 0, chunk = 10000; i < this.data.length; i += chunk) {
+				let data = []
+				let i = 0
+				const chunk = 10000
+				for (; i < this.data.length; i += chunk) {
 					data = Array.prototype.concat.apply(data, this.data.slice(i, i + chunk))
 				}
 				buffer = new this.type(data)
-				var spacing = this.data.length ? data.length / this.data.length : 0
+				const spacing = this.data.length ? data.length / this.data.length : 0
 				assert(spacing % 1 == 0, `buffer ${this.name}elements not of consistent size, average size is ` + spacing)
 				assert(data.every(v => 'number' == typeof v), () => "data.every(v => 'number' == typeof v)" + data.toSource())
 				if (NLA_DEBUG) {
@@ -916,18 +918,18 @@ void main() {
 		 * Populate the `lines` index buffer from the `triangles` index buffer.
 		 */
 		computeWireframe(): this {
-			var canonEdges = new Set()
+			const canonEdges = new Set()
 
 			function canonEdge(i0, i1) {
-				var iMin = min(i0, i1), iMax = max(i0, i1)
+				const iMin = min(i0, i1), iMax = max(i0, i1)
 				return (iMin << 16) | iMax
 			}
 
 			// function uncanonEdge(key) {
 			// 	return [key >> 16, key & 0xffff]
 			// }
-			for (var i = 0; i < this.triangles.length; i++) {
-				var t = this.triangles[i]
+			for (let i = 0; i < this.triangles.length; i++) {
+				const t = this.triangles[i]
 				canonEdges.add(canonEdge(t[0], t[1]))
 				canonEdges.add(canonEdge(t[1], t[2]))
 				canonEdges.add(canonEdge(t[2], t[0]))
@@ -939,18 +941,18 @@ void main() {
 		}
 
 		computeWireframeFromFlatTriangles(): this {
-			var canonEdges = new Set()
+			const canonEdges = new Set()
 
 			function canonEdge(i0, i1) {
-				var iMin = min(i0, i1), iMax = max(i0, i1)
+				const iMin = min(i0, i1), iMax = max(i0, i1)
 				return (iMin << 16) | iMax
 			}
 
 			// function uncanonEdge(key) {
 			// 	return [key >> 16, key & 0xffff]
 			// }
-			var t = this.triangles
-			for (var i = 0; i < this.triangles.length; i += 3) {
+			const t = this.triangles
+			for (let i = 0; i < this.triangles.length; i += 3) {
 				canonEdges.add(canonEdge(t[i + 0], t[i + 1]))
 				canonEdges.add(canonEdge(t[i + 1], t[i + 2]))
 				canonEdges.add(canonEdge(t[i + 2], t[i + 0]))
@@ -993,8 +995,8 @@ void main() {
 		}
 
 		getBoundingSphere(): {center: V3, radius: number} {
-			var sphere = {center: this.getAABB().getCenter(), radius: 0}
-			for (var i = 0; i < this.vertices.length; i++) {
+			const sphere = {center: this.getAABB().getCenter(), radius: 0}
+			for (let i = 0; i < this.vertices.length; i++) {
 				sphere.radius = Math.max(sphere.radius, this.vertices[i].minus(sphere.center).length())
 			}
 			return sphere
@@ -1093,7 +1095,7 @@ void main() {
 		 * Creates line, triangle, vertex and normal buffers.
 		 */
 		static cube(): Mesh {
-			var mesh = new Mesh({lines: true, triangles: true, normals: true})
+			const mesh = new Mesh({lines: true, triangles: true, normals: true})
 
 			// basically indexes for faces of the cube. vertices each need to be added 3 times,
 			// as they have different normals depending on the face being rendered
@@ -1232,10 +1234,10 @@ void main() {
 				}
 			}
 
-			var mesh = new Mesh({normals: true, colors: false, lines: true})
+			const mesh = new Mesh({normals: true, colors: false, lines: true})
 			mesh.vertices.pushAll(vertices)
 			subdivisions = undefined == subdivisions ? 4 : subdivisions
-			for (var i = 0; i < 20; i++) {
+			for (let i = 0; i < 20; i++) {
 				var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
 				tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
 			}
@@ -1263,7 +1265,7 @@ void main() {
 			if (!('colors' in options)) options.colors = !!json.colors
 			if (!('triangles' in options)) options.triangles = !!json.triangles
 			if (!('lines' in options)) options.lines = !!json.lines
-			var mesh = new Mesh(options)
+			const mesh = new Mesh(options)
 			mesh.vertices = json.vertices
 			if (mesh.coords) mesh.coords = json.coords
 			if (mesh.normals) mesh.normals = json.normals
@@ -1385,7 +1387,7 @@ void main() {
 		constructor(vertexSource: string, fragmentSource: string) {
 
 			// Headers are prepended to the sources to provide some automatic functionality.
-			var header = `
+			const header = `
 		uniform mat3 LGL_NormalMatrix;
 		uniform mat4 LGL_ModelViewMatrix;
 		uniform mat4 LGL_ProjectionMatrix;
@@ -1394,13 +1396,13 @@ void main() {
 		uniform mat4 LGL_ProjectionMatrixInverse;
 		uniform mat4 LGL_ModelViewProjectionMatrixInverse;
 	`
-			var vertexHeader = header + `
+			const vertexHeader = header + `
 		attribute vec4 LGL_Vertex;
 		attribute vec4 LGL_TexCoord;
 		attribute vec3 LGL_Normal;
 		attribute vec4 LGL_Color;
 	`
-			var fragmentHeader = `  precision highp float;` + header
+			const fragmentHeader = `  precision highp float;` + header
 
 			const matrixNames = header.match(/\bLGL_\w+/g)
 
@@ -1435,7 +1437,7 @@ void main() {
 			})
 
 			this.uniformInfos = {}
-			for (var i = gl.getProgramParameter(this.program, WGL.ACTIVE_UNIFORMS); i-- > 0;) {
+			for (let i = gl.getProgramParameter(this.program, WGL.ACTIVE_UNIFORMS); i-- > 0;) {
 				let info = gl.getActiveUniform(this.program, i)
 				this.uniformInfos[info.name] = info
 			}
@@ -1449,8 +1451,8 @@ void main() {
 		uniforms(uniforms: { [uniformName: string]: UniformType }): this {
 			gl.useProgram(this.program)
 
-			for (var name in uniforms) {
-				var location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name)
+			for (let name in uniforms) {
+				let location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name)
 				assert(!!location, name + ' uniform is not used in shader')
 				if (!location) continue
 				this.uniformLocations[name] = location
@@ -1579,8 +1581,8 @@ void main() {
 			// Create and enable attribute pointers as necessary.
 			let minVertexBufferLength = Infinity
 			for (let attribute in vertexBuffers) {
-				var buffer = vertexBuffers[attribute]
-				var location = this.attributes[attribute] || gl.getAttribLocation(this.program, attribute)
+				const buffer = vertexBuffers[attribute]
+				const location = this.attributes[attribute] || gl.getAttribLocation(this.program, attribute)
 				if (location == -1 || !buffer.buffer) {
 					//console.warn(`Vertex buffer ${attribute} was not bound because the attribute is not active.`)
 					continue
@@ -1634,7 +1636,7 @@ void main() {
 	}
 
 	function isNumber(obj) {
-		var str = Object.prototype.toString.call(obj)
+		const str = Object.prototype.toString.call(obj)
 		return str == '[object Number]' || str == '[object Boolean]'
 	}
 
@@ -1712,8 +1714,8 @@ void main() {
 			this.height = height
 			this.format = options.format || WGL.RGBA
 			this.type = options.type || WGL.UNSIGNED_BYTE
-			var magFilter = options.filter || options.magFilter || WGL.LINEAR
-			var minFilter = options.filter || options.minFilter || WGL.LINEAR
+			const magFilter = options.filter || options.magFilter || WGL.LINEAR
+			const minFilter = options.filter || options.minFilter || WGL.LINEAR
 			if (this.type === WGL.FLOAT) {
 				if (!gl.getExtension('OES_texture_float')) {
 					throw new Error('OES_texture_float is required but not supported')
@@ -1755,13 +1757,13 @@ void main() {
 			this.framebuffer = this.framebuffer || gl.createFramebuffer()
 			gl.bindFramebuffer(WGL.FRAMEBUFFER, this.framebuffer)
 			gl.framebufferTexture2D(WGL.FRAMEBUFFER, WGL.COLOR_ATTACHMENT0, WGL.TEXTURE_2D, this.texture, 0)
-			var result = gl.checkFramebufferStatus(WGL.FRAMEBUFFER) == WGL.FRAMEBUFFER_COMPLETE
+			const result = gl.checkFramebufferStatus(WGL.FRAMEBUFFER) == WGL.FRAMEBUFFER_COMPLETE
 			gl.bindFramebuffer(WGL.FRAMEBUFFER, null)
 			return result
 		}
 
 		drawTo(callback: () => void): void {
-			var v = gl.getParameter(WGL.VIEWPORT)
+			const v = gl.getParameter(WGL.VIEWPORT)
 			this.framebuffer = this.framebuffer || gl.createFramebuffer()
 			this.renderbuffer = this.renderbuffer || gl.createRenderbuffer()
 			gl.bindFramebuffer(WGL.FRAMEBUFFER, this.framebuffer)
@@ -1786,7 +1788,7 @@ void main() {
 		}
 
 		swapWith(other: Texture): void {
-			var temp
+			let temp
 			temp = other.texture
 			other.texture = this.texture
 			this.texture = temp
@@ -1800,21 +1802,21 @@ void main() {
 
 
 		/**
-		 * Return a new texture created from `image`, an `<img>` tag.
+		 * Return a new texture created from `imgElement`, an `<img>` tag.
 		 *
-		 * @param {HTMLImageElement} image <img> element
-		 * @param {Object} options See {@link Texture} for option descriptions.
+		 * @param imgElement <img> element
+		 * @param options See {@link Texture} for option descriptions.
 		 */
-		static fromImage(image: HTMLImageElement | HTMLCanvasElement, options): Texture {
+		static fromImage(imgElement: HTMLImageElement | HTMLCanvasElement, options): Texture {
 			options = options || {}
-			var texture = new Texture(image.width, image.height, options)
+			const texture = new Texture(imgElement.width, imgElement.height, options)
 			try {
-				gl.texImage2D(WGL.TEXTURE_2D, 0, texture.format, texture.format, texture.type, image)
+				gl.texImage2D(WGL.TEXTURE_2D, 0, texture.format, texture.format, texture.type, imgElement)
 			} catch (e) {
 				if (location.protocol == 'file:') {
-					throw new Error('image not loaded for security reasons (serve this page over "http://" instead)')
+					throw new Error('imgElement not loaded for security reasons (serve this page over "http://" instead)')
 				} else {
-					throw new Error('image not loaded for security reasons (image must originate from the same ' +
+					throw new Error('imgElement not loaded for security reasons (imgElement must originate from the same ' +
 						'domain as this page or use Cross-Origin Resource Sharing)')
 				}
 			}
@@ -1832,10 +1834,10 @@ void main() {
 		 */
 		static fromURL(url: string, options): Texture {
 			Texture.checkerBoardCanvas = Texture.checkerBoardCanvas || (function () {
-					var c = document.createElement('canvas').getContext('2d')
+					const c = document.createElement('canvas').getContext('2d')
 					c.canvas.width = c.canvas.height = 128
-					for (var y = 0; y < c.canvas.height; y += 16) {
-						for (var x = 0; x < c.canvas.width; x += 16) {
+					for (let y = 0; y < c.canvas.height; y += 16) {
+						for (let x = 0; x < c.canvas.width; x += 16) {
 							//noinspection JSBitwiseOperatorUsage
 							c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD'
 							c.fillRect(x, y, 16, 16)
@@ -1843,9 +1845,9 @@ void main() {
 					}
 					return c.canvas
 				})()
-			var texture = Texture.fromImage(Texture.checkerBoardCanvas, options)
-			var image = new Image()
-			var context = gl
+			const texture = Texture.fromImage(Texture.checkerBoardCanvas, options)
+			const image = new Image()
+			const context = gl
 			image.onload = function () {
 				context.makeCurrent()
 				Texture.fromImage(image, options).swapWith(texture)

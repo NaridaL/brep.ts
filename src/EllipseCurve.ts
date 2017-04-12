@@ -255,9 +255,8 @@ class EllipseCurve extends Curve {
 
 	arcLength(startT: number, endT: number, steps?: int): number {
 		assert(startT < endT, 'startT < endT')
-		const f1Length = this.f1.length()
-		if (eq(f1Length, this.f2.length())) {
-			return f1Length * (endT - startT)
+		if (this.isCircular()) {
+			return this.f1.length() * (endT - startT)
 		}
 		return super.arcLength(startT, endT, steps)
 	}
@@ -266,7 +265,7 @@ class EllipseCurve extends Curve {
 		// approximate circumference by Ramanujan
 		// https://en.wikipedia.org/wiki/Ellipse#Circumference
 		const {f1, f2} = this.mainAxes(), a = f1.length(), b = f2.length()
-		const h = (a - b) * (a - b) / (a + b) / (a + b) // (a - b)² / (a + b)²
+		const h = (a - b) ** 2 / (a + b) ** 2
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 
@@ -290,9 +289,6 @@ class EllipseCurve extends Curve {
 		}
 	}
 
-	/**
-	 * @inheritDoc
-	 */
 	isTsWithPlane(plane) {
 		assertInst(P3, plane)
 		/*
@@ -350,10 +346,8 @@ class EllipseCurve extends Curve {
 			}
 
 			//new EllipseCurve(V3.O, V3.X, V3.Y).debugToMesh(dMesh, 'curve4')
-			console.log(localEllipse, localEllipse.sce)
 			//localEllipse.debugToMesh(dMesh, 'curve3')
-			let angle = localEllipse.f1.angleXY()
-			console.log('angle', angle)
+			const angle = localEllipse.f1.angleXY()
 			const aSqr = localEllipse.f1.squared(), bSqr = localEllipse.f2.squared()
 			const a = Math.sqrt(aSqr), b = Math.sqrt(bSqr)
 			const {x: centerX, y: centerY} = localEllipse.center

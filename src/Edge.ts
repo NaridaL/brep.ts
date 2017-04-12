@@ -189,6 +189,14 @@ abstract class Edge extends Transformable {
 
 	abstract isCoEdge(other: Edge): boolean
 
+	static ngon(count: int, radius: number = 1) {
+		return StraightEdge.chain(NLA.arrayFromFunction(count, i => V3.polar(radius, TAU * i / count)))
+	}
+
+	static star(pointCount: int = 5, r0: number = 1, r1: number = 0.5) {
+		return StraightEdge.chain(NLA.arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2)))
+	}
+
 	static reverseLoop(loop: Edge[]) {
 		return NLA.arrayFromFunction(loop.length, i => loop[loop.length - 1 - i].flipped())
 	}

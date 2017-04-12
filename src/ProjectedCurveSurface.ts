@@ -173,11 +173,7 @@ class ProjectedCurveSurface extends Surface {
 	    if (surface instanceof SemiEllipsoidSurface) {
 		    return surface.isCurvesWithSurface(this).map(curve => curve.reversed())
 	    }
-        if (surface.parametricFunction) {
-            return new PICurve(surface, this)
-        } else if (surface.implicitFunction) {
-            return new PICurve(this, surface)
-        }
+	    assertNever()
     }
 
     /**

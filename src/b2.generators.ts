@@ -141,7 +141,7 @@ namespace B2T {
 	}
 
 
-	export function cylinder(radius: number, height: number, rads: number, name: string): B2 {
+	export function cylinder(radius: number = 1, height: number = 1, rads: number = TAU, name: string = 'cylinder' + globalId++): B2 {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return B2T.rotateEdges(StraightEdge.chain(vertices, true), rads || 2 * PI, name)
 	}

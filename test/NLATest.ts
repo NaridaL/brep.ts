@@ -1,3 +1,5 @@
+import round10 = NLA.round10
+import eq2 = NLA.eq2
 window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 	console.log(errorMsg, url, lineNumber, column, errorObj)
 }
@@ -104,13 +106,16 @@ QUnit.testDifferentSystems('BezierCurve.isTsWithSurface(SemiCylinderSurface)', f
 	})
 })
 function linkB2(assert, link, msg = 'view') {
+	link = link.replace(/, /g, ',').replace(/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/g, (numberStr) => {
+		const f = parseFloat(numberStr), rd = NLA.round10(f, -7)
+		return eq(f, rd) ? rd : f
+		})
 	assert.ok(true, `<html><a href='brep2.html?${link}'>${msg}</a>`)
 }
 function testISCurves(assert: Assert, surface1: Surface, surface2: Surface, curveCount: int) {
     const isCurves = surface1.isCurvesWithSurface(surface2)
     console.log("http://google.com")
-    assert.ok(true, `<html><a href='brep2.html?meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]`
-    + `&edges=${isCurves.map(c => Edge.forCurveAndTs(c, c.tMin, c.tMax)).sce}'>view</a>`)
+	linkB2(assert, `meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]&edges=${isCurves.map(c => Edge.forCurveAndTs(c, c.tMin, c.tMax)).sce}`)
     assert.equal(isCurves.length, curveCount, 'number of curves = ' +  curveCount)
     for (const curve of isCurves) {
         assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
@@ -126,7 +131,7 @@ function testISCurves(assert: Assert, surface1: Surface, surface2: Surface, curv
     }
 }
 function testZDirVolume(assert, face) {
-	linkB2(assert, `brep2.html?mesh=${face.sce}.toMesh()`)
+	linkB2(assert, `mesh=${face.sce}.toMesh()`)
 	const actual = face.zDirVolume().volume, expected = face.toMesh().calcVolume().volume
 	console.log(actual, expected)
 	assert.push(NLA.eq2(actual, expected, 0.1), actual, expected, "diff = " + (actual - expected))
@@ -143,6 +148,13 @@ function testCurve(ass: Assert, curve: Curve) {
 			message: 't eq pointT(at(t) for ' + t})
 		ass.ok(curve.containsPoint(p), `containsPoint(at(t = ${t}) = ${p})`)
 	})
+
+	// test curve length
+	if (curve.arcLength !== Curve.prototype.arcLength) {
+		const expected = glqInSteps(t => curve.tangentAt(t).length(), curve.tMin, curve.tMax, 4)
+		const actual = curve.arcLength(curve.tMin, curve.tMax)
+		ass.pushResult({result: eq2(expected, actual, 1e-6), expected, actual, message: 'curve should have same length as the numericaly calculated value'})
+	}
 }
 
 function testParametricSurface(ass, ps: Surface) {
@@ -185,16 +197,16 @@ function testParametricSurface(ass, ps: Surface) {
 }
 function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: int) {
 	surface instanceof P3 && (surface = new PlaneSurface(surface))
-    const ists = curve.isTsWithSurface(surface)
-    const points = ists.map(t => curve.at(t))
-    assert.ok(true, `<html><a href='brep2.html?meshes=[${surface}.toMesh()]&edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}]&points=${points.sce}'>view</a>`)
-    assert.equal(ists.length, tCount, 'number of curves = ' +  tCount)
-    for (const t of ists) {
-        const p = curve.at(t)
-        assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
-                + ' t: ' + t
-            + ' dist: ' + surface.implicitFunction()(p))
-    }
+	const ists = curve.isTsWithSurface(surface)
+	const points = ists.map(t => curve.at(t))
+	linkB2(assert, `meshes=[${surface}.toMesh()]&edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}]&points=${points.sce}`)
+	assert.equal(ists.length, tCount, 'number of curves = ' +  tCount)
+	for (const t of ists) {
+		const p = curve.at(t)
+		assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
+			+ ' t: ' + t
+			+ ' dist: ' + surface.implicitFunction()(p))
+	}
 }
 QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert, m4) {
 	const surface = SemiCylinderSurface.UNIT.transform(m4)
@@ -205,8 +217,7 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 		StraightEdge.throughPoints(V(0, 1, 0), V(0, 1, 1)),
 		Edge.forCurveAndTs(SemiEllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0)].map(edge => edge.transform(m4))
 	const face = Face.create(surface, loop)
-	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
+	linkB2(assert, `mesh=${face.sce}.scale(100, 100, 100).toMesh()`)
 	const area = face.calcArea()
 	if (m4.isOrthogonal()) {
 		assert.push(NLA.eq(area, PI/2), area, PI / 2)
@@ -240,8 +251,7 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 			Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, 1), 0, PI/2),
 			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0)].map(edge => edge.transform(m4))
 		const face = Face.create(surface, loop)
-		assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
+		linkB2(assert, `mesh=${face.sce}.scale(100, 100, 100).toMesh()`)
 		const area = face.calcArea()
 		if (m4.isOrthogonal()) {
 			assert.push(NLA.eq(area, 1), area, 1)
@@ -766,7 +776,7 @@ registerTests({
 	'SemiEllipseCurve.isInfosWithEllipse'(assert) {
 		function testEllipseIntersections(assert, e1, e2, count) {
 			const intersections = e1.isInfosWithEllipse(e2).map(info => info.p)
-            assert.ok(true, `<html><a href='brep2.html?edges=[Edge.forCurveAndTs(${e1}, 0, PI), Edge.forCurveAndTs(${e2}, 0, PI)]'>view</a>`)
+			linkB2(assert, `edges=[Edge.forCurveAndTs(${e1}, 0, PI), Edge.forCurveAndTs(${e2}, 0, PI)]`)
 			assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
 			intersections.forEach((is, i) => {
 				assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)

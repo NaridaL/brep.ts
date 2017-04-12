@@ -44,7 +44,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return this == surface ||
 			surface instanceof SemiCylinderSurface
 			&& this.dir1.isParallelTo(surface.dir1)
-			&& this.containsSemiEllipse(surface.baseCurve)
+			&& this.containsSemiEllipse(surface.baseCurve, false)
 	}
 
 	like(object) {
@@ -55,10 +55,10 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return thisFacesOut == objectFacesOut
 	}
 
-	containsSemiEllipse(ellipse) {
+	containsSemiEllipse(ellipse, checkAABB = true) {
 		const projEllipse = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
 		return this == ellipse || this.baseCurve.isColinearTo(projEllipse) &&
-                le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y)
+			(!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y))
 	}
 
 	containsCurve(curve) {

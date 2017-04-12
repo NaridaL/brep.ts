@@ -1466,7 +1466,7 @@ class RotationFace extends Face {
                 function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
                     if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                         //if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
-                            addPair(a.edge.getCanon(), b.edge.getCanon())
+                        //    addPair(a.edge.getCanon(), b.edge.getCanon())
                             // ends on a, on colinear segment b bT != a.edge.bT &&
                             // b can be colinear, so edgeT == aT is possible
                             if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) {
@@ -1951,8 +1951,8 @@ class B2 extends Transformable {
                         }
                         assert(currentEdge)
                         assert(currentEdge != startEdge)
-                    } while (++i < 200)
-                    if (200 == i) {
+                    } while (++i < 400)
+                    if (400 == i) {
                         assert(false, "too many")
                     }
                     // check if we found a loop

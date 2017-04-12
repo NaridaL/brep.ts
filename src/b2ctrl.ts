@@ -1,7 +1,6 @@
-function parseGetParams() {
+function parseGetParams(str) {
     const result = {}
-    window.location.search
-        .substr(1)
+    str
         .split("&")
         .forEach(function (item) {
             const tmp = item.split("=")
@@ -28,7 +27,7 @@ function initB2() {
     eyeUp = V(0, 1, 0)
     zoomFactor = 1
 
-    const gets = parseGetParams()
+    const gets = parseGetParams(window.location.search.substr(1) || window.location.hash.substr(1))
     "abcd".split('').forEach(k => gets[k] && (console.log(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()'), eval(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()')))
 
     //cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()

@@ -365,37 +365,6 @@ class BezierCurve extends Curve {
 		return NLA.arrayFromFunction(3, dim => solveCubicReal2(0, a.e(dim), b.e(dim), c.e(dim)))
 	}
 
-
-	/**
-	 *
-	 * @param p
-	 * @param tMin Defines interval with tMax in which a start value for t will be searched.
-	 * Result is not necessarily in this interval.
-	 * @param tMax
-	 * @param tStart
-	 */
-	closestTToPoint(p: V3, tMin?: number, tMax?: number, tStart?: number): number {
-		tMin = isFinite(tMin) ? tMin : this.tMin
-		tMax = isFinite(tMax) ? tMax : this.tMax
-
-
-		// this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
-		// the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
-		// f = (this.at(t) - p) . (this.tangentAt(t)
-		// df = this.tangentAt(t) . this.tangentAt(t) + (this.at(t) - p) . this.ddt(t)
-		//    = this.tangentAt(t)² + (this.at(t) - p) . this.ddt(t)
-		const f = t => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
-		const df = t => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
-
-		const STEPS = 32
-		const startT = 'undefined' === typeof tStart
-			? NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
-			.withMax(t => -this.at(t).distanceTo(p))
-			: tStart
-
-		return newtonIterateWithDerivative(f, startT, 16, df)
-	}
-
 	/**
 	 *
 	 * @param p
