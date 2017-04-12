@@ -214,6 +214,10 @@ class SemiEllipseCurve extends Curve {
 		return this.f1.isPerpendicularTo(this.f2)
 	}
 
+	reversed(): SemiEllipseCurve {
+		return new SemiEllipseCurve(this.center, this.f1.negated(), this.f2, PI - this.tMax, PI - this.tMin)
+	}
+
 	/**
 	 * Radii of the ellipse are described by
 	 * q(phi) = f1 * cos(phi) + f2 * sin(phi)

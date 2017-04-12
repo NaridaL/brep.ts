@@ -51,16 +51,9 @@
 
 	})
 	QUnit.test('BezierCurve.isPointsWithBezier()', function(assert) {
-		let curve1 = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
-		let curve2 = curve1.transform(M4.rotationLine(V(0.5, 0), V3.Z, PI / 2))
-		let isInfos = curve1.isInfosWithBezier(curve2)
-		assert.equal(isInfos.length, 9)
-		console.log(isInfos.map(SCE))
-		isInfos.forEach(info => {
-			let p = info.p
-			assert.ok(curve1.containsPoint(p), `curve1.distanceToPoint(${p}) = ${curve1.distanceToPoint(p, -2, 3)}`)
-			assert.ok(curve2.containsPoint(p), `curve2.distanceToPoint(${p}) = ${curve2.distanceToPoint(p, -2, 3)}`)
-		})
+		const curve1 = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
+		const curve2 = curve1.transform(M4.rotationLine(V(0.5, 0), V3.Z, PI / 2))
+		testCurveISInfos(assert, curve1, curve2, 9)
 
 		// test self-intersections
 		;[  new BezierCurve(V(133, 205, 0), V(33, 240, 0), V(63, 168, 0), V(151, 231, 0)),
@@ -77,27 +70,20 @@
 	})
 	registerTests({
 		'isInfosWithLine'(assert) {
-			console.log(solveCubicReal2(1, 0, 0, 0))
-			let curve = BezierCurve.graphXY(2, -3, -3, 2, -3, 4)
-			let line = new L3(V3.Y, V3.X)
-			let isInfos = curve.isInfosWithLine(line.anchor, line.dir1)
-			assert.equal(isInfos.length, 3)
-			isInfos.forEach(info => {
-				let p = info.p
-				assert.ok(line.containsPoint(p))
-				assert.ok(curve.containsPoint(p))
-			})
+			const curve = BezierCurve.graphXY(2, -3, -3, 2, -3, 4)
+			const line = new L3(V3.Y, V3.X)
+			testCurveISInfos(assert, curve, line, 3)
 
+			const line2 = new L3(V(0, 2, 1), V3.Z)
+			testCurveISInfos(assert, curve, line2, 1)
 
-			let line2 = new L3(V(0, 2, 1), V3.Z)
-			let isInfos2 = curve.isInfosWithLine(line2.anchor, line2.dir1)
-			assert.equal(isInfos2.length, 1)
-			assert.ok(V(0, 2, 0).like(isInfos2[0].p))
-
-
-			let line3 = new L3(V3.Z, V3.X)
-			assert.equal(curve.isInfosWithLine(line3.anchor, line3.dir1).length, 0)
-
+			const line3 = new L3(V3.Z, V3.X)
+			testCurveISInfos(assert, curve, line3, 0)
+		},
+		'isInfosWithLine 2'(assert) {
+			const curve = new BezierCurve(V(0.1, 0.39392310120488316, 0.06945927106677233), V(0.1, 0.5027019619056378, 0.08863991913904307), V(0.010456949966158688, 0.5908846518073247, 0.10418890660015839), V(-0.09999999999999999, 0.5908846518073247, 0.10418890660015839), 0, 1)
+			const line = new L3(V(0, 0, 0), V(0, 0.9848077530122081, 0.17364817766693033))
+			testCurveISInfos(assert, curve, line, 1)
 		},
 		'isTsWithPlane'(assert) {
 			const curve = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
@@ -116,6 +102,17 @@
 			// TODO
 			//testISTs(assert, curve.translate(-0.00635), s, 3)
 			//console.log(NLA.arrayRange(-0.00640, -0.00630, 0.000005).map(i => curve.translate(i).isTsWithSurface(s).length))
+		},
+
+		'ProjectedCurveSurface Face containsPoint'(assert) {
+			const face = new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0), -3, 4), V(0, 0, 1), -3, 4, -100, 100), [
+				PCurveEdge.forCurveAndTs(
+					new BezierCurve(V(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0)), 1, 0),
+				StraightEdge.throughPoints(V(142.87578921496748, -191.46078243076332, 0), V(142.87578921496748, -191.46078243076332, -100)),
+				PCurveEdge.forCurveAndTs(new BezierCurve(V(142.87578921496748, -191.46078243076332, -100), V(161.78547089700214, -252.13248349581008, -100), V(284.63214994898954, -163.59789158697575, -100), V(372.40411211189405, -210.3992206435476, -100)), 0, 1),
+				StraightEdge.throughPoints(V(372.40411211189405, -210.3992206435476, -100), V(372.40411211189405, -210.3992206435476, 0))], [])
+			const line = new L3(V(1241.5987, -1214.1894, 38.9886), V(-0.6705, 0.7386, -0.0696).unit())
+			testISTs(assert, line, face.surface, 3)
 		},
 	})
 }

@@ -28,8 +28,8 @@ class BezierCurve extends Curve {
 		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		const s = 1 - t, c0 = s * s * s, c1 = 3 * s * s * t, c2 = 3 * s * t * t, c3 = t * t * t
 		return new V3(
-			p0.x * c0 + p1.x * c1 + p2.x * c2 + p3.x * c3, 
-			p0.y * c0 + p1.y * c1 + p2.y * c2 + p3.y * c3, 
+			p0.x * c0 + p1.x * c1 + p2.x * c2 + p3.x * c3,
+			p0.y * c0 + p1.y * c1 + p2.y * c2 + p3.y * c3,
 			p0.z * c0 + p1.z * c1 + p2.z * c2 + p3.z * c3)
 	}
 
@@ -385,6 +385,10 @@ class BezierCurve extends Curve {
 	}
 
 	isInfosWithLine(anchor: V3, dir: V3, tMin?: number, tMax?: number): {tThis: number, tOther: number, p: V3}[] {
+		const dirLength = dir.length()
+		const result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchor, dir.unit()), -100, 100)
+		result.forEach(info => (info.tOther /= dirLength))
+		return result
 		// looking for this.at(t) == line.at(s)
 		// this.at(t).x == anchor.x + dir.x * s
 		// (this.at(t).x - anchor.x) / dir.x == s (analogue for y and z) (1x, 1y, 1z)
@@ -393,26 +397,26 @@ class BezierCurve extends Curve {
 		// (this.at(t).x - anchor.x) * dir.y - (this.at(t).y - anchor.y) * dir.x == 0 (2)
 
 		// cubic equation params (see #pointT):
-		let {p0, p1, p2, p3} = this
-		let a = p1.minus(p2).times(3).minus(p0).plus(p3)
-		let b = p0.plus(p2).times(3).minus(p1.times(6))
-		let c = p1.minus(p0).times(3)
-		let d = p0
+		const {p0, p1, p2, p3} = this
+		const a = p1.minus(p2).times(3).minus(p0).plus(p3)
+		const b = p0.plus(p2).times(3).minus(p1.times(6))
+		const c = p1.minus(p0).times(3)
+		const d = p0
 
 		// modifier cubic equation parameters to get (1)
-		// let w = a.x * dir.y - a.y * dir.x
-		// let x = b.x * dir.y - b.y * dir.x
-		// let y = c.x * dir.y - c.y * dir.x
-		// let z = (d.x - anchor.x) * dir.y - (d.y - anchor.y) * dir.x
+		// const w = a.x * dir.y - a.y * dir.x
+		// const x = b.x * dir.y - b.y * dir.x
+		// const y = c.x * dir.y - c.y * dir.x
+		// const z = (d.x - anchor.x) * dir.y - (d.y - anchor.y) * dir.x
 
 		// the above version doesn't work for dir.x == dir.y == 0, so:
-		let absMinDim = dir.minAbsDim()
-		let [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim]
+		const absMinDim = dir.minAbsDim()
+		const [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim]
 
-		let w = a.e(coord0) * dir.e(coord1) - a.e(coord1) * dir.e(coord0)
-		let x = b.e(coord0) * dir.e(coord1) - b.e(coord1) * dir.e(coord0)
-		let y = c.e(coord0) * dir.e(coord1) - c.e(coord1) * dir.e(coord0)
-		let z = (d.e(coord0) - anchor.e(coord0)) * dir.e(coord1) - (d.e(coord1) - anchor.e(coord1)) * dir.e(coord0)
+		const w = a.e(coord0) * dir.e(coord1) - a.e(coord1) * dir.e(coord0)
+		const x = b.e(coord0) * dir.e(coord1) - b.e(coord1) * dir.e(coord0)
+		const y = c.e(coord0) * dir.e(coord1) - c.e(coord1) * dir.e(coord0)
+		const z = (d.e(coord0) - anchor.e(coord0)) * dir.e(coord1) - (d.e(coord1) - anchor.e(coord1)) * dir.e(coord0)
 
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
@@ -420,10 +424,10 @@ class BezierCurve extends Curve {
 		// we ignored a dimension in the previous step, so we need to check it too
 		return solveCubicReal2(w, x, y, z).mapFilter(tThis => {
 			if (tMin <= tThis && tThis <= tMax) {
-				let p = this.at(tThis)
+				const p = this.at(tThis)
 				// console.log(t*t*t*w+t*t*x+t*y+z, dir.length())
-				let s = p.minus(anchor).dot(dir) / dir.dot(dir)
-				let lineAtS = dir.times(s).plus(anchor)
+				const s = p.minus(anchor).dot(dir) / dir.dot(dir)
+				const lineAtS = dir.times(s).plus(anchor)
 				if (lineAtS.like(p)) return {tThis: tThis, tOther: s, p: p}
 			}
 		})

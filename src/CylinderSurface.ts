@@ -2,8 +2,9 @@
 class CylinderSurface extends ProjectedCurveSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
+	readonly baseCurve: EllipseCurve
 
-	constructor(baseEllipse: SemiEllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
+	constructor(baseEllipse: EllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
 		super(baseEllipse, dir1, undefined, undefined, zMin, zMax)
 		assert(2 == arguments.length)
 		assertVectors(dir1)
@@ -81,7 +82,8 @@ class CylinderSurface extends ProjectedCurveSurface {
 	transform(m4) {
 		return new CylinderSurface(
 			this.baseCurve.transform(m4),
-			m4.transformVector(this.dir1).unit())
+			m4.transformVector(this.dir1).toLength(m4.isMirroring() ? -1 : 1),
+			this.tMin, this.tMax)
 	}
 
 	flipped() {

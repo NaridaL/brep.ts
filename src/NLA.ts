@@ -23,7 +23,7 @@ type int = number
 type FloatArray = Float32Array | Float64Array | number[]
 
 /** @define {boolean} */
-const NLA_DEBUG = true
+const NLA_DEBUG = false
 const NLA_PRECISION = 1 / (1 << 26)
 console.log("NLA_PRECISION", NLA_PRECISION)
 console.log("NLA_DEBUG", NLA_DEBUG)

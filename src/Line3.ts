@@ -8,14 +8,12 @@ class L3 extends Curve {
 	readonly dir1: V3
 
 	constructor(anchor, dir1) {
-		super(-Infinity, Infinity)
+		super(-10000, 10000)
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
 		assertf(() => !Number.isNaN(anchor.x))
-		const l = Object.create(L3.prototype)
-		l.dir1 = dir1
-		l.anchor = anchor
-		return l
+		this.anchor = anchor
+		this.dir1 = dir1
 	}
 
     roots(): number[][] {

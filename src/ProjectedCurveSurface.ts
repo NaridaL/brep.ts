@@ -33,8 +33,32 @@ class ProjectedCurveSurface extends Surface {
         }
     }
 
+	calculateArea(edges: Edge[]): number {
+		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
+		const totalArea = edges.map(edge => {
+			if (edge.curve instanceof SemiEllipseCurve) {
+				const f = (t) => {
+					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
+					return at.dot(this.dir1) * tangent.rejected1Length(this.dir1)
+				}
+				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
+				const val = glqInSteps(f, edge.aT, edge.bT, 4)
+				console.log("edge", edge, val)
+				return val * sign
+			} else if (edge.curve instanceof L3) {
+				return 0
+			} else {
+				assertNever()
+			}
+		}).sum()
+		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
+		// Math.abs is not an option as "holes" may also be passed
+		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))
+	}
+
     zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number} {
-        assertNever()
+    	throw new Error()
     }
 
     toSource(): string {
@@ -97,7 +121,6 @@ class ProjectedCurveSurface extends Surface {
         const projPlane = new P3(this.dir1, 0)
         const dir1 = this.dir1, baseCurve = this.baseCurve
         const projBaseCurve = baseCurve.project(projPlane)
-        const _this = this
         return function (pWC) {
             const projPoint = projPlane.projectedPoint(pWC)
             const t = projBaseCurve.pointT(projPoint)
@@ -132,7 +155,6 @@ class ProjectedCurveSurface extends Surface {
             let projCurve = this.baseCurve.transform(M4.projection(plane, this.dir1))
             if (this.dir1.dot(plane.normal) > 0) {
                 // we need to flip the ellipse so the tangent is correct
-                console.log('FLIPPING')
                 projCurve = projCurve.reversed()
             }
             return [projCurve]
@@ -146,14 +168,13 @@ class ProjectedCurveSurface extends Surface {
         if (surface instanceof ProjectedCurveSurface || surface instanceof SemiCylinderSurface) {
             const dir1 = surface instanceof ProjectedCurveSurface ? surface.dir1 : surface.dir.unit()
             if (this.dir1.isParallelTo(dir1)) {
-                const otherCurve = surface instanceof ProjectedCurveSurface ? surface.baseCurve : surface.baseEllipse
+                const otherCurve = surface.baseCurve
                 const infos = this.baseCurve.isInfosWithCurve(otherCurve)
                 return infos.map(info => new L3(info.p, dir1))
             }
             if (surface instanceof ProjectedCurveSurface) {
                 const line = new L3(this.baseCurve.at(0.5), this.dir1)
                 const startPoint = line.at(surface.isTsForLine(line)[0])
-                drVs.push({anchor: this.baseCurve.at(0.5), dir: this.dir1})
                 console.log(startPoint)
                 return [new PPCurve(this, surface, startPoint)]
                 // const testVector = this.dir1.cross(surface.dir1).unit()

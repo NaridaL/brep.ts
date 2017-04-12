@@ -105,109 +105,6 @@ QUnit.testDifferentSystems('BezierCurve.isTsWithSurface(SemiCylinderSurface)', f
 		assert.ok(cyl.containsPoint(p), cyl.implicitFunction()(p))
 	})
 })
-function linkB2(assert, link, msg = 'view') {
-	link = link.replace(/, /g, ',').replace(/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/g, (numberStr) => {
-		const f = parseFloat(numberStr), rd = NLA.round10(f, -7)
-		return eq(f, rd) ? rd : f
-		})
-	assert.ok(true, `<html><a href='brep2.html?${link}'>${msg}</a>`)
-}
-function testISCurves(assert: Assert, surface1: Surface, surface2: Surface, curveCount: int) {
-    const isCurves = surface1.isCurvesWithSurface(surface2)
-    console.log("http://google.com")
-	linkB2(assert, `meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]&edges=${isCurves.map(c => Edge.forCurveAndTs(c, c.tMin, c.tMax)).sce}`)
-    assert.equal(isCurves.length, curveCount, 'number of curves = ' +  curveCount)
-    for (const curve of isCurves) {
-        assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
-        assert.ok(surface2.containsCurve(curve), 'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str)
-        const t = curve.tMin || 0, p = curve.at(t), dp = curve.tangentAt(t)
-        assert.ok(surface1.containsPoint(p), 'surface1.containsPoint(curve.at(curve.sMin))')
-        assert.ok(surface2.containsPoint(p), 'surface2.containsPoint(curve.at(curve.tMax))')
-
-        const pN1 = surface1.normalAt(p)
-        const pN2 = surface2.normalAt(p)
-        assert.ok(pN1.cross(pN2).isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
-        assert.ok(pN1.cross(pN2).dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
-    }
-}
-function testZDirVolume(assert, face) {
-	linkB2(assert, `mesh=${face.sce}.toMesh()`)
-	const actual = face.zDirVolume().volume, expected = face.toMesh().calcVolume().volume
-	console.log(actual, expected)
-	assert.push(NLA.eq2(actual, expected, 0.1), actual, expected, "diff = " + (actual - expected))
-}
-function testCurve(ass: Assert, curve: Curve) {
-	const STEPS = 12
-	NLA.arrayFromFunction(12, i => {
-		const t = lerp(curve.tMin, curve.tMax, i / (STEPS - 1))
-		const p = curve.at(t)
-		ass.pushResult({
-			result: eq(t, curve.pointT(p)),
-			actual: curve.pointT(p),
-			expected: t,
-			message: 't eq pointT(at(t) for ' + t})
-		ass.ok(curve.containsPoint(p), `containsPoint(at(t = ${t}) = ${p})`)
-	})
-
-	// test curve length
-	if (curve.arcLength !== Curve.prototype.arcLength) {
-		const expected = glqInSteps(t => curve.tangentAt(t).length(), curve.tMin, curve.tMax, 4)
-		const actual = curve.arcLength(curve.tMin, curve.tMax)
-		ass.pushResult({result: eq2(expected, actual, 1e-6), expected, actual, message: 'curve should have same length as the numericaly calculated value'})
-	}
-}
-
-function testParametricSurface(ass, ps: Surface) {
-	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.6)]
-		.map(pm => new V3(lerp(ps.sMin, ps.sMax, pm.x), lerp(ps.tMin, ps.tMax, pm.y), 0))
-	const points = params.map(({x, y}) => ps.parametricFunction()(x, y))
-	const psFlipped = ps.flipped()
-	for (let i = 0; i < points.length; i++) {
-		const p = points[i], pNormal = ps.normalAt(p)
-        ass.ok(ps.containsPoint(p))
-        assert(ps.containsPoint(p))
-		const psFlippedNormal = psFlipped.normalAt(p)
-		ass.ok(psFlippedNormal.negated().like(pNormal))
-		assert(psFlippedNormal.negated().like(pNormal))
-	    const pm = params[i]
-	    if (ps.parametricNormal) {
-		    const pmNormal = ps.parametricNormal()(pm.x, pm.y)
-		    ass.ok(pNormal.like(pmNormal))
-		    assert(pNormal.like(pmNormal))
-	    }
-    }
-    const matrices = [M4.mirroring(P3.XY), M4.mirroring(P3.YZ), M4.mirroring(P3.ZX)]
-	for (let mI = 0; mI < matrices.length; mI++) {
-		const m = matrices[mI]
-		for (let i = 0; i < points.length; i++) {
-			const p = points[i], pNormal = ps.normalAt(p)
-    		const mNormal = m.transformVector(pNormal)
-			const mP = m.transformPoint(p)
-			const mPS = ps.transform(m)
-			ass.ok(mPS.normalAt(mP).like(mNormal))
-			assert(mPS.normalAt(mP).like(mNormal))
-
-
-			//const mPSFlipped = mPS.flipped()
-			//ass.ok(mPSFlipped.normalAt(mP).negated().like(mNormal))
-			//assert(mPSFlipped.normalAt(mP).negated().like(mNormal))
-		}
-	}
-
-}
-function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: int) {
-	surface instanceof P3 && (surface = new PlaneSurface(surface))
-	const ists = curve.isTsWithSurface(surface)
-	const points = ists.map(t => curve.at(t))
-	linkB2(assert, `meshes=[${surface}.toMesh()]&edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}]&points=${points.sce}`)
-	assert.equal(ists.length, tCount, 'number of curves = ' +  tCount)
-	for (const t of ists) {
-		const p = curve.at(t)
-		assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
-			+ ' t: ' + t
-			+ ' dist: ' + surface.implicitFunction()(p))
-	}
-}
 QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert, m4) {
 	const surface = SemiCylinderSurface.UNIT.transform(m4)
 	// loop which is 1 high and goes around a quarter of the cylinder
@@ -379,11 +276,6 @@ QUnit.testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4
 	M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
 	M4.FOO.as3x3())
 
-function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
-	!surface.edgeLoopCCW(loop) && (loop = Edge.reverseLoop(loop))
-	linkB2(assert, `meshes=[${Face.create(surface, loop).sce}.toMesh()]&points=[${p.sce}]`)
-	assert.equal(surface.loopContainsPoint(loop, p), result)
-}
 registerTests({
 
 	'Edge.edgesIntersects'(assert) {
@@ -722,96 +614,6 @@ registerTests({
 		assert.push(res.like(V(2, 4)), res.sce, V(2, 4).sce)
 	},
 
-
-	'ProjectedCurveSurface Face containsPoint'(assert) {
-		let face = new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0), -3, 4), V(0, 0, 1), -3, 4), [
-			PCurveEdge.forCurveAndTs(
-				new BezierCurve(V(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0)), 1, 0),
-			StraightEdge.throughPoints(V(142.87578921496748, -191.46078243076332, 0), V(142.87578921496748, -191.46078243076332, -100)),
-			PCurveEdge.forCurveAndTs(new BezierCurve(V(142.87578921496748, -191.46078243076332, -100), V(161.78547089700214, -252.13248349581008, -100), V(284.63214994898954, -163.59789158697575, -100), V(372.40411211189405, -210.3992206435476, -100)), 0, 1),
-			StraightEdge.throughPoints(V(372.40411211189405, -210.3992206435476, -100), V(372.40411211189405, -210.3992206435476, 0))], [])
-		let line = new L3(V(1241.5987, -1214.1894, 38.9886), V(-0.6705, 0.7386, -0.0696).unit())
-		let ists = face.surface.isTsForLine(line)
-		assert.equal(ists.length, 3)
-		ists.forEach(t => {
-			let p = line.at(t)
-			assert.ok(face.surface.containsPoint(p))
-		})
-//		let p = V(1192.4056247755673, -1243.899135769775, 220.80458903468156)
-//		assert.ok(face.surface.containsPoint(p))
-	},
-
-	'ParabolaCurve'(assert) {
-		const curve = new ParabolaCurve(V(1, 1), V(4, 1, -2), V(1, 10, 2))
-		assert.ok(curve.containsPoint(curve.at(0)))
-		assert.ok(curve.containsPoint(curve.at(1)))
-		assert.ok(curve.containsPoint(curve.at(-1)))
-		const plane = new P3(V(2, 7, 1).unit(), 10)
-		const iss = curve.isTsWithPlane(plane)
-		assert.equal(iss.length, 2)
-		assert.ok(plane.containsPoint(curve.at(iss[0])), plane.distanceToPointSigned(curve.at(iss[0])))
-		assert.ok(plane.containsPoint(curve.at(iss[1])), plane.distanceToPointSigned(curve.at(iss[1])))
-
-
-		const curveRA = curve.rightAngled()
-		NLA.arrayRange(-10, 10, 1).forEach(t => assert.ok(curveRA.containsPoint(curve.at(t))))
-
-		//var curve = ParabolaCurve.forAB(10, 20)
-		const startT = -2, endT = 3, steps = 1000
-		console.log(integrateCurve(curve, startT, endT, 1000))
-		console.log(curve.arcLength(startT, endT))
-	},
-	'SemiEllipseCurve.distanceToPoint'(assert) {
-		let curve = SemiEllipseCurve.forAB(10, 15)
-		let p = V(12, 12)
-		let closestT = curve.closestTToPoint(p)
-		let pDist = curve.at(closestT).distanceTo(p)
-		const EPS = 0.001
-		assert.push(pDist < curve.at(closestT - EPS).distanceTo(p), curve.at(closestT - EPS).distanceTo(p), '> ' + pDist, '' + (pDist - curve.at(closestT - EPS).distanceTo(p)) + 'larger')
-		assert.push(pDist < curve.at(closestT + EPS).distanceTo(p), curve.at(closestT + EPS).distanceTo(p), '> ' + pDist)
-	},
-	'SemiEllipseCurve.isColinearTo'(assert) {
-		assert.ok(SemiEllipseCurve.forAB(1, 2).isColinearTo(SemiEllipseCurve.forAB(1, -2)))
-	},
-	'SemiEllipseCurve.isInfosWithEllipse'(assert) {
-		function testEllipseIntersections(assert, e1, e2, count) {
-			const intersections = e1.isInfosWithEllipse(e2).map(info => info.p)
-			linkB2(assert, `edges=[Edge.forCurveAndTs(${e1}, 0, PI), Edge.forCurveAndTs(${e2}, 0, PI)]`)
-			assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
-			intersections.forEach((is, i) => {
-				assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
-				assert.ok(e1.containsPoint(is), `e1.containsPoint(is): ${e1.toSource()}.containsPoint(${is.sce},`)
-				assert.ok(e2.containsPoint(is), `e2.containsPoint(is): ${e1.toSource()}.containsPoint(${is.sce},`)
-			})
-		}
-		const c1 = SemiEllipseCurve.semicircle(5), c2 = SemiEllipseCurve.semicircle(5, V(3, 0))
-		testEllipseIntersections(assert, c1, c2, 1)
-		const verticalEllipse = new SemiEllipseCurve(V(2, 0), V(1, 1), V(1, 10))
-		testEllipseIntersections(assert, c1, verticalEllipse, 2)
-		const verticalEllipse2 = new SemiEllipseCurve(V(10, 2), V(1, 1), V(1, 10))
-		testEllipseIntersections(assert, c1, verticalEllipse2, 0)
-		const smallEllipse = SemiEllipseCurve.forAB(2, 3)
-		testEllipseIntersections(assert, c1, smallEllipse, 0)
-		const test = new SemiEllipseCurve(V(6, 1, 0), V(3, 1, 0), V(4, 0, 0))
-		testEllipseIntersections(assert, c1, test, 1)
-	},
-	'SemiEllipseCurve.isTsWithSurface(SemiEllipsoidSurface)'(assert) {
-		const s = SemiEllipsoidSurface.sphere(5)
-		const c = new SemiEllipseCurve(V(5, 2), V3.Z.negated(), V(-1, 1.2246467991473532e-16, 0), 0, PI)
-		testISTs(assert, c, s, 2)
-	},
-	'SemiEllipseCurve.isInfosWithBezier2D()'(assert) {
-		const ell = SemiEllipseCurve.forAB(3, 1)
-        const bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
-        const isInfos = ell.isInfosWithBezier2D(bez)
-		assert.equal(isInfos.length, 3)
-		console.log(isInfos.map(SCE))
-		isInfos.forEach(info => {
-            const p = info.p
-			assert.ok(ell.containsPoint(p), `curve1.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`)
-			assert.ok(bez.containsPoint(p), `curve2.distanceToPoint(${p}) = ${bez.distanceToPoint(p, -2, 3)}`)
-		})
-	},
 	//'SemiEllipseCurve.getVolZAnd'(assert) {
 	//
 	//	assert.equal(SemiEllipseCurve.UNIT.getVolZAnd(V3.Z, -PI, PI).volume, 0)
@@ -916,28 +718,6 @@ registerTests({
 		assert.ok(line.containsPoint(isPoints[0]), '' + line.distanceToPoint(isPoints[0]))
 		assert.ok(line.containsPoint(isPoints[1]), '' + line.distanceToPoint(isPoints[1]))
 	},
-	'SemiCylinderSurface.intersectionLine 2'(assert) {
-		const cylSurface = new SemiCylinderSurface(new SemiEllipseCurve(V3.O, V(8, 0, 0), V(0, 5, 0)), V3.Z)
-		const line = L3.throughPoints(V(10, 0, 0), V(-10, 2, 10))
-		const isPoints = cylSurface.isTsForLine(line).map(line.at, line)
-		console.log(isPoints.toSource())
-		assert.equal(isPoints.length, 2, 'no of points')
-		assert.notOk(isPoints[0].like(isPoints[1]))
-
-		assert.ok(cylSurface.containsPoint(isPoints[0]))
-		assert.ok(cylSurface.containsPoint(isPoints[1]))
-
-		assert.ok(line.containsPoint(isPoints[0]), line.distanceToPoint(isPoints[0]))
-		assert.ok(line.containsPoint(isPoints[1]), line.distanceToPoint(isPoints[1]))
-	},
-	'SemiCylinderSurface.isCurvesWithSurface'(assert) {
-		const cyl = SemiCylinderSurface.semicylinder(5)
-		const ell = new SemiCylinderSurface(new SemiEllipseCurve(V(6, 1, 4), V(3, 1, 4), V(4, 0, 0)), V3.Z)
-		const iss = cyl.isCurvesWithSurface(ell)
-		assert.equal(iss.length, 1)
-		assert.ok(cyl.containsPoint(iss[0].anchor))
-		assert.ok(ell.containsPoint(iss[0].anchor), ell.implicitFunction()(iss[0].anchor))
-	},
 	'SemiCylinderSurface.zDirVolume'(assert) {
 		const face = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.forAB(-1, 1), 0, PI), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
 		const face2 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
@@ -991,7 +771,7 @@ registerTests({
         const testFace = B2T.sphere(1).faces[0]
 
         const p1 = new V3(0, 1, 0)
-        assert.equal(testFace.surface.loopContainsPoint(testFace.contour, p1), PointVsFace.INSIDE)
+	    testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE)
     },
 	'serialization'(assert) {
 		let a = {a: 2, b: 3}
@@ -1054,34 +834,6 @@ registerTests({
     //    const expectedFront = []
     //    const expectedBack = [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)]
     //},
-    'SemiEllipsoidSurface.loopContainsPoint'(assert) {
-        const s = new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5))
-        const loop = [
-            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0)), V(0, 0, 5), V(0, 0, -5), PI, 0, null, V(5, 0, 0), V(-5, 0, 0)),
-            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(-5, 0, 0)), V(0, 0, -5), V(0, 0, 5), 0, PI, null, V(-5, 0, 0), V(5, 0, 0))]
-        const p = V(5, 0, 0)
-        assert.equal(s.loopContainsPoint(loop, p), PointVsFace.ON_EDGE)
-    },
-    'SemiEllipsoidSurface.loopContainsPoint 3'(assert) {
-        const s = new SemiEllipsoidSurface(V3.O, V(-5, 6.123233995736766e-16, 0), V(-6.123233995736766e-16, -5, 0), V(0, 0, 5))
-        const loop = [
-            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0), 0, 3.141592653589793), V(0, 0, -5), V(1.1291713066130296, 0, -4.87082869338697), 0, 0.22779933669791175, null, V(5, 0, 0), V(4.87082869338697, 0, 1.1291713066130296)),
-            new PCurveEdge(new SemiEllipseCurve(V(1.411764705882352, -2.1176470588235303, -1.4117647058823533), V(2.0917534572581817, 2.7890046096775745, -2.091753457258183), V(-2.874840149008801, 3.5206637865439285e-16, -2.874840149008799), 0.7085839061491113, 3.141592653589793), V(1.1291713066130291, 0, -4.87082869338697), V(0, -0.6994424542963525, -4.950836318555471), 0.7085839061491117, 1.0373562345961393, null, V(-3.544048444786543, -1.8149704259460577, -0.821592805867452), V(-3.262983117260863, -2.401508361946856, 0.3392794256594245)),
-            new PCurveEdge(new SemiEllipseCurve(V(-1.4117647058823535, -2.117647058823529, -1.4117647058823533), V(2.0917534572581813, -2.789004609677577, 2.0917534572581813), V(2.8748401490088, -3.520663786543927e-16, -2.8748401490088007), 0, 2.43300874744068), V(0, -0.6994424542963525, -4.950836318555471), V(-1.1291713066130296, 1.382836026332681e-16, -4.87082869338697), 2.1042364189936533, 2.4330087474406805, null, V(-3.2629831172608608, 2.401508361946859, -0.33927942565942426), V(-3.5440484447865406, 1.8149704259460617, 0.8215928058674513)),
-            new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, 5), V(-5, 0, 0), 0, 3.141592653589793), V(-1.1291713066130296, 0, -4.87082869338697), V(0, 0, -5), 2.9137933168918817, 3.141592653589793, null, V(4.870828693386971, 0, -1.1291713066130287), V(5, 0, -6.123233995736766e-16))]
-        const p = V(-4.999999999999999, 0, 0)
-        assert.equal(s.loopContainsPoint(loop, p), PointVsFace.OUTSIDE)
-    },
-    'SemiEllipsoidSurface.intersect SES'(assert) {
-        const a = SemiEllipsoidSurface.sphere(5)
-        const b = SemiEllipsoidSurface.sphere(1).rotateAB(V3.Y, V3.X.negated()).translate(5,2)
-        const isCurves = a.isCurvesWithSurface(b)
-        assert.equal(isCurves.length, 2, 'isCurves.length')
-        isCurves.forEach(c => {
-            assert.ok(a.containsCurve(c))
-            assert.ok(b.containsCurve(c))
-        })
-    },
     'EllipsoidSurface.isCurvesWithPlane'(assert) {
         const es = SemiEllipsoidSurface.sphere(5)
         testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)), 0)
@@ -1102,26 +854,6 @@ registerTests({
 
         // slices perpendicular to V3.X
         testISCurves(assert, es, new PlaneSurface(P3.YZ), 1)
-    },
-    'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface is curves both y > 0'(assert) {
-        const s1 = SemiEllipsoidSurface.UNIT
-        const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-        testISCurves(assert, s1, s2.translate(0.2).rotateZ(90 * DEG).rotateX(10 * DEG), 2)
-    },
-    'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface is curves both cross y = 0'(assert) {
-        const s1 = SemiEllipsoidSurface.UNIT
-        const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-        testISCurves(assert, s1, s2.translate(0.2), 2)
-    },
-    'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface is curves both y < 0'(assert) {
-        const s1 = SemiEllipsoidSurface.UNIT
-        const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-        testISCurves(assert, s1, s2.translate(0.2).rotateZ(-90 * DEG), 0)
-    },
-    'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface one isCurve cross y = 0 twice, one isCurve y > 0'(assert) {
-        const s1 = SemiEllipsoidSurface.UNIT
-        const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-        testISCurves(assert, s1, s2.translate(0.2).rotateZ(90 * DEG).rotateX(80 * DEG), 3)
     },
     'V3.inverseLerp'(assert) {
 	    const a = V(0.1, 0.2, 0.3), b = V(3, 2, 1)

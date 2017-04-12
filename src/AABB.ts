@@ -38,7 +38,7 @@ class AABB extends Transformable {
         const volume = this.volume(), size = this.size()
         let remainingVolume = -Infinity
         for (let i = 0; i < 3; i++) {
-			const dim = ['x', 'y', 'z'][i]
+			const dim = ['x', 'y', 'z'][i] as 'x' | 'y' | 'z'
             const cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim]
             const dimMin = cond ? this.min[dim] : Math.max(this.min[dim], aabb.max[dim])
             const dimMax = !cond ? this.max[dim] : Math.min(this.max[dim], aabb.min[dim])
@@ -127,26 +127,18 @@ class AABB extends Transformable {
 		return this.containsPoint(aabb.min) && this.containsPoint(aabb.max)
 	}
 
-	likeAABB(aabb) {
+	likeAABB(aabb: AABB): boolean {
 		assertInst(AABB, aabb)
 		return this.min.like(aabb.min) && this.max.like(aabb.max)
 	}
 
-	intersectsLine(l3) {
-		assertInst(L3, l3)
-		const maxDim = l3.dir1.maxAbsDim()
-        const [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxDim]
-		const s0 = (this.min[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
-        const s1 = (this.max[maxDim] - l3.anchor[maxDim]) / l3.dir1[maxDim]
-        let sMin = Math.min(s0, s1)
-        let sMax = Math.max(s0, s1)
-        const c = l3.dir1[coord0] * l3.anchor[coord1] - l3.anchor[coord0] * l3.dir1[coord1]
-
-        function lineSide(pCoord0, pCoord1) {
-			return l3.dir1[coord1] * pCoord0 + l3.dir1[coord0] * pCoord1 + c
-		}
-
-		let sideBL = lineSide()
+	intersectsLine(line: L3): boolean {
+		assertInst(L3, line)
+		const dir = line.dir1.map(el => el || Number.MIN_VALUE)
+		const minTs = (this.min.minus(line.anchor)).divv(dir)
+		const maxTs = (this.max.minus(line.anchor)).divv(dir)
+		const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(minTs).minElement()
+		return tMin <= tMax && !(tMax < line.tMin || line.tMax < tMin)
     }
 
 	hasVolume() {

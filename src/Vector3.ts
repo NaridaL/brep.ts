@@ -47,6 +47,10 @@ class V3 implements Equalable {
 		return new V3(this.x * a.x, this.y * a.y, this.z * a.z)
 	}
 
+	divv(a: V3): V3 {
+		return new V3(this.x / a.x, this.y / a.y, this.z / a.z)
+	}
+
 	/**
 	 * See also {@link to} which is a.minus(this)
 	 */
@@ -202,12 +206,16 @@ class V3 implements Equalable {
 		return this.x * this.x + this.y * this.y
 	}
 
+	xy(): V3 {
+		return new V3(this.x, this.y, 0)
+	}
+
 	/**
 	 * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
 	 * @param f function to apply to elements (number -> number)
 	 */
-	map(f: (el: number) => number): V3 {
-		return new V3(f(this.x), f(this.y), f(this.z))
+	map(f: (el: number, dim: 'x' | 'y' | 'z') => number): V3 {
+		return new V3(f(this.x, 'x'), f(this.y, 'y'), f(this.z, 'z'))
 	}
 
 	toString(roundFunction?): string {
@@ -481,9 +489,9 @@ class V3 implements Equalable {
 		// floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
 		// this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
 		// the other 7 can be calculated by adding constants
-		const xHC = ~~(this.x * (1 << 28) - 0.5), 
-			yHC = ~~(this.y * (1 << 28) - 0.5), 
-			zHC = ~~(this.z * (1 << 28) - 0.5), 
+		const xHC = ~~(this.x * (1 << 28) - 0.5),
+			yHC = ~~(this.y * (1 << 28) - 0.5),
+			zHC = ~~(this.z * (1 << 28) - 0.5),
 			hc = ~~((xHC * 31 + yHC) * 31 + zHC)
 		return [
 			~~(hc),
@@ -533,7 +541,7 @@ class V3 implements Equalable {
     static readonly XYZ: V3 = new V3(1, 1, 1)
     static readonly INF: V3 = new V3(Infinity, Infinity, Infinity)
 	static readonly UNITS: V3[] = [V3.X, V3.Y, V3.Z]
-	
+
 	static random(): V3 {
 		return new V3(Math.random(), Math.random(), Math.random())
 	}

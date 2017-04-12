@@ -1,6 +1,9 @@
 class SemiCylinderSurface extends ProjectedCurveSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
+	readonly normalMatrix: M4
+	readonly normalDir: number
+	readonly baseCurve: SemiEllipseCurve
 
 	constructor(baseCurve: SemiEllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
 		super(baseCurve, dir1, undefined, undefined, zMin, zMax)
@@ -10,10 +13,16 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		assert(dir1.hasLength(1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
+		this.normalDir = sign(this.baseCurve.normal.dot(this.dir1))
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
 	}
 
 	toSource() {
 		return `new SemiCylinderSurface(${this.baseCurve.toSource()}, ${this.dir1.toSource()})`
+	}
+
+	normalAt(p: V3): V3 {
+		return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit()
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
@@ -74,7 +83,8 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	transform(m4) {
 		return new SemiCylinderSurface(
 			this.baseCurve.transform(m4),
-			m4.transformVector(this.dir1).unit()) as this
+			m4.transformVector(this.dir1).toLength(m4.isMirroring() ? -1 : 1),
+			this.tMin, this.tMax) as this
 	}
 
 	flipped() {
@@ -241,6 +251,10 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 }
 SemiCylinderSurface.prototype.uStep = TAU  / 128
 SemiCylinderSurface.prototype.vStep = 256
+SemiCylinderSurface.prototype.sMin = 0
+SemiCylinderSurface.prototype.sMax = PI
+SemiCylinderSurface.prototype.tMin = 0
+SemiCylinderSurface.prototype.tMax = 1
 
 
 

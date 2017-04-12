@@ -169,7 +169,7 @@ abstract class Curve extends Transformable {
 				}
 			}
 		}
-		return new AABB(V(mins), V(maxs))
+		return new AABB(V3.fromArray(mins), V3.fromArray(maxs))
 	}
 
 	static hlol = 0
@@ -219,10 +219,13 @@ abstract class Curve extends Transformable {
             }
             return false
         }
-        
+
         const result = []
         findRecursive(tMin, tMax, sMin, sMax, curve1.getAABB(tMin, tMax), curve2.getAABB(sMin, sMax))
         return NLA.fuzzyUniquesF(result, info => info.tThis)
     }
-    
+
+	reversed(): this {
+		throw new Error()
+	}
 }

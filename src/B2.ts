@@ -277,7 +277,7 @@ abstract class Face extends Transformable {
                 inOut = b
             }
         }
-        for (const edge: Edge of this.getAllEdges()) {
+        for (const edge of this.getAllEdges()) {
             assert(edge.a.equals(p) || !edge.a.like(p))
             assert(edge.b.equals(p) || !edge.b.like(p))
             if (edge.a.equals(p) && test(edge.aDir, false)) return PointVsFace.ON_EDGE
@@ -807,7 +807,7 @@ class RotationFace extends Face {
 	    // this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
 	    const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last() + loop.length), arr), [0])
 	    const pointToParameterFunction = this.surface.pointToParameterFunction()
-	    const verticesUV = vertices.map(v => { const uv = pointToParameterFunction(v) return new V3(uv.x / uStep, uv.y / vStep, 0) })
+	    const verticesUV = vertices.map(v => { const uv = pointToParameterFunction(v); return new V3(uv.x / uStep, uv.y / vStep, 0) })
 	    return {verticesUV: verticesUV, vertices: vertices, normals: normals, loopStarts: loopStarts}
     }
 
@@ -1364,12 +1364,8 @@ class RotationFace extends Face {
          * @param newEdge generated segment
          * @param col1 if newEdge is colinear to an edge of this, the edge in question
          * @param col2 same for face2
-         * @param in1
-         * @param in2
-         * @param a
-         * @param b
          */
-        function handleNewEdge(newEdge: Edge, col1: Edge, col2: Edge, in1, in2, a, b) {
+        function handleNewEdge(newEdge: Edge, col1: Edge, col2: Edge) {
             if (!col1 && !col2) {
                 assert(newEdge.aDir.cross(face.surface.normalAt(newEdge.a)).dot(face2.surface.normalAt(newEdge.a)) > 0)
                 NLA.mapPush(faceMap, face, newEdge)
@@ -1443,9 +1439,9 @@ class RotationFace extends Face {
         // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B
         //         you don't want thos to be marked as "inside", otherwise invalid faces will be added
         // if a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be
-        function handleEndPoint(a, b, useA, useB, newEdge) {
+        function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) {
             // ends in the middle of b's face
-            if (useA && !useB) {
+            if (a && !b) {
                 if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                     NLA.mapPush(thisEdgePoints, a.edge.getCanon(), a)
                     assert(a.edge.isValidT(a.edgeT))
@@ -1453,14 +1449,15 @@ class RotationFace extends Face {
                 // else colinear segment ends in middle of other face, do nothing
             }
             // ends in the middle of a's face
-            if (useB && !useA) {
+            if (b && !a) {
                 if (!b.colinear && b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) {
                     NLA.mapPush(otherEdgePoints, b.edge.getCanon(), b)
                     assert(b.edge.isValidT(b.edgeT))
                 }
                 // else colinear segment ends in middle of other face, do nothing
             }
-            if (useA && useB) {
+            if (a && b) {
+            	assert(a.colinear || b.colinear || eq(a.t, b.t))
                 // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
                 // segment starts/ends on edge/edge intersection
                 function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
@@ -1504,12 +1501,12 @@ class RotationFace extends Face {
 
         assertInst(Face, face2)
 
-	    if (!this.getAABB().touchesAABB(face2.getAABB())) {
-        	return
-	    }
 
         const face = this
         const surface = face.surface, surface2 = face2.surface
+	    if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
+		    return
+	    }
         if (surface.isCoplanarTo(surface2)) {
             return
         }
@@ -1518,7 +1515,7 @@ class RotationFace extends Face {
             return
         }
         for (const isCurve of isCurves) {
-            const t = isCurve.tMin || 0, p = isCurve.at(t), dp = isCurve.tangentAt(t)
+            const t = isFinite(isCurve.tMin) ? isCurve.tMin : 0, p = isCurve.at(t), dp = isCurve.tangentAt(t)
             const normal1 = surface.normalAt(p), normal2 = surface2.normalAt(p), dp2 = normal1.cross(normal2)
             assert(surface.containsCurve(isCurve))
             assert(surface2.containsCurve(isCurve))
@@ -1541,7 +1538,7 @@ class RotationFace extends Face {
             assertf(() => (0 == ps2.length) || !NLA.eq0(ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t))), () => ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t)))
             function startsInside(ps, face) {
                 if (0 == ps.length) {
-                    return undefined !== isCurve.tMin && face.containsPoint(isCurve.at(isCurve.tMin))
+                    return isFinite(isCurve.tMin) && face.containsPoint(isCurve.at(isCurve.tMin))
                 } else {
                     return ps[0].insideDir.dot(isCurve.tangentAt(ps[0].t)) < 0
                 }
@@ -1554,7 +1551,7 @@ class RotationFace extends Face {
                 return
             }
             //assert(!in1 || !in2)
-            let col1: Edge, col2: Edge
+            let col1: IntersectionPointInfo, col2: IntersectionPointInfo
             let i = 0, j = 0, last, segments = []
             let startP = in1 && in2 && isCurve.at(isCurve.tMin), startDir, startT = isCurve.tMin, startA, startB, startCol1, startCol2
             while (i < ps1.length || j < ps2.length) {
@@ -1564,24 +1561,26 @@ class RotationFace extends Face {
                 assert(a || b)
                 if (j == ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
                     last = a
+	                a.used = true
                     in1 = !in1
                     // ": col1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
-                    col1 = in1 ? a.colinear && a.edge : col1
+	                in1 && (col1 = a.colinear && a)
                     i++
                 } else if (i == ps1.length || NLA.gt(a.t, b.t)) {
                     last = b
+	                b.used = true
                     in2 = !in2
-                    col2 = in2 ? b.colinear && b.edge : col2
+	                in2 && (col2 = b.colinear && b)
                     j++
                 } else {
                     last = a
+	                a.used = true
+	                b.used = true
                     in1 = !in1
                     in2 = !in2
                     //if (in1 == in2) {
-                    a.used = true
-                    b.used = true
-                    col1 = in1 ? a.colinear && a.edge : col1
-                    col2 = in2 ? b.colinear && b.edge : col2
+	                in1 && (col1 = a.colinear && a)
+	                in2 && (col2 = b.colinear && b)
                     //}
                     i++
                     j++
@@ -1599,21 +1598,17 @@ class RotationFace extends Face {
                     startT > last.t && (endDir = endDir.negated())
                     const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, null, startDir, endDir, 'genseg' + globalId++)
                     startP = undefined
-                    last.used = true
-                    if (handleNewEdge(newEdge, col1, col2, in1, in2, a, b)) {
-                        handleEndPoint(startA || {colinear: false}, startB, startCol1, startCol2, newEdge)
-                        handleEndPoint(a || {colinear: false}, b, col1 || a && !!a.used, col2 || b && !!b.used, newEdge)
+                    if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
+                        handleEndPoint(startA || col1, startB || col2, newEdge)
+                        handleEndPoint(a && a.used && a || col1, b && b.used && b || col2, newEdge)
                     }
                 } else if (in1 && in2) {
                     // new segment just started
                     startP = last.p
                     startDir = last.insideDir
                     startT = last.t
-                    last.used = true
-                    startA = a
-                    startB = b
-                    startCol1 = col1 || (a && !!a.used)
-                    startCol2 = col2 || (b && !!b.used)
+                    startA = a && a.used && a
+                    startB = b && b.used && b
                 }
             }
             if (in1 && in2 && startT !== isCurve.tMax) {
@@ -1623,8 +1618,8 @@ class RotationFace extends Face {
                 let endDir = isCurve.tangentAt(endT)
                 startT > endT && (endDir = endDir.negated())
                 const newEdge = Edge.create(isCurve, startP, isCurve.at(endT), startT, endT, null, startDir, endDir, 'genseg' + globalId++)
-                if (handleNewEdge(newEdge, col1, col2, in1, in2)) {
-                    handleEndPoint(startA || {colinear: false}, startB, startCol1, startCol2, newEdge)
+                if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
+	                handleEndPoint(startA || col1, startB || col2, newEdge)
                 }
             }
         })
@@ -2596,7 +2591,6 @@ function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, f
     }
 }
 function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: V3, faceNormal: V3): int {
-    console.log(brep, canonEdge, p, pInside, faceNormal)
     assert(arguments.length == 5)
     assert(canonEdge == canonEdge.getCanon())
     //assert(p.equals(canonEdge.a))

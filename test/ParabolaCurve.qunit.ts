@@ -14,6 +14,7 @@ QUnit.module('ParabolaCurve')
 			const curveRA = curve.rightAngled()
 			assert.ok(curveRA.isColinearTo(curve))
 			NLA.arrayRange(-10, 10, 1).forEach(t => assert.ok(curveRA.containsPoint(curve.at(t))))
-		}
+		},
+
 	})
 }
