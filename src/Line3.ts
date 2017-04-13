@@ -7,8 +7,8 @@ class L3 extends Curve {
 	// Normalized direction of the line.
 	readonly dir1: V3
 
-	constructor(anchor, dir1) {
-		super(-10000, 10000)
+	constructor(anchor: V3, dir1: V3, tMin: number = -4096, tMax: number = 4096) {
+		super(tMin, tMax)
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
 		assertf(() => !Number.isNaN(anchor.x))
@@ -280,20 +280,13 @@ class L3 extends Curve {
 	transform(m4: M4): this {
 		const newAnchor = m4.transformPoint(this.anchor)
 		const newDir = m4.transformVector(this.dir1)
-		return new L3(newAnchor, newDir.unit()) as this
+		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length()) as this
 	}
 
-	projectedOnPlane(plane) {
-		assertInst(P3, plane)
-		return new L3(plane.projectedPoint(this.anchor), plane.projectedVector(this.dir1).unit())
+	static throughPoints(anchor: V3, b: V3, tMin?: number, tMax?: number): L3 {
+		return new L3(anchor, b.minus(anchor).unit(), tMin, tMax)
 	}
 
-	debugToMesh(mesh, bufferName) {
-		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
-		mesh[bufferName].push(this.at(-1000), this.at(2000))
-	}
-
-	static throughPoints = (anchor: V3, b: V3): L3 => new L3(anchor, b.minus(anchor).unit())
 	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
 
 

@@ -1,3 +1,4 @@
+import fuzzyUniquesF = NLA.fuzzyUniquesF
 class BezierCurve extends Curve {
 	readonly p0: V3
 	readonly p1: V3
@@ -293,7 +294,6 @@ class BezierCurve extends Curve {
 			} else {
 
 				const newResults = solveCubicReal2(a[dim], b[dim], c[dim], d[dim])
-				console.log([a[dim], b[dim], c[dim], d[dim]], dim, newResults)
 				if (0 == newResults.length) return NaN
 				if (1 == newResults.length) return newResults[0]
 				if (results) {
@@ -328,7 +328,7 @@ class BezierCurve extends Curve {
 	debugToMesh(mesh, bufferName) {
 		mesh.addVertexBuffer(bufferName, bufferName)
 		for (let t = -2; t <= 2; t += 0.01) {
-			const p = this.at(t);
+			const p = this.at(t)
 			mesh[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
 			mesh[bufferName].push(p, p.plus(this.normalAt(t).toLength(1)))
 		}
@@ -384,9 +384,11 @@ class BezierCurve extends Curve {
 		return this.at(t).distanceTo(p)
 	}
 
-	isInfosWithLine(anchor: V3, dir: V3, tMin?: number, tMax?: number): {tThis: number, tOther: number, p: V3}[] {
+	isInfosWithLine(anchor: V3, dir: V3, tMin?: number, tMax?: number, lineMin = -100000, lineMax = 100000): {tThis: number, tOther: number, p: V3}[] {
 		const dirLength = dir.length()
-		const result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchor, dir.unit()), -100, 100)
+		// TODO: no:
+		let result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchor, dir.unit()), lineMin, lineMax)
+		result = fuzzyUniquesF(result, info => info.tOther)
 		result.forEach(info => (info.tOther /= dirLength))
 		return result
 		// looking for this.at(t) == line.at(s)
@@ -546,7 +548,6 @@ class BezierCurve extends Curve {
 			tMin = Math.min(tMin, sMin)
 			tMax = Math.max(tMax, sMax)
 			const splits = NLA.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(NLA.minus)
-			console.log('splits', splits, this.roots().concatenated())
 			//let aabbs = NLA.arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
 			Array.from(NLA.combinations(splits.length - 1)).forEach(({i, j}) => {
 				// adjacent curves can't intersect
@@ -569,7 +570,7 @@ class BezierCurve extends Curve {
 
 	isInfosWithCurve(curve) {
 		if (curve instanceof L3) {
-			return this.isInfosWithLine(curve.anchor, curve.dir1)
+			return this.isInfosWithLine(curve.anchor, curve.dir1, curve.tMin, curve.tMax)
 		}
 		if (curve instanceof BezierCurve) {
 			return this.isInfosWithBezier(curve)

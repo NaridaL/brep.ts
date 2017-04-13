@@ -1,3 +1,4 @@
+import snap0 = NLA.snap0
 let eps = 1e-5
 
 abstract class Face extends Transformable {
@@ -373,6 +374,8 @@ class PlaneFace extends Face {
     }
 
     intersectFace(face2, thisBrep, face2Brep, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs) {
+    	//const f = face2 instanceof PlaneFace ? this.intersectPlaneFace : RotationFace.intersectFace
+	    //f.call(this, face2, thisBrep, face2Brep, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs)
         if (face2 instanceof PlaneFace) {
             this.intersectPlaneFace(face2, thisBrep, face2Brep, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs)
             return
@@ -401,16 +404,11 @@ class PlaneFace extends Face {
         }
 
         /**
-         *
          * @param newEdge generated segment
          * @param col1 if newEdge is colinear to an edge of this, the edge in question
          * @param col2 same for face2
-         * @param in1
-         * @param in2
-         * @param a
-         * @param b
          */
-        function handleNewEdge(newEdge: StraightEdge, col1: Edge, col2: Edge, in1, in2, a, b) {
+        function handleNewEdge(newEdge: StraightEdge, col1: Edge, col2: Edge) {
             if (!col1 && !col2) {
                 NLA.mapPush(faceMap, face, newEdge)
                 NLA.mapPush(faceMap, face2, newEdge.flipped())
@@ -482,9 +480,9 @@ class PlaneFace extends Face {
         // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B
         //         you don't want thos to be marked as "inside", otherwise invalid faces will be added
         // if a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be
-        function handleEndPoint(a, b, useA, useB, newEdge) {
+	    function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) {
             // ends in the middle of b's face
-            if (useA && !useB) {
+            if (a && !b) {
                 if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                     NLA.mapPush(thisEdgePoints, a.edge.getCanon(), a)
                     assert(a.edge.isValidT(a.edgeT))
@@ -492,14 +490,14 @@ class PlaneFace extends Face {
                 // else colinear segment ends in middle of other face, do nothing
             }
             // ends in the middle of a's face
-            if (useB && !useA) {
+            if (b && !a) {
                 if (!b.colinear && b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) {
                     NLA.mapPush(otherEdgePoints, b.edge.getCanon(), b)
                     assert(b.edge.isValidT(b.edgeT))
                 }
                 // else colinear segment ends in middle of other face, do nothing
             }
-            if (useA && useB) {
+            if (a && b) {
                     // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
                 // segment starts/ends on edge/edge intersection
                 function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
@@ -561,9 +559,10 @@ class PlaneFace extends Face {
             return
         }
 
-        let in1 = false, in2 = false, col1: Edge = undefined, col2: Edge = undefined
+	    let col1: IntersectionPointInfo, col2: IntersectionPointInfo
+        let in1 = false, in2 = false
         let i = 0, j = 0, last
-        let startP, startDir, startT, startA, startB, startCol1, startCol2
+        let startP, startDir, startT, startA, startB
         while (i < ps1.length || j < ps2.length) {
             assert(i <= ps1.length)
             assert(j <= ps2.length)
@@ -572,13 +571,14 @@ class PlaneFace extends Face {
             if (j == ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
                 last = a
                 in1 = !in1
-                // ": col1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
-                col1 = in1 ? a.colinear && a.edge : col1
-                i++
+	            a.used = true
+	            in1 && (col1 = a.colinear && a)
+	            i++
             } else if (i == ps1.length || NLA.gt(a.t, b.t)) {
                 last = b
                 in2 = !in2
-                col2 = in2 ? b.colinear && b.edge : col2
+	            b.used = true
+	            in2 && (col2 = b.colinear && b)
                 j++
             } else {
                 // TODO: this will break if 3 points on the same t
@@ -588,31 +588,28 @@ class PlaneFace extends Face {
                 //if (in1 == in2) {
                 a.used = true
                 b.used = true
-                col1 = in1 ? a.colinear && a.edge : col1
-                col2 = in2 ? b.colinear && b.edge : col2
+	            in1 && (col1 = a.colinear && a)
+	            in2 && (col2 = b.colinear && b)
                 //}
                 i++
                 j++
             }
             if (startP && !(in1 && in2)) {
                 // segment end
-                let newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, null, 'genseg' + globalId++)
+                const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, null, 'genseg' + globalId++)
                 startP = undefined
                 last.used = true
-                if (handleNewEdge(newEdge, col1, col2, in1, in2, a, b)) {
-                    handleEndPoint(a, b, col1 || a.used, col2 || b.used, newEdge)
-                    handleEndPoint(startA, startB, startCol1, startCol2, newEdge)
+                if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
+	                handleEndPoint(startA || col1, startB || col2, newEdge)
+	                handleEndPoint(a && a.used && a || col1, b && b.used && b || col2, newEdge)
                 }
             } else if (in1 && in2) {
                 // new segment just started
                 startP = last.p
                 startDir = last.insideDir
                 startT = last.t
-                last.used = true
-                startA = a
-                startB = b
-                startCol1 = col1 || a.used
-                startCol2 = col2 || b.used
+	            startA = a && a.used && a
+	            startB = b && b.used && b
             }
             if (!in1 && a && last == a && a.colinear) {
                 checkedPairs.add(new NLA.Pair(a.edge.getCanon(), face2))
@@ -1360,7 +1357,6 @@ class RotationFace extends Face {
         }
 
         /**
-         *
          * @param newEdge generated segment
          * @param col1 if newEdge is colinear to an edge of this, the edge in question
          * @param col2 same for face2
@@ -1463,7 +1459,7 @@ class RotationFace extends Face {
                 function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
                     if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                         //if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
-                        //    addPair(a.edge.getCanon(), b.edge.getCanon())
+                            addPair(a.edge.getCanon(), b.edge.getCanon())
                             // ends on a, on colinear segment b bT != a.edge.bT &&
                             // b can be colinear, so edgeT == aT is possible
                             if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) {
@@ -1519,8 +1515,10 @@ class RotationFace extends Face {
             const normal1 = surface.normalAt(p), normal2 = surface2.normalAt(p), dp2 = normal1.cross(normal2)
             assert(surface.containsCurve(isCurve))
             assert(surface2.containsCurve(isCurve))
-            assert(dp2.dot(dp) > 0)
-            assert(dp2.isParallelTo(dp))
+	        if (!dp2.isZero()) {
+		        assert(dp2.dot(dp) > 0)
+		        assert(dp2.isParallelTo(dp))
+	        }
         }
         // get intersections of newCurve with other edges of face and face2
         const pss1 = faceEdgeISPsWithSurface(face, isCurves, face2.surface)
@@ -1552,8 +1550,8 @@ class RotationFace extends Face {
             }
             //assert(!in1 || !in2)
             let col1: IntersectionPointInfo, col2: IntersectionPointInfo
-            let i = 0, j = 0, last, segments = []
-            let startP = in1 && in2 && isCurve.at(isCurve.tMin), startDir, startT = isCurve.tMin, startA, startB, startCol1, startCol2
+            let i = 0, j = 0, last
+            let startP = in1 && in2 && isCurve.at(isCurve.tMin), startDir, startT = isCurve.tMin, startA, startB
             while (i < ps1.length || j < ps2.length) {
                 assert(i <= ps1.length)
                 assert(j <= ps2.length)
@@ -1561,9 +1559,8 @@ class RotationFace extends Face {
                 assert(a || b)
                 if (j == ps2.length || i < ps1.length && NLA.lt(a.t, b.t)) {
                     last = a
+	                in1 = !in1
 	                a.used = true
-                    in1 = !in1
-                    // ": col1" to remember the colinear segment, as segments are only handled once it ends (in1 false)
 	                in1 && (col1 = a.colinear && a)
                     i++
                 } else if (i == ps1.length || NLA.gt(a.t, b.t)) {
@@ -2703,21 +2700,43 @@ function fff(info: {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reve
 /**
  * Solves a quadratic system of equations of the form
  *      a * x + b * y = c
- *      x^2 + y^2 = 1
+ *      x² + y² = 1
  * This can be understood as the intersection of the unit circle with a line.
+ *      => y = (c - a x) / b
+ *      => x² + (c - a x)² / b² = 1
+ *      => x² b² + c² - 2 c a x + a² x² = b²
+ *      => (a² + b²) x² - 2 a c x + (c² - b²) = 0
  *
  * a * b + (b -c) * (b + c)
  */
 function intersectionUnitCircleLine(a: number, b: number, c: number): {x1: number, y1: number, x2: number, y2: number} {
-    assertNumbers(a, b, c)
-    // TODO: disambiguate on a < b
-    const term = sqrt(a * a + b * b - c * c)
-    return {
-        x1: (a * c + b * term) / (a * a + b * b),
-        x2: (a * c - b * term) / (a * a + b * b),
-        y1: (b * c - a * term) / (a * a + b * b),
-        y2: (b * c + a * term) / (a * a + b * b)
-    }
+	assertNumbers(a, b, c)
+	// TODO: disambiguate on a < b
+	const term = sqrt(a * a + b * b - c * c)
+	return {
+		x1: (a * c + b * term) / (a * a + b * b),
+		x2: (a * c - b * term) / (a * a + b * b),
+		y1: (b * c - a * term) / (a * a + b * b),
+		y2: (b * c + a * term) / (a * a + b * b)
+	}
+}
+function intersectionUnitCircleLine2(a: number, b: number, c: number): [number, number][] {
+	assertNumbers(a, b, c)
+	// TODO: disambiguate on a < b
+	// cf. pqFormula
+	const termSqr = snap0(a * a + b * b - c * c)
+	const term = sqrt(termSqr)
+	if (termSqr < 0) {
+		return []
+	} else if (termSqr == 0) {
+		return [    [   (a * c + b * term) / (a * a + b * b),
+				        (b * c - a * term) / (a * a + b * b)]]
+	} else {
+		return [    [   (a * c + b * term) / (a * a + b * b),
+						(b * c - a * term) / (a * a + b * b)],
+					[   (a * c - b * term) / (a * a + b * b),
+						(b * c + a * term) / (a * a + b * b)]]
+	}
 }
 function intersectionCircleLine(a: number, b: number, c: number, r: number): {x1: number, x2: number, y1: number, y2: number} {
     assertNumbers(a, b, c, r)
@@ -2791,7 +2810,13 @@ function followAlgorithm2 (implicitCurve, startPoint, endPoint, stepLength, star
         tangents.push(tangent)
         prevp = p
         p = curvePoint(implicitCurve, tangentEndPoint)
-    } while (i++ < 1000 && (i < 4 || prevp.distanceTo(endPoint) > 0.5 * stepLength) && boundsFunction(p.x, p.y))
+    } while (i++ < 1000 && (i < 4 || p.distanceTo(endPoint) > stepLength) && boundsFunction(p.x, p.y))
+	assert(i != 1000)
+	assert(boundsFunction(p.x, p.y))
+	const endPointTangent = new V3(-didy(endPoint.x, endPoint.y), didx(endPoint.x, endPoint.y), 0)
+	points.push(endPoint)
+	tangents.push(endPointTangent)
+
     //assert(points.length > 6)
     // TODO gleichmäßige Verteilung der Punkte
     return points

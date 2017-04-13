@@ -61,7 +61,6 @@
 			assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
 			const isInfos = curve.isInfosWithBezier(curve, 0, 1, 0, 1)
 			assert.equal(isInfos.length, 1)
-			console.log(isInfos.map(SCE))
 			isInfos.forEach(info => {
 				let p = info.p
 				assert.ok(NLA.eq0(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)

@@ -37,10 +37,15 @@ class EllipsoidSurface extends Surface {
 			&& this.matrix.equals(obj.matrix)
 	}
 
+
+	isCurvesWithPlane(plane: P3) {
+		const planeLC = plane.transform(this.inverseMatrix)
+		return EllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
+	}
+
     isCurvesWithSurface(surface: Surface) {
         if (surface instanceof PlaneSurface) {
-            const localPlane = surface.plane.transform(this.inverseMatrix)
-            return EllipsoidSurface.unitISCurvesWithPlane(localPlane).map(c => c.transform(this.matrix))
+        	return this.isCurvesWithPlane(surface.plane)
         } else if (surface instanceof CylinderSurface) {
             if (surface.dir1.isParallelTo(this.dir1)) {
                 const ellipseProjected = surface.baseCurve.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
@@ -297,16 +302,17 @@ class EllipsoidSurface extends Surface {
      * unit sphere: x² + y² + z² = 1
      * plane: normal DOT p = w
      */
-    static unitISCurvesWithPlane(plane:P3):EllipseCurve[] {
-        let distPlaneCenter = Math.abs(plane.w)
+    static unitISCurvesWithPlane(plane: P3): EllipseCurve[] {
+	    assertInst(P3, plane)
+	    let distPlaneCenter = Math.abs(plane.w)
         if (NLA.lt(distPlaneCenter, 1)) {
             // result is a circle
             // radius of circle: imagine right angled triangle (origin -> center of intersection circle -> point on intersection circle)
             // pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 - distPlaneCenter²)
-            let isCircleRadius = Math.sqrt(1 - distPlaneCenter * distPlaneCenter)
-            let center = plane.anchor
-            let f1 = plane.normal.getPerpendicular().toLength(isCircleRadius)
-            let f2 = plane.normal.cross(f1)
+            const isCircleRadius = Math.sqrt(1 - distPlaneCenter * distPlaneCenter)
+            const center = plane.anchor
+            const f1 = plane.normal.getPerpendicular().toLength(isCircleRadius)
+            const f2 = plane.normal.cross(f1)
             return [new EllipseCurve(plane.anchor, f1, f2)]
         } else {
             return []

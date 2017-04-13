@@ -479,7 +479,7 @@ class StraightEdge extends Edge {
 
 
 	static throughPoints(a: V3, b: V3, name?: string) {
-		return new StraightEdge(L3.throughPoints(a, b), a, b, 0, b.minus(a).length(), null, name)
+		return new StraightEdge(L3.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), null, name)
 	}
 
 	/**

@@ -18,7 +18,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	toSource() {
-		return `new SemiCylinderSurface(${this.baseCurve.toSource()}, ${this.dir1.toSource()})`
+		return `new SemiCylinderSurface(${this.baseCurve.toSource()}, ${this.dir1.toSource()}, ${this.tMin}, ${this.tMax})`
 	}
 
 	normalAt(p: V3): V3 {
@@ -75,16 +75,19 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 			return this.containsLine(curve)
 		} else if (curve instanceof SemiEllipseCurve) {
 			return this.containsSemiEllipse(curve)
+		} else if (curve instanceof PICurve) {
+			return curve.points.every(p => this.containsPoint(p))
 		} else {
 			assert(false)
 		}
 	}
 
 	transform(m4) {
+		const newDir = m4.transformVector(this.dir1)
 		return new SemiCylinderSurface(
 			this.baseCurve.transform(m4),
-			m4.transformVector(this.dir1).toLength(m4.isMirroring() ? -1 : 1),
-			this.tMin, this.tMax) as this
+			newDir.toLength(m4.isMirroring() ? -1 : 1),
+			this.tMin * newDir.length(), this.tMax * newDir.length()) as this
 	}
 
 	flipped() {
@@ -201,7 +204,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
 	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
 	 */
-	zDirVolume(edges: Edge[]): {volume: number} {
+	zDirVolume(edges: Edge[]): {volume: number, centroid: any} {
 		if (V3.Z.cross(this.dir1).isZero()) return {volume: 0}
 		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
 		const scalingVector = this.dir1.cross(V3.Z).unit()
@@ -247,9 +250,9 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir1)
 	}
 
-	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z)
+	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, 0, 1)
 }
-SemiCylinderSurface.prototype.uStep = TAU  / 128
+SemiCylinderSurface.prototype.uStep = TAU  / 32
 SemiCylinderSurface.prototype.vStep = 256
 SemiCylinderSurface.prototype.sMin = 0
 SemiCylinderSurface.prototype.sMax = PI

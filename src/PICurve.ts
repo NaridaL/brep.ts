@@ -14,6 +14,7 @@ class PICurve extends Curve {
 
 	constructor(parametricSurface: Surface, implicitSurface: Surface, startPoint: V3, endPoint?: V3, dir: number = 1) {
 		super(0, 1)
+		assert(!startPoint.like(endPoint))
 		assert(parametricSurface.parametricFunction, 'parametricSurface.parametricFunction')
 		assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
 		this.parametricSurface = parametricSurface

@@ -46,7 +46,15 @@ class SemiEllipsoidSurface extends Surface {
 
 	static unitArea(contour: Edge[]) {
         const totalArea = contour.map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof PICurve) {
+        	if (edge.curve instanceof PICurve) {
+        		const points = edge.curve.calcSegmentPoints(edge.aT, edge.bT, edge.a, edge.b, edge.aT > edge.bT, true)
+		        let sum = 0
+		        for (let i = 0; i < points.length - 1; i++) {
+        			const p = points[i], ppp = points[i + 1]
+			        sum += (abs(p.angleXY()) + abs(ppp.angleXY())) / 2 * (ppp.z - p.z)
+		        }
+				return sum
+	        } else if (edge.curve instanceof SemiEllipseCurve) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
                     const angleXY = abs(at.angleXY())
@@ -71,40 +79,93 @@ class SemiEllipsoidSurface extends Surface {
         return `new SemiEllipsoidSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
     }
 
-    isCurvesWithSurface(surface: Surface) {
-        function iii(ists, surface, curve, min, max) {
-            ists.sort((a, b) => a - b)
-            if (!eq(ists[0], min)) {
-                ists.splice(0, 0, min)
-            }
-            if (!eq(ists.last(), max)) {
-                ists.push(max)
-            }
-            const result = []
-            for (let i = 0; i < ists.length - 1; i++) {
-                const aT = ists[i], bT = ists[i + 1]
-                const a = curve.at(aT), b = curve.at(bT)
-                const aNormal = surface.normalAt(a), bNormal = surface.normalAt(b)
-                const aInside = dotCurve2(curve, aT, aNormal, 1) < 0
-                const bInside = dotCurve2(curve, bT, bNormal, -1) < 0
-                //assert(bInside == aInside)
-                if (surface.containsPoint(a) ? aInside : bInside) {
-                    result.push([aT, ists[i + 1]])
-                }
-            }
-            return result
-        }
-        function getIntervals(ts: number[], min, max): [number, number][] {
-            ts.sort((a, b) => a - b)
-            if (!eq(ts[0], min)) {
-                ts.splice(0, 0, min)
-            }
-            if (!eq(ts.last(), max)) {
-                ts.push(max)
-            }
-            return NLA.arrayFromFunction(ts.length - 1, i => [ts[i], ts[i + 1]])
-        }
+	isCurvesWithPCS(surface: ProjectedCurveSurface): Curve[] {
+		function iii(ists, surface, curve, min, max) {
+			ists.sort((a, b) => a - b)
+			if (!eq(ists[0], min)) {
+				ists.splice(0, 0, min)
+			}
+			if (!eq(ists.last(), max)) {
+				ists.push(max)
+			}
+			const result = []
+			for (let i = 0; i < ists.length - 1; i++) {
+				const aT = ists[i], bT = ists[i + 1]
+				const a = curve.at(aT), b = curve.at(bT)
+				const aNormal = surface.normalAt(a), bNormal = surface.normalAt(b)
+				const aInside = dotCurve2(curve, aT, aNormal, 1) < 0
+				const bInside = dotCurve2(curve, bT, bNormal, -1) < 0
+				//assert(bInside == aInside)
+				if (surface.containsPoint(a) ? aInside : bInside) {
+					result.push([aT, ists[i + 1]])
+				}
+			}
+			return result
+		}
+		function getIntervals(ts: number[], min, max): [number, number][] {
+			ts.sort((a, b) => a - b)
+			if (!eq(ts[0], min)) {
+				ts.splice(0, 0, min)
+			}
+			if (!eq(ts.last(), max)) {
+				ts.push(max)
+			}
+			return NLA.arrayFromFunction(ts.length - 1, i => [ts[i], ts[i + 1]])
+		}
 
+		//return []
+		const surfaceLC = surface.transform(this.inverseMatrix)
+		const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir1, 0))
+		const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
+		const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax)
+			.filter(([a, b]) => baseCurveLC.at((a + b) / 2).length() < 1)
+		const projectedCurves = [0, 1].map(id => {
+			return t => {
+				const atSqr = NLA.snap(baseCurveLC.at(t).squared(), 1)
+				const lineISTs = /* +- */ sqrt(1 - atSqr)
+				//assert(!isNaN(lineISTs))
+				return eq0(lineISTs) ? baseCurveLC.at(t) : baseCurveLC.at(t).plus(surfaceLC.dir1.times(sign(id - 0.5) * lineISTs))
+			}
+		})
+		const dProjectedCurves = [0, 1].map(id => {
+			return t => {
+				// d/dt sqrt(1 - baseCurveLC.at(t).squared())
+				// = -1/2 * 1/sqrt(1 - baseCurveLC.at(t).squared()) * -2*baseCurveLC.at(t) * baseCurveLC.tangentAt(t)
+				const atSqr = NLA.snap(baseCurveLC.at(t).squared(), 1)
+				const lineISTs = /* +- */ baseCurveLC.at(t).times(-1/sqrt(1 - atSqr)).dot(baseCurveLC.tangentAt(t))
+				//assert(!isNaN(lineISTs))
+				return baseCurveLC.tangentAt(t).plus(surfaceLC.dir1.times(sign(id - 0.5) * lineISTs))
+			}
+		})
+		//const f2 = t => sqrt(1 - baseCurveLC.at(t).squared())
+		//const df2 = t => baseCurveLC.at(t).times(-1 / sqrt(1 - baseCurveLC.at(t).squared())).dot(baseCurveLC.tangentAt(t))
+		//checkDerivate(f2, df2, 0.31, 0.60)
+		const curves = []
+		for (const [aT, bT] of insideIntervals) {
+			//const aLine = new L3(baseCurveLC.at(aT), surfaceLC.dir1)
+			//const a = EllipsoidSurface.UNIT.isTsForLine(aLine).map(t => aLine.at(t))
+			//const bLine = new L3(baseCurveLC.at(bT), surfaceLC.dir1)
+			//const b = EllipsoidSurface.UNIT.isTsForLine(bLine).map(t => bLine.at(t))
+			for (const i of [0, 1]) {
+				const f = t => projectedCurves[i](t).y
+				const df = t => dProjectedCurves[i](t).y
+				checkDerivate(f, df, aT + 0.1, bT - 0.1)
+				const tsAtY0 = getRoots(f, aT + NLA_PRECISION, bT - NLA_PRECISION, 1 / (1 << 11), df)
+				const ii2 = getIntervals(tsAtY0, aT, bT).filter(([a, b]) => f((a + b) / 2) > 0)
+				for (const [aT2, bT2] of ii2) {
+					let aP = projectedCurves[i](aT2), bP = projectedCurves[i](bT2)
+					0 === i && ([aP, bP] = [bP, aP])
+					assert(EllipsoidSurface.UNIT.containsPoint(aP))
+					assert(EllipsoidSurface.UNIT.containsPoint(bP))
+					curves.push(new PICurve(surface, this, this.matrix.transformPoint(aP), this.matrix.transformPoint(bP), -1))
+				}
+			}
+		}
+		const f = (t) => baseCurveLC.at(t).length() - 1
+		const fRoots = null
+		return curves
+	}
+	isCurvesWithSurface(surface: Surface): Curve[] {
 
 
         if (surface instanceof PlaneSurface) {
@@ -113,60 +174,11 @@ class SemiEllipsoidSurface extends Surface {
             return this.isCurvesWithSemiCylinderSurface(surface)
         } else if (surface instanceof SemiEllipsoidSurface) {
             const surfaceLC = surface.transform(this.inverseMatrix)
-            return SemiEllipsoidSurface.unitISCurvesWithEllipsoidSurface(surfaceLC)
-                .map(c => c.transform(this.matrix))
+	        const curves = SemiEllipsoidSurface.unitISCurvesWithEllipsoidSurface(surfaceLC)
+		        .map(c => c.transform(this.matrix))
+	        return -1 == surface.normalDir ? curves.map(c => c.reversed()) : curves
         } else if (surface instanceof ProjectedCurveSurface) {
-            //return []
-            const surfaceLC = surface.transform(this.inverseMatrix)
-            const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir1, 0))
-            const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
-            const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax)
-                .filter(([a, b]) => baseCurveLC.at((a + b) / 2).length() < 1)
-            const projectedCurves = [0, 1].map(id => {
-                return t => {
-                    const atSqr = NLA.snap(baseCurveLC.at(t).squared(), 1)
-                    const lineISTs = /* +- */ sqrt(1 - atSqr)
-                    //assert(!isNaN(lineISTs))
-                    return eq0(lineISTs) ? baseCurveLC.at(t) : baseCurveLC.at(t).plus(surfaceLC.dir1.times(sign(id - 0.5) * lineISTs))
-                }
-            })
-            const dProjectedCurves = [0, 1].map(id => {
-                return t => {
-                    // d/dt sqrt(1 - baseCurveLC.at(t).squared())
-                    // = -1/2 * 1/sqrt(1 - baseCurveLC.at(t).squared()) * -2*baseCurveLC.at(t) * baseCurveLC.tangentAt(t)
-                    const atSqr = NLA.snap(baseCurveLC.at(t).squared(), 1)
-                    const lineISTs = /* +- */ baseCurveLC.at(t).times(-1/sqrt(1 - atSqr)).dot(baseCurveLC.tangentAt(t))
-                    //assert(!isNaN(lineISTs))
-                    return baseCurveLC.tangentAt(t).plus(surfaceLC.dir1.times(sign(id - 0.5) * lineISTs))
-                }
-            })
-            //const f2 = t => sqrt(1 - baseCurveLC.at(t).squared())
-            //const df2 = t => baseCurveLC.at(t).times(-1 / sqrt(1 - baseCurveLC.at(t).squared())).dot(baseCurveLC.tangentAt(t))
-            //checkDerivate(f2, df2, 0.31, 0.60)
-            const curves = []
-            for (const [aT, bT] of insideIntervals) {
-                //const aLine = new L3(baseCurveLC.at(aT), surfaceLC.dir1)
-                //const a = EllipsoidSurface.UNIT.isTsForLine(aLine).map(t => aLine.at(t))
-                //const bLine = new L3(baseCurveLC.at(bT), surfaceLC.dir1)
-                //const b = EllipsoidSurface.UNIT.isTsForLine(bLine).map(t => bLine.at(t))
-                for (const i of [0, 1]) {
-                    const f = t => projectedCurves[i](t).y
-                    const df = t => dProjectedCurves[i](t).y
-                    checkDerivate(f, df, aT + 0.1, bT - 0.1)
-                    const tsAtY0 = getRoots(f, aT + NLA_PRECISION, bT - NLA_PRECISION, 1 / (1 << 11), df)
-                    const ii2 = getIntervals(tsAtY0, aT, bT).filter(([a, b]) => f((a + b) / 2) > 0)
-                    for (const [aT2, bT2] of ii2) {
-                        let aP = projectedCurves[i](aT2), bP = projectedCurves[i](bT2)
-                        0 === i && ([aP, bP] = [bP, aP])
-                        assert(EllipsoidSurface.UNIT.containsPoint(aP))
-                        assert(EllipsoidSurface.UNIT.containsPoint(bP))
-                        curves.push(new PICurve(surface, this, this.matrix.transformPoint(aP), this.matrix.transformPoint(bP), -1))
-                    }
-                }
-            }
-            const f = (t) => baseCurveLC.at(t).length() - 1
-            const fRoots = null
-            return curves
+        	return this.isCurvesWithPCS(surface)
         } else {
             assert(false)
         }
@@ -181,18 +193,19 @@ class SemiEllipsoidSurface extends Surface {
         if (new L3(surface.baseCurve.center, surface.dir1).containsPoint(this.center)) {
             assert(this.isSphere())
             const ellipseProjected = surface.baseCurve.transform(M4.projection(surface.baseCurve.getPlane(), surface.dir1))
-            assert(ellipseProjected.isCircular())
-            const thisRadius = this.f1.length()
-            const surfaceRadius = ellipseProjected.f1.length()
-            // sphereRadius² = distanceISFromCenter² + isRadius²
-            if (eq(thisRadius, surfaceRadius)) {
-                // return
-            } else if (surfaceRadius < thisRadius) {
+            if (ellipseProjected.isCircular()) {
+	            const thisRadius = this.f1.length()
+	            const surfaceRadius = ellipseProjected.f1.length()
+	            // sphereRadius² = distanceISFromCenter² + isRadius²
+	            if (eq(thisRadius, surfaceRadius)) {
+		            // return
+	            } else if (surfaceRadius < thisRadius) {
 
+	            }
+	            assert(false)
             }
-        } else {
-            assert(false)
         }
+        return this.isCurvesWithPCS(surface)
     }
 
     isTsForLine(line) {
@@ -437,7 +450,7 @@ class SemiEllipsoidSurface extends Surface {
         }
     }
 
-    static unitISCurvesWithEllipsoidSurface(surface: SemiEllipsoidSurface) {
+    static unitISCurvesWithEllipsoidSurface(surface: SemiEllipsoidSurface): Curve[] {
         if (surface.isSphere()) {
             const surfaceRadius = surface.f1.length()
             const surfaceCenterDist = surface.center.length()
@@ -449,12 +462,13 @@ class SemiEllipsoidSurface extends Surface {
                 // the distance from the origin to the lot point is the distance to the intersection plane
                 function heron(a, b, c) {
                     const p = (a + b + c) / 2
-                    return (p * (p - a) * (p - b) * (p - c)) ** 0.5
+                    return sqrt(p * (p - a) * (p - b) * (p - c))
                 }
                 const triangleArea = heron(1, surfaceRadius, surfaceCenterDist)
                 const radius = triangleArea * 2 / surfaceCenterDist
-                const isCurvesCenterDist = (1 - radius ** 2) ** 0.5
-                return SemiEllipsoidSurface.unitISCurvesWithPlane(new P3(surface.center.unit(), isCurvesCenterDist))
+                const isCurvesCenterDist = sign(1 + surfaceCenterDist ** 2 - surfaceRadius ** 2) * sqrt(1 - radius ** 2)
+	            const plane = new P3(surface.center.unit(), isCurvesCenterDist)
+                return SemiEllipsoidSurface.unitISCurvesWithPlane(plane.flipped())
             }
         }
         assertNever()

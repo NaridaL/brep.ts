@@ -19,9 +19,23 @@ QUnit.assert.fuzzyEquals = function(actual, expected, message) {
 
 function b2Equal(test, a, b, actual, expected) {
 
-    linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'`, 'expected')
-    linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}`, 'actual')
-    test.B2equals(actual, expected)
+	linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'`, 'expected')
+	linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}`, 'actual')
+	test.B2equals(actual, expected)
+}
+function b2EqualAnd(test, a, b, expected) {
+	let actual
+	try {
+		actual = a.and(b)
+	} finally {
+		if (actual) {
+			const abWidth = a.getAABB().addAABB(b.getAABB()).size().x
+			linkB3(test, {a, b, c: actual.translate(abWidth + 1), d: expected.translate(2 * (abWidth + 1))})
+			test.B2equals(actual, expected)
+		} else {
+			linkB3(test, {a, b})
+		}
+	}
 }
 
 
@@ -46,21 +60,34 @@ function linkB3(assert: Assert, values, msg = 'view') {
 	const link = Object.getOwnPropertyNames(values).map(name => name + '=' + values[name].toSource()).join('&')
 	linkB2(assert, link, msg)
 }
-function testISCurves(assert: Assert, surface1: Surface, surface2: Surface, curveCount: int) {
-	const isCurves = surface1.isCurvesWithSurface(surface2)
-	linkB2(assert, `meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]&edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
-	assert.equal(isCurves.length, curveCount, 'number of curves = ' +  curveCount)
-	for (const curve of isCurves) {
-		assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
-		assert.ok(surface2.containsCurve(curve), 'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str)
-		const t = curve.tMin || 0, p = curve.at(t), dp = curve.tangentAt(t)
-		assert.ok(surface1.containsPoint(p), 'surface1.containsPoint(curve.at(curve.sMin))')
-		assert.ok(surface2.containsPoint(p), 'surface2.containsPoint(curve.at(curve.tMax))')
+function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface | P3, curveCount: int) {
+	surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
+	surface2 instanceof P3 && (surface2 = new PlaneSurface(surface2))
+	let isCurves
+	try {
+		isCurves = surface1.isCurvesWithSurface(surface2)
+	} finally {
+		if (isCurves) {
+			linkB2(assert, `meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]&edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
 
-		const pN1 = surface1.normalAt(p)
-		const pN2 = surface2.normalAt(p)
-		assert.ok(pN1.cross(pN2).isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
-		assert.ok(pN1.cross(pN2).dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
+			assert.equal(isCurves.length, curveCount, 'number of curves = ' +  curveCount)
+			for (const curve of isCurves) {
+				assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
+				assert.ok(surface2.containsCurve(curve), 'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str)
+				const t = curve.tMin || 0, p = curve.at(t), dp = curve.tangentAt(t)
+				assert.ok(surface1.containsPoint(p), 'surface1.containsPoint(curve.at(curve.sMin))')
+				assert.ok(surface2.containsPoint(p), 'surface2.containsPoint(curve.at(curve.tMax))')
+
+				const pN1 = surface1.normalAt(p)
+				const pN2 = surface2.normalAt(p)
+				const expectedTangent = pN1.cross(pN2)
+				// expectedTangent can be zero if the surfaces just touch and dont cross each other
+				!expectedTangent.isZero() && assert.ok(expectedTangent.isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
+				!expectedTangent.isZero() && assert.ok(expectedTangent.dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
+			}
+		} else {
+			linkB2(assert, `meshes=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
+		}
 	}
 }
 function testZDirVolume(assert: Assert, face) {
@@ -133,7 +160,7 @@ function testParametricSurface(ass: Assert, ps: Surface) {
 }
 function testCurveISInfos(assert: Assert, c1, c2, count, f = 'isInfosWithCurve') {
 	const intersections = c1[f](c2).map(info => info.p)
-	linkB3(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections})
+	linkB3(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections}, `view ${c1} ${c2}`)
 	assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
 	intersections.forEach((is, i) => {
 		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
@@ -146,17 +173,17 @@ function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: i
 	const ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
 	const points = ists.map(t => curve.at(t))
 	linkB2(assert, `meshes=[${surface}.toMesh()]&edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}]&points=${points.sce}`)
-	assert.equal(ists.length, tCount, 'number of curves = ' +  tCount)
+	assert.equal(ists.length, tCount, 'number of isps = ' +  tCount)
 	for (const t of ists) {
 		const p = curve.at(t)
 		assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
 			+ ' t: ' + t
-			+ ' dist: ' + surface.implicitFunction()(p))
+			+ (surface.implicitFunction ? ' dist: ' + surface.implicitFunction()(p) : ''))
 	}
 }
 
 function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
-	!surface.edgeLoopCCW(loop) && (loop = Edge.reverseLoop(loop))
+	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reverseLoop(loop)
 	linkB2(assert, `meshes=[${Face.create(surface, loop).sce}.toMesh()]&points=[${p.sce}]`)
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }

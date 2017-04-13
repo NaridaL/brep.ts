@@ -23,7 +23,7 @@ type int = number
 type FloatArray = Float32Array | Float64Array | number[]
 
 /** @define {boolean} */
-const NLA_DEBUG = false
+const NLA_DEBUG = true
 const NLA_PRECISION = 1 / (1 << 26)
 console.log("NLA_PRECISION", NLA_PRECISION)
 console.log("NLA_DEBUG", NLA_DEBUG)
@@ -41,9 +41,9 @@ if (!Object.prototype.toSource) {
 }
 
 interface Object {
-	sce:string
-	str:string
-	toSource():string
+	sce: string
+	str: string
+	toSource(): string
 }
 
 let oldConsole = undefined
@@ -270,7 +270,7 @@ namespace NLA {
 		return Array.from(map.values())
 	}
 
-	export function fuzzyUniquesF<T>(vals:T[], f: (o:T) => number) {
+	export function fuzzyUniquesF<T>(vals: T[], f: (o: T) => number): T[] {
 		let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
 		let map = new Map()
 		for (let i = 0; i < vals.length; i++) {
@@ -975,9 +975,8 @@ function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps: in
 	return x
 }
 
-function newtonIterate1d(f: (x: number) => number, xStart: number, steps?: number, EPSILON?: number): number {
-	steps = steps || 4
-	EPSILON = EPSILON || 1e-8
+function newtonIterate1d(
+	f: (x: number) => number, xStart: number, steps: number = 8, EPSILON: number = 1e-8): number {
 
 	let x = xStart
 
@@ -989,14 +988,45 @@ function newtonIterate1d(f: (x: number) => number, xStart: number, steps?: numbe
 	}
 	return x
 }
-function newtonIterateWithDerivative(f: (x: number) => number, xStart: number, steps: number, df: (x: number)=>number) {
-	steps = steps || 4
+function newtonIterateWithDerivative(f: (x: number) => number, xStart: number, steps: number = 4, df: (x: number)=>number) {
 	let x = xStart
 	for (let i = 0; i < steps; i++) {
 		let fx = f(x)
 		let dfdx = df(x)
-		//console.log("fx / dfdx", fx / dfdx)
+		if (isNaN(fx) || isNaN(dfdx)) {
+			console.log()
+			//console.log("fx / dfdx", fx / dfdx)
+		}
 		x = x - fx / dfdx
+		if (isNaN(fx)) {
+			console.log()
+			//console.log("fx / dfdx", fx / dfdx)
+		}
+	}
+	return x
+}
+function newtonIterateSmart(
+	f: (x: number) => number,
+	xStart: number,
+	steps: number = 4,
+	df: (x: number)=>number,
+	mindf = 1e-6) {
+	let x = xStart
+	for (let i = 0; i < steps; i++) {
+		let fx = f(x)
+		let dfdx = df(x)
+		if (abs(dfdx) < mindf && abs(fx) < mindf) {
+			return newtonIterate1d(df, x)
+		}
+		if (isNaN(fx) || isNaN(dfdx)) {
+			console.log()
+			//console.log("fx / dfdx", fx / dfdx)
+		}
+		x = x - fx / dfdx
+		if (isNaN(fx)) {
+			console.log()
+			//console.log("fx / dfdx", fx / dfdx)
+		}
 	}
 	return x
 }

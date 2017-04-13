@@ -76,7 +76,6 @@ registerTests({
 
         a = a.rotateZ(30 * DEG)
         const m = M4.rotationZ(30 * DEG)
-        console.log(a.toString())
         assert.ok(a.containsPoint(m.transformPoint(V(5, 5, 0))))
         assert.notOk(a.containsPoint(m.transformPoint(V(-5, 5, 0))))
 
@@ -147,7 +146,6 @@ registerTests({
     'splitsVolumeEnclosingFaces 3'(assert) {
         const brep = B2T.box(5, 5, 5).flipped()
         brep.buildAdjacencies()
-        console.log(brep.sce)
 
         const edge = (a, b) => brep.faces.map(face => face.getAllEdges()).concatenated().find(edge => edge.a.like(a) && edge.b.like(b)).getCanon()
         assert.equal(splitsVolumeEnclosingFaces(brep, edge(V(0, 5, 0), V(0, 0, 0)), V(0, 0, -1), V(1, 0, 0)), INSIDE)
@@ -226,7 +224,6 @@ registerTests({
          new P3(V(2.766775686256173e-11, 9.90075577448337e-10, 1), -4.999999990964091),
          true, true)
          assert.deepEqual(result, [])*/
-        console.log(brep.faces[2].toSource())
         let line = L3.X.translate(0, 0, -1)
         let result = planeFaceEdgeISPsWithPlane(brep.faces[2], L3.Y.translate(0, 0, -1), P3.XY.translate(0, 0, -1)).map(is => is.p)
         assert.V3ArraysLike(result, [V(0, 0, -1), V(0, 10, -1)])
@@ -236,7 +233,7 @@ registerTests({
         assert.V3ArraysLike(result, [V(0, 0, 6), V(0, 10, 6)])
     },
 
-    'B2.prototype.minus B2T.box(5, 5, 5).minus(B2T.box(1, 1, 6))'(assert) {
+    'B2T.box(5, 5, 5) - B2T.box(1, 1, 6)'(assert) {
         const a = B2T.box(5, 5, 5, 'a')
         const b = B2T.box(1, 1, 6, 'b')
         const result = new B2([
@@ -286,7 +283,8 @@ registerTests({
                 new StraightEdge(new L3(V(1, 0, 0), V(0, 0, -1)), V(1, 0, 0), V(1, 0, 5), 0, -5)])], false)
         b2Equal(assert, a, b, a.minus(b), result)
     },
-    'B2.prototype.minus B2T.box(5, 5, 5).minus(B2T.box(1, 1, 5))'(assert) {
+
+    'B2T.box(5, 5, 5) - B2T.box(1, 1, 5)'(assert) {
         const a = B2T.box(5, 5, 5)
         const b = B2T.box(1, 1, 5)
         const result = new B2([
@@ -1524,6 +1522,20 @@ registerTests({
 		b2Equal(assert, d, c, d.and(c), result)
 	},
 
+	'B2T.sphere().translate(1,2,1.4) - B2T.sphere(3)'(assert) {
+		const a = B2T.sphere()
+		const b = B2T.cylinder(0.05, 4).scale(10,1,1).translate(0.5,0,-2).flipped()
+		const result = B2.EMPTY
+		b2EqualAnd(assert, a, b, result)
+	},
+
+	'B2T.box() - B2T.cylinder(0.2,2).translate(0.5,0.2)'(assert) {
+		const a = B2T.box()
+		const b = B2T.cylinder(0.2,2).translate(0.5,0.2).flipped()
+		const result = B2.EMPTY
+		b2EqualAnd(assert, a, b, result)
+	},
+
 	async 'B2T.sphere() - "a"'(assert) {
 		const a = B2T.sphere()
 		const b = B2T.text('a', 64, 64, await B2T.loadFont('fonts/FiraSansMedium.woff')).scale(0.5/32).translate(-0.25,-0.25,1.2).flipped()
@@ -1682,7 +1694,7 @@ registerTests({
 				new StraightEdge(new L3(V(0.047968750000000004, 0.010000000000000009, 0.19999999999999996), V(1, 0, 0)), V(0.047968750000000004, 0.010000000000000009, 0.19999999999999996), V(0.11093750000000002, 0.010000000000000009, 0.19999999999999996), 0, 0.06296875000000002),
 				new StraightEdge(new L3(V(0.11093750000000002, 0.010000000000000009, 0.19999999999999996), V(0, -1, 0)), V(0.11093750000000002, 0.010000000000000009, 0.19999999999999996), V(0.11093750000000002, -0.12, 0.19999999999999996), 0, 0.13),
 				new PCurveEdge(new BezierCurve(V(0.11093750000000002, -0.12, 0.19999999999999996), V(0.0809375, -0.16593750000000002, 0.19999999999999996), V(0.040937500000000016, -0.19296875, 0.19999999999999996), V(-0.009062500000000001, -0.19296875, 0.19999999999999996), 0, 1), V(0.11093750000000002, -0.12, 0.19999999999999996), V(-0.009062500000000001, -0.19296875, 0.19999999999999996), 0, 1, null, V(-0.09000000000000008, -0.1378125, 0), V(-0.15000000000000005, 0, 0))]])], undefined)
-		b2Equal(assert, a, b, a.and(b), result)
+		b2EqualAnd(assert, a, b, result)
 	},
 
 	'B2T.cylinder(1,2) AND B2T.cylinder(1,2).rotateZ(PI/2).translate(0,0,1)'(assert) {

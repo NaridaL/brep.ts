@@ -74,7 +74,7 @@ class ProjectedCurveSurface extends Surface {
 	}
 
 
-    toMesh(tStart = this.sMin, tEnd = this.sMax, zStart = this.tMin, zEnd = this.tMax, count = 128) {
+    toMesh(tStart = this.sMin, tEnd = this.sMax, zStart = this.tMin, zEnd = this.tMax, count = 32) {
 
         const tInterval = tEnd - tStart, tStep = tInterval / (count - 1)
         const baseVertices =
@@ -98,10 +98,6 @@ class ProjectedCurveSurface extends Surface {
 
     parametricNormal() {
         return (t: number, z: number) => this.baseCurve.tangentAt(t).cross(this.dir1).unit()
-    }
-
-    implicitFunction() {
-
     }
 
     parametersValid(t: number, z: number) {
@@ -283,16 +279,16 @@ class ProjectedCurveSurface extends Surface {
 
     isTsForLine(line) {
         assertInst(L3, line)
-        let projPlane = new P3(this.dir1, 0)
-        let projDir = projPlane.projectedVector(line.dir1)
+        const projPlane = new P3(this.dir1, 0)
+        const projDir = projPlane.projectedVector(line.dir1)
         if (projDir.isZero()) {
             // line is parallel to this.dir
             return []
         }
-        let projAnchor = projPlane.projectedPoint(line.anchor)
-        let projBaseCurve = this.baseCurve.project(projPlane)
+        const projAnchor = projPlane.projectedPoint(line.anchor)
+        const projBaseCurve = this.baseCurve.project(projPlane)
         return projBaseCurve
-            .isInfosWithLine(projAnchor, projDir, this.sMin, this.sMax)
+            .isInfosWithLine(projAnchor, projDir, this.sMin, this.sMax, line.tMin, line.tMax)
             .map(info => info.tOther)
     }
 

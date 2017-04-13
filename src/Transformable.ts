@@ -53,7 +53,7 @@ abstract class Transformable extends NLA.BaseObject {
 		return this.transform(M4.eulerZXZ(alpha, beta, gamma))
 	}
 
-	project(plane): this {
+	project(plane: P3): this {
 		return this.transform(M4.projection(plane))
 	}
 
