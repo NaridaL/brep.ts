@@ -1,30 +1,21 @@
 /**
- * Surface normal is (t, z) => this.baseCurve.tangentAt(t) X this.dir1
+ * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir1
  * Choose dir1 appropriately to select surface orientation.
  */
 class ProjectedCurveSurface extends Surface {
-    readonly baseCurve: Curve
-	readonly dir1: V3
-	readonly sMin: number
-	readonly sMax: number
-	readonly tMin: number
-	readonly tMax: number
-
-
-    constructor(baseCurve, dir1, tMin = baseCurve.tMin, tMax = baseCurve.tMax, zMin = -Infinity, zMax = Infinity) {
+    constructor(readonly baseCurve: Curve,
+                readonly dir1: V3,
+                readonly sMin: number = baseCurve.tMin,
+                readonly sMax: number = baseCurve.tMax,
+                readonly tMin: number = -Infinity,
+                readonly tMax: number = Infinity) {
         super()
         assertInst(Curve, baseCurve)
         assertInst(V3, dir1)
-        assertNumbers(tMin, tMax)
-        assert(dir1.hasLength(1))
+	    assert(dir1.hasLength(1))
+        assertNumbers(sMin, sMax, tMin, tMax)
+        assert(sMin < sMax)
         assert(tMin < tMax)
-        assert(zMin < zMax)
-        this.baseCurve = baseCurve
-        this.dir1 = dir1
-        this.sMin = tMin
-        this.sMax = tMax
-        this.tMin = zMin
-        this.tMax = zMax
     }
 
     boundsFunction() {
@@ -41,10 +32,9 @@ class ProjectedCurveSurface extends Surface {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					return at.dot(this.dir1) * tangent.rejected1Length(this.dir1)
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a positive area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
-				console.log("edge", edge, val)
 				return val * sign
 			} else if (edge.curve instanceof L3) {
 				return 0
@@ -138,18 +128,18 @@ class ProjectedCurveSurface extends Surface {
 
     isCurvesWithPlane(plane): Curve[] {
         assertInst(P3, plane)
-        if (this.dir1.isPerpendicularTo(plane.normal)) {
+        if (this.dir1.isPerpendicularTo(plane.normal1)) {
 
             const ts = this.baseCurve.isTsWithPlane(plane)
             return ts.map(t => {
-                const l3dir = 0 < this.baseCurve.tangentAt(t).dot(plane.normal)
+                const l3dir = 0 < this.baseCurve.tangentAt(t).dot(plane.normal1)
                     ? this.dir1
                     : this.dir1.negated()
                 return new L3(this.baseCurve.at(t), l3dir)
             })
         } else {
             let projCurve = this.baseCurve.transform(M4.projection(plane, this.dir1))
-            if (this.dir1.dot(plane.normal) > 0) {
+            if (this.dir1.dot(plane.normal1) > 0) {
                 // we need to flip the ellipse so the tangent is correct
                 projCurve = projCurve.reversed()
             }
@@ -162,7 +152,7 @@ class ProjectedCurveSurface extends Surface {
             return this.isCurvesWithPlane(surface.plane)
         }
         if (surface instanceof ProjectedCurveSurface || surface instanceof SemiCylinderSurface) {
-            const dir1 = surface instanceof ProjectedCurveSurface ? surface.dir1 : surface.dir.unit()
+            const dir1 = surface.dir1
             if (this.dir1.isParallelTo(dir1)) {
                 const otherCurve = surface.baseCurve
                 const infos = this.baseCurve.isInfosWithCurve(otherCurve)
@@ -293,7 +283,7 @@ class ProjectedCurveSurface extends Surface {
     }
 
 
-    flipped() {
+    flipped(): ProjectedCurveSurface {
         return new ProjectedCurveSurface(this.baseCurve, this.dir1.negated(), this.sMin, this.sMax)
     }
 }

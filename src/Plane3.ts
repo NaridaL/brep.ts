@@ -6,94 +6,87 @@ import eq0 = NLA.eq0
 import lt = NLA.lt
 import le = NLA.le
 class P3 extends Transformable {
-	w: number
-	normal: V3
 
 	/**
 	 * Oriented plane, i.e. splits R^3 in half, with one half being "in front" of the plane.
 	 * Leads to multiple comparisons: isCoplanarToPlane returns if the plane occupies the same space,
 	 * like returns if the plane occupies the same space and has the same orientation
 	 *
-	 * Points x on the plane fulfill the equation: normal DOT x = w
+	 * Points x on the plane fulfill the equation: normal1 DOT x = w
 	 *
-	 * @param normal1 unit plane normal
+	 * @param normal1 unit plane normal1
 	 * @param w signed (rel to normal1) distance from the origin
-	 * @param prototype object to set as prototype of the new Plane3 object. Defaults to P3.prototype
 	 */
-	constructor(normal1: V3, w: number, prototype?) {
+	constructor(readonly normal1: V3, readonly w: number) {
 		super()
 		assertVectors(normal1)
 		assertNumbers(w)
-		assert(normal1.hasLength(1), "normal1.hasLength(1)" + normal1)
-		const p = Object.create(prototype || P3.prototype)
-		p.w = w
-		p.normal = normal1
-		return p
+		assert(normal1.hasLength(1), 'normal1.hasLength(1)' + normal1)
 	}
 
 	axisIntercepts(): V3 {
-		const w = this.w, n = this.normal
+		const w = this.w, n = this.normal1
 		return new V3(w / n.x, w / n.y, w / n.z)
 	}
 
 	get anchor(): V3 {
-		return this.normal.times(this.w)
+		return this.normal1.times(this.w)
 	}
 
-	isCoplanarToPlane(plane): boolean {
+	isCoplanarToPlane(plane: P3): boolean {
 		assertInst(P3, plane)
 		return this.like(plane) || this.likeFlipped(plane)
 	}
 
 	like(plane): boolean {
 		assertInst(P3, plane)
-		return eq(this.w, plane.w) && this.normal.like(plane.normal)
+		return eq(this.w, plane.w) && this.normal1.like(plane.normal1)
 	}
 
 	likeFlipped(plane): boolean {
 		assertInst(P3, plane)
-		return eq(this.w, -plane.w) && this.normal.like(plane.normal.negated())
+		return eq(this.w, -plane.w) && this.normal1.like(plane.normal1.negated())
 	}
 
 	/**
-	 * True iff plane.normal is equal to this.normal or it's negation.
+	 * True iff plane.normal1 is equal to this.normal1 or it's negation.
 	 *
 	 */
 	isParallelToPlane(plane: P3): boolean {
 		assertInst(P3, plane)
-		return eq(1, Math.abs(this.normal.dot(plane.normal)))
+		return eq(1, Math.abs(this.normal1.dot(plane.normal1)))
 	}
 
 	isParallelToLine(line: L3): boolean {
 		assertInst(L3, line)
-		return eq0(this.normal.dot(line.dir1))
+		return eq0(this.normal1.dot(line.dir1))
 	}
 
 	isPerpendicularToLine(line: L3): boolean {
 		assertInst(L3, line)
-		// this.normal || line.dir1
-		return eq(1, Math.abs(this.normal.dot(line.dir1)))
+		// this.normal1 || line.dir1
+		return eq(1, Math.abs(this.normal1.dot(line.dir1)))
 	}
 
 	isPerpendicularToPlane(plane) {
 		assertInst(P3, plane)
-		return eq0(this.normal.dot(plane.normal))
+		return eq0(this.normal1.dot(plane.normal1))
 	}
 
 	toString(roundFunction?) {
 		roundFunction = roundFunction || (v => v) //((v) => +v.toFixed(3))
-		return "new P3(" + this.normal.toString(roundFunction) + ", " + roundFunction(this.w) + ")"
+		return 'new P3(' + this.normal1.toString(roundFunction) + ', ' + roundFunction(this.w) + ')'
 	}
 
 	translated(offset) {
-		return new P3(this.normal, this.w + offset.dot(this.normal))
+		return new P3(this.normal1, this.w + offset.dot(this.normal1))
 	}
 
-	transform(m4): this {
+	transform(m4: M4): this {
 		const mirror = m4.isMirroring()
 		// get two vectors in the plane:
-		const u = this.normal.getPerpendicular()
-		const v = u.cross(this.normal)
+		const u = this.normal1.getPerpendicular()
+		const v = u.cross(this.normal1)
 		// get 3 points in the plane:
 		const p1 = m4.transformPoint(this.anchor),
 			p2 = m4.transformPoint(this.anchor.plus(v)),
@@ -113,7 +106,7 @@ class P3 extends Transformable {
 
 	containsPoint(x: V3): boolean {
 		assertVectors(x)
-		return eq(this.w, this.normal.dot(x))
+		return eq(this.w, this.normal1.dot(x))
 	}
 
 	containsLine(line: L3): boolean {
@@ -123,12 +116,12 @@ class P3 extends Transformable {
 
 	distanceToPointSigned(point) {
 		assertInst(V3, point)
-		return this.normal.dot(point) - this.w
+		return this.normal1.dot(point) - this.w
 	}
 
 	distanceToPoint(point) {
 		assertInst(V3, point)
-		return Math.abs(this.normal.dot(point) - this.w)
+		return Math.abs(this.normal1.dot(point) - this.w)
 	}
 
 	intersectionWithLine(line: L3): V3 {
@@ -145,16 +138,16 @@ class P3 extends Transformable {
 		 n2 * x = 0
 		 */
 		assertInst(P3, plane)
-		assert(!this.isParallelToPlane(plane), "!this.isParallelToPlane(plane)")
+		assert(!this.isParallelToPlane(plane), '!this.isParallelToPlane(plane)')
 		/*
-		 var n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).unit(), m = M4.forSys(n0, n1, n2)
+		 var n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit(), m = M4.forSys(n0, n1, n2)
 		 var x0 = this.anchor, x1 = plane.anchor, x2 = V3.O
 		 var p = n2.times(x2.dot(n2))
 		 .plus(n1.cross(n2).times(x0.dot(n0)))
 		 .plus(n2.cross(n0).times(x1.dot(n1)))
 		 .div(m.determinant())
 		 */
-		const n0 = this.normal, n1 = plane.normal, n2 = n0.cross(n1).unit()
+		const n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit()
 		const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0))
 		return new L3(p, n2)
 	}
@@ -165,29 +158,29 @@ class P3 extends Transformable {
 	 */
 	projectedPoint(x: V3): V3 {
 		// See http://math.stackexchange.com/questions/444968/project-a-point-in-3d-on-a-given-plane
-		// p = x - ((x - planeAnchor) * normal) * normal
-		return x.minus(this.normal.times(x.minus(this.anchor).dot(this.normal)))
+		// p = x - ((x - planeAnchor) * normal1) * normal1
+		return x.minus(this.normal1.times(x.minus(this.anchor).dot(this.normal1)))
 	}
 
 	projectedVector(x: V3): V3 {
-		// See V3.rejectedFrom. Simplified, as this.normal.length() == 1
-		return x.minus(this.normal.times(x.dot(this.normal)))
+		// See V3.rejectedFrom. Simplified, as this.normal1.length() == 1
+		return x.minus(this.normal1.times(x.dot(this.normal1)))
 	}
 
 	flipped(): P3 {
-		return new P3(this.normal.negated(), -this.w)
+		return new P3(this.normal1.negated(), -this.w)
 	}
 
-	static throughPoints(a: V3, b: V3, c: V3, prototype?): P3 {
+	static throughPoints(a: V3, b: V3, c: V3): P3 {
 		assertVectors(a, b, c)
 		const n1 = b.minus(a).cross(c.minus(a)).unit()
-		return new P3(n1, n1.dot(a), prototype)
+		return new P3(n1, n1.dot(a))
 	}
 
-	static normalOnAnchor(normal: V3, anchor: V3, prototype?): P3 {
+	static normalOnAnchor(normal: V3, anchor: V3): P3 {
 		assertVectors(normal, anchor)
 		const n1 = normal.unit()
-		return new P3(n1, n1.dot(anchor), prototype)
+		return new P3(n1, n1.dot(anchor))
 	}
 
 	/**
@@ -200,9 +193,9 @@ class P3 extends Transformable {
 		return new P3(normal.unit(), normal.length())
 	}
 
-	static forAnchorAndPlaneVectors(anchor: V3, v0: V3, v1: V3, prototype?): P3 {
+	static forAnchorAndPlaneVectors(anchor: V3, v0: V3, v1: V3): P3 {
 		assertVectors(anchor, v0, v1)
-		return P3.normalOnAnchor(v0.cross(v1), anchor, prototype)
+		return P3.normalOnAnchor(v0.cross(v1), anchor)
 	}
 
 
@@ -214,14 +207,14 @@ class P3 extends Transformable {
         if (curve instanceof L3) {
             return this.containsLine(curve)
         } else if (curve instanceof SemiEllipseCurve ||
-            curve instanceof SemiEllipseCurve ||
+            curve instanceof EllipseCurve ||
             curve instanceof HyperbolaCurve ||
             curve instanceof ParabolaCurve) {
-            return this.containsPoint(curve.center) && this.normal.isParallelTo(curve.normal)
+            return this.containsPoint(curve.center) && this.normal1.isParallelTo(curve.normal)
         } else if (curve instanceof BezierCurve) {
             return curve.points.every(p => this.containsPoint(p))
         } else {
-            throw new Error(curve)
+            throw new Error('' + curve)
         }
 
     }

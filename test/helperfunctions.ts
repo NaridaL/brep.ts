@@ -19,18 +19,19 @@ QUnit.assert.fuzzyEquals = function(actual, expected, message) {
 
 function b2Equal(test, a, b, actual, expected) {
 
-	linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource()}'`, 'expected')
-	linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource()}`, 'actual')
+	linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${expected.translate(20, 0, 0).toSource(false)}'`, 'expected')
+	linkB2(test, `a=${a.toSource()}&b=${b.toSource()}&c=${actual.translate(20, 0, 0).toSource(false)}`, 'actual')
 	test.B2equals(actual, expected)
 }
-function b2EqualAnd(test, a, b, expected) {
+function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
 	let actual
 	try {
 		actual = a.and(b)
 	} finally {
 		if (actual) {
 			const abWidth = a.getAABB().addAABB(b.getAABB()).size().x
-			linkB3(test, {a, b, c: actual.translate(abWidth + 1), d: expected.translate(2 * (abWidth + 1))})
+			linkB3(test, {
+				a, b, c: actual.translate(abWidth + 1).toSource(false), d: expected.translate(2 * (abWidth + 1)).toSource(false)})
 			test.B2equals(actual, expected)
 		} else {
 			linkB3(test, {a, b})
@@ -54,10 +55,13 @@ function linkB2(assert: Assert, link, msg = 'view') {
 	//	const f = parseFloat(numberStr), rd = NLA.round10(f, -7)
 	//	return eq(f, rd) ? rd : f
 	//})
-	assert.ok(true, `<html><a href='brep2.html?${link}'>${msg}</a>`)
+	assert.ok(true, `<html><a href='viewer.html?${link}'>${msg}</a>`)
 }
 function linkB3(assert: Assert, values, msg = 'view') {
-	const link = Object.getOwnPropertyNames(values).map(name => name + '=' + values[name].toSource()).join('&')
+	const link = Object.getOwnPropertyNames(values).map(name => {
+		const val = values[name]
+		return name + '=' + (typeof val == 'string' ? val : val.toSource())
+	}).join('&')
 	linkB2(assert, link, msg)
 }
 function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface | P3, curveCount: int) {

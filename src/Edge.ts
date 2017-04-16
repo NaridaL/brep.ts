@@ -1,17 +1,21 @@
+declare const SVGPathData: any
+
 abstract class Edge extends Transformable {
-	curve: Curve
-	aT: number
-	bT: number
-	a: V3
-	b: V3
-	flippedOf: Edge
-	name: string
-	aDir: V3
-	bDir: V3
-	reversed: boolean
-	id: number
-	aDDT: V3
-	bDDT: V3
+	readonly aDir: V3
+	readonly bDir: V3
+	readonly reversed: boolean
+
+	constructor(readonly curve: Curve,
+	            readonly a: V3,
+	            readonly b: V3,
+	            readonly aT: number,
+	            readonly bT: number,
+	            readonly flippedOf: Edge,
+	            readonly name: Edge) {
+		super()
+        assert(!eq(aT, bT))
+		this.reversed = this.aT > this.bT
+	}
 
 	get minT() { return Math.min(this.aT, this.bT) }
 
@@ -19,22 +23,8 @@ abstract class Edge extends Transformable {
 
 	abstract tangentAt(t: number): V3
 
-	constructor(curve, a, b, aT, bT, flippedOf, name) {
-		super()
-		this.curve = curve
-		this.a = a
-		this.b = b
-		this.aT = aT
-		this.bT = bT
-        assert(!eq(aT, bT))
-		this.flippedOf = flippedOf
-		this.name = name
-		this.reversed = this.aT > this.bT
-		this.id = globalId++
-	}
-
 	toString(f?): string {
-		return `new ${this.constructor.name}(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT}, null, ${this.aDir}, ${this.bDir})`
+		return makeGen('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, null, this.aDir, this.bDir)
 	}
 
 	abstract edgeISTsWithSurface(surface: Surface): number[]
@@ -77,7 +67,7 @@ abstract class Edge extends Transformable {
 
 	static create(curve: Curve, a: V3, b: V3, aT: number, bT: number, flippedOf: Edge, aDir: V3, bDir: V3, name?: string): Edge {
 		if (curve instanceof L3) {
-			return new StraightEdge(curve, a, b, aT, bT, flippedOf, name)
+			return new StraightEdge(curve, a, b, aT, bT, flippedOf as StraightEdge, name)
 		} else {
 			return new PCurveEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name)
 		}
@@ -187,22 +177,130 @@ abstract class Edge extends Transformable {
         return aabb
     }
 
+    length(steps: int = 1): number {
+    	return this.curve.arcLength(this.minT, this.maxT, steps)
+    }
+
 	abstract isCoEdge(other: Edge): boolean
 
-	static ngon(count: int, radius: number = 1) {
-		return StraightEdge.chain(NLA.arrayFromFunction(count, i => V3.polar(radius, TAU * i / count)))
+	static ngon(n: int = 3, radius: number = 1): Edge[] {
+		return StraightEdge.chain(NLA.arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)))
 	}
 
-	static star(pointCount: int = 5, r0: number = 1, r1: number = 0.5) {
-		return StraightEdge.chain(NLA.arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2)))
+	static star(pointCount: int = 5, r0: number = 1, r1: number = 0.5): Edge[] {
+		const vertices = NLA.arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2))
+		return StraightEdge.chain(vertices)
 	}
 
-	static reverseLoop(loop: Edge[]) {
+	static reverseLoop(loop: Edge[]): Edge[] {
 		return NLA.arrayFromFunction(loop.length, i => loop[loop.length - 1 - i].flipped())
 	}
+
+	static rect(width: number = 1, height: number = width): Edge[] {
+		const vertices = [new V3(0, 0, 0), new V3(width, 0, 0), new V3(width, height, 0), new V3(0, height, 0)]
+		return StraightEdge.chain(vertices)
+	}
+
+	static reuleaux(n: int = 3, radius: number = 1): Edge[] {
+    	assert(3 <= n)
+    	assert(1 == n % 2)
+    	const corners = NLA.arrayFromFunction(n, i => V3.polar(radius, TAU * i / n))
+    	return NLA.arrayFromFunction(n, i => {
+		    const aI = (i + floor(n / 2)) % n, bI = (i + ceil(n / 2)) % n
+		    const a = corners[aI], b = corners[bI]
+		    const center = corners[i]
+		    const f1 = center.to(a), curve = new SemiEllipseCurve(center, f1, V3.Z.cross(f1))
+			return Edge.create(curve, a, b, 0, curve.pointT(b), undefined, V3.Z.cross(f1), V3.Z.cross(center.to(b)))
+	    })
+	}
+
+	static round(edges: Edge[], radius: number) {
+    	if (eq0(radius)) {
+    		return edges
+	    }
+		const corners = edges.map((edge, i) => {
+			const j = (i + 1) % edges.length, nextEdge = edges[j]
+			if (!edge.b.like(nextEdge.a)) return
+			const angleToNext = edge.bDir.angleTo(nextEdge.aDir)
+			const c1 = edge.curve, c2 = nextEdge.curve
+			if (c1 instanceof L3 && c2 instanceof L3) {
+				const normal = c1.dir1.cross(c2.dir1)
+				if (eq0(angleToNext)) return
+
+				const l1inside = normal.cross(c1.dir1), l2inside = normal.cross(c2.dir1)
+				const l1offset = c1.transform(M4.translation(l1inside.toLength(radius)))
+				const l2offset = c2.transform(M4.translation(l2inside.toLength(radius)))
+				const center = l1offset.isInfoWithLine(l2offset)
+				const cornerA = center.plus(l1inside.toLength(-radius))
+				const cornerB = center.plus(l2inside.toLength(-radius))
+				const f1 = l1inside.toLength(-radius)
+				const curve = new SemiEllipseCurve(center, f1, normal.cross(f1).toLength(radius))
+				const cornerEdge = Edge.create(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.dir1, c2.dir1)
+				return cornerEdge
+			} else {
+				return Edge.arbitraryCorner(edge, nextEdge, radius)
+			}
+		})
+		const result = edges.map((edge, i) => {
+			const h = (i + edges.length - 1) % edges.length, j = (i + 1) % edges.length
+			const prevCorner = corners[h], nextCorner = corners[i]
+			if (!prevCorner && !nextCorner) {
+				return edge
+			}
+			const [aT, a, aDir] = !prevCorner ? [edge.aT, edge.a, edge.aDir] :
+				[edge.curve.pointT(prevCorner.b), prevCorner.b, prevCorner.bDir]
+			const [bT, b, bDir] = !nextCorner ? [edge.bT, edge.b, edge.bDir] :
+				[edge.curve.pointT(nextCorner.a), nextCorner.a, nextCorner.aDir]
+			const newEdge = Edge.create(edge.curve, a, b, aT, bT, undefined, aDir, bDir)
+			return !nextCorner ? newEdge : [newEdge, nextCorner]
+		}).concatenated()
+		return result
+	}
+
+	static arbitraryCorner(e1: Edge, e2: Edge, radius) {
+		const c1 = e1.curve, c2 = e2.curve
+		function f([t1, t2]) {
+			const p1 = c1.at(t1), p2 = c2.at(t2)
+			const dp1 = c1.tangentAt(t1), dp2 = c2.tangentAt(t2)
+			const virtualPlaneNormal = dp1.cross(dp2)
+			const normal1 = virtualPlaneNormal.cross(dp1).unit(), normal2 = virtualPlaneNormal.cross(dp2).unit()
+			const dirCross = normal1.cross(normal2)
+			if (virtualPlaneNormal.isZero()) {
+				assert(false)
+			} // lines parallel
+			const p1p2 = p1.to(p2)
+			// check if distance is zero (see also L3.distanceToLine)
+			if (!NLA.eq0(p1p2.dot(virtualPlaneNormal))) {
+				assert(false)
+			}
+			const l1 = new L3(p1, normal1), l2 = new L3(p2, normal2)
+			const uh = l1.infoClosestToLine(l2), uh2 = l1.isInfoWithLine(l2)
+			const dist1 = p1p2.cross(normal2).dot(dirCross) / dirCross.squared()
+			const dist2 = p1p2.cross(normal1).dot(dirCross) / dirCross.squared()
+			const g1 = p1.plus(normal1.times(dist1))
+			const g2 = p2.plus(normal2.times(dist2))
+			assert(g1.like(g2))
+			return [abs(dist1) - radius, abs(dist2) - radius]
+		}
+		const startT1 = e1.bT - radius * sign(e1.deltaT()) / e1.bDir.length()
+		const startT2 = e2.aT + radius * sign(e2.deltaT()) / e2.aDir.length()
+		const [t1, t2] = newtonIterate(f, [startT1, startT2])
+		const cornerA = e1.curve.at(t1)
+		const cornerB = e2.curve.at(t2)
+		const p1 = c1.at(t1), p2 = c2.at(t2)
+		const dp1 = c1.tangentAt(t1), dp2 = c2.tangentAt(t2)
+		const virtualPlaneNormal = dp1.cross(dp2)
+		const normal1 = virtualPlaneNormal.cross(dp1).unit(), normal2 = virtualPlaneNormal.cross(dp2).unit()
+		const f1 = normal1.toLength(-radius)
+		const center = cornerA.minus(f1)
+		const curve = new SemiEllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius))
+		const cornerEdge = Edge.create(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.tangentAt(t1), c2.tangentAt(t2))
+		return cornerEdge
+	}
+
     static pathFromSVG(pathString: String): Edge[] {
         let currentPos
-        const parsed: {type: int, x: number, y: number, relative?: boolean}[] =
+        const parsed: any[] =
 	        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).commands
         const path: Edge[] = []
         for (const c of parsed) {
@@ -230,9 +328,6 @@ abstract class Edge extends Transformable {
 	                let {rx, ry, xAxisRotation, largeArc, sweep} = c
 	                rx = abs(rx)
 	                ry = abs(ry)
-	                if ('a' == c.code) {
-		                endPos = endPos.plus(currentPos)
-	                }
 	                const rads = xAxisRotation * DEG
 	                const midPoint = currentPos.minus(endPos).times(0.5)
 	                const midPointTransformed = M4.rotationZ(-rads).transformPoint(midPoint)
@@ -280,11 +375,15 @@ abstract class Edge extends Transformable {
 }
 
 class PCurveEdge extends Edge {
+	readonly aDir: V3
+	readonly bDir: V3
 
 	constructor(curve, a, b, aT, bT, flippedOf, aDir, bDir, name?) {
 		assertNumbers(aT, bT)
 		assertVectors(a, b, aDir, bDir)
-		assertf(() => curve instanceof L3 || curve instanceof Curve, curve)
+		assertf(() => !aDir.isZero(), curve)
+		assertf(() => !bDir.isZero(), curve)
+		assertf(() => curve instanceof Curve, curve)
 		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
 		assertf(() => curve.at(aT).like(a), curve.at(aT) + a)
 		assertf(() => curve.at(bT).like(b), curve.at(bT) + b)
@@ -323,28 +422,28 @@ class PCurveEdge extends Edge {
 		return rot
 	}
 
-	edgeISTsWithSurface(surface) {
+	edgeISTsWithSurface(surface: Surface) {
         return this.curve.isTsWithSurface(surface)
 			.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
 			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
-	edgeISTsWithPlane(surface) {
+	edgeISTsWithPlane(surface: P3) {
         return this.curve.isTsWithPlane(surface)
 			.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
 			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		return !this.reversed ? this.curve.tangentAt(t) : this.curve.tangentAt(t).negated()
 	}
 
-	flipped() {
+	flipped(): PCurveEdge {
 		return this.flippedOf || (this.flippedOf = new PCurveEdge(this.curve, this.b, this.a, this.bT, this.aT, this,
 				this.bDir.negated(), this.aDir.negated(), this.name))
 	}
 
-	transform(m4, desc): this {
+	transform(m4: M4, desc?: string): PCurveEdge {
 		return new PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b),
 			this.aT, this.bT,
 			null,
@@ -379,8 +478,8 @@ class PCurveEdge extends Edge {
 
 
 class StraightEdge extends Edge {
-	tangent: V3
-	curve: L3
+	readonly tangent: V3
+	readonly curve: L3
 	// flippedOf: StraightEdge
 
 	constructor(line: L3, a: V3, b: V3, aT: number, bT: number, flippedOf?: StraightEdge, name?: string) {

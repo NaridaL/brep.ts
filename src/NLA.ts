@@ -20,16 +20,30 @@ const log = Math.log
 
 let globalId = 0
 type int = number
+type raddd = number
 type FloatArray = Float32Array | Float64Array | number[]
 
 /** @define {boolean} */
 const NLA_DEBUG = true
 const NLA_PRECISION = 1 / (1 << 26)
-console.log("NLA_PRECISION", NLA_PRECISION)
-console.log("NLA_DEBUG", NLA_DEBUG)
+console.log('NLA_PRECISION', NLA_PRECISION)
+console.log('NLA_DEBUG', NLA_DEBUG)
 
 function SCE(o) {
-	return o.sce
+	switch (typeof o) {
+		case 'undefined':
+			return 'undefined'
+		case 'string':
+			return JSON.stringify(o)
+		case 'object':
+			if (null == o) {
+				return 'null'
+			} else {
+				return o.sce
+			}
+		default:
+			return '' + o
+	}
 }
 function STR(o) {
 	return o.str
@@ -72,7 +86,7 @@ function assertInst(what, ...objs) {
 	if (NLA_DEBUG) {
 		for (let i = 0; i < objs.length; i++) {
 			if (!(objs[i] instanceof what)) {
-				throw new Error("assertInst objs[" + (i) + "] is not a "+what.prototype.constructor.name+". " + objs[i].constructor.name + objs[i])
+				throw new Error('assertInst objs[' + (i) + '] is not a '+what.prototype.constructor.name+'. ' + objs[i].constructor.name + objs[i])
 			}
 		}
 	}
@@ -101,7 +115,7 @@ function assertNever(value?: never): never {
 
 function assertf(f:() => any, ...messages:(any|(() => any))[]) {
 	if (!f()) {
-		throw new Error("NLA.assertf failed: " + f.toString()
+		throw new Error('NLA.assertf failed: ' + f.toString()
 			+ messages.map(message => ('function' === typeof message ? message() : message || '')).join('\n'))
 	}
 }
@@ -109,13 +123,21 @@ function assertf(f:() => any, ...messages:(any|(() => any))[]) {
 function lerp(a: number, b: number, t: number) {
 	return a * (1 - t) + b * t
 }
+const orignalNumberToString = Number.prototype.toString
+Number.prototype.toString = function (radix) {
+	if (PI == this) {
+		return 'PI'
+	}
+	return orignalNumberToString.call(this, radix)
+}
+
 
 namespace NLA {
 	// TODO: ensure consistency
 	export const eq0 = (x: number): boolean => Math.abs(x) < NLA_PRECISION
 	export const eq02 = (x: number, precision: number) => Math.abs(x) < precision
 	export const eq = (x: number, y: number) => Math.abs(x - y) <= NLA_PRECISION
-	export const eq2 = (x, y, precision): boolean => Math.abs(x - y) < precision
+	export const eq2 = (x: number, y: number, precision: number): boolean => Math.abs(x - y) < precision
 	export const lt = (x: number, y: number): boolean => x + NLA_PRECISION < y
 	export const gt = (x: number, y: number): boolean => x > y + NLA_PRECISION
 	export const le = (x: number, y: number): boolean => x <= y + NLA_PRECISION
@@ -164,9 +186,9 @@ namespace NLA {
 
 
 
-	export function repeatString(count, str) {
+	export function repeatString(count: int, str: string) {
 		if (count == 0) {
-			return ""
+			return ''
 		}
 		count *= str.length
 		const halfCharLength = count / 2
@@ -237,7 +259,7 @@ namespace NLA {
         assertNumbers(startInclusive, step)
         //console.log(Math.ceil((endExclusive - startInclusive) / step))
         const arrLength = Math.ceil((endExclusive - startInclusive) / step)
-        const result = new Array(arrLength) // "- startInclusive" so that chunk in the last row will also be selected, even if the row is not complete
+        const result = new Array(arrLength) // '- startInclusive' so that chunk in the last row will also be selected, even if the row is not complete
         for (let i = startInclusive, index = 0; index < arrLength; i += step, index++) {
             result[index] = i
         }
@@ -290,21 +312,21 @@ namespace NLA {
 		Object.getOwnPropertyNames(props).forEach(key => {
 			//console.log(props, key)
 			if (target.hasOwnProperty(key)) {
-				console.warn("target ", target, " already has property ", key)
+				console.warn('target ', target, ' already has property ', key)
 			}
 			Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(props, key))
 		})
 	}
 
-	export function defineClass(name, parent, constructor, props, statics) {
-		assert('function' == typeof constructor, "'function' == typeof constructor")
-		constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
-		constructor.prototype.constructor = constructor
-		Object.defineProperty(constructor.prototype, 'name', {value: name})
-		statics && NLA.addOwnProperties(constructor, statics)
-		return constructor
-	}
-	export const defaultRoundFunction = x => x // Math.round10(x, -4)
+	//export function defineClass(name, parent, constructor, props, statics) {
+	//	assertf(() => 'function' == typeof constructor, 'function' == typeof constructor)
+	//	constructor.prototype = NLA.defineObject(parent && parent.prototype, props)
+	//	constructor.prototype.constructor = constructor
+	//	Object.defineProperty(constructor.prototype, 'name', {value: name})
+	//	statics && NLA.addOwnProperties(constructor, statics)
+	//	return constructor
+	//}
+	export let defaultRoundFunction = x => x // Math.round10(x, -4)
 
 	export function defineObject(prot, props) {
 		const o = Object.create(prot || NLA.BaseObject)
@@ -465,7 +487,6 @@ interface Array<T> {
 	concatenated(): T
 	firstMatch: (f: (el: T, elIndex: int, arr: T[]) => any) => T
 	flatMap<U>(f: (el: T, elIndex: int, arr: T[]) => (U | U[])): U[]
-	includes: (el: T) => boolean
 	indexWithMax: (f: (el: T, elIndex: int, arr: T[]) => number) => int
 	isEmpty(): boolean
 	last(): T
@@ -496,7 +517,7 @@ const ARRAY_UTILITIES = {
 	sliceStep(start, step, chunkSize) {
 		assertNumbers(start, step)
 		chunkSize = chunkSize || 1
-		const result = new Array(Math.ceil((this.length - start) / step)) // "- start" so that chunk in the last row
+		const result = new Array(Math.ceil((this.length - start) / step)) // '- start' so that chunk in the last row
 		// will also be selected, even if the row is
 		// not complete
 		let index = 0
@@ -735,7 +756,7 @@ const ARRAY_UTILITIES = {
 }
 
 for (let key in ARRAY_UTILITIES) {
-	const nlaName = "array" + key.capitalizeFirstLetter()
+	const nlaName = 'array' + key.capitalizeFirstLetter()
 	assert(!NLA[nlaName])
 	NLA[nlaName] = (arr, ...rest) => ARRAY_UTILITIES[key].apply(arr, rest)
 }
@@ -969,7 +990,7 @@ function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps: in
 		assert(!dfdx.isZero())
 		let dx = dfdx.solveLinearSystem(new NLA.Vector(new Float64Array(fx))).v
 		assert(!isNaN(dx[0]))
-		//console.log("fx / dfdx", fx / dfdx)
+		//console.log('fx / dfdx', fx / dfdx)
 		for (let j = 0; j < x.length; j++) x[j] -= dx[j]
 	}
 	return x
@@ -983,7 +1004,7 @@ function newtonIterate1d(
 	for (let i = 0; i < steps; i++) {
 		let fx = f(x)
 		let dfdx = (f(x + EPSILON) - fx) / EPSILON
-		//console.log("fx / dfdx", fx / dfdx)
+		//console.log('fx / dfdx', fx / dfdx)
 		x = x - fx / dfdx
 	}
 	return x
@@ -995,12 +1016,12 @@ function newtonIterateWithDerivative(f: (x: number) => number, xStart: number, s
 		let dfdx = df(x)
 		if (isNaN(fx) || isNaN(dfdx)) {
 			console.log()
-			//console.log("fx / dfdx", fx / dfdx)
+			//console.log('fx / dfdx', fx / dfdx)
 		}
 		x = x - fx / dfdx
 		if (isNaN(fx)) {
 			console.log()
-			//console.log("fx / dfdx", fx / dfdx)
+			//console.log('fx / dfdx', fx / dfdx)
 		}
 	}
 	return x
@@ -1020,12 +1041,12 @@ function newtonIterateSmart(
 		}
 		if (isNaN(fx) || isNaN(dfdx)) {
 			console.log()
-			//console.log("fx / dfdx", fx / dfdx)
+			//console.log('fx / dfdx', fx / dfdx)
 		}
 		x = x - fx / dfdx
 		if (isNaN(fx)) {
 			console.log()
-			//console.log("fx / dfdx", fx / dfdx)
+			//console.log('fx / dfdx', fx / dfdx)
 		}
 	}
 	return x

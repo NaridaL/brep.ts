@@ -9,7 +9,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		super(baseCurve, dir1, undefined, undefined, zMin, zMax)
 		assertVectors(dir1)
 		assertInst(SemiEllipseCurve, baseCurve)
-		//assert(!baseCurve.normal.isPerpendicularTo(dir1), !baseCurve.normal.isPerpendicularTo(dir1))
+		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		assert(dir1.hasLength(1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
@@ -18,7 +18,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	toSource() {
-		return `new SemiCylinderSurface(${this.baseCurve.toSource()}, ${this.dir1.toSource()}, ${this.tMin}, ${this.tMax})`
+		return makeGen('new SemiCylinderSurface', this.baseCurve, this.dir1, this.tMin, this.tMax)
 	}
 
 	normalAt(p: V3): V3 {
@@ -122,8 +122,11 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 			return this.isCurvesWithPlane(surface2.plane)
 		} else if (surface2 instanceof SemiCylinderSurface) {
 			if (surface2.dir1.isParallelTo(this.dir1)) {
-				const ellipseProjected = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
-				return this.baseCurve.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
+				const projEllipse = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
+				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => {
+					const lineDir = sign(this.normalAt(info.p).cross(surface2.normalAt(info.p)).dot(this.dir1)) || 1
+					return new L3(info.p, this.dir1.times(lineDir))
+				})
 			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
 			} else {
@@ -177,7 +180,6 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
-				console.log("edge", edge, val)
 				return val * sign
 			} else if (edge.curve instanceof L3) {
 				return 0
@@ -230,7 +232,6 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val, sign)
 				return val * sign
 			} else if (edge.curve instanceof L3) {
 				return 0

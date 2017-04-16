@@ -1,17 +1,15 @@
 class SemiEllipseCurve extends Curve {
 	readonly normal: V3
-	readonly center: V3
-	readonly f1: V3
-	readonly f2: V3
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 
-	constructor(center, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
+	constructor(readonly center: V3,
+	            readonly f1: V3,
+	            readonly f2: V3,
+	            readonly tMin: number = 0,
+	            readonly tMax: number = PI) {
         super(tMin, tMax)
         assertVectors(center, f1, f2)
-        this.center = center
-		this.f1 = f1
-		this.f2 = f2
         assert(0 <= this.tMin && this.tMin < PI)
         assert(0 < this.tMax && this.tMax <= PI)
 		this.normal = f1.cross(f2)
@@ -30,101 +28,34 @@ class SemiEllipseCurve extends Curve {
 		}
 	}
 
-	// TODO: there'S alsoa commented out test
-	//getVolZAnd(dir1: V3, tStart: number, tEnd: number): {volume: number, centroid: V3} {
-	//	// let p = at(t)
-	//	// integrate area [p -> plane.projectPoint(p)] to x axis...
-	//	// INTEGRATE[tStart, tEnd] fp(this.at(t)) dt
-	//	const ft = t => this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
-	//	// f(t) = c + f1 cos + f2 sin
-	//	// p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
-	//	function fp(p) {
-	//		const p0ToP = dir1.times(dir1.dot(p))
-	//		const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
-	//		return area
-	//	}
-	//	const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
-	//	return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
-	//}
-
 	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): {area: number, centroid: V3} {
-		//assertf(() => tStart < tEnd)
-		assertf(() => right.isPerpendicularTo(this.normal))
-		assertf(() => up.isPerpendicularTo(this.normal))
-		//assertf(() => SemiEllipseCurve.isValidT(tStart), tStart)
-		//assertf(() => SemiEllipseCurve.isValidT(tEnd), tEnd)
-
-		let localUp = this.inverseMatrix.transformVector(up)
-		let localRight = localUp.cross(V3.Z)
-		let normTStart = tStart - localRight.angleXY()
-		let normTEnd = tEnd - localRight.angleXY()
-		let transformedOriginY = this.inverseMatrix.getTranslation().dot(localUp.unit())
-		//console.log(localUp.str, localRight.str, normTStart, normTEnd, 'localUp.length()', localUp.length())
-		//console.log('transformedOriginY', transformedOriginY)
-		//assertf(() => localUp.hasLength(1), localUp.length())
-		const fPi = Math.PI / 4
-		// integral of sqrt(1 - x²) from 0 to cos(t)
-		// Basically, we want
-		// INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
-		// INTEGRAL[PI/2: cos(t)] -sqrt(1 - x²) dx
-		// = INTEGRAL[cos(0); cos(t)] -sqrt(1 - x²) dx
-		// = INTEGRAL[0; t] -sqrt(1 - cos²(t)) * -sin(t) dt
-		// = INTEGRAL[0; t] -sin(t) * -sin(t) dt
-		// = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
-		// = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
-		function fArea(t) { return (t - Math.sin(t) * Math.cos(t)) / 2 }
-
-		// for the centroid, we want
-		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
-		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * sqrt(1 - x²) dx
-		// cx = 1 / area * INTEGRAL[cos(0); cos(t)] x * -sqrt(1 - x²) dx
-		// ...
-		// cx = 1 / area * INTEGRAL[0; t] cos(t) * sin²(t) dt // WA
-		// cx = 1 / area * (sin^3(t) / 3)[0; t]
-		function cxTimesArea(t) { return Math.pow(Math.sin(t), 3) / 3 }
-
-		// cy = 1 / area * INTEGRAL[cos(t); PI/2] f²(x) / 2 dx
-		// cy = 1 / area * INTEGRAL[cos(0); cos(t)] -(1 - x²) / 2 dx
-		// cy = 1 / area * INTEGRAL[0; t] (cos²(t) - 1) * -sin(t) / 2 dt
-		// cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
-		function cyTimesArea(t) { return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24 }
-
-		let restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart) )
-		let area = fArea(normTEnd) - fArea(normTStart) + restArea
-		let cxt = (cxTimesArea(normTEnd) - cxTimesArea(normTStart) + -transformedOriginY * (-Math.cos(normTEnd) - Math.cos(normTStart)) / 2 * restArea) / area
-		let cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area
-		let factor = this.matrix.xyAreaFactor() // * localUp.length()
-		//console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
-		assert(!NLA.eq0(factor))
-		return {area: area * factor, centroid: this.matrix.transformPoint(M4.rotationZ(localRight.angleXY()).transformPoint(new V3(cxt, cyt, 0)))}
-
+		return EllipseCurve.prototype.getAreaInDir.call(this, right, up, tStart, tEnd)
 	}
 
-	toString(f?) {
-		return `new SemiEllipseCurve(${this.center}, ${this.f1}, ${this.f2}${
-		    this.hasOwnProperty('tMin') || this.hasOwnProperty('tMax') ? `, ${this.tMin}, ${this.tMax}` : ''})`
+	toSource() {
+		return makeGen('new SemiEllipseCurve', this.center, this.f1, this.f2, this.tMin, this.tMax)
 	}
 
-	at(t) {
+	at(t: number): V3 {
         assertNumbers(t)
-        assert(this.isValidT(t))
+        //assert(this.isValidT(t))
         // center + f1 cos t + f2 sin t
 		return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
 	}
 
-	at2(xi, eta) {
+	at2(xi: number, eta: number): V3 {
 		// center + f1 xi + f2 eta
 		return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
 	}
 
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		assertNumbers(t)
-        assert(this.isValidT(t))
+        //assert(this.isValidT(t))
 		// f2 cos(t) - f1 sin(t)
 		return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t)))
 	}
 
-	ddt(t) {
+	ddt(t: number): V3 {
 		assertNumbers(t)
         assert(this.isValidT(t))
 		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)))
@@ -158,14 +89,14 @@ class SemiEllipseCurve extends Curve {
         return hashCode | 0
     }
 
-	likeCurve(curve) {
+	likeCurve(curve: Curve): boolean {
 		return curve.constructor == SemiEllipseCurve
 			&& this.center.like(curve.center)
 			&& this.f1.like(curve.f1)
 			&& this.f2.like(curve.f2)
 	}
 
-	isColinearTo(curve) {
+	isColinearTo(curve: Curve): boolean {
 		if (curve.constructor != SemiEllipseCurve) {
 			return false
 		}
@@ -187,7 +118,7 @@ class SemiEllipseCurve extends Curve {
 		}
 	}
 
-	normalAt(t) {
+	normalAt(t: number): V3 {
 		return this.tangentAt(t).cross(this.normal)
 	}
 
@@ -277,7 +208,7 @@ class SemiEllipseCurve extends Curve {
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 
-	transform(m4): this {
+	transform(m4: M4): this {
 		return new SemiEllipseCurve(
 		    m4.transformPoint(this.center),
             m4.transformVector(this.f1),
@@ -318,13 +249,13 @@ class SemiEllipseCurve extends Curve {
 		}
 	}
 
-	isTsWithPlane(plane) {
+	isTsWithPlane(plane: P3) {
 		assertInst(P3, plane)
 		/*
 		 this: x = center + f1 * cos t + f2 * sin t  (1)
 		 n DOT center + n DOT f1 cos t + n DOT f2 sin t - w = 0
 		 plane:
-		 n := plane.normal
+		 n := plane.normal1
 		 n DOT x == plane.w           (2)
 		 plane defined by f1/f2
 		 x = center + f1 * xi + f2 * eta         (3)
@@ -340,10 +271,10 @@ class SemiEllipseCurve extends Curve {
 		 solve system (5)/(6)
 		 g1 * eta + g2 * eta = g3 (6)
 		 */
-		if (plane.normal.isParallelTo(this.normal)) {
+		if (plane.normal1.isParallelTo(this.normal)) {
 			return []
 		}
-		const n = plane.normal, w = plane.w,
+		const n = plane.normal1, w = plane.w,
 			center = this.center, f1 = this.f1, f2 = this.f2,
 			g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center)
 
@@ -364,7 +295,7 @@ class SemiEllipseCurve extends Curve {
         return P3.normalOnAnchor(this.normal, this.center)
     }
 
-	containsPoint(p) {
+	containsPoint(p: V3): boolean {
 		const pLC = this.inverseMatrix.transformPoint(p)
 		return NLA.eq0(pLC.z) && SemiEllipseCurve.validPlanePoint(pLC.x, pLC.y)
 	}
@@ -479,8 +410,8 @@ class SemiEllipseCurve extends Curve {
 		// tangent(eta, xi) = f2 eta - f1 xi
 
 		return NLA.arrayFromFunction(3, dim => {
-			let a = this.f2.e(dim), b = -this.f1.e(dim)
-			let {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
+			const a = this.f2.e(dim), b = -this.f1.e(dim)
+			const {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
 			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]
 		})
 	}

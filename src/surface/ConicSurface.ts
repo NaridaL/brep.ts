@@ -61,7 +61,7 @@ class ConicSurface extends Surface {
 							// we need to calculate if the section of the plane intersection line BEFORE the colinear
 							// segment is inside or outside the face. It is inside when the colinear segment out vector
 							// and the current segment vector point in the same direction (dot > 0)
-							const colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal)
+							const colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal1)
 							const insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
 							// if the "inside-ness" changes, add intersection point
 							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear !=
@@ -254,10 +254,10 @@ class ConicSurface extends Surface {
 	isCurvesWithPlane(plane) {
 		assertInst(P3, plane)
 		const localPlane = plane.transform(this.inverseMatrix)
-		const planeNormal = localPlane.normal
+		const planeNormal = localPlane.normal1
 		const c = planeNormal.z
-		/** "rotate" plane normal when passing to {@link ConicSurface.unitISPlane} so that
-		 *  y-component of normal is 0 */
+		/** "rotate" plane normal1 when passing to {@link ConicSurface.unitISPlane} so that
+		 *  y-component of normal1 is 0 */
 		const a = planeNormal.lengthXY()
 		const d = localPlane.w
 		// generated curves need to be rotated back before transforming to world coordinates
@@ -291,8 +291,8 @@ class ConicSurface extends Surface {
 					console.log(t, at.distanceTo(this.baseEllipse.center), at.rejectedLength(this.dir), tangent.rejectedLength(this.dir))
 					return at.minus(this.baseEllipse.center).cross(tangent.rejectedFrom(this.dir)).length() / 2
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				// hyperbola normal can be perpendicular to
+				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// hyperbola normal1 can be perpendicular to
 				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
 					: -Math.sign(this.baseEllipse.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
@@ -332,7 +332,7 @@ class ConicSurface extends Surface {
 					return (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY() *
 						tangent.dot(V3.Z.cross(this.dir).unit())
 				}
-				// ellipse with normal parallel to dir need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive area
 				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
 					: -Math.sign(this.baseEllipse.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))

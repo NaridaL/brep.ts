@@ -115,72 +115,72 @@ registerTests({
 
 	'tetrahedron intersections doTestWithBrep'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
-		const face = box.faces.find(face => face.surface.plane.normal.like(V3.Z))
+		const face = box.faces.find(face => face.surface.plane.normal1.like(V3.Z))
 		let testBrep
 		// splitting contour in base position:
-	
+
 		testBrep = B2T.tetrahedron(V(-1, 1, 9), V(5, 1, 9), V(-1, -4, 14), V(2, -4, 10))
 		doTestWithBrep(assert, face, box, testBrep, [], [],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
-	
+
 		testBrep = B2T.tetrahedron(V(-1, 1, 9), V(4, 1, 9), V(-1, -4, 14), V(-1, -4, 10)).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 0, 10), V(3, 0, 10))], [V(3, 0, 10), V(0, 0, 10)],
 			'face of _flipped_ tetra touches edge of testface and also intersects main volume (expect point on edge)')
-	
+
 		testBrep = B2T.tetrahedron(V(-1, 0, 10), V(5, 0, 10), V(2, 0, 14), V(2, -4, 10))
 		doTestWithBrep(assert, face, box, testBrep, [], [],
 			'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
-	
+
 		testBrep = B2T.tetrahedron(V(-1, 0, 10), V(5, 0, 10), V(-1, -2, 8), V(-1, 2, 8)).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 0, 10), V(5, 0, 10))], [V(5, 0, 10), V(0, 0, 10)],
 			'Tetrahedron is flipped, testface only touched at edge, needs point on edge as tetrahedron intersects side of volume')
-	
-	
+
+
 		testBrep = B2T.tetrahedron(V(-1, 0, 10), V(5, 0, 10), V(-1, 0, 14), V(-1, -4, 9)).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 0, 10), V(5, 0, 10))], [V(0, 0, 10), V(5, 0, 10)],
 			'volumes do not intersect, tetra is flipped, touches box edge-edge (result would be entire box)')
 	},
-	
+
 	'tetrahedorn is point on line'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
-		let face = box.faces.find(face => face.surface.plane.normal.like(V3.Z)), testBrep
+		let face = box.faces.find(face => face.surface.plane.normal1.like(V3.Z)), testBrep
 		// splitting contour in base position:
-	
+
 		testBrep = B2T.tetrahedron(V(4, 0, 10), V(4, 3, 9), V(7, 3, 12), V(1, 3, 12))
 		doTestWithBrep(assert, face, box, testBrep, [
 				StraightEdge.throughPoints(V(3, 3, 10), V(4, 0, 10)),
 				StraightEdge.throughPoints(V(4, 0, 10), V(5, 3, 10)),
 				StraightEdge.throughPoints(V(5, 3, 10), V(3, 3, 10))], [],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
-	
+
 		doTestWithBrep(assert, face, box, testBrep.flipped(), [
 				StraightEdge.throughPoints(V(4, 0, 10), V(3, 3, 10)),
 				StraightEdge.throughPoints(V(5, 3, 10), V(4, 0, 10)),
 				StraightEdge.throughPoints(V(3, 3, 10), V(5, 3, 10))], [V(4, 0, 10)],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
-	
+
 		doTestWithBrep(assert, face, box, testBrep.rotate(V(4, 0, 10), V3.Z, 90 * DEG), [
 				StraightEdge.throughPoints(V(4, 0, 10), V(1, 1, 10)),
 				StraightEdge.throughPoints(V(1, 1, 10), V(1, 0, 10))], [V(1, 0, 10), V(4, 0, 10)],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
-	
+
 		doTestWithBrep(assert, face, box, testBrep.rotate(V(4, 0, 10), V3.Z, 90 * DEG).flipped(), [
 				StraightEdge.throughPoints(V(1, 1, 10), V(4, 0, 10)),
 				StraightEdge.throughPoints(V(1, 0, 10), V(1, 1, 10))], [V(1, 0, 10), V(4, 0, 10)],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
-	
+
 		doTestWithBrep(assert, face, box, testBrep.rotate(V(4, 0, 10), V3.Z, 180 * DEG), [], [],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
-	
+
 		doTestWithBrep(assert, face, box, testBrep.rotate(V(4, 0, 10), V3.Z, 180 * DEG).flipped(), [], [],
 			'face of tetra touches edge of test face, tetra intersects test volume (test face not part of result, points dont really matter)')
 	},
-	
+
 	'face box'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
-		const face = box.faces.find(face => face.surface.plane.normal.like(V3.Z))
+		const face = box.faces.find(face => face.surface.plane.normal1.like(V3.Z))
 		// splitting contour in base position:
-	
+
 		const testBrep = B2T.box(8, 1, 1).translate(0, 0, 9).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [
 				StraightEdge.throughPoints(V(0, 1, 10), V(8, 1, 10))], [V(0, 1, 10), V(8, 1, 10)],
@@ -189,7 +189,7 @@ registerTests({
 
     'face box 2'(assert) {
         const box = B2T.box(1, 1, 6, 'box').flipped()
-        const face = box.faces.find(face => face.surface.plane.normal.like(V3.X))
+        const face = box.faces.find(face => face.surface.plane.normal1.like(V3.X))
         // splitting contour in base position:
 
         const testBrep = B2T.box(5, 5, 5)
@@ -197,10 +197,10 @@ registerTests({
             '???')
 
     },
-	
+
 	'face box 3'(assert) {
 		const box = B2T.box(10, 10, 5, 'box')
-		const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal.like(V3.Z))
+		const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal1.like(V3.Z))
 		// splitting contour in base position:
 
         const testBrep = B2T.box(10, 10, 5, 'box').translate(3, 3, 0)
@@ -212,12 +212,12 @@ registerTests({
 
 		doTestWithBrep(assert, face, box, testBrep, [], [],
 			'???', true)
-	
+
 	},
 
     'face box 4'(assert) {
         const box = B2T.box(10, 10, 5, 'box').flipped()
-        const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal.z == -1)
+        const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal1.z == -1)
         // splitting contour in base position:
 
         const testBrep = box.translate(3, 3, 0)
@@ -235,7 +235,7 @@ registerTests({
     },
     'face box 5'(assert) {
         const box = B2T.box(10, 10, 5, 'box').flipped()
-        const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal.z == -1)
+        const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal1.z == -1)
         // splitting contour in base position:
 
         const testBrep = box.translate(0, 0, 5)
@@ -249,7 +249,7 @@ registerTests({
         const box = B2T.box(10, 10, 10, 'box').flipped()
         const box2 = B2T.box(10, 12, 12, 'box').flipped()
 
-        const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal.z == -1)
+        const face = box.faces.find(face => (face.surface as PlaneSurface).plane.normal1.z == -1)
         // splitting contour in base position:
 
         const testBrep = box2.translate(0, 0, -2)
@@ -266,7 +266,7 @@ registerTests({
     },
     'face box 7'(assert) {
         const box = B2T.box(1, 1, 1, 'box')
-        const face = box.faces.find(face => face.surface.plane.normal.like(V3.Z))
+        const face = box.faces.find(face => face.surface.plane.normal1.like(V3.Z))
         // splitting contour in base position:
 
         const testBrep = B2T.box(1/3, 1/3, 1).flipped()
@@ -314,68 +314,68 @@ registerTests({
 
 	'coplanar things'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
-		let face = box.faces.find(face => face.surface.plane.normal.like(V3.Z)), testBrep
+		let face = box.faces.find(face => face.surface.plane.normal1.like(V3.Z)), testBrep
 		// splitting contour in base position:
-	
+
 		testBrep = B2T.tetrahedron(V(-1, -1, 10), V(-1, 5, 10), V(5, -1, 10), V(-1, -1, 5)).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 4, 10), V(4, 0, 10))], [V(0, 4, 10), V(4, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 		testBrep = B2T.tetrahedron(V(-1, -1, 10), V(-1, 5, 10), V(4, 0, 10), V(-1, -1, 5)).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 4, 10), V(4, 0, 10))], [V(0, 4, 10), V(4, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 		testBrep = B2T.tetrahedron(V(1, 0, 10), V(1, 5, 10), V(4, 0, 10), V(-1, -1, 5)).flipped()
 		doTestWithBrep(assert, face, box, testBrep,
 			[StraightEdge.throughPoints(V(1, 0, 10), V(1, 5, 10)), StraightEdge.throughPoints(V(1, 5, 10), V(4, 0, 10))],
 			[V(1, 0, 10), V(4, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 		testBrep = B2T.tetrahedron(V(0, 0, 10), V(0, 5, 10), V(5, 0, 10), V(0, 0, 5)).flipped()
 		doTestWithBrep(assert, face, box, testBrep,
 			[StraightEdge.throughPoints(V(0, 5, 10), V(5, 0, 10))],
 			[V(0, 5, 10), V(5, 0, 10), V(0, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 		testBrep = B2T.tetrahedron(V(0, 0, 10), V(-1, 5, 10), V(5, -1, 10), V(-1, -1, 5)).flipped()
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 4, 10), V(4, 0, 10))], [V(0, 4, 10), V(4, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 		testBrep = B2T.tetrahedron(V(0, 0, 10), V(1, 5, 10), V(5, 1, 10), V(0, 0, 5)).flipped()
 		doTestWithBrep(assert, face, box, testBrep,
 			[StraightEdge.throughPoints(V(0, 0, 10), V(1, 5, 10)), StraightEdge.throughPoints(V(1, 5, 10), V(5, 1, 10)), StraightEdge.throughPoints(V(5, 1, 10), V(0, 0, 10))],
 			[],
 			'cut hole at corner of test face')
-	
+
 	},
 	'coplanar things 2'(assert) {
 		const box = B2T.box(8, 9, 10, 'box')
-		let face = box.faces.find(face => face.surface.plane.normal.like(V3.Z)), testBrep
+		let face = box.faces.find(face => face.surface.plane.normal1.like(V3.Z)), testBrep
 		// splitting contour in base position:
-	
+
 		testBrep = B2T.tetrahedron(V(-1, -1, 10), V(-1, 5, 10), V(5, -1, 10), V(-1, -1, 5))
 		doTestWithBrep(assert, face, box, testBrep, [StraightEdge.throughPoints(V(0, 4, 10), V(4, 0, 10))], [V(0, 4, 10), V(4, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 		testBrep = B2T.tetrahedron(V(-1, -1, 10), V(-1, 5, 10), V(5, -1, 10), V(-1, -1, 5)).flipped()
 		doTestWithBrep(assert, face, box.flipped(), testBrep, [StraightEdge.throughPoints(V(0, 4, 10), V(4, 0, 10))], [V(0, 4, 10), V(4, 0, 10)],
 			'cut off corner of box with flipped tetra (anti)coplanar to test face')
-	
+
 	},
-	
-	
+
+
 	'assembly'(assert) {
 		const baseFace = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
-	
+
 		const extrude = B2T.extrudeVertices([V(5, -1), V(2, 2), V(8, 2)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result = PlaneFace.forVertices(P3.XY, [V(0, 0), V(4, 0), V(2, 2), V(8, 2), V(6, 0), V(10, 0), V(10, 10), V(0, 10)])
 		doTest2(assert, baseFace, extrude, [result], 'volume cuts edge of test face (twice)')
-	
+
 		const edges = StraightEdge.chain([V(5, 0), V(2, 3), V(8, 3)])
 		const result2 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)], [V(5, 0), V(2, 3), V(8, 3)])
 		doTest3(assert, baseFace, edges, new Map(), [result2], 'volume touches inside of test face edge')
-	
-	
+
+
 		// from test case 3:4
 		// V-shape spine touching middle, splits volume enclosing in both directions
 		let brep = new B2([
@@ -384,12 +384,12 @@ registerTests({
 		]).rotateX(-PI / 2).flipped().translate(0, 2, 0)
 		// degenerate cycle in middle of face
 		let result4 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)], [V(5, 2), V(0, 2)])
-	
-	
+
+
 		const extrude5 = B2T.extrudeVertices([V(0, 0), V(3, 2), V(2, 3)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result5 = PlaneFace.forVertices(P3.XY, [V(0, 0), V(2, 3), V(3, 2), V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
 		doTest2(assert, baseFace, extrude5, [result5], 'volume touches inside of test face corner')
-	
+
 		const edges6 = StraightEdge.chain([V(1, 0), V(8, 10), V(3, 0)], false)
 		const points6 = new Map().set(baseFace.contour.find(edge => edge.aDir.like(V3.X)), [V(1, 0), V(3, 0)])
 		const result6 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(1, 0), V(8, 10), V(3, 0), V(10, 0), V(10, 10), V(0, 10)])]
@@ -418,53 +418,53 @@ registerTests({
 
 
 	},
-	
+
 	'assembly holes'(assert) {
 		const baseFace = PlaneFace.forVertices(P3.XY, [V(0, 0), V(10, 0), V(10, 10), V(0, 10)])
-	
+
 		const extrude7 = B2T.extrudeVertices([V(0, 0), V(5, 8), V(8, 5)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result7 = [PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 8), V(8, 5), V(0, 0), V(10, 0), V(10, 10), V(0, 10)])]
 		doTest2(assert, baseFace, extrude7, result7, 'volume touches inside of test face corner')
-	
+
 		const extrude8 = B2T.extrudeVertices([V(1, 1), V(1, -1), V(-1, 1)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result8 = [PlaneFace.forVertices(P3.XY, [V(1, 0), V(10, 0), V(10, 10), V(0, 10), V(0, 1), V(1, 1)])]
 		doTest2(assert, baseFace, extrude8, result8, 'volume touches inside of test face corner')
-	
+
 		const extrude9 = B2T.extrudeVertices([V(-1, -1), V(1, 1), V(1, -1)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result9 = [PlaneFace.forVertices(P3.XY, [V(1, 0), V(10, 0), V(10, 10), V(0, 10), V(0, 0), V(1, 1)])]
 		doTest2(assert, baseFace, extrude9, result9, 'volume touches inside of test face corner')
-	
+
 		const extrude10 = B2T.extrudeVertices([V(1, 1), V(2, 2), V(2, 1)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result10 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(2, 2), V(2, 1)])]
 		doTest2(assert, baseFace, extrude10, result10, 'adding a hole')
-	
+
 		const baseFace11 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(2, 2), V(2, 1)])
 		const extrude11 = B2T.extrudeVertices([V(5, 5), V(6, 6), V(6, 5)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result11 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(2, 2), V(2, 1)], [V(5, 5), V(6, 6), V(6, 5)])]
 		doTest2(assert, baseFace11, extrude11, result11, 'adding a hole to a face which already has one')
-	
-	
+
+
 		let baseFace12 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(5, 5), V(5, 1)])
 		const extrude12 = B2T.extrudeVertices([V(2, 1.5), V(2, 4), V(4.5, 4)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result12 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(5, 5), V(5, 1), V(1, 1), V(2, 2), V(2, 4), V(4, 4)])]
 		doTest2(assert, baseFace12, extrude12, result12, 'extending an existing hole')
-	
+
 		const baseFace13 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(5, 5), V(5, 1)])
 		const extrude13 = B2T.extrudeVertices([V(3, -1), V(4, -1), V(4, 2), V(3, 2)], P3.XY.flipped(), V(0, 0, 10)).translate(0, 0, -2).flipped()
 		const result13 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0), V(3, 0), V(3, 1), V(1, 1), V(5, 5), V(5, 1), V(4, 1), V(4, 0)])]
 		doTest2(assert, baseFace13, extrude13, result13, 'removing a hole by cutting a channel')
-	
+
 		const baseFace14 = PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(1, 1), V(5, 5), V(5, 1)])
 		const edges14 = StraightEdge.chain([V(1, 1), V(1, 5), V(5, 5)], false)
 		const points14 = new Map()
 		const result14 = [PlaneFace.forVertices(P3.XY, [V(10, 0), V(10, 10), V(0, 10), V(0, 0)], [V(5, 5), V(5, 1), V(1, 1), V(1, 5)])]
 		doTest3(assert, baseFace14, edges14, points14, result14, 'extending an existing hole')
 	},
-	
+
 	'B2.prototype.minus remove half of a half-pie'(assert) {
 		let pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		let boxKnife = B2T.box(11, 10, 7, 'knife').translate(-10, -1, -1)
-	
+
 		let resultTopPoint = V(1, 8 * Math.sin(Math.acos(1 / 8)), 0)
 		let result = B2T.extrudeEdges([
 				StraightEdge.throughPoints(V(8, 0, 0), V(1, 0, 0)),
@@ -472,10 +472,10 @@ registerTests({
 				PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
 		b2Equal(assert, pie, boxKnife, pie.minus(boxKnife), result)
-	
-	
+
+
 		{
-			const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
+			const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal1.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
 			const k2 = boxKnife.translate(-1, 0, 0)
 			doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.O, V(0, 0, 5)],
 				'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
@@ -540,7 +540,7 @@ registerTests({
         b2Equal(assert, pie, punch, pie.minus(punch), result)
 		console.log(pie.minus(punch).sce)
 	},
-	
+
 	'B2.prototype.minus including ProjectedCurveSurface'(assert) {
 		let s1 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		let s2 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
@@ -549,7 +549,7 @@ registerTests({
 				PCurveEdge.forCurveAndTs(new BezierCurve(V3.O, V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0)), 0, 1)],
 			P3.XY.flipped(), V(0, 0, 5), 'a/4')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
-	
+
 		let result = new B2([
 			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V(0, 0, -1), V(1, 0, 0)), [
 				new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(10, 0, 0), 10, 0),

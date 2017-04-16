@@ -1,7 +1,7 @@
 
 import eq = NLA.eq
 class M4 extends Matrix implements Transformable {
-	m: Float64Array
+	readonly m: Float64Array
 
 	/**
 	 * This constructor takes 16 arguments in row-major order, which can be passed individually, as a list, or even as
@@ -13,13 +13,10 @@ class M4 extends Matrix implements Transformable {
 			m = new Float64Array(16)
 		} else {
 			const flattened = Array.prototype.concat.apply([], arguments)
-			assert(flattened.length == 16, "flattened.length == 16" + flattened.length)
+			assert(flattened.length == 16, 'flattened.length == 16' + flattened.length)
 			m = new Float64Array(flattened)
 		}
 		super(4, 4, m)
-		let o = Object.create(M4.prototype)
-		Object.defineProperty(o, 'm', {value: m})
-		return o
 	}
 
 	/**
@@ -56,9 +53,9 @@ class M4 extends Matrix implements Transformable {
 		// |  d  e-λ  f  | = -λ^3 + λ^2 (a+e+i) + λ (-a e-a i+b d+c g-e i+f h) + a(ei - fh) - b(di - fg) + c(dh - eg)
 		// |  g   h  i-λ |
 
-		let [a, b, c, ,
-			d, e, f, ,
-			g, h, i] = m
+		const [a, b, c, ,
+			   d, e, f, ,
+			   g, h, i] = m
 		// det(this - λI) = -λ^3 +λ^2 (a+e+i) + λ (-a e-a i-b d+c g-e i+f h)+ (a e i-a f h-b d i+b f g+c d h-c e g)
 		let s = -1
 		let t = a + e + i // equivalent to trace of matrix
@@ -77,9 +74,9 @@ class M4 extends Matrix implements Transformable {
 		console.log(this3x3.toString())
 		let mats = eigenValues.map(ev => M4.IDENTITY3.timesScalar(-ev).plus(this3x3))
 		console.log(mats.map(m=>m.determinant3()))
-		console.log(mats.map(m=>'' + m.toString(v=>'' + v)).join("\n\n"))
-		console.log(mats.map(m=>'' + m.gauss().U.toString(v=>'' + v)).join("\n\n"))
-		console.log("mats.map(m=>m.rank())", mats.map(m=>m.rank()))
+		console.log(mats.map(m=>'' + m.toString(v=>'' + v)).join('\n\n'))
+		console.log(mats.map(m=>'' + m.gauss().U.toString(v=>'' + v)).join('\n\n'))
+		console.log('mats.map(m=>m.rank())', mats.map(m=>m.rank()))
 		if (1 == eigenValues.length) {
 			console.log(mats[0].toString())
 			assertf(() => 0 == mats[0].rank())
@@ -133,7 +130,7 @@ class M4 extends Matrix implements Transformable {
 		let S = A.transposed().times(A), V = M4.identity()
 		console.log(S.str)
 		for (let it = 0; it < 16; it++) {
-			console.log("blahg\n", V.times(S).times(V.transposed()).str)
+			console.log('blahg\n', V.times(S).times(V.transposed()).str)
 			assert(V.times(S).times(V.transposed()).likeM4(A.transposed().times(A)),
 				V.times(S).times(V.transposed()).str,
 				A.transposed().times(A).str)
@@ -149,7 +146,7 @@ class M4 extends Matrix implements Transformable {
 			const i = Math.floor(maxOffDiagonalIndex / 4), k = maxOffDiagonalIndex % 4
 			const a_ii = S.m[5 * i], a_kk = S.m[5 * k], a_ik = S.m[maxOffDiagonalIndex]
 			const phi = a_ii === a_kk ? PI / 4 : Math.atan(2 * a_ik / (a_ii - a_kk)) / 2
-			console.log(maxOffDiagonalIndex, i, k, "phi", phi)
+			console.log(maxOffDiagonalIndex, i, k, 'phi', phi)
 			const cos = Math.cos(phi), sin = Math.sin(phi)
 			const givensRotation = matrixForCS(i, k, cos, -sin)
 			assert(givensRotation.transposed().times(givensRotation).isIdentity())
@@ -167,7 +164,7 @@ class M4 extends Matrix implements Transformable {
 		return M4.fromFunction((x, y, i) => fn(this.m[i], i, this.m))
 	}
 
-	likeM4(m4): boolean {
+	likeM4(m4: M4): boolean {
 		assertInst(M4, m4)
 		return this.m.every((el, index) => NLA.eq(el, m4.m[index]))
 	}
@@ -290,7 +287,7 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	/**
-	 * A matrix M is normal iff M * M^-T == M^T * M TODO: ^-T?
+	 * A matrix M is normal1 iff M * M^-T == M^T * M TODO: ^-T?
 	 * I being the identity matrix.
 	 *
 	 * @returns {boolean} If this matrix is symmetric or very close to it. Comparison of the identity matrix and
@@ -409,8 +406,8 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	toString(f?: (number) => string): string {
-		f = f || ((v) => v.toFixed(6).replace(/(0|\.)(?=0*$)/g, " ").toString())
-		assert(typeof f(0) == "string", "" + typeof f(0))
+		f = f || ((v) => v.toFixed(6).replace(/(0|\.)(?=0*$)/g, ' ').toString())
+		assert(typeof f(0) == 'string', '' + typeof f(0))
 		// slice this.m to convert it to an Array (from TypeArray)
 		const rounded = Array.prototype.slice.call(this.m).map(f)
 		const colWidths = [0, 1, 2, 3].map((colIndex) => rounded.sliceStep(colIndex, 4).map((x) => x.length).max())
@@ -418,8 +415,8 @@ class M4 extends Matrix implements Transformable {
 			(rowIndex) => rounded
 				.slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
 				.map((x, colIndex) => NLA.repeatString(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
-				.join(" ")
-		).join("\n") // join rows
+				.join(' ')
+		).join('\n') // join rows
 	}
 
 	/**
@@ -431,7 +428,7 @@ class M4 extends Matrix implements Transformable {
 	static inverse(matrix: M4, result?: M4): M4 {
 		assertInst(M4, matrix)
 		!result || assertInst(M4, result)
-		assert(matrix != result, "matrix != result")
+		assert(matrix != result, 'matrix != result')
 		result = result || new M4()
 		const m = matrix.m, r = result.m
 
@@ -460,7 +457,7 @@ class M4 extends Matrix implements Transformable {
 		// calculate determinant using laplace expansion (cf https://en.wikipedia.org/wiki/Laplace_expansion),
 		// as we already have the cofactors. We multiply a column by a row as the cofactor matrix is transposed.
 		const det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12]
-		// assert(!NLA.isZero(det), "det may not be zero, i.e. the matrix is not invertible")
+		// assert(!NLA.isZero(det), 'det may not be zero, i.e. the matrix is not invertible')
 		let i = 16
 		while (i--) {
 			r[i] /= det
@@ -475,7 +472,7 @@ class M4 extends Matrix implements Transformable {
 	static transpose(matrix: M4, result?: M4): M4 {
 		assertInst(M4, matrix)
 		!result || assertInst(M4, result)
-		assert(matrix != result, "matrix != result" + matrix + result)
+		assert(matrix != result, 'matrix != result' + matrix + result)
 		result = result || new M4()
 		const m = matrix.m, r = result.m
 		r[0] = m[0]
@@ -503,8 +500,8 @@ class M4 extends Matrix implements Transformable {
 	static multiply(left: M4, right: M4, result?: M4):M4 {
 		assertInst(M4, left, right)
 		!result || assertInst(M4, result)
-		assert(left != result, "left != result")
-		assert(right != result, "right != result")
+		assert(left != result, 'left != result')
+		assert(right != result, 'right != result')
 		result = result || new M4()
 		const a = left.m, b = right.m, r = result.m
 
@@ -534,7 +531,7 @@ class M4 extends Matrix implements Transformable {
 	static copy(src: M4, result?: M4) {
 		assertInst(M4, src)
 		!result || assertInst(M4, result)
-		assert(result != src, "result != src")
+		assert(result != src, 'result != src')
 		result = result || new M4()
 		const s = src.m, d = result.m
 		let i = 16
@@ -601,7 +598,7 @@ class M4 extends Matrix implements Transformable {
 	 * @param result
 	 */
 	static fromFunction(f: (elRow: number, elCol: number, elIndex: number) => number, result?: M4): M4 {
-		assert(typeof f == "function", 'typeof f == "function"' + typeof f)
+		assert(typeof f == 'function', 'typeof f == 'function'' + typeof f)
 		!result || assertInst(M4, result)
 		result = result || new M4()
 		const m = result.m
@@ -645,8 +642,8 @@ class M4 extends Matrix implements Transformable {
 // the OpenGL function `glFrustum()`.
 	static frustum(left: number, right: number, bottom: number, top: number, near: number, far: number, result?: M4): M4 {
 		assertNumbers(left, right, bottom, top, near, far)
-		assert(0 < near, "0 < near")
-		assert(near < far, "near < far")
+		assert(0 < near, '0 < near')
+		assert(near < far, 'near < far')
 		!result || assertInst(M4, result)
 		result = result || new M4()
 		const m = result.m
@@ -683,7 +680,7 @@ class M4 extends Matrix implements Transformable {
 		!result || assertInst(M4, result)
 		result = result || new M4()
 		const m = result.m
-		const n = plane.normal, w = plane.w
+		const n = plane.normal1, w = plane.w
 		const np = n.dot(p)
 
 		m[0] = p.x * n.x + w - np
@@ -763,7 +760,7 @@ class M4 extends Matrix implements Transformable {
 				x = x.x
 			}
 		} else {
-			assert(3 == arguments.length || 4 == arguments.length, "3 == arguments.length || 4 == arguments.length")
+			assert(3 == arguments.length || 4 == arguments.length, '3 == arguments.length || 4 == arguments.length')
 			assertNumbers(x, y, z)
 		}
 		!result || assertInst(M4, result)
@@ -814,7 +811,7 @@ class M4 extends Matrix implements Transformable {
 				z = x
 			}
 		} else {
-			assert(3 == arguments.length || 4 == arguments.length, "3 == arguments.length || 4 == arguments.length")
+			assert(3 == arguments.length || 4 == arguments.length, '3 == arguments.length || 4 == arguments.length')
 			assertNumbers(x, y, z)
 		}
 		!result || assertInst(M4, result)
@@ -849,8 +846,8 @@ class M4 extends Matrix implements Transformable {
 	 * Returns a matrix that rotates by `a` degrees around the vector (x, y, z). You can optionally pass an existing
 	 * matrix in `result` to avoid allocating a new matrix. This emulates the OpenGL function `glRotate()`.
 	 */
-	static rotation(radians: number, x: number, y: number, z: number, result?: M4): M4
-	static rotation(radians: number, v: V3, result?: M4): M4
+	static rotation(radians: raddd, x: number, y: number, z: number, result?: M4): M4
+	static rotation(radians: raddd, v: V3, result?: M4): M4
 	static rotation(radians, x, y?, z?, result?): M4 {
 		if (2 == arguments.length || 3 == arguments.length) {
 			assertVectors(x)
@@ -860,12 +857,12 @@ class M4 extends Matrix implements Transformable {
 			z = x.z
 			x = x.x
 		} else {
-			assert(4 == arguments.length || 5 == arguments.length, "4 == arguments.length || 5 == arguments.length")
+			assert(4 == arguments.length || 5 == arguments.length, '4 == arguments.length || 5 == arguments.length')
 			assertNumbers(radians, x, y, z)
 		}
 		!result || assertInst(M4, result)
 		// TODO
-		assert(!V(x, y, z).isZero(), "!V(x, y, z).isZero()")
+		assert(!V(x, y, z).isZero(), '!V(x, y, z).isZero()')
 
 		result = result || new M4()
 		const m = result.m
@@ -906,7 +903,7 @@ class M4 extends Matrix implements Transformable {
 	 * a new matrix. This emulates the OpenGL function `gluLookAt()`.
 	 */
 	static lookAt(eye: V3, focus: V3, up: V3, result?: M4): M4 {
-		assert(3 == arguments.length || 4 == arguments.length, "3 == arguments.length || 4 == arguments.length")
+		assert(3 == arguments.length || 4 == arguments.length, '3 == arguments.length || 4 == arguments.length')
 		assertVectors(eye, focus, up)
 		!result || assertInst(M4, result)
 
@@ -943,7 +940,7 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 * Create a rotation matrix for rotating around the X axis
 	 */
-	static rotationX(radians: number): M4 {
+	static rotationX(radians: raddd): M4 {
 		assertNumbers(radians)
 		const sin = Math.sin(radians), cos = Math.cos(radians)
 		const els = [
@@ -955,7 +952,7 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 * Create a rotation matrix for rotating around the Y axis
 	 */
-	static rotationY(radians: number): M4 {
+	static rotationY(radians: raddd): M4 {
 		const sin = Math.sin(radians), cos = Math.cos(radians)
 		const els = [
 			cos, 0, sin, 0, 0, 1, 0, 0, -sin, 0, cos, 0, 0, 0, 0, 1
@@ -966,7 +963,7 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 * Create a rotation matrix for rotating around the Z axis
 	 */
-	static rotationZ(radians: number) {
+	static rotationZ(radians: raddd) {
 		const sin = Math.sin(radians), cos = Math.cos(radians)
 		const els = [
 			cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
@@ -994,7 +991,7 @@ class M4 extends Matrix implements Transformable {
 	 * Matrix for rotation about arbitrary line defined by an anchor point and direction.
 	 * rotationAxis does not need to be unit
 	 */
-	static rotationLine(rotationAnchor: V3, rotationAxis: V3, radians: number, result?: M4): M4 {
+	static rotationLine(rotationAnchor: V3, rotationAxis: V3, radians: raddd, result?: M4): M4 {
 		// see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
 		assertVectors(rotationAnchor, rotationAxis)
 		assertNumbers(radians)
@@ -1035,9 +1032,9 @@ class M4 extends Matrix implements Transformable {
 	static mirroring(plane: P3, result?: M4): M4 {
 		assertInst(P3, plane)
 		!result || assertInst(M4, result)
-		const nx = plane.normal.x
-		const ny = plane.normal.y
-		const nz = plane.normal.z
+		const nx = plane.normal1.x
+		const ny = plane.normal1.y
+		const nz = plane.normal1.z
 		const w = plane.w
 		result = result || new M4()
 		const m = result.m
@@ -1067,19 +1064,19 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 *
 	 * @param plane
-	 * @param dir Projection direction. Optional, if not specified plane normal will be used.
+	 * @param dir Projection direction. Optional, if not specified plane normal1 will be used.
 	 * @param result
 	 */
 	static projection(plane: P3, dir?: V3, result?: M4): M4 {
 		// TODO: doc
 		/**
-		 * plane.normal DOT (p + lambda * dir) = w (1)
+		 * plane.normal1 DOT (p + lambda * dir) = w (1)
 		 * extract lambda:
-		 * plane.normal DOT p + lambda * plane.normal DOT dir = w
-		 * lambda = (w - plane.normal DOT p) / plane.normal DOT dir
+		 * plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
+		 * lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
 		 * result = p + lambda * dir
-		 * result = p + dir * (w - plane.normal DOT p) / plane.normal DOT dir
-		 * result =  w * dir / (plane.normal DOT dir) + p - plane.normal DOT p * dir / (plane.normal DOT dir) *
+		 * result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+		 * result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
 		 *
 
 		 a + d * (w - n . a) / (nd)
@@ -1088,19 +1085,19 @@ class M4 extends Matrix implements Transformable {
 		assertInst(P3, plane)
 		!dir || assertVectors(dir)
 		!result || assertInst(M4, result)
-		dir = dir || plane.normal
+		dir = dir || plane.normal1
 		const w = plane.w
 		result = result || new M4()
 		const m = result.m
-		const nd = plane.normal.dot(dir)
-		const {x: nx, y: ny, z: nz} = plane.normal
+		const nd = plane.normal1.dot(dir)
+		const {x: nx, y: ny, z: nz} = plane.normal1
 		const {x: dx, y: dy, z: dz} = dir.div(nd)
 		/*
 		 rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
 		 return M4.forSys(
-		 V3.X.rejectedFrom(plane.normal),
-		 V3.Y.rejectedFrom(plane.normal),
-		 V3.Z.rejectedFrom(plane.normal),
+		 V3.X.rejectedFrom(plane.normal1),
+		 V3.Y.rejectedFrom(plane.normal1),
+		 V3.Z.rejectedFrom(plane.normal1),
 		 plane.anchor,
 		 result
 		 )

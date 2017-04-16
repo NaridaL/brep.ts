@@ -1,7 +1,12 @@
 {
-    "rules": {
-        "semicolon": [true, "never"]
-//        , "no-var-keyword": true
-    },
-    "no-unused-variable": [true, "check-parameters", {"ignore-pattern": "^_"}]
+  "rules": {
+    "semicolon": [true, "never"],
+    "quotemark": [true, "single"],
+    "no-var-keyword": true,
+    "array-type": [true, "array"],
+//    "no-unused-variable": [true, "check-parameters", {"ignore-pattern": "^_"}],
+    "class-name": true,
+    "object-literal-key-quotes": [true, "as-needed"],
+    "prefer-const": true
+  }
 }

@@ -25,26 +25,26 @@ class HyperbolaCurve extends Curve {
         return `new HyperbolaCurve(${this.center} ${this.f1} ${this.f2})`
     }
 
-    at(t) {
+    at(t: number) {
         return this.center.plus(this.f1.times(Math.cosh(t))).plus(this.f2.times(Math.sinh(t)))
     }
 
-    at2(xi, eta) {
+    at2(xi: number, eta: number) {
         return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
     }
 
-    tangentAt(t) {
+    tangentAt(t: number): V3 {
         assertNumbers(t)
         return this.f1.times(Math.sinh(t)).plus(this.f2.times(Math.cosh(t)))
     }
 
-    ddt(t) {
+	tangentAt2(xi: number, eta: number) {
+		return this.f1.times(eta).plus(this.f2.times(xi))
+	}
+
+    ddt(t: number): V3 {
         assertNumbers(t)
         return this.f1.times(Math.cosh(t)).plus(this.f2.times(Math.sinh(t)))
-    }
-
-    tangentAt2(xi, eta) {
-        return this.f1.times(eta).plus(this.f2.times(xi))
     }
 
     isCircular() {
@@ -75,7 +75,7 @@ class HyperbolaCurve extends Curve {
             && NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
-    normalAt(t) {
+    normalAt(t: number): V3 {
         return this.tangentAt(t).cross(this.normal)
     }
 
@@ -99,7 +99,7 @@ class HyperbolaCurve extends Curve {
         return new HyperbolaCurve(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(eta).plus(f2.times(xi)))
     }
 
-    transform(m4) {
+    transform(m4: M4) {
         return new HyperbolaCurve(
         	m4.transformPoint(this.center),
 	        m4.transformVector(this.f1),
@@ -118,7 +118,7 @@ class HyperbolaCurve extends Curve {
         return P3.normalOnAnchor(this.normal, this.center)
     }
 
-    containsPoint(p) {
+	containsPoint(p: V3): boolean {
         const pLC = this.inverseMatrix.transformPoint(p)
         return pLC.x > 0 && NLA.eq0(pLC.z) && NLA.eq(1, pLC.x * pLC.x - pLC.y * pLC.y)
     }

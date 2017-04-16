@@ -38,7 +38,7 @@ registerTests({
         assert.notOk(c.like(b))
     },
 
-    'B2T.tetrahedron'(assert) {
+    'tetrahedron'(assert) {
         const a = B2T.tetrahedron(V(5, 5, 5), V(5, 5, -5), V(9, 11, 1), V(1, 9, 0))
         const result = new B2([
             new PlaneFace(new P3(V(0.8320502943378437, -0.5547001962252291, 0), 1.386750490563073), [
@@ -233,7 +233,7 @@ registerTests({
         assert.V3ArraysLike(result, [V(0, 0, 6), V(0, 10, 6)])
     },
 
-    'B2T.box(5, 5, 5) - B2T.box(1, 1, 6)'(assert) {
+    'box(5, 5, 5) - box(1, 1, 6)'(assert) {
         const a = B2T.box(5, 5, 5, 'a')
         const b = B2T.box(1, 1, 6, 'b')
         const result = new B2([
@@ -284,7 +284,7 @@ registerTests({
         b2Equal(assert, a, b, a.minus(b), result)
     },
 
-    'B2T.box(5, 5, 5) - B2T.box(1, 1, 5)'(assert) {
+    'box(5, 5, 5) - box(1, 1, 5)'(assert) {
         const a = B2T.box(5, 5, 5)
         const b = B2T.box(1, 1, 5)
         const result = new B2([
@@ -413,7 +413,7 @@ registerTests({
         b2Equal(assert, wideBox, extrusion, wideBox.plus(extrusion), result)
     },
 
-    'B2T.box(10, 10, 5) + B2T.box(10, 10, 5).translate(0, 0, 5) touching coplanar faces result contains both'(assert) {
+    'box(10, 10, 5) + box(10, 10, 5).translate(0, 0, 5) touching coplanar faces result contains both'(assert) {
         const a = B2T.box(10, 10, 5), b = a.translate(0, 0, 5)
 
         // the expected result is the union of a and b's faces, minus the ones where they touch, which we remove with an AABB test
@@ -422,7 +422,7 @@ registerTests({
         b2Equal(assert, a, b, b.plus(a), result)
     },
 
-    'B2T.box(10, 10, 5) - B2T.box(10, 5, 5).translate(0, 0, 5) - B2T.box(5, 5, 5).translate(5, 5, 5)'(assert) {
+    'box(10, 10, 5) - box(10, 5, 5).translate(0, 0, 5) - box(5, 5, 5).translate(5, 5, 5)'(assert) {
         const box = B2T.box(10, 10, 10), box2 = B2T.box(10, 5, 5).translate(0, 0, 5), box3 = B2T.box(5, 5, 5).translate(5, 5, 5)
         const actual = box.minus(box2).minus(box3)
         const result = new B2([
@@ -485,13 +485,13 @@ registerTests({
         b2Equal(assert, box.minus(box2), box3, actual, result)
     },
 
-    'B2T.box(10, 10, 5) && B2T.box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains intersection of faces'(assert) {
+    'box(10, 10, 5) && box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains intersection of faces'(assert) {
         const box = B2T.box(10, 10, 5, 'a')
         const box2 = B2T.box(10, 10, 4, 'b').translate(3, 3, 0)
         b2Equal(assert, box, box2, box.intersection(box2, true, true), B2T.box(7, 7, 4).translate(3, 3, 0))
     },
 
-    'B2T.box(10, 10, 5) + B2T.box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains union of faces'(assert) {
+    'box(10, 10, 5) + box(10, 10, 5).translate(3, 3, 0) overlapping faces result contains union of faces'(assert) {
         const boxA = B2T.box(10, 10, 5, 'boxA').flipped(), boxB = boxA.translate(3, 3, 0)
         //const result = B2T.extrudeVertices([V3.O, V(0, 10), V(3, 10), V(3, 13), V(13, 13), V(13, 3), V(10, 3), V(10, 0)], P3.XY.flipped(), V(0, 0, 5), 'result').flipped()
         const result = new B2([
@@ -577,7 +577,7 @@ registerTests({
     },
 
 
-    'B2T.box(10,10,5) + B2T.box(4,10,2).translate(2, 0, 3) overlapping faces result contains union of faces 2'(assert) {
+    'box(10,10,5) + box(4,10,2).translate(2, 0, 3) overlapping faces result contains union of faces 2'(assert) {
         const box = B2T.box(10, 10, 5), box2 = B2T.box(4, 10, 2).translate(2, 0, 3)
         const result = new B2([
             new PlaneFace(new P3(V(0, 1, 0), 10), [
@@ -641,7 +641,7 @@ registerTests({
         b2Equal(assert, box, box2, box.plus(box2), result)
     },
 
-    'B2T.box(10,10,10) + B2T.box(10,12,12).translate(0, 0, -2) overlapping faces result contains union of faces 3'(assert) {
+    'box(10,10,10) + box(10,12,12).translate(0, 0, -2) overlapping faces result contains union of faces 3'(assert) {
         const box = B2T.box(10, 10, 10, 'box0'), box2 = B2T.box(10, 12, 12, 'box').translate(0, 0, -2)
         const result = new B2([
             new PlaneFace(new P3(V(-1, 0, 0), 0), [
@@ -701,7 +701,7 @@ registerTests({
         b2Equal(assert, box, box2, box.plus(box2), result)
     },
 
-    'B2T.box(10, 10, 10) - B2T.box().scale(8 / 3 ** 0.5).rotateAB(V3.ONES, V3.X)'(assert) {
+    'box(10, 10, 10) - box().scale(8 / 3 ** 0.5).rotateAB(V3.ONES, V3.X)'(assert) {
         const box = B2T.box(10, 10, 10, 'box0'), box2 = B2T.box(1,1,1).scale(8 / 3 ** 0.5).rotateAB(V3.XYZ, V3.X)
         const result = new B2([
             new PlaneFace(new P3(V(0, -1, 0), 0), [
@@ -754,7 +754,7 @@ registerTests({
         b2Equal(assert, box, box2, box.minus(box2), result)
     },
 
-    'B2T.box(10, 10, 10) - B2T.tetrahedron(V(5,0,10),V(5,3,10),V(7,1,9),V(7,1,11))'(assert) {
+    'box(10, 10, 10) - tetrahedron(V(5,0,10),V(5,3,10),V(7,1,9),V(7,1,11))'(assert) {
         const box = B2T.box(10, 10, 10, 'box0'), box2 = B2T.tetrahedron(V(5,0,10),V(5,3,10),V(7,1,9),V(7,1,11)).flipped()
         const result = new B2([
             new PlaneFace(new P3(V(0, -1, 0), 0), [
@@ -807,7 +807,7 @@ registerTests({
         b2Equal(assert, box, box2, box.and(box2), result)
     },
 
-    'B2T.box(10, 10, 10) - B2T.box().rotateAB(V3.ONES, V3.Y).translate(5,0,10)'(assert) {
+    'box(10, 10, 10) - box().rotateAB(V3.ONES, V3.Y).translate(5,0,10)'(assert) {
         const box = B2T.box(10, 10, 10, 'box0'), box2 = B2T.box().rotateAB(V3.XYZ, V3.Y).translate(5,0,10).flipped()
         const result = new B2([
             new PlaneFace(new P3(V(0, -1, 0), 0), [
@@ -872,7 +872,7 @@ registerTests({
         b2Equal(assert, box, box2, box.and(box2), result)
     },
 
-    'menger(1) - B2T.box(2,2,1).rotateZ(-45*DEG)'(assert) {
+    'menger(1) - box(2,2,1).rotateZ(-45*DEG)'(assert) {
         const box = B2T.box(1,1,1, 'box0').minus(B2T.box(1/3,1/3,1).translate(1/3,1/3,0))
         const box2 = B2T.box(2,2,1).rotateZ(-45*DEG).flipped()
         const result = new B2([
@@ -923,7 +923,7 @@ registerTests({
         b2Equal(assert, box, box2, box.and(box2), result)
     },
 
-    'B2T.sphere(5) - B2T.box(12,2,3).translate(-6, 0,1)'(assert) {
+    'sphere(5) - box(12,2,3).translate(-6, 0,1)'(assert) {
         const a = B2T.sphere(5)
         const b = B2T.box(12,2,3).translate(-6, 0,1).flipped()
         const result = new B2([
@@ -968,7 +968,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere(5) AND B2T.octahedron().scale(6)'(assert) {
+    'sphere(5) AND octahedron().scale(6)'(assert) {
         const a = B2T.sphere(5)
         const b = B2T.octahedron().scale(6)
         const result = new B2([
@@ -1093,7 +1093,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere(5) - B2T.box(12,2,3).translate(-6, 0,1) 2'(assert) {
+    'sphere(5) - box(12,2,3).translate(-6, 0,1) 2'(assert) {
         const a = B2T.sphere(5)
         const b = B2T.box(12,2,2).translate(-6, -1,1).rotateX(-10*DEG).flipped()
         const result = new B2([
@@ -1146,7 +1146,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere(5) AND B2T.tetrahedron(V3.ZERO, V3.Y, V3.Z, V(7,0,0))'(assert) {
+    'sphere(5) AND tetrahedron(V3.ZERO, V3.Y, V3.Z, V(7,0,0))'(assert) {
         const a = B2T.sphere(5)
         const b = B2T.tetrahedron(V3.O, V3.Y, V3.Z, V(7,0,0))
         const result = new B2([
@@ -1176,7 +1176,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere(5) AND B2T.tetrahedron(V3.ZERO, V3.X, V3.Y, V3.Z).scale(7)'(assert) {
+    'sphere(5) AND tetrahedron(V3.ZERO, V3.X, V3.Y, V3.Z).scale(7)'(assert) {
         const a = B2T.sphere(5)
         const b = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z).scale(7)
         const result = new B2([
@@ -1222,7 +1222,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere(5) AND B2T.tetrahedron(V3.ZERO, V3.X, V3.Y, V3.Z.negated()).scale(7)'(assert) {
+    'sphere(5) AND tetrahedron(V3.ZERO, V3.X, V3.Y, V3.Z.negated()).scale(7)'(assert) {
         const a = B2T.sphere(5)
         const b = B2T.tetrahedron(V(-6,0,0), V(6,0,0), V(0,-4,0), V(0,0,-6))
         const result = new B2([
@@ -1268,7 +1268,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere() - cubelet near -V3.Y'(assert) {
+    'sphere() - cubelet near -V3.Y'(assert) {
         const a = B2T.sphere()
         const b = B2T.box(0.2, 0.2,0.2, "").translate(0, 0.95, 0).rotateAB(V3.Y, V(0, -0.9341723589627158, 0.35682208977308993)).flipped()
         const result = new B2([
@@ -1310,7 +1310,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere() - B2 w/ PCS'(assert) {
+    'sphere() - B2 w/ PCS'(assert) {
         const a = B2T.sphere()
         const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
             .scale(0.2, 0.2, 2)
@@ -1342,7 +1342,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.sphere() - B2 w/ PCS 2'(assert) {
+    'sphere() - B2 w/ PCS 2'(assert) {
         const a = B2T.sphere()
         const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
             .scale(0.2, 0.2, 2)
@@ -1379,7 +1379,7 @@ registerTests({
         b2Equal(assert, a, b, a.and(b), result)
     },
 
-    'B2T.box() - B2 w/ PCS 2'(assert) {
+    'box() - B2 w/ PCS 2'(assert) {
         const a = B2T.box()
         const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
             .scale(0.2, 0.2, 4)
@@ -1441,7 +1441,7 @@ registerTests({
 	    b2Equal(assert, a, b, a.and(b), result)
     },
 
-	'B2 w/ PCS - B2T.sphere()'(assert) {
+	'B2 w/ PCS - sphere()'(assert) {
 		const a = B2T.sphere().flipped()
 		const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
 			.scale(0.2, 0.2, 2)
@@ -1473,7 +1473,7 @@ registerTests({
 		b2Equal(assert, a, b, a.and(b), result)
 	},
 
-	'B2T.sphere() - B2 w/ PCS - B2T.sphere(0.9)'(assert) {
+	'sphere() - B2 w/ PCS - sphere(0.9)'(assert) {
 		const a = B2T.sphere(0.9).flipped()
 		const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
 			.scale(0.2, 0.2, 2)
@@ -1522,21 +1522,98 @@ registerTests({
 		b2Equal(assert, d, c, d.and(c), result)
 	},
 
-	'B2T.sphere().translate(1,2,1.4) - B2T.sphere(3)'(assert) {
+	'sphere() - cylinder(0.05, 4).scale(10,1,1).translate(0.5,0,-2)'(assert) {
 		const a = B2T.sphere()
 		const b = B2T.cylinder(0.05, 4).scale(10,1,1).translate(0.5,0,-2).flipped()
 		const result = B2.EMPTY
 		b2EqualAnd(assert, a, b, result)
 	},
 
-	'B2T.box() - B2T.cylinder(0.2,2).translate(0.5,0.2)'(assert) {
+	'box() - cylinder(0.2,2).translate(0.5,0.2)'(assert) {
 		const a = B2T.box()
 		const b = B2T.cylinder(0.2,2).translate(0.5,0.2).flipped()
 		const result = B2.EMPTY
 		b2EqualAnd(assert, a, b, result)
 	},
 
-	async 'B2T.sphere() - "a"'(assert) {
+	'cylinder() - triangle(1.5)'(assert) {
+		// file:///C:/Users/aval/Desktop/cs/viewer.html?a=B2T.cylinder()&b=B2T.extrudeEdges(Edge.ngon(3,1.5))&c=a.and(b).translate(3)
+		const a = B2T.cylinder()
+		const b = B2T.extrudeEdges(Edge.round(Edge.ngon(3,1.6),0.5))
+		const result = B2.EMPTY
+		b2EqualAnd(assert, a, b, result)
+	},
+	'box - snug sphere'(assert) {
+		// file:///C:/Users/aval/Desktop/cs/viewer.html?a=B2T.cylinder()&b=B2T.extrudeEdges(Edge.ngon(3,1.5))&c=a.and(b).translate(3)
+		const a = B2T.box(2,2,3)
+		const b = B2T.sphere().translate(1,1).flipped()
+		const result = B2.EMPTY
+		b2EqualAnd(assert, a, b, result)
+	},
+	'box() - cylinder(0.2,3).translate(0.5,0.2,-1).rotateX(10*DEG)'(assert) {
+		const a = B2T.box()
+		const b = B2T.cylinder(0.2,1).translate(0.5,0.2,-0.5).rotateX(-10*DEG).flipped()
+		const result = new B2([
+			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0), V(-1, 0, 0), V(0, 1, 0)), [
+				new StraightEdge(new L3(V(0, 0, 0), V(0, 1, 0)), V(0, 0, 0), V(0, 1, 0), 0, 1),
+				new StraightEdge(new L3(V(0, 1, 0), V(1, 0, 0)), V(0, 1, 0), V(1, 1, 0), 0, 1),
+				new StraightEdge(new L3(V(1, 1, 0), V(0, -1, 0)), V(1, 1, 0), V(1, 0, 0), 0, 1),
+				new StraightEdge(new L3(V(1, 0, 0), V(-1, 0, 0)), V(1, 0, 0), V(0, 0, 0), 0, 1)], [[
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.203085322377149, 0), V(-0.2, 0, 0), V(0, 0.203085322377149, 0), 0, 3.141592653589793), V(0.7, 0.203085322377149, 0), V(0.3, 0.20308532237714905, 0), 3.141592653589793, 2.220446049250313e-16, null, V(-2.4492935982947065e-17, 0.203085322377149, 0), V(-4.4408920985006264e-17, -0.203085322377149, 0)),
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.203085322377149, 0), V(0.2, -2.4870779000298388e-17, 0), V(-2.4492935982947065e-17, -0.203085322377149, 0), 0, 3.141592653589793), V(0.3, 0.20308532237714905, 0), V(0.7, 0.203085322377149, 0), 3.141592653589793, 0, null, V(0, -0.203085322377149, 0), V(2.4492935982947065e-17, 0.203085322377149, 0))]]),
+			new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), 0), V(0, 0, -1), V(0, -1, 0)), [
+				new StraightEdge(new L3(V(0, 0, 0), V(0, 1, 0)), V(0, 1, 0), V(0, 0, 0), 1, 0),
+				new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 0), V(0, 0, 1), 0, 1),
+				new StraightEdge(new L3(V(0, 0, 1), V(0, 1, 0)), V(0, 0, 1), V(0, 1, 1), 0, 1),
+				new StraightEdge(new L3(V(0, 1, 0), V(0, 0, 1)), V(0, 1, 1), V(0, 1, 0), 1, 0)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, 1, 0), 1), V(0, 0, -1), V(-1, 0, 0)), [
+				new StraightEdge(new L3(V(0, 1, 0), V(1, 0, 0)), V(1, 1, 0), V(0, 1, 0), 1, 0),
+				new StraightEdge(new L3(V(0, 1, 0), V(0, 0, 1)), V(0, 1, 0), V(0, 1, 1), 0, 1),
+				new StraightEdge(new L3(V(0, 1, 1), V(1, 0, 0)), V(0, 1, 1), V(1, 1, 1), 0, 1),
+				new StraightEdge(new L3(V(1, 1, 0), V(0, 0, 1)), V(1, 1, 1), V(1, 1, 0), 1, 0)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(1, 0, 0), 1), V(0, 0, -1), V(0, 1, 0)), [
+				new StraightEdge(new L3(V(1, 1, 0), V(0, -1, 0)), V(1, 0, 0), V(1, 1, 0), 1, 0),
+				new StraightEdge(new L3(V(1, 1, 0), V(0, 0, 1)), V(1, 1, 0), V(1, 1, 1), 0, 1),
+				new StraightEdge(new L3(V(1, 1, 1), V(0, -1, 0)), V(1, 1, 1), V(1, 0, 1), 0, 1),
+				new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 1), V(1, 0, 0), 1, 0)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V(0, 0, -1), V(1, 0, 0)), [
+				new StraightEdge(new L3(V(1, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(1, 0, 0), 1, 0),
+				new StraightEdge(new L3(V(1, 0, 0), V(0, 0, 1)), V(1, 0, 0), V(1, 0, 1), 0, 1),
+				new StraightEdge(new L3(V(1, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(0, 0, 1), 0, 1),
+				new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 1), V(0, 0, 0), 1, 0)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1), V(1, 0, 0), V(0, 1, 0)), [
+				new StraightEdge(new L3(V(1, 0, 1), V(-1, 0, 0)), V(0, 0, 1), V(1, 0, 1), 1, 0),
+				new StraightEdge(new L3(V(1, 1, 1), V(0, -1, 0)), V(1, 0, 1), V(1, 1, 1), 1, 0),
+				new StraightEdge(new L3(V(0, 1, 1), V(1, 0, 0)), V(1, 1, 1), V(0, 1, 1), 1, 0),
+				new StraightEdge(new L3(V(0, 0, 1), V(0, 1, 0)), V(0, 1, 1), V(0, 0, 1), 1, 0)], []),
+			new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0.11013746176897644, -0.5271335120394901), V(0.2, 0, 0), V(0, 0.1969615506024416, -0.034729635533386066), 0, 3.141592653589793), V(0, -0.17364817766693036, -0.9848077530122082), -Infinity, Infinity), [
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.203085322377149, 0), V(-0.2, 0, 0), V(0, 0.203085322377149, 0), 0, 3.141592653589793), V(0.3, 0.20308532237714905, 0), V(0.7, 0.203085322377149, 0), 2.220446049250313e-16, 3.141592653589793, null, V(4.4408920985006264e-17, 0.203085322377149, 0), V(2.4492935982947065e-17, -0.203085322377149, 0)),
+				new StraightEdge(new L3(V(0.7, 0.11013746176897644, -0.5271335120394901), V(0, 0.17364817766693036, 0.9848077530122081)), V(0.7, 0.203085322377149, 0), V(0.7, 0.2837856394359068, 0.4576742409727179), 0.535265396141693, 0.9999999999999999),
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.2837856394359068, 0.4576742409727179), V(0.2, 0, 0), V(0, 0.1969615506024416, -0.034729635533386066), 0, 3.141592653589793), V(0.7, 0.2837856394359068, 0.4576742409727179), V(0.3, 0.2837856394359068, 0.4576742409727179), 0, 3.141592653589793, null, V(0, 0.1969615506024416, -0.034729635533386066), V(-2.4492935982947065e-17, -0.1969615506024416, 0.034729635533386066)),
+				new StraightEdge(new L3(V(0.3, 0.11013746176897647, -0.5271335120394901), V(0, 0.17364817766693036, 0.9848077530122081)), V(0.3, 0.2837856394359068, 0.4576742409727179), V(0.3, 0.20308532237714905, 0), 0.9999999999999999, 0.535265396141693)], []),
+			new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0.11013746176897644, -0.5271335120394901), V(-0.2, 2.4120833250037956e-17, -4.2531536991515426e-18), V(-2.4492935982947065e-17, -0.1969615506024416, 0.034729635533386066), 0, 3.141592653589793), V(0, -0.17364817766693036, -0.9848077530122082), -Infinity, Infinity), [
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.203085322377149, 0), V(0.2, -2.4870779000298388e-17, 0), V(-2.4492935982947065e-17, -0.203085322377149, 0), 0, 3.141592653589793), V(0.7, 0.203085322377149, 0), V(0.3, 0.20308532237714905, 0), 0, 3.141592653589793, null, V(-2.4492935982947065e-17, -0.203085322377149, 0), V(0, 0.203085322377149, 0)),
+				new StraightEdge(new L3(V(0.3, 0.11013746176897647, -0.5271335120394901), V(0, 0.17364817766693036, 0.9848077530122081)), V(0.3, 0.20308532237714905, 0), V(0.3, 0.2837856394359068, 0.4576742409727179), 0.535265396141693, 0.9999999999999999),
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.2837856394359068, 0.4576742409727179), V(-0.2, 2.4120833250037956e-17, -4.2531536991515426e-18), V(-2.4492935982947065e-17, -0.1969615506024416, 0.034729635533386066), 0, 3.141592653589793), V(0.3, 0.2837856394359068, 0.4576742409727179), V(0.7, 0.2837856394359068, 0.4576742409727179), 0, 3.141592653589793, null, V(-2.4492935982947065e-17, -0.1969615506024416, 0.034729635533386066), V(4.898587196589413e-17, 0.1969615506024416, -0.034729635533386066)),
+				new StraightEdge(new L3(V(0.7, 0.11013746176897644, -0.5271335120394901), V(0, 0.17364817766693036, 0.9848077530122081)), V(0.7, 0.2837856394359068, 0.4576742409727179), V(0.7, 0.203085322377149, 0), 0.9999999999999999, 0.535265396141693)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, -0.1736481776669304, -0.9848077530122081), -0.5), V(0, 0.9848077530122081, -0.1736481776669304), V(1, 0, 0)), [
+				new StraightEdge(new L3(V(0.3, 0.2837856394359068, 0.4576742409727179), V(1, -1.2060416625018976e-16, 2.1265768495757713e-17)), V(0.5, 0.2837856394359068, 0.4576742409727179), V(0.3, 0.2837856394359068, 0.4576742409727179), 0.2, 0),
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.2837856394359068, 0.4576742409727179), V(0.2, 0, 0), V(0, 0.1969615506024416, -0.034729635533386066), 0, 3.141592653589793), V(0.3, 0.2837856394359068, 0.4576742409727179), V(0.7, 0.2837856394359068, 0.4576742409727179), 3.141592653589793, 0, null, V(2.4492935982947065e-17, 0.1969615506024416, -0.034729635533386066), V(0, -0.1969615506024416, 0.034729635533386066)),
+				new StraightEdge(new L3(V(0.7, 0.2837856394359068, 0.4576742409727179), V(-1, 0, 0)), V(0.7, 0.2837856394359068, 0.4576742409727179), V(0.5, 0.2837856394359068, 0.4576742409727179), 0, 0.2)], []),
+			new PlaneFace(new PlaneSurface(new P3(V(0, -0.1736481776669304, -0.9848077530122081), -0.5), V(0, 0.9848077530122081, -0.1736481776669304), V(1, 0, 0)), [
+				new StraightEdge(new L3(V(0.7, 0.2837856394359068, 0.4576742409727179), V(-1, 0, 0)), V(0.5, 0.2837856394359068, 0.4576742409727179), V(0.7, 0.2837856394359068, 0.4576742409727179), 0.2, 0),
+				new PCurveEdge(new SemiEllipseCurve(V(0.5, 0.2837856394359068, 0.4576742409727179), V(-0.2, 2.4120833250037956e-17, -4.2531536991515426e-18), V(-2.4492935982947065e-17, -0.1969615506024416, 0.034729635533386066), 0, 3.141592653589793), V(0.7, 0.2837856394359068, 0.4576742409727179), V(0.3, 0.2837856394359068, 0.4576742409727179), 3.141592653589793, 0, null, V(-4.898587196589413e-17, -0.1969615506024416, 0.034729635533386066), V(2.4492935982947065e-17, 0.1969615506024416, -0.034729635533386066)),
+				new StraightEdge(new L3(V(0.3, 0.2837856394359068, 0.4576742409727179), V(1, -1.2060416625018976e-16, 2.1265768495757713e-17)), V(0.3, 0.2837856394359068, 0.4576742409727179), V(0.5, 0.2837856394359068, 0.4576742409727179), 0, 0.2)], [])], false)
+		b2EqualAnd(assert, a, b, result)
+	},
+	'star - ball'(assert) {
+		const a = B2T.extrudeEdges(Edge.star(4,2,1),P3.XY,V3.Z.negated())
+		const b = B2T.sphere().flipped()
+		const result = B2.EMPTY
+		b2EqualAnd(assert, a, b, result)
+	},
+
+	async 'sphere() - "a"'(assert) {
 		const a = B2T.sphere()
 		const b = B2T.text('a', 64, 64, await B2T.loadFont('fonts/FiraSansMedium.woff')).scale(0.5/32).translate(-0.25,-0.25,1.2).flipped()
 		const result = new B2([
@@ -1697,7 +1774,7 @@ registerTests({
 		b2EqualAnd(assert, a, b, result)
 	},
 
-	'B2T.cylinder(1,2) AND B2T.cylinder(1,2).rotateZ(PI/2).translate(0,0,1)'(assert) {
+	'cylinder(1,2) AND cylinder(1,2).rotateZ(PI/2).translate(0,0,1)'(assert) {
 		const a = B2T.cylinder(1,2)
 		const b = B2T.cylinder(1,2).rotateZ(PI/2).translate(0,0,1)
 		const result = new B2([
@@ -2004,8 +2081,8 @@ registerTests({
 
      //'B2.withMergedFaces'(assert) {
     //    const box = B2T.box(5, 5, 5)
-    //    const boxToMerge = new B2(box.faces.filter((face:PlaneFace) => face.surface.plane.normal.x != 1).concat(
-    //        box.translate(5, 0, 0).faces.filter((face:PlaneFace) => face.surface.plane.normal.x != -1)
+    //    const boxToMerge = new B2(box.faces.filter((face:PlaneFace) => face.surface.plane.normal1.x != 1).concat(
+    //        box.translate(5, 0, 0).faces.filter((face:PlaneFace) => face.surface.plane.normal1.x != -1)
     //    ), false)
     //
     //    assert.equal(boxToMerge.faces.length, 10)

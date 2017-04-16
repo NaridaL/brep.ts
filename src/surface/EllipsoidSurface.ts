@@ -1,30 +1,29 @@
 class EllipsoidSurface extends Surface {
-    center: V3
-    f1: V3
-    f2: V3
-    f3: V3
-    matrix: M4
-    inverseMatrix: M4
-    normalMatrix: M4
+	readonly matrix: M4
+	readonly inverseMatrix: M4
+	readonly normalMatrix: M4
 
-	edgeLoopCCW(loop) {
+	constructor(readonly center: V3,
+	            readonly f1: V3,
+	            readonly f2: V3,
+	            readonly f3: V3) {
+		super()
+		assertVectors(center, f1, f2, f3)
+		this.matrix = M4.forSys(f1, f2, f3, center)
+		this.inverseMatrix = this.matrix.inversed()
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(sign(this.f1.cross(this.f2).dot(this.f3)))
+	}
 
+	like(obj: any): boolean {
+		return this.isCoplanarTo(obj) && this.isInsideOut() == obj.isInsideOut()
+	}
+
+	edgeLoopCCW(loop: Edge[]): boolean {
+		throw new Error()
 	}
 
 	rootPoints() {
 
-    }
-
-    constructor(center: V3, f1: V3, f2: V3, f3: V3) {
-        super()
-        assertVectors(center, f1, f2, f3)
-        this.center = center
-        this.f1 = f1
-        this.f2 = f2
-        this.f3 = f3
-        this.matrix = M4.forSys(f1, f2, f3, center)
-        this.inverseMatrix = this.matrix.inversed()
-        this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(sign(this.f1.cross(this.f2).dot(this.f3)))
     }
 
     toSource() {
@@ -157,8 +156,8 @@ class EllipsoidSurface extends Surface {
     parametricNormal() {
         // ugh
         // paramtric ellipsoid point q(a, b)
-        // normal == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
-        // normal == cos b * (f2 X f3 * cos b * cos a + f3 X f1 * cos b * sin a + f1 X f2 * sin b)
+        // normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
+        // normal1 == cos b * (f2 X f3 * cos b * cos a + f3 X f1 * cos b * sin a + f1 X f2 * sin b)
         return (a, b) => {
             let {f1, f2, f3} = this
             let normal = f2.cross(f3).times(Math.cos(b) * Math.cos(a))
@@ -186,7 +185,7 @@ class EllipsoidSurface extends Surface {
     }
 
 	pointToParameterFunction() {
-		return (pWC: V3, hint) => {
+		return (pWC: V3, hint?) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			let alpha = pLC.angleXY()
 			if (abs(alpha) > Math.PI - NLA_PRECISION) {
@@ -300,7 +299,7 @@ class EllipsoidSurface extends Surface {
 
     /**
      * unit sphere: x² + y² + z² = 1
-     * plane: normal DOT p = w
+     * plane: normal1 DOT p = w
      */
     static unitISCurvesWithPlane(plane: P3): EllipseCurve[] {
 	    assertInst(P3, plane)
@@ -311,8 +310,8 @@ class EllipsoidSurface extends Surface {
             // pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 - distPlaneCenter²)
             const isCircleRadius = Math.sqrt(1 - distPlaneCenter * distPlaneCenter)
             const center = plane.anchor
-            const f1 = plane.normal.getPerpendicular().toLength(isCircleRadius)
-            const f2 = plane.normal.cross(f1)
+            const f1 = plane.normal1.getPerpendicular().toLength(isCircleRadius)
+            const f2 = plane.normal1.cross(f1)
             return [new EllipseCurve(plane.anchor, f1, f2)]
         } else {
             return []
@@ -367,113 +366,6 @@ class EllipsoidSurface extends Surface {
 
 
 	    return totalArea
-    }
-
-    meshSphere(edges: Edge[], subdivisions: int = 3) {
-	    const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).unit(), s = u.x, t = u.y
-	    // base vertices of isocahedron
-	    const vertices = [
-		    new V3(-s, t, 0),
-		    new V3(s, t, 0),
-		    new V3(-s, -t, 0),
-		    new V3(s, -t, 0),
-
-		    new V3(0, -s, t),
-		    new V3(0, s, t),
-		    new V3(0, -s, -t),
-		    new V3(0, s, -t),
-
-		    new V3(t, 0, -s),
-		    new V3(t, 0, s),
-		    new V3(-t, 0, -s),
-		    new V3(-t, 0, s)]
-	    // base triangles of isocahedron
-	    const triangles = [
-		    // 5 faces around point 0
-		    0, 11, 5,
-		    0, 5, 1,
-		    0, 1, 7,
-		    0, 7, 10,
-		    0, 10, 11,
-
-		    // 5 adjacent faces
-		    1, 5, 9,
-		    5, 11, 4,
-		    11, 10, 2,
-		    10, 7, 6,
-		    7, 1, 8,
-
-		    // 5 faces around point 3
-		    3, 9, 4,
-		    3, 4, 2,
-		    3, 2, 6,
-		    3, 6, 8,
-		    3, 8, 9,
-
-		    // 5 adjacent faces
-		    4, 9, 5,
-		    2, 4, 11,
-		    6, 2, 10,
-		    8, 6, 7,
-		    9, 8, 1,
-	    ]
-
-	    /**
-	     * Tesselates triangle a b c
-	     * a b c must already be in vertices with the indexes ia ib ic
-	     * res is the number of subdivisions to do. 0 just results in triangle and line indexes being added to the
-	     * respective buffers.
-	     */
-	    function tesselateRecursively(a, b, c, res, vertices, triangles, ia, ib, ic, lines, fullyInside: boolean) {
-		    if (0 == res) {
-			    triangles.push(ia, ib, ic)
-			    if (ia < ib) lines.push(ia, ib)
-			    if (ib < ic) lines.push(ib, ic)
-			    if (ic < ia) lines.push(ic, ia)
-		    } else {
-				const vs = [a, b, c]
-			    let edgeIntersectsTriangle = false
-		    	for (let i = 0; i < 3; i++) {
-		    		const v0 = vs[i], v1 = vs[(i + 1) % 3], v2 = vs[(i + 2) % 3]
-				    const plane = new P3(a.cross(b).normalized(), 0)
-				    edgeIntersectsTriangle = edgeIntersectsTriangle || edges.some(edge => {
-					    return edge.edgeISTsWithPlane(plane).some(t => {
-						    const p = edge.curve.at(t)
-						    const v01 = v0.to(v1), v0p_1 = v0.to(p).unit(), dot = v01.dot(v0p_1)
-						    if (0 <= dot && dot <= 1) {
-							    return true
-						    }
-					    })
-				    })
-			    }
-			    fullyInside = !edgeIntersectsTriangle && EllipseCurve.XY.con
-
-			    // subdivide the triangle abc into 4 by adding a vertex (with the correct distance from the origin)
-			    // between each segment ab, bc and cd, then calling the function recursively
-			    const abMid1 = a.plus(b).toLength(1), bcMid1 = b.plus(c).toLength(1), caMid1 = c.plus(a).toLength(1)
-			    // indexes of new vertices:
-			    const iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
-			    vertices.push(abMid1, bcMid1, caMid1)
-			    tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, iabm, ibcm, icam, lines)
-			    tesselateRecursively(a, abMid1, caMid1, res - 1, vertices, triangles, ia, iabm, icam, lines)
-			    tesselateRecursively(b, bcMid1, abMid1, res - 1, vertices, triangles, ib, ibcm, iabm, lines)
-			    tesselateRecursively(c, caMid1, bcMid1, res - 1, vertices, triangles, ic, icam, ibcm, lines)
-		    }
-	    }
-
-	    var mesh = new Mesh({normals: true, colors: false, lines: true});
-	    mesh.vertices.pushAll(vertices)
-	    subdivisions = undefined == subdivisions ? 4 : subdivisions
-	    for (var i = 0; i < 20; i++) {
-		    var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
-		    tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
-	    }
-
-	    mesh.normals = mesh.vertices
-	    mesh.compile()
-	    console.log('mesh.lines', mesh.lines, mesh.indexBuffers)
-	    return mesh
-
     }
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
@@ -537,7 +429,6 @@ class EllipsoidSurface extends Surface {
 
     }
 
-
 	calculateArea(edges: Edge[], canApproximate = true): number {
     	assert(this.isVerticalSpheroid())
     	const {f1, f2, f3} = this
@@ -589,7 +480,7 @@ class EllipsoidSurface extends Surface {
 		//// the edge curve is CCW on the seamPlane
 		//// the edge is the same dir as the curve (bT > aT)
 		//const colinearEdgesSide = loop.map((edge, i) => colinearEdges[i] &&
-		//		(ccw ? 1 : -1) * seamPlane.normal.dot(edge.curve.normal) * (edge.bT - edge.aT))
+		//		(ccw ? 1 : -1) * seamPlane.normal1.dot(edge.curve.normal1) * (edge.bT - edge.aT))
     //
 		//for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
 		//	const edge = loop[edgeIndex]
@@ -597,7 +488,7 @@ class EllipsoidSurface extends Surface {
 		//	//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 		//	if (colinearEdges[edgeIndex]) {
 		//		const nextSide = colinearEdges[nextEdgeIndex] ? colinearEdgesSide[nextEdgeIndex]
-		//			: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal, nextEdge.bT - nextEdge.aT)
+		//			: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal1, nextEdge.bT - nextEdge.aT)
 		//		if (nextSide * colinearEdgesSide[edgeIndex] < 0) {
 		//			iss.push({p: edge.b, t: 0, out: nextSide > 0})
 		//		}
@@ -664,7 +555,7 @@ class EllipsoidSurface extends Surface {
 	// now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
 	// we need to split the transformed loop along the local seam plane
 	// and then sum the zDir volumes of the resulting loops
-    zDirVolume(loop: Edge[]): number {
+    zDirVolume(loop: Edge[]): {centroid: V3, volume: number} {
 	    const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
 	    const T = M4.rotationAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
 	    function calc(loop) {
@@ -693,7 +584,7 @@ class EllipsoidSurface extends Surface {
 	    const [front, back] = EllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
 	    const localVolume = calc(front, PI) + calc(back, -PI)
 
-	    return localVolume * this.f1.dot(this.f2.cross(this.f3))
+	    return {area: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: null}
 	}
     zDirVolumeForLoop2(loop: Edge[]): number {
     	const angles = this.inverseMatrix.getZ().toAngles()

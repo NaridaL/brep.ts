@@ -24,7 +24,8 @@ class BezierCurve extends Curve {
 		return `new BezierCurve(${this.p0}, ${this.p1}, ${this.p2}, ${this.p3}, ${this.tMin}, ${this.tMax})`
 	}
 
-	at(t) {
+	at(t: number) {
+		// = s^3 p0 + 3 s^2 t p1 + 3 s t^2 p2 + t^3 p3
 		assertNumbers(t)
 		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		const s = 1 - t, c0 = s * s * s, c1 = 3 * s * s * t, c2 = 3 * s * t * t, c3 = t * t * t
@@ -44,7 +45,7 @@ class BezierCurve extends Curve {
 	 *                + (-6 (p1 - p0) + (p2 - p1)) t
 	 *                + 3 (p1 - p0)
 	 */
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		assertNumbers(t)
 		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		const s = 1 - t, c01 = 3 * s * s, c12 = 6 * s * t, c23 = 3 * t * t
@@ -54,7 +55,7 @@ class BezierCurve extends Curve {
 			(p1.z - p0.z) * c01 + (p2.z - p1.z) * c12 + (p3.z - p2.z) * c23)
 	}
 
-	ddt(t) {
+	ddt(t: number): V3 {
 		assertNumbers(t)
 		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
 		const c012 = 6 * (1 - t), c123 = 6 * t
@@ -64,25 +65,25 @@ class BezierCurve extends Curve {
 			(p2.z - 2 * p1.z + p0.z) * c012 + (p3.z - 2 * p2.z + p1.z) * c123)
 	}
 
-	normalAt(t) {
+	normalAt(t: number): V3 {
 		const tangent = this.tangentAt(t)
 		const rot = tangent.cross(this.ddt(t))
 		return rot.cross(tangent)
 	}
 
 
-	isTsWithPlane(plane) {
+	isTsWithPlane(plane: P3) {
 		assertInst(P3, plane)
 		/*
 		 We are solving for t:
-		 n := plane.normal
+		 n := plane.normal1
 		 this.at(t) DOT n == plane.w // according to plane definition
 		 (a t³ + b t² + c t + d) DOT n == plane.w // bezier curve as cubic equation
 		 (a DOT n) t³ + (b DOT n) t³ + (c DOT n) t + d DOT n - plane.w == 0 // multiply out DOT n, minus plane.w
 		 */
 
 		const {p0, p1, p2, p3} = this
-		const n = plane.normal
+		const n = plane.normal1
 		const a = p1.minus(p2).times(3).minus(p0).plus(p3)
 		const b = p0.plus(p2).times(3).minus(p1.times(6))
 		const c = p1.minus(p0).times(3)
@@ -92,7 +93,7 @@ class BezierCurve extends Curve {
             .filter(t => between(t, this.tMin, this.tMax))
 	}
 
-	isTsWithSurface(surface) {
+	isTsWithSurface(surface: Surface): number[] {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		}
@@ -143,13 +144,13 @@ class BezierCurve extends Curve {
 		assert(false)
 	}
 
-	likeCurve(obj) {
-		return this == obj ||
-			Object.getPrototypeOf(obj) == BezierCurve.prototype
-			&& this.p0.like(obj.p0)
-			&& this.p1.like(obj.p1)
-			&& this.p2.like(obj.p2)
-			&& this.p3.like(obj.p3)
+	likeCurve(curve: Curve): boolean {
+		return this == curve ||
+			Object.getPrototypeOf(curve) == BezierCurve.prototype
+			&& this.p0.like(curve.p0)
+			&& this.p1.like(curve.p1)
+			&& this.p2.like(curve.p2)
+			&& this.p3.like(curve.p3)
 	}
 
 	equals(obj: any): boolean {
@@ -234,7 +235,7 @@ class BezierCurve extends Curve {
 		return [V3.O, a, b, c]
 	}
 
-	pointT(p) {
+	pointT(p: V3): number {
 	    return this.closestTToPoint(p)
     }
 	pointT3(p) {
@@ -308,7 +309,7 @@ class BezierCurve extends Curve {
 		assert(false, 'multiple intersection ' + results + this.toString() + p.sce)
 	}
 
-	transform(m4): this {
+	transform(m4: M4): this {
 		return new BezierCurve(
 			m4.transformPoint(this.p0),
 			m4.transformPoint(this.p1),
@@ -346,7 +347,7 @@ class BezierCurve extends Curve {
 		return {left: new BezierCurve(p0, b01, b02, b03), right: new BezierCurve(b03, b12, b21, p3)}
 	}
 
-	containsPoint(p) {
+	containsPoint(p: V3): boolean {
 		return isFinite(this.pointT(p))
 	}
 
@@ -374,8 +375,8 @@ class BezierCurve extends Curve {
 	 * @returns {number}
 	 */
 	distanceToPoint(p: V3, tStart?: number, tEnd?: number) {
-		let t = this.closestTToPoint(p, tStart, tEnd)
-		return this.at(t).distanceTo(p)
+		const closestT = this.closestTToPoint(p, tStart, tEnd)
+		return this.at(closestT).distanceTo(p)
 	}
 
 	asSegmentDistanceToPoint(p, tStart, tEnd) {
@@ -435,7 +436,7 @@ class BezierCurve extends Curve {
 		})
 	}
 
-	closestPointToLine(line, tMin, tMax) {
+	closestPointToLine(line: L3, tMin: number, tMax: number) {
 		// (this(t)-line(s)) * line.dir == 0 (1)
 		// (this(t)-line(s)) * this.tangentAt(t) == 0 (2)
 		// this(t) * line.dir - line(s) * line.dir == 0

@@ -11,7 +11,7 @@
 
 const MooEl: ElementConstructor = Element
 function formatStack(stack) {
-	let re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
+	const re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
 	let match, matches = []
 
 	let maxWidths = [0, 0, 0, 0]
@@ -20,9 +20,9 @@ function formatStack(stack) {
 		matches.push(match)
 		maxWidths = maxWidths.map((maxWidth, i) => max(maxWidth, match[i + 1].length))
 	}
-	let output = matches.map(match => {
+	const output = matches.map(match => {
 		return [
-			"\t",
+			'\t',
 
 			match[1],
 			NLA.repeatString(maxWidths[0] + 2 - match[1].length, ' '),
@@ -50,7 +50,7 @@ function Point(x, y) {
 
 function makeCoincident(p1, p2, sketch) {
 	if (p1.coincidence && p2.coincidence) {
-		for (var i = 0; i < p2.coincidence.length; i++) {
+		for (let i = 0; i < p2.coincidence.length; i++) {
 			p1.coincidence.cs.push(p2.coincidence.cs[i])
 			p2.coincidence.cs[i].coincidence = p1.coincidence
 		}
@@ -63,7 +63,7 @@ function makeCoincident(p1, p2, sketch) {
 		p2.coincidence.cs.push(p1)
 		p1.coincidence = p2.coincidence
 	} else {
-		sketch.constraints.push(p1.coincidence = p2.coincidence = new Constraint("coincident", [p1, p2]))
+		sketch.constraints.push(p1.coincidence = p2.coincidence = new Constraint('coincident', [p1, p2]))
 	}
 	p2.x = p1.x
 	p2.y = p1.y
@@ -83,29 +83,29 @@ function deleteCoincidence(coincidence, sketch) {
 }
 
 
-var savedTextures = new Map()
+let savedTextures = new Map()
 function getTextureForString(str) {
-	var texture
+	let texture
 	if (texture = savedTextures.get(str)) {
 		return texture
 	}
 
-	var canvas = $("textTextureCanvas") as any as HTMLCanvasElement
-	var ctx = canvas.getContext('2d')
+	const canvas = $('textTextureCanvas') as any as HTMLCanvasElement
+	const ctx = canvas.getContext('2d')
 
-	var font = TEXT_TEXTURE_HEIGHT + "px Anonymous Pro"
+	const font = TEXT_TEXTURE_HEIGHT + 'px Anonymous Pro'
 
 	ctx.font = font
-	var textWidthPx = ctx.measureText(str).width
-	var canvasWidth = 1 << ceil(log(textWidthPx) / log(2))
+	const textWidthPx = ctx.measureText(str).width
+	const canvasWidth = 1 << ceil(log(textWidthPx) / log(2))
 	canvas.width = canvasWidth
 	canvas.height = TEXT_TEXTURE_HEIGHT
 
 
 	ctx.font = font
-	ctx.fillStyle = "#ffffff"
-	ctx.textAlign = "left"	// This determines the alignment of text, e.g. left, center, right
-	ctx.textBaseline = "top"	// This determines the baseline of the text, e.g. top, middle, bottom
+	ctx.fillStyle = '#ffffff'
+	ctx.textAlign = 'left'	// This determines the alignment of text, e.g. left, center, right
+	ctx.textBaseline = 'top'	// This determines the baseline of the text, e.g. top, middle, bottom
 	;
 	(ctx as any).imageSmoothingEnabled = false
 
@@ -120,7 +120,6 @@ function getTextureForString(str) {
 
 	return texture
 }
-var zoomFactor = 1
 function paintSketch(sketch) {
 
 	if (!sketch.plane || !sketch.sketchToWorldMatrix || !sketch.sketchToWorldMatrix.m) return
@@ -136,7 +135,7 @@ function paintSketch(sketch) {
 			paintArc(p.V3(), 1.5, 3, colorFor(highlighted.includes(p) || hoverHighlight == p, selected.includes(p)))
 		}
 
-		let color = colorFor(highlighted.includes(seg) || hoverHighlight == seg, selected.includes(seg))
+		const color = colorFor(highlighted.includes(seg) || hoverHighlight == seg, selected.includes(seg))
 		if (seg instanceof SketchLineSeg) {
 			//console.log("seg", seg);
 			//console.log("hoverHighlight.length", hoverHighlight.length);
@@ -148,8 +147,8 @@ function paintSketch(sketch) {
 			drawPoint(seg.a)
 			drawPoint(seg.b)
 		} else if (seg instanceof SketchArc) {
-			var radius = seg.radiusA()
-			var angleA = seg.angleA(), angleB = seg.angleB()
+			const radius = seg.radiusA()
+			let angleA = seg.angleA(), angleB = seg.angleB()
 			if (angleB <= angleA) { angleB += Math.PI * 2 }
 			paintArc(seg.c.V3(), radius, 2, color, angleA, angleB)
 			drawPoint(seg.c)
@@ -158,7 +157,7 @@ function paintSketch(sketch) {
 			paintBezier(seg.points.map(p => p.V3()), 2, color, 0, 1)
 			seg.points.forEach(drawPoint)
 		} else {
-			throw new Error("unknown sketch element" + seg)
+			throw new Error('unknown sketch element' + seg)
 		}
 		drawPoint(seg.a)
 		drawPoint(seg.b)
@@ -184,27 +183,27 @@ function getCachedCurve(other: NameRef|any, plane: P3) {
 	if (other instanceof Surface) return other.isCurvesWithPlane(plane)[0]
 }
 function paintConstraints(sketch: Sketch) {
-	var crossCount = 2, parallelCrossCount = 1
+	let crossCount = 2, parallelCrossCount = 1
 	sketch.constraints.forEach(function (cst) {
 		paintDefaultColor = hoverHighlight == cst ? (!cst.error ? 0x00ff00 : 0xffff00) : (!cst.error ? 0x000000 : 0xff0000)
 		switch (cst.type) {
 			case 'coincident':
-				let point = cst.cs[0]
+				const point = cst.cs[0]
 				paintArc(point.V3(), 4, 1, colorFor(false, false), 0, 2 * Math.PI)
 				paintArc(point.V3(), 1.5, 3, colorFor(highlighted.includes(point) || hoverHighlight == point, selected.includes(point)), 0, 2 * Math.PI)
 				break
 			case 'parallel': {
-				let dir1 = cst.segments[0].getVectorAB().unit()
-				let dir90 = dir1.getPerpendicular().unit()
-				let ARR_SPACING = 5
+				const dir1 = cst.segments[0].getVectorAB().unit()
+				const dir90 = dir1.getPerpendicular().unit()
+				const ARR_SPACING = 5
 				for (let c = 0; c < cst.segments.length; c++) {
-					let line = cst.segments[c]
-					let ab = line.getVectorAB()
-					let abLength = ab.length()
-					let ab1 = ab.unit()
+					const line = cst.segments[c]
+					const ab = line.getVectorAB()
+					const abLength = ab.length()
+					const ab1 = ab.unit()
 					for (let i = 0; i < parallelCrossCount; i++) {
-						let s = abLength / 2 - ARR_SPACING * parallelCrossCount / 2 + i * ARR_SPACING - 10
-						let arrPoint = line.a.V3().plus(ab1.times(s))
+						const s = abLength / 2 - ARR_SPACING * parallelCrossCount / 2 + i * ARR_SPACING - 10
+						const arrPoint = line.a.V3().plus(ab1.times(s))
 						//console.log('crosspos', crossStart, crossEnd);
 						paintLineXY(arrPoint.plus(dir90.times(-1)), arrPoint.plus(dir1.times(6).plus(dir90.times(5))))
 						paintLineXY(arrPoint.plus(dir90.times(1)), arrPoint.plus(dir1.times(6).plus(dir90.times(-5))))
@@ -215,42 +214,42 @@ function paintConstraints(sketch: Sketch) {
 			}
 			case 'perpendicular':
 				if (cst.other instanceof SketchLineSeg) {
-					let ab = cst.segment.getVectorAB()
-					let cd = cst.other.getVectorAB()
-					let intersection = cst.segment.intersection(cst.other)
-					let abPos = cst.segment.pointT(intersection)
-					let cdPos = cst.other.pointT(intersection)
-					let abLine = ab.unit().times(0.5 < abPos ? -16 : 16)
-					let cdLine = cd.unit().times(0.5 < cdPos ? -16 : 16)
+					const ab = cst.segment.getVectorAB()
+					const cd = cst.other.getVectorAB()
+					const intersection = cst.segment.intersection(cst.other)
+					const abPos = cst.segment.pointT(intersection)
+					const cdPos = cst.other.pointT(intersection)
+					const abLine = ab.unit().times(0.5 < abPos ? -16 : 16)
+					const cdLine = cd.unit().times(0.5 < cdPos ? -16 : 16)
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
 				} else {
-					let ab = cst.segment.getVectorAB()
-					let sketchLineWC = sketch.plane.intersectionWithPlane(cst.other.plane)
-					let dir = sketch.worldToSketchMatrix.transformVector(sketchLineWC.dir1)
-					let p = sketch.worldToSketchMatrix.transformPoint(sketchLineWC.anchor)
-					let abXcd = ab.cross(dir)
-					let div = abXcd.squared()
-					let anchorDiff = p.minus(cst.segment.a.V3())
-					let abPos = anchorDiff.cross(dir).dot(abXcd) / div
-					let linePos = anchorDiff.cross(ab).dot(abXcd) / div
-					let intersection = p.plus(dir.times(linePos))
-					let abLine = ab.unit().times(0.5 < abPos ? -16 : 16)
-					let cdLine = dir.times(16)
+					const ab = cst.segment.getVectorAB()
+					const sketchLineWC = sketch.plane.intersectionWithPlane(cst.other.plane)
+					const dir = sketch.worldToSketchMatrix.transformVector(sketchLineWC.dir1)
+					const p = sketch.worldToSketchMatrix.transformPoint(sketchLineWC.anchor)
+					const abXcd = ab.cross(dir)
+					const div = abXcd.squared()
+					const anchorDiff = p.minus(cst.segment.a.V3())
+					const abPos = anchorDiff.cross(dir).dot(abXcd) / div
+					const linePos = anchorDiff.cross(ab).dot(abXcd) / div
+					const intersection = p.plus(dir.times(linePos))
+					const abLine = ab.unit().times(0.5 < abPos ? -16 : 16)
+					const cdLine = dir.times(16)
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(abLine))
 					paintLineXY(intersection.plus(abLine).plus(cdLine), intersection.plus(cdLine))
 				}
 				break
 			case 'colinear':
 				// assume segments dont overlap
-				let segments = cst.segments
+				const segments = cst.segments
 				let ab = segments[0].getVectorAB().unit()
-				let coord = ab.x > ab.y ? 'x' : 'y'
+				const coord = ab.x > ab.y ? 'x' : 'y'
 				if (ab[coord] < 0) {
 					ab = ab.times(-1)
 				}
-				let scale = ab[coord]
-				let offsetPoint = segments[0].a.V3().minus(ab.times(segments[0].a.V3()[coord] / scale))
+				const scale = ab[coord]
+				const offsetPoint = segments[0].a.V3().minus(ab.times(segments[0].a.V3()[coord] / scale))
 				segments.sort((a, b) => a.a[coord] - b.a[coord])
 				for (let i = 0; i < segments.length - (cst.fixed ? 0 : 1); i++) {
 					let startS = max(segments[i].a.V3()[coord] / scale, segments[i].b.V3()[coord] / scale) + 8
@@ -263,19 +262,19 @@ function paintConstraints(sketch: Sketch) {
 				}
 				break
 			case 'pointDistance': {
-				let a = cst.cs[0].V3(), b = cst.cs[1].V3()
-				let ab = b.minus(a)
-				let ab1 = ab.unit()
-				let abLength = ab.length()
-				let ab90 = ab1.getPerpendicular()
-				let texture = getTextureForString(cst.distance)
-				let textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
+				const a = cst.cs[0].V3(), b = cst.cs[1].V3()
+				const ab = b.minus(a)
+				const ab1 = ab.unit()
+				const abLength = ab.length()
+				const ab90 = ab1.getPerpendicular()
+				const texture = getTextureForString(cst.distance)
+				const textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
 				paintLineXY(a.plus(ab90.times(6)), a.plus(ab90.times(22)))
 				paintLineXY(b.plus(ab90.times(6)), b.plus(ab90.times(22)))
 
 				paintLineXY(a.plus(ab90.times(14)), a.plus(ab90.times(14)).plus(ab1.times(abLength / 2 - textLength / 2 - 5)))
 				paintLineXY(a.plus(ab90.times(14)).plus(ab1.times(abLength / 2 + textLength / 2 + 5)), a.plus(ab90.times(14)).plus(ab1.times(abLength)))
-				let textCenter = a.plus(ab90.times(14)).plus(ab1.times(abLength / 2))
+				const textCenter = a.plus(ab90.times(14)).plus(ab1.times(abLength / 2))
 				gl.pushMatrix()
 				gl.translate(textCenter)
 				gl.scale(20, 20, 10)
@@ -286,17 +285,17 @@ function paintConstraints(sketch: Sketch) {
 				break
 			}
 			case 'pointLineDistance': {
-				let texture = getTextureForString(cst.distance)
-				let p = cst.point.V3(), ab = cst.other.getVectorAB(), a = cst.other.a.V3()
-				let ab1 = ab.unit()
-				let abLength = ab.length()
-				let ab90 = ab1.getPerpendicular()
-				let ap = p.minus(a)
-				let apProj = ab90.times(-ap.dot(ab90))
+				const texture = getTextureForString(cst.distance)
+				const p = cst.point.V3(), ab = cst.other.getVectorAB(), a = cst.other.a.V3()
+				const ab1 = ab.unit()
+				const abLength = ab.length()
+				const ab90 = ab1.getPerpendicular()
+				const ap = p.minus(a)
+				const apProj = ab90.times(-ap.dot(ab90))
 				paintLineXY(a, a.plus(apProj))
 				paintLineXY(a.plus(apProj), p)
-				let textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
-				let textCenter = a.plus(apProj.times(1 / 2))
+				const textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
+				const textCenter = a.plus(apProj.times(1 / 2))
 				gl.pushMatrix()
 				gl.translate(textCenter)
 				gl.scale(20, 20, 10)
@@ -307,15 +306,15 @@ function paintConstraints(sketch: Sketch) {
 				break
 			}
 			case 'pointPlaneDistance': {
-				let texture = getTextureForString(cst.distance)
-				let p = cst.point.V3()
-				let sketchLineWC = sketch.plane.intersectionWithPlane(cst.other.plane)
-				let sketchLineSC = sketchLineWC.transform(sketch.worldToSketchMatrix)
-				let a = sketchLineSC.closestPointToPoint(p)
-				let ap = p.minus(a)
+				const texture = getTextureForString(cst.distance)
+				const p = cst.point.V3()
+				const sketchLineWC = sketch.plane.intersectionWithPlane(cst.other.plane)
+				const sketchLineSC = sketchLineWC.transform(sketch.worldToSketchMatrix)
+				const a = sketchLineSC.closestPointToPoint(p)
+				const ap = p.minus(a)
 				paintLineXY(a, p)
-				let textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
-				let textCenter = a.plus(ap.times(1 / 2))
+				const textLength = texture.textWidthPx / TEXT_TEXTURE_HEIGHT * 20
+				const textCenter = a.plus(ap.times(1 / 2))
 				gl.pushMatrix()
 				gl.translate(textCenter)
 				gl.scale(20, 20, 10)
@@ -326,32 +325,32 @@ function paintConstraints(sketch: Sketch) {
 				break
 			}
 			case 'pointOnLine': {
-				let curve = getCachedCurve(cst.other, sketch.plane)
-				let t = curve.closestTToPoint(cst.point.V3())
-				let tangentLength = curve.tangentAt(t).length()
+				const curve = getCachedCurve(cst.other, sketch.plane)
+				const t = curve.closestTToPoint(cst.point.V3())
+				const tangentLength = curve.tangentAt(t).length()
 				CURVE_PAINTERS[curve.constructor.name](curve, 0x000000, t - 12 / tangentLength, t - 4 / tangentLength, 3)
 				CURVE_PAINTERS[curve.constructor.name](curve, 0x000000, t + 4 / tangentLength, t + 12 / tangentLength, 3)
 				break
 			}
 			case 'angle':
-				let first = cst.cs[0], second = cst.cs[1]
-				let intersection = first.intersection(second)
-				let startAngle = (first.angleAB() + (cst.f[0] == -1 ? PI : 0)) % (2 * PI), endAngle = startAngle + cst.value
+				const first = cst.cs[0], second = cst.cs[1]
+				const intersection = first.intersection(second)
+				const startAngle = (first.angleAB() + (cst.f[0] == -1 ? PI : 0)) % (2 * PI), endAngle = startAngle + cst.value
 				paintArc(intersection, 20, 1, 0x000000, startAngle, endAngle)
 				break
 			case 'equalLength': {
 				for (let c = 0; c < cst.segments.length; c++) {
-					let line = cst.segments[c]
-					let ab = line.getVectorAB()
-					let abLength = ab.length()
-					let ab1 = ab.unit()
-					let ab90 = ab.getPerpendicular().unit()
-					let crossLength = 10
-					let crossSpacing = 3
+					const line = cst.segments[c]
+					const ab = line.getVectorAB()
+					const abLength = ab.length()
+					const ab1 = ab.unit()
+					const ab90 = ab.getPerpendicular().unit()
+					const crossLength = 10
+					const crossSpacing = 3
 					for (let i = 0; i < crossCount; i++) {
-						let s = abLength / 2 - crossSpacing * crossCount / 2 + i * crossSpacing + 10
-						let crossStart = line.a.V3().plus(ab1.times(s)).plus(ab90.times(crossLength / 2))
-						let crossEnd = line.a.V3().plus(ab1.times(s)).plus(ab90.times(-crossLength / 2))
+						const s = abLength / 2 - crossSpacing * crossCount / 2 + i * crossSpacing + 10
+						const crossStart = line.a.V3().plus(ab1.times(s)).plus(ab90.times(crossLength / 2))
+						const crossEnd = line.a.V3().plus(ab1.times(s)).plus(ab90.times(-crossLength / 2))
 						//console.log('crosspos', crossStart, crossEnd)
 						paintLineXY(crossStart, crossEnd)
 					}
@@ -371,20 +370,20 @@ class PlaneDefinition {
 	/*
 	 if ("face" == feature.planeType && feature.faceName) {
 	 var face = modelBREP.faces.find(face => face.name == feature.faceName)
-	 var plane = face.surface.plane, right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
+	 var plane = face.surface.plane, right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
 
 	 var cp
-	 planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal.times(feature.offset)),
+	 planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal1.times(feature.offset)),
 	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 	 }
 	 if ("immediate" == feature.planeType) {
-	 var plane = eval(feature.source), right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
+	 var plane = eval(feature.source), right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
 
 	 planes.push(new CustomPlane(plane.anchor,
 	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 	 }
 	 */
-	type = "planeDefinition"
+	type = 'planeDefinition'
 	planeId
 	planeType = 'dynamic'
 	source = ''
@@ -429,26 +428,26 @@ function load(key) {
 	// lastSketch && modePush(MODES.SKETCH, lastSketch)
 }
 function initLoadSave() {
-	let loadSelect = $('loadSelect') as HTMLSelectElement
-	let keys = NLA.arrayFromFunction(localStorage.length, i => localStorage.key(i))
+	const loadSelect = $('loadSelect') as HTMLSelectElement
+	const keys = NLA.arrayFromFunction(localStorage.length, i => localStorage.key(i))
 	keys.sort()
 	keys.forEach(key => loadSelect.adopt(new MooEl('option', {html: key})))
 	loadSelect.onchange = function () {
-		let key = loadSelect.value
+		const key = loadSelect.value
 		if (key) {
 			load(key)
 		}
 	}
 
 
-	let saveButton = $<HTMLButtonElement>('saveButton')
+	const saveButton = $<HTMLButtonElement>('saveButton')
 	saveButton.onclick = function () {
-		let key = $<HTMLInputElement>('saveNameInput').value
+		const key = $<HTMLInputElement>('saveNameInput').value
 		if (null == key) {
 			loadSelect.adopt(new MooEl('option', {html: key}))
 		}
 		localStorage.setItem(key, serializeFeatures(featureStack))
-		console.log("saved " + key)
+		console.log('saved ' + key)
 	}
 }
 
@@ -458,7 +457,7 @@ function isSketchEl(el) {
 }
 
 //var sketchPlane = new CustomPlane(V3(0, 0,1), V3.X, V3.Y, -500, 500, -500, 500, 0xff00ff);
-var editingSketch: Sketch, featureStack = []
+let editingSketch: Sketch, featureStack = []
 function initModel() {
 
 }
@@ -467,13 +466,13 @@ function directionObjectToVector(dirObj) {
 		return dirObj.normal
 	} else {
 		console.log(dirObj)
-		throw new Error("uuuh" + dirObj)
+		throw new Error('uuuh' + dirObj)
 	}
 }
 function rebuildModel() {
-	let DISABLE_CONSOLE = false
+	const DISABLE_CONSOLE = false
 	DISABLE_CONSOLE && disableConsole()
-	console.log("rebuilding model")
+	console.log('rebuilding model')
 	//NLA.DEBUG = false
 
 
@@ -494,33 +493,33 @@ function rebuildModel() {
 	brepEdges = []
 
 	planes = [
-		new CustomPlane(V3.O, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, "planeYZ"),
-		new CustomPlane(V3.O, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, "planeZX"),
-		new CustomPlane(V3.O, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, "planeXY"),
+		new CustomPlane(V3.O, V3.Y, V3.Z, -500, 500, -500, 500, 0xffaaaa, 'planeYZ'),
+		new CustomPlane(V3.O, V3.Z, V3.X, -500, 500, -500, 500, 0xaaffaa, 'planeZX'),
+		new CustomPlane(V3.O, V3.X, V3.Y, -500, 500, -500, 500, 0xaaaaff, 'planeXY'),
 	]
 	planes.forEach(customPlane => publish(customPlane.name, customPlane))
 
-	let loopEnd = -1 == rebuildLimit ? featureStack.length : min(rebuildLimit, featureStack.length)
-	for (var featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
-		var feature = featureStack[featureIndex]
+	const loopEnd = -1 == rebuildLimit ? featureStack.length : min(rebuildLimit, featureStack.length)
+	for (let featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
+		const feature = featureStack[featureIndex]
 		//try {
 		if (feature instanceof Sketch) {
 			feature.plane = feature.planeRef.getOrThrow()
 			//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(),
-			// feature.plane.normal.length())
+			// feature.plane.normal1.length())
 			feature.sketchToWorldMatrix =
-				M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal, feature.plane.anchor)
+				M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal1, feature.plane.anchor)
 			feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed()
 			feature.recalculate()
 			feature.elements.forEach(el => publish(el.name, el))
-		} else if (feature.type && feature.type == "extrude") {
+		} else if (feature.type && feature.type == 'extrude') {
 
-			let loopSegment = feature.segmentName.getOrThrow()
-			let loopSketch = loopSegment.sketch
-			// opposite dir to plane normal:
-			let startOffset = loopSketch.plane.normal.times(-min(feature.start, feature.end))
-			let lengthOffset = loopSketch.plane.normal.times(-Math.abs(feature.start - feature.end))
-			let startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
+			const loopSegment = feature.segmentName.getOrThrow()
+			const loopSketch = loopSegment.sketch
+			// opposite dir to plane normal1:
+			const startOffset = loopSketch.plane.normal1.times(-min(feature.start, feature.end))
+			const lengthOffset = loopSketch.plane.normal1.times(-Math.abs(feature.start - feature.end))
+			const startMatrix = M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix)
 			let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
 			edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix, ''))
 			// TODO: test for self-intersection of edgeloop
@@ -528,10 +527,10 @@ function rebuildModel() {
 				edgeLoop = edgeLoop.map(edge => edge.flipped()).reverse()
 			}
 			//console.log(polygonPoints.map(v =>v.$))
-			let length = feature.end - feature.start
+			const length = feature.end - feature.start
 			//console.log("polypoints", polygonPoints, polygonPoints.toSource(),
 			// loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
-			let brep = B2T.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
+			const brep = B2T.extrudeEdges(edgeLoop, loopSketch.plane.translated(startOffset), lengthOffset, feature.name)
 
 			if (modelBREP) {
 				// isEdges = modelBREP.getIntersectionEdges(brep)
@@ -545,19 +544,19 @@ function rebuildModel() {
 			modelBREP.faces.map(face => face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id).forEach(edge => publish(edge.name, edge)))
 			console.log('modelBREP.vertexNames', modelBREP.vertexNames)
 			modelBREP.vertexNames && modelBREP.vertexNames.forEach((name, p) => publish(name, p))
-		} else if (feature.type && "planeDefinition" == feature.type) {
-			let sel = feature.whats.map(w => w.getOrThrow())
+		} else if (feature.type && 'planeDefinition' == feature.type) {
+			const sel = feature.whats.map(w => w.getOrThrow())
 			let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
 			if (plane) {
 				if (feature.flipped) plane = plane.flipped()
-				let right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
+				const right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
 
-				var cp
-				planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal.times(feature.offset)),
+				let cp
+				planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal1.times(feature.offset)),
 					right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 			}
-			if ("immediate" == feature.planeType) {
-				let plane = eval(feature.source), right = plane.normal.getPerpendicular().unit(), up = plane.normal.cross(right)
+			if ('immediate' == feature.planeType) {
+				const plane = eval(feature.source), right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
 
 				planes.push(new CustomPlane(plane.anchor,
 					right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
@@ -565,7 +564,7 @@ function rebuildModel() {
 			publish(feature.planeId, cp)
 		} else {
 			//noinspection ExceptionCaughtLocallyJS
-			throw new Error("unknown feature")
+			throw new Error('unknown feature')
 		}
 		// brepMesh.computeWireframeFromFlatTriangles()
 		// brepMesh.compile()
@@ -600,19 +599,19 @@ function rebuildModel() {
 }
 // DECLARATIONS
 // GLOBALS
-var missingEls = [], namesPublishedBy, publishedObjects
-var faces = []
-var highlighted = [], selected = [], paintDefaultColor = 0x000000
-var gl: GL.LightGLContext
-var modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges = []
-var rebuildLimit = -1, rollBackIndex = -1
-var drPs = [], drVs = []
+let missingEls = [], namesPublishedBy, publishedObjects
+let faces = []
+let highlighted = [], selected = [], paintDefaultColor = 0x000000
+let gl: GL.LightGLContext
+let modelBREP, brepMesh, brepPoints, planes, brepEdges, isEdges = []
+let rebuildLimit = -1, rollBackIndex = -1
+let drPs = [], drVs = []
 
-var eyePos = V(1000, 1000, 1000), eyeFocus = V3.O, eyeUp = V3.Z
-var hoverHighlight = undefined
+let eye = {eyePos: V(1000, 1000, 1000), eyeFocus: V3.O, eyeUp: V3.Z, zoomFactor: 1}
+let hoverHighlight = undefined
 // console.log = oldConsole;
-var modeStack = []
-var shaders: any = {}
+let modeStack = []
+let shaders: any = {}
 
 function rgbToVec4(color) {
 	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0]
@@ -627,9 +626,9 @@ function renderColorLines(mesh, color) {
 		color: rgbToVec4(color)
 	}).draw(mesh, 'LINES')
 }
-var TEXT_TEXTURE_HEIGHT = 128
+let TEXT_TEXTURE_HEIGHT = 128
 function renderText(string, color) {
-	var texture = getTextureForString(string)
+	const texture = getTextureForString(string)
 	texture.bind(0)
 	gl.pushMatrix()
 	gl.scale(texture.width / TEXT_TEXTURE_HEIGHT, 1, 1)
@@ -639,22 +638,22 @@ function renderText(string, color) {
 	}).draw(meshes.text)
 	gl.popMatrix()
 }
-function drawVector(vector, anchor, color = 0x0000ff, size = 50) {
-	gl.pushMatrix()
-	let v2 = vector.getPerpendicular()
-	gl.multMatrix(M4.forSys(vector, v2, vector.cross(v2), anchor))
-	gl.scale(size, size, size)
-	shaders.singleColor.uniforms({
+function drawVector(vector, anchor, color = 0x0000ff, size = 1, _gl = gl) {
+	_gl.pushMatrix()
+	const vT = vector.getPerpendicular()
+	_gl.multMatrix(M4.forSys(vector, vT, vector.cross(vT), anchor))
+	1 != size && _gl.scale(size, size, size)
+	_gl.shaders.singleColor.uniforms({
 		color: rgbToVec4(color)
-	}).draw(meshes.vector)
-	gl.popMatrix()
+	}).draw(_gl.meshes.vector)
+	_gl.popMatrix()
 }
-function drawVectors() {
-	drawVector(V3.X, V3.O, 0xff0000)
-	drawVector(V3.Y, V3.O, 0x00ff00)
-	drawVector(V3.Z, V3.O, 0x0000ff)
+function drawVectors(_gl = gl) {
+	drawVector(V3.X, V3.O, 0xff0000, undefined, _gl)
+	drawVector(V3.Y, V3.O, 0x00ff00, undefined, _gl)
+	drawVector(V3.Z, V3.O, 0x0000ff, undefined, _gl)
 
-	drVs.forEach(vi => drawVector(vi.dir1, vi.anchor, vi.color))
+	drVs.forEach(vi => drawVector(vi.dir1, vi.anchor, vi.color, undefined, _gl))
 }
 
 function drawPoint(p, color = 0x000000, size = 5) {
@@ -671,53 +670,55 @@ function drawPoints(size: number) {
 }
 
 
-const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int, startT: number, endT: number, width: number) => void} = {}
-CURVE_PAINTERS[SemiEllipseCurve.name] = function paintEllipseCurve(ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
-	shaders.ellipse3d.uniforms({
-		f1: ellipse.f1,
-		f2: ellipse.f2,
-		center: ellipse.center,
-		color: rgbToVec4(color),
-		startT: startT,
-		endT: endT,
-		scale: width,
-		mode: 0 // ellipse
-	}).draw(meshes.pipe)
-}
-CURVE_PAINTERS[BezierCurve.name] = function paintBezierCurve(curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
-	shaders.bezier3d.uniforms({
-		p0: curve.p0,
-		p1: curve.p1,
-		p2: curve.p2,
-		p3: curve.p3,
-		color: rgbToVec4(color),
-		startT: startT,
-		endT: endT,
-		scale: width,
-		normal: normal
-	}).draw(meshes.pipe)
-}
-CURVE_PAINTERS[L3.name] = function (curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
-	gl.pushMatrix()
-	let a = curve.at(startT), b = curve.at(endT)
-	let ab = b.minus(a), abT = ab.getPerpendicular().unit()
-	let m = M4.forSys(ab, abT, ab.cross(abT).unit(), a)
-	gl.multMatrix(m)
-	gl.scale(1, width, width)
-	shaders.singleColor.uniforms({
-		color: rgbToVec4(color), // TODO: error checking
-	}).draw(meshes.pipe)
+const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int, startT: number, endT: number, width: number) => void} = {
+	[SemiEllipseCurve.name](ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
+		shaders.ellipse3d.uniforms({
+			f1: ellipse.f1,
+			f2: ellipse.f2,
+			center: ellipse.center,
+			color: rgbToVec4(color),
+			startT: startT,
+			endT: endT,
+			scale: width,
+			mode: 0 // ellipse
+		}).draw(meshes.pipe)
+	},
+	[BezierCurve.name](curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
+		shaders.bezier3d.uniforms({
+			p0: curve.p0,
+			p1: curve.p1,
+			p2: curve.p2,
+			p3: curve.p3,
+			color: rgbToVec4(color),
+			startT: startT,
+			endT: endT,
+			scale: width,
+			normal: normal
+		}).draw(meshes.pipe)
+	},
+	[L3.name](curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
+		gl.pushMatrix()
+		const a = curve.at(startT), b = curve.at(endT)
+		const ab = b.minus(a), abT = ab.getPerpendicular().unit()
+		const m = M4.forSys(ab, abT, ab.cross(abT).unit(), a)
+		gl.multMatrix(m)
+		gl.scale(1, width, width)
+		shaders.singleColor.uniforms({
+			color: rgbToVec4(color), // TODO: error checking
+		}).draw(meshes.pipe)
 
-	gl.popMatrix()
+		gl.popMatrix()
+	},
 }
+CURVE_PAINTERS[EllipseCurve.name] = CURVE_PAINTERS[SemiEllipseCurve.name]
 
 
 function paintLineXY(a, b, color?, width?) {
 	color = color || paintDefaultColor
 	width = width || 2
-	var ab = b.minus(a)
+	const ab = b.minus(a)
 	if (ab.isZero()) { return }
-	var abT = ab.getPerpendicular().toLength(width)
+	const abT = ab.getPerpendicular().toLength(width)
 	//console.log(ab)
 	gl.pushMatrix()
 	gl.multMatrix(M4.forSys(ab, abT, V3.Z, a))
@@ -759,11 +760,9 @@ function randomVec4Color(opacity) {
 	return [Math.random(), Math.random(), Math.random(), opacity]
 }
 function drawEdge(edge, color = 0x000000, width = 2) {
-	const startT = min(edge.aT, edge.bT)
-	const endT = max(edge.aT, edge.bT)
-	CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, startT, endT, width)
+	CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, edge.minT, edge.maxT, width)
 }
-var cachedMeshes = new Map()
+let cachedMeshes = new Map()
 function drawFace(face, color) {
 	let mesh = cachedMeshes.get(face)
 	if (!mesh) {
@@ -774,9 +773,9 @@ function drawFace(face, color) {
 	}
 	shaders.singleColor.uniforms({color: rgbToVec4(color)}).draw(mesh)
 }
-var /**@type GL.Mesh */ mesh1, mesh2
-var meshes: any = {}
-var ZERO_EL = {}
+let /**@type GL.Mesh */ mesh1, mesh2
+let meshes: any = {}
+let ZERO_EL = {}
 function drawEl(el, color) {
 	if (el instanceof V3) {
 		drawPoint(el, color)
@@ -853,8 +852,8 @@ let paintScreen = function () {
 		let faceIndex = modelBREP.faces.length
 		while (faceIndex--) {
 
-			let face = modelBREP.faces[faceIndex]
-			let faceTriangleIndexes = brepMesh.faceIndexes.get(face)
+			const face = modelBREP.faces[faceIndex]
+			const faceTriangleIndexes = brepMesh.faceIndexes.get(face)
 			shaders.lighting.uniforms({
 				color: rgbToVec4(hoverHighlight == face ? 0xff00ff : (selected.includes(face) ? 0x00ff45 : COLORS.RD_FILL))
 			}).draw(brepMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
@@ -887,44 +886,44 @@ let paintScreen = function () {
 	gl.projectionMatrix.m[11] += DZ
 }
 
-function setupCamera() {
+function setupCamera(_gl = gl, {eyePos, eyeFocus, eyeUp, zoomFactor}) {
 	//console.log("eyePos", eyePos.$, "eyeFocus", eyeFocus.$, "eyeUp", eyeUp.$)
-	gl.matrixMode(gl.PROJECTION)
-	gl.loadIdentity()
-	//gl.perspective(70, gl.canvas.width / gl.canvas.height, 0.1, 1000);
-	var lr = gl.canvas.width / 2 / zoomFactor
-	var bt = gl.canvas.height / 2 / zoomFactor
-	gl.ortho(-lr, lr, -bt, bt, -1e5, 1e5)
-	gl.lookAt(eyePos, eyeFocus, eyeUp)
-	gl.matrixMode(gl.MODELVIEW)
+	_gl.matrixMode(_gl.PROJECTION)
+	_gl.loadIdentity()
+	//_gl.perspective(70, _gl.canvas.width / _gl.canvas.height, 0.1, 1000);
+	const lr = _gl.canvas.width / 2 / zoomFactor
+	const bt = _gl.canvas.height / 2 /zoomFactor
+	_gl.ortho(-lr, lr, -bt, bt, -1e5, 1e5)
+	_gl.lookAt(eyePos, eyeFocus, eyeUp)
+	_gl.matrixMode(_gl.MODELVIEW)
 }
-function drawPlane(customPlane, color) {
-	gl.pushMatrix()
-	gl.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal))
-	gl.translate(customPlane.rightStart, customPlane.upStart, customPlane.w)
-	gl.scale(customPlane.rightEnd - customPlane.rightStart, customPlane.upEnd - customPlane.upStart, 1)
+function drawPlane(customPlane, color, _gl = gl) {
+	_gl.pushMatrix()
+	_gl.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal1))
+	_gl.translate(customPlane.sMin, customPlane.rMin, customPlane.w)
+	_gl.scale(customPlane.sMax - customPlane.sMin, customPlane.tMax - customPlane.rMin, 1)
 
-	let shader = hoverHighlight == customPlane ? shaders.singleColorHighlight : shaders.singleColor
+	const shader = hoverHighlight == customPlane ? _gl.shaders.singleColorHighlight : _gl.shaders.singleColor
 
-	shader.uniforms({color: rgbToVec4(color)}).draw(meshes.xyLinePlane, 'LINES')
+	shader.uniforms({color: rgbToVec4(color)}).draw(_gl.meshes.xyLinePlane, 'LINES')
 
-	gl.popMatrix()
+	_gl.popMatrix()
 }
 
 function segmentIntersectsRay(a, b, p, dir) {
-	var ab = b.minus(a)
-	var abXdir = ab.cross(dir)
-	var div = abXdir.squared()
-	var anchorDiff = p.minus(a)
-	var s = anchorDiff.cross(dir).dot(abXdir) / div
-	var t = anchorDiff.cross(ab).dot(abXdir) / div
+	const ab = b.minus(a)
+	const abXdir = ab.cross(dir)
+	const div = abXdir.squared()
+	const anchorDiff = p.minus(a)
+	const s = anchorDiff.cross(dir).dot(abXdir) / div
+	const t = anchorDiff.cross(ab).dot(abXdir) / div
 	//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1, "s",
 	// s, "t", t, "div", div)
 	return t > 0 && s >= 0 && s <= 1
 }
 function template(templateName, map): HTMLElement {
-	var html = $<HTMLScriptElement>(templateName).text
-	for (var key in map) {
+	let html = $<HTMLScriptElement>(templateName).text
+	for (const key in map) {
 		html = html.replace(new RegExp('\\$' + key, 'g'), map[key])
 	}
 	return $(new MooEl('div', {html: html.trim()}).firstChild)
@@ -934,32 +933,32 @@ function featureRollBack(feature: any, featureIndex: number) {
 	rollBackIndex = featureIndex
 }
 function updateFeatureDisplay() {
-	var div = $('featureDisplay')
+	const div = $('featureDisplay')
 	div.erase('text')
 	featureStack.forEach(function (feature, featureIndex) {
 		if (rebuildLimit == featureIndex) {
 			div.adopt(new MooEl('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
 			// div.adopt(<div class='rebuildLimit'>REBUILD LIMIT</div>)
 		}
-		var newChild
-		if (feature.type == "extrude") {
-			newChild = template('templateFeatureExtrude', {what: "EXTRUDE", name: feature.name})
+		let newChild
+		if (feature.type == 'extrude') {
+			newChild = template('templateFeatureExtrude', {what: 'EXTRUDE', name: feature.name})
 			newChild.getElement('[name=edit]').onclick = function () {
 				modePush(MODES.EXTRUDE, feature)
 			}
-		} else if (feature.type == "planeDefinition") {
-			newChild = template('templateFeatureExtrude', {what: "PLANE", name: feature.planeId})
+		} else if (feature.type == 'planeDefinition') {
+			newChild = template('templateFeatureExtrude', {what: 'PLANE', name: feature.planeId})
 			newChild.getElement('[name=edit]').onclick = function () {
 				modePush(MODES.PLANE_DEFINITION, feature)
 			}
 		} else if (feature instanceof Sketch) {
-			newChild = template('templateFeatureExtrude', {what: "SKETCH", name: feature.name})
+			newChild = template('templateFeatureExtrude', {what: 'SKETCH', name: feature.name})
 			newChild.getElement('[name=edit]').onclick = function () {
 				modePush(MODES.SKETCH, feature)
 			}
 		} else {
 			console.log(feature)
-			throw new Error("Unknown feature" + feature.toSource() + feature.constructor.name)
+			throw new Error('Unknown feature' + feature.toSource() + feature.constructor.name)
 		}
 		newChild.inject(div)
 		newChild.getElement('[name=delete]').onclick = function () {
@@ -987,7 +986,7 @@ function updateFeatureDisplay() {
 	})
 }
 function updateSelected() {
-	var div = $('selectedElements')
+	let div = $('selectedElements')
 	div.erase('text')
 	selected.forEach(sel => {
 		// TODO, if only necessary part of model is rebuilt, this probably wont be necessary:
@@ -999,7 +998,7 @@ function updateSelected() {
 			target = sel
 			name = sel.name || modelBREP && modelBREP.vertexNames && modelBREP.vertexNames.get(sel)
 		}
-		var newChild = template("template", {what: sel.constructor.name, name: name})
+		const newChild = template('template', {what: sel.constructor.name, name: name})
 		if (!target) {
 			newChild.addClass('notfound')
 		}
@@ -1020,12 +1019,12 @@ function updateSelected() {
 			}
 			paintScreen()
 		}
-		newChild.getElement(".remove").onclick = function (e) {
+		newChild.getElement('.remove').onclick = function (e) {
 			editingSketch.removeElement(target)
 			updateSelected()
 			paintScreen()
 		}
-		newChild.getElement(".unsel").onclick = function (e) {
+		newChild.getElement('.unsel').onclick = function (e) {
 			selected.remove(sel)
 			updateSelected()
 			paintScreen()
@@ -1044,7 +1043,7 @@ function updateSelected() {
 	div.erase('text')
 	if (MODES.SKETCH == modeGetCurrent()) {
 		selected.flatMap((el) => editingSketch.getConstraintsFor(el)).unique().forEach(cst => {
-			var newChild
+			let newChild
 			if ('pointDistance' == cst.type
 				|| 'pointLineDistance' == cst.type
 				|| 'pointPlaneDistance' == cst.type) {
@@ -1057,7 +1056,7 @@ function updateSelected() {
 				}
 			} else if ('angle' == cst.type) {
 				newChild = template('templateAngle', {name: cst.type, id: cst.id})
-				var input = newChild.getElement('.distanceInput')
+				const input = newChild.getElement('.distanceInput')
 				newChild.getElement('.distanceInput').value = NLA.round10(rad2deg(cst.value), -5)
 				newChild.getElement('.fa').onclick = () => {
 					cst.f[0] *= -1
@@ -1079,12 +1078,12 @@ function updateSelected() {
 					paintScreen()
 				}
 			} else {
-				newChild = template("templateConstraint", {name: cst.type})
+				newChild = template('templateConstraint', {name: cst.type})
 
 				cst.cs.forEach(function (el) {
-					var subChild = template("templateConstraintSub", {what: el.constructor.name, name: el.name})
+					const subChild = template('templateConstraintSub', {what: el.constructor.name, name: el.name})
 					subChild.inject(newChild)
-					subChild.getElement(".removeFromConstraint").onclick = function (e) {
+					subChild.getElement('.removeFromConstraint').onclick = function (e) {
 						removeFromConstraint(el, editingSketch, cst)
 						updateSelected()
 						paintScreen()
@@ -1100,7 +1099,7 @@ function updateSelected() {
 					}
 				})
 			}
-			newChild.getElement(".remove").onclick = function (e) {
+			newChild.getElement('.remove').onclick = function (e) {
 				deleteConstraint(editingSketch, cst)
 				updateSelected()
 			}
@@ -1123,7 +1122,7 @@ class NameRef {
 	lastHit: any
 
 	constructor(name, lastHit) {
-		let x = NameRef.pool.get(name)
+		const x = NameRef.pool.get(name)
 		if (x) return x
 		this.ref = name
 		this.lastHit = lastHit
@@ -1131,7 +1130,7 @@ class NameRef {
 	}
 
 	get() {
-		let hit = publishedObjects.get(this.ref)
+		const hit = publishedObjects.get(this.ref)
 		// let hit = planes.find(plane => plane.name == this.ref)
 		// 	|| modelBREP && modelBREP.faces.find(face => face.name == this.ref)
 		// 	|| modelBREP && modelBREP.faces.firstMatch(face => face.getAllEdges().find(edge => edge.name ==
@@ -1141,7 +1140,7 @@ class NameRef {
 	}
 
 	getOrThrow() {
-		let hit = this.get()
+		const hit = this.get()
 		if (!hit) {
 			throw new Error(`could not find ${this.lastHit.constructor.name} ${this.ref}`)
 		}
@@ -1157,11 +1156,11 @@ class NameRef {
 	}
 
 	get what() {
-		return this.get() instanceof Face ? "face" : "plane"
+		return this.get() instanceof Face ? 'face' : 'plane'
 	}
 
 	get name() {
-		let hit = this.get()
+		const hit = this.get()
 		return hit && hit.name
 	}
 
@@ -1189,7 +1188,7 @@ function mapReverse(map, value) {
 		}
 	}
 }
-function initMeshes() {
+function initMeshes(meshes) {
 	meshes.sphere1 = GL.Mesh.sphere(2)
 	meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
 	meshes.text = GL.Mesh.plane()
@@ -1197,7 +1196,7 @@ function initMeshes() {
 	meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
 	meshes.xyLinePlane = GL.Mesh.plane()
 }
-function initShaders() {
+function initShaders(shaders) {
 	shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor)
 	shaders.singleColorHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight)
 	shaders.textureColor = new GL.Shader(vertexShaderTexture, fragmentShaderTextureColor)
@@ -1211,7 +1210,7 @@ function initShaders() {
 }
 function initOtherEvents() {
 	window.onkeypress = function (e) {
-		if ("Delete" == e.key) {
+		if ('Delete' == e.key) {
 			selected.forEach(x => editingSketch.removeElement(x))
 			paintScreen()
 		}
@@ -1227,13 +1226,13 @@ function initOtherEvents() {
 		}
 		if (0 == e.button) {
 			const mouseLine = getMouseLine(e)
-			console.log("mouseLine", getMouseLine(e).toString(x => x), "mode", modeGetCurrent())
+			console.log('mouseLine', getMouseLine(e).toString(x => x), 'mode', modeGetCurrent())
 			modeGetCurrent().mousedown(e, mouseLine)
 		}
 
 		return false
 	})
-	$("clearmode").addEvent('click', modePop)
+	$('clearmode').addEvent('click', modePop)
 
 }
 function initPointInfoEvents() {
@@ -1243,7 +1242,7 @@ function initPointInfoEvents() {
 		{
 			let pp, html = '', closestP = Infinity
 			drPs.forEach(info => {
-				let p = info.p || info
+				const p = info.p || info
 				let text = p.toString(x => NLA.round10(x, -4)) + (info.p ? ' ' + info.text : '')
 				text = `<li>${text}</li>`
 				const dist = mouseLine.distanceToPoint(p)
@@ -1258,10 +1257,9 @@ function initPointInfoEvents() {
 				}
 			})
 			if (pp) {
-				let pSC = gl.projectionMatrix.times(gl.modelViewMatrix).transformPoint(pp)
-				let x = (pSC.x * 0.5 + 0.5) * window.innerWidth, y = (-pSC.y * 0.5 + 0.5) * window.innerHeight
+				const pSC = gl.projectionMatrix.times(gl.modelViewMatrix).transformPoint(pp)
+				const x = (pSC.x * 0.5 + 0.5) * window.innerWidth, y = (-pSC.y * 0.5 + 0.5) * window.innerHeight
 				tooltipShow(html, x, y)
-				console.log("show tt")
 			} else {
 				tooltipHide()
 			}
@@ -1269,54 +1267,63 @@ function initPointInfoEvents() {
 		paintScreen()
 	})
 }
-function initNavigationEvents() {
-	const canvas: HTMLCanvasElement = $(gl.canvas)
-
-	gl.onmousemove.push(function (e) {
+function initNavigationEvents(_gl = gl, eye, paintScreen) {
+	const canvas: HTMLCanvasElement = $(_gl.canvas)
+	//_gl.onmousedown.push((e) => {
+	//	e.preventDefault()
+	//	e.stopPropagation()
+	//})
+	//_gl.onmouseup.push((e) => {
+	//	e.preventDefault()
+	//	e.stopPropagation()
+	//})
+	_gl.onmousemove.push(function (e) {
 
 		if (e.dragging) {
 
 			//noinspection JSBitwiseOperatorUsage
 			if (e.buttons & 4) {
 				// pan
-				const moveCamera = V(-e.deltaX, e.deltaY, 0).times(2 / gl.canvas.width)
-				const inverseProjectionMatrix = gl.projectionMatrix.inversed()
+				const moveCamera = V(-e.deltaX, e.deltaY, 0).times(2 / _gl.canvas.width)
+				const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 				const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
-				eyePos = eyePos.plus(worldMoveCamera)
-				eyeFocus = eyeFocus.plus(worldMoveCamera)
-				setupCamera()
+				eye.eyePos = eye.eyePos.plus(worldMoveCamera)
+				eye.eyeFocus = eye.eyeFocus.plus(worldMoveCamera)
+				setupCamera(_gl, eye)
 			}
 			// scene rotation
 			//noinspection JSBitwiseOperatorUsage
 			if (e.buttons & 2) {
-				let rotateLR = -e.deltaX / 6.0 * DEG
-				let rotateUD = -e.deltaY / 6.0 * DEG
+				const rotateLR = -e.deltaX / 6.0 * DEG
+				const rotateUD = -e.deltaY / 6.0 * DEG
 				// rotate
-				let matrix = M4.rotationLine(eyeFocus, eyeUp, rotateLR)
+				let matrix = M4.rotationLine(eye.eyeFocus, eye.eyeUp, rotateLR)
 				//let horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
-				let horizontalRotationAxis = eyeUp.cross(eyePos.minus(eyeFocus))
-				matrix = matrix.times(M4.rotationLine(eyeFocus, horizontalRotationAxis, rotateUD))
-				eyePos = matrix.transformPoint(eyePos)
-				eyeUp = matrix.transformVector(eyeUp)
+				const horizontalRotationAxis = eye.eyeUp.cross(eye.eyePos.minus(eye.eyeFocus))
+				matrix = matrix.times(M4.rotationLine(eye.eyeFocus, horizontalRotationAxis, rotateUD))
+				eye.eyePos = matrix.transformPoint(eye.eyePos)
+				eye.eyeUp = matrix.transformVector(eye.eyeUp)
 
-				setupCamera()
+				setupCamera(_gl, eye)
 			}
 		}
 		paintScreen()
 	})
 	canvas.addEvent('mousewheel', function (e) {
 		//console.log(e)
-		zoomFactor *= pow(0.9, -e.wheel)
-		const mouseCoords = e.client
-		const moveCamera = V(mouseCoords.x * 2 / gl.canvas.width - 1, -mouseCoords.y * 2 / gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
-		const inverseProjectionMatrix = gl.projectionMatrix.inversed()
+		eye.zoomFactor *= pow(0.9, -e.wheel)
+		const targetPos = e.target.getPosition()
+		const mouseCoords = {x: e.page.x - targetPos.x, y: e.page.y - targetPos.y}
+		const moveCamera = V(mouseCoords.x * 2 / _gl.canvas.width - 1, -mouseCoords.y * 2 / _gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
+		const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 		const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
 		//console.log("moveCamera", moveCamera)
 		//console.log("worldMoveCamera", worldMoveCamera)
-		eyePos = eyePos.plus(worldMoveCamera)
-		eyeFocus = eyeFocus.plus(worldMoveCamera)
-		setupCamera()
+		eye.eyePos = eye.eyePos.plus(worldMoveCamera)
+		eye.eyeFocus = eye.eyeFocus.plus(worldMoveCamera)
+		setupCamera(_gl, eye)
 		paintScreen()
+		e.preventDefault()
 	})
 }
 //const sFace = B2T.rotateEdges([Edge.forCurveAndTs(EllipseCurve.XY, 0, 90 * DEG).rotateX(90 * DEG),StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah').faces.find(face => face.surface instanceof EllipsoidSurface)
@@ -1471,16 +1478,16 @@ window.onload = function () {
 	// console.log(mesh2)
 	//mesh1 = mesh1.transform(M4.FOO.as3x3())
 
-	let linksHaendig = M4.forSys(V3.X, V3.Y, V3.Z.negated())
-	let v0 = V(2, 3, 4), v1 = V(-2, 3, 5), v2 = v0.cross(v1)
-	let v2t = linksHaendig.transformVector(v0).cross(linksHaendig.transformVector(v1))
-	let v2s = linksHaendig.inversed().transposed().transformVector(v2)
-	console.log("ASKDKJALDS", v2t.dot(v2s), v2t.isParallelTo(v2s))
+	const linksHaendig = M4.forSys(V3.X, V3.Y, V3.Z.negated())
+	const v0 = V(2, 3, 4), v1 = V(-2, 3, 5), v2 = v0.cross(v1)
+	const v2t = linksHaendig.transformVector(v0).cross(linksHaendig.transformVector(v1))
+	const v2s = linksHaendig.inversed().transposed().transformVector(v2)
+	console.log('ASKDKJALDS', v2t.dot(v2s), v2t.isParallelTo(v2s))
 	initMeshes()
 	initShaders()
-	let b = editingSketch && editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
+	const b = editingSketch && editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
 	//	console.log(mesh.vertices)
-	console.log("BBB", b)
+	console.log('BBB', b)
 	initNavigationEvents()
 	initOtherEvents()
 
@@ -1500,12 +1507,14 @@ window.onload = function () {
 	updateFeatureDisplay()
 	rebuildModel() // so warning will show
 	paintScreen()
-	let lastInterst = featureStack.slice().reverse().find(f => f instanceof Sketch)
+	const lastInterst = featureStack.slice().reverse().find(f => f instanceof Sketch)
 	lastInterst && modePush(MODES.SKETCH, lastInterst)
 
 }
 
-function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchElements' | 'brepPoints' | 'brepEdges')[]) {
+function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points: V3[], edges: Edge[],
+                     mindist: number,
+                     ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges')[]) {
 	let hoverHighlight = null, nearest = Infinity
 
 	function checkEl(el, distance) {
@@ -1515,80 +1524,69 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
 		}
 	}
 
-	if (consider.includes('faces') && modelBREP) {
-		modelBREP.faces.forEach((face) => {
+	if (consider.includes('faces')) {
+		for (const face of faces) {
 			checkEl(face, face.intersectsLine(mouseLine))
-		})
+		}
 	}
 	if (consider.includes('planes')) {
-		planes.forEach(plane => checkEl(plane, plane.distanceTo(mouseLine)))
+		for (const plane of planes) {
+			checkEl(plane, plane.distanceTo(mouseLine,mindist))
+		}
 	}
 	if (consider.includes('sketchElements')) {
 		featureStack.filter(f => f instanceof Sketch).forEach(sketch => {
-			if (!sketch.hide && sketch.plane && sketch.plane.normal.dot(mouseLine.dir1) < -0.1) {
+			if (!sketch.hide && sketch.plane && sketch.plane.normal1.dot(mouseLine.dir1) < -0.1) {
 				// sketch plane is facing user; ensures there is an intersection
 
-				let mouseLineIS = mouseLine.intersectionWithPlane(sketch.plane)
-				let sketchCoords = sketch.worldToSketchMatrix.transformPoint(mouseLineIS)
+				const mouseLineIS = mouseLine.intersectionWithPlane(sketch.plane)
+				const sketchCoords = sketch.worldToSketchMatrix.transformPoint(mouseLineIS)
 
-				let closestElement = sketch.elements.concat(getAllPoints(sketch).map(p => p.canon()).unique())
+				const closestElement = sketch.elements.concat(getAllPoints(sketch).map(p => p.canon()).unique())
 					.withMax(el => {
 						let d = el.distanceToCoords(sketchCoords)
 						if (el instanceof SegmentEndPoint) d -= 8
 						return -d
 					})
 
-				if (closestElement && closestElement.distanceToCoords(sketchCoords) < 16) {
+				if (closestElement && closestElement.distanceToCoords(sketchCoords) < mindist) {
 					// subtract 0.001 so that sketch elements have priority over things in same plane
 					checkEl(closestElement, mouseLine.pointT(mouseLineIS) - 0.1)
 				}
 			}
 		})
 	}
-	if (consider.includes('brepPoints')) {
-		brepPoints.forEach(p => {
-			let t = mouseLine.pointT(p)
-			if (mouseLine.at(t).distanceTo(p) < 20) {
+	if (consider.includes('points')) {
+		for (const p of points) {
+			const t = mouseLine.pointT(p)
+			if (mouseLine.at(t).distanceTo(p) < mindist * 1.2) {
 				checkEl(p, t - 0.1)
 			}
-		})
+		}
 	}
-	if (consider.includes('brepEdges')) {
-		let projPlane = new P3(mouseLine.dir1, 0)
-		let projPoint = projPlane.projectedPoint(mouseLine.anchor)
-		brepEdges.forEach(edge => {
-			let curve = edge.curve
+	if (consider.includes('edges')) {
+		const projPlane = new P3(mouseLine.dir1, 0)
+		const projPoint = projPlane.projectedPoint(mouseLine.anchor)
+		for (const edge of edges) {
+			const curve = edge.curve
 			const prio = 0.05
-			if (curve instanceof L3) {
-				if (curve.dir1.isParallelTo(mouseLine.dir1)) {
-					let d = mouseLine.distanceToPoint(edge.a)
-					let t = mouseLine.pointT(edge.a)
+			if (curve instanceof L3 && curve.dir1.isParallelTo(mouseLine.dir1)) {
+				const d = mouseLine.distanceToPoint(edge.a)
+				const t = mouseLine.pointT(edge.a)
 
-					if (d < 16) {
-						checkEl(edge, t - prio)
-					}
-				} else {
-					let projAnchor = projPlane.projectedPoint(curve.anchor)
-					let projDir = projPlane.projectedVector(curve.dir1)
-					let tCurve = projPoint.minus(projAnchor).dot(projDir) / projDir.squared()
-					tCurve = edge.clampedT(tCurve)
-					let p = curve.at(tCurve)
-					let t = mouseLine.pointT(p)
-					if (mouseLine.at(t).distanceTo(p) < 16) {
-						checkEl(edge, t - prio)
-					}
+				if (d < mindist) {
+					checkEl(edge, t - prio)
 				}
 			} else {
-				let projCurve = curve.project(projPlane)
-				let tCurve = projCurve.closestTToPoint(projPoint)
-				tCurve = edge.clampedT(tCurve)
-				let p = curve.at(tCurve)
-				let t = mouseLine.pointT(p)
-				if (projCurve.at(tCurve).distanceTo(projPoint) < 16) {
+				const projCurve = curve.project(projPlane)
+				const curveT = edge.clampedT(projCurve.closestTToPoint(projPoint))
+				const p = curve.at(curveT)
+				const t = mouseLine.pointT(p)
+				if (projCurve.at(curveT).distanceTo(projPoint) < mindist) {
 					checkEl(edge, t - prio)
 				}
 			}
-		})
+		}
 	}
 
 	return hoverHighlight
@@ -1599,12 +1597,12 @@ function getHovering(mouseLine: L3, ...consider: ('faces' | 'planes' | 'sketchEl
  * @returns {L3}
  */
 function getMouseLine(pos) {
-	let ndc1 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 0)
-	let ndc2 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 1)
+	const ndc1 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 0)
+	const ndc2 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 1)
 	//console.log(ndc)
-	let inverseProjectionMatrix = gl.projectionMatrix.inversed()
-	let s = inverseProjectionMatrix.transformPoint(ndc1)
-	let dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s)
+	const inverseProjectionMatrix = gl.projectionMatrix.inversed()
+	const s = inverseProjectionMatrix.transformPoint(ndc1)
+	const dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s)
 	return L3.anchorDirection(s, dir)
 }
 
@@ -1620,7 +1618,7 @@ function setupSelectors(el, feature, mode) {
 			el.linkRef = feature[el.dataset.featureProperty]
 		})
 		.addEvent('mouseover', function (e) {
-			let target = this.linkRef.get()
+			const target = this.linkRef.get()
 			if (target) {
 				hoverHighlight = target
 			} else {
@@ -1654,7 +1652,7 @@ function setupSelectors(el, feature, mode) {
 			this.addClass('selecting')
 			selector.set('text', 'Click on a plane')
 			modePush(MODES.PLANE_SELECT, function (planeRef) {
-				console.log("plane-select callback", planeRef)
+				console.log('plane-select callback', planeRef)
 				selector.removeClass('selecting')
 				selector.set('text', planeRef.ref)
 				selector.linkRef = planeRef
@@ -1685,7 +1683,7 @@ function setupSelectors(el, feature, mode) {
 		.each(el => el.value = feature[el.dataset.featureProperty])
 		.addEvent('change', function (e) {
 			// TODO: check if unique
-			let propName = el.dataset.featureProperty
+			const propName = el.dataset.featureProperty
 			feature[propName] = this.value
 			rebuildModel()
 		})
@@ -1694,7 +1692,7 @@ function setupSelectors(el, feature, mode) {
 		.removeEvents()
 		.each(el => el.value = feature[el.dataset.featureProperty])
 		.addEvent('change', function (e) {
-			var propName = this.dataset.featureProperty
+			const propName = this.dataset.featureProperty
 			feature[propName] = this.value
 			rebuildModel()
 		})
@@ -1704,7 +1702,7 @@ function setupSelectors(el, feature, mode) {
 		.each(el => el.value = feature[el.dataset.featureProperty])
 		.addEvent('mousewheel', function (e) {
 			console.log(e)
-			let delta = (e.shift ? 1 : 10) * Math.sign(e.wheel)
+			const delta = (e.shift ? 1 : 10) * Math.sign(e.wheel)
 			this.set('value', NLA.round10(parseFloat(this.value) + delta, -6))
 			this.fireEvent('change')
 		})
@@ -1715,7 +1713,7 @@ function setupSelectors(el, feature, mode) {
 			}
 		})
 		.addEvent('change', function (e) {
-			var propName = this.dataset.featureProperty
+			const propName = this.dataset.featureProperty
 			feature[propName] = this.value = NLA.forceFinite(this.value)
 			rebuildModel()
 		})
@@ -1724,7 +1722,7 @@ function setupSelectors(el, feature, mode) {
 		.removeEvents()
 		.each(el => el.checked = feature[el.dataset.featureProperty])
 		.addEvent('change', function (e) {
-			var propName = this.dataset.featureProperty
+			const propName = this.dataset.featureProperty
 			feature[propName] = this.checked
 			rebuildModel()
 		})
@@ -1742,10 +1740,10 @@ function setupSelectors(el, feature, mode) {
 
 }
 function featureDelete(feature) {
-	let correspondingMode = modeStack.find(mode => mode.feature && mode.feature == feature)
+	const correspondingMode = modeStack.find(mode => mode.feature && mode.feature == feature)
 	correspondingMode && modeEnd(correspondingMode)
 
-	let featureIndex = featureStack.indexOf(feature)
+	const featureIndex = featureStack.indexOf(feature)
 	featureStack.remove(feature)
 	if (-1 != featureIndex && featureIndex < rebuildLimit) {
 		rebuildLimit--
@@ -1754,16 +1752,16 @@ function featureDelete(feature) {
 	rebuildModel()
 }
 function featureDependents(feature) {
-	let featureIndex = featureStack.indexOf(feature)
+	const featureIndex = featureStack.indexOf(feature)
 	return featureStack
 		.slice(featureIndex + 1)
 		.filter(followingFeature => featureDependencies(followingFeature).includes(feature))
 }
 function featureDependencies(feature) {
-	let result = new Set()
-	let featureNameDependecies = feature.dependentOnNames()
+	const result = new Set()
+	const featureNameDependecies = feature.dependentOnNames()
 	featureNameDependecies.forEach(nameRef => {
-		let dependentOnFeature = namesPublishedBy.get(nameRef.ref)
+		const dependentOnFeature = namesPublishedBy.get(nameRef.ref)
 		dependentOnFeature && result.add(dependentOnFeature)
 	})
 	return Array.from(result.values())
@@ -1781,14 +1779,14 @@ function exportModel() {
 	saveAs(brepMesh.toBinarySTL(), 'export.stl')
 }
 function clicky() {
-	for (var j = 0; j < 1; j++) {
+	for (let j = 0; j < 1; j++) {
 		editingSketch.gaussNewtonStep()
 	}
 	editingSketch.reverse()
 	paintScreen()
 }
 function deleteConstraint(sketch, constraint) {
-	if ("coincident" == constraint.type) {
+	if ('coincident' == constraint.type) {
 		deleteCoincidence(constraint, sketch)
 	} else {
 		sketch.constraints.remove(constraint)
@@ -1803,7 +1801,7 @@ function getGroupConstraint(el, sketch, type) {
 }
 // removes segment or plane from group constraint
 function removeFromGroupConstraint(el, sketch, type) {
-	var groupConstraint = getGroupConstraint(el, sketch, type)
+	const groupConstraint = getGroupConstraint(el, sketch, type)
 	if (!groupConstraint) return
 	groupConstraint.cs.remove(el)
 	if (1 == groupConstraint.cs.length) {
@@ -1882,26 +1880,26 @@ function removeFromConstraint(el: SketchSegment | SegmentEndPoint, sketch: Sketc
  */
 function makeGroup(type) {
 	const isFixed = x => x instanceof Face || x instanceof Edge || x instanceof CustomPlane
-	var els = selected.filter((el) => el instanceof SketchLineSeg || ('equalLength' != type && isFixed(el)))
+	const els = selected.filter((el) => el instanceof SketchLineSeg || ('equalLength' != type && isFixed(el)))
 	if (els.length < 2) return
 
-	var newGroup = els.map(el => {
+	const newGroup = els.map(el => {
 		if (isFixed(el)) el = NameRef.forObject(el)
-		var c = getGroupConstraint(el, editingSketch, type)
+		const c = getGroupConstraint(el, editingSketch, type)
 		return c ? c.cs : el
 	}).concatenated().unique()
-	var fixeds = newGroup.filter(el => el instanceof NameRef)
+	const fixeds = newGroup.filter(el => el instanceof NameRef)
 	if (1 < fixeds.length) {
-		throw new Error("cannot have two fixed")
+		throw new Error('cannot have two fixed')
 	}
 
-	var oldConstraints = newGroup.map(el => getGroupConstraint(el, editingSketch, type))
+	const oldConstraints = newGroup.map(el => getGroupConstraint(el, editingSketch, type))
 	editingSketch.constraints.removeAll(oldConstraints)
 
 	// add new constraint
 	// fixeds[0] may be null
-	var segments = newGroup.filter(x => !(x instanceof NameRef))
-	var f = fixeds[0]
+	const segments = newGroup.filter(x => !(x instanceof NameRef))
+	const f = fixeds[0]
 	editingSketch.constraints.push(new Constraint(type, f ? segments.concat(f) : segments, {
 		fixed: f,
 		segments: segments
@@ -1914,15 +1912,15 @@ function makeGroup(type) {
 
 
 function makeAngle() {
-	var selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane)
+	const selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane)
 	console.log(selSegments)
 	if (selSegments.length == 2) {
-		var segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1]
-		var other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0]
+		const segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1]
+		const other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0]
 		if (!(segment instanceof SketchLineSeg)) {
-			throw new Error("at least one must be a segment")
+			throw new Error('at least one must be a segment')
 		}
-		editingSketch.constraints.push(new Constraint("angle", [segment, other], {
+		editingSketch.constraints.push(new Constraint('angle', [segment, other], {
 			segment: segment,
 			other: other,
 			f: [1, 1],
@@ -1934,14 +1932,14 @@ function makeAngle() {
 	}
 }
 function makePerpendicular() {
-	var selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane)
+	const selSegments = selected.filter((el) => el instanceof SketchLineSeg || el.plane)
 	if (selSegments.length == 2) {
-		var segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1]
-		var other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0]
+		const segment = selSegments[0] instanceof SketchLineSeg ? selSegments[0] : selSegments[1]
+		const other = selSegments[0] instanceof SketchLineSeg ? selSegments[1] : selSegments[0]
 		if (!(segment instanceof SketchLineSeg)) {
-			throw new Error("at least one must be a segment")
+			throw new Error('at least one must be a segment')
 		}
-		editingSketch.constraints.push(new Constraint("perpendicular", [segment, other], {
+		editingSketch.constraints.push(new Constraint('perpendicular', [segment, other], {
 			segment: segment,
 			other: other
 		}))
@@ -1952,21 +1950,21 @@ function makePerpendicular() {
 }
 function makeDistance() {
 	if (2 != selected.length) return
-	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
-	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0]
+	const point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
+	let other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0]
 	if (point instanceof SegmentEndPoint && (other instanceof SketchLineSeg || other instanceof SegmentEndPoint || other.plane)) {
-		var newConstraint
+		let newConstraint
 		if (other instanceof SegmentEndPoint) {
-			newConstraint = new Constraint("pointDistance", selected.slice(), {distance: round(other.distanceToCoords(point))})
+			newConstraint = new Constraint('pointDistance', selected.slice(), {distance: round(other.distanceToCoords(point))})
 		} else if (other instanceof SketchLineSeg) {
-			let distance = round(other.distanceToCoords(point))
-			newConstraint = new Constraint("pointLineDistance", [point, other],
+			const distance = round(other.distanceToCoords(point))
+			newConstraint = new Constraint('pointLineDistance', [point, other],
 				{point: point, other: other, distance: distance})
 		} else {
-			let distance = round(other.plane.intersectionWithPlane(editingSketch.plane)
+			const distance = round(other.plane.intersectionWithPlane(editingSketch.plane)
 				.transform(editingSketch.worldToSketchMatrix).distanceToPoint(point.V3()))
 			other = NameRef.forObject(other)
-			newConstraint = new Constraint("pointPlaneDistance", [point, other],
+			newConstraint = new Constraint('pointPlaneDistance', [point, other],
 				{point: point, other: other, distance: distance})
 			console.log(newConstraint)
 		}
@@ -1975,7 +1973,7 @@ function makeDistance() {
 		paintScreen()
 		updateSelected()
 		;
-		($("distanceInput" + newConstraint.id) as HTMLInputElement).select()
+		($('distanceInput' + newConstraint.id) as HTMLInputElement).select()
 	}
 }
 interface getCurvable {
@@ -1987,12 +1985,12 @@ Edge.prototype.getCurve = function () {
 }
 function selPointOnLine() {
 	if (2 != selected.length) return
-	var point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
-	var other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0]
+	const point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
+	let other = selected[0] instanceof SegmentEndPoint ? selected[1] : selected[0]
 	if (point instanceof SegmentEndPoint && (other instanceof SketchLineSeg || other instanceof SketchBezier || other instanceof SketchArc
 		|| other instanceof Face || other instanceof Edge || other instanceof CustomPlane)) {
 		other = isSketchEl(other) ? other : NameRef.forObject(other)
-		var newConstraint = new Constraint("pointOnLine", [point, other], {point: point, other: other})
+		const newConstraint = new Constraint('pointOnLine', [point, other], {point: point, other: other})
 		console.log(newConstraint)
 		editingSketch.constraints.push(newConstraint)
 		rebuildModel()
@@ -2001,9 +1999,9 @@ function selPointOnLine() {
 	}
 }
 function makeSelCoincident() {
-	var selPoints = selected.filter(function (s) { return s instanceof SegmentEndPoint })
+	const selPoints = selected.filter(function (s) { return s instanceof SegmentEndPoint })
 	if (selPoints.length >= 2) {
-		for (var i = 1; i < selPoints.length; i++) {
+		for (let i = 1; i < selPoints.length; i++) {
 			makeCoincident(selPoints[0], selPoints[i], editingSketch)
 		}
 		rebuildModel()
@@ -2013,10 +2011,10 @@ function makeSelCoincident() {
 }
 
 function faceSketchPlane() {
-	var plane = editingSketch.plane
-	var viewLine = L3.throughPoints(eyePos, eyeFocus)
+	const plane = editingSketch.plane
+	const viewLine = L3.throughPoints(eyePos, eyeFocus)
 	eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.O)
-	eyePos = eyeFocus.plus(plane.normal.times(100))
+	eyePos = eyeFocus.plus(plane.normal1.times(100))
 	eyeUp = plane.up
 	setupCamera()
 	paintScreen()
@@ -2030,14 +2028,14 @@ class Extrude {
 	operation: 'minus' | 'plus'
 
 	constructor(name, segmentName, start, end, operation) {
-		this.type = "extrude"
-		this.name = name || "extrude" + (globalId++)
+		this.type = 'extrude'
+		this.name = name || 'extrude' + (globalId++)
 		segmentName = segmentName || NameRef.UNASSIGNED
 		assertInst(NameRef, segmentName)
 		this.segmentName = segmentName
 		this.start = start || 0
 		this.end = end || 100
-		this.operation = operation || "minus"
+		this.operation = operation || 'minus'
 	}
 
 	set segmentName(sn: NameRef) {
@@ -2080,7 +2078,7 @@ function modeUpdateDisplay() {
 function modePush(mode, ...args) {
 	assert(mode.init && mode.end && mode.mousemove && mode.mousedown)
 	mode.before && mode.before()
-	let feature = args[0]
+	const feature = args[0]
 	if (mode.modeEditsFeatureAndRequiresRollback && feature) {
 		rebuildLimit = featureStack.indexOf(feature) + 1
 		updateFeatureDisplay()
@@ -2093,7 +2091,7 @@ function modePush(mode, ...args) {
 function modeEnd(mode) {
 	if (modeStack.includes(mode)) {
 		do {
-			var popped = modeStack.pop()
+			const popped = modeStack.pop()
 			popped.end()
 			if (popped.modeEditsFeatureAndRequiresRollback) {
 				rebuildLimit = -1
@@ -2122,12 +2120,12 @@ interface Mode {
 
 
 function tooltipShow(htmlContent, x, y) {
-	let tipWrap = $('tip-wrap') as HTMLDivElement
+	const tipWrap = $('tip-wrap') as HTMLDivElement
 	assert(tipWrap)
-	let tip = $('tip') as HTMLDivElement
+	const tip = $('tip') as HTMLDivElement
 	tipWrap.setStyle('visibility', 'visible')
 	tip.set('html', htmlContent)
-	let size = tipWrap.getSize()
+	const size = tipWrap.getSize()
 	tipWrap.setStyle('left', (x - 16 - 16) + 'px')
 	if (window.innerHeight - y < size.y) {
 		// place on top
@@ -2178,7 +2176,7 @@ function serialize(v) {
 				}
 			} else {
 				visited.add(v)
-				let keys = Object.keys(v)
+				const keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {
 					gatherList(v[keys[i]])
 				}
@@ -2201,10 +2199,10 @@ function serialize(v) {
 			if (true !== first && undefined !== (index = listMap.get(v))) {
 				return {'#REF': index}
 			} else {
-				let result = Object.prototype == v.prototype ? {}
+				const result = Object.prototype == v.prototype ? {}
 					: assert(v.constructor && v.constructor.name,
 					() => (console.log(v), v.toSource() + v.constructor.name)) && {'#PROTO': v.constructor.name}
-				let keys = Object.keys(v)
+				const keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {
 					result[keys[i]] = transform(v[keys[i]])
 				}
@@ -2215,7 +2213,7 @@ function serialize(v) {
 		}
 	}
 
-	let visited = new Set()
+	const visited = new Set()
 	let listMap = new Map(), resultList = []
 	listMap.set(v, 0)
 	resultList.push(v)
@@ -2237,8 +2235,8 @@ function unserialize(string) {
 		} else if ('object' == typeof v && null != v) {
 			if ('#PROTO' in v) {
 				assert(window[v['#PROTO']] || NLA.CLASSES[v['#PROTO']], v['#PROTO'] + ' Missing ' + window[v['#PROTO']])
-				let result = Object.create((window[v['#PROTO']] || NLA.CLASSES[v['#PROTO']]).prototype)
-				let keys = Object.keys(v)
+				const result = Object.create((window[v['#PROTO']] || NLA.CLASSES[v['#PROTO']]).prototype)
+				const keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {
 					//if ('name' == keys[i]) console.log(result)
 					if ('#PROTO' != keys[i]) {
@@ -2269,7 +2267,7 @@ function unserialize(string) {
 			if ('#REF' in v) {
 				return tree[v['#REF']]
 			} else {
-				let keys = Object.keys(v)
+				const keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {
 					v[keys[i]] = linkReferences(v[keys[i]])
 				}
@@ -2280,7 +2278,7 @@ function unserialize(string) {
 		}
 	}
 
-	let tree = JSON.parse(string)
+	const tree = JSON.parse(string)
 	// console.log(tree)
 	fixObjects(tree)
 	// console.log(tree)

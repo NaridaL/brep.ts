@@ -9,7 +9,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 		assert(2 == arguments.length)
 		assertVectors(dir1)
 		assertInst(EllipseCurve, baseEllipse)
-		//assert(!baseCurve.normal.isPerpendicularTo(dir1), !baseCurve.normal.isPerpendicularTo(dir1))
+		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		assert(dir1.hasLength(1))
 		this.matrix = M4.forSys(baseEllipse.f1, baseEllipse.f2, dir1, baseEllipse.center)
 		this.inverseMatrix = this.matrix.inversed()

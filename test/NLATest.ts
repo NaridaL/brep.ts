@@ -211,7 +211,7 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 	//		Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4))
 	//	const face = Face.create(surface, loop)
 	//	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-	//					href='brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
+	//					href='viewer.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
 	//	const area = face.calcArea()
 	//	if (m4.isOrthogonal()) {
 	//		assert.push(NLA.eq(area, 1), area, 1)
@@ -387,7 +387,7 @@ registerTests({
 		const a = Matrix.fromRowArrays([6, 3], [4, 3])
 		const b = Matrix.fromRowArrays([6, 3], [12, 6])
 
-		// all rows on plane through origin with normal = V(1, -1, 0)
+		// all rows on plane through origin with normal1 = V(1, -1, 0)
 		const c = Matrix.fromRowArrays([1, -1, 1], [1, 1, 1], [-1, 0, -1])
 		assert.ok(a.rowsIndependent())
 		assert.notOk(b.rowsIndependent())
@@ -397,7 +397,7 @@ registerTests({
 		const a = Matrix.fromRowArrays([6, 3], [4, 3])
 		const b = Matrix.fromRowArrays([6, 3], [12, 6])
 
-		// all rows on plane through origin with normal = V(1, -1, 0)
+		// all rows on plane through origin with normal1 = V(1, -1, 0)
 		const c = Matrix.fromRowArrays([1, -1, 1], [1, 1, 1], [-1, 0, -1])
 		assert.equal(a.rank(), 2)
 		assert.equal(b.rank(), 1)
@@ -533,10 +533,10 @@ registerTests({
 		assert.V3like(proj.transformPoint(V(2, 4, 6)), plane.anchor)
 		assert.V3like(proj.transformVector(V(2, 4, 6)), V3.O)
 		const p2 = V(3, 5, 22)
-		assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(plane.normal))
+		assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(plane.normal1))
 		assert.ok(plane.containsPoint(proj.transformPoint(p2)))
-		assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(plane.normal))
-		assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
+		assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(plane.normal1))
+		assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal1))
 	},
 	'NLA.M4.projection 2'(assert) {
 		[V(1, 1, 1), V(0, 0, -1)].forEach(dir => {
@@ -546,7 +546,7 @@ registerTests({
 			assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
 			assert.ok(plane.containsPoint(proj.transformPoint(p2)))
 			assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(dir))
-			assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal))
+			assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal1))
 			console.log(proj.transformPoint(p2).sce)
 			console.log(proj.str)
 		})
@@ -806,6 +806,20 @@ registerTests({
 		assert.equal([1, 2, 3].sumInPlaceTree(), 6)
 		assert.equal([1, 2, 3, 4].sumInPlaceTree(), 10)
 	},
+	'PlaneSurface.loopContainsPoint 2'(assert) {
+		const loop = [
+			new StraightEdge(new L3(V(2, 10, 0), V3.Z), V(2, 10, 3), V(2, 10, 5), 3, 5),
+			new StraightEdge(new L3(V(0, 10, 5), V3.X), V(2, 10, 5), V(0, 10, 5), 2, 0),
+			new StraightEdge(new L3(V(0, 10, 0), V3.Z), V(0, 10, 5), V(0, 10, 0), 5, 0),
+			new StraightEdge(new L3(V(0, 10, 0), V3.X), V(0, 10, 0), V(10, 10, 0), 0, 10),
+			new StraightEdge(new L3(V(10, 10, 0), V3.Z), V(10, 10, 0), V(10, 10, 5), 0, 5),
+			new StraightEdge(new L3(V(0, 10, 5), V3.X), V(10, 10, 5), V(6, 10, 5), 10, 6),
+			new StraightEdge(new L3(V(6, 10, 0), V(0, 0, -1)), V(6, 10, 5), V(6, 10, 3), -5, -3),
+			new StraightEdge(new L3(V(0, 10, 3), V(-1, 0, 0)), V(6, 10, 3), V(2, 10, 3), -6, -2)
+		]
+		const p = V(6, 10, 3)
+		testLoopContainsPoint(assert, new PlaneSurface(new P3(V(0,-1,0),-10)), loop, p, PointVsFace.ON_EDGE)
+	},
 	'EllipsoidSurface.mainAxes'(assert) {
 		const es = new SemiEllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
 		assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
@@ -825,11 +839,11 @@ registerTests({
     //    const seamCurve = SemiEllipseCurve.UNIT.rotateX(-PI / 2)
     //    const edge = Edge.forCurveAndTs(curve, -PI, PI)
     //    assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-		//				href='brep2.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[${edge.str}]'>view</a>`)
+		//				href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[${edge.str}]'>view</a>`)
     //    const [front, back] = SemiEllipsoidSurface.splitOnPlaneLoop([edge], true)
     //
     //    assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-		//				href='brep2.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=${back.sce}'>view</a>`)
+		//				href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=${back.sce}'>view</a>`)
     //    console.log(front, back)
     //    const expectedFront = []
     //    const expectedBack = [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)]

@@ -3,58 +3,59 @@
 <head>
 	<meta charset="utf-8">
 	<title>BREP.js</title>
-
+	<script type="text/javascript" src="node_modules/chroma-js/chroma.js"></script>
 	<script type="text/javascript" src="lib/toSource.js"></script>
-	<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
-	<script src="https://wzrd.in/standalone/function-plot@1.14.0"></script>
-
-	<script type="text/javascript" src="lib/earcut.dev.js"></script>
-	<script type="text/javascript" src="lib/FileSaver.js"></script>
 	<script type="text/javascript" src="lib/opentype.js"></script>
-    <script type="text/javascript" src="lib/parser.js"></script>
-    <script type="text/javascript" src="lib/SVGPathData.js"></script>
+	<script type="text/javascript" src="lib/SVGPathData.js"></script>
 
 	<script type="text/javascript" src="out/src/NLA.js"></script>
 	<script type="text/javascript" src="out/src/CustomSet.js"></script>
 	<script type="text/javascript" src="out/src/Transformable.js"></script>
-	<script type="text/javascript" src="out/src/Surface.js"></script>
-	<script type="text/javascript" src="out/src/shaders.js"></script>
 	<script type="text/javascript" src="out/src/Vector.js"></script>
 	<script type="text/javascript" src="out/src/Vector3.js"></script>
+	<script type="text/javascript" src="out/src/Line.js"></script>
 	<script type="text/javascript" src="out/src/Matrix.js"></script>
 	<script type="text/javascript" src="out/src/Matrix4x4.js"></script>
 	<script type="text/javascript" src="out/src/AABB.js"></script>
-
-
-	<script type="text/javascript" src="out/src/Curve.js"></script>
 	<script type="text/javascript" src="out/src/Plane3.js"></script>
-	<script type="text/javascript" src="out/src/Line3.js"></script>
 
-	<script type="text/javascript" src="out/src/PICurve.js"></script>
-	<script type="text/javascript" src="out/src/PPCurve.js"></script>
-	<script type="text/javascript" src="out/src/BezierCurve.js"></script>
-	<script type="text/javascript" src="out/src/SemiEllipseCurve.js"></script>
-	<script type="text/javascript" src="out/src/EllipseCurve.js"></script>
-	<script type="text/javascript" src="out/src/HyperbolaCurve.js"></script>
-	<script type="text/javascript" src="out/src/ParabolaCurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/Curve.js"></script>
+	<script type="text/javascript" src="out/src/curve/Line3.js"></script>
+	<script type="text/javascript" src="out/src/curve/PICurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/PPCurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/BezierCurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/SemiEllipseCurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/EllipseCurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/ParabolaCurve.js"></script>
+	<script type="text/javascript" src="out/src/curve/HyperbolaCurve.js"></script>
 
-	<script type="text/javascript" src="out/src/PlaneSurface.js"></script>
-	<script type="text/javascript" src="out/src/ProjectedCurveSurface.js"></script>
-	<script type="text/javascript" src="out/src/CylinderSurface.js"></script>
-	<script type="text/javascript" src="out/src/SemiCylinderSurface.js"></script>
-	<script type="text/javascript" src="out/src/ConicSurface.js"></script>
-	<script type="text/javascript" src="out/src/EllipsoidSurface.js"></script>
-	<script type="text/javascript" src="out/src/SemiEllipsoidSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/Surface.js"></script>
+	<script type="text/javascript" src="out/src/surface/PlaneSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/ConicSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/ProjectedCurveSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/SemiCylinderSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/CylinderSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/EllipsoidSurface.js"></script>
+	<script type="text/javascript" src="out/src/surface/SemiEllipsoidSurface.js"></script>
 
 	<script type="text/javascript" src="out/src/Edge.js"></script>
+	<script type="text/javascript" src="out/src/Face.js"></script>
 	<script type="text/javascript" src="out/src/B2.js"></script>
 	<script type="text/javascript" src="out/src/b2.generators.js"></script>
+
+	<script type="text/javascript" src="lib/MooTools-Core-1.6.0.js"></script>
+	<script type="text/javascript" src="lib/MooTools-More-1.6.0.js"></script>
+	<script type="text/javascript" src="out/src/lightgl.js"></script>
+	<script type="text/javascript" src="out/src/CustomPlane.js"></script>
+	<script type="text/javascript" src="out/src/js3d.js"></script>
+	<script type="text/javascript" src="out/src/modes.js"></script>
+	<script type="text/javascript" src="out/src/SketchBezier.js"></script>
+	<script type="text/javascript" src="lib/earcut.dev.js"></script>
 
 
 	<script type="text/javascript" src="lib/MooTools-Core-1.6.0.js"></script>
 	<script type="text/javascript" src="out/src/lightgl.js"></script>
-	<script type="text/javascript" src="out/src/CustomPlane.js"></script>
-	<script type="text/javascript" src="out/src/js3d.js"></script>
+	<script type="text/javascript" src="out/src/shaders.js"></script>
 	<script type="text/javascript" src="out/src/b2ctrl.js"></script>
 
 	<style type="text/css">

@@ -1,24 +1,19 @@
 class SemiEllipsoidSurface extends Surface {
-    readonly center: V3
-    readonly f1: V3
-    readonly f2: V3
-    readonly f3: V3
-    readonly matrix: M4
-    readonly inverseMatrix: M4
-    readonly normalMatrix: M4
-    readonly normalDir: number // -1 | 1
+	readonly matrix: M4
+	readonly inverseMatrix: M4
+	readonly normalMatrix: M4
+	readonly normalDir: number // -1 | 1
 
-	constructor(center: V3, f1: V3, f2: V3, f3: V3) {
+	constructor(readonly center: V3,
+	            readonly f1: V3,
+	            readonly f2: V3,
+	            readonly f3: V3) {
 		super()
 		assertVectors(center, f1, f2, f3)
-		this.center = center
-		this.f1 = f1
-		this.f2 = f2
-		this.f3 = f3
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.f3))
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(sign(this.f1.cross(this.f2).dot(this.f3)))
 	}
 
 	equals(obj: any): boolean {
@@ -115,6 +110,7 @@ class SemiEllipsoidSurface extends Surface {
 
 		//return []
 		const surfaceLC = surface.transform(this.inverseMatrix)
+		//const lcMinZ0RelO =
 		const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir1, 0))
 		const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
 		const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax)
@@ -277,8 +273,8 @@ class SemiEllipsoidSurface extends Surface {
     parametricNormal() {
         // ugh
         // paramtric ellipsoid point q(a, b)
-        // normal == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
-        // normal == cos b * (f2 X f3 * cos b * cos a + f3 X f1 * cos b * sin a + f1 X f2 * sin b)
+        // normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
+        // normal1 == cos b * (f2 X f3 * cos b * cos a + f3 X f1 * cos b * sin a + f1 X f2 * sin b)
         return (a, b) => {
             let {f1, f2, f3} = this
             let normal = f2.cross(f3).times(Math.cos(b) * Math.cos(a))
@@ -419,7 +415,7 @@ class SemiEllipsoidSurface extends Surface {
 
     /**
      * unit sphere: x² + y² + z² = 1
-     * plane: normal DOT p = w
+     * plane: normal1 DOT p = w
      */
     static unitISCurvesWithPlane(plane: P3): SemiEllipseCurve[] {
         const distPlaneCenter = Math.abs(plane.w)
@@ -429,18 +425,18 @@ class SemiEllipsoidSurface extends Surface {
             // intersection circle) pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 -
             // distPlaneCenter²)
             const isCircleRadius = Math.sqrt(1 - distPlaneCenter ** 2)
-            const anchorY = plane.normal.y * plane.w
+            const anchorY = plane.normal1.y * plane.w
             const d = abs(distPlaneCenter *isCircleRadius)
             if (le(anchorY, -d) && !eq0(distPlaneCenter)) {
                 return []
-            } else if (le(anchorY, 0) && !plane.normal.isParallelTo(V3.Y)) {
-                let f1 = plane.normal.isParallelTo(V3.Y) ? V3.Z : plane.normal.cross(V3.Y).toLength(isCircleRadius)
-                const f2 = f1.cross(plane.normal)
+            } else if (le(anchorY, 0) && !plane.normal1.isParallelTo(V3.Y)) {
+                let f1 = plane.normal1.isParallelTo(V3.Y) ? V3.Z : plane.normal1.cross(V3.Y).toLength(isCircleRadius)
+                const f2 = f1.cross(plane.normal1)
                 const minEta = -anchorY / f2.y, minT = max(0, Math.asin(minEta))
                 return [new SemiEllipseCurve(plane.anchor, f1, f2, minT, PI - minT)]
             } else {
-                const f2 = (plane.normal.isParallelTo(V3.Y) ? V3.X : plane.normal.cross(V3.Y)).toLength(isCircleRadius)
-                const f1 = f2.cross(plane.normal)
+                const f2 = (plane.normal1.isParallelTo(V3.Y) ? V3.X : plane.normal1.cross(V3.Y)).toLength(isCircleRadius)
+                const f1 = f2.cross(plane.normal1)
                 const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max(-1, minXi))
                 return [new SemiEllipseCurve(plane.anchor, f1.negated(), f2, PI - maxT, PI),
                     new SemiEllipseCurve(plane.anchor, f1, f2.negated(), 0, maxT)]
@@ -538,113 +534,6 @@ class SemiEllipsoidSurface extends Surface {
 	    return totalArea
     }
 
-    meshSphere(edges: Edge[], subdivisions: int = 3) {
-	    const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).unit(), s = u.x, t = u.y
-	    // base vertices of isocahedron
-	    const vertices = [
-		    new V3(-s, t, 0),
-		    new V3(s, t, 0),
-		    new V3(-s, -t, 0),
-		    new V3(s, -t, 0),
-
-		    new V3(0, -s, t),
-		    new V3(0, s, t),
-		    new V3(0, -s, -t),
-		    new V3(0, s, -t),
-
-		    new V3(t, 0, -s),
-		    new V3(t, 0, s),
-		    new V3(-t, 0, -s),
-		    new V3(-t, 0, s)]
-	    // base triangles of isocahedron
-	    const triangles = [
-		    // 5 faces around point 0
-		    0, 11, 5,
-		    0, 5, 1,
-		    0, 1, 7,
-		    0, 7, 10,
-		    0, 10, 11,
-
-		    // 5 adjacent faces
-		    1, 5, 9,
-		    5, 11, 4,
-		    11, 10, 2,
-		    10, 7, 6,
-		    7, 1, 8,
-
-		    // 5 faces around point 3
-		    3, 9, 4,
-		    3, 4, 2,
-		    3, 2, 6,
-		    3, 6, 8,
-		    3, 8, 9,
-
-		    // 5 adjacent faces
-		    4, 9, 5,
-		    2, 4, 11,
-		    6, 2, 10,
-		    8, 6, 7,
-		    9, 8, 1,
-	    ]
-
-	    /**
-	     * Tesselates triangle a b c
-	     * a b c must already be in vertices with the indexes ia ib ic
-	     * res is the number of subdivisions to do. 0 just results in triangle and line indexes being added to the
-	     * respective buffers.
-	     */
-	    function tesselateRecursively(a, b, c, res, vertices, triangles, ia, ib, ic, lines, fullyInside: boolean) {
-		    if (0 == res) {
-			    triangles.push(ia, ib, ic)
-			    if (ia < ib) lines.push(ia, ib)
-			    if (ib < ic) lines.push(ib, ic)
-			    if (ic < ia) lines.push(ic, ia)
-		    } else {
-				const vs = [a, b, c]
-			    let edgeIntersectsTriangle = false
-		    	for (let i = 0; i < 3; i++) {
-		    		const v0 = vs[i], v1 = vs[(i + 1) % 3], v2 = vs[(i + 2) % 3]
-				    const plane = new P3(a.cross(b).normalized(), 0)
-				    edgeIntersectsTriangle = edgeIntersectsTriangle || edges.some(edge => {
-					    return edge.edgeISTsWithPlane(plane).some(t => {
-						    const p = edge.curve.at(t)
-						    const v01 = v0.to(v1), v0p_1 = v0.to(p).unit(), dot = v01.dot(v0p_1)
-						    if (0 <= dot && dot <= 1) {
-							    return true
-						    }
-					    })
-				    })
-			    }
-			    fullyInside = !edgeIntersectsTriangle && SemiEllipseCurve.UNIT.con
-
-			    // subdivide the triangle abc into 4 by adding a vertex (with the correct distance from the origin)
-			    // between each segment ab, bc and cd, then calling the function recursively
-			    const abMid1 = a.plus(b).toLength(1), bcMid1 = b.plus(c).toLength(1), caMid1 = c.plus(a).toLength(1)
-			    // indexes of new vertices:
-			    const iabm = vertices.length, ibcm = iabm + 1, icam = iabm + 2
-			    vertices.push(abMid1, bcMid1, caMid1)
-			    tesselateRecursively(abMid1, bcMid1, caMid1, res - 1, vertices, triangles, iabm, ibcm, icam, lines)
-			    tesselateRecursively(a, abMid1, caMid1, res - 1, vertices, triangles, ia, iabm, icam, lines)
-			    tesselateRecursively(b, bcMid1, abMid1, res - 1, vertices, triangles, ib, ibcm, iabm, lines)
-			    tesselateRecursively(c, caMid1, bcMid1, res - 1, vertices, triangles, ic, icam, ibcm, lines)
-		    }
-	    }
-
-	    var mesh = new Mesh({normals: true, colors: false, lines: true});
-	    mesh.vertices.pushAll(vertices)
-	    subdivisions = undefined == subdivisions ? 4 : subdivisions
-	    for (var i = 0; i < 20; i++) {
-		    var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
-		    tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
-	    }
-
-	    mesh.normals = mesh.vertices
-	    mesh.compile()
-	    console.log('mesh.lines', mesh.lines, mesh.indexBuffers)
-	    return mesh
-
-    }
-
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
         if (!this.containsPoint(p)) return PointVsFace.OUTSIDE
 		assertVectors(p)
@@ -731,7 +620,6 @@ class SemiEllipsoidSurface extends Surface {
 						} else {
 							angleXY = PI * dotCurve(this.f2, tangent, edge.curve.ddt(t))
 						}
-						console.log(angleXY)
 					}
 					const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
 					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit()
@@ -742,7 +630,6 @@ class SemiEllipsoidSurface extends Surface {
 					return arcLength * scaling
 				}
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val)
 				return val
 			} else {
 				assertNever()
@@ -781,7 +668,6 @@ class SemiEllipsoidSurface extends Surface {
 			    }
 
 			    const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-			    console.log("edge", edge, "volume", volume)
 			    totalVolume += volume
 		    })
 		    return totalVolume
@@ -803,22 +689,18 @@ class SemiEllipsoidSurface extends Surface {
 		    function f (t) {
 	    		const at2d = edge.curve.at(t).withElement('x', 0)
 			    const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()))
-			    console.log("at2d", at2d.sce, "result", result)
 			    return result
 		    }
 		    //if (edge.)
 		    if (edge.b.like(V3.X)) {
 			    const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
 			    totalVolume += 2 / 3 * angleDiff
-			    console.log("xaa")
 		    }
 		    if (edge.b.like(V3.X.negated())) {
 			    const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
 			    totalVolume += 2 / 3 * angleDiff
-			    console.log("xbb")
 		    }
 		    const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-		    console.log("edge", edge, "volume", volume)
 		    totalVolume += volume
 	    })
 

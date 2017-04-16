@@ -1,7 +1,7 @@
 interface ElementConstructor {
 	prototype: Element
 	new(): Element
-	new (tagNameOrCSSSelector: string, properties: {[prop: string]: any})
+	new (tagNameOrCSSSelector: string, properties?: {[prop: string]: any})
 }
 
 /////// Element

@@ -87,7 +87,7 @@ namespace B2T {
 		return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, d), name, `B2T.box(${w}, ${h}, ${d}, "${name || ''}")`)
 	}
 
-	export function puckman(radius: number, rads: number, height: number, name: string): B2 {
+	export function puckman(radius: number, rads: raddd, height: number, name: string): B2 {
 		assertf(() => NLA.lt(0, radius))
 		assertf(() => NLA.lt(0, rads) && NLA.le(rads, TAU))
 		assertf(() => NLA.lt(0, height))
@@ -102,13 +102,13 @@ namespace B2T {
 		}
 	}
 
-	export function extrudeEdges(baseFaceEdges: Edge[], baseFacePlane: P3, offset: V3, name?: string, gen?: string): B2 {
+	export function extrudeEdges(baseFaceEdges: Edge[], baseFacePlane: P3 = P3.XY, offset: V3 = V3.Z, name?: string, gen?: string): B2 {
 		//Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
 		//	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce + baseFaceEdges[j].sce)
 		//})
 		assertf(() => Edge.isLoop(baseFaceEdges))
 		// TODO checks..
-		//if (offset.dot(baseFacePlane.normal) > 0) {
+		//if (offset.dot(baseFacePlane.normal1) > 0) {
 		//	baseFacePlane = baseFacePlane.flipped()
 		//}
 		const vertexNames = new Map()
@@ -141,19 +141,20 @@ namespace B2T {
 	}
 
 
-	export function cylinder(radius: number = 1, height: number = 1, rads: number = TAU, name: string = 'cylinder' + globalId++): B2 {
+	export function cylinder(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cylinder' + globalId++): B2 {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return B2T.rotateEdges(StraightEdge.chain(vertices, true), rads || 2 * PI, name)
 	}
 
-    export function sphere(radius: number = 1, name: string = 'sphere' + globalId++, rot: number = TAU): B2 {
+    export function sphere(radius: number = 1, name: string = 'sphere' + globalId++, rot: raddd = TAU): B2 {
         const ee = PCurveEdge.create(
             new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
             new V3(0, 0, -radius), new V3(0, 0, radius),
             0, PI,
             undefined,
             new V3(radius, 0, 0), new V3(-radius, 0, 0))
-        return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name)
+	    const generator = makeGen('B2T.sphere', radius, name, rot)
+	    return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator)
     }
 
     export function menger(res: int = 2, name: string = 'menger' + globalId++): B2 {
@@ -200,14 +201,14 @@ namespace B2T {
             .and(stencil.transform(M4.ZXY))
     }
 
-	export function torus(rSmall: number, rLarge: number, rads: number, name: string): B2 {
+	export function torus(rSmall: number, rLarge: number, rads: raddd, name: string): B2 {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		const curve = SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0))
 		const baseEdges = [PCurveEdge.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge.forCurveAndTs(curve, 0, Math.PI)]
 		return B2T.rotateEdges(baseEdges, rads, name || 'torus' + globalId++)
 	}
-	export function torusUnsplit(rSmall: number, rLarge: number, rads: number, name: string): B2 {
+	export function torusUnsplit(rSmall: number, rLarge: number, rads: raddd, name: string): B2 {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		let baseEdge = PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI)
@@ -217,7 +218,7 @@ namespace B2T {
 	/**
 	 * baseLoop should be CCW on XZ plane for a bounded B2
 	 */
-	export function rotateEdges(baseLoop: Edge[], totalRads: number, name: string): B2 {
+	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string): B2 {
 		assert(!NLA.eq(PI, totalRads) || PI == totalRads) // URHGJ
 		assertf(() => NLA.lt(0, totalRads) && NLA.le(totalRads, TAU))
         totalRads = NLA.snap(totalRads, TAU)
@@ -317,13 +318,13 @@ namespace B2T {
 				new PlaneFace(new PlaneSurface(P3.ZX.flipped()), baseLoop),
 				new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(totalRads)), endFaceEdges))
 		}
-		return new B2(faces)
+		return new B2(faces, undefined, generator)
 	}
 
 	/**
 	 * loop should be CCW on XZ plane for a bounded B2
 	 */
-	export function rotateEdgesUnsplit(loop: Edge[], rads: number, name: string): B2 {
+	export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): B2 {
 		assert(Edge.isLoop(loop))
 		const rotationMatrix = M4.rotationZ(rads)
 		const open = !NLA.eq(rads, 2 * PI)
@@ -476,7 +477,8 @@ namespace B2T {
             return loop
         })
         const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace)
-        const hello = B2.join(faces.map(face => B2T.extrudeFace(face, V(0,0,-depth))))
+	    const generator = `B2T.text(${text.sce}, ${size}, ${depth})`
+	    const hello = B2.join(faces.map(face => B2T.extrudeFace(face, V(0,0,-depth))), generator)
         return hello
 
     }
@@ -526,7 +528,7 @@ namespace B2T {
         //return numbersB2
     }
 
-	export function rotStep(edges: Edge[], totalRads: number, count: int) {
+	export function rotStep(edges: Edge[], totalRads: raddd, count: int) {
 		const radStep = totalRads / count
 		const open = !NLA.eq(totalRads, 2 * PI)
 		const ribCount = !open ? count : count + 1
@@ -603,8 +605,8 @@ namespace B2T {
 		assert(baseVertices.every(v => v instanceof V3), "baseVertices.every(v => v instanceof V3)")
 		assertInst(P3, baseFacePlane)
 		assertVectors(offset)
-		if (baseFacePlane.normal.dot(offset) > 0) baseFacePlane = baseFacePlane.flipped()
-		if (!isCCW(baseVertices, baseFacePlane.normal)) {
+		if (baseFacePlane.normal1.dot(offset) > 0) baseFacePlane = baseFacePlane.flipped()
+		if (!isCCW(baseVertices, baseFacePlane.normal1)) {
 			baseVertices = baseVertices.reverse()
 		}
 		let topVertices = baseVertices.map((v) => v.plus(offset)).reverse()
@@ -793,11 +795,11 @@ namespace B2T {
 			return Face.create(surface, faceEdges, undefined, faceName)
 		})
 		faces.push(bottomFace)
-		const gen = makeGen('B2T.pyramidEdges', baseEdges, apex, name)
-		return new B2(faces, false, gen, name)
+		const generator = makeGen('B2T.pyramidEdges', baseEdges, apex, name)
+		return new B2(faces, false, generator, name)
 	}
 }
 
 function makeGen(name: string, ...params: { toSource(): string }[]) {
-	return name + '(' + params.map(p => p.toSource()).join(', ') + ')'
+	return name + '(' + params.map(SCE).join(', ') + ')'
 }

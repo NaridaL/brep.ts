@@ -350,7 +350,7 @@ class Sketch {
 						if (null == lineWC) throw new Error("no intersection!!")
 					} else {
 						lineWC = fixed.curve
-						if (lineWC.dir1.isParallelTo(this.plane.normal)) {
+						if (lineWC.dir1.isParallelTo(this.plane.normal1)) {
 							if (null == lineWC) throw new Error("line perp to sketch plane")
 						}
 					}

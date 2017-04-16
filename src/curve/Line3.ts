@@ -2,36 +2,33 @@
  * 3-dimensional line
  */
 class L3 extends Curve {
-	// Anchor of the line.
-	readonly anchor: V3
-	// Normalized direction of the line.
-	readonly dir1: V3
 
-	constructor(anchor: V3, dir1: V3, tMin: number = -4096, tMax: number = 4096) {
+	constructor(readonly anchor: V3, // line anchor
+	            readonly dir1: V3, // normalized line dir
+	            tMin: number = -4096,
+	            tMax: number = 4096) {
 		super(tMin, tMax)
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
 		assertf(() => !Number.isNaN(anchor.x))
-		this.anchor = anchor
-		this.dir1 = dir1
 	}
 
     roots(): number[][] {
         return [[], [], []]
     }
 
-	containsPoint(point) {
-		assertVectors(point)
-		const dist = this.distanceToPoint(point)
+	containsPoint(p: V3): boolean {
+		assertVectors(p)
+		const dist = this.distanceToPoint(p)
 		assertNumbers(dist)
 		return NLA.eq0(dist)
 	}
 
-	likeCurve(obj) {
-		return this == obj ||
-			Object.getPrototypeOf(obj) == L3.prototype
-			&& this.anchor.like(obj.anchor)
-			&& this.dir1.like(obj.dir1)
+	likeCurve(curve: Curve): boolean {
+		return this == curve ||
+			Object.getPrototypeOf(curve) == L3.prototype
+			&& this.anchor.like(curve.anchor)
+			&& this.dir1.like(curve.dir1)
 	}
 
 	equals(obj: any): boolean {
@@ -135,18 +132,18 @@ class L3 extends Curve {
 		return NLA.eq0(this.distanceToLine(line))
 	}
 
-	isInfosWithCurve(line) {
-		assertInst(L3, line)
+	isInfosWithCurve(curve: Curve) {
+		assertInst(L3, curve)
 
-		let dirCross = this.dir1.cross(line.dir1)
+		let dirCross = this.dir1.cross(curve.dir1)
 		let div = dirCross.squared()
 		if (NLA.eq0(div)) {
 			// lines are parallel
 			return []
 		}
-		let anchorDiff = line.anchor.minus(this.anchor)
+		let anchorDiff = curve.anchor.minus(this.anchor)
 		if (NLA.eq0(anchorDiff.dot(dirCross))) {
-			let tThis = anchorDiff.cross(line.dir1).dot(dirCross) / div
+			let tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div
 			let tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
 			let p = this.at(tThis)
 			return [{tThis: tThis, tOther: tOther, p: p}]
@@ -190,7 +187,7 @@ class L3 extends Curve {
 		// "s", s, "t", t, "div", div)
 	}
 
-	ddt(t) {
+	ddt(t: number): V3 {
 		return V3.O
 	}
 
@@ -199,9 +196,9 @@ class L3 extends Curve {
 		return 'new L3(' + this.anchor.toString(roundFunction) + ', ' + this.dir1.toString(roundFunction) + ')'
 	}
 
-	closestTToPoint(p): number {
+	closestTToPoint(p: V3): number {
 		// similar logic as pointT; we project the vector (anchor -> p) onto dir1, then add anchor back to it
-		let nearestT = p.minus(this.anchor).dot(this.dir1)
+		const nearestT = p.minus(this.anchor).dot(this.dir1)
 		return nearestT
 	}
 
@@ -249,27 +246,27 @@ class L3 extends Curve {
 	}
 
 	intersectionWithPlane(plane: P3): V3 {
-		// plane: plane.normal * p = plane.w
+		// plane: plane.normal1 * p = plane.w
 		// line: p=line.point + lambda * line.dir1
-		const lambda = (plane.w - plane.normal.dot(this.anchor)) / plane.normal.dot(this.dir1)
+		const lambda = (plane.w - plane.normal1.dot(this.anchor)) / plane.normal1.dot(this.dir1)
 		const point = this.anchor.plus(this.dir1.times(lambda))
 		return point
 	}
 
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		return this.dir1
 	}
 
 	intersectWithPlaneLambda(plane): number {
-		// plane: plane.normal * p = plane.w
+		// plane: plane.normal1 * p = plane.w
 		// line: p=line.point + lambda * line.dir1
-		const div = plane.normal.dot(this.dir1)
+		const div = plane.normal1.dot(this.dir1)
 		if (NLA.eq0(div)) return NaN
-		const lambda = (plane.w - plane.normal.dot(this.anchor)) / div
+		const lambda = (plane.w - plane.normal1.dot(this.anchor)) / div
 		return lambda
 	}
 
-	isTsWithPlane(plane) {
+	isTsWithPlane(plane: P3) {
 		return [this.intersectWithPlaneLambda(plane)]
 	}
 
@@ -301,7 +298,7 @@ class L3 extends Curve {
 
 	static fromPlanes(p1: P3, p2: P3): L3 {
 		assertInst(P3, p1, p2)
-		const dir = p1.normal.cross(p2.normal)
+		const dir = p1.normal1.cross(p2.normal1)
 		const length = dir.length()
 		if (length < 1e-10) {
 			throw new Error('Parallel planes')

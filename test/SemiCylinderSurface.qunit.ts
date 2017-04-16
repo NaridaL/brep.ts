@@ -7,9 +7,14 @@
 	})
 	registerTests({
 		'is curves w/ SemiCylinderSurface'(assert) {
-			const cyl = SemiCylinderSurface.semicylinder(5)
+			const cyl = SemiCylinderSurface.UNIT.scale(5,5,1)
 			const ell = new SemiCylinderSurface(new SemiEllipseCurve(V(6, 1, 4), V(3, 1, 4), V(4, 0, 0)), V3.Z)
 			testISCurves(assert, cyl, ell, 1)
+		},
+		'is curves w/ SemiCylinderSurface 2'(assert) {
+			const cyl = SemiCylinderSurface.UNIT.scale(5,5,1)
+			const scs = new SemiCylinderSurface(new SemiEllipseCurve(V(-1.5, 2.5980762113533173, 0), V(1.250, 2.1650635094610964, 0), V(-2.165063509461096, 1.25, 0), 0, 3.141592653589793), V(0, 0, -1), -2, 2)
+			testISCurves(assert, cyl, scs, 2)
 		},
 		'is curves w/ SemiEllipsoidSurface'(assert) {
 			const cyl = SemiCylinderSurface.UNIT.scale(0.05,0.05, 4).translate(0.5,0.5,-2)

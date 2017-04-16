@@ -72,7 +72,7 @@ class PICurve extends Curve {
 		}
 	}
 
-	containsPoint(p) {
+	containsPoint(p: V3): boolean {
 		assertVectors(p)
 		return !isNaN(this.pointT(p))
 	}
@@ -185,7 +185,7 @@ class PICurve extends Curve {
 		return this.tangentAt(t)
 	}
 
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		return V3.lerp(this.tangents[floor(t)], this.tangents[ceil(t)], t % 1)
 	}
 
@@ -239,7 +239,7 @@ class PICurve extends Curve {
 
 
 
-	pointT(p) {
+	pointT(p: V3): number {
 		assertVectors(p)
 		if (!this.parametricSurface.containsPoint(p) || !this.implicitSurface.containsPoint(p)) {
 		    return NaN
@@ -270,7 +270,7 @@ class PICurve extends Curve {
             this.implicitSurface.transform(m4),
             m4.transformPoint(this.startPoint),
             m4.transformPoint(this.endPoint),
-            this.dir * (m4.isMirroring() ? -1 : 1)) as this
+            this.dir * (m4.isMirroring() ? -1 : 1))
     }
 
     roots(): number[][] {

@@ -191,7 +191,7 @@ class PPCurve extends Curve {
 		return V3.lerp(this.points[Math.floor(t)], this.points[Math.ceil(t)], t % 1)
 	}
 
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		return V3.lerp(this.tangents[Math.floor(t)], this.tangents[Math.ceil(t)], t % 1)
 	}
 

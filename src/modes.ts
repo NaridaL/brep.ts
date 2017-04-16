@@ -65,7 +65,7 @@ MODES.SKETCH = {
 	},
 	mousemove: function (e, mouseLine) {
 		// TODO: highlight sketch elements
-		hoverHighlight = getHovering(mouseLine, 'sketchElements', 'planes', 'faces', 'brepPoints', 'brepEdges')
+		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'sketchElements', 'planes', 'faces', 'points', 'edges')
 
 		// drag elements
 		//noinspection JSBitwiseOperatorUsage
@@ -218,10 +218,9 @@ MODES.PLANE_DEFINITION = {
 		div.setStyle('display', 'none')
 	},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, 'planes', 'faces', 'brepEdges', 'brepPoints')
+		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'planes', 'faces', 'edges', 'points')
 	},
 	mouseup: function (e) {
-		console.log('e', e)
 		if (BUTTONS.LEFT == e.button) {
 			const nameRef = hoverHighlight && NameRef.forObject(hoverHighlight)
 			if (e.shiftKey) {
@@ -246,7 +245,7 @@ MODES.PLANE_SELECT = {
 	},
 	end: function () {},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, 'planes', 'faces')
+		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'planes', 'faces')
 	},
 	mousedown: function (e) {
 		if (null == hoverHighlight) return
@@ -270,7 +269,7 @@ MODES.SELECT_SEGMENT = {
 	},
 	end: function () {},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, 'sketchElements') // todo only sketch segments
+		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'sketchElements') // todo only sketch segments
 		paintScreen()
 	},
 	mousedown: function (e) {

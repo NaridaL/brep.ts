@@ -366,6 +366,12 @@ void main() {
 			windowOnResize()
 		}
 
+		handleError() {
+			if (0 !== this.getError()) {
+				throw new Error()
+			}
+		}
+
 
 		////// EVENTS
 		onmouseup: ((ev: GL_Event) => any)[]
@@ -387,23 +393,25 @@ void main() {
 			canvas.height = 600
 		}
 		if (!('alpha' in options)) options.alpha = false
+		let newGL
 		try {
-			gl = canvas.getContext('webgl', options) as LightGLContext
+			newGL = canvas.getContext('webgl', options) as LightGLContext
 			console.log("getting context")
 		} catch (e) {
-			console.log(e, gl)
+			console.log(e, newGL)
 		}
 		try {
-			gl = gl || canvas.getContext('experimental-webgl', options) as LightGLContext
+			newGL = newGL || canvas.getContext('experimental-webgl', options) as LightGLContext
 		} catch (e) {
-			console.log(e, gl)
+			console.log(e, newGL)
 		}
-		if (!gl) throw new Error('WebGL not supported')
+		if (!newGL) throw new Error('WebGL not supported')
 
-		NLA.addOwnProperties(gl, LightGLContext.prototype)
-		gl.init()
-		addEventListeners(gl)
-		return gl
+		NLA.addOwnProperties(newGL, LightGLContext.prototype)
+		gl = newGL
+		newGL.init()
+		addEventListeners(newGL)
+		return newGL
 	}
 
 	// `GL.KEYS` contains a mapping of key codes to booleans indicating whether
@@ -473,7 +481,8 @@ void main() {
 			oldY = e.y
 			e.dragging = isDragging()
 			e.preventDefault = function () {
-			}//e.original.preventDefault
+				this.original.preventDefault()
+			}
 			e.stopPropagation = e.original.stopPropagation
 			return e
 		}
@@ -659,6 +668,7 @@ void main() {
 				this.count = data.length
 			}
 			gl.bindBuffer(this.target, this.buffer)
+			gl.handleError()
 			gl.bufferData(this.target, buffer, type || WGL.STATIC_DRAW)
 			this.hasBeenCompiled = true
 		}
@@ -712,7 +722,7 @@ void main() {
 // and can be enabled by setting the corresponding options to true. There are
 // two index buffers, `triangles` and `lines`, which are used for rendering
 // `WGL.TRIANGLES` and `WGL.LINES`, respectively. Only `triangles` is enabled by
-// default, although `computeWireframe()` will add a normal buffer if it wasn't
+// default, although `computeWireframe()` will add a normal1 buffer if it wasn't
 // initially enabled.
 	export class Mesh extends Transformable {
 		hasBeenCompiled: boolean
@@ -890,7 +900,7 @@ void main() {
 		}
 
 		/**
-		 * Computes a new normal for each vertex from the average normal of the neighboring triangles. This means
+		 * Computes a new normal1 for each vertex from the average normal1 of the neighboring triangles. This means
 		 * adjacent triangles must share vertices for the resulting normals to be smooth.
 		 */
 		computeNormals(): this {
@@ -1092,7 +1102,7 @@ void main() {
 		/**
 		 * Generates a unit cube (1x1x1) starting at the origin and extending into the (+ + +) octant.
 		 * I.e. box from V3.O to V3(1,1,1)
-		 * Creates line, triangle, vertex and normal buffers.
+		 * Creates line, triangle, vertex and normal1 buffers.
 		 */
 		static cube(): Mesh {
 			const mesh = new Mesh({lines: true, triangles: true, normals: true})
@@ -1157,7 +1167,7 @@ void main() {
 		 *      How many recursive divisions to do. A subdivision divides a triangle into 4,
 		 *      so the total number of triangles is 20 * 4^subdivisions
 		 * @returns
-		 *      Contains vertex and normal buffers and index buffers for triangles and lines
+		 *      Contains vertex and normal1 buffers and index buffers for triangles and lines
 		 */
 		static sphere(subdivisions: int = 3): Mesh {
 			const golden = (1 + Math.sqrt(5)) / 2, u = new V3(1, golden, 0).unit(), s = u.x, t = u.y
@@ -1244,9 +1254,7 @@ void main() {
 
 			mesh.normals = mesh.vertices
 			mesh.compile()
-			console.log('mesh.lines', mesh.lines, mesh.indexBuffers)
 			return mesh
-
 		}
 
 		/**
@@ -1305,7 +1313,7 @@ void main() {
 		// should be connected by triangles. If $normals is set (pass an array of V3s of the same length as $vertices),
 		// these will also be rotated and correctly added to the mesh.
 		// @example let precious = Mesh.rotation([V(10, 0, -2), V(10, 0, 2), V(11, 0, 2), V(11, 0, -2)], , L3.Z, 512)
-		static rotation(vertices: V3[], lineAxis: L3, totalRads: number, steps: int, close = true, normals?:V3[]):Mesh {
+		static rotation(vertices: V3[], lineAxis: L3, totalRads: raddd, steps: int, close = true, normals?:V3[]):Mesh {
 			let mesh = new GL.Mesh({normals: !!normals})
 			let vc = vertices.length, vTotal = vc * steps
 
@@ -1573,7 +1581,7 @@ void main() {
 			on['LGL_ModelViewProjectionMatrixInverse'] && (uni['LGL_ModelViewProjectionMatrixInverse'] = modelViewProjectionMatrix.inversed())
 			if (on['LGL_NormalMatrix']) {
 				const m = modelViewMatrixInverse.m
-				// transpose normal matrix
+				// transpose normal1 matrix
 				uni['LGL_NormalMatrix'] = new Float32Array([m[0], m[4], m[8], m[1], m[5], m[9], m[2], m[6], m[10]])
 			}
 			this.uniforms(uni)

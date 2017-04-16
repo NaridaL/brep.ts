@@ -1,13 +1,9 @@
 abstract class Curve extends Transformable {
-	tMin: number
-	tMax: number
 	tIncrement: number
 	hlol: number
 
-	constructor(tMin:  number, tMax: number) {
+	constructor(readonly tMin: number, readonly tMax: number) {
 		super()
-		this.tMin = tMin
-		this.tMax = tMax
 		assertNumbers(tMin, tMax)
 		assert(!isNaN(tMin))
 		assert(!isNaN(tMax))
@@ -225,7 +221,7 @@ abstract class Curve extends Transformable {
         return NLA.fuzzyUniquesF(result, info => info.tThis)
     }
 
-	reversed(): this {
+	reversed(): Curve {
 		throw new Error()
 	}
 }

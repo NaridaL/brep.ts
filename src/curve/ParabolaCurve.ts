@@ -33,13 +33,13 @@ class ParabolaCurve extends Curve {
 		return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
 	}
 
-	tangentAt(t) {
+	tangentAt(t: number): V3 {
 		assertNumbers(t)
         // f1 + f2 2 t
 		return this.f1.plus(this.f2.times(2 * t))
 	}
 
-	ddt(t) {
+	ddt(t: number): V3 {
 		assertNumbers(t)
 		return this.f2.times(2)
 	}
@@ -73,7 +73,7 @@ class ParabolaCurve extends Curve {
         return hashCode | 0
     }
 
-	isColinearTo(curve) {
+	isColinearTo(curve: Curve): boolean {
 		if (curve.constructor != ParabolaCurve) {
 			return false
 		}
@@ -83,16 +83,16 @@ class ParabolaCurve extends Curve {
 			&& mainAxes.f1.likeOrReversed(curveMainAxes.f1)
 	}
 
-	normalAt(t) {
+	normalAt(t: number): V3 {
 		return this.tangentAt(t).cross(this.normal)
 	}
 
-	pointT(p) {
+	pointT(p: V3): number {
 		assertVectors(p)
 		return this.inverseMatrix.transformPoint(p).x
 	}
 
-	isOrthogonal(p) {
+	isOrthogonal(p: V3): boolean {
 		return this.f1.isPerpendicularTo(this.f2)
 	}
 
@@ -147,7 +147,7 @@ class ParabolaCurve extends Curve {
 		return 1
 	}
 
-	isTsWithSurface(surface) {
+	isTsWithSurface(surface: Surface) {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof ConicSurface) {
@@ -194,12 +194,12 @@ class ParabolaCurve extends Curve {
 		return []
 	}
 
-	isTsWithPlane(plane) {
+	isTsWithPlane(plane: P3) {
 		assertInst(P3, plane)
 		/*
 		 this: x = center + f1 * cos t + f2 * sin t  (1)
 		 plane:
-		 n := plane.normal
+		 n := plane.normal1
 		 n DOT x == plane.w           (2)
 		 plane defined by f1/f2
 		 x = center + f1 * xi + f2 * eta         (3)
@@ -217,14 +217,14 @@ class ParabolaCurve extends Curve {
 		 g1 * xi + g2 * xi * xi = g3
 		 xi² + xi * g1/g2 - g3/g2 = 0
 		 */
-		if (plane.normal.isParallelTo(this.normal)) {
+		if (plane.normal1.isParallelTo(this.normal)) {
 			return []
 		}
 		// funnily enough, changing the order of the operations changes nothing...
-		const n = plane.normal, w = plane.w,
+		const n = plane.normal1, w = plane.w,
 			g1 = n.dot(this.f1), g2 = n.dot(this.f2)
 		let g3 = w - n.dot(this.center)
-		// g2 not zero (!plane.normal.isParallelTo(this.normal))
+		// g2 not zero (!plane.normal1.isParallelTo(this.normal1))
 		let p = g1 / g2
 		const q = -g3 / g2
 		const discriminant4 = p * p / 4 - q

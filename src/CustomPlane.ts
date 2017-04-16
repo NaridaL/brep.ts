@@ -1,65 +1,57 @@
 
 class CustomPlane extends P3 {
-	up: V3
-	right: V3
-	upStart: number
-	upEnd: number
-	rightStart: number
-	rightEnd: number
-	color: int
-	id: int
-	name: string
+	readonly up: V3
+	readonly right: V3
+	readonly rMin: number
+	readonly tMax: number
+	readonly sMin: number
+	readonly sMax: number
+	readonly color: int
+	readonly name: string
 
-	constructor(anchor2, right, up, upStart, upEnd, rightStart, rightEnd, color, name) {
-		var p = P3.forAnchorAndPlaneVectors(anchor2, right, up, CustomPlane.prototype)
-		p.up = up
-		p.right = right
-		p.upStart = upStart
-		p.upEnd = upEnd
-		p.rightStart = rightStart
-		p.rightEnd = rightEnd
-		p.color = color
-		p.id = globalId++
-		p.name = name
-		return p
+	constructor(anchor: V3, right: V3, up: V3,
+	            name: string,
+	            color: number = NLA.randomColor(),
+	            rightStart: number = -500,
+	            rightEnd: number = 500,
+	            upStart: number = -500,
+	            upEnd: number = 500) {
+		const {normal1, w} = P3.forAnchorAndPlaneVectors(anchor, right, up)
+		super(normal1, w)
+		this.up = up
+		this.right = right
+		this.sMin = rightStart
+		this.sMax = rightEnd
+		this.rMin = upStart
+		this.tMax = upEnd
+		this.color = color
+		this.name = name
 	}
 
-	toString() {
-		return "Plane #" + this.id;
-	}
-
-	distanceTo(line) {
+	distanceTo(line: L3, mindist: number) {
 		return [
-			new L3(this.anchor.plus(this.right.times(this.rightStart)), this.up),
-			new L3(this.anchor.plus(this.right.times(this.rightEnd)), this.up),
-			new L3(this.anchor.plus(this.up.times(this.upStart)), this.right),
-			new L3(this.anchor.plus(this.up.times(this.upEnd)), this.right)].map(function (line2, line2Index) {
-			var info = line2.infoClosestToLine(line);
+			new L3(this.anchor.plus(this.right.times(this.sMin)), this.up),
+			new L3(this.anchor.plus(this.right.times(this.sMax)), this.up),
+			new L3(this.anchor.plus(this.up.times(this.rMin)), this.right),
+			new L3(this.anchor.plus(this.up.times(this.tMax)), this.right)].map(function (line2, line2Index) {
+			const info = line2.infoClosestToLine(line)
 			if ((isNaN(info.t) // parallel lines
-				|| line2Index < 2 && this.upStart <= info.t && info.t <= this.upEnd
-				|| line2Index >= 2 && this.rightStart <= info.t && info.t <= this.rightEnd)
-				&& info.distance <= 16) {
-				return info.s;
+				|| line2Index < 2 && this.rMin <= info.t && info.t <= this.tMax
+				|| line2Index >= 2 && this.sMin <= info.t && info.t <= this.sMax)
+				&& info.distance <= mindist) {
+				return info.s
 			} else {
-				return Infinity;
+				return Infinity
 			}
-		}, this).min();
+		}, this).min()
 	}
 
 	get plane(){ return this }
 
-	static forPlane(plane, color, name) {
-		var p = new P3(plane.normal, plane.w, CustomPlane.prototype) as CustomPlane
-		p.up = plane.normal.getPerpendicular().unit()
-		p.right = p.up.cross(p.normal)
-		p.upStart = -500
-		p.upEnd = 500
-		p.rightStart = -500
-		p.rightEnd = 500
-		p.color = color || NLA.randomColor()
-		p.id = globalId++
-		p.name = name
-		return p;
+	static forPlane(plane: P3, color: int, name?: string) {
+		//assert(!name)
+		const up = plane.normal1.getPerpendicular().unit(), right = up.cross(plane.normal1)
+		return new CustomPlane(plane.anchor, right, up, name, color)
 	}
 
 }

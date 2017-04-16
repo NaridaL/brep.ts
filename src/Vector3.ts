@@ -220,7 +220,8 @@ class V3 implements Equalable {
 
 	toString(roundFunction?): string {
 		roundFunction = roundFunction || NLA.defaultRoundFunction
-		return 'V(' + [this.x, this.y, this.z].map(roundFunction).join(', ') + ')' //+ this.id
+		return V3.NAMEMAP.get(this) ||
+			'V(' + [this.x, this.y, this.z].map(roundFunction).join(', ') + ')' //+ this.id
 	}
 
 	angleTo(b: V3): number {

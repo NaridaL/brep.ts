@@ -34,10 +34,13 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 	abstract loopContainsPoint(contour: Edge[], point: V3): PointVsFace
 
 	/**
-	 * Returns true iff the surface occupies the same space as the argument (not necessarily same normal)
+	 * Returns true iff the surface occupies the same space as the argument (not necessarily same normal1)
 	 */
 	abstract isCoplanarTo(surface: Surface): boolean
 
+	/**
+	 * coplanar and same normals
+	 */
 	abstract like(object): boolean
 
     parameters(pWC: V3): V3 {
@@ -91,6 +94,10 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 					if (edgeT == edge.bT) {
 						if (!testLine.containsPoint(edge.b)) continue
 						// endpoint lies on intersection line
+						if (edge.b.like(p)) {
+							// TODO: refactor, dont check for different sides, just logIs everything
+							return PointVsFace.ON_EDGE
+						}
 						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) > 0
 						const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
 						if (edgeInside != nextInside) {
