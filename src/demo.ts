@@ -13,6 +13,8 @@ window.onload = async function () {
 		$(window).addEvent('resize', () => {
 			canvas.width = container.clientWidth
 			canvas.height = container.clientHeight
+			gl.viewport(0, 0, canvas.width, canvas.height)
+			setupCamera(demo.eye, gl)
 		})
 		const gl =demo.gl= GL.create({canvas})
 		gl.clearColor(1.0, 1.0, 1.0, 0.0)
@@ -35,7 +37,7 @@ window.onload = async function () {
 		initNavigationEvents(gl, demo.eye, () => paintDemo(demo))
 		//initInfoEvents()
 		//initPointInfoEvents()
-		setupCamera(gl, demo.eye)
+		setupCamera(demo.eye, gl)
 
 		container.adopt(
 			canvas,
@@ -43,17 +45,20 @@ window.onload = async function () {
 				const input = new MooEl('input.canvasinput', {type: 'text', dataName: arg.name, value: arg.def, foo:eye}) as HTMLInputElement
 				input.demo = demo
 				input.arg = arg
-				arg.step && input.addEvent('mousewheel', function (e) {
-					const delta = (e.shift ? 10 : 1) * Math.sign(e.wheel) * arg.step
-					this.set('value', NLA.round10(parseFloat(this.value) + delta, -6))
-					this.fireEvent('change')
-					e.preventDefault()
-				})
+				if (arg.step) {
+					input.addEvent('mousewheel', function (e) {
+						const delta = (e.shift ? 0.1 : 1) * Math.sign(e.wheel) * arg.step
+						this.set('value', NLA.round10(parseFloat(this.value) + delta, -6))
+						this.fireEvent('change')
+						e.preventDefault()
+					})
+					input.addClass('scrollable')
+				}
 				input.addEvent('change', changeHandler)
 				return new MooEl('span.incont').adopt(input).appendText(arg.name)
 			}),
 			new MooEl('span.info'),
-			new MooEl('span.navinfo', {text: 'pan: drag-mmb | rotate: drag-right | zoom: wheel'})
+			new MooEl('span.navinfo', {text: 'pan: drag-mmb | rotate: drag-rmb | zoom: scroll'})
 		)
 
 		update(demo, args.map(a => a.def))
@@ -66,9 +71,9 @@ const meshColorss = [
 	chroma.scale(['#19ff66', '#1ffff2']).mode('lab').colors(20).map(s => chroma(s).gl())
 ]
 const demoPlanes = [
-	new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000, -100, 100, -100, 100),
-	new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00, -100, 100, -100, 100),
-	new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff, -100, 100, -100, 100),
+	new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000, -5, 5, -5, 5),
+	new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00, -5, 5, -5, 5),
+	new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff, -5, 5, -5, 5),
 	//	sketchPlane
 ]
 function paintDemo(demo) {
@@ -116,13 +121,13 @@ function update(demo, params) {
 		}
 		return p
 	})
-	try {
+	//try {
 		const b2s = demo.f.apply(undefined, fixedParams)
 		demo.b2s = b2s instanceof Array ? b2s : [b2s]
 		demo.b2s.forEach(b2 => b2.buildAdjacencies())
-	} catch (e) {
-		console.log(e.message)
-	}
+	//} catch (e) {
+	//	console.log(e.message)
+	//}
 	demo.gl.makeCurrent()
 	demo.meshes = demo.b2s && demo.b2s.map(b2 => b2.toMesh())
 	const info = demo.b2s && 'faces: ' + demo.b2s.map(b2 => b2.faces.length).join('/')

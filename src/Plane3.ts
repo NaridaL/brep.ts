@@ -1,4 +1,3 @@
-import eq = NLA.eq
 import between = NLA.between
 import fuzzyBetween = NLA.fuzzyBetween
 import clamp = NLA.clamp
@@ -17,7 +16,8 @@ class P3 extends Transformable {
 	 * @param normal1 unit plane normal1
 	 * @param w signed (rel to normal1) distance from the origin
 	 */
-	constructor(readonly normal1: V3, readonly w: number) {
+	constructor(readonly normal1: V3,
+	            readonly w: number) {
 		super()
 		assertVectors(normal1)
 		assertNumbers(w)
@@ -78,7 +78,7 @@ class P3 extends Transformable {
 		return 'new P3(' + this.normal1.toString(roundFunction) + ', ' + roundFunction(this.w) + ')'
 	}
 
-	translated(offset) {
+	translated(offset: V3): P3 {
 		return new P3(this.normal1, this.w + offset.dot(this.normal1))
 	}
 
@@ -189,7 +189,7 @@ class P3 extends Transformable {
 	 */
 	static forAxisIntercepts(x0: number, y0: number, z0: number): P3 {
 		assertNumbers(x0, y0, z0)
-		let normal = new V3(1 / x0, 1 / y0, 1 / z0)
+		const normal = new V3(1 / x0, 1 / y0, 1 / z0)
 		return new P3(normal.unit(), normal.length())
 	}
 

@@ -266,6 +266,10 @@ class L3 extends Curve {
 		return lambda
 	}
 
+	reversed() {
+		return new L3(this.anchor, this.dir1.negated(), -this.tMax, -this.tMin)
+	}
+
 	isTsWithPlane(plane: P3) {
 		return [this.intersectWithPlaneLambda(plane)]
 	}

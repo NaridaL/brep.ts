@@ -541,21 +541,9 @@ class M4 extends Matrix implements Transformable {
 		return result
 	}
 
-	/**
-	 *
-	 * @param e0
-	 * @param e1
-	 * @param e2
-	 * @param origin
-	 * @returns {M4}
-	 */
-	static forSys(e0: V3, e1: V3, e2?: V3, origin?: V3):M4 {
-		assertVectors(e0, e1)
-		!e2 || assertVectors(e2)
-		!origin || assertVectors(origin)
+	static forSys(e0: V3, e1: V3, e2: V3 = e0.cross(e1), origin: V3 = V3.O): M4 {
+		assertVectors(e0, e1, e2, origin)
 
-		e2 = e2 || e0.cross(e1)
-		origin = origin || V3.O
 		return new M4(
 			e0.x, e1.x, e2.x, origin.x,
 			e0.y, e1.y, e2.y, origin.y,
@@ -598,7 +586,7 @@ class M4 extends Matrix implements Transformable {
 	 * @param result
 	 */
 	static fromFunction(f: (elRow: number, elCol: number, elIndex: number) => number, result?: M4): M4 {
-		assert(typeof f == 'function', 'typeof f == 'function'' + typeof f)
+		assert(typeof f == 'function')
 		!result || assertInst(M4, result)
 		result = result || new M4()
 		const m = result.m

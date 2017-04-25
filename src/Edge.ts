@@ -11,7 +11,7 @@ abstract class Edge extends Transformable {
 	            readonly aT: number,
 	            readonly bT: number,
 	            readonly flippedOf: Edge,
-	            readonly name: Edge) {
+	            readonly name: string) {
 		super()
         assert(!eq(aT, bT))
 		this.reversed = this.aT > this.bT
@@ -25,6 +25,15 @@ abstract class Edge extends Transformable {
 
 	toString(f?): string {
 		return makeGen('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, null, this.aDir, this.bDir)
+	}
+
+	split(t: number): [Edge, Edge] {
+		const p = this.curve.at(t)
+		const pDir = this.tangentAt(t)
+		return [
+			Edge.create(this.curve, this.a, p, this.aT, t, undefined, this.aDir, pDir, this.name + 'left'),
+			Edge.create(this.curve, p, this.b, t, this.bT, undefined, pDir, this.bDir, this.name + 'left')
+		]
 	}
 
 	abstract edgeISTsWithSurface(surface: Surface): number[]
@@ -301,7 +310,7 @@ abstract class Edge extends Transformable {
     static pathFromSVG(pathString: String): Edge[] {
         let currentPos
         const parsed: any[] =
-	        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).commands
+		        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).commands
         const path: Edge[] = []
         for (const c of parsed) {
             const endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
@@ -324,26 +333,26 @@ abstract class Edge extends Transformable {
 		            path.push(edge)
 		            break
 	            }
-                case SVGPathData.ARC_TO: {
-	                let {rx, ry, xAxisRotation, largeArc, sweep} = c
-	                rx = abs(rx)
-	                ry = abs(ry)
-	                const rads = xAxisRotation * DEG
+                case SVGPathData.ARC: {
+	                let {rX, rY, xRot, lArcFlag, sweep} = c
+	                rX = abs(rX)
+	                rY = abs(rY)
+	                const rads = xRot * DEG
 	                const midPoint = currentPos.minus(endPos).times(0.5)
 	                const midPointTransformed = M4.rotationZ(-rads).transformPoint(midPoint)
-	                const testValue = midPointTransformed.x ** 2 / rx ** 2 + midPointTransformed.y ** 2 / ry ** 2
+	                const testValue = midPointTransformed.x ** 2 / rX ** 2 + midPointTransformed.y ** 2 / rY ** 2
 	                console.log(testValue)
 	                if (testValue > 1) {
-		                rx *= Math.sqrt(testValue)
-		                ry *= Math.sqrt(testValue)
+		                rX *= Math.sqrt(testValue)
+		                rY *= Math.sqrt(testValue)
 	                }
-	                const temp = (rx ** 2 * midPointTransformed.y ** 2 + ry ** 2 * midPointTransformed.x ** 2)
-	                const centerTransformedScale = (largeArc != sweep ? 1 : -1) * Math.sqrt(max(0, (rx ** 2 * ry ** 2 - temp) / temp))
-	                const centerTransformed = V(rx * midPointTransformed.y / ry, -ry * midPointTransformed.x / rx).times(centerTransformedScale)
+	                const temp = (rX ** 2 * midPointTransformed.y ** 2 + rY ** 2 * midPointTransformed.x ** 2)
+	                const centerTransformedScale = (lArcFlag != sweep ? 1 : -1) * Math.sqrt(max(0, (rX ** 2 * rY ** 2 - temp) / temp))
+	                const centerTransformed = V(rX * midPointTransformed.y / rY, -rY * midPointTransformed.x / rX).times(centerTransformedScale)
 	                const center = M4.rotationZ(rads).transformPoint(centerTransformed).plus(currentPos.plus(endPos).times(0.5))
-	                let f1 = new V3(rx * cos(rads), rx * sin(rads), 0)
-	                const f2 = new V3(ry * -sin(rads), ry * cos(rads), 0)
-	                let curve = new SemiEllipseCurve(center, f1, f2)
+	                let f1 = new V3(rX * cos(rads), rX * sin(rads), 0)
+	                const f2 = new V3(rY * -sin(rads), rY * cos(rads), 0)
+	                let curve = new EllipseCurve(center, f1, f2)
 	                let aT = curve.pointT(currentPos, PI)
 	                let bT = curve.pointT(endPos, PI)
 	                if (aT < bT != sweep) {
@@ -354,7 +363,7 @@ abstract class Edge extends Transformable {
 			                bT = -PI
 		                } else {
 			                f1 = f1.negated()
-			                curve = new SemiEllipseCurve(center, f1, f2)
+			                curve = new EllipseCurve(center, f1, f2)
 			                aT = curve.pointT(currentPos, PI)
 			                bT = curve.pointT(endPos, PI)
 		                }
@@ -385,7 +394,7 @@ class PCurveEdge extends Edge {
 		assertf(() => !bDir.isZero(), curve)
 		assertf(() => curve instanceof Curve, curve)
 		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
-		assertf(() => curve.at(aT).like(a), curve.at(aT) + a)
+		assertf(() => curve.at(aT).like(a),  + a)
 		assertf(() => curve.at(bT).like(b), curve.at(bT) + b)
 		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce)
 		assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
@@ -464,16 +473,6 @@ class PCurveEdge extends Edge {
             aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(),
             aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated(), name)
     }
-
-	get aDDT() {
-		let ddt = this.curve.ddt(this.aT)
-		return this.reversed ? ddt.negated() : ddt
-	}
-
-	get bDDT() {
-		let ddt = this.curve.ddt(this.bT)
-		return this.reversed ? ddt.negated() : ddt
-	}
 }
 
 

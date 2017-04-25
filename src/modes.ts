@@ -2,7 +2,7 @@ const MODES:any = {}
 MODES.DEFAULT = {
 	init: function () {},
 	end: function () {
-		throw new Error("Can't end default mode")
+		throw new Error('Can\'t end default mode')
 	},
 	mousemove: function (e) {},
 	mousedown: function (e) {}
@@ -65,7 +65,7 @@ MODES.SKETCH = {
 	},
 	mousemove: function (e, mouseLine) {
 		// TODO: highlight sketch elements
-		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'sketchElements', 'planes', 'faces', 'points', 'edges')
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16, 'sketchElements', 'planes', 'faces', 'points', 'edges')
 
 		// drag elements
 		//noinspection JSBitwiseOperatorUsage
@@ -103,8 +103,8 @@ MODES.SKETCH = {
 				console.log(this.relPoss)
 			}
 			updateSelected()
-			console.log("selected is now ", selected)
-			console.log("highlighted is now ", highlighted)
+			console.log('selected is now ', selected)
+			console.log('highlighted is now ', highlighted)
 		}
 	}
 
@@ -142,24 +142,51 @@ MODES.EXTRUDE = {
 	mousedown: function (e) {}
 
 }
+MODES.PATTERN = {
+	modeEditsFeatureAndRequiresRollback: true,
+	feature: undefined,
+	before: function () {
+		modeEnd(MODES.SKETCH)
+		modeEnd(MODES.PLANE_DEFINITION)
+		modeEnd(MODES.EXTRUDE)
+	},
+	init: function (feature) {
+		if (feature) {
+			assertInst(Pattern, feature)
+		} else {
+			feature = new Pattern()
+			featureStack.push(feature)
+			updateFeatureDisplay()
+		}
+		this.feature = feature
+		const div = $('patternEditor')
+		div.setStyle('display', 'block')
+		setupSelectors(div, feature, this)
+	},
+	end: function () {
+		const div = $('patternEditor')
+		div.setStyle('display', 'none')
+	},
+	mousemove: function (e) {},
+	mousedown: function (e) {}
+
+}
 MODES.PLANE_DEFINITION = {
 	modeEditsFeatureAndRequiresRollback: true,
 	magic: function (sel, rads) {
 		const CLASS_ORDER = [V3, Curve, Edge, Surface, Face]
 		const sortMap = o => CLASS_ORDER.findIndex(clazz => o instanceof clazz)
 		sel.sort((a, b) => sortMap(a) - sortMap(b))
-		let [a, b, c] = sel
-		if (sel.length == 3) {
+		const [a, b, c] = sel
+		if (3 == sel.length) {
 			if (a instanceof V3 && b instanceof V3 && c instanceof V3) {
 				return P3.throughPoints(a, b, c)
 			}
 		}
 		if (2 == sel.length) {
 			if (a instanceof V3 && b instanceof Face) {
-				let p = /** @type V3 */ a
-				let face = /** @type Face */ b
-				if (face.containsPoint(p)) {
-					return P3.normalOnAnchor(face.surface.normalAt(p), p)
+				if (b.containsPoint(a)) {
+					return P3.normalOnAnchor(b.surface.normalAt(a), a)
 				}
 			}
 			if (a instanceof V3 && (b instanceof Curve || b instanceof Edge)) {
@@ -218,7 +245,7 @@ MODES.PLANE_DEFINITION = {
 		div.setStyle('display', 'none')
 	},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'planes', 'faces', 'edges', 'points')
+		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 16, 'planes', 'faces', 'edges', 'points')
 	},
 	mouseup: function (e) {
 		if (BUTTONS.LEFT == e.button) {
@@ -240,28 +267,95 @@ MODES.PLANE_DEFINITION = {
 	mousedown: function (e) {}
 }
 MODES.PLANE_SELECT = {
-	init: function (callback) {
+	init: function (callback: (NameRef) => void) {
 		this.callback = callback
 	},
 	end: function () {},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'planes', 'faces')
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16, 'planes', 'faces')
 	},
-	mousedown: function (e) {
+	mouseup: function (e) {
 		if (null == hoverHighlight) return
 		let customPlane
 		if (hoverHighlight instanceof CustomPlane) {
 			customPlane = hoverHighlight
 		} else {
 			// TODO: create plane on face
-			let planeDefinition = new PlaneDefinition()
-			planeDefinition.type = 'face'
-			planeDefinition.faceName = hoverHighlight.name
-			featureStack.push(planeDefinition)
-			this.callback(planeDefinition)
+			const planeDefinition = new PlaneDefinition()
+			planeDefinition.planeType = 'face'
+			planeDefinition.whats = [NameRef.forObject(hoverHighlight)]
+			featureStack.splice(featureStack.length - 1, 0, planeDefinition)
+			customPlane = planeDefinition
 		}
 		this.callback(NameRef.forObject(customPlane))
-	}
+	},
+	mousedown: function (e) {},
+}
+MODES.SELECT_DIRECTION = {
+	init: function (callback: (NameRef) => void) {
+		this.callback = callback
+	},
+	magic: function (sel) {
+		const CLASS_ORDER = [V3, Edge, Surface, Face, P3]
+		const sortMap = o => CLASS_ORDER.findIndex(clazz => o instanceof clazz)
+		sel.sort((a, b) => sortMap(a) - sortMap(b))
+		const [a, b, c] = sel
+		if (3 == sel.length) {
+			if (a instanceof V3 && b instanceof V3 && c instanceof V3) {
+				return V3.normalOnPoints(a, b, c).unit()
+			}
+		}
+		if (2 == sel.length) {
+			if (a instanceof V3 && b instanceof V3) {
+				return a.to(b).unit()
+			}
+			if (a instanceof V3 &&
+				b instanceof Edge &&
+				b.curve !instanceof L3 &&
+				b.curve.containsPoint(a)) {
+				const aT = b.curve.pointT(a)
+				return b.curve.tangentAt(aT).unit()
+			}
+			if (a instanceof V3 &&
+				b instanceof Face &&
+				b.surface !instanceof L3 &&
+				b.surface.containsPoint(a)) {
+				return b.surface.normalAt(a).unit()
+			}
+		}
+		if (1 == sel.length) {
+			if (a instanceof P3) {
+				return a.normal1
+			}
+			if (a instanceof Edge && a.curve instanceof L3) {
+				return a.curve.dir1
+			}
+			if (a instanceof Face && a.surface instanceof PlaneSurface) {
+				return a.surface.plane.normal1
+			}
+		}
+	},
+	end: function () {
+		this.callback(selected.map(s => NameRef.forObject(s)))
+	},
+	mousemove: function (e, mouseLine) {
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16, 'planes', 'faces', 'points', 'edges')
+	},
+	mouseup: function (e) {
+		if (BUTTONS.LEFT == e.button) {
+			if (e.shiftKey) {
+				selected.toggle(hoverHighlight)
+			} else {
+				if (hoverHighlight) {
+					selected = [hoverHighlight]
+				} else {
+					selected = []
+				}
+			}
+			updateSelected()
+		}
+	},
+	mousedown: function (e, mouseLine) {},
 }
 MODES.SELECT_SEGMENT = {
 	init: function (callback) {
@@ -269,11 +363,42 @@ MODES.SELECT_SEGMENT = {
 	},
 	end: function () {},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 'sketchElements') // todo only sketch segments
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16, 'sketchElements') // todo only sketch segments
 		paintScreen()
 	},
 	mousedown: function (e) {
 		this.callback(NameRef.forObject(hoverHighlight))
+	}
+}
+MODES.SELECT_FEATURE = {
+	init: function (callback) {
+		this.callback = callback
+		const events = {
+			click: function (e) {
+				const fl = e.target.featureLink || e.target.getParent().featureLink
+				if (fl) {
+					e.stopPropagation()
+					modePop()
+					$('featureDisplay')
+						.removeEvents(events)
+						.removeClass('selectable')
+					callback(NameRef.forObject(fl))
+				}
+			},
+		}
+		$('featureDisplay')
+			.addEvents(events)
+			.addClass('selectable')
+	},
+	end: function () {},
+	mousemove: function (e, mouseLine) {
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16, 'sketchElements') // todo only sketch segments
+		paintScreen()
+	},
+	mousedown: function (e) {
+		if (hoverHighlight instanceof Feature) {
+			this.callback(NameRef.forObject(hoverHighlight))
+		}
 	}
 }
 MODES.ADD_SEGMENT = {
@@ -319,7 +444,7 @@ MODES.ADD_SEGMENT = {
 		/*
 		 for (var i in lines) {
 		 var line = lines[i];
-		 //console.log("line", line);
+		 //console.log('line', line);
 		 if (line != this.currentAddingSegment && line.distanceTo(mousePos.x, mousePos.y) < 16) {
 		 mousePos = line.getClosestPoint(mousePos.x, mousePos.y);
 		 break;

@@ -8,7 +8,6 @@ namespace GL {
 	type UniformType = V3 | M4 | number[] | boolean
 
 
-
 	export class LightGLContext extends WebGLRenderingContext {
 		modelViewMatrix: M4 = new M4()
 		projectionMatrix: M4 = new M4()
@@ -18,8 +17,8 @@ namespace GL {
 		PROJECTION = {}
 
 
-		static HALF_FLOAT_OES:int = 0x8D61
-		HALF_FLOAT_OES:int
+		static HALF_FLOAT_OES: int = 0x8D61
+		HALF_FLOAT_OES: int
 
 		private tempMatrix = new M4()
 		private resultMatrix = new M4()
@@ -27,6 +26,9 @@ namespace GL {
 		private projectionStack: M4[] = []
 		private currentMatrixName: 'modelViewMatrix' | 'projectionMatrix'
 		private stack
+
+		meshes: { [name: string]: Mesh }
+		shaders: { [name: string]: Shader }
 
 		init() {
 			this.modelViewMatrix = new M4()
@@ -352,7 +354,7 @@ void main() {
 				gl.canvas.width = window.innerWidth - left - right
 				gl.canvas.height = window.innerHeight - top - bottom
 				gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
-				if (options.camera || !('camera' in options)) {
+				if (options.camera) {
 					gl.matrixMode(LightGLContext.PROJECTION)
 					gl.loadIdentity()
 					gl.perspective(options.fov || 45, gl.canvas.width / gl.canvas.height,
@@ -528,7 +530,8 @@ void main() {
 			e = augmented(e)
 			e.preventDefault()
 			for (const handler of gl.onmousedown) {
-				!e.isImmediatePropagationStopped() && handler(e)
+				handler(e)
+				//	!e.isImmediatePropagationStopped() && handler(e)
 			}
 		})
 		gl.canvas.addEventListener('mousemove', mousemove)
@@ -646,7 +649,7 @@ void main() {
 				//console.trace()
 			}
 			if (this.data.length == 0 || this.data[0] instanceof V3) {
-				buffer = V3.flattenV3Array(this.data) // asserts that all elements are V3s
+				buffer = V3.pack(this.data) // asserts that all elements are V3s
 				this.spacing = 3
 				this.count = this.data.length
 			} else {
@@ -736,6 +739,7 @@ void main() {
 		vertices?: V3[]
 		coords?: any[]
 		colors?: any[]
+		[name: string]: any
 
 		constructor(options: {coords?: boolean, normals?: boolean, colors?: boolean, lines?: boolean, triangles?: boolean} = {}) {
 			super()
@@ -863,7 +867,7 @@ void main() {
 				let a = this.vertices[triangles[i]], b = this.vertices[triangles[i + 1]], c = this.vertices[triangles[i + 2]]
 				let normal = V3.normalOnPoints(a, b, c)
 
-					; [normal, a, b, c].forEach(v => {
+				;[normal, a, b, c].forEach(v => {
 					dataView.setFloat32(bufferPtr, v.x, true)
 					bufferPtr += 4
 					dataView.setFloat32(bufferPtr, v.y, true)
@@ -1543,9 +1547,8 @@ void main() {
 		 * @param {number=} start int
 		 * @param {number=} count int
 		 */
-		draw(mesh: Mesh, mode, start?, count?) {
+		draw(mesh: Mesh, mode: string = 'TRIANGLES', start?: int, count?: int) {
 			assert(mesh.hasBeenCompiled, 'mesh.hasBeenCompiled')
-			mode = mode || 'TRIANGLES'
 			assert(DRAW_MODES.includes(mode), 'GL.DRAW_MODES.includes(mode) ' + mode)
 			assert(mesh.indexBuffers[mode], `The index buffer ${mode} doesn't exist!`)
 			this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[mode], gl[mode], start, count)

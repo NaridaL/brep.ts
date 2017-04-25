@@ -1,121 +1,88 @@
 class ConicSurface extends Surface {
-	baseEllipse: SemiEllipseCurve
-	dir: V3
-	matrix: M4
-	inverseMatrix: M4
+	readonly matrix: M4
+	readonly inverseMatrix: M4
+	readonly normalMatrix: M4
+	readonly normalDir: number // -1 | 1
 
-	constructor(baseEllipse, dir) {
+	/**
+	 * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
+	 * @param f1
+	 * @param f2
+	 * @param f3 Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
+	 * @param normalDir 1 or -1. 1 if surface normals point outwards, -1 if not.
+	 */
+	constructor(readonly center: V3,
+	            readonly f1: V3,
+	            readonly f2: V3,
+	            readonly dir: V3) {
 		super()
-		assertVectors(dir)
-		assertInst(SemiEllipseCurve, baseEllipse)
-		assert(!baseEllipse.normal.isPerpendicularTo(dir), !baseEllipse.normal.isPerpendicularTo(dir))
-		this.baseEllipse = baseEllipse
-		this.dir = dir
-		this.matrix = M4.forSys(baseEllipse.f1, baseEllipse.f2, dir, baseEllipse.center)
+		assertVectors(center, f1, f2, dir)
+		this.matrix = M4.forSys(f1, f2, dir, center)
 		this.inverseMatrix = this.matrix.inversed()
+		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
 	}
 
 	get apex() {
-		return this.baseEllipse.center
+		return this.center
+	}
+
+	like(object) {
+		assert(false)
+		if (!this.isCoplanarTo(object)) return false
+		// normals need to point in the same direction (outwards or inwards) for both
+		return this.normalDir == object.normalDir
+	}
+	getVectors() {
+		return [    {anchor: this.center, dir1: this.dir},
+					{anchor: this.center.plus(this.dir), dir1: this.f1},
+					{anchor: this.center.plus(this.dir), dir1: this.f2}]
 	}
 
 	getSeamPlane(): P3 {
-		return P3.forAnchorAndPlaneVectors(this.baseEllipse.center, this.baseEllipse.f1, this.dir)
+		return P3.forAnchorAndPlaneVectors(this.center, this.f1, this.dir)
 	}
 
 	loopContainsPoint(contour: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
-		const line = L3.throughPoints(this.apex, p)
-		// create plane that goes through cylinder seam
-		const seamBase = this.baseEllipse.at(Math.PI)
-		const intersectionLinePerpendicular = this.dir.cross(p.minus(seamBase))
-		const plane2 = P3.normalOnAnchor(intersectionLinePerpendicular, p)
-		const colinearSegments = contour.map((edge) => edge.colinearToLine(line))
-		const colinearSegmentsInside = contour.map((edge, i) => edge.aDir.dot(this.dir) > 0)
-		let inside = false
+		const line = this.center.like(p)
+			? new L3(p, this.matrix.transformVector(new V3(0, 1, 1).unit()))
+			: L3.throughPoints(p, this.apex)
+		const lineOut = line.dir1.cross(this.dir)
 
-		function logIS(p) {
-			if (line.pointT(p) > 0) {
-				inside = !inside
-			}
-		}
-
-		contour.forEach((edge, i, edges) => {
-			const j = (i + 1) % edges.length, nextEdge = edges[j]
-			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-			if (colinearSegments[i]) {
-				// edge colinear to intersection
-				const outVector = edge.bDir.cross(this.normalAt(edge.b))
-				const insideNext = outVector.dot(nextEdge.aDir) > 0
-				if (colinearSegmentsInside[i] != insideNext) {
-					logIS(edge.b)
-				}
-			} else {
-				const edgeTs = edge.isTsWithPlane(plane2)
-				for (let k = 0; k < edgeTs.length; k++) {
-					const edgeT = edgeTs[k]
-					if (edgeT == edge.bT) {
-						// endpoint lies on intersection line
-						if (colinearSegments[j]) {
-							// next segment is colinear
-							// we need to calculate if the section of the plane intersection line BEFORE the colinear
-							// segment is inside or outside the face. It is inside when the colinear segment out vector
-							// and the current segment vector point in the same direction (dot > 0)
-							const colinearSegmentOutsideVector = nextEdge.aDir.cross(plane.normal1)
-							const insideFaceBeforeColinear = colinearSegmentOutsideVector.dot(edge.bDir) < 0
-							// if the "inside-ness" changes, add intersection point
-							//console.log("segment end on line followed by colinear", insideFaceBeforeColinear !=
-							// colinearSegmentInsideFace, nextSegmentOutsideVector)
-							if (colinearSegmentsInside[j] != insideFaceBeforeColinear) {
-								logIS(edge.b)
-							}
-						} else if (intersectionLinePerpendicular.dot(edge.bDir) * intersectionLinePerpendicular.dot(nextEdge.aDir) > 0) {
-							logIS(edge.b)
-						}
-					} else if (edgeT != edge.aT) {
-						// edge crosses line, neither starts nor ends on it
-						logIS(edge.curve.at(edgeT))
-					}
-				}
-			}
-		})
-		return inside
-
+		return Surface.loopContainsPointGeneral(contour, p, line, lineOut)
 	}
 
-	toString() {
-		return makeGen('new ConicSurface', this.baseEllipse, this.dir)
+	toSource(): string {
+		return makeGen('new ConicSurface', this.center, this.f1, this.f2, this.dir)
 	}
 
 	isTsForLine(line: L3): number[] {
 		// transforming line manually has advantage that dir1 will not be renormalized,
-		// meaning that calculated values t for localLine are directly transferable to line
-		const localAnchor = this.inverseMatrix.transformPoint(line.anchor)
-		const localDir = this.inverseMatrix.transformVector(line.dir1)
-		return ConicSurface.unitISLineTs(localAnchor, localDir)
+		// meaning that calculated values t for lineLC are directly transferable to line
+		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
+		const dirLC = this.inverseMatrix.transformVector(line.dir1)
+		return ConicSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
 	/**
 	 * Interestingly, two cones don't need to have parallel dirs to be coplanar.
 	 */
 	isCoplanarTo(surface: Surface): boolean {
-		if (this == surface) return true
+		if (this === surface) return true
 		if (!(surface instanceof ConicSurface) || !this.apex.like(surface.apex)) return false
 		// at this point apexes are equal
-		const ell = surface.baseEllipse
 		return this.containsEllipse(
-			new SemiEllipseCurve(ell.center.plus(surface.dir), ell.f1, ell.f2))
+			new SemiEllipseCurve(surface.center.plus(surface.dir), surface.f1, surface.f2))
 	}
 
 	containsEllipse(ellipse: SemiEllipseCurve): boolean {
-		console.log(ellipse.toString())
-		const localEllipse = ellipse.transform(this.inverseMatrix)
-		if (localEllipse.center.z < 0) {
+		const ellipseLC = ellipse.transform(this.inverseMatrix)
+		if (ellipseLC.center.z < 0) {
 			return false
 		}
-		const {f1, f2} = localEllipse.mainAxes()
-		console.log(f1.sce, f2.sce)
-		const p1 = localEllipse.center.plus(f1), p2 = localEllipse.center.plus(f2)
+		const {f1, f2} = ellipseLC.mainAxes()
+		const p1 = ellipseLC.center.plus(f1), p2 = ellipseLC.center.plus(f2)
 		// check if both endpoints are on the cone's surface
 		// and that one main axis is perpendicular to the Z-axis
 		return NLA.eq(p1.x ** 2 + p1.y ** 2, p1.z ** 2)
@@ -124,19 +91,18 @@ class ConicSurface extends Surface {
 	}
 
 	containsLine(line: L3): boolean {
-		const localLine = line.transform(this.inverseMatrix)
-		const d = localLine.dir1
-		return localLine.containsPoint(V3.O) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
+		const lineLC = line.transform(this.inverseMatrix)
+		const d = lineLC.dir1
+		return lineLC.containsPoint(V3.O) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
 	}
 
 	containsParabola(parabola: ParabolaCurve): boolean {
 		assertInst(ParabolaCurve, parabola)
-		const local = parabola.transform(this.inverseMatrix)
-		if (local.center.z < 0 || local.f2.z < 0) {
+		const parabolaLC = parabola.transform(this.inverseMatrix)
+		if (parabolaLC.center.z < 0 || parabolaLC.f2.z < 0) {
 			return false
 		}
-		const {center, f1, f2} = local.rightAngled()
-		console.log(f1.sce, f2.sce)
+		const {center, f1, f2} = parabolaLC.rightAngled()
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		// and that "y" axis is parallel to surface
@@ -156,37 +122,28 @@ class ConicSurface extends Surface {
 		}
 	}
 
-	transform(m4) {
+	transform(m4: M4): ConicSurface {
 		return new ConicSurface(
-			this.baseEllipse.transform(m4),
-			m4.transformVector(this.dir),
-			this.normalDir) as this
+			m4.transformPoint(this.center),
+			m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1),
+			m4.transformVector(this.f2),
+			m4.transformVector(this.dir))
 	}
 
-	flipped() {
-		return new ConicSurface(
-			this.baseEllipse,
-			this.dir.negated())
+	rightAngled() {
+
+	}
+
+	flipped(): ConicSurface {
+		return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir)
 	}
 
 	toMesh(zStart = 0, zEnd = 30) {
-		const mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
-		const pF = this.parametricFunction(), pN = this.parametricNormal()
-		const split = 4 * 128, inc = 2 * Math.PI / split
-		const c = split * 2
-		for (let i = 0; i < split; i++) {
-			let v = pF(i * inc, zStart)
-			mesh.vertices.push(pF(i * inc, zStart), pF(i * inc, zEnd))
-			pushQuad(mesh.triangles, -1 != this.normalDir, 2 * i, (2 * i + 2) % c, (2 * i + 1), (2 * i + 3) % c)
-			const normal = pN(i * inc, 0)
-			mesh.normals.push(normal, normal)
-		}
-		//mesh.compile()
-		return mesh
+		return GL.Mesh.parametric(this.parametricFunction(), this.parametricNormal(), 0, PI, this.tMin, this.tMax, 16, 1)
 	}
 
 	parametricNormal() {
-		const {f1, f2} = this.baseEllipse, f3 = this.dir
+		const {f1, f2} = this, f3 = this.dir
 		return (d, z) => {
 			return f2.cross(f1).plus(f2.cross(f3.times(Math.cos(d)))).plus(f3.cross(f1.times(Math.sin(d)))).unit()
 		}
@@ -208,11 +165,11 @@ class ConicSurface extends Surface {
 		return (pWC) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			const radiusLC = pLC.lengthXY()
-			return this.normalDir * (1 - radiusLC)
+			return this.normalDir * (radiusLC - pLC.z)
 		}
 	}
 
-	containsPoint(p) {
+	containsPoint(p: V3) {
 		return NLA.eq0(this.implicitFunction()(p))
 	}
 
@@ -221,7 +178,7 @@ class ConicSurface extends Surface {
 	}
 
 	pointToParameterFunction() {
-		return (pWC, hint) => {
+		return (pWC: V3, hint = PI) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			let angle = pLC.angleXY()
 			if (abs(angle) > Math.PI - NLA_PRECISION) {
@@ -232,14 +189,14 @@ class ConicSurface extends Surface {
 		}
 	}
 
-	isCurvesWithSurface(surface2) {
-		if (surface2 instanceof PlaneSurface) {
-			return this.isCurvesWithPlane(surface2.plane)
-		} else if (surface2 instanceof ConicSurface) {
-			if (surface2.dir.isParallelTo(this.dir)) {
-				const ellipseProjected = surface2.baseEllipse.transform(M4.projection(this.baseEllipse.getPlane(), this.dir))
-				return this.baseEllipse.isPointsWithEllipse(ellipseProjected).map(is => new L3(is, this.dir))
-			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+	isCurvesWithSurface(surface: Surface): Curve[] {
+		if (surface instanceof PlaneSurface) {
+			return this.isCurvesWithPlane(surface.plane)
+		} else if (surface instanceof ConicSurface) {
+			if (surface.dir.isParallelTo(this.dir)) {
+				const ellipseProjected = surface.transform(M4.projection(this.getPlane(), this.dir))
+				return this.isPointsWithEllipse(ellipseProjected).map(is => new L3(is, this.dir))
+			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
 
 			} else {
 				assert(false)
@@ -248,21 +205,23 @@ class ConicSurface extends Surface {
 	}
 
 	getCenterLine() {
-		return new L3(this.baseEllipse.center, this.dir)
+		return new L3(this.center, this.dir)
 	}
 
-	isCurvesWithPlane(plane) {
+	isCurvesWithPlane(plane: P3): Curve[] {
 		assertInst(P3, plane)
-		const localPlane = plane.transform(this.inverseMatrix)
-		const planeNormal = localPlane.normal1
+		const planeLC = plane.transform(this.inverseMatrix)
+		const planeNormal = planeLC.normal1
 		const c = planeNormal.z
 		/** "rotate" plane normal1 when passing to {@link ConicSurface.unitISPlane} so that
 		 *  y-component of normal1 is 0 */
 		const a = planeNormal.lengthXY()
-		const d = localPlane.w
+		const d = planeLC.w
 		// generated curves need to be rotated back before transforming to world coordinates
-		const wcMatrix = this.matrix.times(M4.rotationZ(planeNormal.angleXY()))
-		return ConicSurface.unitISPlane(a, c, d).map(curve => curve.transform(wcMatrix))
+		const wcMatrix = eq0(planeNormal.lengthXY())
+			? this.matrix
+			: this.matrix.times(M4.rotationZ(planeNormal.angleXY()))
+		return ConicSurface.unitISPlane(a, c, d).map(curve => curve.transform(wcMatrix)) as Curve[]
 	}
 
 	edgeLoopCCW(contour) {
@@ -288,14 +247,13 @@ class ConicSurface extends Surface {
 			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
 				const f = (t) => {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					console.log(t, at.distanceTo(this.baseEllipse.center), at.rejectedLength(this.dir), tangent.rejectedLength(this.dir))
-					return at.minus(this.baseEllipse.center).cross(tangent.rejectedFrom(this.dir)).length() / 2
+					return at.minus(this.center).cross(tangent.rejectedFrom(this.dir)).length() / 2
 				}
 				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a positive area
 				// hyperbola normal1 can be perpendicular to
 				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
-					: -Math.sign(this.baseEllipse.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
+					: -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
 				return glqInSteps(f, edge.aT, edge.bT, 4) * sign
 			} else if (edge.curve instanceof L3) {
 				return 0
@@ -305,7 +263,7 @@ class ConicSurface extends Surface {
 		}).sum()
 		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
 		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.baseEllipse.normal.dot(this.dir))
+		return totalArea * Math.sign(this.normal.dot(this.dir))
 	}
 
 	/**
@@ -322,22 +280,20 @@ class ConicSurface extends Surface {
 	 * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
 	 * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
 	 */
-	zDirVolume(edges: Edge[]): {volume: number} {
+	zDirVolume(edges: Edge[]): {volume: number, centroid: V3} {
 		// INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z
 		const totalVolume = edges.map(edge => {
 			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
 				const f = (t) => {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					console.log("subarea", t, (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY(), tangent.dot(V3.Z.cross(this.dir).unit()))
 					return (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY() *
 						tangent.dot(V3.Z.cross(this.dir).unit())
 				}
 				// ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive area
 				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
-					: -Math.sign(this.baseEllipse.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
+					: -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val, sign)
 				return val * sign
 			} else if (edge.curve instanceof L3) {
 				return 0
@@ -346,27 +302,16 @@ class ConicSurface extends Surface {
 			}
 		}).sum()
 
-		return {volume: totalVolume * Math.sign(this.baseEllipse.normal.dot(this.dir))}
+		return {volume: totalVolume * Math.sign(this.normal.dot(this.dir))}
 	}
 
 
 
-	/**
-	 * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
-	 * @param apex Apex of cone.
-	 * @param f1
-	 * @param f2
-	 * @param f3 Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
-	 * @param normalDir 1 or -1. 1 if surface normals point outwards, -1 if not.
-	 */
-	static forApexF123(apex, f1, f2, f3, normalDir): ConicSurface {
-		return new ConicSurface(new SemiEllipseCurve(apex, f1, f2), f3, normalDir)
-	}
 
-	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve, normalDir: number): ConicSurface {
+	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve): ConicSurface {
 		assertVectors(apex)
 		assertInst(SemiEllipseCurve, ellipse)
-		return new ConicSurface(new SemiEllipseCurve(apex, ellipse.f1, ellipse.f2), ellipse.center.minus(apex), normalDir)
+		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center))
 	}
 
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
@@ -399,7 +344,7 @@ class ConicSurface extends Surface {
 			} else {
 				// hyperbola
 				const center = new V3(d / a, 0, 0)
-				const f1 = new V3(0, 0, Math.abs(d / a)); // abs, because we always want the hyperbola to be pointing up
+				const f1 = new V3(0, 0, Math.abs(d / a)) // abs, because we always want the hyperbola to be pointing up
 				const f2 = new V3(0, d / a, 0)
 				return [new HyperbolaCurve(center, f1, f2)]
 			}
@@ -420,29 +365,28 @@ class ConicSurface extends Surface {
 				if (NLA.eq(aa, cc)) {
 					console.log('acd', a, c, d)
 					// parabola
-					let parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
-					let parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
-					let p2 = new V3(0, 0, d / c)
-					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), p2.minus(parabolaVertex)) as Curve]
+					const parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
+					const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
+					const p2 = new V3(0, 0, d / c)
+					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), p2.minus(parabolaVertex))]
 				} else if (aa < cc) {
 					// ellipse
-					let center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
 					if (center.z < 0) {
 						return []
 					}
-					let p1 = new V3(d / (a - c), 0, -d / (a - c))
-					let p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(cc - aa), d * c / (cc - aa))
-					return [new SemiEllipseCurve(center, p1.minus(center), p2.minus(center))]
+					const p1 = new V3(d / (a - c), 0, -d / (a - c))
+					const p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(cc - aa), d * c / (cc - aa))
+					return [new SemiEllipseCurve(center, center.to(p1), center.to(p2))]
 				} else if (aa > cc) {
 					// hyperbola
-					let center = new V3(-a * d / (cc - aa), 0, -d * c / (cc - aa))
+					const center = new V3(-a * d / (cc - aa), 0, -d * c / (cc - aa))
 					let f1 = new V3(d / (a - c) - center.x, 0, d / (a - c) - center.z)
 					if (f1.z < 0) {
 						f1 = f1.negated()
 					}
 					// sqrt(cc - aa) flipped relative to ellipse case:
-					let p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(aa - cc), -d * c / (cc - aa))
-					console.log(center.sce, f1.sce, p2.sce)
+					const p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(aa - cc), -d * c / (cc - aa))
 					return [new HyperbolaCurve(center, f1, p2.minus(center))]
 				}
 			}
@@ -453,5 +397,11 @@ class ConicSurface extends Surface {
 	/**
 	 * Unit cone. x² + y² = z², 0 <= z
 	 */
-	static readonly UNIT = new ConicSurface(SemiEllipseCurve.UNIT, V3.Z, 1)
+	static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
 }
+ConicSurface.prototype.uStep = PI / 16
+ConicSurface.prototype.vStep = 256
+ConicSurface.prototype.sMin = 0
+ConicSurface.prototype.sMax = PI
+ConicSurface.prototype.tMin = 0
+ConicSurface.prototype.tMax = 16

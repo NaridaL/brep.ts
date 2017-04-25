@@ -1,8 +1,8 @@
 
 class Line {
 
-	dir1: NLA.Vector
-	anchor: NLA.Vector
+	dir1: Vector
+	anchor: Vector
 
 	/**
 	 * n-dimensional line

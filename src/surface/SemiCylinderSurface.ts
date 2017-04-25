@@ -49,18 +49,18 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
-	isCoplanarTo(surface) {
+	isCoplanarTo(surface: Surface) {
 		return this == surface ||
 			surface instanceof SemiCylinderSurface
 			&& this.dir1.isParallelTo(surface.dir1)
 			&& this.containsSemiEllipse(surface.baseCurve, false)
 	}
 
-	like(object) {
-		if (!this.isCoplanarTo(object)) return false
+	like(surface: Surface): boolean {
+		if (!this.isCoplanarTo(surface)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
 		const thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir1)
-		const objectFacesOut = 0 < object.baseCurve.normal.dot(object.dir1)
+		const objectFacesOut = 0 < surface.baseCurve.normal.dot(surface.dir1)
 		return thisFacesOut == objectFacesOut
 	}
 
@@ -77,6 +77,8 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 			return this.containsSemiEllipse(curve)
 		} else if (curve instanceof PICurve) {
 			return curve.points.every(p => this.containsPoint(p))
+		} else if (curve instanceof BezierCurve) {
+			return false
 		} else {
 			assert(false)
 		}
@@ -213,7 +215,6 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		// the length of the base of the trapezoid is calculated by dotting with the baseVector
 		const baseVector = this.dir1.rejectedFrom(V3.Z).unit()
 		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-		console.log("scalingVector", scalingVector.sce)
 		const totalArea = edges.map(edge => {
 			if (edge.curve instanceof SemiEllipseCurve) {
 				const f = (t) => {

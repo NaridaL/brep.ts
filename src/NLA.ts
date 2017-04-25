@@ -75,7 +75,7 @@ function enableConsole() {
 function assertVectors(...vectors: (Vector | V3)[]) {
     if (NLA_DEBUG) {
         for (let i = 0; i < arguments.length; i++) {
-            if (!(arguments[i] instanceof V3 || arguments[i] instanceof NLA.Vector)) {
+            if (!(arguments[i] instanceof V3 || arguments[i] instanceof Vector)) {
                 throw new Error('assertVectors arguments[' + (i) + '] is not a vector. ' + typeof arguments[i] + ' == typeof ' + arguments[i])
             }
         }
@@ -101,6 +101,12 @@ function assertNumbers(...numbers) {
         }
     }
     return true
+}
+function makeLink(values) {
+	return 'viewer.html?' + Object.getOwnPropertyNames(values).map(name => {
+		const val = values[name]
+		return name + '=' + (typeof val == 'string' ? val : val.toSource())
+	}).join('&')
 }
 function assert(value: any, ...messages: (any | (() => string))[]): boolean {
     if (NLA_DEBUG && !value) {
@@ -266,7 +272,7 @@ namespace NLA {
         return result
     }
 
-	export function arrayFromFunction<T>(length: number, f: (i: number) => T): T[] {
+	export function arrayFromFunction<T>(length: int, f: (i: int) => T): T[] {
         assertNumbers(length)
         assert('function' == typeof f)
         const a = new Array(length)
@@ -837,48 +843,8 @@ function pqFormula(p: number, q: number): number[] {
     }
 }
 
-function solveCubic(pa,pb,pc,pd) {
-    var reduce = function(t) { return 0<=t && t <=1; };
-    const tau = TAU, crt = Math.cbrt
-
-    // see http://www.trans4mind.com/personal_development/mathematics/polynomials/cubicAlgebra.htm
-    var
-        a = pb / pa,
-        b = pc / pa,
-        c = pd / pa,
-        p = (3*b - a*a)/3,
-        p3 = p/3,
-        q = (2*a*a*a - 9*a*b + 27*c)/27,
-        q2 = q/2,
-        discriminant = q2*q2 + p3*p3*p3,
-        u1,v1,x1,x2,x3;
-    if (discriminant < 0) {
-        var mp3 = -p/3,
-            mp33 = mp3*mp3*mp3,
-            r = sqrt( mp33 ),
-            t = -q/(2*r),
-            cosphi = t<-1 ? -1 : t>1 ? 1 : t,
-            phi = Math.acos(cosphi),
-            crtr = Math.cbrt(r),
-            t1 = 2*crtr;
-        x1 = t1 * cos(phi/3) - a/3;
-        x2 = t1 * cos((phi+tau)/3) - a/3;
-        x3 = t1 * cos((phi+2*tau)/3) - a/3;
-        return [x1, x2, x3].filter(reduce);
-    } else if(discriminant === 0) {
-        u1 = q2 < 0 ? crt(-q2) : -crt(q2);
-        x1 = 2*u1-a/3;
-        x2 = -u1 - a/3;
-        return [x1,x2].filter(reduce);
-    } else {
-        var sd = sqrt(discriminant);
-        u1 = crt(-q2+sd);
-        v1 = crt(q2+sd);
-        return [u1-v1-a/3].filter(reduce);;
-    }
-}
-
 /**
+ * from pomax' library
  * solves ax³ + bx² + cx + d = 0
  * This function from pomax' utils
  * @returns 0-3 roots
@@ -928,12 +894,12 @@ function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
         return [u1 - v1 - a / 3]
     }
 }
-function checkDerivate(f, df, a, b, maxFaults = 1) {
+function checkDerivate(f, df, a, b, maxFaults = 0) {
     const eps = 1e-6
     let faults = 0
     for (let t = a; t < b; t += (b - a) / 100) {
         const df2 = (f(t + eps) - f(t)) / eps
-        assert((faults += +!NLA.eq2(df2, df(t), 0.1 )) < maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`)
+        assert((faults += +!NLA.eq2(df2, df(t), 0.1 )) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`)
     }
 }
 function getRoots(f, a, b, stepSize, df) {
@@ -988,7 +954,7 @@ function newtonIterate(f: (x: number[]) => number[], xStart: number[], steps: in
 		let fx = f(x)
 		let dfdx = Matrix.jacobi(f, x, fx, EPSILON)
 		assert(!dfdx.isZero())
-		let dx = dfdx.solveLinearSystem(new NLA.Vector(new Float64Array(fx))).v
+		let dx = dfdx.solveLinearSystem(new Vector(new Float64Array(fx))).v
 		assert(!isNaN(dx[0]))
 		//console.log('fx / dfdx', fx / dfdx)
 		for (let j = 0; j < x.length; j++) x[j] -= dx[j]

@@ -13,6 +13,11 @@ class PlaneSurface extends Surface {
 		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
 	}
 
+
+	isTsForLine(line: L3): number[] {
+		return line.isTsWithPlane(this.plane)
+	}
+
 	like(surface) {
 		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
 	}
@@ -31,8 +36,17 @@ class PlaneSurface extends Surface {
 	}
 
 	isCurvesWithSurface(surface2: Surface): Curve[] {
-		assert(false)
-		return null
+		if (surface2 instanceof PlaneSurface) {
+			return this.isCurvesWithPlane(surface2.plane)
+		}
+		return super.isCurvesWithSurface(surface2)
+	}
+
+	isCurvesWithPlane(p: P3): L3[] {
+		if (this.plane.isParallelToPlane(p)) {
+			return []
+		}
+		return [this.plane.intersectionWithPlane(p)]
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {

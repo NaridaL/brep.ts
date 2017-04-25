@@ -26,6 +26,10 @@ abstract class Curve extends Transformable {
 		return le(this.tMin, t) && le(t, this.tMax)
 	}
 
+	diff(t: number, eps: number): V3 {
+		return this.at(t).to(this.at(t + eps))
+	}
+
 
 	/**
 	 *
@@ -61,7 +65,7 @@ abstract class Curve extends Transformable {
 	 *
 	 */
 	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed: boolean, includeFirst: boolean): V3[] {
-		assert(this.tIncrement, "tIncrement not defined on " + this)
+		assert(this.tIncrement, 'tIncrement not defined on ' + this)
 		const split = 4 * 62, inc = this.tIncrement
 		const points = []
 		if (includeFirst) points.push(a)
@@ -102,6 +106,8 @@ abstract class Curve extends Transformable {
 	abstract ddt(t: number): V3
 
 	abstract containsPoint(p: V3): boolean
+
+	abstract transform(m4: M4, desc?: string): Curve
 
 	abstract isTsWithSurface(surface: Surface): number[]
 

@@ -13,7 +13,7 @@ class SemiEllipsoidSurface extends Surface {
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.f3))
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(sign(this.f1.cross(this.f2).dot(this.f3)))
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
 	}
 
 	equals(obj: any): boolean {
@@ -244,12 +244,12 @@ class SemiEllipsoidSurface extends Surface {
         }
     }
 
-    transform(m4) {
+    transform(m4: M4): SemiEllipsoidSurface {
         return new SemiEllipsoidSurface(
             m4.transformPoint(this.center),
             m4.transformVector(this.f1),
             m4.transformVector(this.f2),
-            m4.transformVector(this.f3).times(m4.isMirroring() ? -1 : 1)) as this
+            m4.transformVector(this.f3).times(m4.isMirroring() ? -1 : 1))
     }
 
     isInsideOut(): boolean {
@@ -582,7 +582,7 @@ class SemiEllipsoidSurface extends Surface {
 					if (edgeT == edge.bT) {
 						if (!testLine.containsPoint(edge.b)) continue
 						// endpoint lies on intersection testLine
-						const edgeInside = dotCurve(lineOut, edge.bDir.negated(), edge.bDDT.negated()) < 0 // TODO: bDDT negated?
+						const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign(edge.deltaT())) < 0 // TODO: bDDT negated?
 						const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
 						if (edgeInside != nextInside) {
 							if (logIS(edge.b)) return PointVsFace.ON_EDGE
@@ -772,8 +772,8 @@ class SemiEllipsoidSurface extends Surface {
 			.map(p => p.times(thisRadius).plus(this.center))
 	}
 }
-SemiEllipsoidSurface.prototype.uStep = PI / 32
-SemiEllipsoidSurface.prototype.vStep = PI / 32
+SemiEllipsoidSurface.prototype.uStep = PI / 16
+SemiEllipsoidSurface.prototype.vStep = PI / 16
 SemiEllipsoidSurface.prototype.sMin = 0
 SemiEllipsoidSurface.prototype.sMax = PI
 SemiEllipsoidSurface.prototype.tMin = -PI

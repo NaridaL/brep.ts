@@ -55,14 +55,10 @@ function linkB2(assert: Assert, link, msg = 'view') {
 	//	const f = parseFloat(numberStr), rd = NLA.round10(f, -7)
 	//	return eq(f, rd) ? rd : f
 	//})
-	assert.ok(true, `<html><a href='viewer.html?${link}'>${msg}</a>`)
+	assert.ok(true, `<html><a href='${link}'>${msg}</a>`)
 }
 function linkB3(assert: Assert, values, msg = 'view') {
-	const link = Object.getOwnPropertyNames(values).map(name => {
-		const val = values[name]
-		return name + '=' + (typeof val == 'string' ? val : val.toSource())
-	}).join('&')
-	linkB2(assert, link, msg)
+	linkB2(assert, makeLink(values), msg)
 }
 function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface | P3, curveCount: int) {
 	surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
@@ -127,16 +123,26 @@ function testParametricSurface(ass: Assert, ps: Surface) {
 	const psFlipped = ps.flipped()
 	for (let i = 0; i < points.length; i++) {
 		const p = points[i], pNormal = ps.normalAt(p)
+		const pm = params[i]
 		ass.ok(ps.containsPoint(p))
 		assert(ps.containsPoint(p))
+
 		const psFlippedNormal = psFlipped.normalAt(p)
 		ass.ok(psFlippedNormal.negated().like(pNormal))
 		assert(psFlippedNormal.negated().like(pNormal))
-		const pm = params[i]
+
+		const pm2 = ps.parameters(p)
+		ass.ok(pm.like(pm2))
+		assert(pm.like(pm2))
+
 		if (ps.parametricNormal) {
 			const pmNormal = ps.parametricNormal()(pm.x, pm.y)
 			ass.ok(pNormal.like(pmNormal))
 			assert(pNormal.like(pmNormal))
+		}
+		if (ps.implicitFunction) {
+			ass.ok(eq0(ps.implicitFunction()(p)))
+			assert(eq0(ps.implicitFunction()(p)))
 		}
 	}
 	const matrices = [M4.mirroring(P3.XY), M4.mirroring(P3.YZ), M4.mirroring(P3.ZX)]

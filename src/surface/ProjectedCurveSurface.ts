@@ -98,32 +98,20 @@ class ProjectedCurveSurface extends Surface {
         const basePlane = new P3(this.dir1, 0)
         const projCurve = this.baseCurve.project(basePlane)
         const projPoint = basePlane.projectedPoint(pWC)
-        const t = projCurve.closestTToPoint(projPoint, undefined, undefined, ss)
+        const t = projCurve.closestTToPoint(projPoint, ss)
         const z = pWC.minus(this.baseCurve.at(t)).dot(this.dir1)
         return new V3(t, z, 0)
     }
 
     pointToParameterFunction() {
         const projPlane = new P3(this.dir1, 0)
-        const dir1 = this.dir1, baseCurve = this.baseCurve
-        const projBaseCurve = baseCurve.project(projPlane)
-        return function (pWC) {
+	    const projBaseCurve = this.baseCurve.project(projPlane)
+        return (pWC) => {
             const projPoint = projPlane.projectedPoint(pWC)
             const t = projBaseCurve.pointT(projPoint)
-            const z = pWC.minus(baseCurve.at(t)).dot(dir1)
+            const z = pWC.minus(this.baseCurve.at(t)).dot(this.dir1)
             return new V3(t, z, 0)
         }
-
-        // const baseCurve = this.baseCurve, dir1 = this.dir1
-        // const sMin = this.sMin, sMax = this.sMax
-        // return function (pWC) {
-        // 	const iterationFunc = t => {const d = baseCurve.at(t).minus(pWC); return d.dot(dir1) + d.length() }
-        // 	const startT = NLA.arrayFromFunction(16, i => sMin + (sMax - sMin) * i / 15)
-        // 		.withMax(t => -abs(iterationFunc(t)))
-        // 	const t = newtonIterate1d(iterationFunc, startT, 16)
-        // 	const z = pWC.minus(baseCurve.at(t)).dot(dir1)
-        // 	return V(t, z, 0)
-        // }
     }
 
     isCurvesWithPlane(plane): Curve[] {
@@ -156,7 +144,10 @@ class ProjectedCurveSurface extends Surface {
             if (this.dir1.isParallelTo(dir1)) {
                 const otherCurve = surface.baseCurve
                 const infos = this.baseCurve.isInfosWithCurve(otherCurve)
-                return infos.map(info => new L3(info.p, dir1))
+                return infos.map(info => {
+	                const correctDir = this.normalAt(info.p).cross(surface.normalAt(info.p))
+	                return new L3(info.p, dir1.times(sign(correctDir.dot(dir1))))
+                })
             }
             if (surface instanceof ProjectedCurveSurface) {
                 const line = new L3(this.baseCurve.at(0.5), this.dir1)
@@ -287,6 +278,6 @@ class ProjectedCurveSurface extends Surface {
         return new ProjectedCurveSurface(this.baseCurve, this.dir1.negated(), this.sMin, this.sMax)
     }
 }
-ProjectedCurveSurface.prototype.uStep = 1 / 4
+ProjectedCurveSurface.prototype.uStep = 1 / 40
 ProjectedCurveSurface.prototype.vStep = 256
 NLA.registerClass(ProjectedCurveSurface)

@@ -11,10 +11,10 @@ function parseGetParams(str) {
 let a, b, c, d, edges = [], hovering
 function initB2() {
     dMesh = new GL.Mesh()
-    eye.eyePos = V(1, 101, 101)
-	eye.eyeFocus = V(0, 100, 0)
+    eye.eyePos = V(1, 2, 101)
+	eye.eyeFocus = V(0, 1, 0)
 	eye.eyeUp = V(0, 1, 0)
-    zoomFactor = 1
+    eye.zoomFactor = 8
 
     const gets = parseGetParams(window.location.search.substr(1) || window.location.hash.substr(1))
     'abcd'.split('').forEach(k => gets[k] && eval(k + '=' + gets[k] + ';' + k + 'Mesh = ' + k + '.toMesh()'))
@@ -126,9 +126,9 @@ paintScreen = function() {
     if (dMesh && dMesh.hasBeenCompiled) {
         gl.pushMatrix()
         //gl.scale(10, 10, 10)
-        gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
+        gl.projectionMatrix.m[11] -= 1 / (1 << 21) // prevent Z-fighting
         dMesh.lines && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) }).draw(dMesh, 'LINES')
-        gl.projectionMatrix.m[11] += 1 / (1 << 20)
+        gl.projectionMatrix.m[11] += 1 / (1 << 21)
         dMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
             camPos: eye.eyePos }).draw(dMesh)
 
@@ -263,7 +263,7 @@ window.onload = async function () {
 	gl.fullscreen()
 	gl.canvas.oncontextmenu = () => false
 
-	setupCamera(gl, eye)
+	setupCamera(eye, gl)
 	//gl.cullFace(gl.FRONT_AND_BACK);
 	gl.clearColor(1.0, 1.0, 1.0, 0.0)
 	gl.enable(gl.BLEND)
@@ -285,6 +285,6 @@ window.onload = async function () {
 	initInfoEvents()
 	//initPointInfoEvents()
 	initB2()
-	setupCamera(gl, eye)
+	setupCamera(eye, gl)
 	paintScreen()
 }

@@ -1,4 +1,3 @@
-import Vector = NLA.Vector
 class Matrix implements Equalable {
 	m: Float64Array
 	width: number
@@ -806,10 +805,8 @@ class Matrix implements Equalable {
 	 * @param fx0 f(x0), pass it if you have it already
 	 * @param EPSILON
 	 */
-	static jacobi(f: (x: number[]) => number[], x0: number[], fx0: number[], EPSILON?: number): Matrix {
-		EPSILON = EPSILON || 1e-6
-		fx0 = fx0 || f(x0)
-		let jacobi = Matrix.forWidthHeight(x0.length, fx0.length)
+	static jacobi(f: (x: FloatArray) => FloatArray, x0: FloatArray, fx0: FloatArray = f(x0), EPSILON: number = 1e-6): Matrix {
+		const jacobi = Matrix.forWidthHeight(x0.length, fx0.length)
 		for (let colIndex = 0; colIndex < x0.length; colIndex++) {
 			x0[colIndex] += EPSILON
 			let fx = f(x0)

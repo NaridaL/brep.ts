@@ -11,7 +11,7 @@ import {assert} from 'chai'
 suite('ConicSurface', function () {
     test('ConicSurface.isCoplanarTo', function () {
         const unitCone = ConicSurface.UNIT
-        assert.ok(unitCone.matrix.isIdentity(), 'unitCone.matrix.isIdentity()')
+        assert.ok(unitCone.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
         assert.V3like(unitCone.parametricFunction()(0, 3), V(3, 0, 3))
         const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
         const planeAtZ3 = P3.XY.translate(0, 0, 3)
@@ -25,7 +25,7 @@ suite('ConicSurface', function () {
         assert.notOk(scaledUnit.isCoplanarTo(unitCone))
         assert.notOk(unitCone.isCoplanarTo(scaledUnit))
         const ell1 = unitCone.isCurvesWithPlane(new P3(V(2, 3, 10).unit(), 10))[0]
-        assert.ok(unitCone.containsEllipse(ell1), 'unitCone.containsEllipse(ell1)')
+        assert.ok(unitCone.containsEllipse(ell1), 'UCS.containsEllipse(ell1)')
         const ell2 = unitCone.isCurvesWithPlane(new P3(V(1, 1, 2).unit(), 4))[0]
         const ell1Cone = ConicSurface.atApexThroughEllipse(V3.O, ell1, 1)
         const ell2Cone = ConicSurface.atApexThroughEllipse(V3.O, ell2, 1)

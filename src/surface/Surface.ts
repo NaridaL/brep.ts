@@ -5,6 +5,9 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 
 	abstract toSource(): string
 
+
+	abstract transform(m4: M4, desc?: string): Surface
+
 	abstract isTsForLine(line: L3): number[]
 
 	/**
@@ -18,7 +21,9 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 	 */
 	abstract isCurvesWithPlane(plane: P3): Curve[]
 
-	abstract isCurvesWithSurface(surface: Surface): Curve[]
+	isCurvesWithSurface(surface: Surface): Curve[] {
+		return surface.isCurvesWithSurface(this).map(curve => curve.reversed())
+	}
 
 	abstract containsCurve(curve: Curve): boolean
 

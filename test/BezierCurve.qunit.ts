@@ -1,5 +1,13 @@
 {
 	QUnit.module('BezierCurve')
+
+
+	QUnit.testDifferentSystems('BezierCurve.isTsWithSurface(SemiCylinderSurface)', function (assert, m4) {
+		let bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3).rotateX(15 * DEG).translate(0, 0, 100).transform(m4)
+		let cyl = new SemiCylinderSurface(SemiEllipseCurve.forAB(4, 1).rotateY(10 * DEG), V3.Z).transform(m4)
+		testISTs(assert, bez, cyl, 3)
+	})
+
 	QUnit.test('testCurve', function(assert) {
 		const curve = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)//.rotateZ(PI/3)
 		testCurve(assert, curve)
@@ -101,17 +109,6 @@
 			// TODO
 			//testISTs(assert, curve.translate(-0.00635), s, 3)
 			//console.log(NLA.arrayRange(-0.00640, -0.00630, 0.000005).map(i => curve.translate(i).isTsWithSurface(s).length))
-		},
-
-		'ProjectedCurveSurface Face containsPoint'(assert) {
-			const face = new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0), -3, 4), V(0, 0, 1), -3, 4, -100, 100), [
-				PCurveEdge.forCurveAndTs(
-					new BezierCurve(V(142.87578921496748, -191.46078243076332, 0), V(161.78547089700214, -252.13248349581008, 0), V(284.63214994898954, -163.59789158697575, 0), V(372.40411211189405, -210.3992206435476, 0)), 1, 0),
-				StraightEdge.throughPoints(V(142.87578921496748, -191.46078243076332, 0), V(142.87578921496748, -191.46078243076332, -100)),
-				PCurveEdge.forCurveAndTs(new BezierCurve(V(142.87578921496748, -191.46078243076332, -100), V(161.78547089700214, -252.13248349581008, -100), V(284.63214994898954, -163.59789158697575, -100), V(372.40411211189405, -210.3992206435476, -100)), 0, 1),
-				StraightEdge.throughPoints(V(372.40411211189405, -210.3992206435476, -100), V(372.40411211189405, -210.3992206435476, 0))], [])
-			const line = new L3(V(1241.5987, -1214.1894, 38.9886), V(-0.6705, 0.7386, -0.0696).unit())
-			testISTs(assert, line, face.surface, 3)
 		},
 	})
 }

@@ -191,7 +191,7 @@ class EllipseCurve extends Curve {
 	/**
 	 * @param hint +-PI, whichever is correct
 	 */
-	pointT(p: V3, hint?:number) {
+	pointT(p: V3, hint: number = PI) {
 		assertVectors(p)
 		const p2 = this.inverseMatrix.transformPoint(p)
 		const angle = p2.angleXY()
@@ -319,7 +319,7 @@ class EllipseCurve extends Curve {
 
 			const f = t => ellipseLCRA.at(t).lengthXY() - 1
 			const df = t => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
-			checkDerivate(f, df, -PI, PI)
+			checkDerivate(f, df, -PI, PI, 1)
 			const ts = []
 			const tsvs = NLA.arrayRange(-4/5 * PI, PI, PI/4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
 			for (let startT = -4/5 * PI; startT < PI; startT += PI / 4) {
@@ -514,8 +514,16 @@ class EllipseCurve extends Curve {
 	}
 
     static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)
+
+	static circleForCenter2P(center: V3, a: V3, b: V3, radius: number) {
+		const f1 = center.to(a)
+		const normal = f1.cross(center.to(b))
+		const f2 = normal.cross(f1).toLength(f1.length())
+		const tMax = f1.angleTo(center.to(b))
+		return new EllipseCurve(center, f1, f2, 0, tMax)
+	}
 }
 EllipseCurve.prototype.hlol = Curve.hlol++
-EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 8)
+EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 800)
 EllipseCurve.prototype.tMin = -PI
 EllipseCurve.prototype.tMax = PI

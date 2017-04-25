@@ -69,5 +69,60 @@
 			linkB3(assert, {edges: loop})
 			assert.ok(s1.edgeLoopCCW(loop))
 		},
+		'EllipsoidSurface.loopContainsPoint'(assert) {
+			const testFace = B2T.rotateEdges([
+				Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),
+				StraightEdge.throughPoints(V3.Z, V3.X)], 45 * DEG, 'blah')
+				.faces.find(face => face.surface instanceof SemiEllipsoidSurface)
+
+			const p1 = V3.sphere(10 * DEG, 10 * DEG)
+			testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE)
+			const p2 = V3.sphere(10 * DEG, -10 * DEG)
+			testLoopContainsPoint(assert, testFace.surface, testFace.contour, p2, PointVsFace.OUTSIDE)
+			testLoopContainsPoint(assert,
+				testFace.surface.foo(),
+				testFace.contour.map(edge => edge.foo()),
+				M4.FOO.transformPoint(p1),
+				PointVsFace.INSIDE)
+		},
+		'EllipsoidSurface.loopContainsPoint 2'(assert) {
+			const testFace = B2T.sphere(1).faces[0]
+
+			const p1 = new V3(0, 1, 0)
+			testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE)
+		},
+		'EllipsoidSurface.isCurvesWithPlane'(assert) {
+			const es = SemiEllipsoidSurface.sphere(5)
+			testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)), 0)
+			testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)).flipped(), 0)
+			testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI/2, sin(3/5)), 4)), 0)
+			testISCurves(assert, es, new PlaneSurface(new P3(V(0, -0.1, 1).unit(), 4)), 1)
+			testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0, 1), 4)), 1)
+			testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0.1, 1).unit(), 4)), 2)
+			testISCurves(assert, es, new PlaneSurface(new P3(V(0, 1, 0.1).unit(), 4)), 2)
+			testISCurves(assert, es, new PlaneSurface(P3.XY), 1)
+			testISCurves(assert, es, new PlaneSurface(P3.XY.flipped()), 1)
+
+			// slices perpendicular to V3.Y
+			testISCurves(assert, es, new PlaneSurface(P3.ZX), 2)
+			testISCurves(assert, es, new PlaneSurface(P3.ZX.flipped()), 2)
+			testISCurves(assert, es, new PlaneSurface(P3.ZX).translate(0, 2, 0), 2)
+			testISCurves(assert, es, new PlaneSurface(P3.ZX).translate(0, -2, 0), 0)
+
+			// slices perpendicular to V3.X
+			testISCurves(assert, es, new PlaneSurface(P3.YZ), 1)
+		},
+		'EllipsoidSurface.mainAxes'(assert) {
+			const es = new SemiEllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
+			assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+						href='brep2.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[
+						StraightEdge.throughPoints(V(-5, 1, -1), ${V(-5, 1, -1).plus(V(-9.660064978873681e-7, 0.999999999962889, 0.000008560880502697739).times(100)).sce}),
+						StraightEdge.throughPoints(V(-5, 1, -1), ${V(-5, 1, -1).plus(V(0.14427746420619014, -0.6925318281897137, -1.413919149220665).times(100)).sce})]'>view</a>`)
+			const esn = es.mainAxes()
+			assert.ok(esn.f1.isPerpendicularTo(esn.f2))
+			assert.ok(esn.f2.isPerpendicularTo(esn.f3))
+			assert.ok(esn.f3.isPerpendicularTo(esn.f1))
+			assert.ok(es.inverseMatrix.times(esn.matrix).isOrthogonal())
+		},
 	})
 }

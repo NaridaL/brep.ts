@@ -253,7 +253,7 @@ class V3 implements Equalable {
 	/**
 	 Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a pos or neg number, using NLA.equals
 	 Throw a DebugError
-	 if vector is not a NLA.NLA.Vector or
+	 if vector is not a NLA.Vector or
 	 if this has a length of 0 or
 	 if vector has a length of 0
 	 */
@@ -285,7 +285,7 @@ class V3 implements Equalable {
 	}
 
 	/**
-	 * Returns the length of this NLA.Vector, i.e. the euclidean norm.
+	 * Returns the length of this Vector, i.e. the euclidean norm.
 	 *
 	 * Note that the partial derivatives of the euclidean norm at point x are equal to the
 	 * components of the unit vector x.
@@ -318,7 +318,7 @@ class V3 implements Equalable {
 	}
 
 	/**
-	 * Returns a new unit NLA.NLA.Vector (.length() === 1) with the same direction as this vector. Throws a
+	 * Returns a new unit NLA.Vector (.length() === 1) with the same direction as this vector. Throws a
 	 * NLA.DebugError if this has a length of 0.
 	 */
 	unit(): V3 {
@@ -362,7 +362,7 @@ class V3 implements Equalable {
 	//}
 
 	/**
-	 Returns a new NLA.NLA.Vector which is the projection of this vector onto the passed vector.
+	 Returns a new NLA.Vector which is the projection of this vector onto the passed vector.
 	 Examples
 	 NLA.V(3, 4).projectedOn(NLA.V(1, 0)) // returns NLA.V(3, 0)
 	 NLA.V(3, 4).projectedOn(NLA.V(2, 0)) // returns NLA.V(3, 0)
@@ -372,20 +372,20 @@ class V3 implements Equalable {
 	 */
 	projectedOn(b: V3): V3 {
 		assertVectors(b)
-		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
+		// https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
 		return b.times(this.dot(b) / b.dot(b))
 	}
 
 	rejectedFrom(b: V3): V3 {
 		assertVectors(b)
-		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
+		// https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
 		return this.minus(b.times(this.dot(b) / b.dot(b)))
 	}
 
 	rejectedFrom1(b1: V3): V3 {
 		assertVectors(b1)
 		assert(b1.hasLength(1))
-		// https://en.wikipedia.org/wiki/NLA.Vector_projection#NLA.Vector_projection_2
+		// https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
 		return this.minus(b1.times(this.dot(b1)))
 	}
 
@@ -570,8 +570,11 @@ class V3 implements Equalable {
 		return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z)
 	}
 
+	/**
+	 * Documentation stub. You want {@see V3#sphere}
+	 */
 	static fromAngles(theta: number, phi: number): V3 {
-		return new V3(Math.cos(theta) * Math.cos(phi), Math.sin(phi), Math.sin(theta) * Math.cos(phi))
+		throw new Error()
 	}
 
 	static fromFunction(f: (dim: number) => number) {
@@ -635,19 +638,83 @@ class V3 implements Equalable {
 		return new V3(x, y, z)
 	}
 
-	static flattenV3Array(v3arr: V3[], dest?: number[]|Float64Array|Float32Array, srcStart?: number, destStart?: number, v3count?: number) {
+	static pack(v3arr: V3[],
+	            dest?: number[] | Float64Array | Float32Array,
+	            srcStart: number = 0,
+	            destStart: number = 0,
+	            v3count: number = v3arr.length - srcStart) {
 		//assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-		srcStart = srcStart || 0
-		destStart = destStart || 0
-		v3count = v3count || (v3arr.length - srcStart)
 		dest = dest || new Float32Array(3 * v3count)
 		assert(dest.length - destStart >= v3count, 'dest.length - destStart >= v3count')
-		let i = v3count
+
+		let i = v3count, srcIndex = srcStart, destIndex = destStart
 		while (i--) {
-			const v = v3arr[srcStart + i]
-			dest[destStart + i * 3] = v.x
-			dest[destStart + i * 3 + 1] = v.y
-			dest[destStart + i * 3 + 2] = v.z
+			const v = v3arr[srcIndex]
+			dest[destIndex] = v.x
+			dest[destIndex + 1] = v.y
+			dest[destIndex + 2] = v.z
+			srcIndex += 1
+			destIndex += 3
+		}
+		return dest
+	}
+
+	static unpack(v3arr: V3[],
+	            dest?: number[] | Float64Array | Float32Array,
+	            srcStart: number = 0,
+	            destStart: number = 0,
+	            v3count: number = v3arr.length - srcStart) {
+		//assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+		dest = dest || new Float32Array(3 * v3count)
+		assert(dest.length - destStart >= v3count, 'dest.length - destStart >= v3count')
+
+		let i = v3count, srcIndex = srcStart, destIndex = destStart
+		while (i--) {
+			const v = v3arr[srcIndex]
+			dest[destIndex] = v.x
+			dest[destIndex + 1] = v.y
+			dest[destIndex + 2] = v.z
+			srcIndex += 1
+			destIndex += 3
+		}
+		return dest
+	}
+
+	static packXY<T extends FloatArray>(v3arr: V3[],
+	              dest?: T,
+	              srcStart: number = 0,
+	              destStart: number = 0,
+	              v3count: number = v3arr.length - srcStart): T {
+		//assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+		dest = dest || new Float32Array(2 * v3count)
+		assert(dest.length - destStart >= v3count, 'dest.length - destStart >= v3count')
+
+		let i = v3count, srcIndex = srcStart, destIndex = destStart
+		while (i--) {
+			const v = v3arr[srcIndex]
+			dest[destIndex] = v.x
+			dest[destIndex + 1] = v.y
+			srcIndex += 1
+			destIndex += 2
+		}
+		return dest
+	}
+
+	static unpackXY(src: number[] | Float64Array | Float32Array,
+	                dest?: V3[],
+	                srcStart: int = 0,
+	                destStart: int = 0,
+	                v3count: int = Math.min(src.length / 2, dest && dest.length || Infinity) - destStart): V3[] {
+		//assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+		dest = dest || new Array(v3count)
+		assert(dest.length - destStart >= v3count, 'dest.length - destStart >= v3count')
+		assert(src.length - srcStart >= v3count * 2, 'dest.length - destStart >= v3count')
+
+		let i = v3count, srcIndex = srcStart, destIndex = destStart
+		while (i--) {
+			dest[destIndex] = new V3(src[srcIndex], src[srcIndex + 1], 0)
+			srcIndex += 2
+			destIndex += 1
 		}
 		return dest
 	}
@@ -684,7 +751,7 @@ class V3 implements Equalable {
 	 * @param longitude angle in XY plane
 	 * @param latitude "height"/z dir angle
 	 */
-    static sphere(longitude: number, latitude: number): V3 {
+    static sphere(longitude: raddd, latitude: raddd): V3 {
         return new V3(
             Math.cos(latitude) * Math.cos(longitude),
             Math.cos(latitude) * Math.sin(longitude),

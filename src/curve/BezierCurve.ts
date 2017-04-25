@@ -192,7 +192,7 @@ class BezierCurve extends Curve {
 			// this.split(curveP3T): 0 --> curveP3T --> 1
 			// .right: curveP3T --> 1
 			// .reversed(): 1 --> curveP3T
-			thisSplit = this.split(curveP3T).right.reversed()
+			thisSplit = this.split(curveP3T)[1].reversed()
 		} else {
 			// curveP3T describes the point on this
 			// adjust it so it describes the same point on this.split(curveP0T).right
@@ -200,7 +200,7 @@ class BezierCurve extends Curve {
 			//                             |            |          |       |
 			// this.split(curveP0T).right:              0        p3tad     1
 			const curveP3Tadjusted = (curveP3T - curveP0T) / (1 - curveP0T)
-			thisSplit = this.split(curveP0T).right.split(curveP3Tadjusted).left
+			thisSplit = this.split(curveP0T)[1].split(curveP3Tadjusted)[0]
 		}
 
 		return curve.likeCurve(thisSplit)
@@ -338,13 +338,13 @@ class BezierCurve extends Curve {
 		mesh[bufferName].push(this.p2, this.p3)
 	}
 
-	split(t: number): {left: BezierCurve, right: BezierCurve} {
+	split(t: number): [BezierCurve, BezierCurve] {
 		const s = (1 - t)
 		const {p0, p1, p2, p3} = this
 		const b01 = p0.times(s).plus(p1.times(t)), b11 = p1.times(s).plus(p2.times(t)), b21 = p2.times(s).plus(p3.times(t))
 		const b02 = b01.times(s).plus(b11.times(t)), b12 = b11.times(s).plus(b21.times(t))
 		const b03 = b02.times(s).plus(b12.times(t))
-		return {left: new BezierCurve(p0, b01, b02, b03), right: new BezierCurve(b03, b12, b21, p3)}
+		return [new BezierCurve(p0, b01, b02, b03), new BezierCurve(b03, b12, b21, p3)]
 	}
 
 	containsPoint(p: V3): boolean {
@@ -576,6 +576,7 @@ class BezierCurve extends Curve {
 		if (curve instanceof BezierCurve) {
 			return this.isInfosWithBezier(curve)
 		}
+		return curve.isInfosWithCurve(this).map(({tThis, tOther, p}) => ({tThis: tOther, tOther: tThis, p}))
 		assert(false)
 	}
 
@@ -612,10 +613,10 @@ class BezierCurve extends Curve {
 		// c = -3 p0y + 3 p1y => p1y = c/3 + p0y
 		// b = 3 p0y - 6 p1y + 3 p2y => p2y = b/3 - p0y + 2 p1y
 		// a = -p0y + 3 p1y -3 p2y + p3y => p3y = a + p0y - 3 p1y + 3 p2y
-		let p0y = d
-		let p1y = c / 3 + p0y
-		let p2y = b / 3 - p0y + 2 * p1y
-		let p3y = a + p0y - 3 * p1y + 3 * p2y
+		const p0y = d
+		const p1y = c / 3 + p0y
+		const p2y = b / 3 - p0y + 2 * p1y
+		const p3y = a + p0y - 3 * p1y + 3 * p2y
 		return new BezierCurve(V(0, p0y), V(1 / 3, p1y), V(2 / 3, p2y), V(1, p3y), tMin, tMax)
 	}
 
@@ -646,6 +647,96 @@ class BezierCurve extends Curve {
             0, 1)
 	}
 
+	magic(t0: number = this.tMin, t1:number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
+		const max3d = 0.01, eps = 0.01
+		const splits = 20
+		const ts = NLA.arrayFromFunction(splits, i => lerp(t0, t1, i/( splits- 1)))
+		const ps = ts.map(t => this.at(t))
+		const ns = ts.map(t => this.normalAt(t).unit())
+		const f = (ns: V3[]) => {
+			const ls = ts.map((t, i) => new L3(ps[i], ns[i].unit()))
+			const isInfos = NLA.arrayFromFunction(splits- 1, i => {
+				const j = i + 1
+				const li = ls[i], lj = ls[j]
+				return li.infoClosestToLine(lj)
+			})
+			const a = isInfos.map(isInfo => isInfo.s - isInfo.t)
+			const centers = isInfos.map(isInfo => V3.lerp(isInfo.closest, isInfo.closest2, 0.5))
+			const b = NLA.arrayFromFunction(splits- 1, i => {
+				const tMid = lerp(ts[i], ts[i + 1], 0.5)
+				const pMid = this.at(tMid)
+				return pMid.distanceTo(centers[i]) ** 0.5
+			})
+			return a.concat(b)
+		}
+		const startX = V3.packXY(ns)
+		const ff = (xs) => {
+			return f(V3.unpackXY(xs))
+		}
+		let x = new Vector(new Float64Array(startX))
+		for (let i = 0; i < 2; i++) {
+			let Fx = new Vector(new Float64Array(ff(x.v)))
+			console.log(Fx.v)
+			const jacobi = Matrix.jacobi(ff, x.v)
+			console.log('jacobi\n', jacobi.toString(x=>''+x))
+			const jacobiDependentRowIndexes = jacobi.getDependentRowIndexes()
+			//if (0 != jacobiDependentRowIndexes.length) {
+			//	const error:any = new Error()
+			//	error.jacobiDependentRowIndexes = jacobiDependentRowIndexes
+			//	throw error
+			//}
+			const jacobiTranspose = jacobi.transposed()
+			console.log((jacobi.times(jacobiTranspose)).str)
+			console.log((jacobi.times(jacobiTranspose)).inversed().str)
+			const matrix = jacobiTranspose.times((jacobi.times(jacobiTranspose)).inversed())
+			const xDiff = matrix.timesVector(Fx)
+			x = x.minus(xDiff)
+		}
+		const ns2 = V3.unpackXY(x.v)
+		const ls2 = NLA.arrayFromFunction(splits, i => new L3(ps[i], ns2[i].unit()))
+		const curves = NLA.arrayFromFunction(splits- 1, i => {
+			const j = i + 1
+			const li = ls2[i], lj = ls2[j]
+			const isInfo = li.infoClosestToLine(lj)
+			return EllipseCurve.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s)
+		})
+		return curves
+	}
+	magic2(t0: number = this.tMin, t1:number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
+		const max3d = 0.01, eps = 0.01
+		const a = this.at(t0), b = this.at(t1)
+		const aN = this.normalAt(t0).unit(), bN = this.normalAt(t1).unit()
+		const aL = new L3(a, aN), bL = new L3(b, bN)
+		const isInfo = aL.infoClosestToLine(bL)
+		if (isInfo.s < 0 || isInfo.t < 0
+			|| isInfo.distance > max3d
+			|| !NLA.eq2(isInfo.s, isInfo.t, eps)) {
+		} else {
+			const centerPoint = V3.lerp(isInfo.closest, isInfo.closest2, 0.5)
+			const testT1 = lerp(t0, t1, 1/2), testP1 = this.at(testT1)
+			const testT2 = lerp(t0, t1, 2/3), testP2 = this.at(testT2)
+			const radius = (isInfo.s + isInfo.t) / 2
+			if (NLA.eq2(centerPoint.distanceTo(testP1), radius, eps)) {
+				const newCurve = EllipseCurve.circleForCenter2P(centerPoint, a, b, radius)
+				result.push(newCurve)
+				return result
+			}
+		}
+
+		const tMid = (t0 + t1) / 2
+		this.magic(t0, tMid, result)
+		this.magic(tMid, t1, result)
+		return result
+	}
+
+	static testEdges() {
+		const curve2 = BezierCurve.graphXY(2, -3, -3, 2, 0.6, 2)
+		const items = curve2.magic().map(c => Edge.forCurveAndTs(c).translate(3))
+		console.log(items.length)
+
+		return [Edge.forCurveAndTs(curve2)].concat(			items		)
+	}
+
 	/**
 	 * https://en.wikipedia.org/wiki/Cubic_function#/media/File:Graph_of_cubic_polynomial.svg
 	 */
@@ -656,4 +747,4 @@ class BezierCurve extends Curve {
 	static readonly QUARTER_CIRCLE = BezierCurve.approximateUnitArc(PI / 2)
 }
 BezierCurve.prototype.hlol = Curve.hlol++
-BezierCurve.prototype.tIncrement = 1 / 16
+BezierCurve.prototype.tIncrement = 1 / 80

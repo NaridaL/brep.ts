@@ -193,7 +193,7 @@ class AABB extends Transformable {
 	}
 
 	toString() {
-		return "new AABB(" + this.min.toString() + ", " + this.max.toString() + ")"
+		return makeGen('new AABB', this.min, this.max)
 	}
 
 	toSource() {
