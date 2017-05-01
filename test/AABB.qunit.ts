@@ -5,5 +5,5 @@ QUnit.test('intersectLines', function (assert) {
 	assert.ok(aabb.intersectsLine(new L3(V(1, 0, 0), V3.Z)))
 	assert.ok(aabb.intersectsLine(new L3(V(0.5, 0, 0), V3.Z)))
 	assert.ok(aabb.intersectsLine(new L3(V(0.5, 0.5, 0), V3.Z)))
-	assert.ok(aabb.intersectsLine(new L3(V3.XYZ.negated(), V3.XYZ)))
+	assert.ok(aabb.intersectsLine(new L3(V3.XYZ.negated(), V3.XYZ.unit())))
 })

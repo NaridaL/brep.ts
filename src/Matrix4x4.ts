@@ -1,5 +1,3 @@
-
-import eq = NLA.eq
 class M4 extends Matrix implements Transformable {
 	readonly m: Float64Array
 
@@ -34,7 +32,7 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	as3x3(): M4 {
-		let result = M4.copy(this), m = result.m
+		const result = M4.copy(this), m = result.m
 
 		m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0
 		m[15] = 1
@@ -46,7 +44,7 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	realEigenValues3(): number[] {
-		let m = this.m
+		const m = this.m
 		assert(0 == m[12] && 0 == m[13] && 0 == m[14])
 		// determinant of (this - λI):
 		// | a-λ  b   c  |
@@ -57,10 +55,10 @@ class M4 extends Matrix implements Transformable {
 			   d, e, f, ,
 			   g, h, i] = m
 		// det(this - λI) = -λ^3 +λ^2 (a+e+i) + λ (-a e-a i-b d+c g-e i+f h)+ (a e i-a f h-b d i+b f g+c d h-c e g)
-		let s = -1
-		let t = a + e + i // equivalent to trace of matrix
-		let u = -a * e - a * i + b * d + c * g - e * i + f * h // equivalent to 1/2 (trace(this²) - trace²(A))
-		let w = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g) // equivalent to matrix determinant
+		const s = -1
+		const t = a + e + i // equivalent to trace of matrix
+		const u = -a * e - a * i + b * d + c * g - e * i + f * h // equivalent to 1/2 (trace(this²) - trace²(A))
+		const w = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g) // equivalent to matrix determinant
 
 		console.log(s, t, u, w)
 		return solveCubicReal2(s, t, u, w)
@@ -68,8 +66,8 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	realEigenVectors3():V3[] {
-		let eigenValues = this.realEigenValues3()
-		let this3x3 = this.times(M4.IDENTITY3)
+		const eigenValues = this.realEigenValues3()
+		const this3x3 = this.times(M4.IDENTITY3)
 		console.log(this.toString())
 		console.log(this3x3.toString())
 		let mats = eigenValues.map(ev => M4.IDENTITY3.timesScalar(-ev).plus(this3x3))
@@ -253,7 +251,7 @@ class M4 extends Matrix implements Transformable {
 	}
 
 
-	isAxisAligned():boolean {
+	isAxisAligned(): boolean {
 		const m = this.m
 		return (1 >= +!NLA.eq0(m[0]) + +!NLA.eq0(m[1]) + +!NLA.eq0(m[2]))
 			&& (1 >= +!NLA.eq0(m[4]) + +!NLA.eq0(m[5]) + +!NLA.eq0(m[6]))
@@ -369,21 +367,19 @@ class M4 extends Matrix implements Transformable {
 	 * Returns this matrix scaled so that the determinant is 1.
 	 * det(c * A) = (c ** n) * det(A) for n x n matrices,
 	 * so we need to divide by the 4th root of the determinant
-	 * @returns {M4}
 	 */
-	normalized():M4 {
+	normalized(): M4 {
 		const det = this.determinant()
-		return 1 == det ? this : this.divScalar(Math.sqrt(Math.sqrt(det)))
+		return 1 == det ? this : this.divScalar(det ** 0.25)
 	}
 
 	/**
 	 * Returns this matrix scaled so that the determinant is 1.
 	 * det(c * A) = (c ** n) * det(A) for n x n matrices,
 	 * so we need to divide by the 4th root of the determinant
-	 * @returns {M4}
 	 */
-	normalized2() {
-		let div = this.m[15]
+	normalized2(): M4 {
+		const div = this.m[15]
 		return 1 == div ? this : this.divScalar(Math.sqrt(Math.sqrt(div)))
 	}
 
@@ -406,7 +402,7 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	toString(f?: (number) => string): string {
-		f = f || ((v) => v.toFixed(6).replace(/(0|\.)(?=0*$)/g, ' ').toString())
+		f = f || ((v) => v.toFixed(6).replace(/([0.])(?=0*$)/g, ' ').toString())
 		assert(typeof f(0) == 'string', '' + typeof f(0))
 		// slice this.m to convert it to an Array (from TypeArray)
 		const rounded = Array.prototype.slice.call(this.m).map(f)
@@ -528,11 +524,9 @@ class M4 extends Matrix implements Transformable {
 		return result
 	}
 
-	static copy(src: M4, result?: M4) {
-		assertInst(M4, src)
-		!result || assertInst(M4, result)
+	static copy(src: M4, result: M4 = new M4()) {
+		assertInst(M4, src, result)
 		assert(result != src, 'result != src')
-		result = result || new M4()
 		const s = src.m, d = result.m
 		let i = 16
 		while (i--) {
@@ -551,10 +545,8 @@ class M4 extends Matrix implements Transformable {
 			0, 0, 0, 1)
 	}
 
-	static forRows(n0: V3, n1: V3, n2: V3, n3?: V3):M4 {
-		assertVectors(n0, n1, n2)
-		!n3 || assertVectors(n2)
-		n3 = n3 || V3.O
+	static forRows(n0: V3, n1: V3, n2: V3, n3: V3 = V3.O): M4 {
+		assertVectors(n0, n1, n2, n3)
 		return new M4(
 			n0.x, n0.y, n0.z, 0,
 			n1.x, n1.y, n1.z, 0,
@@ -568,9 +560,8 @@ class M4 extends Matrix implements Transformable {
 	 *
 	 * Unless initializing a matrix to be modified, use M4.IDENTITY
 	 */
-	static identity(result?: M4):M4 {
-		!result || assertInst(M4, result)
-		result = result || new M4()
+	static identity(result: M4 = new M4()):M4 {
+		assertInst(M4, result)
 		const m = result.m
 		m[0] = m[5] = m[10] = m[15] = 1
 		m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = m[12] = m[13] = m[14] = 0
@@ -585,10 +576,9 @@ class M4 extends Matrix implements Transformable {
 	 *     el, where elIndex is the row-major index, i.e. eLindex == elRow * 4 + elCol
 	 * @param result
 	 */
-	static fromFunction(f: (elRow: number, elCol: number, elIndex: number) => number, result?: M4): M4 {
+	static fromFunction(f: (elRow: number, elCol: number, elIndex: number) => number, result: M4 = new M4()): M4 {
 		assert(typeof f == 'function')
-		!result || assertInst(M4, result)
-		result = result || new M4()
+		assertInst(M4, result)
 		const m = result.m
 		let i = 16
 		while (i--) {
@@ -607,18 +597,16 @@ class M4 extends Matrix implements Transformable {
 // function `gluPerspective()`.
 	/**
 	 *
-	 * @param fov in degrees
+	 * @param fovDegreees in degrees
 	 * @param aspect Aspect ration, width/height of viewport
-	 * @param near
-	 * @param far
-	 * @param {M4} [result]
-	 * @returns {M4}
 	 */
-	static perspective(fov: number, aspect: number, near: number, far: number, result): M4 {
-		!result || assertInst(M4, result)
-		assertNumbers(fov, aspect, near, far)
-		let y = Math.tan(fov * Math.PI / 360) * near
-		let x = y * aspect
+	static perspective(fovDegreees: number, aspect: number,
+	                   near: number, far: number,
+	                   result: M4 = new M4()): M4 {
+		assertInst(M4, result)
+		assertNumbers(fovDegreees, aspect, near, far)
+		const y = Math.tan(fovDegreees * DEG) * near
+		const x = y * aspect
 		return M4.frustum(-x, x, -y, y, near, far, result)
 	}
 
@@ -662,11 +650,10 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 * Returns a new M4 representing the a projection through/towards a point onto a plane.
 	 */
-	static projectPlanePoint(p: V3, plane: P3, result?: M4): M4 {
+	static projectPlanePoint(p: V3, plane: P3, result: M4 = new M4()): M4 {
 		assertVectors(p)
 		assertInst(P3, plane)
-		!result || assertInst(M4, result)
-		result = result || new M4()
+		assertInst(M4, result)
 		const m = result.m
 		const n = plane.normal1, w = plane.w
 		const np = n.dot(p)
@@ -699,10 +686,12 @@ class M4 extends Matrix implements Transformable {
 	 * Orthographic/orthogonal projection. Transforms the cuboid with the dimensions X: [left right] Y: [bottom, top]
 	 * Z: [near far] to the cuboid X: [-1 1] Y [-1 1] Z [-1, 1]
 	 */
-	static ortho(left: number, right: number, bottom: number, top: number, near: number, far: number, result?: M4): M4 {
+	static ortho(left: number, right: number,
+	             bottom: number, top: number,
+	             near: number, far: number,
+	             result: M4 = new M4()): M4 {
 		assertNumbers(left, right, bottom, top, near, far)
-		!result || assertInst(M4, result)
-		result = result || new M4()
+		assertInst(M4, result)
 		const m = result.m
 
 		m[0] = 2 / (right - left)
@@ -732,28 +721,29 @@ class M4 extends Matrix implements Transformable {
 	 * This emulates the OpenGL function `glScale()`. You can optionally pass an existing matrix in `result` to avoid
 	 * allocating a new matrix.
 	 */
-	static scaling(x: number, y: number, z: number, result?: M4): M4
-	static scaling(v: V3, result?: M4): M4
+	static scaling(x: number, y: number, z?: number, result?: M4): M4
 	static scaling(scale: number, result?: M4): M4
-	static scaling(x, y?, z?, result?): M4 {
-		if (1 == arguments.length || 2 == arguments.length) {
-			result = y
-            if ('number' === typeof x) {
-                y = x
-                z = x
-            }
-			if (x instanceof V3) {
-				y = x.y
-				z = x.z
-				x = x.x
-			}
+	static scaling(v: V3, result?: M4): M4
+	static scaling(...args): M4 {
+		let x, y, z, result
+		if (args[0] instanceof V3) {
+			assert(args.length <= 2)
+			;({x, y, z} = args[0])
+			result = args[1]
+		} else if (args.length == 1 || args.length == 2 && 'number' != typeof args[1]) {
+			x = y = z = args[0]
+			result = args[1]
 		} else {
-			assert(3 == arguments.length || 4 == arguments.length, '3 == arguments.length || 4 == arguments.length')
-			assertNumbers(x, y, z)
+			assert(args.length <= 4)
+			x = args[0]
+			y = args[1]
+			z = undefined != args[2] ? args[2] : 1
+			result = args[3]
 		}
-		!result || assertInst(M4, result)
+		undefined == result && (result = new M4())
+		assertInst(M4, result)
+		assertNumbers(x, y, z)
 
-		result = result || new M4()
 		const m = result.m
 
 		m[0] = x
@@ -783,28 +773,25 @@ class M4 extends Matrix implements Transformable {
 	 * This emulates the OpenGL function `glTranslate()`. You can optionally pass
 	 * an existing matrix in `result` to avoid allocating a new matrix.
 	 */
-	static translation(x: number, y: number, z: number, result?: M4): M4
+	static translation(x: number, y?: number, z?: number, result?: M4): M4
 	static translation(v: V3, result?: M4): M4
-	static translation(scale: number, result?: M4): M4
-	static translation(x, y?, z?, result?): M4 {
-		if (1 == arguments.length || 2 == arguments.length) {
-			assertVectors(x)
-			result = y
-			if (x instanceof V3) {
-				y = x.y
-				z = x.z
-				x = x.x
-			} else if ('number' === typeof x) {
-				y = x
-				z = x
-			}
+	static translation(...args): M4 {
+		let x, y, z, result
+		if (args[0] instanceof V3) {
+			assert(args.length <= 2)
+			;({x, y, z} = args[0])
+			result = args[1]
 		} else {
-			assert(3 == arguments.length || 4 == arguments.length, '3 == arguments.length || 4 == arguments.length')
-			assertNumbers(x, y, z)
+			assert(args.length <= 4)
+			x = args[0]
+			y = undefined != args[1] ? args[1] : 0
+			z = undefined != args[2] ? args[2] : 0
+			result = args[3]
 		}
-		!result || assertInst(M4, result)
+		undefined == result && (result = new M4())
+		assertInst(M4, result)
+		assertNumbers(x, y, z)
 
-		result = result || new M4()
 		const m = result.m
 
 		m[0] = 1
@@ -951,7 +938,7 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 * Create a rotation matrix for rotating around the Z axis
 	 */
-	static rotationZ(radians: raddd) {
+	static rotationZ(radians: raddd): M4 {
 		const sin = Math.sin(radians), cos = Math.cos(radians)
 		const els = [
 			cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
@@ -1017,14 +1004,13 @@ class M4 extends Matrix implements Transformable {
 	/**
 	 * Create an affine matrix for mirroring into an arbitrary plane:
 	 */
-	static mirroring(plane: P3, result?: M4): M4 {
+	static mirroring(plane: P3, result: M4 = new M4()): M4 {
 		assertInst(P3, plane)
-		!result || assertInst(M4, result)
+		assertInst(M4, result)
 		const nx = plane.normal1.x
 		const ny = plane.normal1.y
 		const nz = plane.normal1.z
 		const w = plane.w
-		result = result || new M4()
 		const m = result.m
 
 		m[0] = 1.0 - 2.0 * nx * nx
@@ -1055,7 +1041,7 @@ class M4 extends Matrix implements Transformable {
 	 * @param dir Projection direction. Optional, if not specified plane normal1 will be used.
 	 * @param result
 	 */
-	static projection(plane: P3, dir?: V3, result?: M4): M4 {
+	static projection(plane: P3, dir: V3 = plane.normal1, result: M4 = new M4()): M4 {
 		// TODO: doc
 		/**
 		 * plane.normal1 DOT (p + lambda * dir) = w (1)
@@ -1071,11 +1057,9 @@ class M4 extends Matrix implements Transformable {
 		 a + dw - d * na
 		 */
 		assertInst(P3, plane)
-		!dir || assertVectors(dir)
-		!result || assertInst(M4, result)
-		dir = dir || plane.normal1
+		assertVectors(dir)
+		assertInst(M4, result)
 		const w = plane.w
-		result = result || new M4()
 		const m = result.m
 		const nd = plane.normal1.dot(dir)
 		const {x: nx, y: ny, z: nz} = plane.normal1
@@ -1114,12 +1098,11 @@ class M4 extends Matrix implements Transformable {
 		return result
 	}
 
-	static lineProjection(line: L3, result?: M4): M4 {
+	static lineProjection(line: L3, result: M4 = new M4()): M4 {
 		assertInst(L3, line)
-		!result || assertInst(M4, result)
+		assertInst(M4, result)
 		const ax = line.anchor.x, ay = line.anchor.y, az = line.anchor.z
 		const dx = line.dir1.x, dy = line.dir1.y, dz = line.dir1.z
-		result = result || new M4()
 		const m = result.m
 
 		/*
@@ -1159,10 +1142,9 @@ class M4 extends Matrix implements Transformable {
 		return result
 	}
 
-	static pointInversion(p: V3, result?: M4): M4 {
+	static pointInversion(p: V3, result: M4 = new M4()): M4 {
 		assertVectors(p)
-		!result || assertInst(M4, result)
-		result = result || new M4()
+		assertInst(M4, result)
 		const m = result.m
 
 		m[0] = -1

@@ -46,7 +46,7 @@ class ConicSurface extends Surface {
 	loopContainsPoint(contour: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
 		const line = this.center.like(p)
-			? new L3(p, this.matrix.transformVector(new V3(0, 1, 1).unit()))
+			? new L3(p, this.matrix.transformVector(new V3(0, 1, 1)).unit())
 			: L3.throughPoints(p, this.apex)
 		const lineOut = line.dir1.cross(this.dir)
 
@@ -54,7 +54,7 @@ class ConicSurface extends Surface {
 	}
 
 	toSource(): string {
-		return makeGen('new ConicSurface', this.center, this.f1, this.f2, this.dir)
+		return callsce('new ConicSurface', this.center, this.f1, this.f2, this.dir)
 	}
 
 	isTsForLine(line: L3): number[] {
@@ -81,7 +81,7 @@ class ConicSurface extends Surface {
 		if (ellipseLC.center.z < 0) {
 			return false
 		}
-		const {f1, f2} = ellipseLC.mainAxes()
+		const {f1, f2} = ellipseLC.rightAngled()
 		const p1 = ellipseLC.center.plus(f1), p2 = ellipseLC.center.plus(f2)
 		// check if both endpoints are on the cone's surface
 		// and that one main axis is perpendicular to the Z-axis
@@ -96,13 +96,13 @@ class ConicSurface extends Surface {
 		return lineLC.containsPoint(V3.O) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
 	}
 
-	containsParabola(parabola: ParabolaCurve): boolean {
-		assertInst(ParabolaCurve, parabola)
-		const parabolaLC = parabola.transform(this.inverseMatrix)
-		if (parabolaLC.center.z < 0 || parabolaLC.f2.z < 0) {
+	containsParabola(curve: ParabolaCurve): boolean {
+		assertInst(ParabolaCurve, curve)
+		const curveLC = curve.transform(this.inverseMatrix)
+		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
 			return false
 		}
-		const {center, f1, f2} = parabolaLC.rightAngled()
+		const {center, f1, f2} = curveLC.rightAngled()
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		// and that "y" axis is parallel to surface
@@ -112,11 +112,30 @@ class ConicSurface extends Surface {
 
 	}
 
+	containsHyperbola(curve: HyperbolaCurve): boolean {
+		assertInst(HyperbolaCurve, curve)
+		return true
+		const curveLC = curve.transform(this.inverseMatrix)
+		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
+			return false
+		}
+		const {center, f1, f2} = curveLC.rightAngled()
+		// check if center is on the surface,
+		// that tangent is perpendicular to the Z-axis
+		return true
+		return NLA.eq(center.x * center.x + center.y * center.y, center.z * center.z)
+			&& NLA.eq0(f1.z)
+	}
+
 	containsCurve(curve) {
 		if (curve instanceof SemiEllipseCurve) {
 			return this.containsEllipse(curve)
 		} else if (curve instanceof L3) {
 			return this.containsLine(curve)
+		} else if (curve instanceof HyperbolaCurve) {
+			return this.containsHyperbola(curve)
+		} else if (curve instanceof ParabolaCurve) {
+			return this.containsParabola(curve)
 		} else {
 			assert(false)
 		}
@@ -142,14 +161,15 @@ class ConicSurface extends Surface {
 		return GL.Mesh.parametric(this.parametricFunction(), this.parametricNormal(), 0, PI, this.tMin, this.tMax, 16, 1)
 	}
 
-	parametricNormal() {
+	parametricNormal(): (s: number, t: number) => V3 {
 		const {f1, f2} = this, f3 = this.dir
 		return (d, z) => {
 			return f2.cross(f1).plus(f2.cross(f3.times(Math.cos(d)))).plus(f3.cross(f1.times(Math.sin(d)))).unit()
 		}
 	}
 
-	normalAt(p) {
+	normalAt(p: V3): V3 {
+		assert(!p.like(this.center))
 		const pLC = this.inverseMatrix.transformPoint(p)
 		return this.parametricNormal()(pLC.angleXY(), pLC.z)
 	}
@@ -218,13 +238,27 @@ class ConicSurface extends Surface {
 		const a = planeNormal.lengthXY()
 		const d = planeLC.w
 		// generated curves need to be rotated back before transforming to world coordinates
+		const rotationMatrix = M4.rotationZ(planeNormal.angleXY())
 		const wcMatrix = eq0(planeNormal.lengthXY())
 			? this.matrix
-			: this.matrix.times(M4.rotationZ(planeNormal.angleXY()))
-		return ConicSurface.unitISPlane(a, c, d).map(curve => curve.transform(wcMatrix)) as Curve[]
+			: this.matrix.times(rotationMatrix)
+		return ConicSurface.unitISPlane(a, c, d).map(curve => {
+			const curveWC = curve.transform(wcMatrix)
+			if (curve instanceof EllipseCurve) {
+				const curveLC = curve.transform(rotationMatrix)
+				const ts = curveLC.isTsWithPlane(P3.ZX)
+				const intervals = getIntervals(ts, -PI, PI).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0)
+				return intervals.map(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b))
+			}
+			const p = curveWC.at(0.2)
+			return this.normalAt(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
+				? curveWC : curveWC.reversed()
+		}).concatenated().concatenated() as Curve[]
 	}
 
 	edgeLoopCCW(contour) {
+		const ptpF = this.pointToParameterFunction()
+		return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
 		if (contour.length < 56) {
 			let totalAngle = 0
 			for (let i = 0; i < contour.length; i++) {
@@ -329,22 +363,22 @@ class ConicSurface extends Surface {
 		return pqFormula(b / a, c / a).filter(t => 0 < az + t * dz)
 	}
 
+	// calculate intersection of plane ax + cz = d and cone x² + y² = z²
 	static unitISPlane(a: number, c: number, d: number): Curve[] {
-		// plane: ax + cz = d
-		// cone: x² + y² = z²
-		if (NLA.eq0(c)) {
+		if (eq0(c)) {
 			// plane is "vertical", i.e. parallel to Y and Z axes
-			assert(!NLA.eq0(a))
+			assert(!eq0(a)) // normal would be zero, which is invalid
 			// z² - y² = d²/a²
-			if (NLA.eq0(d)) {
+			if (eq0(d)) {
 				// d = 0 => z² - y² = 0 => z² = y² => z = y
 				// plane goes through origin/V3.O
-				return [new L3(V3.O, new V3(0, Math.sqrt(2) / 2, Math.sqrt(2) / 2)),
-					new L3(V3.O, new V3(0, Math.sqrt(2) / 2, -Math.sqrt(2) / 2))]
+				return [new L3(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
+						new L3(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0)]
 			} else {
+
 				// hyperbola
 				const center = new V3(d / a, 0, 0)
-				const f1 = new V3(0, 0, Math.abs(d / a)) // abs, because we always want the hyperbola to be pointing up
+				const f1 = new V3(0, 0, abs(d / a)) // abs, because we always want the hyperbola to be pointing up
 				const f2 = new V3(0, d / a, 0)
 				return [new HyperbolaCurve(center, f1, f2)]
 			}
@@ -352,23 +386,27 @@ class ConicSurface extends Surface {
 		} else {
 			// c != 0
 			const aa = a * a, cc = c * c
-			if (NLA.eq0(d)) {
-				if (NLA.eq(aa, cc)) {
+			if (eq0(d)) {
+				// ax + cz = d => x = d - cz / a => x² = d² - 2cdz/a + c²z²/a²
+				// x² + y² = z²
+				// => d² - 2cdz/a + c²z²/a² + y² = z²
+
+				if (eq(aa, cc)) {
 					return [new L3(V3.O, new V3(c, 0, -a).unit())]
 				} else if (aa < cc) {
 					assert(false, 'intersection is single point V3.O')
 				} else if (aa > cc) {
-					return [new L3(V3.O, new V3(c, Math.sqrt(aa - cc), -a).unit()),
-						new L3(V3.O, new V3(c, -Math.sqrt(aa - cc), -a).unit())]
+					return [new L3(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
+							new L3(V3.O, new V3(c, -sqrt(aa - cc), -a).unit())]
 				}
 			} else {
-				if (NLA.eq(aa, cc)) {
-					console.log('acd', a, c, d)
+				if (eq(aa, cc)) {
 					// parabola
 					const parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
 					const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
 					const p2 = new V3(0, 0, d / c)
-					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), p2.minus(parabolaVertex))]
+					const f2 = p2.minus(parabolaVertex)
+					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0 ? f2.negated() : f2)]
 				} else if (aa < cc) {
 					// ellipse
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
@@ -376,18 +414,15 @@ class ConicSurface extends Surface {
 						return []
 					}
 					const p1 = new V3(d / (a - c), 0, -d / (a - c))
-					const p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(cc - aa), d * c / (cc - aa))
-					return [new SemiEllipseCurve(center, center.to(p1), center.to(p2))]
+					const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa))
+					return [new EllipseCurve(center, center.to(p1), center.to(p2))]
 				} else if (aa > cc) {
 					// hyperbola
-					const center = new V3(-a * d / (cc - aa), 0, -d * c / (cc - aa))
-					let f1 = new V3(d / (a - c) - center.x, 0, d / (a - c) - center.z)
-					if (f1.z < 0) {
-						f1 = f1.negated()
-					}
-					// sqrt(cc - aa) flipped relative to ellipse case:
-					const p2 = new V3(-a * d / (cc - aa), d / Math.sqrt(aa - cc), -d * c / (cc - aa))
-					return [new HyperbolaCurve(center, f1, p2.minus(center))]
+					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					const p1 = new V3(d / (a - c), 0, -d / (a - c))
+					const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
+					const f1 = center.to(p1)
+					return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), center.to(p2))]
 				}
 			}
 		}

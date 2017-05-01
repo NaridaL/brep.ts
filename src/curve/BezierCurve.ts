@@ -146,7 +146,7 @@ class BezierCurve extends Curve {
 
 	likeCurve(curve: Curve): boolean {
 		return this == curve ||
-			Object.getPrototypeOf(curve) == BezierCurve.prototype
+			((x): x is BezierCurve => x.constructor == this.constructor)(curve)
 			&& this.p0.like(curve.p0)
 			&& this.p1.like(curve.p1)
 			&& this.p2.like(curve.p2)
@@ -366,26 +366,7 @@ class BezierCurve extends Curve {
 		return NLA.arrayFromFunction(3, dim => solveCubicReal2(0, a.e(dim), b.e(dim), c.e(dim)))
 	}
 
-	/**
-	 *
-	 * @param p
-	 * @param tStart Defines interval with tEnd in which a start value for t will be searched.
-	 * Result is not necessarily in this interval.
-	 * @param tEnd
-	 * @returns {number}
-	 */
-	distanceToPoint(p: V3, tStart?: number, tEnd?: number) {
-		const closestT = this.closestTToPoint(p, tStart, tEnd)
-		return this.at(closestT).distanceTo(p)
-	}
-
-	asSegmentDistanceToPoint(p, tStart, tEnd) {
-		let t = this.closestTToPoint(p, tStart, tEnd)
-		t = NLA.clamp(t, tStart, tEnd)
-		return this.at(t).distanceTo(p)
-	}
-
-	isInfosWithLine(anchor: V3, dir: V3, tMin?: number, tMax?: number, lineMin = -100000, lineMax = 100000): {tThis: number, tOther: number, p: V3}[] {
+	isInfosWithLine(anchor: V3, dir: V3, tMin?: number, tMax?: number, lineMin = -100000, lineMax = 100000): ISInfo[] {
 		const dirLength = dir.length()
 		// TODO: no:
 		let result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchor, dir.unit()), lineMin, lineMax)
@@ -470,7 +451,7 @@ class BezierCurve extends Curve {
 	 * @param tMax
 	 * @param sMin
 	 * @param {number=} sMax
-	 * @returns {{tThis: number, tOther: number, p: V3}[]}
+	 * @returns {ISInfo[]}
 	 */
 	isInfosWithBezie3(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number) {
 		const handleStartTS = (startT, startS) => {
@@ -528,7 +509,7 @@ class BezierCurve extends Curve {
 		return result
 	}
 
-	isInfosWithBezier(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number): {tThis: number, tOther: number, p: V3}[] {
+	isInfosWithBezier(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number): ISInfo[] {
 
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
@@ -577,7 +558,6 @@ class BezierCurve extends Curve {
 			return this.isInfosWithBezier(curve)
 		}
 		return curve.isInfosWithCurve(this).map(({tThis, tOther, p}) => ({tThis: tOther, tOther: tThis, p}))
-		assert(false)
 	}
 
 	getAreaInDirSurface(dir1: V3, surface: Surface, aT: number, bT: number): {centroid: V3, area: number} {
@@ -647,10 +627,10 @@ class BezierCurve extends Curve {
             0, 1)
 	}
 
-	magic(t0: number = this.tMin, t1:number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
+	magic(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
 		const max3d = 0.01, eps = 0.01
 		const splits = 20
-		const ts = NLA.arrayFromFunction(splits, i => lerp(t0, t1, i/( splits- 1)))
+		const ts = NLA.arrayFromFunction(splits, i => lerp(t0, t1, i / ( splits - 1)))
 		const ps = ts.map(t => this.at(t))
 		const ns = ts.map(t => this.normalAt(t).unit())
 		const f = (ns: V3[]) => {
@@ -734,7 +714,7 @@ class BezierCurve extends Curve {
 		const items = curve2.magic().map(c => Edge.forCurveAndTs(c).translate(3))
 		console.log(items.length)
 
-		return [Edge.forCurveAndTs(curve2)].concat(			items		)
+		return [Edge.forCurveAndTs(curve2)].concat(items)
 	}
 
 	/**

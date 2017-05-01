@@ -22,7 +22,7 @@ abstract class FaceInfoFactory<T> {
 		return this.info(surface, contour, holes)
 	}
 
-	rotationStart(int, surface: Surface, contour: Edge[], holes: Edge[][] = []): T {
+	rotationStart(surface: Surface, contour: Edge[], holes: Edge[][] = []): T {
 		return this.info(surface, contour, holes)
 	}
 
@@ -36,5 +36,17 @@ abstract class FaceInfoFactory<T> {
 
 	transform(original: Face, m4: M4, desc: string, surface: Surface, contour: Edge[], holes: Edge[][] = []): T {
 		return original.info
+	}
+
+	static makeStatic<T>(staticInfo: T) {
+		return new class extends FaceInfoFactory<T> {
+			constructor() {
+				super()
+			}
+
+			info(surface: Surface, contour: Edge[], holes: Edge[][]): T {
+				return staticInfo
+			}
+		}
 	}
 }

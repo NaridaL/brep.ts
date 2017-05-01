@@ -1,3 +1,4 @@
+type ISInfo = {tThis: number, tOther: number, p: V3}
 abstract class Curve extends Transformable {
 	tIncrement: number
 	hlol: number
@@ -31,17 +32,7 @@ abstract class Curve extends Transformable {
 	}
 
 
-	/**
-	 *
-	 * @param p
-	 * @param tMin Defines interval with tMax in which a start value for t will be searched.
-	 * Result is not necessarily in this interval.
-	 * @param tMax
-	 * @param tStart
-	 */
 	closestTToPoint(p: V3, tStart?: number): number {
-
-
 		// this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
 		// the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
 		// f = (this.at(t) - p) . (this.tangentAt(t)
@@ -51,10 +42,9 @@ abstract class Curve extends Transformable {
 		const df = t => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
 
 		const STEPS = 32
-		const startT = 'undefined' === typeof tStart
-			? NLA.arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
+		const startT = undefined !== tStart ? tStart :
+			NLA.arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
 				.withMax(t => -this.at(t).distanceTo(p))
-			: tStart
 
 		return newtonIterateWithDerivative(f, startT, 16, df)
 	}
@@ -66,7 +56,7 @@ abstract class Curve extends Transformable {
 	 */
 	calcSegmentPoints(aT: number, bT: number, a: V3, b: V3, reversed: boolean, includeFirst: boolean): V3[] {
 		assert(this.tIncrement, 'tIncrement not defined on ' + this)
-		const split = 4 * 62, inc = this.tIncrement
+		const inc = this.tIncrement
 		const points = []
 		if (includeFirst) points.push(a)
 		assert(reversed != aT < bT)
@@ -87,14 +77,28 @@ abstract class Curve extends Transformable {
 		return points
 	}
 
-	distanceToPoint(p: V3): number {
-		return this.at(this.closestTToPoint(p)).distanceTo(p)
+	/**
+	 *
+	 * @param p
+	 * @param tStart Defines interval with tEnd in which a start value for t will be searched.
+	 * Result is not necessarily in this interval.
+	 * @param tEnd
+	 */
+	distanceToPoint(p: V3, tStart?: number, tEnd?: number) {
+		const closestT = this.closestTToPoint(p, tStart, tEnd)
+		return this.at(closestT).distanceTo(p)
+	}
+
+	asSegmentDistanceToPoint(p, tStart, tEnd) {
+		let t = this.closestTToPoint(p, tStart, tEnd)
+		t = NLA.clamp(t, tStart, tEnd)
+		return this.at(t).distanceTo(p)
 	}
 
 	/**
 	 * Behavior when curves are colinear: self intersections
 	 */
-	abstract isInfosWithCurve(curve): {tThis: number, tOther: number, p: V3}[]
+	abstract isInfosWithCurve(curve): ISInfo[]
 
 	abstract at(t: number): V3
 
@@ -112,21 +116,6 @@ abstract class Curve extends Transformable {
 	abstract isTsWithSurface(surface: Surface): number[]
 
 	abstract isTsWithPlane(plane: P3): number[]
-
-	/**
-	 * Should really be abstract, but it works for all the conic is curves, so it's here.
-	 */
-	debugToMesh(mesh, bufferName) {
-		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
-		for (let t = 0; t < Math.PI; t += 0.1) {
-			const p = this.at(t)
-			mesh[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
-			mesh[bufferName].push(p, p.plus(this.normalAt(t).toLength(1)))
-		}
-		mesh[bufferName].push(this.center, this.center.plus(this.f1.times(1.2)))
-		mesh[bufferName].push(this.center, this.center.plus(this.f2))
-		mesh[bufferName].push(this.center, this.center.plus(this.normal))
-	}
 
 	arcLength(startT: number, endT: number, steps?: int): number {
 		assert(startT < endT, 'startT < endT')
@@ -152,19 +141,17 @@ abstract class Curve extends Transformable {
 	 */
 	abstract isColinearTo(curve: Curve): boolean
 
-
 	getAABB(tMin = this.tMin, tMax = this.tMax): AABB {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
-		let tMinAt = this.at(tMin), tMaxAt = this.at(tMax)
-		let roots = this.roots()
-		let mins = new Array(3), maxs = new Array(3)
+		const tMinAt = this.at(tMin), tMaxAt = this.at(tMax)
+		const roots = this.roots()
+		const mins = new Array(3), maxs = new Array(3)
 		for (let dim = 0; dim < 3; dim++) {
-			let tRoots = roots[dim]
+			const tRoots = roots[dim]
 			mins[dim] = Math.min(tMinAt.e(dim), tMaxAt.e(dim))
 			maxs[dim] = Math.max(tMinAt.e(dim), tMaxAt.e(dim))
-			for (let j = 0; j < tRoots.length; j++) {
-				let tRoot = tRoots[j]
+			for (const tRoot of tRoots) {
 				if (tMin < tRoot && tRoot < tMax) {
 					mins[dim] = Math.min(mins[dim], this.at(tRoot).e(dim))
 					maxs[dim] = Math.max(maxs[dim], this.at(tRoot).e(dim))
@@ -178,7 +165,7 @@ abstract class Curve extends Transformable {
 
     abstract roots(): number[][]
 
-    static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number): { tThis: number, tOther: number, p: V3 }[] {
+    static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number): ISInfo[] {
         // the recursive function finds good approximates for the intersection points
         // curve1 function uses newton iteration to improve the result as much as possible
         const handleStartTS = (startT, startS) => {

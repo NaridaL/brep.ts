@@ -2,6 +2,7 @@ import between = NLA.between
 import fuzzyBetween = NLA.fuzzyBetween
 import clamp = NLA.clamp
 import eq0 = NLA.eq0
+import eq = NLA.eq
 import lt = NLA.lt
 import le = NLA.le
 class P3 extends Transformable {
@@ -17,7 +18,7 @@ class P3 extends Transformable {
 	 * @param w signed (rel to normal1) distance from the origin
 	 */
 	constructor(readonly normal1: V3,
-	            readonly w: number) {
+	            readonly w: number = 0) {
 		super()
 		assertVectors(normal1)
 		assertNumbers(w)
@@ -68,7 +69,7 @@ class P3 extends Transformable {
 		return eq(1, Math.abs(this.normal1.dot(line.dir1)))
 	}
 
-	isPerpendicularToPlane(plane) {
+	isPerpendicularToPlane(plane: P3): boolean {
 		assertInst(P3, plane)
 		return eq0(this.normal1.dot(plane.normal1))
 	}
@@ -95,7 +96,7 @@ class P3 extends Transformable {
 		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2) as this
 	}
 
-	distanceToLine(line) {
+	distanceToLine(line): number {
 		assertInst(L3, line)
 		if (!this.isParallelToLine(line)) {
 			return this.distanceToPoint(line.anchor)
@@ -114,12 +115,12 @@ class P3 extends Transformable {
 		return this.containsPoint(line.anchor) && this.isParallelToLine(line)
 	}
 
-	distanceToPointSigned(point) {
+	distanceToPointSigned(point: V3): number {
 		assertInst(V3, point)
 		return this.normal1.dot(point) - this.w
 	}
 
-	distanceToPoint(point) {
+	distanceToPoint(point: V3): number {
 		assertInst(V3, point)
 		return Math.abs(this.normal1.dot(point) - this.w)
 	}

@@ -55,7 +55,7 @@ QUnit.testDifferentSystems('Matrix4x4 eigenValues and eigenVectors', function (a
 QUnit.testDifferentSystems('SemiEllipseCurve.isPointsWithBezier()', function (assert, m4: M4) {
 	const ell = new SemiEllipseCurve(V(-223.34900663163222, -176.63214006755936, 0), V(-169.5891804980124, -35.54247345835796, 0), V(35.54247345835796, -169.5891804980124, 0))
     const bez = new BezierCurve(V(-267.6481190901419, -368.37017217006473, 0), V(563.959389388763, 94.96018577817034, 0), V(-1110.7787051488917, -95.8394860073627, 0), V(-59.14331799274822, -299.7830665459221, 0))
-    const isPoints = ell.isPointsWithBezier(bez)
+    const isPoints = ell.isInfosWithBezier(bez).map(info => info.p)
 	assert.equal(isPoints.length, 3)
 	isPoints.forEach(p => {
 		assert.ok(ell.containsPoint(p), `ell.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`)

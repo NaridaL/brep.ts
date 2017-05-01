@@ -1,3 +1,5 @@
+///<reference path="NLA.qunit.ts"/>
+
 {
 	QUnit.module('BezierCurve')
 

@@ -1,31 +1,10 @@
-class EllipseCurve extends Curve {
-	readonly normal: V3
-	readonly matrix: M4
-	readonly inverseMatrix: M4
+///<reference path="XiEtaCurve.ts"/>
 
-	constructor(readonly center: V3,
-	            readonly f1: V3,
-	            readonly f2: V3,
-	            readonly tMin: number = -PI,
-	            readonly tMax: number = PI) {
-		super(tMin, tMax)
+class EllipseCurve extends XiEtaCurve {
+	constructor(center: V3, f1: V3, f2: V3, tMin: number = -PI, tMax: number = PI) {
+		super(center, f1, f2, tMin, tMax)
 		assert(EllipseCurve.isValidT(tMin))
 		assert(EllipseCurve.isValidT(tMax))
-        assertVectors(center, f1, f2)
-		this.normal = f1.cross(f2)
-		if (!this.normal.isZero()) {
-			this.normal = this.normal.unit()
-			this.matrix = M4.forSys(f1, f2, this.normal, center)
-			this.inverseMatrix = this.matrix.inversed()
-		} else {
-			this.matrix = M4.forSys(f1, f2, f1.unit(), center)
-			const f1p = f1.getPerpendicular()
-			this.inverseMatrix = new M4(
-				1, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 0, 1).times(M4.forSys(f1, f1p, f1.cross(f1p), center).inversed())
-		}
 	}
 
 	// TODO: there'S alsoa commented out test
@@ -98,21 +77,17 @@ class EllipseCurve extends Curve {
 
 	}
 
-	toString(f?) {
-		return `new EllipseCurve(${this.center}, ${this.f1}, ${this.f2})`
+	toString(): string {
+		return callsce('new EllipseCurve', this.center, this.f1, this.f2)
 	}
 
 	static isValidT(t) {
 		return -Math.PI <= t && t <= Math.PI
 	}
 
-	at(t: number) {
+	at(t: number): V3 {
+		// = center + f1 cos t + f2 sin t
 		return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
-	}
-
-	at2(xi: number, eta: number) {
-		// center + f1 xi + f2 eta
-		return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
 	}
 
 	tangentAt(t: number) {
@@ -130,80 +105,49 @@ class EllipseCurve extends Curve {
 		return this.f2.times(xi).minus(this.f1.times(eta))
 	}
 
-	/**
-	 *
-	 */
 	isCircular() {
 		return NLA.eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2)
 	}
 
-
-	equals(obj: any): boolean {
-		return this == obj ||
-			Object.getPrototypeOf(obj) == EllipseCurve.prototype
-			&& this.center.equals(obj.center)
-			&& this.f1.equals(obj.f1)
-			&& this.f2.equals(obj.f2)
-	}
-
-    hashCode(): int {
-	    let hashCode = 0
-        hashCode = hashCode * 31 + this.center.hashCode()
-        hashCode = hashCode * 31 + this.f1.hashCode()
-        hashCode = hashCode * 31 + this.f2.hashCode()
-        return hashCode | 0
-    }
-
-	likeCurve(curve: Curve): boolean {
-		return curve.constructor == EllipseCurve
-			&& this.center.like(curve.center)
-			&& this.f1.like(curve.f1)
-			&& this.f2.like(curve.f2)
+	reversed(): this {
+		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin) as this
 	}
 
 	isColinearTo(curve: Curve): boolean {
-		if (curve.constructor != EllipseCurve) {
+		if (!((x): x is EllipseCurve => x.constructor == this.constructor)(curve)) {
 			return false
 		}
-		const ell = curve
-		if (!this.center.like(ell.center)) {
+		if (!this.center.like(curve.center)) {
 			return false
 		}
-		if (this == ell) {
+		if (this == curve) {
 			return true
 		}
 		if (this.isCircular()) {
-			return ell.isCircular() && NLA.eq(this.f1.length(), ell.f1.length()) && this.normal.isParallelTo(ell.normal)
+			return curve.isCircular() && NLA.eq(this.f1.length(), curve.f1.length()) && this.normal.isParallelTo(curve.normal)
 		} else {
-			let {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = ell.mainAxes()
+			let {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
 			if (f1.length() > f2.length()) {[f1, f2] = [f2, f1]}
 			if (c1.length() > c2.length()) {[c1, c2] = [c2, c1]}
-			console.log(f1.squared(), Math.abs(f1.dot(c1)), f2.squared(), Math.abs(f2.dot(c2)))
 			return NLA.eq(f1.squared(), Math.abs(f1.dot(c1)))
 				&& NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
 		}
 	}
 
-	normalAt(t: number): V3 {
-		return this.tangentAt(t).cross(this.normal)
+	static XYLCValid(pLC: V3): boolean {
+		return eq(1, pLC.lengthXY())
 	}
 
 	/**
 	 * @param hint +-PI, whichever is correct
 	 */
-	pointT(p: V3, hint: number = PI) {
-		assertVectors(p)
-		const p2 = this.inverseMatrix.transformPoint(p)
-		const angle = p2.angleXY()
+	static XYLCPointT(pLC: V3, hint?: number): number {
+		const angle = pLC.angleXY()
 		if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
 			assert(isFinite(hint))
 			return Math.sign(hint) * Math.PI
 		}
 		return angle
-	}
-
-	isOrthogonal(p: V3): boolean {
-		return this.f1.isPerpendicularTo(this.f2)
 	}
 
 	eccentricity() {
@@ -233,10 +177,6 @@ class EllipseCurve extends Curve {
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 
-	transform(m4: M4): this {
-		return new EllipseCurve(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2)) as this
-	}
-
 	rightAngled(): EllipseCurve {
 		const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared()
 		if (NLA.eq0(a)) {
@@ -249,59 +189,12 @@ class EllipseCurve extends Curve {
 			f1.times(-eta).plus(f2.times(xi)))
 	}
 
-	isTsWithSurface(surface: Surface) {
-		if (surface instanceof PlaneSurface) {
-			return this.isTsWithPlane(surface.plane)
-		} else if (surface instanceof CylinderSurface) {
-			const ellipseProjected = surface.baseCurve.transform(M4.projection(this.getPlane(), surface.dir1))
-			return this.isInfosWithEllipse(ellipseProjected).map(info => info.tThis)
-		} else {
-			assert(false)
-		}
-	}
-
-	isTsWithPlane(plane: P3) {
-		assertInst(P3, plane)
-		/*
-		 this: x = center + f1 * cos t + f2 * sin t  (1)
-		 plane:
-		 n := plane.normal1
-		 n DOT x == plane.w           (2)
-		 plane defined by f1/f2
-		 x = center + f1 * xi + f2 * eta         (3)
-		 intersection plane and planef1/f2:
-		 insert (3) into (2):
-		 n DOT center + n DOT f1 * xi + n DOT f2 * eta = plane.w | -n DOT center
-		 n DOT f1 * xi + n DOT f2 * eta = plane.w - n DOT center (4)
-		 points on ellipse have additional condition
-		 eta * eta + xi * xi = 1 (5)
-		 g1 := n DOT f1
-		 g2 := n DOT f2
-		 g3 := w - n DOT center
-		 solve system (5)/(6)
-		 g1 * eta + g2 * eta = g3 (6)
-		 */
-		if (plane.normal1.isParallelTo(this.normal)) {
-			return []
-		}
-		const n = plane.normal1, w = plane.w,
-			center = this.center, f1 = this.f1, f2 = this.f2,
-			g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center)
-
-		const isLC = intersectionUnitCircleLine2(g1, g2, g3)
+	static magic(a: number, b: number, c: number): number[] {
+		const isLC = intersectionUnitCircleLine2(a, b, c)
 		return isLC.map(([xi, eta]) => Math.atan2(eta, xi))
 	}
 
-	getPlane(): P3 {
-		return P3.normalOnAnchor(this.normal, this.center)
-	}
-
-	containsPoint(p: V3): boolean {
-		const pLC = this.inverseMatrix.transformPoint(p)
-		return NLA.eq(1, pLC.lengthXY()) && NLA.eq0(pLC.z)
-	}
-
-	isInfosWithEllipse(ellipse: EllipseCurve): {tThis: number, tOther: number, p: V3}[] {
+	isInfosWithEllipse(ellipse: EllipseCurve): ISInfo[] {
 		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
@@ -372,89 +265,24 @@ class EllipseCurve extends Curve {
 		}
 	}
 
-	isInfosWithLine(line) {
-		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
-		const dirLC = this.inverseMatrix.transformVector(line.dir1)
-		if (NLA.eq0(dirLC.z)) {
-			// local line parallel to XY-plane
-			if (NLA.eq0(anchorLC.z)) {
-				// local line lies in XY-plane
-				// ell: x² + y² = 1 = p²
-				// line(t) = anchor + t dir
-				// anchor² - 1 + 2 t dir anchor + t² dir² = 0
-				const pqDiv = dirLC.dot(dirLC)
-				const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.dot(anchorLC) - 1) / pqDiv)
-				return lineTs.map(tOther => ({
-					tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
-					tOther: tOther,
-					p: line.at(tOther)}))
-			}
-		} else {
-			// if the line intersects the XY-plane in a single point, there can be an intersection there
-			// find point, then check if distance from circle = 1
-			const otherTAtZ0 = anchorLC.z / dirLC.z
-			const isp = dirLC.times(otherTAtZ0).plus(anchorLC)
-			if (NLA.eq(1, isp.lengthXY())) {
-				// point lies on unit circle
-				return [{
-					tThis: SemiEllipseCurve.unitT(isp),
-					tOther: otherTAtZ0,
-					p: line.at(otherTAtZ0)}]
-			}
-		}
-		return []
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, line: L3): ISInfo[] {
+		// ell: x² + y² = 1 = p²
+		// line(t) = anchor + t dir
+		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
+		const pqDiv = dirLC.dot(dirLC)
+		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.dot(anchorLC) - 1) / pqDiv)
+		return lineTs.map(tOther => ({
+			tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
+			tOther: tOther,
+			p: line.at(tOther)}))
 	}
 
-	isInfosWithCurve(curve):{tThis: number, tOther: number, p: V3}[] {
-		if (curve instanceof L3) {
-			return this.isInfosWithLine(curve)
-		}
-		if (curve instanceof BezierCurve) {
-			return this.isInfosWithBezier(curve)
-		}
+	isInfosWithCurve(curve): ISInfo[] {
 		if (curve instanceof EllipseCurve) {
 			return this.isInfosWithEllipse(curve)
 		}
-		assert(false)
+		return super.isInfosWithCurve(curve)
 	}
-
-    isPointsWithBezier(bezier: BezierCurve): V3[] {
-        const bezierLC = bezier.transform(this.inverseMatrix)
-        if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
-            // up to 6 solutions possible
-            const f = t => bezierLC.at(t).squaredXY() - 1
-            // f is polynome degree six, no explicit solutionis possble
-            const possibleTs = NLA.arrayFromFunction(16, i => newtonIterate1d(f, i / 15, 8)).filter(t => f(t) < NLA_PRECISION)
-            return NLA.fuzzyUniques(possibleTs).map(t => bezier.at(t))
-        } else {
-            const possibleISPoints = bezierLC.isTsWithPlane(P3.XY).map(t => bezier.at(t))
-            return possibleISPoints.filter(p => NLA.eq(1, p.lengthXY()))
-        }
-    }
-
-	isInfosWithBezier(bezier: BezierCurve): {tThis: number, tOther: number, p: V3}[] {
-		const localBezier = bezier.transform(this.inverseMatrix)
-		if (new PlaneSurface(P3.XY).containsCurve(bezier)) {
-			return this.isInfosWithBezier2D(bezier)
-		} else {
-			const infos = localBezier.isTsWithPlane(P3.XY).mapFilter(tOther => {
-				const pLC = localBezier.at(tOther)
-				if (NLA.eq(1, pLC.lengthXY())) {
-					return {tOther: tOther, p: bezier.at(tOther), tThis: pLC.angleXY()}
-				}
-			})
-			return infos
-		}
-	}
-
-	isInfosWithBezier2D(bezier:BezierCurve, sMin?:number, sMax?:number):{tThis: number, tOther: number, p: V3}[] {
-        sMin = isFinite(sMin) ? sMin : bezier.tMin
-        sMax = isFinite(sMax) ? sMax : bezier.tMax
-        assertf(() => 0 < Math.PI)
-        assertf(() => sMin < sMax)
-        return Curve.ispsRecursive(this, this.tMin, this.tMax, bezier, sMin, sMax)
-	}
-
 
 	roots(): number[][] {
 		// tangent(t) = f2 cos t - f1 sin t
@@ -482,18 +310,6 @@ class EllipseCurve extends Curve {
 	}
 
 	/**
-	 * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
-	 * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
-	 *
-	 * @param a length of the axis parallel to X axis
-	 * @param b length of the axis parallel to Y axis
-	 * @param center Defaults to V3.O
-	 */
-	static forAB(a: number, b: number, center: V3 = V3.O): EllipseCurve {
-		return new EllipseCurve(center, new V3(a, 0, 0), new V3(0, b, 0))
-	}
-
-	/**
 	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
 	 */
 	static circle(radius: number, center: V3 = V3.O): EllipseCurve {
@@ -509,8 +325,8 @@ class EllipseCurve extends Curve {
 	angleToT(phi: number): number {
 		// atan2(y, x) = phi
 		const phiDir = this.f1.unit().times(Math.cos(phi)).plus(this.f2.rejectedFrom(this.f1).unit().times(Math.sin(phi)))
-		const localDir = this.inverseMatrix.transformVector(phiDir)
-		return localDir.angleXY()
+		const dirLC = this.inverseMatrix.transformVector(phiDir)
+		return dirLC.angleXY()
 	}
 
     static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)
@@ -525,5 +341,3 @@ class EllipseCurve extends Curve {
 }
 EllipseCurve.prototype.hlol = Curve.hlol++
 EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 800)
-EllipseCurve.prototype.tMin = -PI
-EllipseCurve.prototype.tMax = PI

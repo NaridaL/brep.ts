@@ -1,25 +1,14 @@
-class Z {
-	/**
-	 *
-	 * @param re
-	 * @param im
-	 * @returns {Z}
-	 * @constructor Z
-	 * @property {number} re
-	 * @property {number} im
-	 */
-	constructor(re, im) {
-		return Object.create(Z.prototype, {/**@type number */ re:  {value: re}, /**@type number */ im: {value: im}})
-	}
+class Complex {
+	constructor(readonly re: number, readonly im: number) {}
 
 	cbrt0() {
-		var r = Math.hypot(this.re, this.im)
-		var phi3 = Math.atan2(this.im, this.re) / 3
-		var rRoot = Math.cbrt(r)
+		const r = Math.hypot(this.re, this.im)
+		const phi3 = Math.atan2(this.im, this.re) / 3
+		const rRoot = Math.cbrt(r)
 		return Z(rRoot * Math.cos(phi3), rRoot * Math.sin(phi3))
 	}
 
-	plusR(real) {
+	plusR(real: number) {
 		return Z(this.re + real, this.im)
 	}
 
@@ -36,7 +25,7 @@ class Z {
 	}
 
 	div(z) {
-		var divisor = z.re * z.re + z.im * z.im
+		const divisor = z.re * z.re + z.im * z.im
 		return Z((this.re * z.re + this.im * z.im) / divisor, (this.im * z.re - this.re * z.im) / divisor)
 	}
 
@@ -56,15 +45,20 @@ class Z {
 		return Z(this.re, -this.im)
 	}
 
+	negated(): Complex {
+		return Z(-this.re, this.im)
+	}
+
 	toString(roundFunction) {
 		roundFunction = roundFunction || NLA.defaultRoundFunction
 		return `(${roundFunction(this.re)} ${this.im < 0 ? '-' : '+'} ${Math.abs(roundFunction(this.im))} i)`
 	}
 
-	sqr() {
+	sqr(): Complex {
 		return Z(this.re * this.re - this.im * this.im, 2 * this.im * this.re)
 	}
 }
+function Z(re: number, im: number) { return new Complex(re, im)}
 
 Z.sqrt = function (real) {
 	return real < 0 ? Z(0, Math.sqrt(-real)) : Z(Math.sqrt(real), 0)

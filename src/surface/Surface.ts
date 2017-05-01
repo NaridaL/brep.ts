@@ -31,6 +31,10 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 
 	abstract flipped(): Surface
 
+	flipped2(doFlip: boolean): Surface {
+		return doFlip ? this.flipped() : this
+	}
+
 	normalAt(p: V3): V3 {
 		const pmPoint = this.pointToParameterFunction()(p)
 		return this.parametricNormal()(pmPoint.x, pmPoint.y)

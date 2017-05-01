@@ -6,21 +6,51 @@ registerTests({
         assert.ok(isCCW(vertices, V(0, 0, 1)))
         assert.notOk(isCCW(vertices, V(0, 0, -1)))
     },
-    'Face.equals'(assert) {
-        const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
-        const b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(10, 0, 0), V(10, 10, 0)])
-        const c = PlaneFace.forVertices(new P3(V(0, 0, -1), 0), [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)].slice().reverse())
-        assert.ok(a.equals(a))
+	'Face.equals'(assert) {
+		const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
+		const b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(10, 0, 0), V(10, 10, 0)])
+		const c = PlaneFace.forVertices(new P3(V(0, 0, -1), 0), [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)].slice().reverse())
+		assert.ok(a.equals(a))
 
-        assert.ok(a.equals(b))
-        assert.ok(b.equals(a))
+		assert.ok(a.equals(b))
+		assert.ok(b.equals(a))
 
-        assert.notOk(a.equals(c))
-        assert.notOk(c.equals(a))
+		assert.notOk(a.equals(c))
+		assert.notOk(c.equals(a))
 
-        assert.notOk(b.equals(c))
-        assert.notOk(c.equals(b))
-    },
+		assert.notOk(b.equals(c))
+		assert.notOk(c.equals(b))
+	},
+	'Face.trasnform'(assert) {
+    	const loop = Edge.pathFromSVG('m 2 0, 1 1, -2 1 Z')
+		const face = new PlaneFace(P3.XY, loop)
+		const faceMirrored = face.mirroredX()
+	},
+	'rotateEdges'(assert){
+		const chain = Edge.pathFromSVG('m 2 0, 1 1, -2 1 Z')
+			.map(e => e.transform(M4.rotationX(90 * DEG)))
+		linkB3(assert, {edges: chain})
+		const a = B2T.rotateEdges(chain,  TAU / 3, 'rot').flipped()
+		a.assertSanity()
+		linkB3(assert, {a})
+		b2equals(assert, a, B2.EMPTY)
+		const b = B2T.box(4,4,1.4).translate(0, 0, -0.2).rotateX(5*DEG).rotateY(-10*DEG)
+		b2EqualAnd(assert, a, b, B2.EMPTY)
+	},
+	'rotateEdges 2'(assert){
+		const chain = [
+			new StraightEdge(new L3(V(198.46477746372744, 0, 244.94352900661897), V(-0.16064282877602398, 0, -0.9870126045612776)), V(173.9128996557253, 0, 94.093266677553), V(198.46477746372744, 0, 244.94352900661897), 152.83519342300417, 0),
+			new StraightEdge(new L3(V(131.35224103228387, 0, 180.2100595549249), V(0.7197488536413841, 0, 0.6942345336281635)), V(198.46477746372744, 0, 244.94352900661897), V(131.35224103228387, 0, 180.2100595549249), 93.24438113642698, 0),
+			new StraightEdge(new L3(V(173.9128996557253, 0, 94.093266677553), V(-0.44306356566594673, 0, 0.8964901989310186)), V(131.35224103228387, 0, 180.2100595549249), V(173.9128996557253, 0, 94.093266677553), 96.05993794472955, 0)
+		]
+		Edge.assertLoop(chain)
+		linkB3(assert, {edges: chain})
+		const a = B2T.rotateEdges(chain,  TAU / 3, 'rot')
+		a.assertSanity()
+		//const a = B2T.rotateEdges(Edge.reverseLoop(chain),  TAU / 3, 'rot')
+		linkB3(assert, {a})
+		b2equals(assert, a, B2.EMPTY)
+	},
     'B2.like'(assert) {
         const a = B2T.tetrahedron(V(5, 5, 5), V(5, 5, -5), V(10, 12, 1), V(0, 12, 1))
         const b = B2T.tetrahedron(V(5, 5, 5), V(10, 12, 1), V(5, 5, -5), V(0, 12, 1))
@@ -57,7 +87,7 @@ registerTests({
                 new StraightEdge(new L3(V(9, 11, 1), V(-0.9630868246861536, -0.2407717061715384, -0.1203858530857692)), V(9, 11, 1), V(1, 9, 0), 0, 8.306623862918075),
                 new StraightEdge(new L3(V(5, 5, 5), V(-0.5298129428260175, 0.5298129428260175, -0.6622661785325219)), V(1, 9, 0), V(5, 5, 5), 7.54983443527075, 0),
                 new StraightEdge(new L3(V(5, 5, 5), V(0.48507125007266594, 0.7276068751089989, -0.48507125007266594)), V(5, 5, 5), V(9, 11, 1), 0, 8.246211251235321)])], false)
-        assert.B2equals(a, result)
+        b2equals(assert, a, result)
     },
 
 

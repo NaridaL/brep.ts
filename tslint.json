@@ -1,7 +1,7 @@
 {
   "rules": {
     "semicolon": [true, "never"],
-    "quotemark": [true, "single"],
+    "quotemark": [true, "single", "jsx-single"],
     "no-var-keyword": true,
     "array-type": [true, "array"],
 //    "no-unused-variable": [true, "check-parameters", {"ignore-pattern": "^_"}],

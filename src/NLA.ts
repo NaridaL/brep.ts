@@ -1,22 +1,5 @@
-
-
-// I'd use a loop but it kills the type checker.
-const ceil = Math.ceil
-const floor = Math.floor
-const abs = Math.abs
-const sign = Math.sign
-const atan2 = Math.atan2
-const atan = Math.atan
-const cos = Math.cos
-const sin = Math.sin
-const min = Math.min
-const max = Math.max
-const PI = Math.PI
+const {ceil, floor, abs, sign, atan2, cos, sin, min, max, PI, sqrt, cbrt, round, log, pow} = Math
 const TAU = 2 * Math.PI
-const sqrt = Math.sqrt
-const pow = Math.pow
-const round = Math.round
-const log = Math.log
 
 let globalId = 0
 type int = number
@@ -71,6 +54,16 @@ function enableConsole() {
 	}
 }
 
+function getIntervals(ts: number[], min, max): [number, number][] {
+	ts.sort((a, b) => a - b)
+	if (!eq(ts[0], min)) {
+		ts.splice(0, 0, min)
+	}
+	if (!eq(ts.last(), max)) {
+		ts.push(max)
+	}
+	return NLA.arrayFromFunction(ts.length - 1, i => [ts[i], ts[i + 1]])
+}
 
 function assertVectors(...vectors: (Vector | V3)[]) {
     if (NLA_DEBUG) {
@@ -86,7 +79,7 @@ function assertInst(what, ...objs) {
 	if (NLA_DEBUG) {
 		for (let i = 0; i < objs.length; i++) {
 			if (!(objs[i] instanceof what)) {
-				throw new Error('assertInst objs[' + (i) + '] is not a '+what.prototype.constructor.name+'. ' + objs[i].constructor.name + objs[i])
+				throw new Error('assertInst objs[' + (i) + '] is not a '+what.prototype.name+'. ' + objs[i].constructor.name + objs[i])
 			}
 		}
 	}

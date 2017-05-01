@@ -2,43 +2,26 @@
  * x² - y² = 1
  *
  */
-class HyperbolaCurve extends Curve {
-	readonly normal: V3
-	readonly center: V3
-	readonly f1: V3
-	readonly f2: V3
-	readonly matrix: M4
-	readonly inverseMatrix: M4
+class HyperbolaCurve extends XiEtaCurve {
+	constructor(center: V3, f1: V3, f2: V3, tMin: number = -7, tMax: number = 7) {
+		super(center, f1, f2, tMin, tMax)
+	}
 
-	constructor(center: V3, f1: V3, f2: V3, tMin: number = -1, tMax: number = 1) {
-		super(tMin, tMax)
-        assertVectors(center, f1, f2)
-        this.center = center
-        this.f1 = f1
-        this.f2 = f2
-        this.normal = f1.cross(f2).unit()
-        this.matrix = M4.forSys(f1, f2, this.normal, center)
-        this.inverseMatrix = this.matrix.inversed()
-    }
-
-    toSource() {
-        return `new HyperbolaCurve(${this.center} ${this.f1} ${this.f2})`
-    }
-
-    at(t: number) {
+    at(t: number): V3 {
+	    assertNumbers(t)
+	    // = center + f1 cosh t + f2 sinh t
         return this.center.plus(this.f1.times(Math.cosh(t))).plus(this.f2.times(Math.sinh(t)))
-    }
-
-    at2(xi: number, eta: number) {
-        return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
     }
 
     tangentAt(t: number): V3 {
         assertNumbers(t)
+	    // = f1 sinh t + f2 cosh t
         return this.f1.times(Math.sinh(t)).plus(this.f2.times(Math.cosh(t)))
     }
 
-	tangentAt2(xi: number, eta: number) {
+	tangentAt2(xi: number, eta: number): V3 {
+		assertNumbers(xi, eta)
+		// = f1 eta + f2 xi
 		return this.f1.times(eta).plus(this.f2.times(xi))
 	}
 
@@ -47,20 +30,8 @@ class HyperbolaCurve extends Curve {
         return this.f1.times(Math.cosh(t)).plus(this.f2.times(Math.sinh(t)))
     }
 
-    isCircular() {
-        return NLA.eq(this.f1.length(), this.f2.length())
-    }
-
-    equals(curve) {
-        return this == curve ||
-	        curve.constructor == HyperbolaCurve
-            && this.center.like(curve.center)
-            && this.f1.like(curve.f1)
-            && this.f2.like(curve.f2)
-    }
-
     isColinearTo(curve: Curve) {
-        if (curve.constructor != HyperbolaCurve) {
+	    if (!((x): x is HyperbolaCurve => x.constructor == this.constructor)(curve)) {
             return false
         }
         if (!curve.center || !this.center.like(curve.center)) {
@@ -75,19 +46,17 @@ class HyperbolaCurve extends Curve {
             && NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
-    normalAt(t: number): V3 {
-        return this.tangentAt(t).cross(this.normal)
-    }
+	reversed(): this {
+		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin) as this
+	}
 
-    pointT(p, hint) {
-        assertVectors(p)
-        const p2 = this.inverseMatrix.transformPoint(p)
-        return Math.asinh(p2.y)
-    }
+	static XYLCValid(pLC: V3): boolean {
+		return pLC.x > 0 && eq(1, pLC.x * pLC.x - pLC.y * pLC.y)
+	}
 
-    isOrthogonal(): boolean {
-        return this.f1.isPerpendicularTo(this.f2)
-    }
+	static XYLCPointT(pLC: V3): number {
+		return Math.asinh(pLC.y)
+	}
 
     rightAngled(): HyperbolaCurve {
         const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() + f1.squared()
@@ -99,14 +68,6 @@ class HyperbolaCurve extends Curve {
         return new HyperbolaCurve(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(eta).plus(f2.times(xi)))
     }
 
-    transform(m4: M4) {
-        return new HyperbolaCurve(
-        	m4.transformPoint(this.center),
-	        m4.transformVector(this.f1),
-	        m4.transformVector(this.f2),
-            this.tMin, this.tMax) as this
-    }
-
     eccentricity(): number {
         const mainAxes = this.rightAngled()
         const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length()
@@ -114,18 +75,51 @@ class HyperbolaCurve extends Curve {
         return Math.sqrt(1 + b * b / a / a)
     }
 
-    getPlane() {
-        return P3.normalOnAnchor(this.normal, this.center)
+	/**
+	 * http://www.wolframalpha.com/input/?i=x%C2%B2-y%C2%B2%3D1,ax%2Bby%3Dc
+	 * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
+	 */
+    static magic(a: number, b: number, c: number): number[] {
+	    if (eq0(b)) {
+	    	const sqrtVal = snap0(c ** 2 / a ** 2 - 1)
+	    	if (sqrtVal < 0 || c * a < 0) {
+	    		return []
+		    } else if (sqrtVal == 0) {
+	    		return [0]
+		    }
+		    const eta1 = sqrt(sqrtVal)
+		    return [-Math.asinh(eta1), Math.asinh(eta1)]
+	    } else if (eq(abs(a), abs(b))) {
+	    	if (le(c * a, 0)) {
+	    		return []
+		    }
+		    const eta = sign(a * b) * (c ** 2 - a ** 2) / 2 / a / c
+		    return [Math.asinh(eta)]
+	    } else {
+		    const sqrtVal = snap0(b ** 2 * (-(a ** 2) + b ** 2 + c ** 2))
+		    if (sqrtVal < 0) {
+			    return []
+		    }
+		    const xi1 = (a * c - sqrt(sqrtVal)) / (a ** 2 - b ** 2)
+		    const xi2 = (a * c + sqrt(sqrtVal)) / (a ** 2 - b ** 2)
+		    const eta1 = (b ** 2 * c - a * sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
+		    const eta2 = (b ** 2 * c + a * sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
+		    return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter(x => x)
+	    }
+
     }
 
-	containsPoint(p: V3): boolean {
-        const pLC = this.inverseMatrix.transformPoint(p)
-        return pLC.x > 0 && NLA.eq0(pLC.z) && NLA.eq(1, pLC.x * pLC.x - pLC.y * pLC.y)
-    }
+	roots(): number[][] {
+		// tangent(t) = f1 sinh t + f2 cosh t = 0
+		// tangentAt2(xi, eta) = f1 eta + f2 xi = V3.O
+		// xi² - eta² = 1 (by def for hyperbola)
 
-    static forAB(a: number, b: number, center: V3): HyperbolaCurve {
-        return new HyperbolaCurve(center || V3.O, V(a, 0, 0), V(0, b, 0))
-    }
+		return NLA.arrayFromFunction(3, dim => {
+			const a = this.f2.e(dim), b = this.f1.e(dim)
+			return HyperbolaCurve.magic(a, b, 0)
+		})
+	}
 
-    static UNIT = new HyperbolaCurve(V3.O, V3.X, V3.Y)
+    static XY = new HyperbolaCurve(V3.O, V3.X, V3.Y)
 }
+HyperbolaCurve.prototype.tIncrement = PI / 16

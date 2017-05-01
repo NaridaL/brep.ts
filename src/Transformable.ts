@@ -15,16 +15,18 @@ abstract class Transformable extends NLA.BaseObject {
 		return this.mirrored(P3.XY)
 	}
 
-	translate(x: number, y: number = 0, z: number = 0): this {
-		return this.transform(M4.translation(x, y, z), `.translate(${x}, ${y}, ${z})`) as this
+	translate(x: number, y?: number, z?: number): this
+	translate(v: V3): this
+	translate(...args): this {
+		return this.transform(M4.translation.apply(undefined, args),
+			callsce.call(undefined, '.translate', ...args)) as this
 	}
 
-	scale(f): this
-	scale(x: number, y: number, z: number): this
-	scale(x, y?, z?): this {
-        return 1 == arguments.length
-            ? this.transform(M4.scaling(x), `.scale(${x})`) as this
-            : this.transform(M4.scaling(x, y, z), `.scale(${x}, ${y}, ${z})`) as this
+	scale(x: number, y?: number, z?: number): this
+	scale(f: V3): this
+	scale(...args): this {
+		return this.transform(M4.scaling.apply(undefined, args),
+			callsce.call(undefined, '.translate', ...args)) as this
 	}
 
 	rotateX(radians: raddd): this {
@@ -40,7 +42,6 @@ abstract class Transformable extends NLA.BaseObject {
 	}
 
     rotate(rotationCenter: V3, rotationAxis: V3, radians: raddd): this {
-        console.log(M4.rotationLine(rotationCenter, rotationAxis, radians).str)
         return this.transform(M4.rotationLine(rotationCenter, rotationAxis, radians),
             `.rotate(${rotationCenter.sce}, ${rotationAxis.sce}, ${radians})`) as this
     }

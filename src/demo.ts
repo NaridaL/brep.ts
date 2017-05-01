@@ -3,7 +3,7 @@ const demos = []
 function makeDemo(id: string, f: (...args: any[]) => B2 | B2[], args) {
 	demos.push({id, f, args})
 }
-window.onload = async function () {
+async function demoMain() {
 	await B2T.loadFonts()
 	demos.forEach((demo, demoi) => {
 		//if (demoi !== 0) return

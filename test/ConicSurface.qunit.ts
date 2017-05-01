@@ -1,3 +1,4 @@
+
 {
 	QUnit.module('ConicSurface')
 	const UCS = ConicSurface.UNIT
@@ -5,6 +6,17 @@
 		'testSurface'(assert) {
 			testParametricSurface(assert, UCS)
 			testParametricSurface(assert, ConicSurface.UNIT.scale(2, 2, 1))
+		},
+		'testLoopCCW'(assert) {
+			const surface = new ConicSurface(V(0, 0, 53.51411369448604),V(198.46477746372744, 0, 0),V(0, 198.46477746372744, 0),V(0, 0, 191.42941531213293)).scale(1/200)
+			const loop = [
+				new StraightEdge(new L3(V(131.35224103228387, 0, 180.2100595549249), V(0.7197488536413841, 0, 0.6942345336281635)), V(131.35224103228387, 0, 180.2100595549249), V(198.46477746372744, 0, 244.94352900661897), 0, 93.24438113642698),
+				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 244.94352900661897),V(198.46477746372744, 0, 0),V(0, 198.46477746372744, 0),0,3.141592653589793),V(198.46477746372744, 0, 244.94352900661897),V(-198.46477746372744, 2.4304925446444556e-14, 244.94352900661897),0,3.141592653589793,null,V(0, 198.46477746372744, 0),V(-2.4304925446444556e-14, -198.46477746372744, 0)),
+				new StraightEdge(new L3(V(-131.35224103228387, 1.6086010154101807e-14, 180.2100595549249), V(-0.7197488536413841, 8.814381298018978e-17, 0.6942345336281635)), V(-198.46477746372744, 2.4304925446444556e-14, 244.94352900661897), V(-131.35224103228387, 1.6086010154101807e-14, 180.2100595549249), 93.24438113642698, 0),
+				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 180.2100595549249),V(131.35224103228387, 0, 0),V(0, 131.35224103228387, 0),0,3.141592653589793),V(-131.35224103228387, 1.6086010154101807e-14, 180.2100595549249),V(131.35224103228387, 0, 180.2100595549249),3.141592653589793,0,null,V(1.6086010154101807e-14, 131.35224103228387, 0),V(0, -131.35224103228387, 0))
+			].map(e => e.scale(1/200))
+			testLoopCCW(assert, surface, Edge.reverseLoop(loop))
+			testLoopCCW(assert, surface.flipped(), loop)
 		},
 		'isCoplanarTo'(assert) {
 			assert.ok(UCS.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
@@ -27,9 +39,21 @@
 			assert.ok(ell2Cone.isCoplanarTo(ell1Cone))
 		},
 		'isCurvesWithPlane'(assert) {
-			testISCurves(assert, UCS, new P3(V(1, 1, 2).unit(), 4), 1)
+			testISCurves(assert, UCS, new P3(V(1, 1, 2).unit(), 4), 2)
 			testISCurves(assert, UCS, P3.XY.translate(0, 0, 3), 1)
 			testISCurves(assert, UCS, P3.XY.translate(0, 0, 3).flipped(), 1)
+		},
+		'isCurvesWithPlane 2'(assert) {
+			testISCurves(assert, ConicSurface.UNIT, P3.ZX, 2)
+			testISCurves(assert, ConicSurface.UNIT, P3.ZX.flipped(), 2)
+			testISCurves(assert, ConicSurface.UNIT, P3.YZ, 2)
+			testISCurves(assert, ConicSurface.UNIT, P3.YZ.flipped(), 2)
+			testISCurves(assert, ConicSurface.UNIT, new P3(V(1, 0, 1).unit(), 4), 1)
+		},
+		'isCurvesWithPlane hyperbolas'(assert) {
+			const plane = new P3(V(2, 0, -1).unit(), 1)
+			testISCurves(assert, UCS, plane, 1)
+			testISCurves(assert, UCS, plane.flipped(), 1)
 		},
 		'containsParabola'(assert) {
 			const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]
@@ -38,6 +62,13 @@
 			const c2 = UCS.shearedX(2, 3)
 			const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearedX(2, 3))[0]
 			assert.ok(c2.containsParabola(pb2))
+		},
+		'containsHyperbola'(assert) {
+			const s = new ConicSurface(V(-242.1625189124994, 38.960257711878945, 0),V(197.87979681325515, -15.226749714620981, 2.4304925446444556e-14),V(2.4233285978328154e-14, -1.8647390299428456e-15, -198.46477746372744),V(14.686977871964286, 190.86517159433123, 0))
+			const c = new HyperbolaCurve(V(-242.16251891249937, 38.960257711878945, -100.00000000000003),V(7.400294429901329, 96.17080372320217, 0),V(-99.70524711843181, 7.672268051394617, -1.8369701987210304e-14))
+
+			linkB2(assert, `viewer.html?meshes=[${s.sce}.toMesh()]&edges=[Edge.forCurveAndTs(${c.sce})]`)
+			assert.ok(s.containsCurve(c))
 		},
 		'containsPoint'(assert) {
 			const face = B2T.cone(1,1,PI).faces.find(face => face.surface instanceof ConicSurface)

@@ -22,7 +22,7 @@ module.exports = function(config) {
       'src/Plane3.ts',
       'src/Line.ts',
       'src/curve/Line3.ts',
-      'src/editor.ts',
+      'src/editor/editor.ts',
       'src/curve/HyperbolaCurve.js',
       'src/curve/ParabolaCurve.js',
       'src/surface/Surface.js',

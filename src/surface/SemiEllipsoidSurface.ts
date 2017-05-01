@@ -97,16 +97,6 @@ class SemiEllipsoidSurface extends Surface {
 			}
 			return result
 		}
-		function getIntervals(ts: number[], min, max): [number, number][] {
-			ts.sort((a, b) => a - b)
-			if (!eq(ts[0], min)) {
-				ts.splice(0, 0, min)
-			}
-			if (!eq(ts.last(), max)) {
-				ts.push(max)
-			}
-			return NLA.arrayFromFunction(ts.length - 1, i => [ts[i], ts[i + 1]])
-		}
 
 		//return []
 		const surfaceLC = surface.transform(this.inverseMatrix)

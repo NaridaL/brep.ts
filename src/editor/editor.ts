@@ -1,4 +1,4 @@
-
+///<reference path="Feature.ts"/>
 const MooEl: ElementConstructor = Element
 function formatStack(stack) {
 	const re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
@@ -369,42 +369,6 @@ function paintConstraints(sketch: Sketch) {
 	})
 }
 
-class PlaneDefinition {
-	/*
-	 if ("face" == feature.planeType && feature.faceName) {
-	 var face = modelBREP.faces.find(face => face.name == feature.faceName)
-	 var plane = face.surface.plane, right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
-
-	 var cp
-	 planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal1.times(feature.offset)),
-	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
-	 }
-	 if ("immediate" == feature.planeType) {
-	 var plane = eval(feature.source), right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
-
-	 planes.push(new CustomPlane(plane.anchor,
-	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
-	 }
-	 */
-	readonly type = 'planeDefinition'
-	planeId = 'plane' + globalId++
-	name = 'plane' + globalId++
-	planeType = 'dynamic'
-	source = ''
-	offset = 0
-	angle = 0
-	whats = []
-	flipped = false
-
-	toSource(line) {
-		return `new PlaneDefinition()`
-	}
-
-	dependentOnNames() {
-		return this.whats
-	}
-}
-NLA.registerClass(PlaneDefinition)
 
 function serializeFeatures(features) {
 	return serialize(features)
@@ -468,6 +432,8 @@ function directionObjectToVector(dirObj) {
 		throw new Error('uuuh' + dirObj)
 	}
 }
+const modelColorCount = 8
+const modelColors = chroma.scale(['#59f7ff', '#ff2860']).mode('lab').colors(modelColorCount).map(s => chroma(s).gl())
 function rebuildModel() {
 	const DISABLE_CONSOLE = false
 	DISABLE_CONSOLE && disableConsole()
@@ -500,8 +466,9 @@ function rebuildModel() {
 
 	const loopEnd = -1 == rebuildLimit ? featureStack.length : min(rebuildLimit, featureStack.length)
 	for (let featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
+		const color = modelColors[featureIndex % modelColorCount]
 		const feature = featureStack[featureIndex]
-		try {
+		//try {
 		if (feature instanceof Sketch) {
 			feature.plane = feature.planeRef.getOrThrow()
 			//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(),
@@ -511,8 +478,6 @@ function rebuildModel() {
 			feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed()
 			feature.recalculate()
 			feature.elements.forEach(el => publish(el.name, el, feature))
-		} else if (feature.type && feature.type == 'extrude') {
-			feature.apply(publish)
 		} else if (feature.type && 'planeDefinition' == feature.type) {
 			const sel = feature.whats.map(w => w.getOrThrow())
 			let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
@@ -531,21 +496,17 @@ function rebuildModel() {
 					right, up, feature.planeId, 0xFF4500, -500, 500, -500, 500))
 			}
 			publish(feature.name, cp)
-		} else if (feature instanceof Pattern) {
-			const sel = feature.direction.map(w => w.getOrThrow())
-			const dir = MODES.SELECT_DIRECTION.magic(sel).times(feature.directionFlipped ? -1 : 1)
-			for (let i = 0; i < feature.count; i++) {
-				const offset = dir.times((i + 1) * feature.intervalLength)
-				const matrix = M4.translation( offset)
-				feature.feature.getOrThrow().apply(publish,matrix, feature)
-			}
+		} else if (feature instanceof Pattern
+			|| feature instanceof Extrude
+			|| feature instanceof Rotate) {
+			feature.apply(publish, color)
 		} else {
 			//noinspection ExceptionCaughtLocallyJS
 			throw new Error('unknown feature')
 		}
 		// brepMesh.computeWireframeFromFlatTriangles()
 		// brepMesh.compile()
-
+try{
 		} catch (error) {
 			let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
 
@@ -649,20 +610,23 @@ function drawPoints(size: number = 2) {
 		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.includes(p) ? 0xff0000 : 0xcccc00), size))
 }
 
-
+function conicPainter(mode, ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
+	shaders.ellipse3d.uniforms({
+		f1: ellipse.f1,
+		f2: ellipse.f2,
+		center: ellipse.center,
+		color: rgbToVec4(color),
+		startT: startT,
+		endT: endT,
+		scale: width,
+		mode: mode
+	}).draw(meshes.pipe)
+}
 const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int, startT: number, endT: number, width: number) => void} = {
-	[SemiEllipseCurve.name](ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
-		shaders.ellipse3d.uniforms({
-			f1: ellipse.f1,
-			f2: ellipse.f2,
-			center: ellipse.center,
-			color: rgbToVec4(color),
-			startT: startT,
-			endT: endT,
-			scale: width,
-			mode: 0 // ellipse
-		}).draw(meshes.pipe)
-	},
+	[SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
+	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
+	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
+	[HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
 	[BezierCurve.name](curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
 		shaders.bezier3d.uniforms({
 			p0: curve.p0,
@@ -690,12 +654,9 @@ const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int
 		gl.popMatrix()
 	},
 }
-CURVE_PAINTERS[EllipseCurve.name] = CURVE_PAINTERS[SemiEllipseCurve.name]
 
 
-function paintLineXY(a, b, color?, width?) {
-	color = color || paintDefaultColor
-	width = width || 2
+function paintLineXY(a, b, color = paintDefaultColor, width = 2) {
 	const ab = b.minus(a)
 	if (ab.isZero()) { return }
 	const abT = ab.getPerpendicular().toLength(width)
@@ -865,7 +826,7 @@ function segmentIntersectsRay(a, b, p, dir) {
 	return t > 0 && s >= 0 && s <= 1
 }
 function template(templateName, map): HTMLElement {
-	let html = $<HTMLScriptElement>(templateName).text
+	let html = $<HTMLScriptElement>(templateName).text || $<HTMLScriptElement>(templateName).innerHTML
 	for (const key in map) {
 		html = html.replace(new RegExp('\\$' + key, 'g'), map[key])
 	}
@@ -883,30 +844,18 @@ function updateFeatureDisplay() {
 			div.adopt(new MooEl('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
 			// div.adopt(<div class='rebuildLimit'>REBUILD LIMIT</div>)
 		}
+		const snAndNames = {
+			[Extrude.name]: ['EXTR', MODES.EXTRUDE],
+			[Rotate.name]: ['ROTA', MODES.ROTATE],
+			[Sketch.name]: ['SKTC', MODES.SKETCH],
+			[Pattern.name]: ['PTRN', MODES.PATTERN],
+			[PlaneDefinition.name]: ['PLNE', MODES.PLANE_DEFINITION],
+		}
 		let newChild
-		if (feature.type == 'extrude') {
-			newChild = template('templateFeatureExtrude', {what: 'EXTR', name: feature.name})
-			newChild.getElement('[name=edit]').onclick = function () {
-				modePush(MODES.EXTRUDE, feature)
-			}
-		} else if (feature.type == 'planeDefinition') {
-			newChild = template('templateFeatureExtrude', {what: 'PLNE', name: feature.planeId})
-			newChild.getElement('[name=edit]').onclick = function () {
-				modePush(MODES.PLANE_DEFINITION, feature)
-			}
-		} else if (feature instanceof Sketch) {
-			newChild = template('templateFeatureExtrude', {what: 'SKCH', name: feature.name})
-			newChild.getElement('[name=edit]').onclick = function () {
-				modePush(MODES.SKETCH, feature)
-			}
-		} else if (feature instanceof Pattern) {
-			newChild = template('templateFeatureExtrude', {what: 'PTRN', name: feature.name})
-			newChild.getElement('[name=edit]').onclick = function () {
-				modePush(MODES.PATTERN, feature)
-			}
-		} else {
-			console.log(feature)
-			throw new Error('Unknown feature' + feature.toSource() + feature.constructor.name)
+		const [sn, mode] = snAndNames[feature.constructor.name]
+		newChild = template('templateFeatureExtrude', {what: sn, name: feature.name})
+		newChild.getElement('[name=edit]').onclick = function () {
+			modePush(mode, feature)
 		}
 		newChild.inject(div)
 		newChild.getElement('[name=delete]').onclick = function () {
@@ -1131,7 +1080,8 @@ NLA.registerClass(NameRef)
 
 
 function mapReverse(map, value) {
-	let it = map.keys(), key
+	const it = map.keys()
+	let key
 	while (key = it.next().value) {
 		if (map.get(key) == value) {
 			return key
@@ -1142,8 +1092,8 @@ function initMeshes(_meshes) {
 	_meshes.sphere1 = GL.Mesh.sphere(2)
 	_meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
 	_meshes.text = GL.Mesh.plane()
-	_meshes.vector = GL.Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, Math.PI * 2, 16, true)
-	_meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, Math.PI * 2, 8, true)
+	_meshes.vector = GL.Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true)
+	_meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
 	_meshes.xyLinePlane = GL.Mesh.plane()
 }
 function initShaders(_shaders) {
@@ -1281,8 +1231,9 @@ function initNavigationEvents(_gl = gl, eye, paintScreen) {
 //const cylface = cyl.faces.find(face => face instanceof RotationFace)//.rotateX(50 * DEG)
 //assert(cylface.surface.facesOutwards())
 //const cyl = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
-function tooltipShowEl(htmlContent: string, target: HTMLElement) {
+function tooltipShowEl(htmlContent: string, target: HTMLElement, side) {
 	const tipWrap = $('tip-wrap') as HTMLDivElement
+	const arrow = tipWrap.getElement('#tip-arrow') as HTMLDivElement
 	assert(tipWrap)
 	const tip = $('tip') as HTMLDivElement
 	tipWrap.setStyle('visibility', 'visible')
@@ -1291,44 +1242,77 @@ function tooltipShowEl(htmlContent: string, target: HTMLElement) {
 	const tipSize = tipWrap.getSize()
 	const targetPos = target.getPosition()
 	const arrowSize = 8
-	if (window.innerHeight - targetPos.y < tipSize.y) {
-		// place on top
-		tipWrap.setStyle('top', (targetPos.y - tipSize.y - 16) + 'px')
-		$('tip-arrow').setStyles({
-			top: 'auto',
-			bottom: '-16px',
-			borderWidth: '16px 16px 0px'
+	side = side || 'bottom'
+	const color = tip.getStyle('background-color')
+	const borderColor = ['top', 'right', 'bottom', 'left']
+		.map(s => s == side ? color : 'transparent').join(' ')
+	if ('left' == side || 'right' == side) {
+		const tipTop = targetPos.y + tipSize.y <=window.innerHeight
+			? targetPos.y
+			: targetPos.y + targetSize.y - tipSize.y
+		//const borderColor = 'red blue green purple'
+		const arrowRight = 'left' == side ? '' + -arrowSize * 2 + 'px' : 'auto'
+		const arrowLeft = 'right' == side ? '' + -arrowSize * 2 + 'px' : 'auto'
+		arrow.setStyles({
+			top: '' + (targetPos.y - tipTop + targetSize.y / 2 - arrowSize) + 'px',
+			bottom: 'auto',
+			left: arrowLeft,
+			right: arrowRight,
+			borderColor,
+			borderWidth: arrowSize + 'px'
 		})
+		const tipLeft = 'left' == side
+			? targetPos.x - arrowSize - tipSize.x
+			: targetPos.x + targetSize.x + arrowSize
+		tipWrap.setStyle('left', tipLeft + 'px')
+		tipWrap.setStyle('top', tipTop + 'px')
 	} else {
-		const x = targetPos.x + tipSize.x <= window.innerWidth
+		const tipLeft = targetPos.x + tipSize.x <= window.innerWidth
 			? targetPos.x
 			: targetPos.x + targetSize.x - tipSize.x
+		const tipTop = 'top' == side
+			? targetPos.y - arrowSize - tipSize.y
+			: targetPos.y + targetSize.y + arrowSize
+		const arrowTop = 'bottom' == side ? '' + -arrowSize * 2 + 'px' : 'auto'
+		const arrowBottom = 'top' == side ? '' + -arrowSize * 2 + 'px' : 'auto'
 		// place below
 		$('tip-arrow').setStyles({
-			top: '' + -arrowSize + 'px',
-			left: '' + (targetPos.x - x + targetSize.x / 2 - arrowSize) + 'px',
-			bottom: 'auto',
-			borderWidth: `0px ${arrowSize}px ${arrowSize}px`
+			top: arrowTop,
+			bottom: arrowBottom,
+			left: '' + (targetPos.x - tipLeft + targetSize.x / 2 - arrowSize) + 'px',
+			right: 'auto',
+			borderColor,
+			borderWidth: arrowSize + 'px'
 		})
-		tipWrap.setStyle('left', (x) + 'px')
-		tipWrap.setStyle('top', (targetPos.y + arrowSize + targetSize.y) + 'px')
+		tipWrap.setStyle('left', tipLeft + 'px')
+		tipWrap.setStyle('top', tipTop + 'px')
 	}
 }
 function initToolTips() {
-	const DELAY_DEFAULT = 1000;
-	let timeout
-	window.addEventListener('mouseover', function (e) {
-		const el = e.target as HTMLElement
-		const tip = el.dataset.tooltip
-		if (tip) {
+	const DELAY_DEFAULT = 1000
+	let timeout, target
+
+	const handler = function (e) {
+		let el: any = e.target, tt
+		while (!(tt = el.dataset.tooltip || el.dataset.tooltipsrc) && el != document.body) {
+			el = el.getParent()
+		}
+		if (tt) {
+			target = el
 			timeout = setTimeout(() => {
-				tooltipShowEl(tip, el)
+				const html = el.dataset.tooltip || $(el.dataset.tooltipsrc).innerHTML
+				tooltipShowEl(html, el, el.dataset.tooltipside)
 			}, DELAY_DEFAULT)
 		}
-	})
+	}
+	window.addEventListener('mouseover', handler, true)
 	window.addEventListener('mouseout', function (e) {
-		clearTimeout(timeout)
-		tooltipHide()
+		console.log('mouseout', timeout, target)
+		if (e.target == target) {
+			clearTimeout(timeout)
+			tooltipHide()
+			target = undefined
+		}
 	})
 	$('tip-wrap').addEvent('mouseover', tooltipHide)
 }
@@ -1367,6 +1351,7 @@ window.onload = function () {
 	const b = editingSketch && editingSketch.elements.find(el => el instanceof SketchBezier).toBrepEdge().curve
 	//	console.log(mesh.vertices)
 
+
 	initNavigationEvents(gl, eye, paintScreen)
 	initOtherEvents()
 	initPointInfoEvents()
@@ -1383,19 +1368,22 @@ window.onload = function () {
 		//initModel()
 	}
 
+	const feature = new Rotate()
 	rebuildModel() // necessary to init planes
 	updateFeatureDisplay()
 	rebuildModel() // so warning will show
 	paintScreen()
 	const lastInterst = featureStack.slice().reverse().find(f => f instanceof Sketch)
-	lastInterst && modePush(MODES.SKETCH, lastInterst)
 
 }
 
 function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points: V3[], edges: Edge[],
                      mindist: number,
-                     ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges')[]) {
+                     ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges' | 'features')[]) {
 	let hoverHighlight = null, nearest = Infinity
+
+	const checkFeatures = consider.includes('features')
+	assert(!checkFeatures || !consider.includes('faces'))
 
 	function checkEl(el, distance) {
 		if (distance < nearest) {
@@ -1404,9 +1392,9 @@ function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points
 		}
 	}
 
-	if (faces && consider.includes('faces')) {
+	if (faces && (consider.includes('faces') || consider.includes('features'))) {
 		for (const face of faces) {
-			checkEl(face, face.intersectsLine(mouseLine))
+			checkEl(checkFeatures ? face.info.feature : face, face.intersectsLine(mouseLine))
 		}
 	}
 	if (planes && consider.includes('planes')) {
@@ -1473,10 +1461,8 @@ function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points
 }
 /**
  * Transforms mouse positions on the screen into a line in world coordinates.
- * @param {{x: number, y: number}} pos
- * @returns {L3}
  */
-function getMouseLine(pos) {
+function getMouseLine(pos: {x: number, y: number}): L3 {
 	const ndc1 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 0)
 	const ndc2 = V(pos.x * 2 / gl.canvas.width - 1, -pos.y * 2 / gl.canvas.height + 1, 1)
 	//console.log(ndc)
@@ -1488,16 +1474,9 @@ function getMouseLine(pos) {
 
 
 function setupSelectors(el, feature, mode) {
-
-	el.getElements('.face-select, .plane-select, .segment-select, .direction-select, .feature-select')
+	el.getElements('.face-select, .plane-select, .segment-select, .direction-select, .features-select')
 		.removeEvents()
 		.removeClass('selecting')
-		.addEvents(tooltipEvents)
-		.each(el => {
-			const prop = feature[el.dataset.featureProperty]
-			prop && el.set('text', prop.ref)
-			el.linkRef = prop
-		})
 		.addEvent('mouseover', function (e) {
 			if (this.linkRef && this.linkRef.get) {
 				const target = this.linkRef.get()
@@ -1529,16 +1508,23 @@ function setupSelectors(el, feature, mode) {
 			})
 		})
 
-	el.getElements('.feature-select')
+	el.getElements('.features-select')
+		.each(el => {
+			el.dataset.tooltip = 'Select features by clicking on them in the model or the feature stack.'
+			el.dataset.tooltipside = 'left'
+			const whats = feature[el.dataset.featureProperty].map(r => r.get())
+			el.set('text', whats.map(w => w.name).join())
+		})
 		.addEvent('click', function (e) {
-			const selector = this
+			const el = this
 			this.addClass('selecting')
-			selector.set('text', 'Click on a feature')
+			el.set('text', 'Click on a feature')
 			modePush(MODES.SELECT_FEATURE, function (ref) {
-				selector.removeClass('selecting')
-				selector.set('text', ref.ref)
+				const whats = ref.map(r => r.getOrThrow())
+				el.removeClass('selecting')
+				el.set('text', whats.map(w => w.name).join())
 
-				feature[selector.dataset.featureProperty] = ref
+				feature[el.dataset.featureProperty] = ref
 				rebuildModel()
 			})
 		})
@@ -1574,14 +1560,17 @@ function setupSelectors(el, feature, mode) {
 				rebuildModel()
 			})
 		})
+
 	el.getElements('.direction-select')
 		.addEvent('click', function (e) {
 			const selector = this
 			this.addClass('selecting')
-			selector.set('text', 'Click on a sketch segment')
 			modePush(MODES.SELECT_DIRECTION, function (dirRefs) {
 				selector.removeClass('selecting')
-				selector.set('text', 'magic')
+				const things = dirRefs.map(r => r.get())
+				const [vector, type] = MODES.SELECT_DIRECTION.magic(things)
+				selector.getElement('.direction-select-info').set('text', type)
+				selector.getElement('.direction-select-things').set('text', things.map(t => t.name).join('\n'))
 				selector.linkRefs = dirRefs
 
 				feature[selector.dataset.featureProperty] = dirRefs
@@ -1591,7 +1580,11 @@ function setupSelectors(el, feature, mode) {
 
 	el.getElements('.string-id-input, .select-text')
 		.removeEvents()
-		.each(el => el.value = feature[el.dataset.featureProperty])
+		.each(el => {
+			el.value = feature[el.dataset.featureProperty]
+			el.dataset.tooltip = 'Feature ID. Must be unique.'
+			el.dataset.tooltipside = 'left'
+		})
 		.addEvent('change', function (e) {
 			// TODO: check if unique
 			const propName = this.dataset.featureProperty
@@ -1643,6 +1636,7 @@ function setupSelectors(el, feature, mode) {
 		.addEvent('click', function () {
 			modeEnd(mode)
 		})
+	el.getElement('[name=done]').dataset.tooltip = 'Finish editing. Shortcut: MMB'
 	el.getElement('[name=delete]')
 		.removeEvents()
 		.addEvent('click', function () {
@@ -1690,6 +1684,7 @@ function exportModel() {
 	saveAs(brepMesh.toBinarySTL(), 'export.stl')
 }
 function clicky() {
+	MODES.PATTERN.vue.$forceUpdate()
 	for (let j = 0; j < 1; j++) {
 		editingSketch.gaussNewtonStep()
 	}
@@ -1923,6 +1918,7 @@ function makeSelCoincident() {
 
 function faceSketchPlane() {
 	const plane = editingSketch.plane
+	if (!plane) return
 	const viewLine = L3.throughPoints(eye.eyePos, eye.eyeFocus)
 	eye.eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.O)
 	eye.eyePos = eye.eyeFocus.plus(plane.normal1.times(100))
@@ -1935,7 +1931,6 @@ function editable(str: string) {
 		console.log(target)
 	}
 }
-abstract class Feature {}
 class Extrude extends Feature {
 
 	readonly type: string = 'extrude'
@@ -1963,7 +1958,7 @@ class Extrude extends Feature {
 		return []
 	}
 
-	apply(publish, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
 		const feature = this
 		const loopSegment = feature.segmentName.getOrThrow()
 		const loopSketch = loopSegment.sketch
@@ -1982,7 +1977,7 @@ class Extrude extends Feature {
 		//console.log("polypoints", polygonPoints, polygonPoints.toSource(),
 		// loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
 		type FI = { feature: Feature, color: number[] }
-		const featureFaceInfo = { feature: genFeature, color: chroma.random().gl() }
+		const featureFaceInfo = { feature: genFeature, color }
 		const infoFactory = new class extends FaceInfoFactory<FI> {
 			constructor() {
 				super()
@@ -2018,21 +2013,179 @@ class Extrude extends Feature {
 		modelBREP.vertexNames && modelBREP.vertexNames.forEach((name, p) => publish(name, p, feature))
 	}
 }
+class PlaneDefinition extends Feature {
+	/*
+	 if ("face" == feature.planeType && feature.faceName) {
+	 var face = modelBREP.faces.find(face => face.name == feature.faceName)
+	 var plane = face.surface.plane, right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
+
+	 var cp
+	 planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal1.times(feature.offset)),
+	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
+	 }
+	 if ("immediate" == feature.planeType) {
+	 var plane = eval(feature.source), right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
+
+	 planes.push(new CustomPlane(plane.anchor,
+	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
+	 }
+	 */
+	readonly type = 'planeDefinition'
+	planeId = 'plane' + globalId++
+	name = 'plane' + globalId++
+	planeType = 'dynamic'
+	source = ''
+	offset = 0
+	angle = 0
+	whats = []
+	flipped = false
+
+	toSource(line) {
+		return `new PlaneDefinition()`
+	}
+
+	dependentOnNames() {
+		return this.whats
+	}
+}
+NLA.registerClass(PlaneDefinition)
+class Rotate extends Feature {
+
+	readonly type: string = 'extrude'
+
+	constructor(public name: string = 'rotate' + (globalId++),
+	            private _segmentName: NameRef = NameRef.UNASSIGNED,
+	            public axis: any[] = [],
+	            public start: raddd = 0,
+	            public end: raddd = TAU,
+	            public operation: 'minus' | 'plus' = 'minus') {
+		super()
+		assertInst(NameRef, _segmentName)
+	}
+
+	set segmentName(sn: NameRef) {
+		assertInst(NameRef, sn)
+		this._segmentName = sn
+	}
+
+	get segmentName() {
+		assertInst(NameRef, this._segmentName)
+		return this._segmentName
+	}
+
+	dependentOnNames(): NameRef[] {
+		return []
+	}
+
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+		const feature = this
+		const loopSegment = feature.segmentName.getOrThrow()
+		const loopSketch = loopSegment.sketch
+		const axis = MODES.SELECT_LINE.magic(feature.axis.map(w => w.get()))[0]
+		assert(loopSketch.plane.containsLine(axis))
+		const m1 = M4.forSys(axis.dir1.cross(loopSketch.plane.normal1).negated(), loopSketch.plane.normal1, axis.dir1, axis.anchor)
+		const m1i = m1.inversed()
+		// opposite dir to plane normal1:
+		const startMatrix = M4.multiplyMultiple(m4, m1, M4.rotationZ(feature.start)))
+		const edgeLoopXY = loopSketch.getLoopForSegment(loopSegment)
+		let edgeLoopXZ = edgeLoopXY.map(edge => edge.transform(m1i, ''))
+		const rads = min(TAU, abs(feature.end - feature.start))
+		// TODO: test for self-intersection of edgeloop
+		if (new PlaneSurface(P3.ZX, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoopXZ)) {
+			edgeLoopXZ = Edge.reverseLoop(edgeLoopXZ)
+		}
+		//console.log(polygonPoints.map(v =>v.$))
+		const length = feature.end - feature.start
+		//console.log("polypoints", polygonPoints, polygonPoints.toSource(),
+		// loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
+		type FI = { feature: Feature, color: number[] }
+		const infoFactory = FaceInfoFactory.makeStatic({ feature: genFeature, color })
+		const brepXZ = B2T.rotateEdges(edgeLoopXZ, rads, feature.name, undefined, infoFactory)
+		brepXZ.assertSanity()
+		const brep = brepXZ.transform(startMatrix)
+		brep.assertSanity()
+
+		if (modelBREP) {
+			//isEdges = modelBREP.getIntersectionEdges(brep)
+			//drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).unit()}))
+			modelBREP = modelBREP[feature.operation](brep, new class extends FaceInfoFactory<FI> {
+				constructor() {
+					super()
+				}
+
+				newSubFace(original: Face, surface: Surface, contour: Edge[], holes: Edge[][] = []): FI {
+					return original.info
+				}
+			})
+			//modelBREP = B2.join([modelBREP, brep])
+		} else {
+			modelBREP = brep
+		}
+
+		modelBREP.faces.forEach(face => publish(face.name, face))
+		modelBREP.faces.map(face => face.getAllEdges().filter(edge => !edge.flippedOf || edge.id < edge.flippedOf.id).forEach(edge => publish(edge.name, edge)))
+		console.log('modelBREP.vertexNames', modelBREP.vertexNames)
+		modelBREP.vertexNames && modelBREP.vertexNames.forEach((name, p) => publish(name, p, feature))
+	}
+}
 NLA.registerClass(Extrude)
 
-class Pattern extends Feature{
-	@editable('identifier')
-	name: string = 'pattern' + globalId++
+type PatternDimensionType = {
+	direction: V3,
+	directionFlipped: boolean,
+	count: int,
+	totalLength: number,
+	intervalLength: number,
+	passive: 'totalLength' | 'intervalLength' | 'count'}
 
-	feature: any[]
-	dimensions: {
-		direction: V3,
-		directionFlipped: boolean,
-		count: int,
-		totalLength: number,
-		intervalLength: number,
-		passive: 'totalLength' | 'intervalLength' | 'count'}[] =
-		[{
+function onChange(callback) {
+	return function (proto, name) {
+		return {
+			set: function (x) {
+				this['_' + name] = x
+				callback(this)
+			},
+			get: function () { return this['_' +name] }}
+	}
+}
+class Pattern extends Feature {
+	fail = this
+	static readonly SN: string = 'PTRN'
+	name: string = 'pattern' + globalId++
+	features: Feature[]
+	direction: V3 = V3.X
+	directionFlipped: boolean = false
+	count: int = 2
+	totalLength: number = 40
+	intervalLength: number = 20
+	passive: 'totalLength' | 'intervalLength' | 'count' = 'totalLength'
+
+
+	constructor() {
+		super()
+	}
+
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+		const feature = this
+		const sel = feature.direction.map(w => w.getOrThrow())
+		const dir = MODES.SELECT_DIRECTION.magic(sel)[0].times(feature.directionFlipped ? -1 : 1)
+		for (const featureRef of feature.features) {
+			const patFeature = featureRef.getOrThrow()
+			for (let i = 0; i < feature.count; i++) {
+				const offset = dir.times((i + 1) * feature.intervalLength)
+				const matrix = M4.translation( offset)
+				patFeature.apply(publish, color, m4.times(matrix), genFeature)
+			}
+		}
+
+	}
+
+	dependentOnNames() {
+		return []
+	}
+
+	addDimension() {
+		this.dimensions.push({
 			direction: V3.X,
 			directionFlipped: false,
 
@@ -2040,14 +2193,7 @@ class Pattern extends Feature{
 			totalLength: 20,
 			intervalLength: 10,
 			passive: 'totalLength',
-		}]
-
-	build() {
-
-	}
-
-	dependentOnNames() {
-		return []
+		})
 	}
 }
 
@@ -2132,8 +2278,6 @@ function tooltipShow(htmlContent, x, y) {
 function tooltipHide() {
 	$('tip-wrap').setStyle('visibility', 'hidden')
 }
-
-let tooltipEvents = {}
 
 
 function serialize(v) {
@@ -2226,7 +2370,8 @@ function unserialize(string) {
 						Object.defineProperty(result, keys[i], {
 							value: fixObjects(v[keys[i]]),
 							enumerable: true,
-							writable: true
+							writable: true,
+							configurable: true
 						})
 					}
 				}

@@ -11,8 +11,8 @@ namespace GL {
 	export class LightGLContext extends WebGLRenderingContext {
 		modelViewMatrix: M4 = new M4()
 		projectionMatrix: M4 = new M4()
-		static MODELVIEW = {}
-		static PROJECTION = {}
+		static readonly MODELVIEW = {}
+		static readonly PROJECTION = {}
 		MODELVIEW = {}
 		PROJECTION = {}
 
@@ -81,7 +81,7 @@ void main() {
 
 		/// Implement the OpenGL modelview and projection matrix stacks, along with some other useful GLU matrix functions.
 
-		matrixMode(mode: LightGLContext.MODELVIEW | LightGLContext.PROJECTION) {
+		matrixMode(mode: any): void {
 			switch (mode) {
 				case this.MODELVIEW:
 					this.currentMatrixName = 'modelViewMatrix'
@@ -110,16 +110,16 @@ void main() {
 			this.stack = this.modelViewStack
 		}
 
-		projectionMode() {
+		projectionMode(): void {
 			this.currentMatrixName = 'projectionMatrix'
 			this.stack = this.projectionStack
 		}
 
-		loadIdentity() {
+		loadIdentity(): void {
 			M4.identity(this[this.currentMatrixName])
 		}
 
-		loadMatrix(m4) {
+		loadMatrix(m4: M4) {
 			M4.copy(m4, this[this.currentMatrixName])
 		}
 
@@ -398,7 +398,7 @@ void main() {
 		let newGL
 		try {
 			newGL = canvas.getContext('webgl', options) as LightGLContext
-			console.log("getting context")
+			console.log('getting context')
 		} catch (e) {
 			console.log(e, newGL)
 		}
@@ -453,7 +453,7 @@ void main() {
 			// `Object.create(original)` because some `MouseEvent` functions must be
 			// called in the context of the original event object.
 			const e: GL_EVENT = {} as any
-			for (let name in original) {
+			for (const name in original) {
 				if (typeof original[name] == 'function') {
 					e[name] = (function (callback) {
 						return function () {
@@ -610,15 +610,10 @@ void main() {
 		 *     indices.data = [[0, 1, 2], [2, 1, 3]]
 		 *     indices.compile()
 		 *
-		 * @param {number} target
 		 * Specifies the target to which the buffer object is bound.
 		 * The symbolic constant must be GL_ARRAY_BUFFER or GL_ELEMENT_ARRAY_BUFFER.
-		 * @param type Float32Array or Uint16Array
-		 *
-		 * @property {WebGLBuffer} buffer
-		 * @constructor
 		 */
-		constructor(target, type) {
+		constructor(target: int, type: typeof Float32Array | typeof Uint16Array) {
 			assert(target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER, 'target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER')
 			assert(type == Float32Array || type == Uint16Array, 'type == Float32Array || type == Uint16Array')
 			this.buffer = null
@@ -640,12 +635,12 @@ void main() {
 		 *
 		 * @param {number} type Either `WGL.STATIC_DRAW` or `WGL.DYNAMIC_DRAW`. Defaults to `WGL.STATIC_DRAW`
 		 */
-		compile(type?:int) {
-			assert('undefined' == typeof type || WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type, 'WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type')
+		compile(type: int = WGL.STATIC_DRAW) {
+			assert(WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type, 'WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type')
 			this.buffer = this.buffer || gl.createBuffer()
 			let buffer
 			if (this.data.length == 0) {
-				console.warn("empty buffer " + this.name)
+				console.warn('empty buffer ' + this.name)
 				//console.trace()
 			}
 			if (this.data.length == 0 || this.data[0] instanceof V3) {
@@ -672,7 +667,7 @@ void main() {
 			}
 			gl.bindBuffer(this.target, this.buffer)
 			gl.handleError()
-			gl.bufferData(this.target, buffer, type || WGL.STATIC_DRAW)
+			gl.bufferData(this.target, buffer, type)
 			this.hasBeenCompiled = true
 		}
 	}
@@ -831,7 +826,7 @@ void main() {
 			// figure out shortest vertex buffer to make sure indexBuffers are in bounds
 			let minVertexBufferLength = Infinity, minBufferName
 			Object.getOwnPropertyNames(this.vertexBuffers).forEach(attribute => {
-				let buffer = this.vertexBuffers[attribute]
+				const buffer = this.vertexBuffers[attribute]
 				buffer.data = this[buffer.name]
 				buffer.compile()
 				if (this[buffer.name].length < minVertexBufferLength) {
@@ -853,12 +848,12 @@ void main() {
 		}
 
 
-		toBinarySTL():Blob {
+		toBinarySTL(): Blob {
 			const HEADER_BYTE_SIZE = 80, FLOAT_BYTE_SIZE = 4
-			let triangles = this.triangles
-			let triangleCount = triangles.length / 3
-			let buffer = new ArrayBuffer(HEADER_BYTE_SIZE + 4 + triangleCount * (4 * 3 * FLOAT_BYTE_SIZE + 2))
-			let dataView = new DataView(buffer)
+			const triangles = this.triangles
+			const triangleCount = triangles.length / 3
+			const buffer = new ArrayBuffer(HEADER_BYTE_SIZE + 4 + triangleCount * (4 * 3 * FLOAT_BYTE_SIZE + 2))
+			const dataView = new DataView(buffer)
 			dataView.setUint32(HEADER_BYTE_SIZE, triangleCount, true)
 			let bufferPtr = HEADER_BYTE_SIZE + 4
 			let i = triangles.length
@@ -892,10 +887,10 @@ void main() {
 			const mesh = new Mesh({vertices: this.vertices, normals: this.normals})
 			mesh.vertices = m4.transformedPoints(this.vertices)
 			if (this.normals) {
-				let invTrans = m4.as3x3().inversed().transposed().normalized()
+				const invTrans = m4.as3x3().inversed().transposed().normalized()
 				mesh.normals = this.normals.map(n => invTrans.transformVector(n))
 			}
-			for (let name in this.indexBuffers) {
+			for (const name in this.indexBuffers) {
 				mesh.addIndexBuffer(name)
 				mesh[name.toLowerCase()] = this[name.toLowerCase()]
 			}
@@ -980,8 +975,8 @@ void main() {
 
 		computeWireframeFromFlatTrianglesClosedMesh(): this {
 			if (!this.lines) this.addIndexBuffer('LINES')
-			let tris = this.triangles
-			let lines = this.lines
+			const tris = this.triangles
+			const lines = this.lines
 			for (let i = 0; i < this.triangles.length; i += 3) {
 				if (tris[i + 0] < tris[i + 1]) lines.push(tris[i + 0], tris[i + 1])
 				if (tris[i + 1] < tris[i + 2]) lines.push(tris[i + 1], tris[i + 2])
@@ -1113,7 +1108,7 @@ void main() {
 
 			// basically indexes for faces of the cube. vertices each need to be added 3 times,
 			// as they have different normals depending on the face being rendered
-			let VERTEX_CORNERS = [
+			const VERTEX_CORNERS = [
 				0, 1, 2, 3, // X = 0
 				4, 5, 6, 7, // X = 1
 
@@ -1252,7 +1247,7 @@ void main() {
 			mesh.vertices.pushAll(vertices)
 			subdivisions = undefined == subdivisions ? 4 : subdivisions
 			for (let i = 0; i < 20; i++) {
-				var [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
+				const [ia, ic, ib] = triangles.slice(i * 3, i * 3 + 3)
 				tesselateRecursively(vertices[ia], vertices[ic], vertices[ib], subdivisions, mesh.vertices, mesh.triangles, ia, ic, ib, mesh.lines)
 			}
 
@@ -1325,7 +1320,7 @@ void main() {
 			const triangles = mesh.triangles
 			for (let i = 0; i < steps; i++) {
 				// add triangles
-				let rads = totalRads / steps * i
+				const rads = totalRads / steps * i
 				M4.rotationLine(lineAxis.anchor, lineAxis.dir1, rads, rotMat)
 				Array.prototype.push.apply(mesh.vertices, rotMat.transformedPoints(vertices))
 
@@ -1342,6 +1337,8 @@ void main() {
 		}
 
 		static parametric(pF: (d, z) => V3, pN: (d, z) => V3, sMin: number, sMax: number, tMin: number, tMax: number, sRes: number, tRes: number) {
+			assert(sRes % 1 == 0)
+			assert(tRes % 1 == 0)
 			const mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
 			const split = 4 * 10, inc = 2 * PI / split
 			for (let si = 0; si <= sRes; si++) {
@@ -1463,18 +1460,18 @@ void main() {
 		uniforms(uniforms: { [uniformName: string]: UniformType }): this {
 			gl.useProgram(this.program)
 
-			for (let name in uniforms) {
-				let location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name)
+			for (const name in uniforms) {
+				const location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name)
 				assert(!!location, name + ' uniform is not used in shader')
 				if (!location) continue
 				this.uniformLocations[name] = location
-				let value = uniforms[name]
+				let value = uniforms[name] as any
+				const info = this.uniformInfos[name]
 				if (NLA_DEBUG) {
-					var info = this.uniformInfos[name]
 					assert(info.type != WGL.FLOAT ||
-						(1 == info.size && "number" === typeof value || isArray(value) && info.size == value.length && assertNumbers.apply(undefined, value)))
+						(1 == info.size && 'number' === typeof value || isArray(value) && info.size == value.length && assertNumbers.apply(undefined, value)))
 					assert(info.type != WGL.INT ||
-						(1 == info.size && "number" === typeof value && value % 1 == 0 ||
+						(1 == info.size && 'number' === typeof value && value % 1 == 0 ||
 						isArray(value) && info.size == value.length && assertNumbers.apply(undefined, value) && value.every(x => x % 1 == 0)))
 					assert(info.type != WGL.FLOAT_VEC3 ||
 						(1 == info.size && value instanceof V3 ||
@@ -1625,14 +1622,14 @@ void main() {
 					assert((count || minVertexBufferLength) % indexBuffer.spacing == 0)
 					assert((start || 0) % indexBuffer.spacing == 0)
 					if (start + count > indexBuffer.count) {
-						throw new Error("Buffer not long enough for passed parameters start/length/buffer length" + " " + start + " " + count + " " + indexBuffer.count)
+						throw new Error('Buffer not long enough for passed parameters start/length/buffer length' + ' ' + start + ' ' + count + ' ' + indexBuffer.count)
 					}
 					gl.bindBuffer(WGL.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer)
 					// start parameter has to be multiple of sizeof(WGL.UNSIGNED_SHORT)
 					gl.drawElements(mode, count, WGL.UNSIGNED_SHORT, 2 * start || 0)
 				} else {
 					if (start + count > minVertexBufferLength) {
-						throw new Error("invalid")
+						throw new Error('invalid')
 					}
 					gl.drawArrays(mode, start || 0, count)
 				}
@@ -1654,7 +1651,6 @@ void main() {
 
 	/**
 	 * These are all the draw modes usable in OpenGL ES
-	 * @type {string[]}
 	 */
 	export const DRAW_MODES = ['POINTS', 'LINES', 'LINE_STRIP', 'LINE_LOOP', 'TRIANGLES', 'TRIANGLE_STRIP', 'TRIANGLE_FAN']
 	export const SHADER_VAR_TYPES = ['FLOAT', 'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4', 'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4', 'UNSIGNED_INT']

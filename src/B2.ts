@@ -248,7 +248,7 @@ class B2 extends Transformable {
             `new B2([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
     }
 
-    static loop1ContainsLoop2(loop1: Edge[], loop2: Edge[], surface: Surface): boolean {
+    static loop1ContainsLoop2(loop1: Edge[], ccw1: boolean, loop2: Edge[], ccw2: boolean, surface: Surface): boolean {
         for (const edge of loop2) {
             const loop1ContainsPoint = surface.loopContainsPoint(loop1, edge.a)
             if (PointVsFace.ON_EDGE != loop1ContainsPoint) return PointVsFace.INSIDE == loop1ContainsPoint
@@ -257,6 +257,9 @@ class B2 extends Transformable {
             const edgePoint = edge.curve.at(edge.aT * 0.2 + edge.bT * 0.8)
             const loop1ContainsPoint = surface.loopContainsPoint(loop1, edgePoint)
             if (PointVsFace.ON_EDGE != loop1ContainsPoint) return PointVsFace.INSIDE == loop1ContainsPoint
+        }
+        if (ccw1 != ccw2) {
+        	return ccw2
         }
         throw new Error(loop1.sce+ loop2.sce)
     }
@@ -270,7 +273,7 @@ class B2 extends Transformable {
             if (loopInfos.length == 0) {
                 loopInfos.push(newLoopInfo)
             } else {
-                const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, newLoopInfo.loop, surface))
+                const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
                 if (subLoopInfo) {
                     placeRecursively(newLoopInfo, subLoopInfo.subloops)
                 } else {
@@ -278,7 +281,7 @@ class B2 extends Transformable {
                     for (let i = loopInfos.length; --i >= 0;) {
                         const subLoopInfo = loopInfos[i]
                         //console.log("cheving subLoopInfo", surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a))
-                        if (B2.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) {
+                        if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                             newLoopInfo.subloops.push(subLoopInfo)
                             loopInfos.splice(i, 1) // remove it
                         }

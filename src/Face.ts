@@ -1,6 +1,6 @@
 
 abstract class Face extends Transformable {
-	'constructor': { new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string): Face }
+	'constructor': { new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string, info?: any): Face }
 	allEdges: Edge[]
 	protected aabb: AABB
 	constructor(readonly surface: Surface,
@@ -116,7 +116,7 @@ abstract class Face extends Transformable {
 	transform(m4: M4): this {
 		const newEdges = this.contour.map(e => e.transform(m4))
 		const newHoles = this.holes.map(hole => hole.map(e => e.transform(m4)))
-		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name) as this
+		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info) as this
 	}
 
 
@@ -1400,7 +1400,9 @@ class RotationFace extends Face {
 		 */
 		function handleNewEdge(newEdge: Edge, col1: Edge, col2: Edge) {
 			if (!col1 && !col2) {
-				assert(newEdge.aDir.cross(face.surface.normalAt(newEdge.a)).dot(face2.surface.normalAt(newEdge.a)) > 0)
+				if (!(newEdge.aDir.cross(face.surface.normalAt(newEdge.a)).dot(face2.surface.normalAt(newEdge.a)) > 0)) {
+					newEdge = newEdge.flipped()
+				}
 				NLA.mapPush(faceMap, face, newEdge)
 				NLA.mapPush(faceMap, face2, newEdge.flipped())
 				return true
@@ -1549,12 +1551,12 @@ class RotationFace extends Face {
 			return
 		}
 		for (const isCurve of isCurves) {
-			const t = isFinite(isCurve.tMin) ? isCurve.tMin : 0, p = isCurve.at(t), dp = isCurve.tangentAt(t)
+			const t = (isCurve.tMin + isCurve.tMax) / 2, p = isCurve.at(t), dp = isCurve.tangentAt(t)
 			const normal1 = surface.normalAt(p), normal2 = surface2.normalAt(p), dp2 = normal1.cross(normal2)
 			assert(surface.containsCurve(isCurve))
 			assert(surface2.containsCurve(isCurve))
 			if (!dp2.isZero()) {
-				assert(dp2.dot(dp) > 0)
+				//assert(dp2.dot(dp) > 0)
 				assert(dp2.isParallelTo(dp))
 			}
 		}

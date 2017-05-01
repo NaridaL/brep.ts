@@ -84,7 +84,7 @@ namespace B2T {
 			new V3(w, h, 0),
 			new V3(w, 0, 0)
 		]
-	    const generator = makeGen('B2T.box', w, h, d, name)
+	    const generator = callsce('B2T.box', w, h, d, name)
 		return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, d), name, generator)
 	}
 
@@ -149,7 +149,7 @@ namespace B2T {
 			return Face.create(surface, faceEdges, undefined, faceName,	info)
 		}) as Face[]
 		faces.push(bottomFace, topFace)
-		gen = gen || makeGen('B2T.extrudeEdges', baseFaceEdges, baseFacePlane, offset, name)
+		gen = gen || callsce('B2T.extrudeEdges', baseFaceEdges, baseFacePlane, offset, name)
 		return new B2(faces, false, gen, vertexNames)
 	}
 
@@ -171,7 +171,7 @@ namespace B2T {
             0, PI,
             undefined,
             new V3(radius, 0, 0), new V3(-radius, 0, 0))
-	    const generator = makeGen('B2T.sphere', radius, name, rot)
+	    const generator = callsce('B2T.sphere', radius, name, rot)
 	    return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator)
     }
 
@@ -236,10 +236,13 @@ namespace B2T {
 	/**
 	 * baseLoop should be CCW on XZ plane for a bounded B2
 	 */
-	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string): B2 {
+	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string, infoFactory?: FaceInfoFactory<any>): B2 {
 		assert(!NLA.eq(PI, totalRads) || PI == totalRads) // URHGJ
 		assertf(() => NLA.lt(0, totalRads) && NLA.le(totalRads, TAU))
         totalRads = NLA.snap(totalRads, TAU)
+		const basePlane = new PlaneSurface(P3.ZX.flipped()).edgeLoopCCW(baseLoop)
+			? new PlaneSurface(P3.ZX.flipped())
+			: new PlaneSurface(P3.ZX)
 		assertf(() => Edge.isLoop(baseLoop))
 		const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
 		const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
@@ -271,7 +274,9 @@ namespace B2T {
 					const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
 					const apex = new V3(0, 0, apexZ)
 					const flipped = edge.a.z > edge.b.z
-					return ConicSurface.atApexThroughEllipse(apex, baseRibCurves[a.x > b.x ? i : ipp] as SemiEllipseCurve, !flipped ? 1 : -1)
+					const base = baseRibCurves[a.x > b.x ? i : ipp] as SemiEllipseCurve
+					const surface = ConicSurface.atApexThroughEllipse(apex, base)
+					return flipped != (-1 == surface.normalDir) ? surface.flipped() : surface
 				}
 			}
 			/*
@@ -325,16 +330,19 @@ namespace B2T {
 						stepEndEdges[edgeIndex],
 						!NLA.eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
                     const surface = 0 == rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
-					faces.push(Face.create(surface, faceEdges))
+					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
+					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
 				}
 			}
 			stepStartEdges = stepEndEdges
 		}
 		if (open) {
 			const endFaceEdges = Edge.reverseLoop(stepEndEdges)
+			const infoStart = infoFactory && infoFactory.rotationStart(basePlane, baseLoop, undefined)
+			const infoEnd = infoFactory && infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined)
 			faces.push(
-				new PlaneFace(new PlaneSurface(P3.ZX.flipped()), baseLoop),
-				new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(totalRads)), endFaceEdges))
+				new PlaneFace(basePlane, baseLoop, undefined, name + 'start', infoStart),
+				new PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + 'end', infoEnd))
 		}
 		const infiniteVolume = new PlaneSurface(P3.ZX).edgeLoopCCW(baseLoop)
 		return new B2(faces, infiniteVolume, generator)
@@ -568,6 +576,8 @@ namespace B2T {
 		let surface, face
 		edges.forEach((edge, i) => {
 			const ipp = (i + 1) % edges.length
+			const projDir = V3.O
+			const surface = projectCurve(ribs[r][i], projDir, ribs[r][i].deltaT() < 0)
 			if (edge instanceof StraightEdge && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
 				let flipped = edge.a.x > edge.b.x
 				surface = new PlaneSurface(flipped ? new P3(V3.Z, edge.a.z) : new P3(V3.Z.negated(), -edge.a.z))
@@ -679,126 +689,9 @@ namespace B2T {
 		//			[bottom.contour[i].flipped(), ribs[i], top.contour[m - j - 1].flipped(), ribs[j].flipped()], [], name + 'wall' + i))
 		//}
 		let edges = StraightEdge.chain(baseVertices, true)
-		generator = generator || makeGen('B2T.extrudeVertices', baseVertices, baseFacePlane, offset, name)
+		generator = generator || callsce('B2T.extrudeVertices', baseVertices, baseFacePlane, offset, name)
 		return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator)
 	}
-
-	export function bug() {
-		const good = `M22.2656,33.2348
-		L25.7646,29.7638
-		C26.7356,31.2938 27.2636,33.0868 27.2636,34.9698
-		C27.2636,37.5888 26.2356,40.0578 24.4126,41.9118
-		L21.1486,45.1468
-		C19.2956,46.9698 16.8556,47.9998 14.2086,47.9998
-		C11.5926,47.9998 9.1236,46.9698 7.2416,45.1178
-		L2.8896,40.7638
-		C-0.9634,36.9408 -0.9634,30.7048 2.8896,26.8818
-		L6.1226,23.6468
-		C7.9766,21.8228 10.4466,20.7928 13.0626,20.7928
-		C14.9736,20.7928 16.7676,21.3228 18.3256,22.3228
-		L14.8556,25.7938
-		C14.2686,25.5878 13.6806,25.4708 13.0626,25.4708
-		C11.6806,25.4708 10.3866,25.9988 9.4166,26.9708
-		L6.1816,30.2048
-		C4.1826,32.2048 4.1826,35.4698 6.1816,37.4698
-		L10.5636,41.8228
-		C11.5336,42.7938 12.8286,43.3228 14.2086,43.3228
-		C15.5916,43.3228 16.8856,42.7938 17.8546,41.8228
-		L21.0896,38.5878
-		C22.5306,37.1468 22.9126,35.0588 22.2656,33.2348
-		L22.2656,33.2348
-		L22.2656,33.2348
-		Z
-		M33.6736,17.6458
-		L30.3516,14.3228
-		L14.0626,30.6178
-		L17.3846,33.9408
-		L33.6736,17.6458
-		L33.6736,17.6458
-		Z
-		M45.1116,21.1168
-		L41.9066,24.3228
-		C40.0536,26.1748 37.5846,27.2048 34.9686,27.2048
-		C33.0866,27.2048 31.2926,26.6768 29.7646,25.7058
-		L33.2326,22.2348
-		C33.7916,22.4108 34.3496,22.5298 34.9686,22.5298
-		C36.3506,22.5298 37.6136,21.9998 38.5846,21.0298
-		L41.8176,17.7938
-		C43.8186,15.7938 43.8186,12.5288 41.8176,10.5288
-		L37.4676,6.1758
-		C36.4966,5.2058 35.2036,4.6758 33.8216,4.6758
-		C32.4396,4.6758 31.1446,5.2058 30.2056,6.1758
-		L26.9696,9.4118
-		C26.0006,10.3528 25.4706,11.6468 25.4706,13.0288
-		C25.4706,13.6458 25.5876,14.2348 25.7946,14.7938
-		L22.3246,18.2648
-		C21.3246,16.7348 20.7946,14.9108 20.7946,13.0288
-		C20.7946,10.4118 21.8246,7.9408 23.6476,6.0878
-		L26.8826,2.8518
-		C28.7346,1.0288 31.2046,-0.0002 33.8216,-0.0002
-		C36.4376,-0.0002 38.9076,1.0288 40.7596,2.8518
-		L45.1116,7.2338
-		C48.9626,11.0578 48.9626,17.2938 45.1116,21.1168
-		L45.1116,21.1168
-		L45.1116,21.1168
-		Z`
-		const bad = `M22.266 33.235
-        l3.499-3.471
-        a9.684 9.684 0 0 1 1.499 5.206 9.867 9.867 0 0 1-2.851 6.942
-        l-3.264 3.235
-        C19.296 46.97 16.856 48 14.209 48
-        c-2.616 0-5.085-1.03-6.967-2.882
-        L2.89 40.764
-        c-3.853-3.823-3.853-10.06 0-13.882
-        l3.233-3.235
-        a9.866 9.866 0 0 1 6.94-2.854
-        c1.91 0 3.705.53 5.263 1.53
-        l-3.47 3.47
-        a5.352 5.352 0 0 0-1.793-.322 5.106 5.106 0 0 0-3.646 1.5
-        l-3.235 3.234
-        a5.15 5.15 0 0 0 0 7.265
-        l4.382 4.353
-        c.97.97 2.265 1.5 3.645 1.5
-        a5.107 5.107 0 0 0 3.646-1.5
-        l3.235-3.235
-        c1.44-1.441 1.823-3.53 1.176-5.353
-        z
-        m11.408-15.59
-        l-3.322-3.322-16.29 16.295 3.323 3.323 16.289-16.295
-        z
-        m11.438 3.472
-        l-3.205 3.206
-        a9.768 9.768 0 0 1-6.938 2.882 9.674 9.674 0 0 1-5.204-1.5
-        l3.468-3.47
-        c.559.176 1.117.295 1.736.295 1.382 0 2.645-.53 3.616-1.5
-        l3.233-3.236
-        a5.147 5.147 0 0 0 0-7.265
-        l-4.35-4.353
-        a5.116 5.116 0 0 0-3.646-1.5
-        c-1.382 0-2.677.53-3.616 1.5
-        L26.97 9.412
-        c-.97.94-1.5 2.235-1.5 3.617 0 .617.118 1.206.325 1.765
-        l-3.47 3.47
-        c-1-1.53-1.53-3.353-1.53-5.235
-        a9.868 9.868 0 0 1 2.853-6.941
-        l3.235-3.236
-        A9.86 9.86 0 0 1 33.822 0
-        a9.86 9.86 0 0 1 6.938 2.852
-        l4.352 4.382
-        c3.85 3.824 3.85 10.06 0 13.883
-        z`
-		const c = `M10 315
-           L 110 215
-           A 30 50 0 0 1 162.55 162.45
-           L 172.55 152.45
-           A 30 50 -45 0 1 215.1 109.9
-           L 315 10`
-		const g = new SVGPathData(bad).encode()
-		const b = new SVGPathData(bad).ySymmetry(30).encode()
-		return Edge.pathFromSVG(bad).concat(Edge.pathFromSVG(b).map(e=>e.translate(300)))
-		//return Edge.pathFromSVG(c)
-	}
-
 
 	// Returns a tetrahedron (3 sided pyramid).
 	// Faces will face outwards.
@@ -954,7 +847,7 @@ namespace B2T {
     }
 
 	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + globalId++): B2 {
-		assertInst.apply(undefined, [Edge].concat(baseEdges))
+		assertInst.apply(undefined, [Edge, ...baseEdges])
 		assertVectors(apex)
 
 		const ribs = baseEdges.map(baseEdge => StraightEdge.throughPoints(apex, baseEdge.a))
@@ -966,11 +859,11 @@ namespace B2T {
 			return Face.create(surface, faceEdges, undefined, faceName)
 		})
 		faces.push(bottomFace)
-		const generator = makeGen('B2T.pyramidEdges', baseEdges, apex, name)
+		const generator = callsce('B2T.pyramidEdges', baseEdges, apex, name)
 		return new B2(faces, false, generator, name)
 	}
 }
 
-function makeGen(name: string, ...params: any[]) {
+function callsce(name: string, ...params: any[]) {
 	return name + '(' + params.map(SCE).join(',') + ')'
 }

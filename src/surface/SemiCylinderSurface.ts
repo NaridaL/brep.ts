@@ -18,7 +18,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	toSource() {
-		return makeGen('new SemiCylinderSurface', this.baseCurve, this.dir1, this.tMin, this.tMax)
+		return callsce('new SemiCylinderSurface', this.baseCurve, this.dir1, this.tMin, this.tMax)
 	}
 
 	normalAt(p: V3): V3 {
@@ -109,14 +109,14 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 
 	containsPoint(p) {
 	    const pLC = this.inverseMatrix.transformPoint(p)
-		return SemiEllipseCurve.validPlanePoint(pLC.x, pLC.y)
+		return SemiEllipseCurve.XYLCValid(pLC)
 	}
 
 	parameters(pWC) {
         assert(arguments.length == 1)
         const pLC = this.inverseMatrix.transformPoint(pWC)
-        const u = SemiEllipseCurve.unitT(pLC)
-        return new V3(u, pLC.z, 0)
+		const u = SemiEllipseCurve.XYLCPointT(pLC)
+		return new V3(u, pLC.z, 0)
 	}
 
 	isCurvesWithSurface(surface2) {
@@ -147,15 +147,15 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 
 	/**
 	 *
-	 * @param anchor
-	 * @param dir not necessarily unit
+	 * @param anchorLC
+	 * @param dirLC not necessarily unit
 	 */
-	static unitISLineTs(anchor: V3, dir: V3): number[] {
-		const {x: ax, y: ay} = anchor
-		const {x: dx, y: dy} = dir
+	static unitISLineTs(anchorLC: V3, dirLC: V3): number[] {
+		const {x: ax, y: ay} = anchorLC
+		const {x: dx, y: dy} = dirLC
 
 		// this cylinder: x² + y² = 1
-		// line: p = anchor + t * dir
+		// line: p = anchorLC + t * dirLC
 		// split line equation into 3 component equations, insert into cylinder equation
 		// x = ax + t * dx
 		// y = ay + t * dy
@@ -164,7 +164,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		const a = dx ** 2 + dy ** 2
 		const b = 2 * (ax * dx + ay * dy)
 		const c = ax ** 2 + ay ** 2 - 1
-		return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve.validPlanePoint(ax + dx * t, ay + dy * t))
+		return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)))
 	}
 
 	/**

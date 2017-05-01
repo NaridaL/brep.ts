@@ -135,17 +135,17 @@ class L3 extends Curve {
 	isInfosWithCurve(curve: Curve) {
 		assertInst(L3, curve)
 
-		let dirCross = this.dir1.cross(curve.dir1)
-		let div = dirCross.squared()
+		const dirCross = this.dir1.cross(curve.dir1)
+		const div = dirCross.squared()
 		if (NLA.eq0(div)) {
 			// lines are parallel
 			return []
 		}
-		let anchorDiff = curve.anchor.minus(this.anchor)
+		const anchorDiff = curve.anchor.minus(this.anchor)
 		if (NLA.eq0(anchorDiff.dot(dirCross))) {
-			let tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div
-			let tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
-			let p = this.at(tThis)
+			const tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div
+			const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
+			const p = this.at(tThis)
 			return [{tThis: tThis, tOther: tOther, p: p}]
 		}
 		return []
@@ -156,12 +156,12 @@ class L3 extends Curve {
 		assertInst(L3, line)
 		const dirCross = this.dir1.cross(line.dir1)
 		const div = dirCross.squared()
-		if (NLA.eq0(div)) {
+		if (eq0(div)) {
 			return null
 		} // lines parallel
 		const anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
-		if (!NLA.eq0(anchorDiff.dot(dirCross.unit()))) {
+		if (!eq0(anchorDiff.dot(dirCross.unit()))) {
 			return null
 		}
 		const t = anchorDiff.cross(line.dir1).dot(dirCross) / div

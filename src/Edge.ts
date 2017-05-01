@@ -24,7 +24,7 @@ abstract class Edge extends Transformable {
 	abstract tangentAt(t: number): V3
 
 	toString(f?): string {
-		return makeGen('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, null, this.aDir, this.bDir)
+		return callsce('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, null, this.aDir, this.bDir)
 	}
 
 	split(t: number): [Edge, Edge] {
@@ -381,6 +381,10 @@ abstract class Edge extends Transformable {
     deltaT() {
         return this.bT - this.aT
     }
+
+	atAvgT() {
+		return this.curve.at((this.minT + this.maxT) / 2)
+	}
 }
 
 class PCurveEdge extends Edge {

@@ -1,24 +1,63 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "outDir": "out/",
-//        "outFile": "out/complete.js",
+    "moduleResolution": "node",
+    "module": "amd",
+    "outFile": "out/complete.js",
+    "declaration": true,
+    "rootDir": ".",
+    "target": "es2017",
+    "noImplicitAny": false,
+    "alwaysStrict": true,
     "sourceMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "alwaysStrict": true,
-    "allowJs": true,
-    //    "noUnusedParameters": true,
+    "jsx": "react",
+    "jsxFactory": "h",
     "lib": ["DOM","ES2017"]
-//    "noImplicitAny": true
-    //    "noImplicitReturns": true
-
   },
   "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    //    "test/ConicSurface.ts",
-    "C:\\Users\\aval\\.WebStorm2016.2\\config\\javascript\\extLibs\\http_github.com_DefinitelyTyped_DefinitelyTyped_raw_master_qunit_qunit.d.ts",
-    "FileSaver"
+    "src/NLA.ts",
+    "src/CustomSet.ts",
+    "src/Transformable.ts",
+    "src/Vector.ts",
+    "src/Vector3.ts",
+    "src/Line.ts",
+    "src/Matrix.ts",
+    "src/Matrix4x4.ts",
+    "src/AABB.ts",
+    "src/Plane3.ts",
+
+    "src/curve/Curve.ts",
+    "src/curve/*.ts",
+
+    "src/surface/Surface.ts",
+    "src/surface/*.ts",
+
+    "src/Edge.ts",
+    "src/Face.ts",
+    "src/FaceInfo.ts",
+    "src/B2.ts",
+    "src/b2.generators.ts",
+
+
+    "src/lightgl.ts",
+    "src/CustomPlane.ts",
+    "src/editor/editor.ts",
+    "src/editor/viewer.ts",
+    "src/editor/modes.ts",
+    "src/editor/SketchBezier.ts",
+    "src/editor/react/Rotate.ts",
+    "src/lightgl.ts",
+    "src/shaders.ts",
+    "src/editor/Sketch.ts",
+    "src/**/*.*",
+
+    "node_modules/preact/dist/preact.d.ts"
+  ],
+  "exclude": [
+    "src/curve/PICurveOld.ts",
+    "src/flower.ts",
+    "src/Mesher.ts",
+    "src/editor/react/PatternEditor.tsx"
   ]
 }

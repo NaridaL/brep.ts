@@ -3,8 +3,8 @@ function parseGetParams(str) {
     str
         .split('&')
         .forEach(function (item) {
-            const tmp = item.split('=')
-            result[tmp[0]] = decodeURI(tmp[1])
+        	const splitIndex = item.indexOf('=')
+            result[item.substr(0, splitIndex)] = decodeURI(item.substr(splitIndex + 1))
         })
     return result
 }
@@ -52,9 +52,9 @@ function initB2() {
         console.log('meshes from GET')
         b2meshes = eval(gets['meshes']) || []
         b2meshes.forEach(m => m.computeWireframeFromFlatTriangles())
-        b2meshes.forEach(m => m.compile())
+	    b2meshes.forEach(m => m.computeNormalLines(0.5))
+	    b2meshes.forEach(m => m.compile())
         console.log('meshes from GET', b2meshes)
-        //sMesh.computeNormalLines()
     }
 
     dMesh.compile()
@@ -71,7 +71,7 @@ let aMesh: GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
 	dMesh: GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
 	sMesh: GL.Mesh,
 	b2meshes: GL.Mesh[] = []
-paintScreen = function() {
+function viewerPaint() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
 
@@ -253,8 +253,9 @@ const b2planes = [
     //	sketchPlane
 ]
 
-window.onload = async function () {
-    await B2T.loadFonts()
+async function viewerMain() {
+	paintScreen = viewerPaint
+	await B2T.loadFonts()
 	modeStack.push({})
 	window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 		console.log(errorMsg, url, lineNumber, column, errorObj)

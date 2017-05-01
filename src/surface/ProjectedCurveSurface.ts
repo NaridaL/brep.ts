@@ -174,9 +174,6 @@ class ProjectedCurveSurface extends Surface {
 	    assertNever()
     }
 
-    /**
-     * @inheritDoc
-     */
     containsPoint(p) {
         const uv = this.pointToParameterFunction()(p)
         return this.parametricFunction()(uv.x, uv.y).like(p)

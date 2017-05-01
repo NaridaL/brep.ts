@@ -110,6 +110,48 @@ MODES.SKETCH = {
 
 }
 const BUTTONS = {LEFT: 0, MIDDLE: 1, RIGHT: 2, BACK: 3, FORWARD: 4}
+function initFeatureMode(this: any, feature: Feature, featType: any, component) {
+	if (feature) {
+		assertInst(featType, feature)
+	} else {
+		feature = new featType()
+		featureStack.push(feature)
+		updateFeatureDisplay()
+	}
+	this.feature = feature
+
+	const props = {
+		feature,
+		del: e => featureDelete(feature),
+		done: e => modePop(),
+		notifier: (feature, propName, value) => {
+			feature[propName] = value
+			preact.render(h(component, props), $('preact'), this.comp)
+			rebuildModel()
+		}}
+	this.comp = preact.render(h(component, props), $('preact'))
+	//if (NameRef.UNASSIGNED == feature.segmentName) {
+	//	div.getElement('[data-feature-property=segmentName]').fireEvent('click')
+	//}
+}
+MODES.ROTATE = {
+	modeEditsFeatureAndRequiresRollback: true,
+	feature: undefined,
+	before: function () {
+		modeEnd(MODES.SKETCH)
+		modeEnd(MODES.PLANE_DEFINITION)
+		modeEnd(MODES.EXTRUDE)
+		modeEnd(MODES.ROTATE)
+	},
+	init: function (feature) {
+		initFeatureMode.call(this, feature, Rotate, RotateEditor)
+	},
+	end: function () {
+		preact.render('', $('preact'), this.comp)
+	},
+	mousemove: function (e) {},
+	mousedown: function (e) {}
+}
 MODES.EXTRUDE = {
 	modeEditsFeatureAndRequiresRollback: true,
 	feature: undefined,
@@ -119,24 +161,10 @@ MODES.EXTRUDE = {
 		modeEnd(MODES.EXTRUDE)
 	},
 	init: function (feature) {
-		if (feature) {
-			assertInst(Extrude, feature)
-		} else {
-			feature = new Extrude()
-			featureStack.push(feature)
-			updateFeatureDisplay()
-		}
-		this.feature = feature
-		let div = $('extrudeEditor')
-		div.setStyle('display', 'block')
-		setupSelectors(div, feature, this)
-		if (NameRef.UNASSIGNED == feature.segmentName) {
-			div.getElement('[data-feature-property=segmentName]').fireEvent('click')
-		}
+		initFeatureMode.call(this, feature, Extrude, ExtrudeEditor)
 	},
 	end: function () {
-		let div = $('extrudeEditor')
-		div.setStyle('display', 'none')
+		preact.render('', $('preact'), this.comp)
 	},
 	mousemove: function (e) {},
 	mousedown: function (e) {}
@@ -149,6 +177,7 @@ MODES.PATTERN = {
 		modeEnd(MODES.SKETCH)
 		modeEnd(MODES.PLANE_DEFINITION)
 		modeEnd(MODES.EXTRUDE)
+		modeEnd(MODES.PATTERN)
 	},
 	init: function (feature) {
 		if (feature) {
@@ -158,13 +187,13 @@ MODES.PATTERN = {
 			featureStack.push(feature)
 			updateFeatureDisplay()
 		}
-		this.feature = feature
 		const div = $('patternEditor')
 		div.setStyle('display', 'block')
 		setupSelectors(div, feature, this)
 	},
 	end: function () {
 		const div = $('patternEditor')
+		//div.erase('text')
 		div.setStyle('display', 'none')
 	},
 	mousemove: function (e) {},
@@ -295,43 +324,45 @@ MODES.SELECT_DIRECTION = {
 	init: function (callback: (NameRef) => void) {
 		this.callback = callback
 	},
-	magic: function (sel) {
+	magic: function (sel): [V3, string] {
+		const r = (vector: V3, type: string): [V3, string] => [vector, type]
 		const CLASS_ORDER = [V3, Edge, Surface, Face, P3]
 		const sortMap = o => CLASS_ORDER.findIndex(clazz => o instanceof clazz)
 		sel.sort((a, b) => sortMap(a) - sortMap(b))
 		const [a, b, c] = sel
 		if (3 == sel.length) {
 			if (a instanceof V3 && b instanceof V3 && c instanceof V3) {
-				return V3.normalOnPoints(a, b, c).unit()
+				return r(V3.normalOnPoints(a, b, c).unit(),
+					'normal of implicit plane through three points')
 			}
 		}
 		if (2 == sel.length) {
 			if (a instanceof V3 && b instanceof V3) {
-				return a.to(b).unit()
+				return r(a.to(b).unit(), 'through two points')
 			}
 			if (a instanceof V3 &&
 				b instanceof Edge &&
-				b.curve !instanceof L3 &&
+				!(b.curve instanceof L3) &&
 				b.curve.containsPoint(a)) {
 				const aT = b.curve.pointT(a)
-				return b.curve.tangentAt(aT).unit()
+				return r(b.curve.tangentAt(aT).unit(), 'tangent of edge at point')
 			}
 			if (a instanceof V3 &&
 				b instanceof Face &&
-				b.surface !instanceof L3 &&
+				!(b.surface instanceof PlaneSurface) &&
 				b.surface.containsPoint(a)) {
-				return b.surface.normalAt(a).unit()
+				return r(b.surface.normalAt(a).unit(), 'normal of surface at point')
 			}
 		}
 		if (1 == sel.length) {
 			if (a instanceof P3) {
-				return a.normal1
+				return r(a.normal1, 'plane normal')
 			}
 			if (a instanceof Edge && a.curve instanceof L3) {
-				return a.curve.dir1
+				return r(a.curve.dir1, 'tangent of straight edge')
 			}
 			if (a instanceof Face && a.surface instanceof PlaneSurface) {
-				return a.surface.plane.normal1
+				return r(a.surface.plane.normal1, 'normal of planar surface')
 			}
 		}
 	},
@@ -352,6 +383,87 @@ MODES.SELECT_DIRECTION = {
 					selected = []
 				}
 			}
+			this.callback(selected.map(s => NameRef.forObject(s)))
+			updateSelected()
+		}
+	},
+	mousedown: function (e, mouseLine) {},
+}
+MODES.SELECT_LINE = {
+	init: function (callback: (NameRef) => void) {
+		this.callback = callback
+	},
+	magic: function (sel): [L3, string] {
+		const r = (vector: L3, type: string): [L3, string] => [vector, type]
+		const CLASS_ORDER = [V3, Edge, Surface, Face, P3]
+		const sortMap = o => CLASS_ORDER.findIndex(clazz => o instanceof clazz)
+		sel.sort((a, b) => sortMap(a) - sortMap(b))
+		const [a, b, c] = sel
+		if (2 == sel.length) {
+			if (a instanceof V3 && b instanceof V3) {
+				return r(L3.throughPoints(a, b), 'through two points')
+			}
+			if (a instanceof V3 &&
+				b instanceof Edge &&
+				!(b.curve instanceof L3)) {
+				const curve = b.curve
+				if (curve.containsPoint(a)) {
+					const aT = b.curve.pointT(a)
+					return r(new L3(a, b.curve.tangentAt(aT).unit()), 'tangent of edge at point')
+				} else {
+					const t = b.curve.closestTToPoint(a)
+					return r(new L3(a, b.curve.tangentAt(t).unit()), 'point and tangent at closest point on edge')
+				}
+			}
+			if (a instanceof V3 &&
+				b instanceof Face) {
+				if (b.surface instanceof PlaneSurface) {
+					const line = new L3(a, b.surface.plane.normal1)
+					return r(line, 'point and plane normal')
+				} else if (b.surface.containsPoint(a)) {
+					const line = new L3(a, b.surface.normalAt(a))
+					return r(line, 'point and surface normal')
+				} else {
+					const foot = b.surface.pointFoot(a)
+					const line = L3.throughPoints(foot, a)
+					return r(line, 'through point and surface point foot')
+				}
+			}
+			if (a instanceof V3 && b instanceof P3) {
+				return r(new L3(a, b.normal1), 'plane normal')
+			}
+		}
+		if (1 == sel.length) {
+			if (a instanceof Edge && a.curve instanceof L3) {
+				return r(a.curve, 'straight edge')
+			}
+			if (a instanceof SketchLineSeg) {
+				return r(a.getCurve(), 'sketch segment')
+			}
+			if (a instanceof L3) {
+				return r(a, 'line')
+			}
+		}
+	},
+	end: function () {
+		this.callback(selected.map(s => NameRef.forObject(s)))
+	},
+	mousemove: function (e, mouseLine) {
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16,
+			'planes', 'faces', 'points', 'edges', 'sketchElements')
+	},
+	mouseup: function (e) {
+		if (BUTTONS.LEFT == e.button) {
+			if (e.shiftKey) {
+				selected.toggle(hoverHighlight)
+			} else {
+				if (hoverHighlight) {
+					selected = [hoverHighlight]
+				} else {
+					selected = []
+				}
+			}
+			this.callback(selected.map(s => NameRef.forObject(s)))
 			updateSelected()
 		}
 	},
@@ -373,6 +485,7 @@ MODES.SELECT_SEGMENT = {
 MODES.SELECT_FEATURE = {
 	init: function (callback) {
 		this.callback = callback
+		const __this = this
 		const events = {
 			click: function (e) {
 				const fl = e.target.featureLink || e.target.getParent().featureLink
@@ -382,7 +495,7 @@ MODES.SELECT_FEATURE = {
 					$('featureDisplay')
 						.removeEvents(events)
 						.removeClass('selectable')
-					callback(NameRef.forObject(fl))
+					__this.mousedown(e)
 				}
 			},
 		}
@@ -392,12 +505,23 @@ MODES.SELECT_FEATURE = {
 	},
 	end: function () {},
 	mousemove: function (e, mouseLine) {
-		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16, 'sketchElements') // todo only sketch segments
+		hoverHighlight = getHovering(mouseLine, modelBREP && modelBREP.faces, planes, brepPoints, brepEdges, 16,
+			'features') // todo only sketch segments
 		paintScreen()
 	},
 	mousedown: function (e) {
-		if (hoverHighlight instanceof Feature) {
-			this.callback(NameRef.forObject(hoverHighlight))
+		if (BUTTONS.LEFT == e.button) {
+			if (e.shiftKey) {
+				selected.toggle(hoverHighlight)
+			} else {
+				if (hoverHighlight) {
+					selected = [hoverHighlight]
+				} else {
+					selected = []
+				}
+			}
+			this.callback(selected.map(s => NameRef.forObject(s)))
+			updateSelected()
 		}
 	}
 }

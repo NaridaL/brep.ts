@@ -1,3 +1,4 @@
+///<reference path="ProjectedCurveSurface.ts"/>
 
 class CylinderSurface extends ProjectedCurveSurface {
 	readonly matrix: M4

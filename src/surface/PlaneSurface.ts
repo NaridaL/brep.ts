@@ -104,7 +104,7 @@ class PlaneSurface extends Surface {
 	}
 
 	toString() {
-		return makeGen('new PlaneSurface', this.plane, this.right, this.up)
+		return callsce('new PlaneSurface', this.plane, this.right, this.up)
 	}
 
 	toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {

@@ -32,7 +32,7 @@ class AABB extends Transformable {
 	 * Returns the largest AABB contained in this which doesn't overlap with aabb
 	 * @param aabb
 	 */
-	withoutAABB(aabb) {
+	withoutAABB(aabb: AABB): AABB {
 		assertInst(AABB, aabb)
 		let min, max
         const volume = this.volume(), size = this.size()
@@ -52,12 +52,12 @@ class AABB extends Transformable {
 		return new AABB(min, max)
 	}
 
-	getIntersectionAABB(aabb) {
+	getIntersectionAABB(aabb: AABB): AABB {
 		assertInst(AABB, aabb)
 		return new AABB(this.min.max(aabb.min), this.max.min(aabb.max))
 	}
 
-    touchesAABB(aabb) {
+    touchesAABB(aabb: AABB): boolean {
         assertInst(AABB, aabb)
         return !(
         this.min.x > aabb.max.x || this.max.x < aabb.min.x
@@ -65,7 +65,7 @@ class AABB extends Transformable {
         || this.min.z > aabb.max.z || this.max.z < aabb.min.z)
     }
 
-    fuzzyTouchesAABB(aabb) {
+    fuzzyTouchesAABB(aabb: AABB): boolean {
         assertInst(AABB, aabb)
         return !(
         lt(aabb.max.x, this.min.x) || lt(this.max.x, aabb.min.x)
@@ -73,7 +73,7 @@ class AABB extends Transformable {
         || lt(aabb.max.z, this.min.z) || lt(this.max.z, aabb.min.z))
     }
 
-	intersectsAABB(aabb) {
+	intersectsAABB(aabb: AABB): boolean {
 		assertInst(AABB, aabb)
 		return !(
 		this.min.x >= aabb.max.x || this.max.x <= aabb.min.x
@@ -81,14 +81,14 @@ class AABB extends Transformable {
 		|| this.min.z >= aabb.max.z || this.max.z <= aabb.min.z)
 	}
 
-	intersectsAABB2d(aabb) {
+	intersectsAABB2d(aabb: AABB): boolean {
 		assertInst(AABB, aabb)
 		return !(
 		this.min.x >= aabb.max.x || this.max.x <= aabb.min.x
 		|| this.min.y >= aabb.max.y || this.max.y <= aabb.min.y)
 	}
 
-	containsPoint(p) {
+	containsPoint(p: V3): boolean {
 		assertVectors(p)
 		return this.min.x <= p.x && this.min.y <= p.y && this.min.z <= p.z
 			&& this.max.x >= p.x && this.max.y >= p.y && this.max.z >= p.z
@@ -122,7 +122,7 @@ class AABB extends Transformable {
 			NLA.clamp(z, min.z, max.z)))
 	}
 
-	containsAABB(aabb) {
+	containsAABB(aabb: AABB) {
 		assertInst(AABB, aabb)
 		return this.containsPoint(aabb.min) && this.containsPoint(aabb.max)
 	}
@@ -137,15 +137,15 @@ class AABB extends Transformable {
 		const dir = line.dir1.map(el => el || Number.MIN_VALUE)
 		const minTs = (this.min.minus(line.anchor)).divv(dir)
 		const maxTs = (this.max.minus(line.anchor)).divv(dir)
-		const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(minTs).minElement()
+		const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(maxTs).minElement()
 		return tMin <= tMax && !(tMax < line.tMin || line.tMax < tMin)
     }
 
-	hasVolume() {
+	hasVolume(): boolean {
 		return this.min.x <= this.max.x && this.min.y <= this.max.y && this.min.z <= this.max.z
 	}
 
-	volume() {
+	volume(): number {
 		if (!this.hasVolume()) {
 			return -1
 		}
@@ -153,15 +153,15 @@ class AABB extends Transformable {
         return v.x * v.y * v.z
 	}
 
-	size() {
+	size(): V3 {
 		return this.max.minus(this.min)
 	}
 
-	getCenter() {
+	getCenter(): V3 {
 		return this.min.plus(this.max).div(2)
 	}
 
-	transform(m4) {
+	transform(m4: M4): AABB {
 		assertInst(M4, m4)
 		assert(m4.isAxisAligned())
 		const aabb = new AABB()
@@ -170,14 +170,14 @@ class AABB extends Transformable {
 		return aabb
 	}
 
-	ofTransformed(m4) {
+	ofTransformed(m4: M4): AABB {
 		assertInst(M4, m4)
 		const aabb = new AABB()
         aabb.addPoints(m4.transformedPoints(this.corners()))
 		return aabb
 	}
 
-	corners() {
+	corners(): V3[] {
 		const min = this.min, max = this.max
         return [
 			min,
@@ -192,24 +192,20 @@ class AABB extends Transformable {
 		]
 	}
 
-	toString() {
-		return makeGen('new AABB', this.min, this.max)
+	toString(): string {
+		return callsce('new AABB', this.min, this.max)
 	}
 
-	toSource() {
+	toSource(): string {
 		return this.toString()
 	}
 
-	toMesh() {
+	toMesh(): GL.Mesh {
 		const matrix = M4.multiplyMultiple(
 			M4.translation(this.min),
 			M4.scaling(this.size().max(new V3(NLA_PRECISION, NLA_PRECISION, NLA_PRECISION))))
-        console.log(matrix.str)
-		console.log(matrix.inversed().transposed().str)
 		const mesh = GL.Mesh.cube().transform(matrix)
-		console.log(mesh)
 		// mesh.vertices = this.corners()
-		console.log(matrix.transformedPoints(mesh.vertices))
         mesh.computeNormalLines(20)
 		mesh.compile()
 
@@ -220,7 +216,7 @@ class AABB extends Transformable {
 	    return new AABB(V3.O, new V3(x, y, z))
     }
 
-    static forAABBs(aabbs: AABB[]) {
+    static forAABBs(aabbs: Iterable<AABB>): AABB {
 	    const result = new AABB()
         for (const aabb of aabbs) {
 	        result.addAABB(aabb)

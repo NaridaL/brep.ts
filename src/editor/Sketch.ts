@@ -1,3 +1,5 @@
+///<reference path="editor.ts"/>
+
 type SketchSegment = SketchBezier | SketchArc | SketchLineSeg
 
 class Sketch extends Feature {
