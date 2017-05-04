@@ -1,4 +1,6 @@
 import snap0 = NLA.snap0
+import CustomSet = NLA.CustomSet
+import CustomMap = NLA.CustomMap
 let eps = 1e-5
 
 
@@ -80,7 +82,7 @@ function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], faceNormalA
 				result = i
 			}
 		} else if (!advanced) {
-			if (NLA.gt(angle, minValue)) {
+			if (gt(angle, minValue)) {
 				minValue = angle
 				result = i
 			}
@@ -93,8 +95,8 @@ class B2 extends Transformable {
     infiniteVolume: boolean
     generator: string
     vertexNames: Map<V3, string>
-    edgeFaces: NLA.CustomMap<Edge, {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}[]>
-    vertFaces: NLA.CustomMap<V3, Edge[]>
+    edgeFaces: CustomMap<Edge, {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}[]>
+    vertFaces: CustomMap<V3, Edge[]>
 
     constructor(faces: Face[], infiniteVolume: boolean, generator?: string, vertexNames?) {
         super()
@@ -440,23 +442,23 @@ class B2 extends Transformable {
     }
 
     getLooseEdgeSegments(
-        edgePointInfoss: NLA.CustomMap<Edge, IntersectionPointInfo[]>,
-        edgeFaces: NLA.CustomMap<Edge, any[]>): Map<Edge, Edge[]> {
+        edgePointInfoss: CustomMap<Edge, IntersectionPointInfo[]>,
+        edgeFaces: CustomMap<Edge, any[]>): Map<Edge, Edge[]> {
 
-        const result = new NLA.CustomMap<Edge, Edge[]>()
+        const result = new CustomMap<Edge, Edge[]>()
         // if there are no point info, the original edge will be kept, so we should return nothing
         // otherwise, something will be returned, even if it a new edge identical to the base edge
         for (const [canonEdge, pointInfos] of edgePointInfoss) {
             if (0 == pointInfos.length) continue
             const allFaces = edgeFaces.get(canonEdge)
-            pointInfos.sort((a, b) => NLA.snap0(a.edgeT - b.edgeT) || +!!a.faces)
+            pointInfos.sort((a, b) => snap0(a.edgeT - b.edgeT) || +!!a.faces)
             let startP = canonEdge.a, startDir = canonEdge.aDir, startT = canonEdge.aT, startInfo
             function addNewEdge(startInfo, endInfo, newEdge) {
                 for (let i = 0; i < allFaces.length; i++) {
                     const faceInfo = allFaces[i]
                     const startYes = !startInfo || !startInfo.faces || startInfo.faces[i]
                     const endYes = !endInfo || !endInfo.faces
-                    endYes && NLA.mapPush(result,
+                    endYes && mapPush(result,
                         !faceInfo.reversed ? canonEdge : canonEdge.flipped(),
                         !faceInfo.reversed ? newEdge : newEdge.flipped())
                 }
@@ -464,7 +466,7 @@ class B2 extends Transformable {
             for (let i = 0; i < pointInfos.length; i++) {
                 const info = pointInfos[i]
                 const pDir = canonEdge.tangentAt(info.edgeT)
-                if (!NLA.eq(info.edgeT, startT) ) {
+                if (!eq(info.edgeT, startT) ) {
                     const newEdge = Edge.create(canonEdge.curve, startP, info.p, startT, info.edgeT, null, startDir, pDir, 'looseSegment' + globalId++)
                     addNewEdge(startInfo, info, newEdge)
                 }
@@ -473,7 +475,7 @@ class B2 extends Transformable {
                 startInfo = info
                 startDir = pDir
             }
-            if (startInfo && !NLA.eq(startT, canonEdge.bT)) {
+            if (startInfo && !eq(startT, canonEdge.bT)) {
                 const newEdge = Edge.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, null, startDir, canonEdge.bDir, 'looseSegment' + globalId++)
                 addNewEdge(startInfo, undefined, newEdge)
             }
@@ -482,7 +484,7 @@ class B2 extends Transformable {
     }
 
     getIntersectionEdges(brep2) {
-        const faceMap = new Map(), thisEdgePoints = new NLA.CustomMap(), otherEdgePoints = new NLA.CustomMap()
+        const faceMap = new Map(), thisEdgePoints = new CustomMap(), otherEdgePoints = new CustomMap()
 
         let likeSurfaceFaces = []
 
@@ -530,7 +532,7 @@ class B2 extends Transformable {
 	assertSanity(): void {
         if (!NLA_DEBUG) return
 		const allFaceEdges = this.faces.map(face => face.getAllEdges()).concatenated()
-		for (const {i, j} of NLA.combinations(allFaceEdges.length)) {
+		for (const {i, j} of combinations(allFaceEdges.length)) {
 			const a = allFaceEdges[i], b = allFaceEdges[j]
 			//assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
 
@@ -552,13 +554,13 @@ class B2 extends Transformable {
     buildAdjacencies(): void {
         if (this.edgeFaces) return
 
-        this.edgeFaces = new NLA.CustomMap() as any
+        this.edgeFaces = new CustomMap() as any
         for (const face of this.faces) {
             for (const edge of face.getAllEdges()) {
                 const canon = edge.getCanon()
                 const normalAtCanonA = face.surface.normalAt(canon.a)
                 const inside = normalAtCanonA.cross(canon == edge ? edge.aDir : edge.bDir)
-                NLA.mapPush(this.edgeFaces, canon,
+                mapPush(this.edgeFaces, canon,
                     {face: face, edge: edge, normalAtCanonA: normalAtCanonA, reversed: canon != edge, inside: inside, angle: 0})
             }
         }
@@ -577,7 +579,7 @@ class B2 extends Transformable {
 		            if (faceInfo.angle < 0) faceInfo.angle += 2 * Math.PI
 	            }
             })
-            edgeFaceInfos.sort((a, b) => NLA.snap(a.angle - b.angle, 0) || assertNever())
+            edgeFaceInfos.sort((a, b) => snap(a.angle - b.angle, 0) || assertNever())
         }
     }
 
@@ -608,10 +610,10 @@ class B2 extends Transformable {
         other.buildAdjacencies()
 
         const faceMap = new Map()
-        const thisEdgePoints = new NLA.CustomMap<Edge, IntersectionPointInfo[]>(),
-	         otherEdgePoints = new NLA.CustomMap<Edge, IntersectionPointInfo[]>()
+        const thisEdgePoints = new CustomMap<Edge, IntersectionPointInfo[]>(),
+	         otherEdgePoints = new CustomMap<Edge, IntersectionPointInfo[]>()
 
-        const likeSurfaceFaces = new NLA.CustomSet()
+        const likeSurfaceFaces = new CustomSet()
 
         for (const thisFace of this.faces) {
             for (const otherFace of other.faces) {
@@ -690,7 +692,7 @@ class B2 extends Transformable {
     //            }
     //        }
     //    }
-    //    const pairs: NLA.CustomSet<[Equalable, Equalable]> = new NLA.CustomSet<[Equalable, Equalable]>()
+    //    const pairs: CustomSet<[Equalable, Equalable]> = new CustomSet<[Equalable, Equalable]>()
     //    pointEdge(this, other, (a, b) => pairs.has([a, b]), (a, b) => pairs.add([a, b]))
     //    pointEdge(other, this, (b, a) => pairs.has([a, b]), (b, a) => pairs.add([a, b]))
     //
@@ -852,7 +854,7 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
 					const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
 					const eps = 1e-4
 					const normVector = surface2.normalAt(p)
-					//if(!NLA.eq0(insideDir.dot(isTangent))) {
+					//if(!eq0(insideDir.dot(isTangent))) {
 						// Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
 						if (edgeT == edge.bT) {
 							// endpoint lies on intersection line
@@ -876,7 +878,7 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
 									nextSide = sign(ecd - iscd)
 								}
 								if (nextSide * thisSide < 0) {
-									assert(!NLA.eq0(insideDir.dot(isTangent)))
+									assert(!eq0(insideDir.dot(isTangent)))
 									// next segment is not colinear and ends on different side
 									ps.push({ p: edge.b, insideDir: insideDir, t: curveT, edge: edge, edgeT: edge.bT, colinear: false})
 								}
@@ -1008,29 +1010,29 @@ function planeFaceEdgeISPsWithPlaneOld(face: PlaneFace, isLine: L3, plane2: P3):
 }
 function dotCurve(v: V3, cDir: V3, cDDT: V3): number {
 	let dot = v.dot(cDir)
-	if (NLA.eq0(dot)) { dot = v.dot(cDDT) }
-	assert(!NLA.eq0(dot))
+	if (eq0(dot)) { dot = v.dot(cDDT) }
+	assert(!eq0(dot))
 	return dot
 }
 function dotCurve2(curve: Curve, t: number, normal: V3, sign: number): number {
 	assert(sign == 1 || sign == -1, sign)
 	const tangentDot = curve.tangentAt(t).dot(normal)
 	// if tangentDot != 0 the curve simply crosses the plane
-	if (!NLA.eq0(tangentDot)) { return sign * tangentDot }
+	if (!eq0(tangentDot)) { return sign * tangentDot }
 	const ddtDot = curve.ddt(t).dot(normal)
 	// tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure and must do a numeric test
-	if (!NLA.eq0(ddtDot)) { return ddtDot }
+	if (!eq0(ddtDot)) { return ddtDot }
 	const numericDot = curve.at(t).to(curve.at(t + sign * 4 * NLA_PRECISION)).dot(normal)
 	assert(!(curve instanceof L3))
 	return numericDot
 }
 function edgesDifferentSidesOfDir(dir: V3, e1: Edge, e2: Edge): boolean {
     let factor1 = dir.dot(e1.bDir)
-    if (NLA.eq0(factor1)) { factor1 = dir.dot(e1.bDDT) }
-    assert(!NLA.eq0(factor1))
+    if (eq0(factor1)) { factor1 = dir.dot(e1.bDDT) }
+    assert(!eq0(factor1))
     let factor2 = dir.dot(e2.aDir)
-    if (NLA.eq0(factor2)) { factor2 = dir.dot(e2.aDDT) }
-    assert(!NLA.eq0(factor2))
+    if (eq0(factor2)) { factor2 = dir.dot(e2.aDDT) }
+    assert(!eq0(factor2))
     return factor1 * factor2 > 0
 }
 
@@ -1062,7 +1064,7 @@ const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE= 3, ALONG_ED
 //    relFaces.sort((a, b) => a.angle - b.angle)
 //    // assert(relFaces.length % 2 == 0, edge.toSource()) // even number of touching faces
 //
-//    if (NLA.eq0(relFaces[0].angle)) {
+//    if (eq0(relFaces[0].angle)) {
 //        //assert(false) todo
 //        const coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0;
 //        return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
@@ -1080,9 +1082,9 @@ function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, f
     const faceInfo0 = edgeFaceInfos[0]
     const aDir1 = canonEdge.aDir.unit()
     const angleToCanon = (faceInfo0.inside.angleRelativeNormal(dirAtEdgeA, aDir1) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) - NLA_PRECISION
-    const nearestFaceInfoIndex = edgeFaceInfos.findIndex(faceInfo => NLA.lt(angleToCanon, faceInfo.angle))
+    const nearestFaceInfoIndex = edgeFaceInfos.findIndex(faceInfo => lt(angleToCanon, faceInfo.angle))
 	const nearestFaceInfo = edgeFaceInfos[nearestFaceInfoIndex == -1 ? edgeFaceInfos.length - 1 : nearestFaceInfoIndex - 1]
-    if (NLA.eq(nearestFaceInfo.angle, angleToCanon)) {
+    if (eq(nearestFaceInfo.angle, angleToCanon)) {
         //assert(false) todo
         const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0
         return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
@@ -1105,7 +1107,7 @@ function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: 
         return -((faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU - NLA_PRECISION)
     }
     const nearestFaceInfo = edgeFaceInfos.withMax(faceInfoAngleFromPInsideNeg)
-    if (NLA.eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
+    if (eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
         //assert(false) todo
         const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0
         return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
@@ -1186,7 +1188,7 @@ function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
     rays.sort((a, b) => a.angle - b.angle)
     //console.log("testPlane", testPlane.toSource(), "rays", rays.toSource())
 
-    if (NLA.eq0(rays[0].angle)) {
+    if (eq0(rays[0].angle)) {
         return ALONG_EDGE_OR_PLANE
     } else {
         return rays[0].out ? OUTSIDE : INSIDE
@@ -1213,7 +1215,7 @@ function splitsVolumeEnclosingCone2(brep: B2, p: V3, curve: Curve, curveT: numbe
 function fff(info: {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}, surface: Surface): int {
     const canonA = info.edge.reversed ? info.edge.b : info.edge.a
     const surfaceNormalAtCanonA = surface.normalAt(canonA)
-    const dot = NLA.snap0(info.inside.dot(surfaceNormalAtCanonA))
+    const dot = snap0(info.inside.dot(surfaceNormalAtCanonA))
     if (0 !== dot) {
         return 0 < dot ? OUTSIDE : INSIDE
     }
@@ -1222,6 +1224,46 @@ function fff(info: {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reve
     }
     assert(false)
 }
+function makeLink(values) {
+	return 'viewer.html?' + Object.getOwnPropertyNames(values).map(name => {
+			const val = values[name]
+			return name + '=' + (typeof val == 'string' ? val : val.toSource())
+		}).join('&')
+}
+declare function earcut(data: FloatArray, holeIndices: number[], dim: int): int[]
+function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
+	const absMaxDim = normal.maxAbsDim(), factor = sign(normal.e(absMaxDim))
+	const contour = new Float64Array(vertices.length * 2)
+	let i = vertices.length
+	/*
+	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]
+	 while (i--) {
+	 contour[i * 2    ] = vertices[i][coord0] * factor
+	 contour[i * 2 + 1] = vertices[i][coord1]
+	 }
+	 */
+
+	while (i--) {
+		// unroll disambiguation instead of accessing elements by string name ([coord0] etc)
+		// as it confuses google closure
+		switch (absMaxDim) {
+			case 0:
+				contour[i * 2] = vertices[i].y * factor
+				contour[i * 2 + 1] = vertices[i].z
+				break
+			case 1:
+				contour[i * 2] = vertices[i].z * factor
+				contour[i * 2 + 1] = vertices[i].x
+				break
+			case 2:
+				contour[i * 2] = vertices[i].x * factor
+				contour[i * 2 + 1] = vertices[i].y
+				break
+		}
+	}
+	return earcut(contour, holeStarts)
+}
+
 
 /**
  * Solves a quadratic system of equations of the form
@@ -1299,28 +1341,13 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
 }
 
 
-
-
-function curvePoint(implicitCurve: (s: number, t: number) => number, startPoint: V3) {
-    const eps = 1 / (1 << 20)
-    let p = startPoint
-    for (let i = 0; i < 4; i++) {
-        const fp = implicitCurve(p.x, p.y)
-        const dfpdx = (implicitCurve(p.x + eps, p.y) - fp) / eps,
-              dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
-        const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
-        //console.log(p.$)
-        p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
-    }
-    return p
-}
 function followAlgorithm2 (implicitCurve, startPoint, endPoint, stepLength, startDir, tangents, boundsFunction, dir, didx, didy) {
     assertNumbers(stepLength, implicitCurve(0, 0))
     assertVectors(startPoint, endPoint)
     assert (!startDir || startDir instanceof V3)
     const points = []
     tangents = tangents || []
-    assert (NLA.eq0(implicitCurve(startPoint.x, startPoint.y)), 'NLA.isZero(implicitCurve(startPoint.x, startPoint.y))')
+    assert (eq0(implicitCurve(startPoint.x, startPoint.y)), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
     stepLength = stepLength || 0.5
     const eps = stepLength / 32
     let p = startPoint, prevp = startDir ? p.minus(startDir) : p
@@ -1353,7 +1380,7 @@ function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, start
     assert (!startDir || startDir instanceof V3)
     const points = []
     tangents = tangents || []
-    assert (NLA.eq0(implicitCurve(startPoint.x, startPoint.y)), 'NLA.isZero(implicitCurve(startPoint.x, startPoint.y))')
+    assert (eq0(implicitCurve(startPoint.x, startPoint.y)), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
     stepLength = stepLength || 0.5
     const eps = stepLength / 32
     let p = startPoint, prevp = startDir ? p.minus(startDir) : p
@@ -1388,7 +1415,7 @@ function intersectionICurveICurve(
     assertVectors(startParams1, endParams1)
     assert (!startDir || startDir instanceof V3)
     const vertices = []
-    assert (NLA.eq0(iCurve1(startParams1.x, startParams1.y)))
+    assert (eq0(iCurve1(startParams1.x, startParams1.y)))
     stepLength = stepLength || 0.5
     const eps = 1e-5
     let p = startParams1, prevp = p // startDir ? p.minus(startDir) : p

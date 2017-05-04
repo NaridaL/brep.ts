@@ -16,7 +16,7 @@
     "lib": ["DOM","ES2017"]
   },
   "include": [
-    "src/NLA.ts",
+//    "src/NLA.ts",
     "src/CustomSet.ts",
     "src/Transformable.ts",
     "src/Vector.ts",

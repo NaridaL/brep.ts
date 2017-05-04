@@ -4,7 +4,7 @@ class Matrix implements Equalable {
 	height: number
 
 	constructor(width: int, height: int, m: Float64Array) {
-		assert(width * height == m.length, "width * height == m.length", width, height, m.length)
+		assert(width * height == m.length, 'width * height == m.length', width, height, m.length)
 		this.m = m
 		this.width = width
 		this.height = height
@@ -59,7 +59,7 @@ class Matrix implements Equalable {
 
 	static fromRowArrays2(arrays) {
 		if (0 == arrays.length) {
-			throw new Error("cannot have 0 vector")
+			throw new Error('cannot have 0 vector')
 		}
 		const height = arrays.length
 		const width = arrays[0].length
@@ -67,7 +67,7 @@ class Matrix implements Equalable {
 		NLA.arrayCopy(arrays[0], 0, m, 0, width)
 		for (let rowIndex = 1; rowIndex < height; rowIndex++) {
 			if (arrays[rowIndex].length != width) {
-				throw new Error("all row arrays must be the same length")
+				throw new Error('all row arrays must be the same length')
 			}
 			NLA.arrayCopy(arrays[rowIndex], 0, m, rowIndex * width, width)
 		}
@@ -84,7 +84,7 @@ class Matrix implements Equalable {
 
 	static fromColArrays(colArrays): Matrix {
 		if (0 == colArrays.length) {
-			throw new Error("cannot have 0 vector")
+			throw new Error('cannot have 0 vector')
 		}
 		const width = colArrays.length
 		const height = colArrays[0].length
@@ -92,7 +92,7 @@ class Matrix implements Equalable {
 		NLA.arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height)
 		for (let colIndex = 1; colIndex < width; colIndex++) {
 			if (colArrays[colIndex].length != height) {
-				throw new Error("all col arrays must be the same length")
+				throw new Error('all col arrays must be the same length')
 			}
 			NLA.arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height)
 		}
@@ -103,38 +103,38 @@ class Matrix implements Equalable {
 	e(rowIndex: number, colIndex: number): number {
 		assertNumbers(rowIndex, colIndex)
 		if (NLA_DEBUG && (rowIndex >= this.height || colIndex >= this.width)) {
-			throw new Error("index " + rowIndex + ", " + colIndex + " is out of bounds (" + this.width + " x " + this.height + ")")
+			throw new Error('index ' + rowIndex + ', ' + colIndex + ' is out of bounds (' + this.width + ' x ' + this.height + ')')
 		}
 		return this.m[rowIndex * this.width + colIndex]
 	}
 
 	setEl(rowIndex: number, colIndex: number, val: number): void {
 		assertNumbers(rowIndex, colIndex, val)
-		assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex)
-		assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex)
+		assert(0 <= rowIndex && rowIndex < this.height, 'rowIndex out of bounds ' + rowIndex)
+		assert(0 <= colIndex && colIndex < this.width, 'colIndex out of bounds ' + colIndex)
 		this.m[rowIndex * this.width + colIndex] = val
 	}
 
 	toString(f?: (el: number) => string): string {
 		f = f || ((v) => v.toFixed(6))
-		assert(typeof f(0) == "string", "" + typeof f(0))
+		assert(typeof f(0) == 'string', '' + typeof f(0))
 		const rounded = Array.prototype.slice.call(this.m).map(f)
 		const colWidths = NLA.arrayFromFunction(this.width,
 			(colIndex) => rounded.sliceStep(colIndex, this.width).map((x) => x.length).max())
 		return NLA.arrayFromFunction(this.height,
 			(rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width) // select matrix row
 				.map((x, colIndex) => NLA.repeatString(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with spaces to col width
-				.join("  ")
-		).map(x => x + "\n").join(""); // join rows
+				.join('  ')
+		).map(x => x + '\n').join(''); // join rows
 	}
 
-	row(rowIndex): Vector {
+	row(rowIndex: int): Vector {
 		const v = new Float64Array(this.width)
 		NLA.arrayCopy(this.m, rowIndex * this.width, v, 0, this.width)
 		return new Vector(v)
 	}
 
-	col(colIndex): Vector {
+	col(colIndex: int): Vector {
 		const v = new Float64Array(this.height)
 		NLA.arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height)
 		return new Vector(v)
@@ -145,10 +145,10 @@ class Matrix implements Equalable {
 	}
 
 	dimString(): string {
-		return this.width + "x" + this.height
+		return this.width + 'x' + this.height
 	}
 
-	equals(obj): boolean {
+	equals(obj: any): boolean {
 		if (obj.constructor != this.constructor) return false
 		if (this.width != obj.width || this.height != obj.height) return false
 		let elIndex = this.m.length
@@ -160,7 +160,7 @@ class Matrix implements Equalable {
 
 	equalsMatrix(matrix: Matrix, precision?: number): boolean {
 		precision = precision || NLA_PRECISION
-		if (!(matrix instanceof Matrix)) throw new Error("not a matrix")
+		if (!(matrix instanceof Matrix)) throw new Error('not a matrix')
 		if (this.width != matrix.width || this.height != matrix.height) return false
 		let elIndex = this.m.length
 		while (elIndex--) {
@@ -181,7 +181,7 @@ class Matrix implements Equalable {
 	isZero(): boolean {
 		let elIndex = this.m.length
 		while (elIndex--) {
-			if (!NLA.eq0(this.m[elIndex])) {
+			if (!eq0(this.m[elIndex])) {
 				return false
 			}
 		}
@@ -230,7 +230,7 @@ class Matrix implements Equalable {
 				for (let rowIndex = currentRowIndex + 1; rowIndex < dim; rowIndex++) {
 					let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
 					lRowArrays[rowIndex][colIndex] = l
-					// subtract pivot row * l from row "rowIndex"
+					// subtract pivot row * l from row 'rowIndex'
 					for (let colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
 						uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
 					}
@@ -279,7 +279,7 @@ class Matrix implements Equalable {
 				for (let rowIndex = currentRowIndex + 1; rowIndex < height; rowIndex++) {
 					let l = uRowArrays[rowIndex][colIndex] / uRowArrays[currentRowIndex][colIndex]
 					lRowArrays[rowIndex][colIndex] = l
-					// subtract pivot row * l from row "rowIndex"
+					// subtract pivot row * l from row 'rowIndex'
 					for (let colIndex2 = colIndex; colIndex2 < width; colIndex2++) {
 						uRowArrays[rowIndex][colIndex2] -= l * uRowArrays[currentRowIndex][colIndex2]
 					}
@@ -318,7 +318,7 @@ class Matrix implements Equalable {
 		for (let colIndex = 0; colIndex < this.width; colIndex++) {
 			// find largest value in colIndex
 			for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
-				//console.log("row ", rowIndex, "col ", colIndex)
+				//console.log('row ', rowIndex, 'col ', colIndex)
 				const xi = this.e(colIndex, colIndex)
 				const xk = this.e(rowIndex, colIndex)
 				if (xk == 0) {
@@ -335,8 +335,8 @@ class Matrix implements Equalable {
 					this.setEl(colIndex, col2, x1)
 					this.setEl(rowIndex, col2, x2)
 				}
-				//console.log("r ", r, "c ", c, "s ", s, "sigma", sigma(c, s))
-				//console.log(this.toString(),"cs\n", matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
+				//console.log('r ', r, 'c ', c, 's ', s, 'sigma', sigma(c, s))
+				//console.log(this.toString(),'cs\n', matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
 				qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed)
 			}
 		}
@@ -346,13 +346,13 @@ class Matrix implements Equalable {
 
 	isPermutation(): boolean {
 		if (!this.isSquare()) return false
-		if (this.m.some((value) => !NLA.eq0(value) && !NLA.eq(1, value))) return false
+		if (this.m.some((value) => !eq0(value) && !eq(1, value))) return false
 
 		const rows = this.asRowArrays(Array)
-		if (rows.some((row) => row.filter((value) => NLA.eq(1, value)).length != 1)) return false
+		if (rows.some((row) => row.filter((value) => eq(1, value)).length != 1)) return false
 
 		const cols = this.asColArrays(Array)
-		if (cols.some((col) => col.filter((value) => NLA.eq(1, value)).length != 1)) return false
+		if (cols.some((col) => col.filter((value) => eq(1, value)).length != 1)) return false
 
 		return true
 	}
@@ -360,7 +360,7 @@ class Matrix implements Equalable {
 	isDiagonal(precision?: number): boolean {
 		let i = this.m.length
 		while (i--) {
-			if (0 !== i % (this.width + 1) && !NLA.eq0(this.m[i])) return false
+			if (0 !== i % (this.width + 1) && !eq0(this.m[i])) return false
 		}
 		return true
 	}
@@ -370,11 +370,11 @@ class Matrix implements Equalable {
 	}
 
 	isUpperTriangular(precision?: number) {
-		precision = "number" == typeof precision ? precision : NLA_PRECISION
+		precision = 'number' == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
 		for (let rowIndex = 1; rowIndex < this.height; rowIndex++) {
 			for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
-				if (!NLA.eq02(this.m[rowIndex * this.width + colIndex], precision)) {
+				if (!eq02(this.m[rowIndex * this.width + colIndex], precision)) {
 					return false
 				}
 			}
@@ -397,12 +397,12 @@ class Matrix implements Equalable {
 	}
 
 	isLowerUnitriangular(precision?: number): boolean {
-		precision = "number" == typeof precision ? precision : NLA_PRECISION
+		precision = 'number' == typeof precision ? precision : NLA_PRECISION
 		if (!this.isSquare()) return false
 		for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
 			for (let colIndex = rowIndex; colIndex < this.width; colIndex++) {
 				const el = this.m[rowIndex * this.width + colIndex]
-				if (rowIndex == colIndex ? !NLA.eq2(1, el, precision) : !NLA.eq02(el, precision)) {
+				if (rowIndex == colIndex ? !eq2(1, el, precision) : !eq02(el, precision)) {
 					return false
 				}
 			}
@@ -414,7 +414,7 @@ class Matrix implements Equalable {
 		if (!this.isSquare()) return false
 		for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
 			for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-				if (!NLA.eq0(this.m[rowIndex * this.width + colIndex])) {
+				if (!eq0(this.m[rowIndex * this.width + colIndex])) {
 					return false
 				}
 			}
@@ -424,8 +424,8 @@ class Matrix implements Equalable {
 
 	solveBackwards(x: Vector): Vector {
 		assertVectors(x)
-		assert(this.height == x.dim(), "this.height == x.dim()")
-		assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.str)
+		assert(this.height == x.dim(), 'this.height == x.dim()')
+		assert(this.isUpperTriangular(), 'this.isUpperTriangular()\n' + this.str)
 		const v = new Float64Array(this.width)
 		let rowIndex = this.height
 		while (rowIndex--) {
@@ -458,7 +458,7 @@ class Matrix implements Equalable {
 
 	solveForwards(x: Vector): Vector {
 		assertVectors(x)
-		assert(this.height == x.dim(), "this.height == x.dim()")
+		assert(this.height == x.dim(), 'this.height == x.dim()')
 		assertf(() => this.isLowerTriangular(), this.toString())
 		const v = new Float64Array(this.width)
 		for (let rowIndex = 0; rowIndex < this.height; rowIndex++) {
@@ -482,7 +482,7 @@ class Matrix implements Equalable {
 		//console.log(R.toString())
 		let rowIndex = this.height
 		while (rowIndex-- && U.row(rowIndex).isZero()) {
-			console.log("RANK" + U.row(rowIndex).toString() + U.row(rowIndex).isZero())
+			console.log('RANK' + U.row(rowIndex).toString() + U.row(rowIndex).isZero())
 		}
 		return rowIndex + 1
 	}
@@ -496,7 +496,7 @@ class Matrix implements Equalable {
 	}
 
 	asRowArrays<T extends FloatArray>(arrayConstructor: new (length: int) => T): T[] {
-		arrayConstructor = arrayConstructor || Float64Array
+		arrayConstructor = arrayConstructor || Float64Array as any
 		let rowIndex = this.height
 		const result = new Array(this.height)
 		while (rowIndex--) {
@@ -506,7 +506,7 @@ class Matrix implements Equalable {
 	}
 
 	asColArrays<T extends FloatArray>(arrayConstructor: new (length: int) => T): T[] {
-		arrayConstructor = arrayConstructor || Float64Array
+		arrayConstructor = arrayConstructor || Float64Array as any
 		let colIndex = this.width
 		const result = new Array(this.width)
 		while (colIndex--) {
@@ -516,14 +516,14 @@ class Matrix implements Equalable {
 	}
 
 	rowArray<T extends FloatArray>(rowIndex, arrayConstructor: new (length: int) => T): T {
-		arrayConstructor = arrayConstructor || Float64Array
+		arrayConstructor = arrayConstructor || Float64Array as any
 		const result = new arrayConstructor(this.width)
 		NLA.arrayCopy(this.m, rowIndex * this.width, result, 0, this.width)
 		return result
 	}
 
 	colArray<T extends FloatArray>(colIndex, arrayConstructor: new (length: int) => T): T {
-		arrayConstructor = arrayConstructor || Float64Array
+		arrayConstructor = arrayConstructor || Float64Array as any
 		const result = new arrayConstructor(this.width)
 		NLA.arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height)
 		return result
@@ -546,10 +546,10 @@ class Matrix implements Equalable {
 	}
 
 	inversed(): Matrix {
-		let lup = this.luDecomposition()
-		let y = lup.L.solveForwardsMatrix(lup.P)
+		const lup = this.luDecomposition()
+		const y = lup.L.solveForwardsMatrix(lup.P)
 		console.log(y)
-		let inverse = lup.U.solveBackwardsMatrix(y)
+		const inverse = lup.U.solveBackwardsMatrix(y)
 		return inverse
 	}
 
@@ -657,7 +657,7 @@ class Matrix implements Equalable {
 		while (tRowIndex--) {
 			let tColIndex = Math.min(tRowIndex, w)
 			while (tColIndex--) {
-				console.log("col", tColIndex, "row", tRowIndex)
+				console.log('col', tColIndex, 'row', tRowIndex)
 				const temp = tM[tRowIndex * w + tColIndex]
 				tM[tRowIndex * w + tColIndex] = tM[tColIndex * h + tRowIndex]
 				tM[tColIndex * h + tRowIndex] = temp
@@ -673,7 +673,7 @@ class Matrix implements Equalable {
 
 	diagonal(): Vector {
 		if (!this.isSquare()) {
-			throw new Error("!!")
+			throw new Error('!!')
 		}
 		const v = new Float64Array(this.width)
 		let elIndex = this.width * (this.width + 1)
@@ -722,7 +722,7 @@ class Matrix implements Equalable {
 	}
 
 	getTriangularDeterminant(): number {
-		assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix")
+		assert(this.isUpperTriangular() || this.isLowerTriangular(), 'not a triangular matrix')
 
 		let product = 1
 		let elIndex = this.width * (this.width + 1)
@@ -786,10 +786,10 @@ class Matrix implements Equalable {
 				}
 			}
 		}
-		console.log("m\n", this.toString(x => '' + x))
-		console.log("L\n", L.toString(x => '' + x))
-		console.log("U\n", U.toString(x => '' + x))
-		console.log("P\n", P.toString(x => '' + x))
+		console.log('m\n', this.toString(x => '' + x))
+		console.log('L\n', L.toString(x => '' + x))
+		console.log('U\n', U.toString(x => '' + x))
+		console.log('P\n', P.toString(x => '' + x))
 		let indexMap = P.permutationAsIndexMap()
 		let dependentRowIndexes = dependents.map((b, index) => b && indexMap[index]).filter(x => x != void 0)
 		return dependentRowIndexes

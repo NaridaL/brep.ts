@@ -17,7 +17,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	if (curve instanceof L3) {
 		let surface
 		if (curve.dir1.isParallelTo(V3.Z)) {
-			if (NLA.eq0(line.anchor.x)) {
+			if (eq0(line.anchor.x)) {
 				return
 			}
 			let flipped = line.anchor.z > edge.b.z
@@ -28,8 +28,8 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 			if (!flipped) surface = surface.flipped()
 			if (!open) {
 				const hole = flipped
-					? !NLA.eq0(edge.b.x) && ribs[ipp].flipped()
-					: !NLA.eq0(line.anchor.x) && ribs[i]
+					? !eq0(edge.b.x) && ribs[ipp].flipped()
+					: !eq0(line.anchor.x) && ribs[i]
 				return new PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
 			}
 			return new PlaneFace(surface, faceEdges)
@@ -237,7 +237,7 @@ namespace B2T {
 	 * baseLoop should be CCW on XZ plane for a bounded B2
 	 */
 	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string, infoFactory?: FaceInfoFactory<any>): B2 {
-		assert(!NLA.eq(PI, totalRads) || PI == totalRads) // URHGJ
+		assert(!eq(PI, totalRads) || PI == totalRads) // URHGJ
 		assertf(() => NLA.lt(0, totalRads) && NLA.le(totalRads, TAU))
         totalRads = NLA.snap(totalRads, TAU)
 		const basePlane = new PlaneSurface(P3.ZX.flipped()).edgeLoopCCW(baseLoop)
@@ -246,10 +246,10 @@ namespace B2T {
 		assertf(() => Edge.isLoop(baseLoop))
 		const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
 		const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
-		const open = !NLA.eq(totalRads, 2 * PI)
+		const open = !eq(totalRads, 2 * PI)
 		const baseRibCurves = baseLoop.map(edge =>  {
 			const a = edge.a, radius = a.lengthXY()
-			if (!NLA.eq0(radius)) {
+			if (!eq0(radius)) {
 				return new SemiEllipseCurve(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0))
 			}
 		})
@@ -258,7 +258,7 @@ namespace B2T {
 			if (edge instanceof StraightEdge) {
 				const line = edge.curve
 				if (line.dir1.isParallelTo(V3.Z)) {
-					if (NLA.eq0(edge.a.x)) {
+					if (eq0(edge.a.x)) {
 						return
 					}
 					const flipped = edge.a.z > edge.b.z
@@ -315,7 +315,7 @@ namespace B2T {
 			const ribs = NLA.arrayFromFunction(baseLoop.length, i => {
 				const a = stepStartEdges[i].a, radius = a.lengthXY()
 				const b = stepEndEdges[i].a
-				if (!NLA.eq0(radius)) {
+				if (!eq0(radius)) {
 					const curve = 0 == rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
 					return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
 				}
@@ -326,9 +326,9 @@ namespace B2T {
 					const ipp = (edgeIndex + 1) % baseLoop.length
 					const faceEdges = [
 						stepStartEdges[edgeIndex].flipped(),
-						!NLA.eq0(edge.a.x) && ribs[edgeIndex],
+						!eq0(edge.a.x) && ribs[edgeIndex],
 						stepEndEdges[edgeIndex],
-						!NLA.eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
+						!eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
                     const surface = 0 == rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
 					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
 					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
@@ -354,13 +354,13 @@ namespace B2T {
 	//export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): B2 {
 	//	assert(Edge.isLoop(loop))
 	//	const rotationMatrix = M4.rotationZ(rads)
-	//	const open = !NLA.eq(rads, 2 * PI)
+	//	const open = !eq(rads, 2 * PI)
 	//	const endEdges = open ? loop.map(edge => edge.transform(rotationMatrix)) : loop
 	//	const edgeCount = loop.length
 	//	const ribs = NLA.arrayFromFunction(edgeCount, i => {
 	//		const a = loop[i].a, radius = a.lengthXY()
 	//		const b = endEdges[i].a
-	//		if (!NLA.eq0(radius)) {
+	//		if (!eq0(radius)) {
 	//			const curve = new SemiEllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
 	//			const aT = -PI, bT = -PI + rads
 	//			return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
@@ -371,14 +371,14 @@ namespace B2T {
 	//		console.log('ljl', i, ipp, ribs)
 	//		const faceEdges = [
 	//			edge.flipped(),
-	//			!NLA.eq0(edge.a.x) && ribs[i],
+	//			!eq0(edge.a.x) && ribs[i],
 	//			endEdges[i],
-	//			!NLA.eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
+	//			!eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
 	//		if (edge instanceof StraightEdge) {
 	//			const line = edge.curve
 	//			let surface
 	//			if (line.dir1.isParallelTo(V3.Z)) {
-	//				if (NLA.eq0(edge.a.x)) {
+	//				if (eq0(edge.a.x)) {
 	//					return
 	//				}
 	//				let flipped = edge.a.z > edge.b.z
@@ -389,8 +389,8 @@ namespace B2T {
 	//				if (!flipped) surface = surface.flipped()
 	//				if (!open) {
 	//					const hole = flipped
-	//						? !NLA.eq0(edge.b.x) && ribs[ipp].flipped()
-	//						: !NLA.eq0(edge.a.x) && ribs[i]
+	//						? !eq0(edge.b.x) && ribs[ipp].flipped()
+	//						: !eq0(edge.a.x) && ribs[i]
 	//					return new PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
 	//				}
 	//				return new PlaneFace(surface, faceEdges)
@@ -557,7 +557,7 @@ namespace B2T {
 
 	export function rotStep(edges: Edge[], totalRads: raddd, count: int) {
 		const radStep = totalRads / count
-		const open = !NLA.eq(totalRads, 2 * PI)
+		const open = !eq(totalRads, 2 * PI)
 		const ribCount = !open ? count : count + 1
 		const ribs = NLA.arrayFromFunction(ribCount, i => {
 			if (i == 0) return edges
@@ -567,7 +567,7 @@ namespace B2T {
 		const hs = NLA.arrayFromFunction(count, i => {
 			const ipp = (i + 1) % ribCount
 			return NLA.arrayFromFunction(edges.length, j => {
-				if (!NLA.eq0(edges[j].a.lengthXY())) {
+				if (!eq0(edges[j].a.lengthXY())) {
 					return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a)
 				}
 			})
@@ -583,11 +583,11 @@ namespace B2T {
 				surface = new PlaneSurface(flipped ? new P3(V3.Z, edge.a.z) : new P3(V3.Z.negated(), -edge.a.z))
 				if (open) {
 					const newEdges = []
-					if (!NLA.eq0(edge.a.x)) {
+					if (!eq0(edge.a.x)) {
 						newEdges.pushAll(NLA.arrayFromFunction(count, j => hs[j][i]))
 					}
 					newEdges.push(ribs[count][i])
-					if (!NLA.eq0(edge.b.x)) {
+					if (!eq0(edge.b.x)) {
 						newEdges.pushAll(NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped()))
 					}
 					newEdges.push(edge.flipped())
@@ -597,9 +597,9 @@ namespace B2T {
 						? NLA.arrayFromFunction(count, j => hs[j][i])
 						: NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
 					let hole
-					if (flipped && !NLA.eq0(edge.b.x)) {
+					if (flipped && !eq0(edge.b.x)) {
 						hole = NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
-					} else if (!flipped && !NLA.eq0(edge.a.x)) {
+					} else if (!flipped && !eq0(edge.a.x)) {
 						hole = NLA.arrayFromFunction(count, j => hs[j][i])
 					}
 					face = new PlaneFace(surface, contour, hole ? [hole] : [])
@@ -607,7 +607,7 @@ namespace B2T {
 				faces.push(face)
 				return
 			} else if (edge instanceof StraightEdge) {
-				if (NLA.eq0(edge.a.lengthXY()) && NLA.eq0(edge.b.lengthXY())) {
+				if (eq0(edge.a.lengthXY()) && eq0(edge.b.lengthXY())) {
 					return
 				}
 			}
@@ -699,7 +699,7 @@ namespace B2T {
 	export function tetrahedron(a: V3, b: V3, c: V3, d: V3, name: string = 'tetra' + globalId++): B2 {
 		assertVectors(a, b, c, d)
 		const dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
-		if (NLA.eq0(dDistance)) {
+		if (eq0(dDistance)) {
 			throw new Error('four points are coplanar')
 		}
 		if (dDistance > 0) {
@@ -862,8 +862,4 @@ namespace B2T {
 		const generator = callsce('B2T.pyramidEdges', baseEdges, apex, name)
 		return new B2(faces, false, generator, name)
 	}
-}
-
-function callsce(name: string, ...params: any[]) {
-	return name + '(' + params.map(SCE).join(',') + ')'
 }

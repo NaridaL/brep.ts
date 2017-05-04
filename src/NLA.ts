@@ -3,6 +3,7 @@ const TAU = 2 * Math.PI
 
 let globalId = 0
 type int = number
+type colorstr = string // e.g. '#abcdef
 type raddd = number
 type FloatArray = Float32Array | Float64Array | number[]
 
@@ -283,8 +284,8 @@ namespace NLA {
 			let val = vals[i], roundVal = round(val)
 			let key
 			if (!map.has(roundVal)
-				&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.eq(key, val))
-				&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.eq(key, val))) {
+				&& !((key = map.get(roundVal - 1 / (1 << 26))) && eq(key, val))
+				&& !((key = map.get(roundVal + 1 / (1 << 26))) && eq(key, val))) {
 				map.set(roundVal, val)
 			}
 		}
@@ -292,14 +293,14 @@ namespace NLA {
 	}
 
 	export function fuzzyUniquesF<T>(vals: T[], f: (o: T) => number): T[] {
-		let round = val => Math.floor(val * (1 << 26)) / (1 << 26)
+		const round = val => Math.floor(val * (1 << 26)) / (1 << 26)
 		let map = new Map()
 		for (let i = 0; i < vals.length; i++) {
 			let val = vals[i], roundVal = round(f(val))
 			let key
 			if (!map.has(roundVal)
-				&& !((key = map.get(roundVal - 1 / (1 << 26))) && NLA.eq(key, f(val)))
-				&& !((key = map.get(roundVal + 1 / (1 << 26))) && NLA.eq(key, f(val)))) {
+				&& !((key = map.get(roundVal - 1 / (1 << 26))) && eq(key, f(val)))
+				&& !((key = map.get(roundVal + 1 / (1 << 26))) && eq(key, f(val)))) {
 				map.set(roundVal, val)
 			}
 		}
@@ -766,39 +767,6 @@ function isCCW(vertices, normal) {
 	assert(0 != dsa)
 	return dsa < 0
 }
-declare function earcut(data: FloatArray, holeIndices: number[], dim: int): int[]
-function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
-	const absMaxDim = normal.maxAbsDim(), factor = sign(normal.e(absMaxDim))
-	const contour = new Float64Array(vertices.length * 2)
-	let i = vertices.length
-	/*
-	 var [coord0, coord1] = [['y', 'z'], ['z', 'x'], ['x', 'y']][maxAbsDim]
-	 while (i--) {
-	 contour[i * 2    ] = vertices[i][coord0] * factor
-	 contour[i * 2 + 1] = vertices[i][coord1]
-	 }
-	 */
-
-	while (i--) {
-		// unroll disambiguation instead of accessing elements by string name ([coord0] etc)
-		// as it confuses google closure
-		switch (absMaxDim) {
-			case 0:
-				contour[i * 2] = vertices[i].y * factor
-				contour[i * 2 + 1] = vertices[i].z
-				break
-			case 1:
-				contour[i * 2] = vertices[i].z * factor
-				contour[i * 2 + 1] = vertices[i].x
-				break
-			case 2:
-				contour[i * 2] = vertices[i].x * factor
-				contour[i * 2 + 1] = vertices[i].y
-				break
-		}
-	}
-	return earcut(contour, holeStarts)
-}
 
 function doubleSignedArea(vertices, normal) {
 	assert(!normal.isZero(),'!normal.isZero()')
@@ -843,8 +811,8 @@ function pqFormula(p: number, q: number): number[] {
  * @returns 0-3 roots
  */
 function solveCubicReal2(a: number, b: number, c: number, d: number): number[] {
-    if (NLA.eq0(a)) {
-        if (NLA.eq0(b)) {
+    if (eq0(a)) {
+        if (eq0(b)) {
             return [-d / c]
 		} else {
 			return pqFormula(c / b, d / b)
@@ -892,7 +860,7 @@ function checkDerivate(f, df, a, b, maxFaults = 0) {
     let faults = 0
     for (let t = a; t < b; t += (b - a) / 100) {
         const df2 = (f(t + eps) - f(t)) / eps
-        assert((faults += +!NLA.eq2(df2, df(t), 0.1 )) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`)
+        assert((faults += +!eq2(df2, df(t), 0.1 )) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`)
     }
 }
 function getRoots(f, a, b, stepSize, df) {
@@ -1171,4 +1139,10 @@ function glqInSteps(f, startT, endT, steps) {
 function midpointRuleQuadrature(f: (number) => number, startT: number, endT: number, steps: int = 32): number {
 	const dt = (endT - startT) / steps
 	return NLA.arrayFromFunction(steps, i => startT + dt / 2 + dt * i).map(f).sumInPlaceTree() * dt
+}
+
+
+
+function callsce(name: string, ...params: any[]) {
+	return name + '(' + params.map(SCE).join(',') + ')'
 }

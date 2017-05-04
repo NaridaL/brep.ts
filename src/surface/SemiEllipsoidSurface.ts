@@ -170,8 +170,8 @@ class SemiEllipsoidSurface extends Surface {
         }
     }
 
-    isCurvesWithPlane(p: P3) {
-        const planeLC = p.transform(this.inverseMatrix)
+    isCurvesWithPlane(plane: P3): Curve[] {
+        const planeLC = plane.transform(this.inverseMatrix)
         return SemiEllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
     }
 
@@ -207,7 +207,7 @@ class SemiEllipsoidSurface extends Surface {
 		if (this === surface) return true
 		if (surface.constructor !== SemiEllipsoidSurface) return false
 		if (!this.center.like(surface.center)) return false
-		if (this.isSphere()) return surface.isSphere() && NLA.eq(this.f1.length(), this.f2.length())
+		if (this.isSphere()) return surface.isSphere() && eq(this.f1.length(), this.f2.length())
 
 		const otherMatrixLC = this.inverseMatrix.times(surface.matrix)
 		// Ellipsoid with matrix otherMatrixLC is unit sphere iff otherMatrixLC is orthogonal
@@ -303,16 +303,16 @@ class SemiEllipsoidSurface extends Surface {
     }
 
 	isSphere(): boolean {
-		return NLA.eq(this.f1.length(), this.f2.length())
-			&& NLA.eq(this.f2.length(), this.f3.length())
-			&& NLA.eq(this.f3.length(), this.f1.length())
+		return eq(this.f1.length(), this.f2.length())
+			&& eq(this.f2.length(), this.f3.length())
+			&& eq(this.f3.length(), this.f1.length())
 			&& this.f1.isPerpendicularTo(this.f2)
 			&& this.f2.isPerpendicularTo(this.f3)
 			&& this.f3.isPerpendicularTo(this.f1)
 	}
 
 	isVerticalSpheroid(): boolean {
-        return NLA.eq(this.f1.length(), this.f2.length())
+        return eq(this.f1.length(), this.f2.length())
 	        && this.f1.isPerpendicularTo(this.f2)
 	        && this.f2.isPerpendicularTo(this.f3)
 	        && this.f3.isPerpendicularTo(this.f1)
@@ -381,7 +381,7 @@ class SemiEllipsoidSurface extends Surface {
     }
 
     containsPoint(p) {
-        return NLA.eq0(this.implicitFunction()(p))
+        return eq0(this.implicitFunction()(p))
     }
 
     boundsFunction() {
@@ -546,7 +546,7 @@ class SemiEllipsoidSurface extends Surface {
 
 		function logIS(isP) {
 			const isT = testLine.pointT(isP)
-			if (NLA.eq(pT, isT)) {
+			if (eq(pT, isT)) {
 				return true
 			} else if (pT < isT && NLA.le(isT, PI)) {
 				inside = !inside

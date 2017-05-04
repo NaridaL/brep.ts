@@ -129,7 +129,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 					const lineDir = sign(this.normalAt(info.p).cross(surface2.normalAt(info.p)).dot(this.dir1)) || 1
 					return new L3(info.p, this.dir1.times(lineDir))
 				})
-			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+			} else if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
 			} else {
 				assert(false)

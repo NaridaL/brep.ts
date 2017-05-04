@@ -101,7 +101,7 @@ class Vector {
 		if (this.v.length != obj.v.length) return false
 		let i = this.v.length
 		while (i--) {
-			if (!NLA.eq(this.v[i], obj.v[i])) return false
+			if (!eq(this.v[i], obj.v[i])) return false
 		}
 		return true
 	}
@@ -137,7 +137,7 @@ class Vector {
 	}
 
 	/**
-	 Returns true iff this is parallel to vector, using NLA.equals
+	 Returns true iff this is parallel to vector, using equals
 	 Throw a DebugError
 	 if vector is not a Vector or
 	 if this has a length of 0 or
@@ -149,14 +149,14 @@ class Vector {
 		assert(!vector.isZero(), '!vector.isZero()')
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
-		return NLA.eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)))
+		return eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)))
 	}
 
 	isPerpendicularTo(vector: Vector): boolean {
 		assertInst(Vector, vector)
 		assert(!this.isZero(), '!this.isZero()')
 		assert(!vector.isZero(), '!vector.isZero()')
-		return NLA.eq0(this.dot(vector))
+		return eq0(this.dot(vector))
 	}
 
 	/**
@@ -164,7 +164,7 @@ class Vector {
 	 Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
 	 */
 	isZero(): boolean {
-		return NLA.eq0(this.length())
+		return eq0(this.length())
 	}
 
 	/*/ Returns the length of this Vector, i.e. the euclidian norm.*/
@@ -187,7 +187,7 @@ class Vector {
 	// NLA_DEBUGError if this has a length of 0.
 	normalized(): Vector {
 		const length = this.length()
-		if (NLA.eq0(length)) {
+		if (eq0(length)) {
 			throw new Error('cannot normalize zero vector')
 		}
 		return this.div(this.length())
@@ -223,13 +223,13 @@ class Vector {
 	}
 
 	/**
-	 Returns true iff the length() of this vector is equal to 'length', using NLA.equals
+	 Returns true iff the length() of this vector is equal to 'length', using equals
 	 E.g. NLA.V(3, 4).hasLength(5) === true
 	 NLA.V(1, 1).hasLength(1) === false
 	 */
 	hasLength(length: number): boolean {
 		assertNumbers(length)
-		return NLA.eq(length, this.length())
+		return eq(length, this.length())
 	}
 
 	V3(): V3 {

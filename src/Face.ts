@@ -729,12 +729,12 @@ class RotationFace extends Face {
 			// check edge.a
 			let u = pointToParameterFunction(edge.a, PI).x
 			// if u is not PI, or ~0, return its sign
-			if (u != PI && !NLA.eq0(u)) {
+			if (u != PI && !eq0(u)) {
 				return sign(u) * PI
 			}
 			// check midpoint between edge.a and edge.b
 			u = pointToParameterFunction(edge.curve.at((edge.aT + edge.bT) / 2), PI).x
-			if (u != PI && !NLA.eq0(u)) {
+			if (u != PI && !eq0(u)) {
 				return sign(u) * PI
 			}
 		}
@@ -751,7 +751,7 @@ class RotationFace extends Face {
 		const vs = []
 		const reverseFunc = this.surface.pointToParameterFunction()
 		const verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0())
-		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !NLA.eq(reverseFunc(edgeVertices[0], Math.PI).x, Math.PI))
+		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(reverseFunc(edgeVertices[0], Math.PI).x, Math.PI))
 		assert(-1 != startEdgeIndex)
 		// console.log(startEdgeIndex)
 		let hint = Math.PI
@@ -1259,7 +1259,7 @@ class RotationFace extends Face {
 			vertexLoop.forEach((v0, i, vs) => {
 				let v1 = vs[(i + 1) % vs.length], dDiff = v1.x - v0.x
 				//console.log(v0.sce, v1.sce)
-				if (NLA.eq0(dDiff)) {
+				if (eq0(dDiff)) {
 					return
 				}
 				if (dDiff < 0) {
@@ -1572,8 +1572,8 @@ class RotationFace extends Face {
 			// 'ps' for the plane face will be empty
 			// TODO: behavior when curves touch face?
 			// !! start in does depend on insidedir... TODO
-			assertf(() => (0 == ps1.length) || !NLA.eq0(ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t))), () => ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t)))
-			assertf(() => (0 == ps2.length) || !NLA.eq0(ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t))), () => ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t)))
+			assertf(() => (0 == ps1.length) || !eq0(ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t))), () => ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t)))
+			assertf(() => (0 == ps2.length) || !eq0(ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t))), () => ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t)))
 			function startsInside(ps, face) {
 				if (0 == ps.length) {
 					return isFinite(isCurve.tMin) && face.containsPoint2(isCurve.at(isCurve.tMin)) == PointVsFace.INSIDE

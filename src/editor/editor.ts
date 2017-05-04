@@ -1,4 +1,5 @@
 ///<reference path="Feature.ts"/>
+import ge = NLA.ge
 const MooEl: ElementConstructor = Element
 function formatStack(stack) {
 	const re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
@@ -142,16 +143,18 @@ function paintSeg(seg, color?) {
 		let angleA = seg.angleA(), angleB = seg.angleB()
 		if (angleB <= angleA) { angleB += Math.PI * 2 }
 		paintArc(seg.c.V3(), radius, 2, color, angleA, angleB)
+		drawPoint(seg.a)
+		drawPoint(seg.b)
 		drawPoint(seg.c)
 	} else if (seg instanceof SketchBezier) {
 		// paintBezier(seg.points.map(p => p.V3()), 2, 0xdddddd, -2, 3)
 		paintBezier(seg.points.map(p => p.V3()), 2, color, 0, 1)
 		seg.points.forEach(drawPoint)
+	} else if (seg instanceof SegmentEndPoint) {
+		drawPoint(seg)
 	} else {
 		throw new Error('unknown sketch element' + seg)
 	}
-	drawPoint(seg.a)
-	drawPoint(seg.b)
 
 }
 function paintSketch(sketch) {
@@ -457,6 +460,8 @@ function rebuildModel() {
 	brepPoints = []
 	brepEdges = []
 
+	featureError = undefined
+
 	planes = [
 		new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xffaaaa, -500, 500, -500, 500),
 		new CustomPlane(V3.O, V3.Z, V3.X, 'planeZX', 0xaaffaa, -500, 500, -500, 500),
@@ -468,56 +473,18 @@ function rebuildModel() {
 	for (let featureIndex = 0; featureIndex < loopEnd; featureIndex++) {
 		const color = modelColors[featureIndex % modelColorCount]
 		const feature = featureStack[featureIndex]
-		//try {
-		if (feature instanceof Sketch) {
-			feature.plane = feature.planeRef.getOrThrow()
-			//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(),
-			// feature.plane.normal1.length())
-			feature.sketchToWorldMatrix =
-				M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal1, feature.plane.anchor)
-			feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed()
-			feature.recalculate()
-			feature.elements.forEach(el => publish(el.name, el, feature))
-		} else if (feature.type && 'planeDefinition' == feature.type) {
-			const sel = feature.whats.map(w => w.getOrThrow())
-			let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
-			let cp
-			if (plane) {
-				if (feature.flipped) plane = plane.flipped()
-
-				const right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
-				planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal1.times(feature.offset)),
-					right, up, feature.planeId, 0xFF4500, -500, 500, -500, 500))
-			}
-			if ('immediate' == feature.planeType) {
-				const plane = eval(feature.source), right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
-
-				planes.push(new CustomPlane(plane.anchor,
-					right, up, feature.planeId, 0xFF4500, -500, 500, -500, 500))
-			}
-			publish(feature.name, cp)
-		} else if (feature instanceof Pattern
-			|| feature instanceof Extrude
-			|| feature instanceof Rotate) {
+		if (!catchErrors) {
 			feature.apply(publish, color)
 		} else {
-			//noinspection ExceptionCaughtLocallyJS
-			throw new Error('unknown feature')
-		}
-		// brepMesh.computeWireframeFromFlatTriangles()
-		// brepMesh.compile()
-try{
-		} catch (error) {
-			let featureDiv = $('featureDisplay').getChildren().filter(child => child.featureLink == feature)[0]
-
-			if (featureDiv) {
-				let ediv = featureDiv.getElement('[name=error]')
-				ediv.setStyle('display', 'inline')
-				ediv.title= error.toString() + '\n' + error.stack
+			try {
+				feature.apply(publish, color)
+			} catch (error) {
+				featureError = {feature, error}
+				updateFeatureDisplay()
+				console.error(error)
+				// throw error
+				break
 			}
-			console.error(error)
-			// throw error
-			break
 		}
 		publish(feature.name, feature, feature)
 	}
@@ -543,7 +510,7 @@ let faces = []
 let highlighted = [], selected = [], paintDefaultColor = 0x000000
 let gl: GL.LightGLContext
 let modelBREP, brepMesh, brepPoints, planes, brepEdges
-let rebuildLimit = -1, rollBackIndex = -1
+let rebuildLimit = -1, rollBackIndex = -1, featureError
 let drPs = [], drVs: {anchor: V3, dir1: V3, color: int}[] = []
 
 let eye = {eyePos: V(1000, 1000, 1000), eyeFocus: V3.O, eyeUp: V3.Z, zoomFactor: 1}
@@ -609,7 +576,11 @@ function drawPoints(size: number = 2) {
 	brepPoints && brepPoints.forEach(p =>
 		drawPoint(p, hoverHighlight == p ? 0x0adfdf : (selected.includes(p) ? 0xff0000 : 0xcccc00), size))
 }
-
+let catchErrors = false
+function handleCatchErrors(e) {
+	catchErrors = e.target.value == 'on'
+	rebuildModel()
+}
 function conicPainter(mode, ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
 	shaders.ellipse3d.uniforms({
 		f1: ellipse.f1,
@@ -725,6 +696,8 @@ function drawEl(el, color) {
 		drawFace(el, color)
 	} else if (el instanceof CustomPlane) {
 		drawPlane(el, color)
+	} else if (el instanceof Curve) {
+		drawEdge(Edge.forCurveAndTs(el), color)
 	} else if (isSketchEl(el)) {
 		paintLooseSeg(el, color)
 	} else if (el == ZERO_EL) {} else {
@@ -836,53 +809,56 @@ function template(templateName, map): HTMLElement {
 function featureRollBack(feature: any, featureIndex: number) {
 	rollBackIndex = featureIndex
 }
+let featureComp
 function updateFeatureDisplay() {
-	const div = $('featureDisplay')
-	div.erase('text')
-	featureStack.forEach(function (feature, featureIndex) {
-		if (rebuildLimit == featureIndex) {
-			div.adopt(new MooEl('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
-			// div.adopt(<div class='rebuildLimit'>REBUILD LIMIT</div>)
-		}
-		const snAndNames = {
-			[Extrude.name]: ['EXTR', MODES.EXTRUDE],
-			[Rotate.name]: ['ROTA', MODES.ROTATE],
-			[Sketch.name]: ['SKTC', MODES.SKETCH],
-			[Pattern.name]: ['PTRN', MODES.PATTERN],
-			[PlaneDefinition.name]: ['PLNE', MODES.PLANE_DEFINITION],
-		}
-		let newChild
-		const [sn, mode] = snAndNames[feature.constructor.name]
-		newChild = template('templateFeatureExtrude', {what: sn, name: feature.name})
-		newChild.getElement('[name=edit]').onclick = function () {
-			modePush(mode, feature)
-		}
-		newChild.inject(div)
-		newChild.getElement('[name=delete]').onclick = function () {
-			featureDelete(feature)
-		}
-		newChild.getElement('[name=rollBack]').onclick = function () {
-			featureRollBack(feature, featureIndex)
-		}
-		newChild.featureLink = feature
-		newChild.onmouseover = function (e) {
-			const dependencies = featureDependencies(feature)
-			const dependents = featureDependents(feature)
-			div.getChildren().filter((subDiv: any) => dependencies.includes(subDiv.featureLink)).addClass('isDependedOn')
-			div.getChildren().filter((subDiv: any) => dependents.includes(subDiv.featureLink)).addClass('hasDependents')
-			hoverHighlight = this.featureLink
-			paintScreen()
-		}
-		newChild.onmouseout = function (e) {
-			div.getChildren().removeClass('isDependedOn').removeClass('hasDependents')
-		}
-		feature.hide && newChild.getElement('[name=toggleHide]').addClass('hidden')
-		newChild.getElement('[name=toggleHide]').onclick = function () {
-			feature.hide = !feature.hide
-			this.toggleClass('hidden', feature.hide)
-			paintScreen()
-		}
-	})
+	const props = {features: featureStack}
+	featureComp = preact.render(h(FeatureStackDisplay, props), $('featureDisplay'), featureComp)
+	//const div = $('featureDisplay')
+	//div.erase('text')
+	//featureStack.forEach(function (feature, featureIndex) {
+	//	if (rebuildLimit == featureIndex) {
+	//		div.adopt(new MooEl('div', {text: 'REBUILD LIMIT', class: 'rebuildLimit'}))
+	//		// div.adopt(<div class='rebuildLimit'>REBUILD LIMIT</div>)
+	//	}
+	//	const snAndNames = {
+	//		[Extrude.name]: ['EXTR', MODES.EXTRUDE],
+	//		[Rotate.name]: ['ROTA', MODES.ROTATE],
+	//		[Sketch.name]: ['SKTC', MODES.SKETCH],
+	//		[Pattern.name]: ['PTRN', MODES.PATTERN],
+	//		[PlaneDefinition.name]: ['PLNE', MODES.PLANE_DEFINITION],
+	//	}
+	//	let newChild
+	//	const [sn, mode] = snAndNames[feature.constructor.name]
+	//	newChild = template('templateFeatureExtrude', {what: sn, name: feature.name})
+	//	newChild.getElement('[name=edit]').onclick = function () {
+	//		modePush(mode, feature)
+	//	}
+	//	newChild.inject(div)
+	//	newChild.getElement('[name=delete]').onclick = function () {
+	//		featureDelete(feature)
+	//	}
+	//	newChild.getElement('[name=rollBack]').onclick = function () {
+	//		featureRollBack(feature, featureIndex)
+	//	}
+	//	newChild.featureLink = feature
+	//	newChild.onmouseover = function (e) {
+	//		const dependencies = featureDependencies(feature)
+	//		const dependents = featureDependents(feature)
+	//		div.getChildren().filter((subDiv: any) => dependencies.includes(subDiv.featureLink)).addClass('isDependedOn')
+	//		div.getChildren().filter((subDiv: any) => dependents.includes(subDiv.featureLink)).addClass('hasDependents')
+	//		hoverHighlight = this.featureLink
+	//		paintScreen()
+	//	}
+	//	newChild.onmouseout = function (e) {
+	//		div.getChildren().removeClass('isDependedOn').removeClass('hasDependents')
+	//	}
+	//	feature.hide && newChild.getElement('[name=toggleHide]').addClass('hidden')
+	//	newChild.getElement('[name=toggleHide]').onclick = function () {
+	//		feature.hide = !feature.hide
+	//		this.toggleClass('hidden', feature.hide)
+	//		paintScreen()
+	//	}
+	//})
 }
 function updateSelected() {
 	let div = $('selectedElements')
@@ -1373,7 +1349,9 @@ window.onload = function () {
 	updateFeatureDisplay()
 	rebuildModel() // so warning will show
 	paintScreen()
-	const lastInterst = featureStack.slice().reverse().find(f => f instanceof Sketch)
+
+	const lastInterst = featureStack.last()
+	modePush(snAndNames[lastInterst.constructor.name][1], lastInterst)
 
 }
 
@@ -1529,22 +1507,6 @@ function setupSelectors(el, feature, mode) {
 			})
 		})
 
-	el.getElements('.plane-select')
-		.addEvent('click', function (e) {
-			const selector = this
-			this.addClass('selecting')
-			selector.set('text', 'Click on a plane')
-			modePush(MODES.PLANE_SELECT, function (planeRef) {
-				console.log('plane-select callback', planeRef)
-				selector.removeClass('selecting')
-				selector.set('text', planeRef.ref)
-				selector.linkRef = planeRef
-				modeEnd(MODES.PLANE_SELECT)
-
-				feature[selector.dataset.featureProperty] = planeRef
-				rebuildModel()
-			})
-		})
 
 	el.getElements('.segment-select')
 		.addEvent('click', function (e) {
@@ -1957,8 +1919,7 @@ class Extrude extends Feature {
 	dependentOnNames(): NameRef[] {
 		return []
 	}
-
-	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+	getB2(m4, color?: colorstr, genFeature?: Feature) {
 		const feature = this
 		const loopSegment = feature.segmentName.getOrThrow()
 		const loopSketch = loopSegment.sketch
@@ -1978,21 +1939,21 @@ class Extrude extends Feature {
 		// loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
 		type FI = { feature: Feature, color: number[] }
 		const featureFaceInfo = { feature: genFeature, color }
-		const infoFactory = new class extends FaceInfoFactory<FI> {
-			constructor() {
-				super()
-			}
-
-			info(surface: Surface, contour: Edge[], holes: Edge[][]): FI {
-				return featureFaceInfo
-			}
-		}
+		const infoFactory = FaceInfoFactory.makeStatic({ feature: genFeature, color })
 		const brep = B2T.extrudeEdges(edgeLoop, loopSketch.plane.transform(startMatrix),
 			lengthOffset, feature.name, undefined, infoFactory)
+		return brep
+	}
+
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+		const feature = this
+		const brep = this.getB2(m4, color, genFeature)
+		brep.assertSanity()
 
 		if (modelBREP) {
-			// isEdges = modelBREP.getIntersectionEdges(brep)
-			// drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).unit()}))
+			//isEdges = modelBREP.getIntersectionEdges(brep)
+			//drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).unit()}))
+			type FI = { feature: Feature, color: number[] }
 			modelBREP = modelBREP[feature.operation](brep, new class extends FaceInfoFactory<FI> {
 				constructor() {
 					super()
@@ -2030,7 +1991,6 @@ class PlaneDefinition extends Feature {
 	 right, up, -500, 500, -500, 500, 0xFF4500, feature.planeId))
 	 }
 	 */
-	readonly type = 'planeDefinition'
 	planeId = 'plane' + globalId++
 	name = 'plane' + globalId++
 	planeType = 'dynamic'
@@ -2040,12 +2000,30 @@ class PlaneDefinition extends Feature {
 	whats = []
 	flipped = false
 
-	toSource(line) {
-		return `new PlaneDefinition()`
-	}
-
 	dependentOnNames() {
 		return this.whats
+	}
+
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+		const feature = this
+		const sel = feature.whats.map(w => w.getOrThrow())
+		let plane = MODES.PLANE_DEFINITION.magic(sel, feature.angle * DEG)
+		let cp
+		if (plane) {
+			if (feature.flipped) plane = plane.flipped()
+
+			const right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right)
+			planes.push(cp = new CustomPlane(plane.anchor.plus(plane.normal1.times(feature.offset)),
+				right, up, feature.planeId, 0xFF4500, -500, 500, -500, 500))
+		}
+		if ('immediate' == feature.planeType) {
+			const plane = eval(feature.source), right = plane.normal1.getPerpendicular().unit(),
+				up = plane.normal1.cross(right)
+
+			planes.push(new CustomPlane(plane.anchor,
+				right, up, feature.planeId, 0xFF4500, -500, 500, -500, 500))
+		}
+		publish(feature.name, cp)
 	}
 }
 NLA.registerClass(PlaneDefinition)
@@ -2077,7 +2055,7 @@ class Rotate extends Feature {
 		return []
 	}
 
-	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+	getB2(m4, color?: colorstr, genFeature?: Feature) {
 		const feature = this
 		const loopSegment = feature.segmentName.getOrThrow()
 		const loopSketch = loopSegment.sketch
@@ -2086,7 +2064,7 @@ class Rotate extends Feature {
 		const m1 = M4.forSys(axis.dir1.cross(loopSketch.plane.normal1).negated(), loopSketch.plane.normal1, axis.dir1, axis.anchor)
 		const m1i = m1.inversed()
 		// opposite dir to plane normal1:
-		const startMatrix = M4.multiplyMultiple(m4, m1, M4.rotationZ(feature.start)))
+		const startMatrix = M4.multiplyMultiple(m4, m1, M4.rotationZ(feature.start))
 		const edgeLoopXY = loopSketch.getLoopForSegment(loopSegment)
 		let edgeLoopXZ = edgeLoopXY.map(edge => edge.transform(m1i, ''))
 		const rads = min(TAU, abs(feature.end - feature.start))
@@ -2098,16 +2076,22 @@ class Rotate extends Feature {
 		const length = feature.end - feature.start
 		//console.log("polypoints", polygonPoints, polygonPoints.toSource(),
 		// loopSketch.plane.translated().toSource(), offsetDir.times(feature.start))
-		type FI = { feature: Feature, color: number[] }
 		const infoFactory = FaceInfoFactory.makeStatic({ feature: genFeature, color })
 		const brepXZ = B2T.rotateEdges(edgeLoopXZ, rads, feature.name, undefined, infoFactory)
 		brepXZ.assertSanity()
 		const brep = brepXZ.transform(startMatrix)
+		return brep
+	}
+
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+		const feature = this
+		const brep = this.getB2(m4, color, genFeature)
 		brep.assertSanity()
 
 		if (modelBREP) {
 			//isEdges = modelBREP.getIntersectionEdges(brep)
 			//drVs = isEdges.map(e => ({anchor: e.a, dir: e.curve.tangentAt(e.aT).unit()}))
+			type FI = { feature: Feature, color: number[] }
 			modelBREP = modelBREP[feature.operation](brep, new class extends FaceInfoFactory<FI> {
 				constructor() {
 					super()
@@ -2152,8 +2136,8 @@ class Pattern extends Feature {
 	fail = this
 	static readonly SN: string = 'PTRN'
 	name: string = 'pattern' + globalId++
-	features: Feature[]
-	direction: V3 = V3.X
+	features: Feature[] = []
+	direction: V3 = []
 	directionFlipped: boolean = false
 	count: int = 2
 	totalLength: number = 40

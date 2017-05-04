@@ -30,7 +30,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isCircular() {
-		return NLA.eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2)
+		return eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2)
 	}
 
 	isColinearTo(curve: Curve): boolean {
@@ -44,13 +44,13 @@ class SemiEllipseCurve extends XiEtaCurve {
 			return true
 		}
 		if (this.isCircular()) {
-			return curve.isCircular() && NLA.eq(this.f1.length(), curve.f1.length()) && this.normal.isParallelTo(curve.normal)
+			return curve.isCircular() && eq(this.f1.length(), curve.f1.length()) && this.normal.isParallelTo(curve.normal)
 		} else {
 			let {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
 			if (f1.length() > f2.length()) {[f1, f2] = [f2, f1]}
 			if (c1.length() > c2.length()) {[c1, c2] = [c2, c1]}
-			return NLA.eq(f1.squared(), Math.abs(f1.dot(c1)))
-				&& NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
+			return eq(f1.squared(), Math.abs(f1.dot(c1)))
+				&& eq(f2.squared(), Math.abs(f2.dot(c2)))
 		}
 	}
 
@@ -135,7 +135,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 	 */
     rightAngled(): SemiEllipseCurve {
 	    const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared()
-	    if (NLA.eq0(a)) {
+	    if (eq0(a)) {
 		    return this
 	    }
 	    const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a)
@@ -160,7 +160,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isInfosWithEllipse(ellipse: EllipseCurve | SemiEllipseCurve): ISInfo[] {
-		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
+		if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 			ellipse instanceof SemiEllipseCurve && (ellipse = ellipse.asEllipse())
 			return this.asEllipse().isInfosWithCurve(ellipse).filter(info => this.isValidT(info.tThis) && ellipse.isValidT(info.tOther))
 		} else {

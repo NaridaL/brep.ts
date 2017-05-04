@@ -42,11 +42,11 @@ class PlaneSurface extends Surface {
 		return super.isCurvesWithSurface(surface2)
 	}
 
-	isCurvesWithPlane(p: P3): L3[] {
-		if (this.plane.isParallelToPlane(p)) {
+	isCurvesWithPlane(plane: P3): L3[] {
+		if (this.plane.isParallelToPlane(plane)) {
 			return []
 		}
-		return [this.plane.intersectionWithPlane(p)]
+		return [this.plane.intersectionWithPlane(plane)]
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {

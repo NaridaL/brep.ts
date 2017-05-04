@@ -1,5 +1,5 @@
 type ISInfo = {tThis: number, tOther: number, p: V3}
-abstract class Curve extends Transformable {
+abstract class Curve extends Transformable implements Equalable {
 	tIncrement: number
 	hlol: number
 
@@ -23,7 +23,7 @@ abstract class Curve extends Transformable {
 		return this.at(this.closestTToPoint(p))
 	}
 
-	isValidT(t) {
+	isValidT(t): boolean {
 		return le(this.tMin, t) && le(t, this.tMax)
 	}
 
@@ -98,7 +98,23 @@ abstract class Curve extends Transformable {
 	/**
 	 * Behavior when curves are colinear: self intersections
 	 */
-	abstract isInfosWithCurve(curve): ISInfo[]
+	isInfosWithCurve(curve: Curve): ISInfo[] {
+		return Curve.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax)
+	}
+
+
+	static integrate(curve: Curve, startT: number, endT: number, steps: int): number {
+		const step = (endT - startT) / steps
+		let length = 0
+		let p = curve.at(startT)
+		let i = 0, t = startT + step
+		for (; i < steps; i++, t += step) {
+			const next = curve.at(t)
+			length += p.distanceTo(next)
+			p = next
+		}
+		return length
+	}
 
 	abstract at(t: number): V3
 
@@ -169,7 +185,7 @@ abstract class Curve extends Transformable {
         // the recursive function finds good approximates for the intersection points
         // curve1 function uses newton iteration to improve the result as much as possible
         const handleStartTS = (startT, startS) => {
-            if (!result.some(info => NLA.eq(info.tcurve1, startT) && NLA.eq(info.tOther, startS))) {
+            if (!result.some(info => eq(info.tcurve1, startT) && eq(info.tOther, startS))) {
                 const f1 = (t, s) => curve1.tangentAt(t).dot(curve1.at(t).minus(curve2.at(s)))
                 const f2 = (t, s) => curve2.tangentAt(s).dot(curve1.at(t).minus(curve2.at(s)))
                 // f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
@@ -217,4 +233,67 @@ abstract class Curve extends Transformable {
 	reversed(): Curve {
 		throw new Error()
 	}
+
+	static breakDownIC(implicitCurve: (s, t) => number,
+	                   sMin: number, sMax: number,
+	                   tMin: number, tMax: number,
+	                   sStep: number, tStep: number,
+	                   step_size: number,
+	                   dids?: (s, t) => number,
+	                   didt?: (s, t) => number): Curve[] {
+		const EPS = 1 / (1 << 20)
+		undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
+		undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
+
+		const deltaS = sMax - sMin, deltaT = tMax - tMin
+		const sRes = deltaS / sStep, tRes = deltaT / tStep
+		const grid = new Array(sRes * tRes)
+		const at = (i, j) => grid[j * sRes + i]
+		const set = (i, j) => (grid[j * sRes + i] = 1)
+		const result = []
+		for (let i = 0; i < sRes; i++) {
+			for (let j = 0; j < tRes; j++) {
+				if (at(i, j)) continue
+				set(i, j)
+				let s = sMin + i * sStep, t = tMin + j * tStep
+
+				// basically curvePoint
+				for (let i = 0; i < 4; i++) {
+					const fp = implicitCurve(s, t)
+					const dfpdx = dids(s, t), dfpdy = didt(s, t)
+					const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
+					s -= scale * dfpdx
+					t -= scale * dfpdy
+					const li = floor((s - sMin) / sStep), lj = floor((t - tMin) / tStep)
+					if (0 <= li && li < sRes && 0 <= lj && lj < tRes) {
+						set(li, lj)
+					}
+				}
+				// s, t are now good starting coordinates to use follow algo
+				result.pushAll(followAlgorithm())
+			}
+		}
+		return result
+	}
+
+	test() {
+		const ic = (x, y) => sin(x+y)-cos(x*y)+1
+		return Curve.breakDownIC(ic, -5, 5, -5, 5, 0.5, 0.5, 0.01)
+	}
+}
+
+
+
+function curvePoint(implicitCurve: (s: number, t: number) => number, startPoint: V3) {
+	const eps = 1 / (1 << 20)
+	let p = startPoint
+	for (let i = 0; i < 4; i++) {
+		const fp = implicitCurve(p.x, p.y)
+		const dfpdx = (implicitCurve(p.x + eps, p.y) - fp) / eps,
+			dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
+		const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
+		//console.log(p.$)
+		p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
+	}
+	return p
 }

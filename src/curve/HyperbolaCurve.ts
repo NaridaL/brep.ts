@@ -42,8 +42,8 @@ class HyperbolaCurve extends XiEtaCurve {
         }
         assert(false)
         const {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
-        return NLA.eq(f1.squared(), Math.abs(f1.dot(c1)))
-            && NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
+        return eq(f1.squared(), Math.abs(f1.dot(c1)))
+            && eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
 	reversed(): this {
@@ -60,7 +60,7 @@ class HyperbolaCurve extends XiEtaCurve {
 
     rightAngled(): HyperbolaCurve {
         const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() + f1.squared()
-        if (NLA.eq0(a)) {
+        if (eq0(a)) {
             return this
         }
         const g1 = 2 * a, g2 = b + Math.sqrt(b * b - 4 * a * a)

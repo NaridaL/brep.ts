@@ -77,7 +77,7 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 
 		function logIS(isP) {
 			const isT = testLine.pointT(isP)
-			if (NLA.eq0(isT)) {
+			if (eq0(isT)) {
 				return true
 			} else if (isT > 0) {
 				inside = !inside
@@ -126,13 +126,19 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 
 	}
 
-	hashCode(): int {
-		return 455678631
-	}
+	abstract equals(obj: any): boolean
+	abstract hashCode(): int
 
 	abstract zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number}
 
 	abstract calculateArea(allEdges: Edge[]): number
+
+	static genericCurvesIP(ps: Surface, is: Surface): Curve[] {
+		const psf = ps.parametricFunction()
+		const isf = ps.implicitFunction()
+		const ic = (s, t) => isf(psf(s, t))
+		return Curve.breakDownIC(ic, ps.sMin, ps.sMax, ps.tMin, ps.tMax, 0.1, 0.1, 0.0001)
+	}
 
 }
 

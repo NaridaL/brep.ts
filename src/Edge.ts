@@ -40,7 +40,7 @@ abstract class Edge extends Transformable {
 
 	/**
 	 * Returns the intersections of the edge with the plane.
-	 * Values are snapped to aT and bT, ie aT === t || !NLA.eq(aT, t)
+	 * Values are snapped to aT and bT, ie aT === t || !eq(aT, t)
 	 * @param plane
 	 */
 	abstract edgeISTsWithPlane(plane: P3): number[]
@@ -279,7 +279,7 @@ abstract class Edge extends Transformable {
 			} // lines parallel
 			const p1p2 = p1.to(p2)
 			// check if distance is zero (see also L3.distanceToLine)
-			if (!NLA.eq0(p1p2.dot(virtualPlaneNormal))) {
+			if (!eq0(p1p2.dot(virtualPlaneNormal))) {
 				assert(false)
 			}
 			const l1 = new L3(p1, normal1), l2 = new L3(p2, normal2)
@@ -571,7 +571,7 @@ class StraightEdge extends Edge {
 	getEdgeT(p: V3): number|undefined {
 		assertVectors(p)
 		let edgeT = p.minus(this.curve.anchor).dot(this.curve.dir1)
-		if (!NLA.eq0(this.curve.at(edgeT).distanceTo(p))) {
+		if (!eq0(this.curve.at(edgeT).distanceTo(p))) {
 			return
 		}
 		edgeT = NLA.snap(edgeT, this.aT)

@@ -27,6 +27,17 @@ class Sketch extends Feature {
 		this.plane = null
 	}
 
+	apply(publish, color, m4: M4 = M4.IDENTITY, genFeature: Feature = this) {
+		const feature = this
+		feature.plane = feature.planeRef.getOrThrow()
+		//console.log("LENGTHS", feature.plane.right.length(), feature.plane.up.length(),
+		// feature.plane.normal1.length())
+		feature.sketchToWorldMatrix =
+			M4.forSys(feature.plane.right, feature.plane.up, feature.plane.normal1, feature.plane.anchor)
+		feature.worldToSketchMatrix = feature.sketchToWorldMatrix.inversed()
+		feature.recalculate()
+		feature.elements.forEach(el => publish(el.name, el, feature))
+	}
 
 	/**
 	 * Can be called even if already removed
@@ -71,7 +82,7 @@ class Sketch extends Feature {
 		console.log('p on ell')
 		if (ellSC.isCircular()) {
 			console.log('p circ')
-			if (NLA.eq0(dist)) {
+			if (eq0(dist)) {
 				this.constrainDistancePointFixedPoint(point, ellSC.center.x, ellSC.center.y, ellSC.f1.length())
 			} else {
 				this.b.push(dist)
@@ -107,7 +118,7 @@ class Sketch extends Feature {
 		const lineA_SC = this.worldToSketchMatrix.transformPoint(lineWC.anchor)
 		const lineB_SC = lineA_SC.plus(this.worldToSketchMatrix.transformVector(lineWC.dir1))
 		// console.log(lineA_SC, lineB_SC);
-		if (NLA.eq0(distance)) {
+		if (eq0(distance)) {
 			this.F.push(x => distanceLinePointSigned(lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]))
 		} else {
 			this.F.push(x => distanceLinePoint(lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]))
@@ -175,7 +186,7 @@ class Sketch extends Feature {
 	constrainDistancePointSegment(point, segment, distance) {
 		this.b.push(distance)
 		const ip = this.varMap.get(point), ia = this.varMap.get(segment.a), ib = this.varMap.get(segment.b)
-		if (NLA.eq0(distance)) {
+		if (eq0(distance)) {
 			this.F.push(x => distanceLinePointSigned(x[ia], x[ia + 1], x[ib], x[ib + 1], x[ip], x[ip + 1]))
 		} else {
 			this.F.push(x => distanceLinePoint(x[ia], x[ia + 1], x[ib], x[ib + 1], x[ip], x[ip + 1]))
@@ -486,7 +497,7 @@ class Sketch extends Feature {
 				sketch.reverse()
 			} else {
 				// then mark every constraint which has a problematic function
-				lastDiffs.v.forEach((el, index) => fxIndexToConstraint[index].error |= +!NLA.eq0(el))
+				lastDiffs.v.forEach((el, index) => fxIndexToConstraint[index].error |= +!eq0(el))
 			}
 		//} catch (e) {
 		//	if (!e.jacobiDependentRowIndexes) throw e // wrong type of error

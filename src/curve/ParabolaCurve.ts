@@ -58,7 +58,7 @@ class ParabolaCurve extends XiEtaCurve {
 		// t0 == -(f1 DOT f2) / (f2 DOT f2 * 2)
 		const f1 = this.f1, f2 = this.f2
         const f1DOTf2 = f1.dot(f2)
-		if (NLA.eq0(f1DOTf2) && f1.hasLength(1)) {
+		if (eq0(f1DOTf2) && f1.hasLength(1)) {
 			return this
 		}
 		const t0 = -f1DOTf2 / f2.squared() / 2
@@ -75,7 +75,7 @@ class ParabolaCurve extends XiEtaCurve {
 		const f2 = this.f2
 		const f1DOTf2 = f1.dot(f2)
 		let t0 = 0
-		if (!NLA.eq0(f1DOTf2)) {
+		if (!eq0(f1DOTf2)) {
 			t0 = -f1DOTf2 / f2.squared() / 2
 			f1 = f1.plus(f2.times(2 * t0))
 		}

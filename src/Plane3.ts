@@ -1,10 +1,3 @@
-import between = NLA.between
-import fuzzyBetween = NLA.fuzzyBetween
-import clamp = NLA.clamp
-import eq0 = NLA.eq0
-import eq = NLA.eq
-import lt = NLA.lt
-import le = NLA.le
 class P3 extends Transformable {
 
 	/**

@@ -21,7 +21,7 @@ class L3 extends Curve {
 		assertVectors(p)
 		const dist = this.distanceToPoint(p)
 		assertNumbers(dist)
-		return NLA.eq0(dist)
+		return eq0(dist)
 	}
 
 	likeCurve(curve: Curve): boolean {
@@ -41,7 +41,7 @@ class L3 extends Curve {
 	isColinearTo(obj: Curve): boolean {
 		return obj instanceof L3
 			&& this.containsPoint(obj.anchor)
-			&& NLA.eq(1, Math.abs(this.dir1.dot(obj.dir1)))
+			&& eq(1, Math.abs(this.dir1.dot(obj.dir1)))
 	}
 
 	distanceToLine(line: L3): number {
@@ -65,7 +65,7 @@ class L3 extends Curve {
 
 	asSegmentDistanceToPoint(x, sStart, sEnd) {
 		let t = x.minus(this.anchor).dot(this.dir1)
-		t = NLA.clamp(t, sStart, sEnd)
+		t = clamp(t, sStart, sEnd)
 		return this.at(t).minus(x).length()
 	}
 
@@ -73,22 +73,22 @@ class L3 extends Curve {
 		assertInst(L3, line)
 		const dirCross = this.dir1.cross(line.dir1)
 		const div = dirCross.squared()
-		if (NLA.eq0(div)) {
+		if (eq0(div)) {
 			return null
 		} // lines parallel
 		const anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
-		if (!NLA.eq0(anchorDiff.dot(dirCross.unit()))) {
+		if (!eq0(anchorDiff.dot(dirCross.unit()))) {
 			return null
 		}
 		let t = this.infoClosestToLine(line).t
-		t = NLA.clamp(t, sStart, sEnd)
-		return this.at(NLA.clamp(t, sStart, sEnd))
+		t = clamp(t, sStart, sEnd)
+		return this.at(clamp(t, sStart, sEnd))
 	}
 
-	at(lambda: number) {
-		assertNumbers(lambda)
-		return this.anchor.plus(this.dir1.times(lambda))
+	at(t: number): V3 {
+		assertNumbers(t)
+		return this.anchor.plus(this.dir1.times(t))
 	}
 
 	/**
@@ -115,7 +115,7 @@ class L3 extends Curve {
 		assertInst(L3, line)
 		// we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than
 		// isParallelTo()
-		return NLA.eq(1, Math.abs(this.dir1.dot(line.dir1)))
+		return eq(1, Math.abs(this.dir1.dot(line.dir1)))
 	}
 
 	angleToLine(line: L3): number {
@@ -129,7 +129,7 @@ class L3 extends Curve {
 	 * @returns {boolean} If the distance between the lines is zero
 	 */
 	intersectsLine(line: L3): boolean {
-		return NLA.eq0(this.distanceToLine(line))
+		return eq0(this.distanceToLine(line))
 	}
 
 	isInfosWithCurve(curve: Curve) {
@@ -137,12 +137,12 @@ class L3 extends Curve {
 
 		const dirCross = this.dir1.cross(curve.dir1)
 		const div = dirCross.squared()
-		if (NLA.eq0(div)) {
+		if (eq0(div)) {
 			// lines are parallel
 			return []
 		}
 		const anchorDiff = curve.anchor.minus(this.anchor)
-		if (NLA.eq0(anchorDiff.dot(dirCross))) {
+		if (eq0(anchorDiff.dot(dirCross))) {
 			const tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div
 			const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
 			const p = this.at(tThis)
@@ -261,7 +261,7 @@ class L3 extends Curve {
 		// plane: plane.normal1 * p = plane.w
 		// line: p=line.point + lambda * line.dir1
 		const div = plane.normal1.dot(this.dir1)
-		if (NLA.eq0(div)) return NaN
+		if (eq0(div)) return NaN
 		const lambda = (plane.w - plane.normal1.dot(this.anchor)) / div
 		return lambda
 	}
@@ -317,4 +317,3 @@ class L3 extends Curve {
 
 }
 L3.prototype.hlol = Curve.hlol++
-NLA.registerClass(L3)

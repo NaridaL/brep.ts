@@ -17,36 +17,14 @@ MODES.SKETCH = {
 		modeEnd(MODES.EXTRUDE)
 	},
 	init: function (feature) {
-		if (feature) {
-			assertInst(Sketch, feature)
-		} else {
-			feature = new Sketch()
-			featureStack.push(feature)
-			updateFeatureDisplay()
-		}
-
-		this.feature = feature
-		editingSketch = feature
-		let div = $('sketchEditor')
-		selected = []
-		updateSelected()
-		div.setStyle('display', 'block')
-		setupSelectors(div, feature, this)
-
-
-
+		initFeatureMode.call(this, feature, Sketch, SketchEditor)
+		editingSketch = this.feature
 		$$('.sketchControl').set('disabled', false)
-
-
-		if (NameRef.UNASSIGNED == feature.planeRef) {
-			div.getElement('[data-feature-property=planeRef]').fireEvent('click')
-		}
 	},
 	end: function () {
 		editingSketch = null
 		$$('.sketchControl').set('disabled', true)
-		let div = $('sketchEditor')
-		div.setStyle('display', 'none')
+		preact.render('', $('preact'), this.comp)
 	},
 	mouseup: function (e, mouseLine) {
 		console.log('MOUSEUP', 'buttons', e.buttons, 'button', e.button, 'which', e.which)
@@ -133,6 +111,7 @@ function initFeatureMode(this: any, feature: Feature, featType: any, component) 
 	//if (NameRef.UNASSIGNED == feature.segmentName) {
 	//	div.getElement('[data-feature-property=segmentName]').fireEvent('click')
 	//}
+	return feature
 }
 MODES.ROTATE = {
 	modeEditsFeatureAndRequiresRollback: true,
@@ -180,21 +159,10 @@ MODES.PATTERN = {
 		modeEnd(MODES.PATTERN)
 	},
 	init: function (feature) {
-		if (feature) {
-			assertInst(Pattern, feature)
-		} else {
-			feature = new Pattern()
-			featureStack.push(feature)
-			updateFeatureDisplay()
-		}
-		const div = $('patternEditor')
-		div.setStyle('display', 'block')
-		setupSelectors(div, feature, this)
+		initFeatureMode.call(this, feature, Pattern, PatternEditor)
 	},
 	end: function () {
-		const div = $('patternEditor')
-		//div.erase('text')
-		div.setStyle('display', 'none')
+		preact.render('', $('preact'), this.comp)
 	},
 	mousemove: function (e) {},
 	mousedown: function (e) {}
@@ -255,23 +223,10 @@ MODES.PLANE_DEFINITION = {
 		modeEnd(MODES.EXTRUDE)
 	},
 	init: function (feature) {
-		if (feature) {
-			assertInst(PlaneDefinition, feature)
-			selected = feature.whats
-		} else {
-			feature = new PlaneDefinition('plane' + globalId++)
-			featureStack.push(feature)
-			updateFeatureDisplay()
-		}
-		updateSelected()
-		this.feature = feature
-		const div = $('planeDefiner')
-		div.setStyle('display', 'block')
-		setupSelectors(div, feature, this)
+		initFeatureMode.call(this, feature, PlaneDefinition, PlaneEditor)
 	},
 	end: function () {
-		const div = $('planeDefiner')
-		div.setStyle('display', 'none')
+		preact.render('', $('preact'), this.comp)
 	},
 	mousemove: function (e, mouseLine) {
 		hoverHighlight = getHovering(mouseLine, modelBREP.faces, planes, brepPoints, brepEdges, 16, 'planes', 'faces', 'edges', 'points')
@@ -295,7 +250,7 @@ MODES.PLANE_DEFINITION = {
 	},
 	mousedown: function (e) {}
 }
-MODES.PLANE_SELECT = {
+MODES.SELECT_PLANE = {
 	init: function (callback: (NameRef) => void) {
 		this.callback = callback
 	},
@@ -324,6 +279,7 @@ MODES.SELECT_DIRECTION = {
 	init: function (callback: (NameRef) => void) {
 		this.callback = callback
 	},
+
 	magic: function (sel): [V3, string] {
 		const r = (vector: V3, type: string): [V3, string] => [vector, type]
 		const CLASS_ORDER = [V3, Edge, Surface, Face, P3]

@@ -85,15 +85,15 @@ class ConicSurface extends Surface {
 		const p1 = ellipseLC.center.plus(f1), p2 = ellipseLC.center.plus(f2)
 		// check if both endpoints are on the cone's surface
 		// and that one main axis is perpendicular to the Z-axis
-		return NLA.eq(p1.x ** 2 + p1.y ** 2, p1.z ** 2)
-			&& NLA.eq(p2.x ** 2 + p2.y ** 2, p2.z ** 2)
-			&& (NLA.eq0(f1.z) || NLA.eq0(f2.z))
+		return eq(p1.x ** 2 + p1.y ** 2, p1.z ** 2)
+			&& eq(p2.x ** 2 + p2.y ** 2, p2.z ** 2)
+			&& (eq0(f1.z) || eq0(f2.z))
 	}
 
 	containsLine(line: L3): boolean {
 		const lineLC = line.transform(this.inverseMatrix)
 		const d = lineLC.dir1
-		return lineLC.containsPoint(V3.O) && NLA.eq(d.x * d.x + d.y * d.y, d.z * d.z)
+		return lineLC.containsPoint(V3.O) && eq(d.x * d.x + d.y * d.y, d.z * d.z)
 	}
 
 	containsParabola(curve: ParabolaCurve): boolean {
@@ -106,9 +106,9 @@ class ConicSurface extends Surface {
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		// and that "y" axis is parallel to surface
-		return NLA.eq(center.x * center.x + center.y * center.y, center.z * center.z)
-			&& NLA.eq0(f1.z)
-			&& NLA.eq(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z)
+		return eq(center.x * center.x + center.y * center.y, center.z * center.z)
+			&& eq0(f1.z)
+			&& eq(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z)
 
 	}
 
@@ -123,8 +123,8 @@ class ConicSurface extends Surface {
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		return true
-		return NLA.eq(center.x * center.x + center.y * center.y, center.z * center.z)
-			&& NLA.eq0(f1.z)
+		return eq(center.x * center.x + center.y * center.y, center.z * center.z)
+			&& eq0(f1.z)
 	}
 
 	containsCurve(curve) {
@@ -190,7 +190,7 @@ class ConicSurface extends Surface {
 	}
 
 	containsPoint(p: V3) {
-		return NLA.eq0(this.implicitFunction()(p))
+		return eq0(this.implicitFunction()(p))
 	}
 
 	boundsFunction() {
@@ -216,7 +216,7 @@ class ConicSurface extends Surface {
 			if (surface.dir.isParallelTo(this.dir)) {
 				const ellipseProjected = surface.transform(M4.projection(this.getPlane(), this.dir))
 				return this.isPointsWithEllipse(ellipseProjected).map(is => new L3(is, this.dir))
-			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
+			} else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
 
 			} else {
 				assert(false)

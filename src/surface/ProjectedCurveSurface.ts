@@ -114,7 +114,7 @@ class ProjectedCurveSurface extends Surface {
         }
     }
 
-    isCurvesWithPlane(plane): Curve[] {
+    isCurvesWithPlane(plane: P3): Curve[] {
         assertInst(P3, plane)
         if (this.dir1.isPerpendicularTo(plane.normal1)) {
 

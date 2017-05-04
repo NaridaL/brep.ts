@@ -175,8 +175,8 @@ class V3 implements Equalable {
 	 * For vectors in the XY-Plane, returns vector rotated 90° CCW.
 	 */
 	getPerpendicular(): V3 {
-		if (NLA.eq0(this.x) && NLA.eq0(this.y)) {
-			if (NLA.eq0(this.z)) {
+		if (eq0(this.x) && eq0(this.y)) {
+			if (eq0(this.z)) {
 				throw new Error('zero vector')
 			}
 			// v is Vector(0, 0, v.z)
@@ -251,7 +251,7 @@ class V3 implements Equalable {
 	}
 
 	/**
-	 Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a pos or neg number, using NLA.equals
+	 Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a pos or neg number, using equals
 	 Throw a DebugError
 	 if vector is not a NLA.Vector or
 	 if this has a length of 0 or
@@ -264,14 +264,14 @@ class V3 implements Equalable {
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
 		const dot = this.dot(vector)
-		return NLA.eq(this.squared() * vector.squared(), dot * dot)
+		return eq(this.squared() * vector.squared(), dot * dot)
 	}
 
 	isPerpendicularTo(vector: V3): boolean {
 		assertVectors(vector)
 		assert(!this.isZero(), '!this.isZero()')
 		assert(!vector.isZero(), '!vector.isZero()')
-		return NLA.eq0(this.dot(vector))
+		return eq0(this.dot(vector))
 	}
 
 	isReverseDirTo(other: V3): boolean {
@@ -281,7 +281,7 @@ class V3 implements Equalable {
 		// a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
 		// in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
 		const dot = this.dot(other)
-		return NLA.eq(Math.sqrt(this.squared() * other.squared()), dot)
+		return eq(Math.sqrt(this.squared() * other.squared()), dot)
 	}
 
 	/**
@@ -307,14 +307,14 @@ class V3 implements Equalable {
 			return true
 		if (!(obj instanceof V3))
 			return false
-		return NLA.eq(this.x, obj.x) && NLA.eq(this.y, obj.y) && NLA.eq(this.z, obj.z)
+		return eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z)
 	}
 
 	/**
 	 * equivalent to this.like(v) || this.negated().like(v)
 	 */
 	likeOrReversed(v: V3): boolean {
-		return NLA.eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()))
+		return eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()))
 	}
 
 	/**
@@ -419,13 +419,13 @@ class V3 implements Equalable {
 	}
 
 	/**
-	 Returns true iff the length() of this vector is equal to 'length', using NLA.eq
+	 Returns true iff the length() of this vector is equal to 'length', using eq
 	 E.g. NLA.V(3, 4).hasLength(5) === true
 	 NLA.V(1, 1).hasLength(1) === false
 	 */
 	hasLength(length: number): boolean {
 		assertNumbers(length)
-		return NLA.eq(length, this.length())
+		return eq(length, this.length())
 	}
 
 	/**
@@ -519,13 +519,13 @@ class V3 implements Equalable {
 	}
 
 	compareTo2(other: V3, eps: number = NLA_PRECISION): number {
-		if (!NLA.eq2(this.x, other.x, eps)) {
+		if (!eq2(this.x, other.x, eps)) {
 			return this.x - other.x
 		}
-		else if (!NLA.eq2(this.y, other.y, eps)) {
+		else if (!eq2(this.y, other.y, eps)) {
 			return this.y - other.y
 		}
-		else if (!NLA.eq2(this.z, other.z, eps)) {
+		else if (!eq2(this.z, other.z, eps)) {
 			return this.z - other.z
 		}
 		else {

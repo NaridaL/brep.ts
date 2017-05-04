@@ -164,7 +164,7 @@ class M4 extends Matrix implements Transformable {
 
 	likeM4(m4: M4): boolean {
 		assertInst(M4, m4)
-		return this.m.every((el, index) => NLA.eq(el, m4.m[index]))
+		return this.m.every((el, index) => eq(el, m4.m[index]))
 	}
 
 	/**
@@ -247,15 +247,15 @@ class M4 extends Matrix implements Transformable {
 	}
 
 	isRegular(): boolean {
-		return !NLA.eq0(this.determinant())
+		return !eq0(this.determinant())
 	}
 
 
 	isAxisAligned(): boolean {
 		const m = this.m
-		return (1 >= +!NLA.eq0(m[0]) + +!NLA.eq0(m[1]) + +!NLA.eq0(m[2]))
-			&& (1 >= +!NLA.eq0(m[4]) + +!NLA.eq0(m[5]) + +!NLA.eq0(m[6]))
-			&& (1 >= +!NLA.eq0(m[8]) + +!NLA.eq0(m[9]) + +!NLA.eq0(m[10]))
+		return (1 >= +!eq0(m[0]) + +!eq0(m[1]) + +!eq0(m[2]))
+			&& (1 >= +!eq0(m[4]) + +!eq0(m[5]) + +!eq0(m[6]))
+			&& (1 >= +!eq0(m[8]) + +!eq0(m[9]) + +!eq0(m[10]))
 	}
 
 	/**
@@ -392,13 +392,13 @@ class M4 extends Matrix implements Transformable {
 	 */
 	is3x3(): boolean {
 		const m = this.m
-		return NLA.eq(1, m[15])
-			&& NLA.eq0(m[12]) && NLA.eq0(m[13]) && NLA.eq0(m[14])
-			&& NLA.eq0(m[3]) && NLA.eq0(m[7]) && NLA.eq0(m[11])
+		return eq(1, m[15])
+			&& eq0(m[12]) && eq0(m[13]) && eq0(m[14])
+			&& eq0(m[3]) && eq0(m[7]) && eq0(m[11])
 	}
 
 	isIdentity(): boolean {
-		return this.m.every((val, i) => (i / 4 | 0) == (i % 4) ? NLA.eq(1, val) : NLA.eq0(val))
+		return this.m.every((val, i) => (i / 4 | 0) == (i % 4) ? eq(1, val) : eq0(val))
 	}
 
 	toString(f?: (number) => string): string {

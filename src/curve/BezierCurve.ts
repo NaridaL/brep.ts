@@ -186,7 +186,7 @@ class BezierCurve extends Curve {
 			return false
 		}
 		let thisSplit
-		if (NLA.eq(1, curveP0T)) {
+		if (eq(1, curveP0T)) {
 			// this.split(curveP0T).right is degenerate in this case, so we need to handle it separately
 
 			// this.split(curveP3T): 0 --> curveP3T --> 1
@@ -285,20 +285,20 @@ class BezierCurve extends Curve {
 		// try to find a single result in the x-dimension, if multiple are found,
 		// filter them by checking the other dimensions
 		for (let dim = 0; dim < 3; dim++) {
-			if (NLA.eq0(a[dim]) && NLA.eq0(b[dim]) && NLA.eq0(c[dim])) {
+			if (eq0(a[dim]) && eq0(b[dim]) && eq0(c[dim])) {
 				// for case x:
 				// ax == bx == cx == 0 => x(t) = dx
 				// x value is constant
 				// if x == 0 for all t, this does not limit the result, otherwise, there is no result, i.e
 				// the passed point is not on the curve
-				if (!NLA.eq0(d[dim])) return NaN
+				if (!eq0(d[dim])) return NaN
 			} else {
 
 				const newResults = solveCubicReal2(a[dim], b[dim], c[dim], d[dim])
 				if (0 == newResults.length) return NaN
 				if (1 == newResults.length) return newResults[0]
 				if (results) {
-					results = results.filter(t => newResults.some(t2 => NLA.eq(t, t2)))
+					results = results.filter(t => newResults.some(t2 => eq(t, t2)))
 					if (0 == results.length) return NaN
 					if (1 == results.length) return results[0]
 				} else {
@@ -455,7 +455,7 @@ class BezierCurve extends Curve {
 	 */
 	isInfosWithBezie3(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number) {
 		const handleStartTS = (startT, startS) => {
-			if (!result.some(info => NLA.eq(info.tThis, startT) && NLA.eq(info.tOther, startS))) {
+			if (!result.some(info => eq(info.tThis, startT) && eq(info.tOther, startS))) {
 				let f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
 				let f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
@@ -690,13 +690,13 @@ class BezierCurve extends Curve {
 		const isInfo = aL.infoClosestToLine(bL)
 		if (isInfo.s < 0 || isInfo.t < 0
 			|| isInfo.distance > max3d
-			|| !NLA.eq2(isInfo.s, isInfo.t, eps)) {
+			|| !eq2(isInfo.s, isInfo.t, eps)) {
 		} else {
 			const centerPoint = V3.lerp(isInfo.closest, isInfo.closest2, 0.5)
 			const testT1 = lerp(t0, t1, 1/2), testP1 = this.at(testT1)
 			const testT2 = lerp(t0, t1, 2/3), testP2 = this.at(testT2)
 			const radius = (isInfo.s + isInfo.t) / 2
-			if (NLA.eq2(centerPoint.distanceTo(testP1), radius, eps)) {
+			if (eq2(centerPoint.distanceTo(testP1), radius, eps)) {
 				const newCurve = EllipseCurve.circleForCenter2P(centerPoint, a, b, radius)
 				result.push(newCurve)
 				return result

@@ -37,7 +37,7 @@ class EllipsoidSurface extends Surface {
 	}
 
 
-	isCurvesWithPlane(plane: P3) {
+	isCurvesWithPlane(plane: P3): Curve[] {
 		const planeLC = plane.transform(this.inverseMatrix)
 		return EllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
 	}
@@ -49,7 +49,7 @@ class EllipsoidSurface extends Surface {
             if (surface.dir1.isParallelTo(this.dir1)) {
                 const ellipseProjected = surface.baseCurve.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
                 return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
-            } else if (NLA.eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
+            } else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
                 assert(false)
             } else {
                 assert(false)
@@ -91,7 +91,7 @@ class EllipsoidSurface extends Surface {
 		if (this === surface) return true
 		if (surface.constructor !== EllipsoidSurface) return false
 		if (!this.center.like(surface.center)) return false
-		if (this.isSphere()) return surface.isSphere() && NLA.eq(this.f1.length(), this.f2.length())
+		if (this.isSphere()) return surface.isSphere() && eq(this.f1.length(), this.f2.length())
 
 		const localOtherMatrix = this.inverseMatrix.times(surface.matrix)
 		// Ellipsoid with matrix localOtherMatrix is unit sphere iff localOtherMatrix is orthogonal
@@ -198,16 +198,16 @@ class EllipsoidSurface extends Surface {
     }
 
 	isSphere(): boolean {
-		return NLA.eq(this.f1.length(), this.f2.length())
-			&& NLA.eq(this.f2.length(), this.f3.length())
-			&& NLA.eq(this.f3.length(), this.f1.length())
+		return eq(this.f1.length(), this.f2.length())
+			&& eq(this.f2.length(), this.f3.length())
+			&& eq(this.f3.length(), this.f1.length())
 			&& this.f1.isPerpendicularTo(this.f2)
 			&& this.f2.isPerpendicularTo(this.f3)
 			&& this.f3.isPerpendicularTo(this.f1)
 	}
 
 	isVerticalSpheroid(): boolean {
-        return NLA.eq(this.f1.length(), this.f2.length())
+        return eq(this.f1.length(), this.f2.length())
 	        && this.f1.isPerpendicularTo(this.f2)
 	        && this.f2.isPerpendicularTo(this.f3)
 	        && this.f3.isPerpendicularTo(this.f1)
@@ -275,7 +275,7 @@ class EllipsoidSurface extends Surface {
     }
 
     containsPoint(p: V3): boolean {
-        return NLA.eq0(this.implicitFunction()(p))
+        return eq0(this.implicitFunction()(p))
     }
 
     boundsFunction() {
@@ -384,7 +384,7 @@ class EllipsoidSurface extends Surface {
 
 		function logIS(isP) {
 			const isT = testLine.pointT(isP)
-			if (NLA.eq(pT, isT)) {
+			if (eq(pT, isT)) {
 				return true
 			} else if (pT < isT && NLA.le(isT, PI)) {
 				inside = !inside

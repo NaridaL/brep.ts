@@ -72,7 +72,7 @@ class EllipseCurve extends XiEtaCurve {
 		const cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area
 		const factor = this.matrix.xyAreaFactor() // * upLC.length()
 		//console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
-		assert(!NLA.eq0(factor))
+		assert(!eq0(factor))
 		return {area: area * factor, centroid: this.matrix.transformPoint(M4.rotationZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0)))}
 
 	}
@@ -106,7 +106,7 @@ class EllipseCurve extends XiEtaCurve {
 	}
 
 	isCircular() {
-		return NLA.eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2)
+		return eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2)
 	}
 
 	reversed(): this {
@@ -124,13 +124,13 @@ class EllipseCurve extends XiEtaCurve {
 			return true
 		}
 		if (this.isCircular()) {
-			return curve.isCircular() && NLA.eq(this.f1.length(), curve.f1.length()) && this.normal.isParallelTo(curve.normal)
+			return curve.isCircular() && eq(this.f1.length(), curve.f1.length()) && this.normal.isParallelTo(curve.normal)
 		} else {
 			let {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
 			if (f1.length() > f2.length()) {[f1, f2] = [f2, f1]}
 			if (c1.length() > c2.length()) {[c1, c2] = [c2, c1]}
-			return NLA.eq(f1.squared(), Math.abs(f1.dot(c1)))
-				&& NLA.eq(f2.squared(), Math.abs(f2.dot(c2)))
+			return eq(f1.squared(), Math.abs(f1.dot(c1)))
+				&& eq(f2.squared(), Math.abs(f2.dot(c2)))
 		}
 	}
 
@@ -179,7 +179,7 @@ class EllipseCurve extends XiEtaCurve {
 
 	rightAngled(): EllipseCurve {
 		const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared()
-		if (NLA.eq0(a)) {
+		if (eq0(a)) {
 			return this
 		}
 		const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a)
@@ -195,7 +195,7 @@ class EllipseCurve extends XiEtaCurve {
 	}
 
 	isInfosWithEllipse(ellipse: EllipseCurve): ISInfo[] {
-		if (this.normal.isParallelTo(ellipse.normal) && NLA.eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
+		if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
 			const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled()

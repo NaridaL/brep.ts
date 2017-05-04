@@ -177,7 +177,7 @@ class PICurve extends Curve {
         }
 	}
 
-	pointTangent(point) {
+	tangentP(point: V3): V3 {
 		assertVectors(point)
 		assert(this.containsPoint(point), 'this.containsPoint(point)' + this.containsPoint(point))
 		this.calcPoints(point)
@@ -263,7 +263,7 @@ class PICurve extends Curve {
         return newtonIterate1d(t => this.at(t).distanceTo(p), startT, 2)
 	}
 
-	transform(m4: M4) {
+	transform(m4: M4): PICurve {
 	    // TODO: pass transformed points?
 	    return new PICurve(
 	        this.parametricSurface.transform(m4),

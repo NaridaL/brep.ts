@@ -112,7 +112,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	containsPoint(p) {
-		return NLA.eq0(this.implicitFunction()(p))
+		return eq0(this.implicitFunction()(p))
 	}
 
 	pointToParameterFunction() {
@@ -134,7 +134,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 			if (surface2.dir1.isParallelTo(this.dir1)) {
 				const ellipseProjected = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
 				return this.baseCurve.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
-			} else if (NLA.eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+			} else if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
 			} else {
 				assert(false)
