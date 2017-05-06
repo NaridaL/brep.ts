@@ -1,3 +1,4 @@
+///<reference path="surface/ConicSurface.ts"/>
 function parseGetParams(str) {
     const result = {}
     str
@@ -9,8 +10,9 @@ function parseGetParams(str) {
     return result
 }
 let a, b, c, d, edges = [], hovering
+const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
 function initB2() {
-    dMesh = new GL.Mesh()
+    dMesh = new Mesh()
     eye.eyePos = V(1, 2, 101)
 	eye.eyeFocus = V(0, 1, 0)
 	eye.eyeUp = V(0, 1, 0)
@@ -31,13 +33,16 @@ function initB2() {
 
     if (gets['edges']) {
         console.log('edges from GET')
-        dMesh = new GL.Mesh({triangles: false})
+        dMesh = new Mesh({triangles: false})
         edges = eval(gets['edges'])
         edges && dMesh.addVertexBuffer('curve1', 'curve1')
-        edges.forEach(edge => {
+        edges && dMesh.addVertexBuffer('curve1colors', 'curve1colors')
+        edges.forEach((edge, edgeIndex) => {
             const points = edge.points()
             for (let i = 0; i < points.length - 1; i++) {
+	            const color = edgeViewerColors[(edgeIndex + (i % 2)) % edgeViewerColors.length]
                 dMesh.curve1.push(points[i], points[i + 1])
+                dMesh.curve1colors.push(color, color)
             }
         })
     }
@@ -65,12 +70,12 @@ function initB2() {
 
 
 const randomColors = chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20).map(s => chroma(s).gl())
-let aMesh: GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
-	bMesh: GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
-	cMesh: GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
-	dMesh: GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
-	sMesh: GL.Mesh,
-	b2meshes: GL.Mesh[] = []
+let aMesh: Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
+	bMesh: Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
+	cMesh: Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
+	dMesh: Mesh & {faceIndexes: Map<Face, {start: int, count: int}>},
+	sMesh: Mesh,
+	b2meshes: Mesh[] = []
 function viewerPaint() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
@@ -132,8 +137,8 @@ function viewerPaint() {
         dMesh.triangles && shaders.lighting.uniforms({ color: rgbToVec4(0xffFF00),
             camPos: eye.eyePos }).draw(dMesh)
 
-        dMesh.curve1 && shaders.singleColor.uniforms({ color: rgbToVec4(0xff00000) })
-            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve1}, null, gl.LINES)
+        dMesh.curve1 && shaders.multiColor
+            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve1, color: dMesh.vertexBuffers.curve1colors}, null, gl.LINES)
         dMesh.curve2 && shaders.singleColor.uniforms({ color: rgbToVec4(COLORS.RD_STROKE) })
             .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
 
@@ -224,11 +229,11 @@ function initInfoEvents() {
 		let html = '', pp
 		if (hovering instanceof Edge) {
 			pp = V({x: e.clientX, y: e.clientY})
-			NLA.defaultRoundFunction = x => NLA.round10(x, -3)
-			html = hovering.toString(x => NLA.round10(x, -3)) + ' length=' + hovering.length().toFixed(3)
+			defaultRoundFunction = x => round10(x, -3)
+			html = hovering.toString(x => round10(x, -3)) + ' length=' + hovering.length().toFixed(3)
 		} else if (hovering instanceof Face) {
 			pp = V({x: e.clientX, y: e.clientY})
-			NLA.defaultRoundFunction = x => NLA.round10(x, -3)
+			defaultRoundFunction = x => round10(x, -3)
 			let area, f = hovering
 			try { area = hovering.calcArea()} catch (e) {}
 			html = `face surface=${f.surface.constructor.name} edges=${f.contour.length} area=${area}`
@@ -260,7 +265,7 @@ async function viewerMain() {
 	window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 		console.log(errorMsg, url, lineNumber, column, errorObj)
 	}
-	gl = GL.create({canvas: document.getElementById('testcanvas') as HTMLCanvasElement})
+	gl = create({canvas: document.getElementById('testcanvas') as HTMLCanvasElement})
 	gl.fullscreen()
 	gl.canvas.oncontextmenu = () => false
 

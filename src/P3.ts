@@ -1,3 +1,4 @@
+
 class P3 extends Transformable {
 
 	/**
@@ -32,12 +33,12 @@ class P3 extends Transformable {
 		return this.like(plane) || this.likeFlipped(plane)
 	}
 
-	like(plane): boolean {
+	like(plane:P3): boolean {
 		assertInst(P3, plane)
 		return eq(this.w, plane.w) && this.normal1.like(plane.normal1)
 	}
 
-	likeFlipped(plane): boolean {
+	likeFlipped(plane: P3): boolean {
 		assertInst(P3, plane)
 		return eq(this.w, -plane.w) && this.normal1.like(plane.normal1.negated())
 	}
@@ -197,7 +198,7 @@ class P3 extends Transformable {
 	static readonly ZX = new P3(V3.Y, 0)
 	static readonly XY = new P3(V3.Z, 0)
 
-    containsCurve(curve: Curve) {
+    containsCurve(curve: Curve): boolean {
         if (curve instanceof L3) {
             return this.containsLine(curve)
         } else if (curve instanceof SemiEllipseCurve ||
@@ -213,4 +214,3 @@ class P3 extends Transformable {
 
     }
 }
-NLA.registerClass(P3)

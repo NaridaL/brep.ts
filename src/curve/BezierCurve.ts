@@ -1,4 +1,3 @@
-import fuzzyUniquesF = NLA.fuzzyUniquesF
 class BezierCurve extends Curve {
 	readonly p0: V3
 	readonly p1: V3
@@ -20,11 +19,11 @@ class BezierCurve extends Curve {
 		return [this.p0, this.p1, this.p2, this.p3]
 	}
 
-	toString(f?) {
-		return `new BezierCurve(${this.p0}, ${this.p1}, ${this.p2}, ${this.p3}, ${this.tMin}, ${this.tMax})`
+	getConstructorParameters(): any[] {
+		return [this.p0, this.p1, this.p2, this.p3, this.tMin, this.tMax]
 	}
 
-	at(t: number) {
+	at(t: number): V3 {
 		// = s^3 p0 + 3 s^2 t p1 + 3 s t^2 p2 + t^3 p3
 		assertNumbers(t)
 		const p0 = this.p0, p1 = this.p1, p2 = this.p2, p3 = this.p3
@@ -363,7 +362,7 @@ class BezierCurve extends Curve {
 		const b = p12.minus(p01).times(6)
 		const c = p01.times(3)
 
-		return NLA.arrayFromFunction(3, dim => solveCubicReal2(0, a.e(dim), b.e(dim), c.e(dim)))
+		return arrayFromFunction(3, dim => solveCubicReal2(0, a.e(dim), b.e(dim), c.e(dim)))
 	}
 
 	isInfosWithLine(anchor: V3, dir: V3, tMin?: number, tMax?: number, lineMin = -100000, lineMax = 100000): ISInfo[] {
@@ -437,7 +436,7 @@ class BezierCurve extends Curve {
 		}
 
 		const STEPS = 32
-		let startT = NLA.arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
+		let startT = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
 
 		return newtonIterate1d(f, startT, 8)
 
@@ -529,9 +528,9 @@ class BezierCurve extends Curve {
 			}
 			tMin = Math.min(tMin, sMin)
 			tMax = Math.max(tMax, sMax)
-			const splits = NLA.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(NLA.minus)
-			//let aabbs = NLA.arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
-			Array.from(NLA.combinations(splits.length - 1)).forEach(({i, j}) => {
+			const splits = fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(minus)
+			//let aabbs = arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
+			Array.from(combinations(splits.length - 1)).forEach(({i, j}) => {
 				// adjacent curves can't intersect
 				if (Math.abs(i - j) > 2) {
 					// console.log(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
@@ -578,7 +577,7 @@ class BezierCurve extends Curve {
 		}
 
 		const area = gaussLegendreQuadrature24(f, aT, bT)
-		const x = V3.add.apply(undefined, NLA.arrayFromFunction(24, i => {
+		const x = V3.add.apply(undefined, arrayFromFunction(24, i => {
 			const t = aT + (gaussLegendre24Xs[i] + 1) / 2 * (bT - aT)
 			return cx(t).times(gaussLegendre24Weights[i] * f(t))
 		})).div(2 * (bT - aT) * area)
@@ -630,19 +629,19 @@ class BezierCurve extends Curve {
 	magic(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
 		const max3d = 0.01, eps = 0.01
 		const splits = 20
-		const ts = NLA.arrayFromFunction(splits, i => lerp(t0, t1, i / ( splits - 1)))
+		const ts = arrayFromFunction(splits, i => lerp(t0, t1, i / ( splits - 1)))
 		const ps = ts.map(t => this.at(t))
 		const ns = ts.map(t => this.normalAt(t).unit())
 		const f = (ns: V3[]) => {
 			const ls = ts.map((t, i) => new L3(ps[i], ns[i].unit()))
-			const isInfos = NLA.arrayFromFunction(splits- 1, i => {
+			const isInfos = arrayFromFunction(splits- 1, i => {
 				const j = i + 1
 				const li = ls[i], lj = ls[j]
 				return li.infoClosestToLine(lj)
 			})
 			const a = isInfos.map(isInfo => isInfo.s - isInfo.t)
 			const centers = isInfos.map(isInfo => V3.lerp(isInfo.closest, isInfo.closest2, 0.5))
-			const b = NLA.arrayFromFunction(splits- 1, i => {
+			const b = arrayFromFunction(splits- 1, i => {
 				const tMid = lerp(ts[i], ts[i + 1], 0.5)
 				const pMid = this.at(tMid)
 				return pMid.distanceTo(centers[i]) ** 0.5
@@ -673,8 +672,8 @@ class BezierCurve extends Curve {
 			x = x.minus(xDiff)
 		}
 		const ns2 = V3.unpackXY(x.v)
-		const ls2 = NLA.arrayFromFunction(splits, i => new L3(ps[i], ns2[i].unit()))
-		const curves = NLA.arrayFromFunction(splits- 1, i => {
+		const ls2 = arrayFromFunction(splits, i => new L3(ps[i], ns2[i].unit()))
+		const curves = arrayFromFunction(splits- 1, i => {
 			const j = i + 1
 			const li = ls2[i], lj = ls2[j]
 			const isInfo = li.infoClosestToLine(lj)

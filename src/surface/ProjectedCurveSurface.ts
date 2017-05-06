@@ -51,13 +51,10 @@ class ProjectedCurveSurface extends Surface {
     	throw new Error()
     }
 
-    toSource(): string {
-        return `new ProjectedCurveSurface(${this.baseCurve}, ${this.dir1}, ${this.sMin}, ${this.sMax}, ${this.tMin}, ${this.tMax})`
-    }
 
-    toString(): string {
-        return this.toSource()
-    }
+	getConstructorParameters(): any[] {
+		return [this.baseCurve, this.dir1, this.sMin, this.sMax, this.tMin, this.tMax]
+	}
 
 	containsLine(line) {
 		return this.dir1.isParallelTo(line.dir1) && this.containsPoint(line.anchor)
@@ -68,11 +65,11 @@ class ProjectedCurveSurface extends Surface {
 
         const tInterval = tEnd - tStart, tStep = tInterval / (count - 1)
         const baseVertices =
-            NLA.arrayFromFunction(count, i => this.baseCurve.at(tStart + i * tStep).plus(this.dir1.times(zStart)))
+            arrayFromFunction(count, i => this.baseCurve.at(tStart + i * tStep).plus(this.dir1.times(zStart)))
         const normalFunc = this.parametricNormal()
-        const normals = NLA.arrayFromFunction(count, i => normalFunc(tStart + i * tStep, 0))
+        const normals = arrayFromFunction(count, i => normalFunc(tStart + i * tStep, 0))
 
-        return GL.Mesh.offsetVertices(baseVertices, this.dir1.times(zEnd - zStart), false, normals)
+        return Mesh.offsetVertices(baseVertices, this.dir1.times(zEnd - zStart), false, normals)
     }
 
     dpds(s: number): V3 {
@@ -91,7 +88,7 @@ class ProjectedCurveSurface extends Surface {
     }
 
     parametersValid(t: number, z: number) {
-        return NLA.between(t, this.sMin, this.sMax) && NLA.between(z, this.tMin, this.tMax)
+        return between(t, this.sMin, this.sMax) && between(z, this.tMin, this.tMax)
     }
 
     footParameters(pWC, ss, st) {
@@ -208,6 +205,10 @@ class ProjectedCurveSurface extends Surface {
 		    && this.baseCurve.equals(obj.baseCurve)
     }
 
+	hashCode(): int {
+		return [this.dir1, this.baseCurve].hashCode()
+	}
+
     like(object) {
         if (!this.isCoplanarTo(object)) return false
         // normals need to point in the same direction (outwards or inwards) for both
@@ -277,4 +278,3 @@ class ProjectedCurveSurface extends Surface {
 }
 ProjectedCurveSurface.prototype.uStep = 1 / 40
 ProjectedCurveSurface.prototype.vStep = 256
-NLA.registerClass(ProjectedCurveSurface)

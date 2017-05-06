@@ -198,7 +198,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 		// solve for each dimension separately
 		// tangent(eta, xi) = f2 eta - f1 xi
 
-		return NLA.arrayFromFunction(3, dim => {
+		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim), b = -this.f1.e(dim)
 			const {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
 			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]

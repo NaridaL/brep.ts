@@ -36,7 +36,7 @@ class ParabolaCurve extends XiEtaCurve {
      * t = -f1 / 2 / f2 (for individual dimensions)
      */
     roots(): number[][] {
-        return NLA.arrayFromFunction(3, dim => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)])
+        return arrayFromFunction(3, dim => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)])
     }
 
 	isColinearTo(curve: Curve): boolean {

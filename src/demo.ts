@@ -1,4 +1,3 @@
-import LightGLContext = GL.LightGLContext
 const demos = []
 function makeDemo(id: string, f: (...args: any[]) => B2 | B2[], args) {
 	demos.push({id, f, args})
@@ -16,7 +15,7 @@ async function demoMain() {
 			gl.viewport(0, 0, canvas.width, canvas.height)
 			setupCamera(demo.eye, gl)
 		})
-		const gl =demo.gl= GL.create({canvas})
+		const gl =demo.gl= create({canvas})
 		gl.clearColor(1.0, 1.0, 1.0, 0.0)
 		gl.enable(gl.BLEND)
 		gl.enable(gl.DEPTH_TEST)
@@ -48,7 +47,7 @@ async function demoMain() {
 				if (arg.step) {
 					input.addEvent('mousewheel', function (e) {
 						const delta = (e.shift ? 0.1 : 1) * Math.sign(e.wheel) * arg.step
-						this.set('value', NLA.round10(parseFloat(this.value) + delta, -6))
+						this.set('value', round10(parseFloat(this.value) + delta, -6))
 						this.fireEvent('change')
 						e.preventDefault()
 					})

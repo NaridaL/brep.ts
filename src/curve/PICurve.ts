@@ -1,4 +1,3 @@
-import fuzzyUniques = NLA.fuzzyUniques
 const STEP_SIZE = 0.01
 class PICurve extends Curve {
 	parametricSurface: Surface
@@ -45,9 +44,10 @@ class PICurve extends Curve {
 	    return new PICurve(this.parametricSurface, this.implicitSurface, this.endPoint, this.startPoint, -this.dir)
     }
 
-	toString() {
-	    return `new PICurve(${this.parametricSurface.sce}, ${this.implicitSurface.sce}, ${this.startPoint.sce}, ${this.endPoint.sce}, ${this.dir})`
-    }
+
+	getConstructorParameters(): any[] {
+		return [this.parametricSurface, this.implicitSurface, this.startPoint, this.endPoint]
+	}
 
 	implicitCurve() {
 		const pF = this.parametricSurface.parametricFunction()
@@ -160,7 +160,7 @@ class PICurve extends Curve {
                 return this.parametricSurface.normalAt(p).cross(this.implicitSurface.normalAt(p))
                     .toLength(this.dir * ds.times(this.pmTangents[i].x).plus(dt.times(this.pmTangents[i].y)).length())
             })
-            //this.tangents = NLA.arrayFromFunction(this.points.length, i => {
+            //this.tangents = arrayFromFunction(this.points.length, i => {
             //    const ds = this.parametricSurface.dpds(this.pmPoints[i].x)
             //    const dt = this.parametricSurface.dpdt(this.pmPoints[i].y)
             //    return ds.times(this.pmTangents[i].x).plus(dt.times(this.pmTangents[i].y))
@@ -274,7 +274,7 @@ class PICurve extends Curve {
     }
 
     roots(): number[][] {
-		const allTs = NLA.arrayRange(0, this.points.length)
+		const allTs = arrayRange(0, this.points.length)
 		return [allTs, allTs, allTs]
     }
 }

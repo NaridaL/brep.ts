@@ -11,7 +11,7 @@ class CustomPlane extends P3 {
 
 	constructor(anchor: V3, right: V3, up: V3,
 	            name: string,
-	            color: number = NLA.randomColor(),
+	            color: number = randomColor(),
 	            rightStart: number = -500,
 	            rightEnd: number = 500,
 	            upStart: number = -500,
@@ -55,4 +55,3 @@ class CustomPlane extends P3 {
 	}
 
 }
-NLA.registerClass(CustomPlane)

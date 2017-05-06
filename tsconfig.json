@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "module": "amd",
+    "module": "none",
     "outFile": "out/complete.js",
     "declaration": true,
     "rootDir": ".",
@@ -13,19 +13,25 @@
     "experimentalDecorators": true,
     "jsx": "react",
     "jsxFactory": "h",
-    "lib": ["DOM","ES2017"]
+    "lib": ["DOM","ES2017"],
+    "baseUrl": ".",
+    "allowJs": false,
+    "paths": {
+      "*": ["*", "../*"]
+    }
   },
   "include": [
 //    "src/NLA.ts",
-    "src/CustomSet.ts",
-    "src/Transformable.ts",
-    "src/Vector.ts",
-    "src/Vector3.ts",
+    "../ts3dutils/out/complete.d.ts",
+    "../tsgl/out/complete.d.ts",
+//    "src/Transformable.ts",
+//    "src/Vector.ts",
+//    "src/Vector3.ts",
     "src/Line.ts",
-    "src/Matrix.ts",
-    "src/Matrix4x4.ts",
-    "src/AABB.ts",
-    "src/Plane3.ts",
+//    "src/Matrix.ts",
+//    "src/Matrix4x4.ts",
+//    "src/AABB.ts",
+    "src/P3.ts",
 
     "src/curve/Curve.ts",
     "src/curve/*.ts",

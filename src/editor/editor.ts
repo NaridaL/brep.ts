@@ -1,5 +1,4 @@
 ///<reference path="Feature.ts"/>
-import ge = NLA.ge
 const MooEl: ElementConstructor = Element
 function formatStack(stack) {
 	const re = /\s*([^@]*)@(.+):(\d+):(\d+)\s*$/mg
@@ -16,15 +15,15 @@ function formatStack(stack) {
 			'\t',
 
 			match[1],
-			NLA.repeatString(maxWidths[0] + 2 - match[1].length, ' '),
+			repeatString(maxWidths[0] + 2 - match[1].length, ' '),
 
 			match[2].replace('file:///C:/Users/aval/Desktop/cs', ''),
-			NLA.repeatString(maxWidths[1] + 2 - match[2].length, ' '),
+			repeatString(maxWidths[1] + 2 - match[2].length, ' '),
 
-			NLA.repeatString(maxWidths[2] + 2 - match[3].length, ' '),
+			repeatString(maxWidths[2] + 2 - match[3].length, ' '),
 			match[3],
 
-			NLA.repeatString(maxWidths[2] + 2 - match[3].length, ' '),
+			repeatString(maxWidths[2] + 2 - match[3].length, ' '),
 			match[3]
 
 		].join('')
@@ -104,7 +103,7 @@ function getTextureForString(str) {
 	ctx.fillText(str, 0, 0)
 
 
-	texture = GL.Texture.fromImage(canvas, {minFilter: gl.LINEAR_MIPMAP_LINEAR, magFilter: gl.LINEAR})
+	texture = Texture.fromImage(canvas, {minFilter: gl.LINEAR_MIPMAP_LINEAR, magFilter: gl.LINEAR})
 	texture.textWidthPx = textWidthPx
 
 	savedTextures.set(str, texture)
@@ -395,7 +394,7 @@ function load(key) {
 }
 function initLoadSave() {
 	const loadSelect = $('loadSelect') as HTMLSelectElement
-	const keys = NLA.arrayFromFunction(localStorage.length, i => localStorage.key(i))
+	const keys = arrayFromFunction(localStorage.length, i => localStorage.key(i))
 	keys.sort()
 	keys.forEach(key => loadSelect.adopt(new MooEl('option', {html: key})))
 	loadSelect.onchange = function () {
@@ -441,7 +440,7 @@ function rebuildModel() {
 	const DISABLE_CONSOLE = false
 	DISABLE_CONSOLE && disableConsole()
 	console.log('rebuilding model')
-	//NLA.DEBUG = false
+	//DEBUG = false
 
 
 	namesPublishedBy = new Map()
@@ -508,7 +507,7 @@ function rebuildModel() {
 let missingEls = [], namesPublishedBy, publishedObjects
 let faces = []
 let highlighted = [], selected = [], paintDefaultColor = 0x000000
-let gl: GL.LightGLContext
+let gl: LightGLContext
 let modelBREP, brepMesh, brepPoints, planes, brepEdges
 let rebuildLimit = -1, rollBackIndex = -1, featureError
 let drPs = [], drVs: {anchor: V3, dir1: V3, color: int}[] = []
@@ -598,6 +597,7 @@ const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int
 	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
 	[HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
+	[ImplicitCurve.name]: () => {},
 	[BezierCurve.name](curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
 		shaders.bezier3d.uniforms({
 			p0: curve.p0,
@@ -678,7 +678,7 @@ let cachedMeshes = new Map()
 function drawFace(face, color) {
 	let mesh = cachedMeshes.get(face)
 	if (!mesh) {
-		mesh = new GL.Mesh({triangles: true, lines: true, normals: true})
+		mesh = new Mesh({triangles: true, lines: true, normals: true})
 		face.addToMesh(mesh)
 		mesh.compile()
 		cachedMeshes.set(face, mesh)
@@ -763,7 +763,7 @@ let paintScreen = function () {
 	gl.projectionMatrix.m[11] += DZ
 }
 
-function setupCamera({eyePos, eyeFocus, eyeUp, zoomFactor}, _gl: GL.LightGLContext = gl) {
+function setupCamera({eyePos, eyeFocus, eyeUp, zoomFactor}, _gl: LightGLContext = gl) {
 	//console.log("eyePos", eyePos.$, "eyeFocus", eyeFocus.$, "eyeUp", eyeUp.$)
 	_gl.matrixMode(_gl.PROJECTION)
 	_gl.loadIdentity()
@@ -905,7 +905,7 @@ function updateSelected() {
 			paintScreen()
 		}
 		sel.toBrepEdge && newChild.grab(new MooEl('span', {
-			text: sel.toBrepEdge().curve.toSource(x => NLA.round10(x, -3)),
+			text: sel.toBrepEdge().curve.toSource(x => round10(x, -3)),
 			style: 'font-size: small;'
 		}))
 		sel.surface && newChild.grab(new MooEl('textarea', {
@@ -932,7 +932,7 @@ function updateSelected() {
 			} else if ('angle' == cst.type) {
 				newChild = template('templateAngle', {name: cst.type, id: cst.id})
 				const input = newChild.getElement('.distanceInput')
-				newChild.getElement('.distanceInput').value = NLA.round10(rad2deg(cst.value), -5)
+				newChild.getElement('.distanceInput').value = round10(rad2deg(cst.value), -5)
 				newChild.getElement('.fa').onclick = () => {
 					cst.f[0] *= -1
 					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))))
@@ -1052,7 +1052,7 @@ class NameRef {
 }
 NameRef.UNASSIGNED.get = function () { return undefined }
 NameRef.UNASSIGNED.getOrThrow = function () { throw new Error('this nameref has never been assigned a value') }
-NLA.registerClass(NameRef)
+
 
 
 function mapReverse(map, value) {
@@ -1065,24 +1065,25 @@ function mapReverse(map, value) {
 	}
 }
 function initMeshes(_meshes) {
-	_meshes.sphere1 = GL.Mesh.sphere(2)
-	_meshes.segment = GL.Mesh.plane({startY: -0.5, height: 1, detailX: 128})
-	_meshes.text = GL.Mesh.plane()
-	_meshes.vector = GL.Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true)
-	_meshes.pipe = GL.Mesh.rotation(NLA.arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
-	_meshes.xyLinePlane = GL.Mesh.plane()
+	_meshes.sphere1 = Mesh.sphere(2)
+	_meshes.segment = Mesh.plane({startY: -0.5, height: 1, detailX: 128})
+	_meshes.text = Mesh.plane()
+	_meshes.vector = Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true)
+	_meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
+	_meshes.xyLinePlane = Mesh.plane()
 }
 function initShaders(_shaders) {
-	_shaders.singleColor = new GL.Shader(vertexShaderBasic, fragmentShaderColor)
-	_shaders.singleColorHighlight = new GL.Shader(vertexShaderBasic, fragmentShaderColorHighlight)
-	_shaders.textureColor = new GL.Shader(vertexShaderTexture, fragmentShaderTextureColor)
-	_shaders.arc = new GL.Shader(vertexShaderRing, fragmentShaderColor)
-	_shaders.arc2 = new GL.Shader(vertexShaderArc, fragmentShaderColor)
-	_shaders.ellipse3d = new GL.Shader(vertexShaderConic3d, fragmentShaderColor)
-	_shaders.bezier3d = new GL.Shader(vertexShaderBezier3d, fragmentShaderColor)
-	_shaders.bezier = new GL.Shader(vertexShaderBezier, fragmentShaderColor)
-	_shaders.lighting = new GL.Shader(vertexShaderLighting, fragmentShaderLighting)
-	_shaders.waves = new GL.Shader(vertexShaderWaves, fragmentShaderLighting)
+	_shaders.singleColor = new Shader(vertexShaderBasic, fragmentShaderColor)
+	_shaders.multiColor = new Shader(vertexShaderColor, fragmentShaderVaryingColor)
+	_shaders.singleColorHighlight = new Shader(vertexShaderBasic, fragmentShaderColorHighlight)
+	_shaders.textureColor = new Shader(vertexShaderTexture, fragmentShaderTextureColor)
+	_shaders.arc = new Shader(vertexShaderRing, fragmentShaderColor)
+	_shaders.arc2 = new Shader(vertexShaderArc, fragmentShaderColor)
+	_shaders.ellipse3d = new Shader(vertexShaderConic3d, fragmentShaderColor)
+	_shaders.bezier3d = new Shader(vertexShaderBezier3d, fragmentShaderColor)
+	_shaders.bezier = new Shader(vertexShaderBezier, fragmentShaderColor)
+	_shaders.lighting = new Shader(vertexShaderLighting, fragmentShaderLighting)
+	_shaders.waves = new Shader(vertexShaderWaves, fragmentShaderLighting)
 }
 function initOtherEvents() {
 	window.onkeypress = function (e) {
@@ -1119,7 +1120,7 @@ function initPointInfoEvents(_gl = gl) {
 			let pp, html = '', closestP = Infinity
 			drPs.forEach(info => {
 				const p = info.p || info
-				let text = p.toString(x => NLA.round10(x, -4)) + (info.p ? ' ' + info.text : '')
+				let text = p.toString(x => round10(x, -4)) + (info.p ? ' ' + info.text : '')
 				text = `<li>${text}</li>`
 				const dist = mouseLine.distanceToPoint(p)
 				if (dist < 16) {
@@ -1308,7 +1309,7 @@ window.onload = function () {
 
 	$$('.sketchControl').set('disabled', true)
 
-	gl = GL.create({canvas: document.getElementById('mainCanvas') as HTMLCanvasElement})
+	gl = create({canvas: document.getElementById('mainCanvas') as HTMLCanvasElement})
 	gl.fullscreen()
 	gl.canvas.oncontextmenu = () => false
 
@@ -1569,7 +1570,7 @@ function setupSelectors(el, feature, mode) {
 		.addEvent('mousewheel', function (e) {
 			console.log(e)
 			const delta = (e.shift ? 1 : 10) * Math.sign(e.wheel)
-			this.set('value', NLA.round10(parseFloat(this.value) + delta, -6))
+			this.set('value', round10(parseFloat(this.value) + delta, -6))
 			this.fireEvent('change')
 		})
 		.addEvent('click', function (e) {
@@ -1580,7 +1581,7 @@ function setupSelectors(el, feature, mode) {
 		})
 		.addEvent('change', function (e) {
 			const propName = this.dataset.featureProperty
-			feature[propName] = this.value = NLA.forceFinite(this.value)
+			feature[propName] = this.value = forceFinite(this.value)
 			rebuildModel()
 		})
 
@@ -2026,7 +2027,7 @@ class PlaneDefinition extends Feature {
 		publish(feature.name, cp)
 	}
 }
-NLA.registerClass(PlaneDefinition)
+
 class Rotate extends Feature {
 
 	readonly type: string = 'extrude'
@@ -2112,7 +2113,7 @@ class Rotate extends Feature {
 		modelBREP.vertexNames && modelBREP.vertexNames.forEach((name, p) => publish(name, p, feature))
 	}
 }
-NLA.registerClass(Extrude)
+
 
 type PatternDimensionType = {
 	direction: V3,
@@ -2344,7 +2345,7 @@ function unserialize(string) {
 			return v
 		} else if ('object' == typeof v && null != v) {
 			if ('#PROTO' in v) {
-				const proto = window[v['#PROTO']] || NLA.CLASSES[v['#PROTO']] || eval(v['#PROTO'])
+				const proto = window[v['#PROTO']] || CLASSES[v['#PROTO']] || eval(v['#PROTO'])
 				assert(proto, v['#PROTO'] + ' Missing ' + window[v['#PROTO']])
 				const result = Object.create((proto).prototype)
 				const keys = Object.keys(v)

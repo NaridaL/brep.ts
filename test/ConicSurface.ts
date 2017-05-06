@@ -2,7 +2,7 @@
 /// <reference path="../src/Vector3.ts" />
 /// <reference path="../src/surface/ConicSurface.ts" />
 /// <reference path="../src/curve/SemiEllipseCurve.ts" />
-/// <reference path="../src/Plane3.ts" />
+/// <reference path="../src/P3.ts" />
 
 import 'mocha'
 import {assert} from 'chai'

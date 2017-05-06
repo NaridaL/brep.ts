@@ -80,6 +80,14 @@ const vertexShaderBasic = `
 		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
+const vertexShaderColor = `
+	attribute vec4 color;
+	varying vec4 fragColor;
+	void main() {
+		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		fragColor = color;
+	}
+`
 const vertexShaderArc = `
 	uniform float step, offset;
 	uniform float radius, width;
@@ -171,6 +179,12 @@ const fragmentShaderColor = `
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
+	}
+`
+const fragmentShaderVaryingColor = `
+	varying vec4 fragColor;
+	void main() {
+		gl_FragColor = fragColor;
 	}
 `
 const fragmentShaderColorHighlight = `

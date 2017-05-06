@@ -77,10 +77,6 @@ class EllipseCurve extends XiEtaCurve {
 
 	}
 
-	toString(): string {
-		return callsce('new EllipseCurve', this.center, this.f1, this.f2)
-	}
-
 	static isValidT(t) {
 		return -Math.PI <= t && t <= Math.PI
 	}
@@ -214,7 +210,7 @@ class EllipseCurve extends XiEtaCurve {
 			const df = t => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
 			checkDerivate(f, df, -PI, PI, 1)
 			const ts = []
-			const tsvs = NLA.arrayRange(-4/5 * PI, PI, PI/4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
+			const tsvs = arrayRange(-4/5 * PI, PI, PI/4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
 			for (let startT = -4/5 * PI; startT < PI; startT += PI / 4) {
 				let t = newtonIterateSmart(f, startT, 16, df, 1e-4)
 				le(t, -PI) && (t += TAU)
@@ -289,7 +285,7 @@ class EllipseCurve extends XiEtaCurve {
 		// solve for each dimension separately
 		// tangent(eta, xi) = f2 eta - f1 xi
 
-		return NLA.arrayFromFunction(3, dim => {
+		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim), b = -this.f1.e(dim)
 			const {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
 			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]

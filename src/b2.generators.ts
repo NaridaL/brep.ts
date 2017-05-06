@@ -89,9 +89,9 @@ namespace B2T {
 	}
 
 	export function puckman(radius: number, rads: raddd, height: number, name: string): B2 {
-		assertf(() => NLA.lt(0, radius))
-		assertf(() => NLA.lt(0, rads) && NLA.le(rads, TAU))
-		assertf(() => NLA.lt(0, height))
+		assertf(() => lt(0, radius))
+		assertf(() => lt(0, rads) && le(rads, TAU))
+		assertf(() => lt(0, height))
 		const edges = StraightEdge.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true)
 		return B2T.rotateEdges(edges, rads, name || 'puckman' + globalId++)
 	}
@@ -110,7 +110,7 @@ namespace B2T {
 	                             gen?: string,
 	                             infoFactory?: FaceInfoFactory<any>): B2 {
     	baseFaceEdges = fixEdges(baseFaceEdges)
-		//Array.from(NLA.combinations(baseFaceEdges.length)).forEach(({i, j}) => {
+		//Array.from(combinations(baseFaceEdges.length)).forEach(({i, j}) => {
 		//	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce + baseFaceEdges[j].sce)
 		//})
 		assertf(() => Edge.isLoop(baseFaceEdges))
@@ -137,7 +137,7 @@ namespace B2T {
 		baseFaceEdges.forEach(edge => B2T.registerVertexName(vertexNames, edge.name + 'A', edge.a))
 		topFaceEdges.forEach(edge => B2T.registerVertexName(vertexNames, edge.name + 'A', edge.a))
 
-		const ribs = NLA.arrayFromFunction(edgeCount,
+		const ribs = arrayFromFunction(edgeCount,
 			i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i))
 
 		const faces = baseFaceEdges.map((edge, i) => {
@@ -238,8 +238,8 @@ namespace B2T {
 	 */
 	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string, infoFactory?: FaceInfoFactory<any>): B2 {
 		assert(!eq(PI, totalRads) || PI == totalRads) // URHGJ
-		assertf(() => NLA.lt(0, totalRads) && NLA.le(totalRads, TAU))
-        totalRads = NLA.snap(totalRads, TAU)
+		assertf(() => lt(0, totalRads) && le(totalRads, TAU))
+        totalRads = snap(totalRads, TAU)
 		const basePlane = new PlaneSurface(P3.ZX.flipped()).edgeLoopCCW(baseLoop)
 			? new PlaneSurface(P3.ZX.flipped())
 			: new PlaneSurface(P3.ZX)
@@ -312,7 +312,7 @@ namespace B2T {
 			const aT = 0, bT = min(totalRads - rot, PI)
 			const rotation = M4.rotationZ(rot + bT), rotrot = M4.rotationZ(rot)
 			stepEndEdges = rot + bT == TAU ? baseLoop : baseLoop.map(edge => edge.transform(rotation))
-			const ribs = NLA.arrayFromFunction(baseLoop.length, i => {
+			const ribs = arrayFromFunction(baseLoop.length, i => {
 				const a = stepStartEdges[i].a, radius = a.lengthXY()
 				const b = stepEndEdges[i].a
 				if (!eq0(radius)) {
@@ -357,7 +357,7 @@ namespace B2T {
 	//	const open = !eq(rads, 2 * PI)
 	//	const endEdges = open ? loop.map(edge => edge.transform(rotationMatrix)) : loop
 	//	const edgeCount = loop.length
-	//	const ribs = NLA.arrayFromFunction(edgeCount, i => {
+	//	const ribs = arrayFromFunction(edgeCount, i => {
 	//		const a = loop[i].a, radius = a.lengthXY()
 	//		const b = endEdges[i].a
 	//		if (!eq0(radius)) {
@@ -559,14 +559,14 @@ namespace B2T {
 		const radStep = totalRads / count
 		const open = !eq(totalRads, 2 * PI)
 		const ribCount = !open ? count : count + 1
-		const ribs = NLA.arrayFromFunction(ribCount, i => {
+		const ribs = arrayFromFunction(ribCount, i => {
 			if (i == 0) return edges
 			const matrix = M4.rotationZ(radStep * i)
 			return edges.map(edge => edge.transform(matrix))
 		})
-		const hs = NLA.arrayFromFunction(count, i => {
+		const hs = arrayFromFunction(count, i => {
 			const ipp = (i + 1) % ribCount
-			return NLA.arrayFromFunction(edges.length, j => {
+			return arrayFromFunction(edges.length, j => {
 				if (!eq0(edges[j].a.lengthXY())) {
 					return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a)
 				}
@@ -584,23 +584,23 @@ namespace B2T {
 				if (open) {
 					const newEdges = []
 					if (!eq0(edge.a.x)) {
-						newEdges.pushAll(NLA.arrayFromFunction(count, j => hs[j][i]))
+						newEdges.pushAll(arrayFromFunction(count, j => hs[j][i]))
 					}
 					newEdges.push(ribs[count][i])
 					if (!eq0(edge.b.x)) {
-						newEdges.pushAll(NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped()))
+						newEdges.pushAll(arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped()))
 					}
 					newEdges.push(edge.flipped())
 					face = new PlaneFace(surface, newEdges)
 				} else {
 					const contour = flipped
-						? NLA.arrayFromFunction(count, j => hs[j][i])
-						: NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
+						? arrayFromFunction(count, j => hs[j][i])
+						: arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
 					let hole
 					if (flipped && !eq0(edge.b.x)) {
-						hole = NLA.arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
+						hole = arrayFromFunction(count, j => hs[count - j - 1][ipp].flipped())
 					} else if (!flipped && !eq0(edge.a.x)) {
-						hole = NLA.arrayFromFunction(count, j => hs[j][i])
+						hole = arrayFromFunction(count, j => hs[j][i])
 					}
 					face = new PlaneFace(surface, contour, hole ? [hole] : [])
 				}
@@ -680,7 +680,7 @@ namespace B2T {
 		//	bottom = PlaneFace.forVertices(new PlaneSurface(baseFacePlane), baseVertices),
 		//	top = PlaneFace.forVertices(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topVertices)]
 		//let m = baseVertices.length
-		//let ribs = NLA.arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
+		//let ribs = arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
 		//for (let i = 0; i < m; i++) {
 		//	let j = (i + 1) % m
 		//	faces.push(
@@ -720,7 +720,7 @@ namespace B2T {
 		const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
 		return new B2(faces, false, gen)
 	}
-    const b = 1 / NLA.GOLDEN_RATIO, c = 2 - NLA.GOLDEN_RATIO
+    const b = 1 / GOLDEN_RATIO, c = 2 - GOLDEN_RATIO
     export const DODECAHEDRON_VERTICES = [
         new V3( c,  0,  1),
         new V3(-c,  0,  1),
@@ -775,7 +775,7 @@ namespace B2T {
         [3, 1, 5],
         [0, 3, 5]]
 
-    const {x: s, y: t} = new V3(1, NLA.GOLDEN_RATIO, 0).unit()
+    const {x: s, y: t} = new V3(1, GOLDEN_RATIO, 0).unit()
     export const ISOCAHEDRON_VERTICES = [
         new V3(-s, t, 0),
         new V3(s, t, 0),
@@ -833,7 +833,7 @@ namespace B2T {
 	    const edgeMap = new Map()
         const faces = FVIS.map(faceIndexes => {
             const surface = PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]])
-            const contour = NLA.arrayFromFunction(faceIndexes.length, i => {
+            const contour = arrayFromFunction(faceIndexes.length, i => {
                 const ipp = (i + 1) % faceIndexes.length
                 const iA = faceIndexes[i], iB = faceIndexes[ipp]
                 const iMin = min(iA, iB), iMax = max(iA, iB), edgeID = iMin * VS.length + iMax

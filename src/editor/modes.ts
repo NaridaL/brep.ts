@@ -69,7 +69,7 @@ MODES.SKETCH = {
 		this.relPoss = new Map()
 		if (hoverHighlight != null) {
 			let intersection = mouseLine.intersectionWithPlane(editingSketch.plane)
-			if (intersection && !GL.KEYS.SHIFT) {
+			if (intersection && !KEYS.SHIFT) {
 				let mouseSC = editingSketch.worldToSketchMatrix.transformPoint(intersection)
 				if (!selected.includes(hoverHighlight)) {
 					selected = [hoverHighlight]

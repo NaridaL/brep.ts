@@ -55,7 +55,7 @@ class SketchBezier {
 	distanceTo(x, y) {
 		let p = V(x, y, 0)
 		const curve = this.getCurve()
-		let t = NLA.clamp(curve.closestTToPoint(p), 0, 1)
+		let t = clamp(curve.closestTToPoint(p), 0, 1)
 		return curve.at(t).distanceTo(p)
 	}
 
@@ -93,4 +93,3 @@ class SketchBezier {
 		return sb
 	}
 }
-NLA.registerClass(SketchBezier)

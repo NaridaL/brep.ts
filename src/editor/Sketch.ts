@@ -513,7 +513,7 @@ class Sketch extends Feature {
 		})
 	}
 }
-NLA.registerClass(Sketch)
+
 
 class SegmentEndPoint {
 	x: number
@@ -585,7 +585,7 @@ class SegmentEndPoint {
 	}
 
 }
-NLA.registerClass(SegmentEndPoint)
+
 
 /**
  * Arc goes CCW from a to b
@@ -630,7 +630,7 @@ class SketchArc {
 		if (angle < 0) {
 			angle += Math.PI * 2
 		}
-		const angle2 = NLA.clamp(angle, angleA, angleB)
+		const angle2 = clamp(angle, angleA, angleB)
 		return V(radius * cos(angle2), radius * sin(angle2), 0).minus(relCoords).length()
 	}
 
@@ -684,7 +684,7 @@ class SketchArc {
 		return new EllipseCurve(this.c.V3(), ca.negated(), ca.negated().getPerpendicular())
 	}
 }
-NLA.registerClass(SketchArc)
+
 
 class SketchLineSeg {
 	sketch: Sketch
@@ -805,7 +805,7 @@ class SketchLineSeg {
 		return StraightEdge.throughPoints(this.a.V3(), this.b.V3(), this.name + 'Edge')
 	}
 }
-NLA.registerClass(SketchLineSeg)
+
 
 class Constraint {
 	type: string
@@ -836,7 +836,7 @@ class Constraint {
 
 	}
 }
-NLA.registerClass(Constraint)
+
 
 
 //////////////////////////////////

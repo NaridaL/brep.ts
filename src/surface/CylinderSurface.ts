@@ -16,10 +16,10 @@ class CylinderSurface extends ProjectedCurveSurface {
 		this.inverseMatrix = this.matrix.inversed()
 	}
 
-	toSource() {
-		return `new CylinderSurface(${this.baseCurve.toSource()}, ${this.dir1.toSource()})`
-	}
 
+	getConstructorParameters(): any[] {
+		return [this.baseCurve, this.dir1]
+	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
@@ -94,7 +94,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	toMesh(zStart: number = -30, zEnd: number = 30) {
-		return GL.Mesh.parametric(this.parametricFunction(), this.parametricNormal(), -PI, PI, zStart, zEnd, 16, 1)
+		return Mesh.parametric(this.parametricFunction(), this.parametricNormal(), -PI, PI, zStart, zEnd, 16, 1)
 	}
 
 	normalAt(p) {

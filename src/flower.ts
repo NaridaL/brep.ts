@@ -1,7 +1,7 @@
 function makeFlower() {
 	const golden = (1 + Math.sqrt(5)) / 2, rotateStep = 2 * PI * golden
-	let flowerMesh = GL.Mesh.plane().rotateZ(-45 * DEG).scale(1, 0.5, 1).rotateX(5 * DEG)
-	const otherPetals = NLA.arrayFromFunction(200, i => {
+	let flowerMesh = Mesh.plane().rotateZ(-45 * DEG).scale(1, 0.5, 1).rotateX(5 * DEG)
+	const otherPetals = arrayFromFunction(200, i => {
 		const f = 1 + 1/ 200 * i
 		return flowerMesh
 			.scale(f, f, f)

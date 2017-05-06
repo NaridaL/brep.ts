@@ -13,12 +13,13 @@ class RotationReqFofZ extends Surface {
 		assert(1 == normalDir || -1 == normalDir)
 	}
 
-	toSource() {
-		return callsce('new RotationReqFofZ', this.axis, this.FofR, this.tMin, this.tMax, this.normalDir, this.drdz)
+
+	getConstructorParameters(): any[] {
+		return [this.axis, this.FofR, this.tMin, this.tMax, this.normalDir, this.drdz]
 	}
 
-	toMesh(): GL.Mesh {
-		return GL.Mesh.parametric(this.parametricFunction(), this.parametricNormal(), this.sMin, this.sMax, this.tMin, this.tMax, 32, 40)
+	toMesh(): Mesh {
+		return Mesh.parametric(this.parametricFunction(), this.parametricNormal(), this.sMin, this.sMax, this.tMin, this.tMax, 32, 40)
 	}
 
 	flipped(): RotationReqFofZ {

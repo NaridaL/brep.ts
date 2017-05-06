@@ -11,6 +11,12 @@ abstract class Curve extends Transformable implements Equalable {
 		assert(tMin < tMax)
 	}
 
+	toSource(rounder: (x: number) => number = x => x): string {
+		return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters())
+	}
+
+	abstract getConstructorParameters(): any[]
+
     /**
      * Returns curve parameter t for point p on curve.
      */
@@ -43,7 +49,7 @@ abstract class Curve extends Transformable implements Equalable {
 
 		const STEPS = 32
 		const startT = undefined !== tStart ? tStart :
-			NLA.arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
+			arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
 				.withMax(t => -this.at(t).distanceTo(p))
 
 		return newtonIterateWithDerivative(f, startT, 16, df)
@@ -91,7 +97,7 @@ abstract class Curve extends Transformable implements Equalable {
 
 	asSegmentDistanceToPoint(p, tStart, tEnd) {
 		let t = this.closestTToPoint(p, tStart, tEnd)
-		t = NLA.clamp(t, tStart, tEnd)
+		t = clamp(t, tStart, tEnd)
 		return this.at(t).distanceTo(p)
 	}
 
@@ -227,7 +233,7 @@ abstract class Curve extends Transformable implements Equalable {
 
         const result = []
         findRecursive(tMin, tMax, sMin, sMax, curve1.getAABB(tMin, tMax), curve2.getAABB(sMin, sMax))
-        return NLA.fuzzyUniquesF(result, info => info.tThis)
+        return fuzzyUniquesF(result, info => info.tThis)
     }
 
 	reversed(): Curve {
@@ -238,50 +244,142 @@ abstract class Curve extends Transformable implements Equalable {
 	                   sMin: number, sMax: number,
 	                   tMin: number, tMax: number,
 	                   sStep: number, tStep: number,
-	                   step_size: number,
+	                   stepSize: number,
 	                   dids?: (s, t) => number,
-	                   didt?: (s, t) => number): Curve[] {
+	                   didt?: (s, t) => number): {points: V3[], tangents: V3[]}[] {
 		const EPS = 1 / (1 << 20)
 		undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
 		undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
 
+		const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
 		const deltaS = sMax - sMin, deltaT = tMax - tMin
-		const sRes = deltaS / sStep, tRes = deltaT / tStep
+		const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
 		const grid = new Array(sRes * tRes)
 		const at = (i, j) => grid[j * sRes + i]
-		const set = (i, j) => (grid[j * sRes + i] = 1)
+		const set = (i, j) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
 		const result = []
 		for (let i = 0; i < sRes; i++) {
-			for (let j = 0; j < tRes; j++) {
+			search: for (let j = 0; j < tRes; j++) {
 				if (at(i, j)) continue
 				set(i, j)
 				let s = sMin + i * sStep, t = tMin + j * tStep
 
 				// basically curvePoint
-				for (let i = 0; i < 4; i++) {
+				for (let i = 0; i < 8; i++) {
 					const fp = implicitCurve(s, t)
 					const dfpdx = dids(s, t), dfpdy = didt(s, t)
 					const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
 					s -= scale * dfpdx
 					t -= scale * dfpdy
-					const li = floor((s - sMin) / sStep), lj = floor((t - tMin) / tStep)
-					if (0 <= li && li < sRes && 0 <= lj && lj < tRes) {
-						set(li, lj)
-					}
+				}
+				const li = floor((s - sMin) / sStep), lj = floor((t - tMin) / tStep)
+				if (at(li, lj)) {
+					continue search
+				}
+				if (0 <= li && li < sRes && 0 <= lj && lj < tRes) {
+					set(li, lj)
 				}
 				// s, t are now good starting coordinates to use follow algo
-				result.pushAll(followAlgorithm())
+				if (bounds(s, t)
+					&& eq02(implicitCurve(s, t), 0.01)
+				) {
+					console.log(V(s, t).sce)
+					const subresult = mkcurves(implicitCurve, s, t, stepSize, dids, didt, bounds)
+					for (const curvedata of subresult) {
+						for (const {x, y} of curvedata.points) {
+							const lif = (x - sMin) / sStep, ljf = (y - tMin) / tStep
+							set((lif - 0.5) | 0, (ljf - 0.5) | 0)
+							set((lif - 0.5) | 0, (ljf + 0.5) | 0)
+							set((lif + 0.5) | 0, (ljf - 0.5) | 0)
+							set((lif + 0.5) | 0, (ljf + 0.5) | 0)
+						}
+					}
+					result.pushAll(subresult)
+				}
+
 			}
 		}
 		return result
 	}
 
-	test() {
+	static test2() {
 		const ic = (x, y) => sin(x+y)-cos(x*y)+1
-		return Curve.breakDownIC(ic, -5, 5, -5, 5, 0.5, 0.5, 0.01)
+		const dids = (x, y) => y * sin(x * y) + cos(x + y)
+		const didt = (x, y) => x * sin(x * y) + cos(x + y)
+		const ic2 = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
+		const di2ds = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
+		const di2dt = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y ** 2 - 3 * x ** 2))
+		const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
+		assert(eq02(ic(start.x, start.y), 0.1))
+		const bounds = (s, t) => -5 <= s && s <= 5 && -5 <= t && t <= 5
+		//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
+		const curves =  Curve.breakDownIC(ic2, -5, 5, -5, 5, 0.1, 0.1, 0.02, di2ds, di2dt)
+		//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
+		//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
+			.map(({points, tangents}, i) => {
+				const curve = new ImplicitCurve(ic, points, tangents)
+				return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i))
+			})
+		//checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5, 0)
+		//checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0)
+		console.log(curves.length)
+		return curves
+
+	}
+	static test() {
+		const ses = SemiEllipsoidSurface.UNIT
+		const cs = ConicSurface.UNIT.scale(0.05,0.2).translate(-0.1,0,-2).rotateX(5*DEG)
+		const pf = cs.parametricFunction(), icc = ses.implicitFunction()
+		const ic = (x, y) => icc(pf(x, y))
+		//const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
+		//assert(eq02(ic(start.x, start.y), 0.1))
+		const sMin = 0, sMax = PI, tMin = 0, tMax = 5
+		const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
+		//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
+		const curves =  Curve.breakDownIC(ic, sMin, sMax, tMin, tMax, 0.1, 0.1, 0.02)
+		//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
+		//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
+			.map(({points: pmPoints, tangents: pmTangents}, i) => {
+				console.log(icc)
+				const points = pmPoints.map(({x, y}) => pf(x, y))
+				const curve = new ImplicitCurve(ic, points, pmTangents)
+				return Edge.forCurveAndTs(curve)
+				//return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i))
+			})
+		//checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5, 0)
+		//checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0)
+		console.log(curves.length)
+		return curves
+
 	}
 }
 
+function mkcurves(implicitCurve: (s: number, t: number) => number,
+                  sStart: number, tStart: number,
+                  stepSize: number,
+                  dids: (s, t) => number,
+                  didt: (s, t) => number,
+                  bounds: (s, t) => boolean): {points: V3[], tangents: V3[]}[] {
+	const start = V(sStart, tStart)
+	checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
+	checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
+	const {points, tangents} = followAlgorithm2d(implicitCurve, start, stepSize, dids, didt, bounds)
+	if (points[0].distanceTo(points.last()) < stepSize) {
+		// this is a loop: split it
+		const half = floor(points.length / 2)
+		const points1 = points.slice(0, half), points2 = points.slice(half - 1, points.length)
+		const tangents1 = tangents.slice(0, half), tangents2 = tangents.slice(half - 1, tangents.length)
+		tangents2[tangents2.length - 1] = tangents1[0]
+		points2[tangents2.length - 1] = points1[0]
+		return [{points: points1, tangents: tangents1}, {points: points2, tangents: tangents2}]
+	} else {
+		// not a loop: check in the other direction
+		const {points: points2, tangents: tangents2} = followAlgorithm2d(implicitCurve, start, -stepSize, dids, didt, bounds)
+		const allPoints = points2.reverse().concat(points)
+		const allTangents = tangents2.reverse().concat(tangents)
+		return [{points: allPoints, tangents: allTangents}]
+	}
+}
 
 
 function curvePoint(implicitCurve: (s: number, t: number) => number, startPoint: V3) {

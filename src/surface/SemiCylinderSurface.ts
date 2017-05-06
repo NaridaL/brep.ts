@@ -17,8 +17,9 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
 	}
 
-	toSource() {
-		return callsce('new SemiCylinderSurface', this.baseCurve, this.dir1, this.tMin, this.tMax)
+
+	getConstructorParameters(): any[] {
+		return [this.baseCurve, this.dir1, this.tMin, this.tMax]
 	}
 
 	normalAt(p: V3): V3 {
@@ -49,7 +50,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
-	isCoplanarTo(surface: Surface) {
+	isCoplanarTo(surface: Surface): boolean {
 		return this == surface ||
 			surface instanceof SemiCylinderSurface
 			&& this.dir1.isParallelTo(surface.dir1)

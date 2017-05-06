@@ -114,7 +114,7 @@ class HyperbolaCurve extends XiEtaCurve {
 		// tangentAt2(xi, eta) = f1 eta + f2 xi = V3.O
 		// xi² - eta² = 1 (by def for hyperbola)
 
-		return NLA.arrayFromFunction(3, dim => {
+		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim), b = this.f1.e(dim)
 			return HyperbolaCurve.magic(a, b, 0)
 		})

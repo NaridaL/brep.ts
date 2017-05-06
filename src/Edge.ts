@@ -51,20 +51,20 @@ abstract class Edge extends Transformable {
 
 	tValueInside(t) {
 		return this.aT < this.bT
-			? NLA.lt(this.aT, t) && NLA.lt(t, this.bT)
-			: NLA.lt(this.bT, t) && NLA.lt(t, this.aT)
+			? lt(this.aT, t) && lt(t, this.bT)
+			: lt(this.bT, t) && lt(t, this.aT)
 	}
 
 	isValidT(t: number): boolean {
 		return this.aT < this.bT
-			? NLA.le(this.aT, t) && NLA.le(t, this.bT)
-			: NLA.le(this.bT, t) && NLA.le(t, this.aT)
+			? le(this.aT, t) && le(t, this.bT)
+			: le(this.bT, t) && le(t, this.aT)
 	}
 
 	clampedT(t) {
 		return this.aT < this.bT
-			? NLA.clamp(t, this.aT, this.bT)
-			: NLA.clamp(t, this.bT, this.aT)
+			? clamp(t, this.aT, this.bT)
+			: clamp(t, this.bT, this.aT)
 	}
 
 
@@ -167,7 +167,7 @@ abstract class Edge extends Transformable {
 		    return noback ? false : edge.overlaps(this, true)
         }
         const flipped = false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edgeBT).dot(edge.bDir)
-		return !(NLA.le(edgeMaxT, this.minT) || NLA.le(this.maxT, edgeMinT))
+		return !(le(edgeMaxT, this.minT) || le(this.maxT, edgeMinT))
 	}
 
 	getAABB(): AABB {
@@ -193,16 +193,16 @@ abstract class Edge extends Transformable {
 	abstract isCoEdge(other: Edge): boolean
 
 	static ngon(n: int = 3, radius: number = 1): Edge[] {
-		return StraightEdge.chain(NLA.arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)))
+		return StraightEdge.chain(arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)))
 	}
 
 	static star(pointCount: int = 5, r0: number = 1, r1: number = 0.5): Edge[] {
-		const vertices = NLA.arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2))
+		const vertices = arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2))
 		return StraightEdge.chain(vertices)
 	}
 
 	static reverseLoop(loop: Edge[]): Edge[] {
-		return NLA.arrayFromFunction(loop.length, i => loop[loop.length - 1 - i].flipped())
+		return arrayFromFunction(loop.length, i => loop[loop.length - 1 - i].flipped())
 	}
 
 	static rect(width: number = 1, height: number = width): Edge[] {
@@ -213,8 +213,8 @@ abstract class Edge extends Transformable {
 	static reuleaux(n: int = 3, radius: number = 1): Edge[] {
     	assert(3 <= n)
     	assert(1 == n % 2)
-    	const corners = NLA.arrayFromFunction(n, i => V3.polar(radius, TAU * i / n))
-    	return NLA.arrayFromFunction(n, i => {
+    	const corners = arrayFromFunction(n, i => V3.polar(radius, TAU * i / n))
+    	return arrayFromFunction(n, i => {
 		    const aI = (i + floor(n / 2)) % n, bI = (i + ceil(n / 2)) % n
 		    const a = corners[aI], b = corners[bI]
 		    const center = corners[i]
@@ -437,13 +437,13 @@ class PCurveEdge extends Edge {
 
 	edgeISTsWithSurface(surface: Surface) {
         return this.curve.isTsWithSurface(surface)
-			.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
+			.map(edgeT => snap(snap(edgeT, this.aT), this.bT))
 			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
 	edgeISTsWithPlane(surface: P3) {
         return this.curve.isTsWithPlane(surface)
-			.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
+			.map(edgeT => snap(snap(edgeT, this.aT), this.bT))
 			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
@@ -522,8 +522,8 @@ class StraightEdge extends Edge {
 
 	edgeISTsWithPlane(plane): number[] {
 		let edgeT = this.curve.intersectWithPlaneLambda(plane)
-		edgeT = NLA.snap(edgeT, this.aT)
-		edgeT = NLA.snap(edgeT, this.bT)
+		edgeT = snap(edgeT, this.aT)
+		edgeT = snap(edgeT, this.bT)
 		return (this.minT <= edgeT && edgeT <= this.maxT) ? [edgeT] : []
 	}
 
@@ -532,7 +532,7 @@ class StraightEdge extends Edge {
 			return this.edgeISTsWithPlane(surface.plane)
 		} else {
 			return surface.isTsForLine(this.curve)
-				.map(edgeT => NLA.snap(NLA.snap(edgeT, this.aT), this.bT))
+				.map(edgeT => snap(snap(edgeT, this.aT), this.bT))
 				.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 		}
 	}
@@ -574,8 +574,8 @@ class StraightEdge extends Edge {
 		if (!eq0(this.curve.at(edgeT).distanceTo(p))) {
 			return
 		}
-		edgeT = NLA.snap(edgeT, this.aT)
-		edgeT = NLA.snap(edgeT, this.bT)
+		edgeT = snap(edgeT, this.aT)
+		edgeT = snap(edgeT, this.bT)
 		return (this.minT <= edgeT && edgeT <= this.maxT) ? edgeT : undefined
 	}
 
@@ -592,7 +592,7 @@ class StraightEdge extends Edge {
 	 */
 	static chain(vertices: V3[], closed: boolean = true): StraightEdge[] {
 		const vc = vertices.length
-		return NLA.arrayFromFunction(closed ? vc : vc - 1,
+		return arrayFromFunction(closed ? vc : vc - 1,
 			i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]))
 	}
 
@@ -600,4 +600,3 @@ class StraightEdge extends Edge {
 StraightEdge.prototype.aDDT = V3.O
 StraightEdge.prototype.bDDT = V3.O
 
-NLA.registerClass(StraightEdge)

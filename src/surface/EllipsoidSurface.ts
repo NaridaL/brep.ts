@@ -1,7 +1,10 @@
-class EllipsoidSurface extends Surface {
+class EllipsoidSurface extends Surface implements ParametricSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4
+	readonly pLCNormalWCMatrix: M4
+	readonly pWCNormalWCMatrix
+	readonly normalDir: number // -1 | 1
 
 	constructor(readonly center: V3,
 	            readonly f1: V3,
@@ -11,7 +14,9 @@ class EllipsoidSurface extends Surface {
 		assertVectors(center, f1, f2, f3)
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(sign(this.f1.cross(this.f2).dot(this.f3)))
+		this.normalDir = sign(this.f1.cross(this.f2).dot(this.f3))
+		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
 	}
 
 	like(obj: any): boolean {
@@ -26,8 +31,8 @@ class EllipsoidSurface extends Surface {
 
     }
 
-    toSource() {
-        return `new EllipsoidSurface(${this.center.toSource()}, ${this.f1.toSource()}, ${this.f2.toSource()}, ${this.f3.toSource()})`
+    getConstructorParameters(): any[] {
+		return [this.center, this.f1, this.f2, this.f3]
     }
 
 	equals(obj: any): boolean {
@@ -102,7 +107,7 @@ class EllipsoidSurface extends Surface {
 		const localEllipse = ellipse.transform(this.inverseMatrix)
 		const distLocalEllipseCenter = localEllipse.center.length()
 		const correctRadius = Math.sqrt(1 - distLocalEllipseCenter * distLocalEllipseCenter)
-		return NLA.lt(distLocalEllipseCenter, 1) && localEllipse.isCircular() && localEllipse.f1.hasLength(correctRadius)
+		return lt(distLocalEllipseCenter, 1) && localEllipse.isCircular() && localEllipse.f1.hasLength(correctRadius)
 	}
 
     containsCurve(curve) {
@@ -134,9 +139,9 @@ class EllipsoidSurface extends Surface {
     }
 
 
-    toMesh(subdivisions: int = 3): GL.Mesh {
-        return GL.Mesh.sphere(subdivisions).transform(this.matrix)
-        // let mesh = new GL.Mesh({triangles: true, lines: false, normals: true})
+    toMesh(subdivisions: int = 3): Mesh {
+        return Mesh.sphere(subdivisions).transform(this.matrix)
+        // let mesh = new Mesh({triangles: true, lines: false, normals: true})
         // let pf = this.parametricFunction()
         // let pn = this.parametricNormal()
         // let aCount = 32, bCount = 16, vTotal = aCount * bCount
@@ -270,7 +275,7 @@ class EllipsoidSurface extends Surface {
 	    assert(U.isOrthogonal())
 	    const U_SIGMA = U.times(SIGMA)
 	    // column vectors of U_SIGMA
-	    const [mainF1, mainF2, mainF3] = NLA.arrayFromFunction(3, i => new V3(U_SIGMA.m[i], U_SIGMA.m[i + 4], U_SIGMA.m[i + 8]))
+	    const [mainF1, mainF2, mainF3] = arrayFromFunction(3, i => new V3(U_SIGMA.m[i], U_SIGMA.m[i + 4], U_SIGMA.m[i + 8]))
 	    return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
     }
 
@@ -279,7 +284,7 @@ class EllipsoidSurface extends Surface {
     }
 
     boundsFunction() {
-        return (a, b) => NLA.between(b, -PI, PI)
+        return (a, b) => between(b, -PI, PI)
     }
 
     /**
@@ -304,7 +309,7 @@ class EllipsoidSurface extends Surface {
     static unitISCurvesWithPlane(plane: P3): EllipseCurve[] {
 	    assertInst(P3, plane)
 	    let distPlaneCenter = Math.abs(plane.w)
-        if (NLA.lt(distPlaneCenter, 1)) {
+        if (lt(distPlaneCenter, 1)) {
             // result is a circle
             // radius of circle: imagine right angled triangle (origin -> center of intersection circle -> point on intersection circle)
             // pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 - distPlaneCenter²)
@@ -386,7 +391,7 @@ class EllipsoidSurface extends Surface {
 			const isT = testLine.pointT(isP)
 			if (eq(pT, isT)) {
 				return true
-			} else if (pT < isT && NLA.le(isT, PI)) {
+			} else if (pT < isT && le(isT, PI)) {
 				inside = !inside
 			}
 		}
@@ -397,7 +402,7 @@ class EllipsoidSurface extends Surface {
 			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearEdges[edgeIndex]) {
 				const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b)
-				if (NLA.le(Math.min(lineAT, lineBT), pT) && NLA.ge(pT, Math.max(lineAT, lineBT))) {
+				if (le(Math.min(lineAT, lineBT), pT) && ge(pT, Math.max(lineAT, lineBT))) {
 					return PointVsFace.ON_EDGE
 				}
 				// edge colinear to intersection
@@ -499,7 +504,7 @@ class EllipsoidSurface extends Surface {
 		//		let prevT = edge.aT,
 		//			prevP = edge.a,
 		//			prevDir = edge.aDir,
-		//			prevSide = NLA.snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y, f)
+		//			prevSide = snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y, f)
 		//		for (let i = 0; i < ists.length; i++) {
 		//			const t = ists[i]
 		//			if (edge.aT == t || edge.bT == t) {
@@ -535,9 +540,9 @@ class EllipsoidSurface extends Surface {
 		////}
 		//for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i += 2) {
     //    	let is0 = iss[i], is1 = iss[(i + 1) % iss.length]
-		//	if (NLA.lt(is0.t, -PI) && NLA.lt(-PI, is1.t)) {
+		//	if (lt(is0.t, -PI) && lt(-PI, is1.t)) {
     //    		iss.splice(i + 1, 0, is1 = {p: V3.Y.negated(), t: -PI, out: true}, {p: V3.Y.negated(), t: -PI, out: true})
-		//	} else if (NLA.lt(is0.t, PI) && NLA.lt(PI, is1.t)) {
+		//	} else if (lt(is0.t, PI) && lt(PI, is1.t)) {
 		//		iss.splice(i + 1, 0, is1 = {p: V3.Y, t: -PI, out: true}, {p: V3.Y, t: PI, out: true})
 		//	}
 		//	const edge = Edge.create(curve, is0.p, is1.p, is0.t, is1.t, undefined,

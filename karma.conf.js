@@ -19,7 +19,7 @@ module.exports = function(config) {
       'src/Vector3.js',
       'src/Matrix4x4.js',
       'src/curve/Curve.js',
-      'src/Plane3.ts',
+      'src/P3.ts',
       'src/Line.ts',
       'src/curve/Line3.ts',
       'src/editor/editor.ts',

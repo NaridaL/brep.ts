@@ -23,6 +23,20 @@ class ConicSurface extends Surface {
 		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
 	}
 
+
+	equals(obj: any): boolean {
+		return this == obj ||
+			Object.getPrototypeOf(this) == Object.getPrototypeOf(obj)
+			&& this.center.equals(obj.center)
+			&& this.f1.equals(obj.f1)
+			&& this.f2.equals(obj.f2)
+			&& this.dir.equals(obj.dir)
+	}
+
+	hashCode(): int {
+		return [this.center, this.f1, this.f2, this.dir].hashCode()
+	}
+
 	get apex() {
 		return this.center
 	}
@@ -53,8 +67,9 @@ class ConicSurface extends Surface {
 		return Surface.loopContainsPointGeneral(contour, p, line, lineOut)
 	}
 
-	toSource(): string {
-		return callsce('new ConicSurface', this.center, this.f1, this.f2, this.dir)
+
+	getConstructorParameters(): any[] {
+		return [this.center, this.f1, this.f2, this.dir]
 	}
 
 	isTsForLine(line: L3): number[] {
@@ -158,7 +173,7 @@ class ConicSurface extends Surface {
 	}
 
 	toMesh(zStart = 0, zEnd = 30) {
-		return GL.Mesh.parametric(this.parametricFunction(), this.parametricNormal(), 0, PI, this.tMin, this.tMax, 16, 1)
+		return Mesh.parametric(this.parametricFunction(), this.parametricNormal(), 0, PI, this.tMin, this.tMax, 16, 1)
 	}
 
 	parametricNormal(): (s: number, t: number) => V3 {
@@ -283,8 +298,8 @@ class ConicSurface extends Surface {
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					return at.minus(this.center).cross(tangent.rejectedFrom(this.dir)).length() / 2
 				}
-				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				// hyperbola normal1 can be perpendicular to
+				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
+                // positive area hyperbola normal1 can be perpendicular to
 				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
 					: -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
@@ -323,7 +338,8 @@ class ConicSurface extends Surface {
 					return (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY() *
 						tangent.dot(V3.Z.cross(this.dir).unit())
 				}
-				// ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive
+                // area
 				const sign = edge.curve instanceof SemiEllipseCurve
 					? -Math.sign(edge.curve.normal.dot(this.dir))
 					: -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))

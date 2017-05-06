@@ -1,11 +1,9 @@
-import snap0 = NLA.snap0
-import CustomSet = NLA.CustomSet
-import CustomMap = NLA.CustomMap
 let eps = 1e-5
 
-
+let globalId = 0
 function addLikeSurfaceFaces(likeSurfaceFaces: Face[][], face1: Face, face2: Face) {
-    // There cannot be two subgroups which will later be connected, as the "graph" of like surface faces is fully connected
+    // There cannot be two subgroups which will later be connected, as the "graph" of like surface faces is fully
+    // connected
     for (let i = 0; i < likeSurfaceFaces.length; i++) {
         let faceGroup = likeSurfaceFaces[i]
         let foundFace1 = false, foundFace2 = false
@@ -156,7 +154,7 @@ class B2 extends Transformable {
             !addedToGroup && likeSurfaceFaces.push([this.faces[i]])
         }
 
-        console.log("likeSurfaceFaces", likeSurfaceFaces)
+        console.log('likeSurfaceFaces', likeSurfaceFaces)
         if (likeSurfaceFaces.every(group => group.length == 1)) return this
 
         const newFaces = []
@@ -169,7 +167,7 @@ class B2 extends Transformable {
                 const allEdges = faceGroup.map(face => face.getAllEdges()).concatenated()
                 for (let i = allEdges.length; i-- > 0;) {
                     for (let j = 0; j < i; j++) {
-                        console.log("blugh", total)
+                        console.log('blugh', total)
                         assert(i >= 0 && j >= 0 && total++ < 500, i + ' '+ j+' '+ total)
                         if (allEdges[i].isCoEdge(allEdges[j])) {
                             // remove both
@@ -192,8 +190,8 @@ class B2 extends Transformable {
         return this.faces.map(face => face.zDirVolume().volume).sum()
     }
 
-    toMesh(): GL.Mesh & {faceIndexes: Map<Face, {start: int, count: int}>} {
-        const mesh = new GL.Mesh({triangles: true, normals: true, lines: true}) as any
+    toMesh(): Mesh & {faceIndexes: Map<Face, {start: int, count: int}>} {
+        const mesh = new Mesh({triangles: true, normals: true, lines: true}) as any
         mesh.faceIndexes = new Map()
         for (const face of this.faces) {
             let triangleStart = mesh.triangles.length
@@ -282,7 +280,8 @@ class B2 extends Transformable {
                     // newLoopInfo isnt contained by any other subLoopInfo
                     for (let i = loopInfos.length; --i >= 0;) {
                         const subLoopInfo = loopInfos[i]
-                        //console.log("cheving subLoopInfo", surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a))
+                        //console.log("cheving subLoopInfo", surface.loopContainsPoint(newLoopInfo.edges,
+                        // subLoopInfo.edges[0].a))
                         if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                             newLoopInfo.subloops.push(subLoopInfo)
                             loopInfos.splice(i, 1) // remove it
@@ -570,7 +569,7 @@ class B2 extends Transformable {
 	        //assert(edgeFaceInfos.length % 2 == 0, () => canonEdge + edgeFaceInfos.sce)
             const faceInfo0 = edgeFaceInfos.find(faceInfo => faceInfo.reversed)
 	        if (!faceInfo0) {
-		        console.warn("invalid brep")
+		        console.warn('invalid brep')
 		        continue
 	        }
             edgeFaceInfos.forEach(faceInfo => {
@@ -648,7 +647,8 @@ class B2 extends Transformable {
                 other.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
             }
         }
-        //buildCoplanar && this.reconstituteCoplanarFaces(likeSurfaceFaces, edgeLooseSegments, faceMap, newFaces, this.infiniteVolume, other.infiniteVolume)
+        //buildCoplanar && this.reconstituteCoplanarFaces(likeSurfaceFaces, edgeLooseSegments, faceMap, newFaces,
+        // this.infiniteVolume, other.infiniteVolume)
 
         const result = new B2(newFaces, this.infiniteVolume && other.infiniteVolume, generator)
 	    //result.buildAdjacencies()
@@ -918,21 +918,19 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
 							}
 						}
 					//} else {
-					//
-					//	const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
-					//	const eps = 1e-4
-					//	const normVector = surface2.normalAt(p)
-					//	for (const dir of [-1, 1]) {
-					//		if (-1 == dir * dirFactor && edgeT == edge.minT ||
-					//			1 == dir * dirFactor && edgeT == edge.maxT ||
-					//			-1 == dir && curveT == isCurve.tMin ||
-					//			1 == dir && curveT == isCurve.tMax) continue
-					//		const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir * eps)).dot(normVector)
-					//		const ecd = edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir * dirFactor * eps)).dot(normVector)
-					//		if (iscd > ecd) {
-					//			ps.push({p, insideDir: isTangent.times(dir * dirFactor), t: curveT, edge: edge, edgeT: edgeT, colinear: false})
-					//		}
-					//	}
+                    //
+                    //	const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
+                    //	const eps = 1e-4
+                    //	const normVector = surface2.normalAt(p)
+                    //	for (const dir of [-1, 1]) {
+                    //		if (-1 == dir * dirFactor && edgeT == edge.minT ||
+                    //			1 == dir * dirFactor && edgeT == edge.maxT ||
+                    //			-1 == dir && curveT == isCurve.tMin ||
+                    //			1 == dir && curveT == isCurve.tMax) continue
+                    //		const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir * eps)).dot(normVector)
+                    //		const ecd = edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir * dirFactor *
+                    // eps)).dot(normVector) if (iscd > ecd) { ps.push({p, insideDir: isTangent.times(dir * dirFactor),
+                    // t: curveT, edge: edge, edgeT: edgeT, colinear: false}) } }
 						//curveVsSurface(isCurve, curveT, p, surface2)
 					//}
 				}
@@ -1020,7 +1018,8 @@ function dotCurve2(curve: Curve, t: number, normal: V3, sign: number): number {
 	// if tangentDot != 0 the curve simply crosses the plane
 	if (!eq0(tangentDot)) { return sign * tangentDot }
 	const ddtDot = curve.ddt(t).dot(normal)
-	// tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure and must do a numeric test
+	// tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure
+    // and must do a numeric test
 	if (!eq0(ddtDot)) { return ddtDot }
 	const numericDot = curve.at(t).to(curve.at(t + sign * 4 * NLA_PRECISION)).dot(normal)
 	assert(!(curve instanceof L3))
@@ -1058,20 +1057,11 @@ const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE= 3, ALONG_ED
 //            ? faceInfo.edge.aDir
 //            : faceInfo.edge.bDir
 //        faceInfo.outsideVector = faceInfo.edgeDirAtEdgeA.cross(faceInfo.normalAtEdgeA)
-//        faceInfo.angle = (dirAtEdgeA.angleRelativeNormal(faceInfo.outsideVector.negated(), ab1) + 2 * Math.PI + NLA_PRECISION / 2) % (2 * Math.PI)
-//    })
-//    assert(relFaces.length != 0, edge.toSource())
-//    relFaces.sort((a, b) => a.angle - b.angle)
-//    // assert(relFaces.length % 2 == 0, edge.toSource()) // even number of touching faces
-//
-//    if (eq0(relFaces[0].angle)) {
-//        //assert(false) todo
-//        const coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0;
-//        return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
-//    } else {
-//        return !relFaces[0].reversed ? INSIDE : OUTSIDE
-//    }
-//}
+//        faceInfo.angle = (dirAtEdgeA.angleRelativeNormal(faceInfo.outsideVector.negated(), ab1) + 2 * Math.PI +
+// NLA_PRECISION / 2) % (2 * Math.PI) }) assert(relFaces.length != 0, edge.toSource()) relFaces.sort((a, b) => a.angle
+// - b.angle) // assert(relFaces.length % 2 == 0, edge.toSource()) // even number of touching faces  if
+// (eq0(relFaces[0].angle)) { //assert(false) todo const coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0;
+// return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE } else { return !relFaces[0].reversed ? INSIDE : OUTSIDE } }
 function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
     assert(arguments.length == 4)
     assert(canonEdge == canonEdge.getCanon())
@@ -1341,6 +1331,51 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
 }
 
 
+/*
+ implicitCurve: (s: number, t: number) => number,
+ sStart: number, tStart: number,
+ step_size: number,
+ dids: (s, t) => number,
+ didt: (s, t) => number,
+ */
+function followAlgorithm2d(implicitCurve: (s: number, t: number) => number,
+                           start: V3,
+                           stepLength: number = 0.5,
+                           dids: (s, t) => number,
+                           didt: (s, t) => number,
+                           bounds: (s, t) => boolean): {points: V3[], tangents: V3[]} {
+	assertNumbers(stepLength, implicitCurve(0, 0))
+	assertVectors(start)
+	//assert (!startDir || startDir instanceof V3)
+	const points = []
+	//let tangents = tangents || []
+	const tangents = []
+	assert (eq02(implicitCurve(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	const eps = stepLength / 32
+	let p = start, prevp = p
+	let i = 0
+	do {
+		const dfpdx = dids(p.x, p.y), dfpdy = didt(p.x, p.y)
+		let tangent = new V3(-dfpdy, dfpdx, 0)
+		const reversedDir = p.minus(prevp).dot(tangent) < 0
+		tangent = tangent.toLength(stepLength)
+		const tangentEndPoint = p.plus(tangent)
+		points.push(p)
+		tangents.push(tangent)
+		prevp = p
+		p = curvePoint(implicitCurve, tangentEndPoint)
+	} while (i++ < 1000 && (i < 4 || p.distanceTo(start) > stepLength) && bounds(p.x, p.y))
+	assert(i != 1000)
+	//assert(bounds(p.x, p.y))
+	const end = p
+	const endTangent = new V3(-dids(end.x, end.y), didt(end.x, end.y), 0)
+	points.push(end)
+	tangents.push(endTangent)
+
+	//assert(points.length > 6)
+	// TODO gleichmäßige Verteilung der Punkte
+	return {points, tangents}
+}
 function followAlgorithm2 (implicitCurve, startPoint, endPoint, stepLength, startDir, tangents, boundsFunction, dir, didx, didy) {
     assertNumbers(stepLength, implicitCurve(0, 0))
     assertVectors(startPoint, endPoint)
@@ -1464,8 +1499,8 @@ function intersectionPCurveISurface(parametricCurve, searchStart, searchEnd, sea
 function intersectionICurvePSurface(f0, f1, parametricSurface) {
 
 }
-function cassini(a, c) {
-    return (x, y) => (x*x + y*y)*(x*x + y*y) - 2*c*c*(x*x - y*y) - (a*a*a*a - c*c*c*c)
+function cassini(a: number, c: number): (x: number, y: number) => number {
+	return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
 }
 
 

@@ -1,10 +1,13 @@
-abstract class Surface extends Transformable implements NLA.Equalable {
+abstract class Surface extends Transformable implements Equalable {
 	toString(): string {
 		return this.toSource()
 	}
 
-	abstract toSource(): string
+	toSource(rounder: (x: number) => number = x => x): string {
+		return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters())
+	}
 
+	abstract getConstructorParameters(): any[]
 
 	abstract transform(m4: M4, desc?: string): Surface
 
@@ -52,17 +55,7 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 	 */
 	abstract like(object): boolean
 
-    parameters(pWC: V3): V3 {
-	    return this.pointToParameterFunction()(pWC)
-    }
 
-    pointToParameterFunction(): (pWC: V3) => V3 {
-        return this.parameters.bind(this)
-    }
-
-	abstract parametricFunction?(): (s: number, t: number)=>V3
-
-	abstract parametricNormal?(): (s: number, t: number)=>V3
 
 	abstract edgeLoopCCW(loop: Edge[]): boolean
 
@@ -127,19 +120,19 @@ abstract class Surface extends Transformable implements NLA.Equalable {
 	}
 
 	abstract equals(obj: any): boolean
-	abstract hashCode(): int
+	abstract hashCode(): int {
+		return 43
+	}
 
 	abstract zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number}
 
 	abstract calculateArea(allEdges: Edge[]): number
 
-	static genericCurvesIP(ps: Surface, is: Surface): Curve[] {
+	static genericCurvesIP(ps: ParametricSurface, is: ImplicitSurface): Curve[] {
 		const psf = ps.parametricFunction()
-		const isf = ps.implicitFunction()
+		const isf = is.implicitFunction()
 		const ic = (s, t) => isf(psf(s, t))
 		return Curve.breakDownIC(ic, ps.sMin, ps.sMax, ps.tMin, ps.tMax, 0.1, 0.1, 0.0001)
 	}
-
 }
-
 enum PointVsFace {INSIDE, OUTSIDE, ON_EDGE}
