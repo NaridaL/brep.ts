@@ -52,12 +52,7 @@ class Line {
 		return this.dir1.angleTo(line.dir1)
 	}
 
-	/**
-	 *
-	 * @param t
-	 * @returns `this.anchor.plus(this.dir1.times(t))`
-	 */
-	at(t) {
+	at(t: number): V3 {
 		assertNumbers(t)
 		return this.anchor.plus(this.dir1.times(t))
 	}

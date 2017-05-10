@@ -38,7 +38,7 @@ abstract class FaceInfoFactory<T> {
 		return original.info
 	}
 
-	static makeStatic<T>(staticInfo: T) {
+	static makeStatic<T>(staticInfo: T): FaceInfoFactory<T> {
 		return new class extends FaceInfoFactory<T> {
 			constructor() {
 				super()

@@ -1,3 +1,4 @@
+///<reference path="P3.ts"/>
 
 class CustomPlane extends P3 {
 	readonly up: V3

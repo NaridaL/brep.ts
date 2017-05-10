@@ -106,7 +106,7 @@ class EllipseCurve extends XiEtaCurve {
 	}
 
 	reversed(): this {
-		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin) as this
+		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
 	}
 
 	isColinearTo(curve: Curve): boolean {
@@ -280,7 +280,7 @@ class EllipseCurve extends XiEtaCurve {
 		return super.isInfosWithCurve(curve)
 	}
 
-	roots(): number[][] {
+	roots(): [number[], number[], number[]] {
 		// tangent(t) = f2 cos t - f1 sin t
 		// solve for each dimension separately
 		// tangent(eta, xi) = f2 eta - f1 xi

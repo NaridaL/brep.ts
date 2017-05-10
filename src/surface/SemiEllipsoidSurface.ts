@@ -1,4 +1,4 @@
-class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface {
+class SemiEllipsoidSurface extends EllipsoidSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly pLCNormalWCMatrix: M4
@@ -9,7 +9,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
 	            readonly f1: V3,
 	            readonly f2: V3,
 	            readonly f3: V3) {
-		super()
+		super(center, f1, f2, f3)
 		assertVectors(center, f1, f2, f3)
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
@@ -30,7 +30,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
         //for (let i = 0; i < contour.length; i++) {
         //    const ipp = (i + 1) % contour.length
         //    const edge = contour[i], nextEdge = contour[ipp]
-        //    totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
+        //    totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b))
         //}
         //return le(0, totalAngle)
 	}
@@ -72,6 +72,9 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
 
     }
 
+	toMesh(): Mesh {
+		return ParametricSurface.prototype.toMesh.call(this)
+	}
 
 	getConstructorParameters(): any[] {
 		return [this.center, this.f1, this.f2, this.f3]
@@ -90,7 +93,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
 			for (let i = 0; i < ists.length - 1; i++) {
 				const aT = ists[i], bT = ists[i + 1]
 				const a = curve.at(aT), b = curve.at(bT)
-				const aNormal = surface.normalAt(a), bNormal = surface.normalAt(b)
+				const aNormal = surface.normalP(a), bNormal = surface.normalP(b)
 				const aInside = dotCurve2(curve, aT, aNormal, 1) < 0
 				const bInside = dotCurve2(curve, bT, bNormal, -1) < 0
 				//assert(bInside == aInside)
@@ -146,17 +149,16 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
 					0 === i && ([aP, bP] = [bP, aP])
 					assert(EllipsoidSurface.UNIT.containsPoint(aP))
 					assert(EllipsoidSurface.UNIT.containsPoint(bP))
-					curves.push(new PICurve(surface, this, this.matrix.transformPoint(aP), this.matrix.transformPoint(bP), -1))
+					curves.push(PICurve.forStartEnd(surface, this, this.matrix.transformPoint(bP), this.matrix.transformPoint(aP), undefined, 1))
 				}
 			}
 		}
 		const f = (t) => baseCurveLC.at(t).length() - 1
 		const fRoots = null
-		return curves
+		return surface.clipCurves(curves)
 	}
+
 	isCurvesWithSurface(surface: Surface): Curve[] {
-
-
         if (surface instanceof PlaneSurface) {
             return this.isCurvesWithPlane(surface.plane)
         } else if (surface instanceof SemiCylinderSurface) {
@@ -227,13 +229,11 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
             //&& le(0, ellipseLC.getAABB().min.y)
 	}
 
-    containsCurve(curve) {
+	containsCurve(curve: Curve): boolean {
         if (curve instanceof SemiEllipseCurve) {
             return this.containsEllipse(curve)
-        } else if (curve instanceof PICurve) {
-            return curve.points.every(this.containsPoint, this)
         } else {
-            return false
+            return super.containsCurve(curve)
         }
     }
 
@@ -257,13 +257,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
             this.f3.negated())
     }
 
-
-    toMesh(subdivisions: int = 3): Mesh {
-	    return Mesh.parametric(this.parametricFunction(), this.parametricNormal(), 0, PI, -PI / 2, PI / 2, 16, 16)
-        //return Mesh.sphere(subdivisions).transform(this.matrix)
-    }
-
-	parametricNormal(): (s: number, t: number)=>V3 {
+	normalSTFunc(): (s: number, t: number)=>V3 {
         // ugh
         // paramtric ellipsoid point q(a, b)
         // normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
@@ -279,17 +273,15 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
         }
     }
 
-
-
-	normalAt(p: V3): V3 {
+	normalP(p: V3): V3 {
     	return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit()
     }
 
     normalST(s: number, t: number): V3 {
-    	return this.pLCNormalWCMatrix.transformVector(V3.sphere(s, t))
+    	return this.pLCNormalWCMatrix.transformVector(V3.sphere(s, t)).unit()
     }
 
-	pointToParameterFunction() {
+	stPFunc() {
 		return (pWC: V3) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			const alpha = abs(pLC.angleXY())
@@ -301,9 +293,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
     }
 
 
-
-
-	parametricFunction() {
+	pSTFunc() {
 		// this(a, b) = f1 cos a cos b + f2 sin a cos b + f2 sin b
 		return (alpha, beta) => {
 			return this.matrix.transformPoint(V3.sphere(alpha, beta))
@@ -370,13 +360,13 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
 		//    x && console.log(centerToP.sce, centerToPdelA.sce, centerToPdelB.sce)
 		//    return [centerToP.dot(centerToPdelA), centerToP.dot(centerToPdelB)]
 		//}
-		//const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.parametricFunction()(mainF1Params[0], mainF1Params[1])
+		//const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.pSTFunc()(mainF1Params[0], mainF1Params[1])
 		//console.log(f(mainF1Params, 1).sce)
-		//const mainF2Params = newtonIterate(f, this.pointToParameterFunction()(f2.rejectedFrom(mainF1)).toArray(2), 8),
-	     //   mainF2 = this.parametricFunction()(mainF2Params[0], mainF2Params[1])
-		//console.log(this.parametricNormal()(mainF2Params[0], mainF2Params[1]).sce)
+		//const mainF2Params = newtonIterate(f, this.stPFunc()(f2.rejectedFrom(mainF1)).toArray(2), 8),
+	     //   mainF2 = this.pSTFunc()(mainF2Params[0], mainF2Params[1])
+		//console.log(this.normalSTFunc()(mainF2Params[0], mainF2Params[1]).sce)
 		//assert(mainF1.isPerpendicularTo(mainF2), mainF1, mainF2, mainF1.dot(mainF2), mainF1Params)
-		//const mainF3Params = this.pointToParameterFunction()(mainF1.cross(mainF2)), mainF3 = this.parametricFunction()(mainF3Params[0], mainF3Params[1])
+		//const mainF3Params = this.stPFunc()(mainF1.cross(mainF2)), mainF3 = this.pSTFunc()(mainF3Params[0], mainF3Params[1])
 		//return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
 
 	    const {U, SIGMA} = this.matrix.svd3()
@@ -470,14 +460,14 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
 
     static unitISCurvesWithSemiCylinderSurface(surface: SemiCylinderSurface): SemiEllipseCurve[] {
         if (new L3(surface.baseCurve.center, surface.dir1).containsPoint(V3.O)) {
-            const ellipseProjected = surface.baseCurve.transform(M4.projection(new P3(surface.dir1, 0)))
-            const f1Length = ellipseProjected.f1.length(), f2Length = ellipseProjected.f2.length()
+            const projEllipse = surface.baseCurve.transform(M4.projection(new P3(surface.dir1, 0)))
+            const f1Length = projEllipse.f1.length(), f2Length = projEllipse.f2.length()
             if (lt(1, min(f1Length, f2Length))) return []
-            if (ellipseProjected.isCircular()) {
+            if (projEllipse.isCircular()) {
                 const distISCurveCenter = Math.sqrt(1 - min(1, f1Length) ** 2)
                 const isCurveCenter = (surface.dir1.y < 0 ? surface.dir1.negated() : surface.dir1).times(distISCurveCenter)
-                // isCurve.at(t).y = isCurveCenter.y + ellipseProjected.f1.y * cos(t) + ellipseProjected.f2.y * sin(t) = 0
-                return [new SemiEllipseCurve(isCurveCenter, ellipseProjected.f1, ellipseProjected.f2)]
+                // isCurve.at(t).y = isCurveCenter.y + projEllipse.f1.y * cos(t) + projEllipse.f2.y * sin(t) = 0
+                return [new SemiEllipseCurve(isCurveCenter, projEllipse.f1, projEllipse.f2)]
             }
         }
         assert(false)
@@ -600,81 +590,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface implements ParametricSurface
     }
 
 
-	calculateArea(edges: Edge[], canApproximate = true): number {
-    	assert(this.isVerticalSpheroid())
-    	const {f1, f2, f3} = this
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const circleRadius = f1.length()
-		const f31 = f3.unit()
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof SemiEllipseCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-					const localAt = this.inverseMatrix.transformPoint(at)
-					let angleXY = localAt.angleXY()
-					if(eq(Math.abs(angleXY), PI)) {
-						if (edge.curve.normal.isParallelTo(this.f2)) {
-							angleXY = PI * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2))
-						} else {
-							angleXY = PI * dotCurve(this.f2, tangent, edge.curve.ddt(t))
-						}
-					}
-					const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
-					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit()
-					const df3 = tangent.dot(f31)
-					//const scaling = df3 / localAt.lengthXY()
-					const scaling = dotter.dot(tangent)
-					//console.log(t, at.str, arcLength, scaling)
-					return arcLength * scaling
-				}
-				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				return val
-			} else {
-				assertNever()
-			}
-		}).sum()
 
-
-
-		return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
-	}
-
-	// volume does scale linearly, so this can be done in the local coordinate system
-	// first transform edges with inverse matrix
-	// then rotate everything edges so the original world Z dir again points in Z dir
-	// now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
-	// we need to split the transformed loop along the local seam plane
-	// and then sum the zDir volumes of the resulting loops
-    zDirVolume(loop: Edge[]): {volume: number, centroid: V3} {
-	    const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
-	    const T = M4.rotationAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
-	    function calc(loop) {
-		    let totalVolume = 0
-		    assert(V3.Z.isParallelTo(T.transformVector(V3.Z)))
-		    //const zDistanceFactor = toT.transformVector(V3.Z).length()
-		    loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
-			    const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
-
-			    function f(t) {
-				    const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-				    const r = at.lengthXY()
-				    const at2d = at.withElement('z', 0)
-				    const angleAdjusted = (at.angleXY() + TAU - NLA_PRECISION) % TAU + NLA_PRECISION
-				    const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.unit())) * Math.sign(tangent.z)
-				    //console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
-				    return result
-			    }
-
-			    const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-			    totalVolume += volume
-		    })
-		    return totalVolume
-	    }
-	    const [front, back] = SemiEllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
-	    const localVolume = calc(front, PI) + calc(back, -PI)
-
-	    return {volume: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: null}
-	}
     zDirVolumeForLoop2(loop: Edge[]): number {
     	const angles = this.inverseMatrix.getZ().toAngles()
 	    const T = M4.rotationY(-angles.theta).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
@@ -774,5 +690,5 @@ SemiEllipsoidSurface.prototype.uStep = PI / 16
 SemiEllipsoidSurface.prototype.vStep = PI / 16
 SemiEllipsoidSurface.prototype.sMin = 0
 SemiEllipsoidSurface.prototype.sMax = PI
-SemiEllipsoidSurface.prototype.tMin = -PI
-SemiEllipsoidSurface.prototype.tMax = PI
+SemiEllipsoidSurface.prototype.tMin = -PI / 2
+SemiEllipsoidSurface.prototype.tMax = PI / 2

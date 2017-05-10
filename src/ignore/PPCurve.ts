@@ -174,12 +174,7 @@ class PPCurve extends Curve {
 		})
 	}
 
-	/**
-	 * This one is better than pointTangent
-	 * @param p
-	 * @returns {*|V3}
-	 */
-	pointTangent(p) {
+	pointTangent(p): V3 {
 		assertVectors(p)
 		assert(this.containsPoint(p), 'this.containsPoint(p)' + this.containsPoint(p))
 		let n1 = this.parametricSurface1.normalAt(p)
@@ -187,7 +182,7 @@ class PPCurve extends Curve {
 		return n1.cross(n2)
 	}
 
-	at(t) {
+        at(t: number): V3 {
 		return V3.lerp(this.points[Math.floor(t)], this.points[Math.ceil(t)], t % 1)
 	}
 

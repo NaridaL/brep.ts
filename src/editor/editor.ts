@@ -504,6 +504,7 @@ function rebuildModel() {
 }
 // DECLARATIONS
 // GLOBALS
+let setupCameraListener
 let missingEls = [], namesPublishedBy, publishedObjects
 let faces = []
 let highlighted = [], selected = [], paintDefaultColor = 0x000000
@@ -512,24 +513,21 @@ let modelBREP, brepMesh, brepPoints, planes, brepEdges
 let rebuildLimit = -1, rollBackIndex = -1, featureError
 let drPs = [], drVs: {anchor: V3, dir1: V3, color: int}[] = []
 
-let eye = {eyePos: V(1000, 1000, 1000), eyeFocus: V3.O, eyeUp: V3.Z, zoomFactor: 1}
+let eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
 let hoverHighlight = undefined
 // console.log = oldConsole;
 let modeStack = []
-let shaders: any = {}
+let shaders: { [name: string]: Shader } = {}
 
-function rgbToVec4(color) {
-	return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0]
-}
 function renderColor(mesh, color, mode?) {
 	shaders.singleColor.uniforms({
-		color: rgbToVec4(color)
+		color: hexIntToGLColor(color)
 	}).draw(mesh, mode)
 }
 function renderColorLines(mesh, color) {
 	shaders.singleColor.uniforms({
-		color: rgbToVec4(color)
-	}).draw(mesh, 'LINES')
+		color: hexIntToGLColor(color)
+	}).draw(mesh, DRAW_MODES.LINES)
 }
 let TEXT_TEXTURE_HEIGHT = 128
 function renderText(string, color) {
@@ -539,7 +537,7 @@ function renderText(string, color) {
 	gl.scale(texture.width / TEXT_TEXTURE_HEIGHT, 1, 1)
 	shaders.textureColor.uniforms({
 		texture: 0,
-		color: rgbToVec4(color)
+		color: hexIntToGLColor(color)
 	}).draw(meshes.text)
 	gl.popMatrix()
 }
@@ -550,7 +548,7 @@ function drawVector(vector, anchor, color = 0x0000ff, size = 1, _gl = gl) {
 	_gl.multMatrix(M4.forSys(vector, vT, vector.cross(vT).unit(), anchor))
 	1 != size && _gl.scale(size, size, size)
 	_gl.shaders.singleColor.uniforms({
-		color: rgbToVec4(color)
+		color: hexIntToGLColor(color)
 	}).draw(_gl.meshes.vector)
 
 	_gl.popMatrix()
@@ -567,7 +565,7 @@ function drawPoint(p, color = 0x000000, size = 5) {
 	gl.pushMatrix()
 	gl.translate(p)
 	gl.scale(size, size, size)
-	shaders.singleColor.uniforms({color: rgbToVec4(color)}).draw(meshes.sphere1)
+	shaders.singleColor.uniforms({color: hexIntToGLColor(color)}).draw(meshes.sphere1)
 	gl.popMatrix()
 }
 function drawPoints(size: number = 2) {
@@ -585,7 +583,7 @@ function conicPainter(mode, ellipse: SemiEllipseCurve, color, startT, endT, widt
 		f1: ellipse.f1,
 		f2: ellipse.f2,
 		center: ellipse.center,
-		color: rgbToVec4(color),
+		color: hexIntToGLColor(color),
 		startT: startT,
 		endT: endT,
 		scale: width,
@@ -597,14 +595,30 @@ const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int
 	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
 	[HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
-	[ImplicitCurve.name]: () => {},
+	[ImplicitCurve.name](curve: ImplicitCurve, color, startT, endT, width = 2, normal = V3.Z) {
+		let mesh = cachedMeshes.get(curve)
+		if (!mesh) {
+			mesh = new Mesh({triangles: true, normals: true, lines: false, colors: false})
+			curve.addToMesh(mesh)
+			mesh.compile()
+			//mesh=Mesh.sphere(2)
+			cachedMeshes.set(curve, mesh)
+		}
+		// TODO: draw only part
+		//startT: startT,
+		//	endT: endT,
+		shaders.generic3d.uniforms({
+			color: hexIntToGLColor(color),
+			scale: width,
+		}).draw(mesh)
+	},
 	[BezierCurve.name](curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
 		shaders.bezier3d.uniforms({
 			p0: curve.p0,
 			p1: curve.p1,
 			p2: curve.p2,
 			p3: curve.p3,
-			color: rgbToVec4(color),
+			color: hexIntToGLColor(color),
 			startT: startT,
 			endT: endT,
 			scale: width,
@@ -619,12 +633,13 @@ const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int
 		gl.multMatrix(m)
 		gl.scale(1, width, width)
 		shaders.singleColor.uniforms({
-			color: rgbToVec4(color), // TODO: error checking
+			color: hexIntToGLColor(color), // TODO: error checking
 		}).draw(meshes.pipe)
 
 		gl.popMatrix()
 	},
 }
+CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 
 function paintLineXY(a, b, color = paintDefaultColor, width = 2) {
@@ -643,7 +658,7 @@ function paintArc(center, radius, width, color, startAngle = 0, endAngle = 2 * M
 	gl.pushMatrix()
 	gl.translate(center)
 	shaders.arc2.uniforms({
-		color: rgbToVec4(color),
+		color: hexIntToGLColor(color),
 		offset: startAngle,
 		step: endAngle - startAngle,
 		radius: radius,
@@ -656,7 +671,7 @@ function paintBezier(ps, width, color, startT, endT) {
 	// TODO PS AREN'T IN THE ORDER YOU EXPECT THEM TO BE!!!
 	assertVectors.apply(undefined, ps)
 	shaders.bezier.uniforms({
-		color: rgbToVec4(color),
+		color: hexIntToGLColor(color),
 		width: width,
 		p0: ps[0],
 		p1: ps[2],
@@ -674,7 +689,7 @@ function randomVec4Color(opacity) {
 function drawEdge(edge, color = 0x000000, width = 2) {
 	CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, edge.minT, edge.maxT, width)
 }
-let cachedMeshes = new Map()
+const cachedMeshes = new Map()
 function drawFace(face, color) {
 	let mesh = cachedMeshes.get(face)
 	if (!mesh) {
@@ -683,7 +698,7 @@ function drawFace(face, color) {
 		mesh.compile()
 		cachedMeshes.set(face, mesh)
 	}
-	shaders.singleColor.uniforms({color: rgbToVec4(color)}).draw(mesh)
+	shaders.singleColor.uniforms({color: hexIntToGLColor(color)}).draw(mesh)
 }
 let meshes: any = {}
 let ZERO_EL = {}
@@ -729,17 +744,17 @@ let paintScreen = function () {
 
 			const face = modelBREP.faces[faceIndex]
 			const faceTriangleIndexes = brepMesh.faceIndexes.get(face)
-			const faceColor = hoverHighlight == face ? rgbToVec4(0xff00ff)
-				: selected.includes(face) ? rgbToVec4(0x00ff45)
-					: hoverHighlight == face.info.feature ? rgbToVec4(0x4500ff)
+			const faceColor = hoverHighlight == face ? hexIntToGLColor(0xff00ff)
+				: selected.includes(face) ? hexIntToGLColor(0x00ff45)
+					: hoverHighlight == face.info.feature ? hexIntToGLColor(0x4500ff)
 					: face.info.color
 			shaders.lighting.uniforms({
 				color: faceColor
-			}).draw(brepMesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
+			}).draw(brepMesh, DRAW_MODES.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
 			/*
 			 shaders.singleColor.uniforms({
-			 color: rgbToVec4(0x0000ff)
-			 }).draw(brepMesh, 'LINES');
+			 color: hexIntToGLColor(0x0000ff)
+			 }).draw(brepMesh, DRAW_MODES.LINES);
 			 */
 		}
 
@@ -748,8 +763,8 @@ let paintScreen = function () {
 
 		gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
 		shaders.singleColor.uniforms({
-			color: rgbToVec4(COLORS.PP_STROKE)
-		}).draw(brepMesh, 'LINES')
+			color: hexIntToGLColor(COLORS.PP_STROKE)
+		}).draw(brepMesh, DRAW_MODES.LINES)
 		gl.projectionMatrix.m[11] += 1 / (1 << 22) // prevent Z-fighting
 	}
 	gl.popMatrix()
@@ -763,16 +778,18 @@ let paintScreen = function () {
 	gl.projectionMatrix.m[11] += DZ
 }
 
-function setupCamera({eyePos, eyeFocus, eyeUp, zoomFactor}, _gl: LightGLContext = gl) {
-	//console.log("eyePos", eyePos.$, "eyeFocus", eyeFocus.$, "eyeUp", eyeUp.$)
+function setupCamera(eye, _gl: LightGLContext = gl) {
+	const {pos, focus, up, zoomFactor} = eye
+	//console.log("pos", pos.$, "focus", focus.$, "up", up.$)
 	_gl.matrixMode(_gl.PROJECTION)
 	_gl.loadIdentity()
 	//_gl.perspective(70, _gl.canvas.width / _gl.canvas.height, 0.1, 1000);
 	const lr = _gl.canvas.width / 2 / zoomFactor
 	const bt = _gl.canvas.height / 2 /zoomFactor
 	_gl.ortho(-lr, lr, -bt, bt, -1e5, 1e5)
-	_gl.lookAt(eyePos, eyeFocus, eyeUp)
+	_gl.lookAt(pos, focus, up)
 	_gl.matrixMode(_gl.MODELVIEW)
+	setupCameraListener && setupCameraListener(eye)
 }
 function drawPlane(customPlane, color, _gl = gl) {
 	_gl.pushMatrix()
@@ -782,7 +799,7 @@ function drawPlane(customPlane, color, _gl = gl) {
 
 	const shader = hoverHighlight == customPlane ? _gl.shaders.singleColorHighlight : _gl.shaders.singleColor
 
-	shader.uniforms({color: rgbToVec4(color)}).draw(_gl.meshes.xyLinePlane, 'LINES')
+	shader.uniforms({color: hexIntToGLColor(color)}).draw(_gl.meshes.xyLinePlane, DRAW_MODES.LINES)
 
 	_gl.popMatrix()
 }
@@ -1080,6 +1097,7 @@ function initShaders(_shaders) {
 	_shaders.arc = new Shader(vertexShaderRing, fragmentShaderColor)
 	_shaders.arc2 = new Shader(vertexShaderArc, fragmentShaderColor)
 	_shaders.ellipse3d = new Shader(vertexShaderConic3d, fragmentShaderColor)
+	_shaders.generic3d = new Shader(vertexShaderGeneric, fragmentShaderColor)
 	_shaders.bezier3d = new Shader(vertexShaderBezier3d, fragmentShaderColor)
 	_shaders.bezier = new Shader(vertexShaderBezier, fragmentShaderColor)
 	_shaders.lighting = new Shader(vertexShaderLighting, fragmentShaderLighting)
@@ -1103,7 +1121,6 @@ function initOtherEvents() {
 		}
 		if (0 == e.button) {
 			const mouseLine = getMouseLine(e)
-			console.log('mouseLine', getMouseLine(e).toString(x => x), 'mode', modeGetCurrent())
 			modeGetCurrent().mousedown(e, mouseLine)
 		}
 
@@ -1164,8 +1181,8 @@ function initNavigationEvents(_gl = gl, eye, paintScreen) {
 				const moveCamera = V(-e.deltaX, e.deltaY, 0).times(2 / _gl.canvas.width)
 				const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 				const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
-				eye.eyePos = eye.eyePos.plus(worldMoveCamera)
-				eye.eyeFocus = eye.eyeFocus.plus(worldMoveCamera)
+				eye.pos = eye.pos.plus(worldMoveCamera)
+				eye.focus = eye.focus.plus(worldMoveCamera)
 				setupCamera(eye, _gl)
 			}
 			// scene rotation
@@ -1174,12 +1191,12 @@ function initNavigationEvents(_gl = gl, eye, paintScreen) {
 				const rotateLR = -e.deltaX / 6.0 * DEG
 				const rotateUD = -e.deltaY / 6.0 * DEG
 				// rotate
-				let matrix = M4.rotationLine(eye.eyeFocus, eye.eyeUp, rotateLR)
-				//let horizontalRotationAxis = eyeFocus.minus(eyePos).cross(eyeUp)
-				const horizontalRotationAxis = eye.eyeUp.cross(eye.eyePos.minus(eye.eyeFocus))
-				matrix = matrix.times(M4.rotationLine(eye.eyeFocus, horizontalRotationAxis, rotateUD))
-				eye.eyePos = matrix.transformPoint(eye.eyePos)
-				eye.eyeUp = matrix.transformVector(eye.eyeUp)
+				let matrix = M4.rotationLine(eye.focus, eye.up, rotateLR)
+				//let horizontalRotationAxis = focus.minus(pos).cross(up)
+				const horizontalRotationAxis = eye.up.cross(eye.pos.minus(eye.focus))
+				matrix = matrix.times(M4.rotationLine(eye.focus, horizontalRotationAxis, rotateUD))
+				eye.pos = matrix.transformPoint(eye.pos)
+				eye.up = matrix.transformVector(eye.up)
 
 				setupCamera(eye, _gl)
 			}
@@ -1196,8 +1213,8 @@ function initNavigationEvents(_gl = gl, eye, paintScreen) {
 		const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
 		//console.log("moveCamera", moveCamera)
 		//console.log("worldMoveCamera", worldMoveCamera)
-		eye.eyePos = eye.eyePos.plus(worldMoveCamera)
-		eye.eyeFocus = eye.eyeFocus.plus(worldMoveCamera)
+		eye.pos = eye.pos.plus(worldMoveCamera)
+		eye.focus = eye.focus.plus(worldMoveCamera)
 		setupCamera(eye, _gl)
 		paintScreen()
 		e.preventDefault()
@@ -1845,13 +1862,6 @@ function makeDistance() {
 		($('distanceInput' + newConstraint.id) as HTMLInputElement).select()
 	}
 }
-interface getCurvable {
-	getCurve()
-}
-interface Edge extends getCurvable {}
-Edge.prototype.getCurve = function () {
-
-}
 function selPointOnLine() {
 	if (2 != selected.length) return
 	const point = selected[0] instanceof SegmentEndPoint ? selected[0] : selected[1]
@@ -1882,10 +1892,10 @@ function makeSelCoincident() {
 function faceSketchPlane() {
 	const plane = editingSketch.plane
 	if (!plane) return
-	const viewLine = L3.throughPoints(eye.eyePos, eye.eyeFocus)
-	eye.eyeFocus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.O)
-	eye.eyePos = eye.eyeFocus.plus(plane.normal1.times(100))
-	eye.eyeUp = plane.up
+	const viewLine = L3.throughPoints(eye.pos, eye.focus)
+	eye.focus = plane.intersectionWithLine(viewLine) || viewLine.closestPointToPoint(V3.O)
+	eye.pos = eye.focus.plus(plane.normal1.times(100))
+	eye.up = plane.up
 	setupCamera(eye, gl)
 	paintScreen()
 }

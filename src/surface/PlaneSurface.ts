@@ -1,4 +1,4 @@
-class PlaneSurface extends Surface {
+class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 	constructor(readonly plane: P3,
 	            readonly right: V3 = plane.normal1.getPerpendicular().unit(),
@@ -12,7 +12,6 @@ class PlaneSurface extends Surface {
 	isCoplanarTo(surface) {
 		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
 	}
-
 
 	isTsForLine(line: L3): number[] {
 		return line.isTsWithPlane(this.plane)
@@ -28,11 +27,6 @@ class PlaneSurface extends Surface {
 
 	implicitFunction() {
 		return p => this.plane.distanceToPointSigned(p)
-	}
-
-	isCurvesWithISurface(implicitSurface) {
-		assert(implicitSurface.implicitFunction, 'implicitSurface.implicitFunction')
-		return new CurvePI(this, implicitSurface)
 	}
 
 	isCurvesWithSurface(surface2: Surface): Curve[] {
@@ -83,7 +77,7 @@ class PlaneSurface extends Surface {
 		}
 	}
 
-	normalAt(p) {
+	normalP(pWC: V3): V3 {
 		return this.plane.normal1
 	}
 
@@ -95,16 +89,16 @@ class PlaneSurface extends Surface {
 		return this.plane.containsCurve(curve)
 	}
 
-	transform(m4: M4): this {
-		return new PlaneSurface(this.plane.transform(m4)) as this
+	transform(m4: M4): PlaneSurface {
+		return new PlaneSurface(this.plane.transform(m4))
 	}
 
 	flipped() {
-		return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated()) as this
+		return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated())
 	}
 
-	toString() {
-		return callsce('new PlaneSurface', this.plane, this.right, this.up)
+	getConstructorParameters(): any[] {
+		return [this.plane, this.right, this.up]
 	}
 
 	toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {

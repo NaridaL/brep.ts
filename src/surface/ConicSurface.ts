@@ -1,15 +1,17 @@
-class ConicSurface extends Surface {
+///<reference path="ParametricSurface.ts"/>
+
+class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4
 	readonly normalDir: number // -1 | 1
 
+
 	/**
 	 * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
 	 * @param f1
 	 * @param f2
-	 * @param f3 Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
-	 * @param normalDir 1 or -1. 1 if surface normals point outwards, -1 if not.
+	 * @param dir Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
 	 */
 	constructor(readonly center: V3,
 	            readonly f1: V3,
@@ -41,8 +43,7 @@ class ConicSurface extends Surface {
 		return this.center
 	}
 
-	like(object) {
-		assert(false)
+	like(object: any): boolean {
 		if (!this.isCoplanarTo(object)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
 		return this.normalDir == object.normalDir
@@ -142,7 +143,7 @@ class ConicSurface extends Surface {
 			&& eq0(f1.z)
 	}
 
-	containsCurve(curve) {
+	containsCurve(curve: Curve): boolean {
 		if (curve instanceof SemiEllipseCurve) {
 			return this.containsEllipse(curve)
 		} else if (curve instanceof L3) {
@@ -152,7 +153,7 @@ class ConicSurface extends Surface {
 		} else if (curve instanceof ParabolaCurve) {
 			return this.containsParabola(curve)
 		} else {
-			assert(false)
+			return super.containsCurve(curve)
 		}
 	}
 
@@ -165,34 +166,44 @@ class ConicSurface extends Surface {
 	}
 
 	rightAngled() {
-
+		// TODO
 	}
 
 	flipped(): ConicSurface {
 		return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir)
 	}
 
-	toMesh(zStart = 0, zEnd = 30) {
-		return Mesh.parametric(this.parametricFunction(), this.parametricNormal(), 0, PI, this.tMin, this.tMax, 16, 1)
-	}
-
-	parametricNormal(): (s: number, t: number) => V3 {
+	normalSTFunc(): (s: number, t: number) => V3 {
 		const {f1, f2} = this, f3 = this.dir
 		return (d, z) => {
 			return f2.cross(f1).plus(f2.cross(f3.times(Math.cos(d)))).plus(f3.cross(f1.times(Math.sin(d)))).unit()
 		}
 	}
 
-	normalAt(p: V3): V3 {
-		assert(!p.like(this.center))
+	normalP(p: V3): V3 {
+		//TODO assert(!p.like(this.center))
 		const pLC = this.inverseMatrix.transformPoint(p)
-		return this.parametricNormal()(pLC.angleXY(), pLC.z)
+		return this.normalSTFunc()(pLC.angleXY(), pLC.z)
 	}
 
-	parametricFunction() {
-		return (d, z) => {
-			// center + f1 z cos d + f2 z sin d + z dir
-			return this.matrix.transformPoint(new V3(z * cos(d), z * sin(d), z))
+	pSTFunc(): (s: number, t: number) => V3 {
+		return (s, t) => {
+			// center + f1 t cos s + f2 t sin s + t dir
+			return this.matrix.transformPoint(new V3(t * cos(s), t * sin(s), t))
+		}
+	}
+
+	dpds(): (s: number, t: number) => V3 {
+		return (s, t) => {
+			const resultLC = new V3(t * -sin(s), t * cos(s), 0)
+			return this.matrix.transformVector(resultLC)
+		}
+	}
+
+	dpdt(): (s: number, t: number) => V3 {
+		return (s, t) => {
+			const resultLC = new V3(cos(s), sin(s), 1)
+			return this.matrix.transformVector(resultLC)
 		}
 	}
 
@@ -212,7 +223,7 @@ class ConicSurface extends Surface {
 		assert(false)
 	}
 
-	pointToParameterFunction() {
+	stPFunc() {
 		return (pWC: V3, hint = PI) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			let angle = pLC.angleXY()
@@ -227,16 +238,10 @@ class ConicSurface extends Surface {
 	isCurvesWithSurface(surface: Surface): Curve[] {
 		if (surface instanceof PlaneSurface) {
 			return this.isCurvesWithPlane(surface.plane)
-		} else if (surface instanceof ConicSurface) {
-			if (surface.dir.isParallelTo(this.dir)) {
-				const ellipseProjected = surface.transform(M4.projection(this.getPlane(), this.dir))
-				return this.isPointsWithEllipse(ellipseProjected).map(is => new L3(is, this.dir))
-			} else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
-
-			} else {
-				assert(false)
-			}
+		} else if (ImplicitSurface.is(surface)) {
+			return ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.02)
 		}
+		return super.isCurvesWithSurface(surface)
 	}
 
 	getCenterLine() {
@@ -263,99 +268,18 @@ class ConicSurface extends Surface {
 				const curveLC = curve.transform(rotationMatrix)
 				const ts = curveLC.isTsWithPlane(P3.ZX)
 				const intervals = getIntervals(ts, -PI, PI).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0)
-				return intervals.map(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b))
+				return intervals.map(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b)).concatenated()
 			}
 			const p = curveWC.at(0.2)
-			return this.normalAt(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
+			return this.normalP(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
 				? curveWC : curveWC.reversed()
-		}).concatenated().concatenated() as Curve[]
+		}).concatenated() as Curve[]
 	}
 
-	edgeLoopCCW(contour) {
-		const ptpF = this.pointToParameterFunction()
-		return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
-		if (contour.length < 56) {
-			let totalAngle = 0
-			for (let i = 0; i < contour.length; i++) {
-				const ipp = (i + 1) % contour.length
-				const edge = contour[i], nextEdge = contour[ipp]
-				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
-			}
-			return totalAngle > 0
-		} else {
-			const ptpF = this.pointToParameterFunction()
-			return isCCW(contour.map(e => ptpF(e.a)), new V3(0, 0, this.normalDir))
-		}
+	edgeLoopCCW(contour: Edge[]): boolean {
+		const ptpF = this.stPFunc()
+		return isCCW(contour.map(e => e.getVerticesNo0()).concatenated().map(v => ptpF(v)), V3.Z)
 	}
-
-
-
-	calculateArea(edges: Edge[]): number {
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					return at.minus(this.center).cross(tangent.rejectedFrom(this.dir)).length() / 2
-				}
-				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
-                // positive area hyperbola normal1 can be perpendicular to
-				const sign = edge.curve instanceof SemiEllipseCurve
-					? -Math.sign(edge.curve.normal.dot(this.dir))
-					: -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
-				return glqInSteps(f, edge.aT, edge.bT, 4) * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.normal.dot(this.dir))
-	}
-
-	/**
-	 * at(t)
-	 * |\                                    ^
-	 * | \ at(t).projectedOn(dir)             \  dir
-	 * |  \                                    \
-	 * |   \ at(t).rejectedFrom(dir)
-	 * |   |
-	 * |___|
-	 *        z = 0
-	 *
-	 *
-	 * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
-	 * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
-	 */
-	zDirVolume(edges: Edge[]): {volume: number, centroid: V3} {
-		// INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z
-		const totalVolume = edges.map(edge => {
-			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					return (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY() *
-						tangent.dot(V3.Z.cross(this.dir).unit())
-				}
-				// ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive
-                // area
-				const sign = edge.curve instanceof SemiEllipseCurve
-					? -Math.sign(edge.curve.normal.dot(this.dir))
-					: -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir))
-				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				return val * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-
-		return {volume: totalVolume * Math.sign(this.normal.dot(this.dir))}
-	}
-
-
 
 
 	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve): ConicSurface {

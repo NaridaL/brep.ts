@@ -7,20 +7,19 @@ abstract class Surface extends Transformable implements Equalable {
 		return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters())
 	}
 
-	abstract getConstructorParameters(): any[]
+	abstract normalP(p: V3): V3
 
-	abstract transform(m4: M4, desc?: string): Surface
+	abstract getConstructorParameters(): any[]
 
 	abstract isTsForLine(line: L3): number[]
 
 	/**
 	 * IMPORTANT: The tangents of the resulting curves need to be equal to the cross product of this and surface in the
-	 * point. I.e.: for every point p p on a returned curve: curve.tangentAt(curve.pointT(p)) == this.normalAt(p)
-	 * X surface.normalAt(p)
+	 * point. I.e.: for every point p p on a returned curve: curve.tangentAt(curve.pointT(p)) == this.normalP(p)
+	 * X surface.normalP(p)
 	 *
-	 * Cross product is not commutative, so curve.tangentAt(curve.pointT(p)) == surface.normalAt(p) X
-	 * this.normalAt(p) is not valid.
-	 *
+	 * Cross product is not commutative, so curve.tangentAt(curve.pointT(p)) == surface.normalP(p) X
+	 * this.normalP(p) is not valid.
 	 */
 	abstract isCurvesWithPlane(plane: P3): Curve[]
 
@@ -28,19 +27,25 @@ abstract class Surface extends Transformable implements Equalable {
 		return surface.isCurvesWithSurface(this).map(curve => curve.reversed())
 	}
 
-	abstract containsCurve(curve: Curve): boolean
-
-	abstract containsPoint(p: V3): boolean
-
-	abstract flipped(): Surface
-
-	flipped2(doFlip: boolean): Surface {
-		return doFlip ? this.flipped() : this
+	containsCurve(curve: Curve): boolean {
+		if (curve instanceof ImplicitCurve) {
+			for (let i = ceil(curve.tMin); i <= floor(curve.tMax); i++) {
+				if (!this.containsPoint(curve.points[i])) {
+					return false
+				}
+			}
+			return true
+		} else {
+			assertNever()
+		}
 	}
 
-	normalAt(p: V3): V3 {
-		const pmPoint = this.pointToParameterFunction()(p)
-		return this.parametricNormal()(pmPoint.x, pmPoint.y)
+	abstract containsPoint(pWC: V3): boolean
+
+	abstract flipped<T extends Surface>(this: T): T
+
+	flipped2<T extends Surface>(this: T, doFlip: boolean): T {
+		return doFlip ? this.flipped() : this
 	}
 
 	abstract loopContainsPoint(contour: Edge[], point: V3): PointVsFace
@@ -56,10 +61,7 @@ abstract class Surface extends Transformable implements Equalable {
 	abstract like(object): boolean
 
 
-
 	abstract edgeLoopCCW(loop: Edge[]): boolean
-
-
 
 
 	static loopContainsPointGeneral(loop: Edge[], p: V3, testLine: L3, lineOut: V3): PointVsFace {
@@ -120,19 +122,17 @@ abstract class Surface extends Transformable implements Equalable {
 	}
 
 	abstract equals(obj: any): boolean
-	abstract hashCode(): int {
-		return 43
+	hashCode(): int {
+		return this.getConstructorParameters().hashCode()
 	}
 
-	abstract zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number}
+	zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number} {
+		return this.visit(ZDirVolumeVisitor, allEdges)
+	}
 
-	abstract calculateArea(allEdges: Edge[]): number
-
-	static genericCurvesIP(ps: ParametricSurface, is: ImplicitSurface): Curve[] {
-		const psf = ps.parametricFunction()
-		const isf = is.implicitFunction()
-		const ic = (s, t) => isf(psf(s, t))
-		return Curve.breakDownIC(ic, ps.sMin, ps.sMax, ps.tMin, ps.tMax, 0.1, 0.1, 0.0001)
+	calculateArea(allEdges: Edge[]): number {
+		return this.visit(CalculateAreaVisitor, allEdges)
 	}
 }
 enum PointVsFace {INSIDE, OUTSIDE, ON_EDGE}
+

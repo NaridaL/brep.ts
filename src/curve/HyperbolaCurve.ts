@@ -40,14 +40,13 @@ class HyperbolaCurve extends XiEtaCurve {
         if (this === curve) {
             return true
         }
-        assert(false)
         const {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
         return eq(f1.squared(), Math.abs(f1.dot(c1)))
             && eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
 	reversed(): this {
-		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin) as this
+		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
 	}
 
 	static XYLCValid(pLC: V3): boolean {
@@ -109,7 +108,7 @@ class HyperbolaCurve extends XiEtaCurve {
 
     }
 
-	roots(): number[][] {
+	roots(): [number[], number[], number[]] {
 		// tangent(t) = f1 sinh t + f2 cosh t = 0
 		// tangentAt2(xi, eta) = f1 eta + f2 xi = V3.O
 		// xi² - eta² = 1 (by def for hyperbola)

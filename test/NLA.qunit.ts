@@ -1,8 +1,6 @@
-import round10 = NLA.round10
-import eq2 = NLA.eq2
-window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-	console.log(errorMsg, url, lineNumber, column, errorObj)
-}
+//window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
+//	console.log(errorMsg, url, lineNumber, column, errorObj)
+//}
 QUnit.assert.matrixEquals = function (actual, expected, message, precision) {
 	this.push(actual.equalsMatrix(expected, precision), actual.toString(), expected.toString(), message)
 }
@@ -35,7 +33,7 @@ QUnit.testDifferentSystems('Matrix4x4 eigenValues and eigenVectors', function (a
 	console.log(eigenValues)
 //		assert.equal(eigenValues.length, 3)
 	eigenValues.forEach((eigenValue, i)=> {
-		assert.ok(NLA.eq0(M4.IDENTITY.timesScalar(-eigenValue).plus(m4.as3x3()).determinant()))
+		assert.ok(eq0(M4.IDENTITY.timesScalar(-eigenValue).plus(m4.as3x3()).determinant()))
 		//assert.ok(ei)
 	})
 	let eigenVectors = m4.realEigenVectors3()
@@ -85,28 +83,28 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 	linkB2(assert, `mesh=${face.sce}.scale(100, 100, 100).toMesh()`)
 	const area = face.calcArea()
 	if (m4.isOrthogonal()) {
-		assert.push(NLA.eq(area, PI/2), area, PI / 2)
+		assert.push(eq(area, PI/2), area, PI / 2)
 	} else {
 		const expectedArea = face.toMesh().calcVolume().area
-		assert.push(NLA.eq2(area, expectedArea, 0.1), area, expectedArea)
+		assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
 	}
 
 
 	const loopReverse = Edge.reverseLoop(loop)
 	const holeArea = surface.calculateArea(loopReverse)
 	if (m4.isOrthogonal()) {
-		assert.push(NLA.eq(holeArea, -PI/2), area, -PI / 2)
+		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
 	} else {
 		const expectedArea = face.toMesh().calcVolume().area
-		assert.push(NLA.eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
 	}
 
 	const flippedSurfaceArea = surface.flipped().calculateArea(loop)
 	if (m4.isOrthogonal()) {
-		assert.push(NLA.eq(holeArea, -PI/2), area, -PI / 2)
+		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
 	} else {
 		const expectedArea = face.toMesh().calcVolume().area
-		assert.push(NLA.eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
 	}
 
 
@@ -119,22 +117,22 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 		linkB2(assert, `mesh=${face.sce}.scale(100, 100, 100).toMesh()`)
 		const area = face.calcArea()
 		if (m4.isOrthogonal()) {
-			assert.push(NLA.eq(area, 1), area, 1)
+			assert.push(eq(area, 1), area, 1)
 		} else {
 			const expectedArea = face.toMesh().calcVolume().area
-			assert.push(NLA.eq2(area, expectedArea, 0.1), area, expectedArea)
+			assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
 		}
 
 
 		const loopReverse = Edge.reverseLoop(loop)
 		const holeArea = surface.calculateArea(loopReverse)
 		if (m4.isOrthogonal()) {
-			assert.push(NLA.eq(holeArea, -1), area, -1)
+			assert.push(eq(holeArea, -1), area, -1)
 		} else {
 			const expectedArea = face.toMesh().calcVolume().area
 			console.log("expectedArea", expectedArea)
 			console.log("expectedArea", eval(face.sce).toMesh().calcVolume().area)
-			assert.push(NLA.eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+			assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
 		}
 	}
 }, M4.IDENTITY, M4.translation(0, 0, 4).times(M4.rotationY(10 * DEG)), M4.scaling(1, 2, 1))
@@ -151,24 +149,24 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 						href='brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
 	const area = face.calcArea()
 	const expectedArea = face.toMesh().calcVolume().area
-	assert.push(NLA.eq2(area, expectedArea, 0.1), area, expectedArea)
+	assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
 
 
 	//const loopReverse = Edge.reverseLoop(loop)
 	//const holeArea = surface.calculateArea(loopReverse)
 	//if (m4.isOrthogonal()) {
-	//	assert.push(NLA.eq(holeArea, -PI/2), area, -PI / 2)
+	//	assert.push(eq(holeArea, -PI/2), area, -PI / 2)
 	//} else {
 	//	const expectedArea = face.toMesh().calcVolume().area
-	//	assert.push(NLA.eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	//	assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
 	//}
 	//
 	//const flippedSurfaceArea = surface.flipped().calculateArea(loop)
 	//if (m4.isOrthogonal()) {
-	//	assert.push(NLA.eq(holeArea, -PI/2), area, -PI / 2)
+	//	assert.push(eq(holeArea, -PI/2), area, -PI / 2)
 	//} else {
 	//	const expectedArea = face.toMesh().calcVolume().area
-	//	assert.push(NLA.eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	//	assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
 	//}
 	//
 	//
@@ -182,22 +180,22 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 	//					href='viewer.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`)
 	//	const area = face.calcArea()
 	//	if (m4.isOrthogonal()) {
-	//		assert.push(NLA.eq(area, 1), area, 1)
+	//		assert.push(eq(area, 1), area, 1)
 	//	} else {
 	//		const expectedArea = face.toMesh().calcVolume().area
-	//		assert.push(NLA.eq2(area, expectedArea, 0.1), area, expectedArea)
+	//		assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
 	//	}
 	//
 	//
 	//	const loopReverse = Edge.reverseLoop(loop)
 	//	const holeArea = surface.calculateArea(loopReverse)
 	//	if (m4.isOrthogonal()) {
-	//		assert.push(NLA.eq(holeArea, -1), area, -1)
+	//		assert.push(eq(holeArea, -1), area, -1)
 	//	} else {
 	//		const expectedArea = face.toMesh().calcVolume().area
 	//		console.log("expectedArea", expectedArea)
 	//		console.log("expectedArea", eval(face.sce).toMesh().calcVolume().area)
-	//		assert.push(NLA.eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	//		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
 	//	}
 	//}
 }, M4.IDENTITY, M4.translation(0, 0, 4).times(M4.rotationY(10 * DEG)), M4.scaling(1, 1, 2))
@@ -255,51 +253,47 @@ registerTests({
 		assert.notOk(Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0)))
 		assert.notOk(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
 	},
-	'NLA.eqAngle'(assert) {
-		assert.ok(NLA.zeroAngle(0))
-		assert.ok(NLA.zeroAngle(-NLA_PRECISION / 2))
-		assert.ok(NLA.zeroAngle(2 * Math.PI - NLA_PRECISION / 2))
-		assert.ok(NLA.zeroAngle(2 * Math.PI + NLA_PRECISION / 2))
-		assert.ok(NLA.eqAngle(-Math.PI, Math.PI))
-		assert.ok(NLA.eqAngle(0, 2 * Math.PI))
-		assert.ok(NLA.eqAngle(0, 2 * Math.PI - NLA_PRECISION / 2))
-		assert.ok(NLA.eqAngle(0, 2 * Math.PI + NLA_PRECISION / 2))
-		assert.notOk(NLA.eqAngle(-Math.PI, 2 * Math.PI))
-		assert.notOk(NLA.eqAngle(0, Math.PI))
+	'eqAngle'(assert) {
+		assert.ok(zeroAngle(0))
+		assert.ok(zeroAngle(-NLA_PRECISION / 2))
+		assert.ok(zeroAngle(2 * Math.PI - NLA_PRECISION / 2))
+		assert.ok(zeroAngle(2 * Math.PI + NLA_PRECISION / 2))
+		assert.ok(eqAngle(-Math.PI, Math.PI))
+		assert.ok(eqAngle(0, 2 * Math.PI))
+		assert.ok(eqAngle(0, 2 * Math.PI - NLA_PRECISION / 2))
+		assert.ok(eqAngle(0, 2 * Math.PI + NLA_PRECISION / 2))
+		assert.notOk(eqAngle(-Math.PI, 2 * Math.PI))
+		assert.notOk(eqAngle(0, Math.PI))
 	},
+	'eq etc'(assert) {
+		assert.notOk(lt(2, 2 + NLA_PRECISION / 2))
+		assert.notOk(lt(2, 2 - NLA_PRECISION / 2))
+		assert.ok(le(2, 2 + NLA_PRECISION / 2))
+		assert.ok(le(2, 2 - NLA_PRECISION / 2))
 
-	'Vector.isParallelTo'(assert) {
-		assert.equal(new Line(V3.O, V3.X).distanceToPoint(V(1, 1, 0)), 1)
-	},
-	'NLA.eq etc'(assert) {
-		assert.notOk(NLA.lt(2, 2 + NLA_PRECISION / 2))
-		assert.notOk(NLA.lt(2, 2 - NLA_PRECISION / 2))
-		assert.ok(NLA.le(2, 2 + NLA_PRECISION / 2))
-		assert.ok(NLA.le(2, 2 - NLA_PRECISION / 2))
+		assert.notOk(gt(2, 2 + NLA_PRECISION / 2))
+		assert.notOk(gt(2, 2 - NLA_PRECISION / 2))
+		assert.ok(ge(2, 2 + NLA_PRECISION / 2))
+		assert.ok(ge(2, 2 - NLA_PRECISION / 2))
 
-		assert.notOk(NLA.gt(2, 2 + NLA_PRECISION / 2))
-		assert.notOk(NLA.gt(2, 2 - NLA_PRECISION / 2))
-		assert.ok(NLA.ge(2, 2 + NLA_PRECISION / 2))
-		assert.ok(NLA.ge(2, 2 - NLA_PRECISION / 2))
+		assert.ok(lt(2, 3))
+		assert.ok(gt(3, 2))
+		assert.ok(le(2, 3))
+		assert.ok(ge(3, 2))
 
-		assert.ok(NLA.lt(2, 3))
-		assert.ok(NLA.gt(3, 2))
-		assert.ok(NLA.le(2, 3))
-		assert.ok(NLA.ge(3, 2))
-
-		assert.ok(NLA.eq(2, 2 + NLA_PRECISION) == !NLA.gt(2, 2 + NLA_PRECISION))
-		assert.ok(NLA.eq(2, 2 + NLA_PRECISION) == NLA.ge(2, 2 + NLA_PRECISION))
+		assert.ok(eq(2, 2 + NLA_PRECISION) == !gt(2, 2 + NLA_PRECISION))
+		assert.ok(eq(2, 2 + NLA_PRECISION) == ge(2, 2 + NLA_PRECISION))
 	},
 	'arrayCopyStep'(assert) {
 		const a = [1, 2, 3, 4, 5, 6, 7, 8]
 		const b = [-1, -2, -3, -4]
-		NLA.arrayCopyStep(b, 0, 1, a, 1, 2, 3)
+		arrayCopyStep(b, 0, 1, a, 1, 2, 3)
 		assert.deepEqual(a, [1, -1, 3, -2, 5, -3, 7, 8])
 	},
 	'arrayCopy'(assert) {
 		const a = [1, 2, 3, 4, 5, 6, 7, 8]
 		const b = [-1, -2, -3, -4]
-		NLA.arrayCopy(b, 1, a, 2, 2)
+		arrayCopy(b, 1, a, 2, 2)
 		assert.deepEqual(a, [1, 2, -2, -3, 5, 6, 7, 8])
 	},
 	'LU Decomposition'(assert) {
@@ -354,10 +348,10 @@ registerTests({
 		const a = V(1, 2, 3), b = V(4, 5, 6)
 		assert.ok(V3.zip((a, b) => a + 3 * b, a, b).equals(a.plus(b.times(3))))
 	},
-	'NLA.magic'(assert) {
+	'magic'(assert) {
 		assert.expect(0)
 		let a = V(1, 2, 3), b = V(4, 5, 6)
-		//assert.ok(NLA.magic('a b c s => abs(a) x b .. c + 3 + ')(a, b, c, 3).equals(a.abs().cross(b).dot(c) + 3))
+		//assert.ok(magic('a b c s => abs(a) x b .. c + 3 + ')(a, b, c, 3).equals(a.abs().cross(b).dot(c) + 3))
 	},
 	'AABB'(assert) {
 		const a = new AABB(V3.O, V(20, 10, 30))
@@ -375,23 +369,23 @@ registerTests({
 // })
 	'V3.areDisjoint2'(assert) {
 		console.log(~~2147483657)
-		const s = new NLA.CustomSet()
+		const s = new CustomSet()
 		const a = V(0, 2.7499999999999996, -5), b = V(0, 2.749999999999999, -5)
 		s.canonicalizeLike(a)
 		console.log(s._map, a.like(b), a.hashCodes(), b.hashCodes(), a.hashCode(), b.hashCode())
 		assert.ok(s.canonicalizeLike(b) == a)
 	},
-	'NLA.arrayBinaryInsert'(assert) {
+	'arrayBinaryInsert'(assert) {
 		const arr = [1, 2, 3, 4]
-		NLA.arrayBinaryInsert(arr, 2.5, (a, b) => a - b)
+		arr.binaryInsert(2.5, (a, b) => a - b)
 		assert.deepEqual(arr, [1, 2, 2.5, 3, 4])
 
 		const arr2 = []
-		NLA.arrayBinaryInsert(arr2, -2, NLA.minus)
-		NLA.arrayBinaryInsert(arr2, 5, NLA.minus)
+		arr2.binaryInsert(-2, minus)
+		arr2.binaryInsert(5, minus)
 		assert.deepEqual(arr2, [-2, 5])
 	},
-	'NLA.arrayBinaryIndexOf'(assert) {
+	'arrayBinaryIndexOf'(assert) {
 		assert.equal([1, 2, 2.5, 3, 4].binaryIndexOf(3, (a, b) => a - b), 3)
 		assert.equal([1, 2, 2.5, 3, 4].binaryIndexOf(2.6, (a, b) => a - b), -3 - 1)
 	},

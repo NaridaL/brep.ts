@@ -3,12 +3,14 @@
     "moduleResolution": "node",
     "module": "none",
     "outFile": "out/complete.js",
+//    "outDir": "out",
     "declaration": true,
     "rootDir": ".",
     "target": "es2017",
     "noImplicitAny": false,
     "alwaysStrict": true,
     "sourceMap": true,
+    "inlineSourceMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "jsx": "react",
@@ -16,18 +18,19 @@
     "lib": ["DOM","ES2017"],
     "baseUrl": ".",
     "allowJs": false,
+    "watch": true,
     "paths": {
       "*": ["*", "../*"]
     }
   },
   "include": [
 //    "src/NLA.ts",
-    "../ts3dutils/out/complete.d.ts",
-    "../tsgl/out/complete.d.ts",
+    "node_modules/ts3dutils/out/complete.d.ts",
+    "node_modules/tsgl/out/complete.d.ts",
 //    "src/Transformable.ts",
 //    "src/Vector.ts",
 //    "src/Vector3.ts",
-    "src/Line.ts",
+    "src/ignore/Line.ts",
 //    "src/Matrix.ts",
 //    "src/Matrix4x4.ts",
 //    "src/AABB.ts",
@@ -52,7 +55,7 @@
     "src/editor/viewer.ts",
     "src/editor/modes.ts",
     "src/editor/SketchBezier.ts",
-    "src/editor/react/Rotate.ts",
+    "src/ignore/react/Rotate.ts",
     "src/lightgl.ts",
     "src/shaders.ts",
     "src/editor/Sketch.ts",
@@ -61,9 +64,6 @@
     "node_modules/preact/dist/preact.d.ts"
   ],
   "exclude": [
-    "src/curve/PICurveOld.ts",
-    "src/flower.ts",
-    "src/Mesher.ts",
-    "src/editor/react/PatternEditor.tsx"
+    "src/ignore/*"
   ]
 }

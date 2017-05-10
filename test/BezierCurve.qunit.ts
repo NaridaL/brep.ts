@@ -21,7 +21,7 @@
 			V(63.52151476563836, 168.59279980361327, 0),
 			V(151.89049176954802, 231.21343792479922, 0))
 		let p = V(90.8280915025532, 214.7764313721318, 0)
-		assert.ok(NLA.eq0(curve.distanceToPoint(p)))
+		assert.ok(eq0(curve.distanceToPoint(p)))
 		assert.ok(isFinite(curve.pointT(p)))
 	})
 	QUnit.test('BezierCurve.pointT 2', function(assert) {
@@ -42,7 +42,7 @@
 	})
 	QUnit.test('BezierCurve.distanceToPoint', function(assert) {
 		let curve = BezierCurve.graphXY(0, 0, 0, 1)//.rotateZ(PI/3)
-//        assert.ok(NLA.eq2(curve.distanceToPoint(V(0.5, 0)), 1, NLA_PRECISION))
+//        assert.ok(eq2(curve.distanceToPoint(V(0.5, 0)), 1, NLA_PRECISION))
 
 		let curve2 = BezierCurve.graphXY(2, -3, -3, 2)
 		let p = V(0.5, 0.2)
@@ -73,7 +73,7 @@
 			assert.equal(isInfos.length, 1)
 			isInfos.forEach(info => {
 				let p = info.p
-				assert.ok(NLA.eq0(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
+				assert.ok(eq0(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
 			})
 		})
 	})
@@ -110,7 +110,7 @@
 			testISTs(assert, curve, s, 4)
 			// TODO
 			//testISTs(assert, curve.translate(-0.00635), s, 3)
-			//console.log(NLA.arrayRange(-0.00640, -0.00630, 0.000005).map(i => curve.translate(i).isTsWithSurface(s).length))
+			//console.log(arrayRange(-0.00640, -0.00630, 0.000005).map(i => curve.translate(i).isTsWithSurface(s).length))
 		},
 	})
 }

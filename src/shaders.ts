@@ -163,6 +163,14 @@ const vertexShaderBezier3d = `
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
+const vertexShaderGeneric = `
+	uniform float scale;
+	void main() {
+		vec3 normal = normalize(LGL_NormalMatrix * LGL_Normal);
+		vec4 vertexPos = LGL_Vertex + vec4(normal * scale, 0);
+		gl_Position = LGL_ModelViewProjectionMatrix * vertexPos;
+	}
+`
 const vertexShaderRing = `
 	#define M_PI 3.1415926535897932384626433832795
 	uniform float step;

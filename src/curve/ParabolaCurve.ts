@@ -27,16 +27,17 @@ class ParabolaCurve extends XiEtaCurve {
 		return this.f1.plus(this.f2.times(2 * eta))
 	}
 
-	reversed(): this {
-		return new this.constructor(this.center, this.f1.negated(), this.f2, -this.tMax, -this.tMin) as this
+	reversed() {
+		return new this.constructor(this.center, this.f1.negated(), this.f2, -this.tMax, -this.tMin)
 	}
 
     /**
      * tangent: f1 + 2 * t * f2 = 0
      * t = -f1 / 2 / f2 (for individual dimensions)
      */
-    roots(): number[][] {
-        return arrayFromFunction(3, dim => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)])
+    roots(): [number[], number[], number[]] {
+	    const dimRoots = dim => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)]
+	    return arrayFromFunction(3, dimRoots) as [number[], number[], number[]]
     }
 
 	isColinearTo(curve: Curve): boolean {

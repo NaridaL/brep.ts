@@ -20,7 +20,7 @@ module.exports = function(config) {
       'src/Matrix4x4.js',
       'src/curve/Curve.js',
       'src/P3.ts',
-      'src/Line.ts',
+      'src/ignore/Line.ts',
       'src/curve/Line3.ts',
       'src/editor/editor.ts',
       'src/curve/HyperbolaCurve.js',

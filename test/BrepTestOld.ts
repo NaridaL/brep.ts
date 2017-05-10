@@ -4,7 +4,7 @@ QUnit.assert.brepEquals = function(actual, expected, message) {
 	this.push(actual.equals(expected), actual.ss(), expected.ss(), message)
 }
 QUnit.assert.fuzzyEquals = function(actual, expected, message) {
-	this.push(NLA.eq(actual, expected), actual, expected, message)
+	this.push(eq(actual, expected), actual, expected, message)
 }
 
 registerTests({

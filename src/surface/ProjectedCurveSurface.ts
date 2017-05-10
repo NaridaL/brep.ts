@@ -2,13 +2,13 @@
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir1
  * Choose dir1 appropriately to select surface orientation.
  */
-class ProjectedCurveSurface extends Surface {
+class ProjectedCurveSurface extends ParametricSurface {
     constructor(readonly baseCurve: Curve,
                 readonly dir1: V3,
                 readonly sMin: number = baseCurve.tMin,
                 readonly sMax: number = baseCurve.tMax,
-                readonly tMin: number = -Infinity,
-                readonly tMax: number = Infinity) {
+                readonly tMin: number = -100,
+                readonly tMax: number = 100) {
         super()
         assertInst(Curve, baseCurve)
         assertInst(V3, dir1)
@@ -18,80 +18,31 @@ class ProjectedCurveSurface extends Surface {
         assert(tMin < tMax)
     }
 
-    boundsFunction() {
-        return (t, z) => {
-            return this.sMin <= t && t <= this.sMax
-        }
-    }
-
-	calculateArea(edges: Edge[]): number {
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof SemiEllipseCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					return at.dot(this.dir1) * tangent.rejected1Length(this.dir1)
-				}
-				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
-				const val = glqInSteps(f, edge.aT, edge.bT, 4)
-				return val * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))
-	}
-
-    zDirVolume(allEdges: Edge[]): {centroid: V3, volume: number} {
-    	throw new Error()
-    }
-
-
 	getConstructorParameters(): any[] {
 		return [this.baseCurve, this.dir1, this.sMin, this.sMax, this.tMin, this.tMax]
 	}
 
-	containsLine(line) {
+	containsLine(line: L3): boolean {
 		return this.dir1.isParallelTo(line.dir1) && this.containsPoint(line.anchor)
 	}
 
+	dpds(): (s: number, t: number) => V3 {
+		return (s, t) => this.baseCurve.tangentAt(s)
+	}
 
-    toMesh(tStart = this.sMin, tEnd = this.sMax, zStart = this.tMin, zEnd = this.tMax, count = 32) {
+	dpdt(): (s: number, t: number) => V3 {
+		return (s, t) => this.dir1
+	}
 
-        const tInterval = tEnd - tStart, tStep = tInterval / (count - 1)
-        const baseVertices =
-            arrayFromFunction(count, i => this.baseCurve.at(tStart + i * tStep).plus(this.dir1.times(zStart)))
-        const normalFunc = this.parametricNormal()
-        const normals = arrayFromFunction(count, i => normalFunc(tStart + i * tStep, 0))
+	normalST(s: number, t: number): V3 {
+		return this.baseCurve.tangentAt(s).cross(this.dir1).unit()
+	}
 
-        return Mesh.offsetVertices(baseVertices, this.dir1.times(zEnd - zStart), false, normals)
+	pST(s: number, t: number): V3 {
+        return this.baseCurve.at(s).plus(this.dir1.times(t))
     }
 
-    dpds(s: number): V3 {
-        return this.baseCurve.tangentAt(s)
-    }
-    dpdt(t: number): V3 {
-        return this.dir1
-    }
-
-    parametricFunction() {
-        return (t: number, z: number) => this.baseCurve.at(t).plus(this.dir1.times(z))
-    }
-
-    parametricNormal() {
-        return (t: number, z: number) => this.baseCurve.tangentAt(t).cross(this.dir1).unit()
-    }
-
-    parametersValid(t: number, z: number) {
-        return between(t, this.sMin, this.sMax) && between(z, this.tMin, this.tMax)
-    }
-
-    footParameters(pWC, ss, st) {
+    footParameters(pWC: V3, ss: number, st: number): V3 {
         const basePlane = new P3(this.dir1, 0)
         const projCurve = this.baseCurve.project(basePlane)
         const projPoint = basePlane.projectedPoint(pWC)
@@ -100,7 +51,7 @@ class ProjectedCurveSurface extends Surface {
         return new V3(t, z, 0)
     }
 
-    pointToParameterFunction() {
+	stPFunc(): (pWC: V3) => V3 {
         const projPlane = new P3(this.dir1, 0)
 	    const projBaseCurve = this.baseCurve.project(projPlane)
         return (pWC) => {
@@ -132,7 +83,7 @@ class ProjectedCurveSurface extends Surface {
         }
     }
 
-    isCurvesWithSurface(surface) {
+    isCurvesWithSurface(surface: Surface): Curve[] {
         if (surface instanceof PlaneSurface) {
             return this.isCurvesWithPlane(surface.plane)
         }
@@ -142,7 +93,7 @@ class ProjectedCurveSurface extends Surface {
                 const otherCurve = surface.baseCurve
                 const infos = this.baseCurve.isInfosWithCurve(otherCurve)
                 return infos.map(info => {
-	                const correctDir = this.normalAt(info.p).cross(surface.normalAt(info.p))
+	                const correctDir = this.normalP(info.p).cross(surface.normalP(info.p))
 	                return new L3(info.p, dir1.times(sign(correctDir.dot(dir1))))
                 })
             }
@@ -171,9 +122,9 @@ class ProjectedCurveSurface extends Surface {
 	    assertNever()
     }
 
-    containsPoint(p) {
-        const uv = this.pointToParameterFunction()(p)
-        return this.parametricFunction()(uv.x, uv.y).like(p)
+    containsPoint(pWC: V3): boolean {
+        const uv = this.stPFunc()(pWC)
+        return this.pSTFunc()(uv.x, uv.y).like(pWC)
     }
 
     containsCurve(curve) {
@@ -181,7 +132,7 @@ class ProjectedCurveSurface extends Surface {
 		    return this.dir1.isParallelTo(curve.dir1) && this.containsPoint(curve.anchor)
 	    }
 	    if (curve instanceof PICurve) {
-		    return curve.points.every(this.containsPoint, this)
+		    return super.containsCurve(curve)
 	    }
         // project baseCurve and test curve onto a common plane and check if the curves are alike
         const projPlane = new P3(this.dir1, 0)
@@ -212,9 +163,9 @@ class ProjectedCurveSurface extends Surface {
     like(object) {
         if (!this.isCoplanarTo(object)) return false
         // normals need to point in the same direction (outwards or inwards) for both
-        const p00 = this.parametricFunction()(0, 0)
-        const thisNormal = this.parametricNormal()(0, 0)
-        const otherNormal = object.normalAt(p00)
+        const p00 = this.pSTFunc()(0, 0)
+        const thisNormal = this.normalSTFunc()(0, 0)
+        const otherNormal = object.normalP(p00)
         return 0 < thisNormal.dot(otherNormal)
     }
 
@@ -222,7 +173,7 @@ class ProjectedCurveSurface extends Surface {
         assertVectors(p)
         assert(isFinite(p.x), p.y, p.z)
         const line = new L3(p, this.dir1)
-        const ptpf = this.pointToParameterFunction()
+        const ptpf = this.stPFunc()
         const pp = ptpf(p)
         if (isNaN(pp.x)) {
             console.log(this.sce, p.sce)
@@ -240,20 +191,20 @@ class ProjectedCurveSurface extends Surface {
             for (let i = 0; i < contour.length; i++) {
                 const ipp = (i + 1) % contour.length
                 const edge = contour[i], nextEdge = contour[ipp]
-                totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
+                totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b))
             }
             return totalAngle > 0
         } else {
-            const ptpF = this.pointToParameterFunction()
+            const ptpF = this.stPFunc()
             return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
         }
     }
 
-    transform(m4: M4) {
+    transform(m4: M4): ProjectedCurveSurface {
         return new ProjectedCurveSurface(
             this.baseCurve.transform(m4),
             m4.transformVector(this.dir1).toLength(m4.isMirroring() ? -1 : 1),
-            this.sMin, this.sMax, this.tMin, this.tMax) as this
+            this.sMin, this.sMax, this.tMin, this.tMax)
     }
 
     isTsForLine(line) {
@@ -271,6 +222,9 @@ class ProjectedCurveSurface extends Surface {
             .map(info => info.tOther)
     }
 
+	clipCurves(curves: Curve[]): Curve[] {
+    	return curves
+	}
 
     flipped(): ProjectedCurveSurface {
         return new ProjectedCurveSurface(this.baseCurve, this.dir1.negated(), this.sMin, this.sMax)

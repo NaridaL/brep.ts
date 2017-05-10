@@ -9,7 +9,7 @@ function doTest(test, face: PlaneFace, brep2: B2, resultEdges: Edge[], resultPoi
 						href='brep2.html?a=${new B2([face]).toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
-	const faceMap = new Map(), edgeMap = new Map(), colinearEdgePairs = new NLA.CustomSet()
+	const faceMap = new Map(), edgeMap = new Map(), colinearEdgePairs = new CustomSet()
 	brep2.faces.forEach(face2 => {
 		face.intersectPlaneFace(face2, new B2([face]), brep2, faceMap, edgeMap, colinearEdgePairs)
 	})
@@ -36,14 +36,14 @@ function doTestWithBrep(test: Assert, face: Face, faceBrep: B2, brep2: B2, resul
 						href='brep2.html?a=${faceBrep.toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>expected ${desc}</a>`)
-	const faceMap = new Map(), faceEdgePoints = new NLA.CustomMap(), checkedPairs = new NLA.CustomSet()
+	const faceMap = new Map(), faceEdgePoints = new CustomMap(), checkedPairs = new CustomSet()
 	if (!backwards) {
 		brep2.faces.forEach(face2 => {
-			face.intersectFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, new NLA.CustomMap(), checkedPairs)
+			face.intersectFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, new CustomMap(), checkedPairs)
 		})
 	} else {
 		brep2.faces.forEach(face2 => {
-			face2.intersectFace(face, brep2, faceBrep, faceMap, new NLA.CustomMap(), faceEdgePoints, checkedPairs)
+			face2.intersectFace(face, brep2, faceBrep, faceMap, new CustomMap(), faceEdgePoints, checkedPairs)
 		})
 	}
 	const edges = faceMap.get(face) || []
@@ -76,12 +76,12 @@ function doTest2 (test, face, brep, resultFaces, desc) {
 		console.log('blah')
 		brep = new B2([brep])
 	}
-	const faceMap = new Map(), edgeMap = new NLA.CustomMap()
+	const faceMap = new Map(), edgeMap = new CustomMap()
 	const faceBrep = new B2([face])
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	brep.faces.forEach(face2 => {
-		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap, new NLA.CustomMap(), new NLA.CustomSet())
+		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap, new CustomMap(), new CustomSet())
 	})
 	console.log('faceMap', faceMap)
 	const edgeLooseSegments = B2.prototype.getLooseEdgeSegments(edgeMap)
@@ -99,7 +99,7 @@ function doTest3(assert, face: Face, newEdges: Edge[], points: Map<Edge, V3[]>, 
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
 href='brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	const isps = Array.from(points.entries()).map(([edge, ps]) =>
-		ps.map(p => ({edge: edge, p: p, edgeT: NLA.snap(NLA.snap(edge.curve.pointT(p), edge.aT), edge.bT)}))
+		ps.map(p => ({edge: edge, p: p, edgeT: snap(snap(edge.curve.pointT(p), edge.aT), edge.bT)}))
 	).concatenated()
 	const edgeLooseSegments = B2.prototype.getLooseEdgeSegments(new Map().set(face, isps))
 	const newFaces = []

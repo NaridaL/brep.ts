@@ -113,10 +113,10 @@ abstract class Face extends Transformable {
 	                       otherEdgePoints: CustomMap<Edge, IntersectionPointInfo[]>,
 	                       likeSurfaceFaces: Set<string>): void
 
-	transform(m4: M4): this {
+	transform(m4: M4): Face {
 		const newEdges = this.contour.map(e => e.transform(m4))
 		const newHoles = this.holes.map(hole => hole.map(e => e.transform(m4)))
-		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info) as this
+		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info)
 	}
 
 
@@ -261,7 +261,7 @@ abstract class Face extends Transformable {
 
 	pointsToInside3(p: V3, curve: Curve, curveT: number, dir: -1 | 1): PointVsFace {
 		const eps = 1e-6
-		const normal = this.surface.normalAt(p)
+		const normal = this.surface.normalP(p)
 		const curveTangent = curve.tangentAt(curveT).times(dir)
 		const up = normal.cross(curveTangent)
 		const ecd = curve.at(curveT).to(curve.at(curveT + dir * eps)).dot(up)
@@ -300,7 +300,7 @@ abstract class Face extends Transformable {
 
 	pointsToInside2(p: V3, dir: V3): PointVsFace {
 		return this.pointsToInside3(p, L3.anchorDirection(p, dir), 0, 1)
-		const normal = this.surface.normalAt(p)
+		const normal = this.surface.normalP(p)
 		let minAngle = Infinity, inOut = false
 		function test(v, b) {
 			const angle = (dir.angleRelativeNormal(v, normal) + TAU + NLA_PRECISION / 2) % TAU
@@ -357,7 +357,7 @@ class PlaneFace extends Face {
 				if (curve instanceof SemiEllipseCurve) {
 					let info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT)
 					edgeArea = info.area
-					let parametricCentroid = this.surface.pointToParameterFunction()(info.centroid)
+					let parametricCentroid = this.surface.stPFunc()(info.centroid)
 					centroidS = parametricCentroid.x
 					centroidT = parametricCentroid.y
 				} else if (curve instanceof BezierCurve) {
@@ -724,16 +724,16 @@ class RotationFace extends Face {
 	}
 
 	getCanonSeamU(): number {
-		const pointToParameterFunction = this.surface.pointToParameterFunction()
+		const stPFunc = this.surface.stPFunc()
 		for (const edge of this.contour) {
 			// check edge.a
-			let u = pointToParameterFunction(edge.a, PI).x
+			let u = stPFunc(edge.a, PI).x
 			// if u is not PI, or ~0, return its sign
 			if (u != PI && !eq0(u)) {
 				return sign(u) * PI
 			}
 			// check midpoint between edge.a and edge.b
-			u = pointToParameterFunction(edge.curve.at((edge.aT + edge.bT) / 2), PI).x
+			u = stPFunc(edge.curve.at((edge.aT + edge.bT) / 2), PI).x
 			if (u != PI && !eq0(u)) {
 				return sign(u) * PI
 			}
@@ -749,7 +749,7 @@ class RotationFace extends Face {
 
 	unrollLoop(edgeLoop) {
 		const vs = []
-		const reverseFunc = this.surface.pointToParameterFunction()
+		const reverseFunc = this.surface.stPFunc()
 		const verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0())
 		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(reverseFunc(edgeVertices[0], Math.PI).x, Math.PI))
 		assert(-1 != startEdgeIndex)
@@ -771,7 +771,7 @@ class RotationFace extends Face {
 		// edgeLoop.forEach((edge, e) => {
 		// 	var hint = edge.bDir
 		// 	if (edge instanceof StraightEdge && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
-		// 		hint = this.surface.normalAt(edge.b).cross(edge.bDir)
+		// 		hint = this.surface.normalP(edge.b).cross(edge.bDir)
 		// 	}
 		// 	edge.getVerticesNo0().forEach(p => {
 		// 		vs.push(reverseFunc(p, hint))
@@ -789,59 +789,68 @@ class RotationFace extends Face {
 	 *          = (-f1x sin t + f2x cos t) / (-f1y sin t + f2y cos t)
 	 */
 	unrollEllipsoidLoops(edgeLoops: Edge[][], uStep: number, vStep: number) {
-		const verticesUV = [], vertices = [], normals = [], loopStarts = []
+		const verticesST = [], vertices = [], loopStarts = []
 		const ellipsoid: SemiEllipsoidSurface = this.surface as SemiEllipsoidSurface
-		const ptpf = ellipsoid.pointToParameterFunction()
+		const ptpf = ellipsoid.stPFunc()
+		const testDegeneratePoint = ellipsoid instanceof  SemiEllipsoidSurface
+			? nextStart => nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) || nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
+			: nextStart => nextStart.like((this.surface as ConicSurface).center)
 		for (const edgeLoop of edgeLoops) {
-			loopStarts.push(verticesUV.length)
+			loopStarts.push(verticesST.length)
 			// console.log(startEdgeIndex)
 			const hint = this.getCanonSeamU()
 			for (let i = 0; i < edgeLoop.length; i++) {
 				const ipp = (i + 1) % edgeLoop.length
 				const verticesNo0 = edgeLoop[i].getVerticesNo0()
 				vertices.pushAll(verticesNo0)
-				normals.pushAll(verticesNo0.map(v => ellipsoid.normalAt(v)))
-				verticesUV.pushAll(verticesNo0.map(v => { const uv = ptpf(v, hint); return new V3(uv.x / uStep, uv.y / vStep, 0) }))
+				verticesST.pushAll(verticesNo0.map(v => ptpf(v)))
 				const nextStart = edgeLoop[ipp].a
 				//console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
-				if (nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) || nextStart.like(ellipsoid.center.minus(ellipsoid.f3))) {
-					console.log('FIXING')
-					const localbDir = ellipsoid.inverseMatrix.transformVector(edgeLoop[i].bDir), localaDir = ellipsoid.inverseMatrix.transformVector(edgeLoop[ipp].aDir)
-					let inAngle = Math.atan2(-localbDir.y, -localbDir.x)
+
+				if (testDegeneratePoint(nextStart)) {
+					const bDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[ipp].aDir)
+					let inAngle = Math.atan2(-bDirLC.y, -bDirLC.x)
 					if (abs(inAngle) > Math.PI - NLA_PRECISION) {
 						assert(hint == -PI || hint == PI)
 						inAngle = hint
 					}
-					let outAngle = Math.atan2(localaDir.y, localaDir.x)
+					let outAngle = Math.atan2(aDirLC.y, aDirLC.x)
 					if (abs(outAngle) > Math.PI - NLA_PRECISION) {
 						assert(hint == -PI || hint == PI)
 						outAngle = hint
 					}
 
-					const uvLast = verticesUV.pop()
-					verticesUV.push(new V3(inAngle / uStep, uvLast.y, 0), new V3(outAngle / uStep, uvLast.y, 0))
+					const stLast = verticesST.pop()
+					verticesST.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0))
 					vertices.push(vertices.last())
-					normals.push(normals.last())
 				}
-				verticesUV.forEach(({x: u, y: v}) => {
+				verticesST.forEach(({x: u, y: v}) => {
 					assert(isFinite(u))
 					assert(isFinite(v))
 				})
 			}
 		}
+		let normals
+		if (this.surface instanceof EllipsoidSurface) {
+			normals = vertices.map(v => ellipsoid.normalP(v))
+		} else {
+			const pN = ellipsoid.normalSTFunc()
+			normals = verticesST.map(({x, y}) => pN(x, y))
+		}
 		assert(vertices.length == vertices.length)
-		//console.log(verticesUV.map(v => v.str).join('\n'))
-		return {verticesUV: verticesUV, vertices: vertices, normals: normals, loopStarts: loopStarts}
+		//console.log(verticesST.map(v => v.str).join('\n'))
+		return {verticesUV: verticesST.map(vST => new V3(vST.x / uStep, vST.y / vStep, 0)), vertices: vertices, normals: normals, loopStarts: loopStarts}
 	}
 
 	unrollCylinderLoops(loops, uStep, vStep) {
 		const vertexLoops = loops.map(loop => loop.map(edge => edge.getVerticesNo0()).concatenated())
 		const vertices: V3[] = vertexLoops.concatenated()
-		const normals: V3[] = vertices.map(v => this.surface.normalAt(v))
 		// this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
 		const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last() + loop.length), arr), [0])
-		const pointToParameterFunction = this.surface.pointToParameterFunction()
-		const verticesUV = vertices.map(v => { const uv = pointToParameterFunction(v); return new V3(uv.x / uStep, uv.y / vStep, 0) })
+		const stPFunc = this.surface.stP()
+		const verticesUV = vertices.map(v => { const uv = stP(v); return new V3(uv.x / uStep, uv.y / vStep, 0) })
+		const pN = this.surface.normalST()
+		const normals: V3[] = verticesUV.map(({x, y}) => pN(x, y))
 		return {verticesUV: verticesUV, vertices: vertices, normals: normals, loopStarts: loopStarts}
 	}
 
@@ -882,10 +891,10 @@ class RotationFace extends Face {
 		uStep = uStep || this.surface.uStep
 		assertf(() => uStep > 0 && vStep > 0, uStep, vStep, 'Surface: ' + this.surface)
 		const triangles = []
-		const f = (i, j) => this.surface.parametricFunction()(i * uStep, j * vStep)
-		const normalF = (i, j) => this.surface.parametricNormal()(i * uStep, j * vStep)
+		const f = (i, j) => this.surface.pSTFunc()(i * uStep, j * vStep)
+		const normalF = (i, j) => this.surface.normalSTFunc()(i * uStep, j * vStep)
 		const loops = [this.contour].concat(this.holes)
-		const {vertices, verticesUV, normals, loopStarts} = this.surface instanceof SemiEllipsoidSurface
+		const {vertices, verticesUV, normals, loopStarts} = this.surface instanceof SemiEllipsoidSurface || this.surface instanceof ConicSurface
 			? this.unrollEllipsoidLoops(loops, uStep, vStep)
 			: this.unrollCylinderLoops(loops, uStep, vStep)
 		loopStarts.push(vertices.length)
@@ -1117,8 +1126,8 @@ class RotationFace extends Face {
 	//addToMesh(mesh: Mesh, uStep: number, vStep: number) {
 	//    const closed = false
 	//    let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity
-	//    const f = this.surface.parametricFunction()
-	//    const normalF = this.surface.parametricNormal()
+	//    const f = this.surface.pSTFunc()
+	//    const normalF = this.surface.normalSTFunc()
 	//    const vertexLoops = this.holes.concat([this.edges]).map(loop => this.unrollLoop(loop))
 	//    vertexLoops.forEach(vertexLoop => {
 	//        vertexLoop.forEach(({x: u, y: v}) => {
@@ -1241,7 +1250,7 @@ class RotationFace extends Face {
 		let minZ = Infinity, maxZ = -Infinity
 		let cmp = (a, b) => a.value - b.value
 		const f = this.surface.parametricFunction()
-		const normalF = this.surface.parametricNormal()
+		const normalF = this.surface.normalST()
 		const vertexLoops = this.holes.concat([this.contour]).map(loop => this.unrollLoop(loop))
 		vertexLoops.forEach(vertexLoop => {
 			vertexLoop.forEach(({x: d, y: z}) => {
@@ -1400,7 +1409,7 @@ class RotationFace extends Face {
 		 */
 		function handleNewEdge(newEdge: Edge, col1: Edge, col2: Edge) {
 			if (!col1 && !col2) {
-				if (!(newEdge.aDir.cross(face.surface.normalAt(newEdge.a)).dot(face2.surface.normalAt(newEdge.a)) > 0)) {
+				if (!(newEdge.aDir.cross(face.surface.normalP(newEdge.a)).dot(face2.surface.normalP(newEdge.a)) > 0)) {
 					newEdge = newEdge.flipped()
 				}
 				mapPush(faceMap, face, newEdge)
@@ -1427,7 +1436,7 @@ class RotationFace extends Face {
 						edgeInside && mapPush(faceMap, faceInfo.face, pushEdge)
 					})
 
-					const surface2NormalAtNewEdgeA = surface2.normalAt(newEdge.a)
+					const surface2NormalAtNewEdgeA = surface2.normalP(newEdge.a)
 					const newEdgeInside = surface2NormalAtNewEdgeA.cross(newEdge.aDir)
 					const sVEF1 = splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside, surface2NormalAtNewEdgeA)
 					let addNewEdge, addNewEdgeFlipped
@@ -1517,8 +1526,8 @@ class RotationFace extends Face {
 							// todo: is this even necessary considering we add edges anyway? i think so...
 							const testVector = a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
 							assert(!testVector.isZero())
-							const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalAt(a.p))
-							const sVEF2 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalAt(a.p))
+							const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p))
+							const sVEF2 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p))
 							if (INSIDE == sVEF1 || INSIDE == sVEF2) {
 								mapPush(thisEdgePoints, a.edge.getCanon(), a)
 								assert(a.edge.isValidT(a.edgeT))
@@ -1552,12 +1561,12 @@ class RotationFace extends Face {
 		}
 		for (const isCurve of isCurves) {
 			const t = (isCurve.tMin + isCurve.tMax) / 2, p = isCurve.at(t), dp = isCurve.tangentAt(t)
-			const normal1 = surface.normalAt(p), normal2 = surface2.normalAt(p), dp2 = normal1.cross(normal2)
+			const normal1 = surface.normalP(p), normal2 = surface2.normalP(p), dp2 = normal1.cross(normal2)
 			assert(surface.containsCurve(isCurve))
 			assert(surface2.containsCurve(isCurve))
 			if (!dp2.isZero()) {
 				//assert(dp2.dot(dp) > 0)
-				assert(dp2.isParallelTo(dp))
+				// TODO assert(dp2.isParallelTo(dp))
 			}
 		}
 

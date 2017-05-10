@@ -1,3 +1,6 @@
+///<reference path="P3.ts"/>
+
+
 declare const SVGPathData: any
 
 abstract class Edge extends Transformable {
@@ -10,10 +13,20 @@ abstract class Edge extends Transformable {
 	            readonly b: V3,
 	            readonly aT: number,
 	            readonly bT: number,
-	            readonly flippedOf: Edge,
-	            readonly name: string) {
+	            public flippedOf?: Edge,
+	            readonly name?: string) {
 		super()
-        assert(!eq(aT, bT))
+		assertNumbers(aT, bT)
+		assert(!eq(aT, bT))
+		assertVectors(a, b)
+		assertf(() => curve instanceof Curve, curve)
+		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
+		assertf(() => curve.at(aT).like(a),  + a)
+		assertf(() => curve.at(bT).like(b), '' + curve.at(bT) + b)
+		assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax))
+		assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax))
+		this.aT = clamp(aT, curve.tMin, curve.tMax)
+		this.bT = clamp(bT, curve.tMin, curve.tMax)
 		this.reversed = this.aT > this.bT
 	}
 
@@ -61,7 +74,7 @@ abstract class Edge extends Transformable {
 			: le(this.bT, t) && le(t, this.aT)
 	}
 
-	clampedT(t) {
+	clampedT(t: number): number {
 		return this.aT < this.bT
 			? clamp(t, this.aT, this.bT)
 			: clamp(t, this.bT, this.aT)
@@ -78,7 +91,7 @@ abstract class Edge extends Transformable {
 		if (curve instanceof L3) {
 			return new StraightEdge(curve, a, b, aT, bT, flippedOf as StraightEdge, name)
 		} else {
-			return new PCurveEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name)
+			return new PCurveEdge(curve, a, b, aT, bT, flippedOf as PCurveEdge, aDir, bDir, name)
 		}
 
 	}
@@ -114,7 +127,7 @@ abstract class Edge extends Transformable {
      * this is equals-equals. "isColinearTo" might make more sense but can't be used, because you can't get a
      * consistent hashCode for colinear curves
      * @param obj
-     * @returns {boolean}
+     * @returns
      */
     equals(obj): boolean {
         return this === obj ||
@@ -308,7 +321,7 @@ abstract class Edge extends Transformable {
 	}
 
     static pathFromSVG(pathString: String): Edge[] {
-        let currentPos
+        let currentPos = undefined
         const parsed: any[] =
 		        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).commands
         const path: Edge[] = []
@@ -334,6 +347,7 @@ abstract class Edge extends Transformable {
 		            break
 	            }
                 case SVGPathData.ARC: {
+	                //noinspection TsLint
 	                let {rX, rY, xRot, lArcFlag, sweep} = c
 	                rX = abs(rX)
 	                rY = abs(rY)
@@ -388,38 +402,39 @@ abstract class Edge extends Transformable {
 }
 
 class PCurveEdge extends Edge {
-	readonly aDir: V3
-	readonly bDir: V3
-
-	constructor(curve, a, b, aT, bT, flippedOf, aDir, bDir, name?) {
-		assertNumbers(aT, bT)
-		assertVectors(a, b, aDir, bDir)
+	constructor(curve: Curve,
+	            a: V3,
+	            b: V3,
+	            aT: number,
+	            bT: number,
+	            public flippedOf: PCurveEdge,
+	            readonly aDir: V3,
+	            readonly bDir: V3,
+	            name?: string) {
+		super(curve, a, b, aT, bT, flippedOf, name)
+		assertVectors(aDir, bDir)
 		assertf(() => !aDir.isZero(), curve)
 		assertf(() => !bDir.isZero(), curve)
-		assertf(() => curve instanceof Curve, curve)
-		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
-		assertf(() => curve.at(aT).like(a),  + a)
-		assertf(() => curve.at(bT).like(b), curve.at(bT) + b)
 		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce)
 		assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
-        assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax))
-        assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax))
-		super(curve, a, b, clamp(aT, curve.tMin, curve.tMax), clamp(bT, curve.tMin, curve.tMax), flippedOf, name)
-		this.aDir = aDir
-		this.bDir = bDir
 		assert(this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
 		assert(this.reversed === this.bDir.dot(curve.tangentAt(bT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
 	}
 
-	getVerticesNo0() {
+	toSource(): string {
+		return callsce('new PCurveEdge', this.curve, this.a, this.b, this.aT, this.bT,
+			undefined, this.aDir, this.bDir, this.name)
+	}
+
+	getVerticesNo0(): V3[] {
 		return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, false)
 	}
 
-	pointsCount() {
+	pointsCount(): int {
 		return this.points().length
 	}
 
-	points() {
+	points(): V3[] {
 		return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, true)
 	}
 
@@ -435,13 +450,13 @@ class PCurveEdge extends Edge {
 		return rot
 	}
 
-	edgeISTsWithSurface(surface: Surface) {
+	edgeISTsWithSurface(surface: Surface): number[] {
         return this.curve.isTsWithSurface(surface)
 			.map(edgeT => snap(snap(edgeT, this.aT), this.bT))
 			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
 	}
 
-	edgeISTsWithPlane(surface: P3) {
+	edgeISTsWithPlane(surface: P3): number[] {
         return this.curve.isTsWithPlane(surface)
 			.map(edgeT => snap(snap(edgeT, this.aT), this.bT))
 			.filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
@@ -460,7 +475,7 @@ class PCurveEdge extends Edge {
 		return new PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b),
 			this.aT, this.bT,
 			null,
-			m4.transformVector(this.aDir), m4.transformVector(this.bDir), this.name + desc) as this
+			m4.transformVector(this.aDir), m4.transformVector(this.bDir), this.name + desc)
 	}
 
 
@@ -485,27 +500,17 @@ class StraightEdge extends Edge {
 	readonly curve: L3
 	// flippedOf: StraightEdge
 
-	constructor(line: L3, a: V3, b: V3, aT: number, bT: number, flippedOf?: StraightEdge, name?: string) {
+	constructor(line: L3, a: V3, b: V3, aT: number, bT: number, public flippedOf?: StraightEdge, name?: string) {
+		super(line, a, b, aT, bT, flippedOf, name)
 		assertInst(L3, line)
-		assertNumbers(aT, bT)
-		assertVectors(a, b)
 		!flippedOf || assertInst(StraightEdge, flippedOf)
 		!name || assertf(() => 'string' === typeof name, name)
-		assert(line.at(aT).like(a), 'line.at(aT).like(a)' + aT + line + a)
-		assert(line.at(bT).like(b), 'line.at(bT).like(b)' + bT + line + b)
-        assert(!a.like(b), '!a.like(b)' + a + b)
-		super(line, a, b, aT, bT, flippedOf, name)
+		assert(!a.like(b), '!a.like(b)' + a + b) // don't put in super as it will break full ellipse
 		this.tangent = this.aT < this.bT ? this.curve.dir1 : this.curve.dir1.negated()
 	}
 
-    toSource() {
-        //return `StraightEdge.throughPoints(${this.a}, ${this.b})`
-        return `new StraightEdge(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT})`
-    }
-
-    toString() {
-        //return `StraightEdge.throughPoints(${this.a}, ${this.b})`
-        return `new StraightEdge(${this.curve}, ${this.a}, ${this.b}, ${this.aT}, ${this.bT})`
+    toSource(): string {
+        return callsce('new StraightEdge', this.curve, this.a, this.b, this.aT, this.bT)
     }
 
 	getVerticesNo0() {
@@ -553,12 +558,12 @@ class StraightEdge extends Edge {
 		return this.tangent
 	}
 
-	transform(m4, desc): this {
+	transform(m4: M4, desc?: string): StraightEdge {
 	    const lineDir1TransLength = m4.transformVector(this.curve.dir1).length()
 		return new StraightEdge(
 			this.curve.transform(m4),
 			m4.transformPoint(this.a),
-			m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, null, this.name + desc) as any
+			m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, null, this.name + desc)
 	}
 
 	isCoEdge(edge): boolean {

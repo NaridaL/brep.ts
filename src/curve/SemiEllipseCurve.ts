@@ -79,7 +79,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	reversed(): this {
-		return new SemiEllipseCurve(this.center, this.f1.negated(), this.f2, PI - this.tMax, PI - this.tMin) as this
+		return new SemiEllipseCurve(this.center, this.f1.negated(), this.f2, PI - this.tMax, PI - this.tMin)
 	}
 
 	eccentricity() {
@@ -193,7 +193,7 @@ class SemiEllipseCurve extends XiEtaCurve {
         return super.isInfosWithCurve(curve)
     }
 
-	roots(): number[][] {
+	roots(): [number[], number[], number[]] {
 		// tangent(t) = f2 cos t - f1 sin t
 		// solve for each dimension separately
 		// tangent(eta, xi) = f2 eta - f1 xi

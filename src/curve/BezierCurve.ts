@@ -1,3 +1,5 @@
+///<reference path="Curve.ts"/>
+
 class BezierCurve extends Curve {
 	readonly p0: V3
 	readonly p1: V3
@@ -64,7 +66,7 @@ class BezierCurve extends Curve {
 			(p2.z - 2 * p1.z + p0.z) * c012 + (p3.z - 2 * p2.z + p1.z) * c123)
 	}
 
-	normalAt(t: number): V3 {
+	normalP(t: number): V3 {
 		const tangent = this.tangentAt(t)
 		const rot = tangent.cross(this.ddt(t))
 		return rot.cross(tangent)
@@ -314,7 +316,7 @@ class BezierCurve extends Curve {
 			m4.transformPoint(this.p1),
 			m4.transformPoint(this.p2),
 			m4.transformPoint(this.p3),
-			this.tMin, this.tMax) as this
+			this.tMin, this.tMax)
 	}
 
 	isClosed(): boolean {
@@ -330,7 +332,7 @@ class BezierCurve extends Curve {
 		for (let t = -2; t <= 2; t += 0.01) {
 			const p = this.at(t)
 			mesh[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
-			mesh[bufferName].push(p, p.plus(this.normalAt(t).toLength(1)))
+			mesh[bufferName].push(p, p.plus(this.normalP(t).toLength(1)))
 		}
 		mesh[bufferName].push(this.p0, this.p1)
 		mesh[bufferName].push(this.p1, this.p2)
@@ -350,7 +352,7 @@ class BezierCurve extends Curve {
 		return isFinite(this.pointT(p))
 	}
 
-	roots(): number[][] {
+	roots(): [number[], number[], number[]] {
 		/**
 		 *            := (3 (p3 - p2) - 6 (p2 - p1) + 3 (p1 - p0)) t²*
 		 *                + (-6 (p1 - p0) + 6 (p2 - p1)) t
@@ -386,7 +388,7 @@ class BezierCurve extends Curve {
 		const c = p1.minus(p0).times(3)
 		const d = p0
 
-		// modifier cubic equation parameters to get (1)
+		// modifier cubic equation stP to get (1)
 		// const w = a.x * dir.y - a.y * dir.x
 		// const x = b.x * dir.y - b.y * dir.x
 		// const y = c.x * dir.y - c.y * dir.x
@@ -450,7 +452,7 @@ class BezierCurve extends Curve {
 	 * @param tMax
 	 * @param sMin
 	 * @param {number=} sMax
-	 * @returns {ISInfo[]}
+	 * @returns
 	 */
 	isInfosWithBezie3(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number) {
 		const handleStartTS = (startT, startS) => {
@@ -565,7 +567,7 @@ class BezierCurve extends Curve {
 		const f = t => {
 			const tangent = this.tangentAt(t)
 			const at = this.at(t)
-			const outsideVector = tangent.cross(surface.normalAt(at))
+			const outsideVector = tangent.cross(surface.normalP(at))
 			const sign = Math.sign(outsideVector.dot(dir1))
 			return at.dot(dir1) * tangent.rejected1Length(dir1) * sign
 			//return this.at(t).dot(dir1) * tangent.minus(dir1.times(tangent.dot(dir1))).length()
@@ -631,7 +633,7 @@ class BezierCurve extends Curve {
 		const splits = 20
 		const ts = arrayFromFunction(splits, i => lerp(t0, t1, i / ( splits - 1)))
 		const ps = ts.map(t => this.at(t))
-		const ns = ts.map(t => this.normalAt(t).unit())
+		const ns = ts.map(t => this.normalP(t).unit())
 		const f = (ns: V3[]) => {
 			const ls = ts.map((t, i) => new L3(ps[i], ns[i].unit()))
 			const isInfos = arrayFromFunction(splits- 1, i => {
@@ -684,7 +686,7 @@ class BezierCurve extends Curve {
 	magic2(t0: number = this.tMin, t1:number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
 		const max3d = 0.01, eps = 0.01
 		const a = this.at(t0), b = this.at(t1)
-		const aN = this.normalAt(t0).unit(), bN = this.normalAt(t1).unit()
+		const aN = this.normalP(t0).unit(), bN = this.normalP(t1).unit()
 		const aL = new L3(a, aN), bL = new L3(b, bN)
 		const isInfo = aL.infoClosestToLine(bL)
 		if (isInfo.s < 0 || isInfo.t < 0

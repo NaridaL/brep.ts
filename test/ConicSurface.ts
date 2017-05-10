@@ -1,4 +1,4 @@
-/// <reference path="../src/NLA.ts" />
+/// <reference path="../src/ts" />
 /// <reference path="../src/Vector3.ts" />
 /// <reference path="../src/surface/ConicSurface.ts" />
 /// <reference path="../src/curve/SemiEllipseCurve.ts" />
@@ -12,7 +12,7 @@ suite('ConicSurface', function () {
     test('ConicSurface.isCoplanarTo', function () {
         const unitCone = ConicSurface.UNIT
         assert.ok(unitCone.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
-        assert.V3like(unitCone.parametricFunction()(0, 3), V(3, 0, 3))
+        assert.V3like(unitCone.pSTFunc()(0, 3), V(3, 0, 3))
         const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
         const planeAtZ3 = P3.XY.translate(0, 0, 3)
         const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3)

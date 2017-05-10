@@ -3,11 +3,13 @@ abstract class Curve extends Transformable implements Equalable {
 	tIncrement: number
 	hlol: number
 
+	'constructor':new (...args: any[]) => this
+
 	constructor(readonly tMin: number, readonly tMax: number) {
 		super()
 		assertNumbers(tMin, tMax)
-		assert(!isNaN(tMin))
-		assert(!isNaN(tMax))
+		assert('number' == typeof tMin && !isNaN(tMin))
+		assert('number' == typeof tMax && !isNaN(tMax))
 		assert(tMin < tMax)
 	}
 
@@ -17,19 +19,26 @@ abstract class Curve extends Transformable implements Equalable {
 
 	abstract getConstructorParameters(): any[]
 
+	withBounds<T extends Curve>(this: T, tMin = this.tMin, tMax = this.tMax): T {
+		assert(this.tMin <= tMin && tMin <= this.tMax)
+		assert(this.tMin <= tMax && tMax <= this.tMax)
+		assert(this.tMin <= tMax && tMax <= this.tMax)
+		return new this.constructor(...this.getConstructorParameters().slice(0, -2), tMin, tMax)
+	}
+
     /**
-     * Returns curve parameter t for point p on curve.
+     * Curve parameter t for point p on curve.
      */
-    abstract pointT(p: V3, hint?): number
+    abstract pointT(p: V3): number
 
 	/**
-	 * Returns the point on the line that is closest to the given point.
+	 * The point on the line that is closest to the given point.
 	 */
 	closestPointToPoint(p: V3): V3 {
 		return this.at(this.closestTToPoint(p))
 	}
 
-	isValidT(t): boolean {
+	isValidT(t: number): boolean {
 		return le(this.tMin, t) && le(t, this.tMax)
 	}
 
@@ -122,12 +131,18 @@ abstract class Curve extends Transformable implements Equalable {
 		return length
 	}
 
+	/**
+	 * Curve point at parameter t.
+	 */
 	abstract at(t: number): V3
 
+	/**
+	 * Tangent of curve at parameter t. This is also the first derivative of {@see at}
+	 */
 	abstract tangentAt(t: number): V3
 
 	/**
-	 * Derivative of tangentAt for parameter t
+	 * Derivative of tangentAt for parameter t at t.
 	 */
 	abstract ddt(t: number): V3
 
@@ -240,6 +255,14 @@ abstract class Curve extends Transformable implements Equalable {
 		throw new Error()
 	}
 
+	clipPlane(plane: P3): Curve[] {
+		const ists = this.isTsWithPlane(plane)
+		return getIntervals(ists, this.tMin, this.tMax).mapFilter(([a, b]) => {
+			const midT = (a + b) / 2
+			return plane.distanceToPointSigned(this.at(midT)) < 0 && this.withBounds(a, b)
+		})
+	}
+
 	static breakDownIC(implicitCurve: (s, t) => number,
 	                   sMin: number, sMax: number,
 	                   tMin: number, tMax: number,
@@ -280,8 +303,7 @@ abstract class Curve extends Transformable implements Equalable {
 					set(li, lj)
 				}
 				// s, t are now good starting coordinates to use follow algo
-				if (bounds(s, t)
-					&& eq02(implicitCurve(s, t), 0.01)
+				if (bounds(s, t) && eq0(implicitCurve(s, t))
 				) {
 					console.log(V(s, t).sce)
 					const subresult = mkcurves(implicitCurve, s, t, stepSize, dids, didt, bounds)
@@ -299,59 +321,14 @@ abstract class Curve extends Transformable implements Equalable {
 
 			}
 		}
+		for (const {points} of result) {
+			for (let i = 0; i < points.length - 1; i++) {
+				assert(!points[i].equals(points[i + 1]))
+			}
+		}
 		return result
 	}
 
-	static test2() {
-		const ic = (x, y) => sin(x+y)-cos(x*y)+1
-		const dids = (x, y) => y * sin(x * y) + cos(x + y)
-		const didt = (x, y) => x * sin(x * y) + cos(x + y)
-		const ic2 = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
-		const di2ds = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
-		const di2dt = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y ** 2 - 3 * x ** 2))
-		const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-		assert(eq02(ic(start.x, start.y), 0.1))
-		const bounds = (s, t) => -5 <= s && s <= 5 && -5 <= t && t <= 5
-		//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
-		const curves =  Curve.breakDownIC(ic2, -5, 5, -5, 5, 0.1, 0.1, 0.02, di2ds, di2dt)
-		//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
-		//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
-			.map(({points, tangents}, i) => {
-				const curve = new ImplicitCurve(ic, points, tangents)
-				return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i))
-			})
-		//checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5, 0)
-		//checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0)
-		console.log(curves.length)
-		return curves
-
-	}
-	static test() {
-		const ses = SemiEllipsoidSurface.UNIT
-		const cs = ConicSurface.UNIT.scale(0.05,0.2).translate(-0.1,0,-2).rotateX(5*DEG)
-		const pf = cs.parametricFunction(), icc = ses.implicitFunction()
-		const ic = (x, y) => icc(pf(x, y))
-		//const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-		//assert(eq02(ic(start.x, start.y), 0.1))
-		const sMin = 0, sMax = PI, tMin = 0, tMax = 5
-		const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
-		//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
-		const curves =  Curve.breakDownIC(ic, sMin, sMax, tMin, tMax, 0.1, 0.1, 0.02)
-		//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
-		//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
-			.map(({points: pmPoints, tangents: pmTangents}, i) => {
-				console.log(icc)
-				const points = pmPoints.map(({x, y}) => pf(x, y))
-				const curve = new ImplicitCurve(ic, points, pmTangents)
-				return Edge.forCurveAndTs(curve)
-				//return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i))
-			})
-		//checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5, 0)
-		//checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0)
-		console.log(curves.length)
-		return curves
-
-	}
 }
 
 function mkcurves(implicitCurve: (s: number, t: number) => number,
@@ -366,6 +343,9 @@ function mkcurves(implicitCurve: (s: number, t: number) => number,
 	const {points, tangents} = followAlgorithm2d(implicitCurve, start, stepSize, dids, didt, bounds)
 	if (points[0].distanceTo(points.last()) < stepSize) {
 		// this is a loop: split it
+			for (let i = 0; i < points.length - 1; i++) {
+				assert(!points[i].equals(points[i + 1]))
+			}
 		const half = floor(points.length / 2)
 		const points1 = points.slice(0, half), points2 = points.slice(half - 1, points.length)
 		const tangents1 = tangents.slice(0, half), tangents2 = tangents.slice(half - 1, tangents.length)
@@ -373,22 +353,26 @@ function mkcurves(implicitCurve: (s: number, t: number) => number,
 		points2[tangents2.length - 1] = points1[0]
 		return [{points: points1, tangents: tangents1}, {points: points2, tangents: tangents2}]
 	} else {
+			for (let i = 0; i < points.length - 1; i++) {
+				assert(!points[i].equals(points[i + 1]))
+			}
 		// not a loop: check in the other direction
 		const {points: points2, tangents: tangents2} = followAlgorithm2d(implicitCurve, start, -stepSize, dids, didt, bounds)
-		const allPoints = points2.reverse().concat(points)
+		const allPoints = points2.reverse().concat(points.slice(1))
 		const allTangents = tangents2.reverse().concat(tangents)
 		return [{points: allPoints, tangents: allTangents}]
 	}
 }
 
 
-function curvePoint(implicitCurve: (s: number, t: number) => number, startPoint: V3) {
+function curvePoint(implicitCurve: (s: number, t: number) => number, startPoint: V3,
+                    dids: (s, t) => number,
+                    didt: (s, t) => number,) {
 	const eps = 1 / (1 << 20)
 	let p = startPoint
-	for (let i = 0; i < 4; i++) {
+	for (let i = 0; i < 8; i++) {
 		const fp = implicitCurve(p.x, p.y)
-		const dfpdx = (implicitCurve(p.x + eps, p.y) - fp) / eps,
-			dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
+		const dfpdx = dids(p.x, p.y), dfpdy = didt(p.x, p.y)
 		const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
 		//console.log(p.$)
 		p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))

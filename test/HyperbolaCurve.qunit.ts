@@ -2,16 +2,16 @@
 QUnit.module('HyperbolaCurve')
 
 registerTests({
+	'testCurve'(assert) {
+		testCurve(assert, HyperbolaCurve.XY)
+	},
 	'HyperbolaCurve'(assert) {
-		const hb = HyperbolaCurve.XY
-		testCurve(assert, hb)
-
-		const hbSheared = hb.shearedX(2, 3)
+		const hbSheared = HyperbolaCurve.XY.shearedX(2, 3)
 		assert.notOk(hbSheared.isOrthogonal())
-		const hbScaledRA = hbSheared.rightAngled()
-		assert.ok(hbScaledRA.isOrthogonal(), 'hbScaledRA.isOrthogonal()')
-		//TODO:assert.ok(hbSheared.isColinearTo(hbScaledRA))
-		testCurve(assert, hbScaledRA)
+		const hbShearedRA = hbSheared.rightAngled()
+		assert.ok(hbShearedRA.isOrthogonal(), 'hbShearedRA.isOrthogonal()')
+		assert.ok(hbSheared.isColinearTo(hbShearedRA))
+		testCurve(assert, hbShearedRA)
 
 		assert.deepEqual(intersectionUnitHyperbolaLine(1, 0, 2), {x1: 2, y1: sqrt(3), x2: 2, y2: -sqrt(3)})
 	},

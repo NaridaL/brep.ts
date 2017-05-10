@@ -13,7 +13,30 @@ class L3 extends Curve {
 		assertf(() => !Number.isNaN(anchor.x))
 	}
 
-    roots(): number[][] {
+	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1, tMin = this.tMin, tMax = this.tMax): void {
+		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
+		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
+		const inc = this.tIncrement
+		const start = Math.ceil((this.tMin + NLA_PRECISION) / inc)
+		const end = Math.floor((this.tMax - NLA_PRECISION) / inc)
+		for (let i = 0; i <= 1; i += 1) {
+			const start = mesh.vertices.length
+			if (0 !== i) {
+				for (let j = 0; j < res; j++) {
+					pushQuad(mesh.triangles, true,
+						start - res + j, start + j,
+						start - res + (j + 1) % res, start + (j + 1) % res)
+				}
+			}
+			const t = 0 == i ? tMin : tMax
+			const point = this.at(t), tangent = this.dir1, x = this.dir1.getPerpendicular()
+			const matrix = M4.forSys(x, this.dir1.cross(x), this.dir1, point)
+			mesh.normals.pushAll(matrix.transformedVectors(baseNormals))
+			mesh.vertices.pushAll(matrix.transformedPoints(baseVertices))
+		}
+	}
+
+    roots(): [number[], number[], number[]] {
         return [[], [], []]
     }
 
@@ -100,9 +123,9 @@ class L3 extends Curve {
 	 *      (x - this.anchor) DOT this.dir1 = lambda (dir1² is 1 as |dir1| == 1)
 	 *
 	 *  @param x
-	 *  @returns {number}
+	 *  @returns
 	 */
-	pointT(x: V3) {
+	pointT(x: V3): number {
 		assertVectors(x)
 		const t = x.minus(this.anchor).dot(this.dir1)
 		return t
@@ -280,7 +303,7 @@ class L3 extends Curve {
 	transform(m4: M4): this {
 		const newAnchor = m4.transformPoint(this.anchor)
 		const newDir = m4.transformVector(this.dir1)
-		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length()) as this
+		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length())
 	}
 
 	static throughPoints(anchor: V3, b: V3, tMin?: number, tMax?: number): L3 {

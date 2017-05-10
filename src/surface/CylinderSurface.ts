@@ -27,7 +27,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 		// create plane that goes through cylinder seam
 		const line = new L3(p, this.dir1)
 		const seamBase = this.baseCurve.at(PI)
-		const lineOut = this.dir1.cross(this.normalAt(p))
+		const lineOut = this.dir1.cross(this.normalP(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
@@ -94,12 +94,12 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	toMesh(zStart: number = -30, zEnd: number = 30) {
-		return Mesh.parametric(this.parametricFunction(), this.parametricNormal(), -PI, PI, zStart, zEnd, 16, 1)
+		return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(), -PI, PI, zStart, zEnd, 16, 1)
 	}
 
-	normalAt(p) {
+	normalP(p) {
 		const pLC = this.inverseMatrix.transformPoint(p)
-		return this.parametricNormal()(pLC.angleXY(), pLC.z)
+		return this.normalSTFunc()(pLC.angleXY(), pLC.z)
 	}
 
 	implicitFunction() {
@@ -116,7 +116,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	pointToParameterFunction() {
-		return (pWC, hint) => {
+		return (pWC, hint?) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			let angle = pLC.angleXY()
 			if (abs(angle) > Math.PI - NLA_PRECISION) {
@@ -152,11 +152,11 @@ class CylinderSurface extends ProjectedCurveSurface {
 			for (let i = 0; i < contour.length; i++) {
 				const ipp = (i + 1) % contour.length
 				const edge = contour[i], nextEdge = contour[ipp]
-				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalAt(edge.b))
+				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b))
 			}
 			return totalAngle > 0
 		} else {
-			const ptpF = this.pointToParameterFunction()
+			const ptpF = this.stPFunc()
 			return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
 		}
 	}
@@ -185,86 +185,6 @@ class CylinderSurface extends ProjectedCurveSurface {
 		const b = 2 * (ax * dx + ay * dy)
 		const c = ax ** 2 + ay ** 2 - 1
 		return pqFormula(b / a, c / a)
-	}
-
-	/**
-	 * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse
-	 * ==> Elliptic integrals/numeric calculation is necessary
-	 */
-	calculateArea(edges: Edge[]): number {
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof EllipseCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					return at.dot(this.dir1) * tangent.rejected1Length(this.dir1)
-				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
-				const val = glqInSteps(f, edge.aT, edge.bT, 4)
-				console.log("edge", edge, val)
-				return val * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))
-	}
-
-	/**
-	 * at(t)
-	 * |\                                    ^
-	 * | \ at(t).projectedOn(dir1)            \  dir1
-	 * |  \                                    \
-	 * |   \ at(t).rejectedFrom(dir1)
-	 * |   |
-	 * |___|
-	 *        z = 0
-	 *
-	 *
-	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
-	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
-	 */
-	zDirVolume(edges: Edge[]): {volume: number} {
-		if (V3.Z.cross(this.dir1).isZero()) return {volume: 0}
-		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
-		const scalingVector = this.dir1.cross(V3.Z).unit()
-		// the length of the base of the trapezoid is calculated by dotting with the baseVector
-		const baseVector = this.dir1.rejectedFrom(V3.Z).unit()
-		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-		console.log("scalingVector", scalingVector.sce)
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof EllipseCurve) {
-				const f = (t) => {
-					// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-					const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-					const area = (at.z + at.rejectedFrom(this.dir1).z) / 2 * at.projectedOn(this.dir1).dot(baseVector)
-					const scale = tangent.dot(scalingVector)
-					//assert(Math.sign(scale) == Math.sign(this.normalAt(at).dot(V3.Z)), this.normalAt(at).dot(V3.Z))
-					//console.log(
-					//	"", t,
-					//	",", area,
-					//	",", scale,
-					//	"atz", at.z)
-					return area * scale
-				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
-				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val, sign)
-				return val * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-
-		return {volume: totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))}
 	}
 
 	facesOutwards(): boolean {

@@ -2,6 +2,11 @@ QUnit.module('SemiEllipseCurve')
 {
 	const curve = SemiEllipseCurve.UNIT.shearedX(2, 1)
 	registerTests({
+		'withBounds'(assert) {
+			const newCurve = curve.withBounds(1, 2)
+			assert.equal(newCurve.tMin, 1)
+			assert.equal(newCurve.tMax, 2)
+		},
 		'testCurve'(assert) {
 			testCurve(assert, SemiEllipseCurve.UNIT)
 			testCurve(assert, curve)
@@ -15,7 +20,7 @@ QUnit.module('SemiEllipseCurve')
 		//	const curveRA = curve.rightAngled()
 		//	assert.ok(curveRA.f1.isPerpendicularTo(curveRA.f2))
 		//	assert.ok(curveRA.isColinearTo(curve))
-		//	NLA.arrayRange(-10, 10, 1).forEach(t => assert.ok(curveRA.containsPoint(curve.at(t))))
+		//	arrayRange(-10, 10, 1).forEach(t => assert.ok(curveRA.containsPoint(curve.at(t))))
 		//},
 		'isTsWithSurface(SemiEllipsoidSurface)'(assert) {
 			const s = SemiEllipsoidSurface.sphere(5)

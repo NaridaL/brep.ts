@@ -1,4 +1,4 @@
-class EllipsoidSurface extends Surface implements ParametricSurface {
+class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4
@@ -110,11 +110,11 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
 		return lt(distLocalEllipseCenter, 1) && localEllipse.isCircular() && localEllipse.f1.hasLength(correctRadius)
 	}
 
-    containsCurve(curve) {
+	containsCurve(curve: Curve): boolean {
         if (curve instanceof EllipseCurve) {
             return this.containsEllipse(curve)
         } else {
-            return false
+            return super.containsCurve(curve)
         }
     }
 
@@ -123,7 +123,7 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
             m4.transformPoint(this.center),
             m4.transformVector(this.f1),
             m4.transformVector(this.f2),
-            m4.transformVector(this.f3)) as this
+            m4.transformVector(this.f3))
     }
 
     isInsideOut(): boolean {
@@ -142,8 +142,8 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
     toMesh(subdivisions: int = 3): Mesh {
         return Mesh.sphere(subdivisions).transform(this.matrix)
         // let mesh = new Mesh({triangles: true, lines: false, normals: true})
-        // let pf = this.parametricFunction()
-        // let pn = this.parametricNormal()
+        // let pf = this.pSTFunc()
+        // let pn = this.normalSTFunc()
         // let aCount = 32, bCount = 16, vTotal = aCount * bCount
         // for (let i = 0, a = -PI; i < aCount; i++, a += 2 * PI / aCount) {
         // 	for (let j = 0, b = -Math.PI / 2; j < bCount; j++, b += Math.PI / (bCount - 1)) {
@@ -158,7 +158,7 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
         // return mesh
     }
 
-    parametricNormal() {
+    normalSTFunc() {
         // ugh
         // paramtric ellipsoid point q(a, b)
         // normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
@@ -174,22 +174,33 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
         }
     }
 
-    normalAt(p) {
-    	return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p))
+    normalP(p) {
+    	return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit()
     }
 
     normalST(s, t) {
     	return this.normalMatrix.transformVector(V3.sphere(s, t))
     }
 
-    parametricFunction() {
-        // this(a, b) = f1 cos a cos b + f2 sin a cos b + f2 sin b
-        return (alpha, beta) => {
-            return this.matrix.transformPoint(V3.sphere(alpha, beta))
-        }
+	pST(s: number, t: number): V3 {
+        return this.matrix.transformPoint(V3.sphere(s, t))
     }
 
-	pointToParameterFunction() {
+	dpds(): (s: number, t: number) => V3 {
+		return (s: number, t: number) => this.matrix.transformVector(new V3(
+			sin(s) * -cos(t),
+			cos(s) * cos(t),
+			0))
+	}
+
+	dpdt(): (s: number, t: number) => V3 {
+		return (s: number, t: number) => this.matrix.transformVector(new V3(
+			sin(t) * -cos(s),
+			-sin(s) * sin(t),
+			cos(t)))
+	}
+
+	stPFunc() {
 		return (pWC: V3, hint?) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			let alpha = pLC.angleXY()
@@ -261,13 +272,13 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
 		//    x && console.log(centerToP.sce, centerToPdelA.sce, centerToPdelB.sce)
 		//    return [centerToP.dot(centerToPdelA), centerToP.dot(centerToPdelB)]
 		//}
-		//const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.parametricFunction()(mainF1Params[0], mainF1Params[1])
+		//const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.pSTFunc()(mainF1Params[0], mainF1Params[1])
 		//console.log(f(mainF1Params, 1).sce)
-		//const mainF2Params = newtonIterate(f, this.pointToParameterFunction()(f2.rejectedFrom(mainF1)).toArray(2), 8),
-	     //   mainF2 = this.parametricFunction()(mainF2Params[0], mainF2Params[1])
-		//console.log(this.parametricNormal()(mainF2Params[0], mainF2Params[1]).sce)
+		//const mainF2Params = newtonIterate(f, this.stPFunc()(f2.rejectedFrom(mainF1)).toArray(2), 8),
+	     //   mainF2 = this.pSTFunc()(mainF2Params[0], mainF2Params[1])
+		//console.log(this.normalSTFunc()(mainF2Params[0], mainF2Params[1]).sce)
 		//assert(mainF1.isPerpendicularTo(mainF2), mainF1, mainF2, mainF1.dot(mainF2), mainF1Params)
-		//const mainF3Params = this.pointToParameterFunction()(mainF1.cross(mainF2)), mainF3 = this.parametricFunction()(mainF3Params[0], mainF3Params[1])
+		//const mainF3Params = this.stPFunc()(mainF1.cross(mainF2)), mainF3 = this.pSTFunc()(mainF3Params[0], mainF3Params[1])
 		//return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
 
 	    const {U, SIGMA} = this.matrix.svd3()
@@ -434,47 +445,6 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
 
     }
 
-	calculateArea(edges: Edge[], canApproximate = true): number {
-    	assert(this.isVerticalSpheroid())
-    	const {f1, f2, f3} = this
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const circleRadius = f1.length()
-		const f31 = f3.unit()
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof EllipseCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-					const localAt = this.inverseMatrix.transformPoint(at)
-					let angleXY = localAt.angleXY()
-					if(eq(Math.abs(angleXY), PI)) {
-						if (edge.curve.normal.isParallelTo(this.f2)) {
-							angleXY = PI * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2))
-						} else {
-							angleXY = PI * dotCurve(this.f2, tangent, edge.curve.ddt(t))
-						}
-						console.log(angleXY)
-					}
-					const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
-					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit()
-					const df3 = tangent.dot(f31)
-					//const scaling = df3 / localAt.lengthXY()
-					const scaling = dotter.dot(tangent)
-					//console.log(t, at.str, arcLength, scaling)
-					return arcLength * scaling
-				}
-				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val)
-				return val
-			} else {
-				assertNever()
-			}
-		}).sum()
-
-
-
-		return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
-	}
-
 	// TODO: also a commented out test
     //static splitOnPlaneLoop(loop: Edge[], ccw: boolean): [Edge[], Edge[]] {
 		//const seamPlane = P3.ZX, seamSurface = new PlaneSurface(seamPlane)
@@ -553,77 +523,6 @@ class EllipsoidSurface extends Surface implements ParametricSurface {
 		//}
 		//return [frontParts, backParts]
     //}
-
-	// volume does scale linearly, so this can be done in the local coordinate system
-	// first transform edges with inverse matrix
-	// then rotate everything edges so the original world Z dir again points in Z dir
-	// now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
-	// we need to split the transformed loop along the local seam plane
-	// and then sum the zDir volumes of the resulting loops
-    zDirVolume(loop: Edge[]): {centroid: V3, volume: number} {
-	    const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
-	    const T = M4.rotationAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
-	    function calc(loop) {
-		    let totalVolume = 0
-		    assert(V3.Z.isParallelTo(T.transformVector(V3.Z)))
-		    //const zDistanceFactor = toT.transformVector(V3.Z).length()
-		    loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
-			    const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
-
-			    function f(t) {
-				    const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-				    const r = at.lengthXY()
-				    const at2d = at.withElement('z', 0)
-				    const angleAdjusted = (at.angleXY() + TAU - NLA_PRECISION) % TAU + NLA_PRECISION
-				    const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.unit())) * Math.sign(tangent.z)
-				    //console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
-				    return result
-			    }
-
-			    const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-			    console.log("edge", edge, "volume", volume)
-			    totalVolume += volume
-		    })
-		    return totalVolume
-	    }
-	    const [front, back] = EllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
-	    const localVolume = calc(front, PI) + calc(back, -PI)
-
-	    return {area: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: null}
-	}
-    zDirVolumeForLoop2(loop: Edge[]): number {
-    	const angles = this.inverseMatrix.getZ().toAngles()
-	    const T = M4.rotationY(-angles.theta).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
-	    const rot90x = M4.rotationX(PI / 2)
-	    let totalVolume = 0
-	    assert(V3.X.isParallelTo(T.transformVector(V3.Z)))
-	    //const zDistanceFactor = toT.transformVector(V3.Z).length()
-	    loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
-		    const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
-		    function f (t) {
-	    		const at2d = edge.curve.at(t).withElement('x', 0)
-			    const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()))
-			    console.log("at2d", at2d.sce, "result", result)
-			    return result
-		    }
-		    //if (edge.)
-		    if (edge.b.like(V3.X)) {
-			    const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
-			    totalVolume += 2 / 3 * angleDiff
-			    console.log("xaa")
-		    }
-		    if (edge.b.like(V3.X.negated())) {
-			    const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
-			    totalVolume += 2 / 3 * angleDiff
-			    console.log("xbb")
-		    }
-		    const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-		    console.log("edge", edge, "volume", volume)
-		    totalVolume += volume
-	    })
-
-	    return totalVolume * this.f1.dot(this.f2.cross(this.f3))
-	}
 
 	surfaceAreaApprox(): number {
     	// See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area

@@ -102,7 +102,7 @@ function paintDemo(demo) {
 				color: hovering == face ? chroma('purple').gl() : meshColorss[i % meshColorss.length][faceIndex % randomColors.length]
 			}).draw(mesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
 			//shaders.singleColor.uniforms({
-			//color: rgbToVec4(0x0000ff)
+			//color: hexIntToGLColor(0x0000ff)
 			//}).draw(brepMesh, 'LINES')
 		}
 

@@ -24,6 +24,8 @@ class P3 extends Transformable {
 		return new V3(w / n.x, w / n.y, w / n.z)
 	}
 
+
+
 	get anchor(): V3 {
 		return this.normal1.times(this.w)
 	}
@@ -68,16 +70,15 @@ class P3 extends Transformable {
 		return eq0(this.normal1.dot(plane.normal1))
 	}
 
-	toString(roundFunction?) {
-		roundFunction = roundFunction || (v => v) //((v) => +v.toFixed(3))
-		return 'new P3(' + this.normal1.toString(roundFunction) + ', ' + roundFunction(this.w) + ')'
+	toSource(rounder?): string {
+		return callsce('new P3', this.normal1, this.w)
 	}
 
 	translated(offset: V3): P3 {
 		return new P3(this.normal1, this.w + offset.dot(this.normal1))
 	}
 
-	transform(m4: M4): this {
+	transform(m4: M4) {
 		const mirror = m4.isMirroring()
 		// get two vectors in the plane:
 		const u = this.normal1.getPerpendicular()
@@ -87,7 +88,7 @@ class P3 extends Transformable {
 			p2 = m4.transformPoint(this.anchor.plus(v)),
 			p3 = m4.transformPoint(this.anchor.plus(u))
 		// and create a new plane from the transformed points:
-		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2) as this
+		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2)
 	}
 
 	distanceToLine(line): number {
@@ -212,5 +213,9 @@ class P3 extends Transformable {
             throw new Error('' + curve)
         }
 
+    }
+
+    hashCode(): int {
+		return this.normal1.hashCode() * 31 | 0 + floatHashCode(this.w)
     }
 }

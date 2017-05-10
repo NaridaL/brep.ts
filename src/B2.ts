@@ -1,3 +1,4 @@
+///<reference path="Face.ts"/>
 let eps = 1e-5
 
 let globalId = 0
@@ -41,7 +42,7 @@ function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, faceConstru
             visited.add(currentEdge)
             loop.push(currentEdge)
             const possibleEdges = edges.filter(edge => currentEdge.b.like(edge.a))
-            const normalAtCurrentB = surface.normalAt(currentEdge.b)
+            const normalAtCurrentB = surface.normalP(currentEdge.b)
             const nextEdgeIndex = possibleEdges.indexWithMax(
                 (edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, normalAtCurrentB))
             currentEdge = possibleEdges[nextEdgeIndex]
@@ -57,11 +58,11 @@ function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, faceConstru
 }
 
 function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], faceNormalAtCurrentB: V3): int {
-	let minValue = -20, advanced = false, result = OUTSIDE
+	let minValue = -20, advanced = false, result = Number.MAX_SAFE_INTEGER
 	const normVector = currentEdge.bDir.negated().cross(faceNormalAtCurrentB)
 	const eps = 1e-4
 	const dir = sign(currentEdge.deltaT())
-	const ecd = currentEdge.curve.at(currentEdge.bT).to(currentEdge.curve.at(currentEdge.bT + dir * eps)).dot(normVector)
+	const ecd = -currentEdge.curve.diff(currentEdge.bT, - dir * eps).dot(normVector)
 	for (let i = possibleEdges.length ; i--;) {
 		const edge = possibleEdges[i]
 		const angle1 = currentEdge.bDir.negated().angleRelativeNormal(edge.aDir, faceNormalAtCurrentB)
@@ -366,7 +367,7 @@ class B2 extends Transformable {
                         const possibleEdges = possibleOldEdges.concat(possibleSubEdges, possibleNewEdges)
                         if (0 == possibleEdges.length) break
                         assert(0 < possibleEdges.length, () => face.sce)
-                        const faceNormalAtCurrentB = face.surface.normalAt(currentEdge.b)
+                        const faceNormalAtCurrentB = face.surface.normalP(currentEdge.b)
 	                    const correct =  possibleEdges.indexWithMax(
 		                    (edge, index) => (currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) + NLA_PRECISION + PI) % TAU)
 	                    const nextEdgeIndex = calcNextEdgeIndex(currentEdge, possibleEdges, faceNormalAtCurrentB)
@@ -429,7 +430,7 @@ class B2 extends Transformable {
                     path.push(currentEdge)
                     let possibleNextEdges = bag.filter(edge => currentEdge.b.like(edge.a))
                     // lowest angle, i.e. the right-most next edge
-                    let nextEdgeIndex = possibleNextEdges.indexWithMax((edge, index) => -currentEdge.bDir.angleRelativeNormal(edge.aDir, surface.normalAt(currentEdge.b)))
+                    let nextEdgeIndex = possibleNextEdges.indexWithMax((edge, index) => -currentEdge.bDir.angleRelativeNormal(edge.aDir, surface.normalP(currentEdge.b)))
                     currentEdge = possibleNextEdges[nextEdgeIndex]
                 } while (!currentEdge.visited)
                 let startIndex = path.find(currentEdge)
@@ -557,7 +558,7 @@ class B2 extends Transformable {
         for (const face of this.faces) {
             for (const edge of face.getAllEdges()) {
                 const canon = edge.getCanon()
-                const normalAtCanonA = face.surface.normalAt(canon.a)
+                const normalAtCanonA = face.surface.normalP(canon.a)
                 const inside = normalAtCanonA.cross(canon == edge ? edge.aDir : edge.bDir)
                 mapPush(this.edgeFaces, canon,
                     {face: face, edge: edge, normalAtCanonA: normalAtCanonA, reversed: canon != edge, inside: inside, angle: 0})
@@ -578,7 +579,7 @@ class B2 extends Transformable {
 		            if (faceInfo.angle < 0) faceInfo.angle += 2 * Math.PI
 	            }
             })
-            edgeFaceInfos.sort((a, b) => snap(a.angle - b.angle, 0) || assertNever())
+            edgeFaceInfos.sort((a, b) => snap(a.angle - b.angle, 0)) // TODO  || assertNever()
         }
     }
 
@@ -726,7 +727,7 @@ class B2 extends Transformable {
             this.infiniteVolume,
             this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
             vertexNames
-        ) as this
+        )
     }
 
     flipped(): B2 {
@@ -826,7 +827,7 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
 				if (isCurve.containsPoint(edge.a)) {
 					const prevEdgeIndex = (edgeIndex - 1 + loop.length) % loop.length, prevEdge = loop[prevEdgeIndex]
 					const curveAT = isCurve.pointT(edge.a)
-					const colinearOutA = edge.aDir.cross(surface.normalAt(edge.a))
+					const colinearOutA = edge.aDir.cross(surface.normalP(edge.a))
 					if (!colinearEdges[prevEdgeIndex] && dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -sign(prevEdge.deltaT())) > 0) {
 						ps.push({p: prevEdge.b, insideDir: edge.aDir.negated(), t: curveAT, edge: prevEdge, edgeT: prevEdge.bT, colinear: false})
 					}
@@ -834,7 +835,7 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
 				}
 				if (isCurve.containsPoint(edge.b)) {
 					const curveBT = isCurve.pointT(edge.b)
-					const colinearOutB = edge.bDir.cross(surface.normalAt(edge.b))
+					const colinearOutB = edge.bDir.cross(surface.normalP(edge.b))
 					if (!colinearEdges[nextEdgeIndex] && dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, sign(nextEdge.deltaT())) > 0) {
 						ps.push({p: edge.b, insideDir: edge.bDir, t: curveBT, edge: nextEdge, edgeT: nextEdge.aT, colinear: false})
 					}
@@ -848,12 +849,12 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
 					if (!isCurve.containsPoint(p)) continue
 					const curveT = isCurve.pointT(p)
 					assert(!isNaN(curveT))
-					const insideDir = edge.tangentAt(edgeT).cross(surface.normalAt(p)).negated()
+					const insideDir = edge.tangentAt(edgeT).cross(surface.normalP(p)).negated()
 
 					const isTangent = isCurve.tangentAt(curveT)
 					const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
 					const eps = 1e-4
-					const normVector = surface2.normalAt(p)
+					const normVector = surface2.normalP(p)
 					//if(!eq0(insideDir.dot(isTangent))) {
 						// Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
 						if (edgeT == edge.bT) {
@@ -921,7 +922,7 @@ function faceEdgeISPsWithSurface(face: Face, isCurve: Curve, surface2: Surface):
                     //
                     //	const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
                     //	const eps = 1e-4
-                    //	const normVector = surface2.normalAt(p)
+                    //	const normVector = surface2.normalP(p)
                     //	for (const dir of [-1, 1]) {
                     //		if (-1 == dir * dirFactor && edgeT == edge.minT ||
                     //			1 == dir * dirFactor && edgeT == edge.maxT ||
@@ -1052,7 +1053,7 @@ const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE= 3, ALONG_ED
 //    const ab1 = edge.aDir.unit()
 //    const relFaces = facesWithEdge(edge, brep.faces) as any[]
 //    relFaces.forEach(faceInfo => {
-//        faceInfo.normalAtEdgeA = faceInfo.face.surface.normalAt(edge.a)
+//        faceInfo.normalAtEdgeA = faceInfo.face.surface.normalP(edge.a)
 //        faceInfo.edgeDirAtEdgeA = !faceInfo.reversed
 //            ? faceInfo.edge.aDir
 //            : faceInfo.edge.bDir
@@ -1092,7 +1093,7 @@ function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: 
     const pDir1 = canonEdge.tangentAt(canonEdge.curve.pointT(p)).unit()
     const faceInfoAngleFromPInsideNeg = faceInfo => {
         const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated()
-        const faceInfoInsideAtP = faceInfo.face.surface.normalAt(p).cross(faceInfoPDir)
+        const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir)
         const faceInfoAngleAtP = pInside.angleRelativeNormal(faceInfoInsideAtP, pDir1)
         return -((faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU - NLA_PRECISION)
     }
@@ -1116,12 +1117,12 @@ function splitsVolumeEnclosingFacesP2(brep: B2, canonEdge: Edge, p: V3, testCurv
 	let minValue = 20, advanced = false, result = OUTSIDE
 	for (const faceInfo of edgeFaceInfos) {
         const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated()
-        const faceInfoInsideAtP = faceInfo.face.surface.normalAt(p).cross(faceInfoPDir)
+        const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir)
         const faceInfoAngleAtP = pInside.angleRelativeNormal(faceInfoInsideAtP, pDir1)
 	    const angle = (faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU - NLA_PRECISION
 	    if (eq0(angle)) {
         	// do advanced analysis
-		    const normVector = faceInfo.face.surface.normalAt(p)
+		    const normVector = faceInfo.face.surface.normalP(p)
 		    if (faceInfo.face.surface.containsCurve(testCurve)) {
 			    const coplanarSame = normVector.dot(faceNormal) > 0
 			    return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
@@ -1204,7 +1205,7 @@ function splitsVolumeEnclosingCone2(brep: B2, p: V3, curve: Curve, curveT: numbe
 }
 function fff(info: {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}, surface: Surface): int {
     const canonA = info.edge.reversed ? info.edge.b : info.edge.a
-    const surfaceNormalAtCanonA = surface.normalAt(canonA)
+    const surfaceNormalAtCanonA = surface.normalP(canonA)
     const dot = snap0(info.inside.dot(surfaceNormalAtCanonA))
     if (0 !== dot) {
         return 0 < dot ? OUTSIDE : INSIDE
@@ -1218,7 +1219,7 @@ function makeLink(values) {
 	return 'viewer.html?' + Object.getOwnPropertyNames(values).map(name => {
 			const val = values[name]
 			return name + '=' + (typeof val == 'string' ? val : val.toSource())
-		}).join('&')
+		}).join(';')
 }
 declare function earcut(data: FloatArray, holeIndices: number[], dim: int): int[]
 function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
@@ -1343,7 +1344,8 @@ function followAlgorithm2d(implicitCurve: (s: number, t: number) => number,
                            stepLength: number = 0.5,
                            dids: (s, t) => number,
                            didt: (s, t) => number,
-                           bounds: (s, t) => boolean): {points: V3[], tangents: V3[]} {
+                           bounds: (s, t) => boolean,
+                           endp: V3 = start): {points: V3[], tangents: V3[]} {
 	assertNumbers(stepLength, implicitCurve(0, 0))
 	assertVectors(start)
 	//assert (!startDir || startDir instanceof V3)
@@ -1363,12 +1365,17 @@ function followAlgorithm2d(implicitCurve: (s: number, t: number) => number,
 		points.push(p)
 		tangents.push(tangent)
 		prevp = p
-		p = curvePoint(implicitCurve, tangentEndPoint)
+		let newP = curvePoint(implicitCurve, tangentEndPoint, dids, didt)
+        if (newP.equals(p)) {
+            assertNever()
+        }
+        p = newP
+		assert(eq0(implicitCurve(p.x, p.y)))
 	} while (i++ < 1000 && (i < 4 || p.distanceTo(start) > stepLength) && bounds(p.x, p.y))
 	assert(i != 1000)
 	//assert(bounds(p.x, p.y))
 	const end = p
-	const endTangent = new V3(-dids(end.x, end.y), didt(end.x, end.y), 0)
+	const endTangent = new V3(-didt(end.x, end.y), dids(end.x, end.y), 0).toLength(stepLength)
 	points.push(end)
 	tangents.push(endTangent)
 

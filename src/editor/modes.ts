@@ -183,7 +183,7 @@ MODES.PLANE_DEFINITION = {
 		if (2 == sel.length) {
 			if (a instanceof V3 && b instanceof Face) {
 				if (b.containsPoint(a)) {
-					return P3.normalOnAnchor(b.surface.normalAt(a), a)
+					return P3.normalOnAnchor(b.surface.normalP(a), a)
 				}
 			}
 			if (a instanceof V3 && (b instanceof Curve || b instanceof Edge)) {
@@ -307,7 +307,7 @@ MODES.SELECT_DIRECTION = {
 				b instanceof Face &&
 				!(b.surface instanceof PlaneSurface) &&
 				b.surface.containsPoint(a)) {
-				return r(b.surface.normalAt(a).unit(), 'normal of surface at point')
+				return r(b.surface.normalP(a).unit(), 'normal of surface at point')
 			}
 		}
 		if (1 == sel.length) {
@@ -377,7 +377,7 @@ MODES.SELECT_LINE = {
 					const line = new L3(a, b.surface.plane.normal1)
 					return r(line, 'point and plane normal')
 				} else if (b.surface.containsPoint(a)) {
-					const line = new L3(a, b.surface.normalAt(a))
+					const line = new L3(a, b.surface.normalP(a))
 					return r(line, 'point and surface normal')
 				} else {
 					const foot = b.surface.pointFoot(a)

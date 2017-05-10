@@ -1,3 +1,4 @@
+
 class SemiCylinderSurface extends ProjectedCurveSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
@@ -7,10 +8,8 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 
 	constructor(baseCurve: SemiEllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
 		super(baseCurve, dir1, undefined, undefined, zMin, zMax)
-		assertVectors(dir1)
 		assertInst(SemiEllipseCurve, baseCurve)
 		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
-		assert(dir1.hasLength(1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.baseCurve.normal.dot(this.dir1))
@@ -22,7 +21,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return [this.baseCurve, this.dir1, this.tMin, this.tMax]
 	}
 
-	normalAt(p: V3): V3 {
+	normalP(p: V3): V3 {
 		return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit()
 	}
 
@@ -32,7 +31,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		// create plane that goes through cylinder seam
 		const line = new L3(p, this.dir1)
 		const seamBase = this.baseCurve.at(PI)
-		const lineOut = this.dir1.cross(this.normalAt(p))
+		const lineOut = this.dir1.cross(this.normalP(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
@@ -76,12 +75,10 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 			return this.containsLine(curve)
 		} else if (curve instanceof SemiEllipseCurve) {
 			return this.containsSemiEllipse(curve)
-		} else if (curve instanceof PICurve) {
-			return curve.points.every(p => this.containsPoint(p))
 		} else if (curve instanceof BezierCurve) {
 			return false
 		} else {
-			assert(false)
+			return super.containsCurve(curve)
 		}
 	}
 
@@ -90,7 +87,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return new SemiCylinderSurface(
 			this.baseCurve.transform(m4),
 			newDir.toLength(m4.isMirroring() ? -1 : 1),
-			this.tMin * newDir.length(), this.tMax * newDir.length()) as this
+			this.tMin * newDir.length(), this.tMax * newDir.length())
 	}
 
 	flipped() {
@@ -108,26 +105,26 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		}
 	}
 
-	containsPoint(p) {
-	    const pLC = this.inverseMatrix.transformPoint(p)
+	containsPoint(pWC): boolean {
+	    const pLC = this.inverseMatrix.transformPoint(pWC)
 		return SemiEllipseCurve.XYLCValid(pLC)
 	}
 
-	parameters(pWC) {
+	stP(pWC: V3): V3 {
         assert(arguments.length == 1)
         const pLC = this.inverseMatrix.transformPoint(pWC)
 		const u = SemiEllipseCurve.XYLCPointT(pLC)
 		return new V3(u, pLC.z, 0)
 	}
 
-	isCurvesWithSurface(surface2) {
+	isCurvesWithSurface(surface2: Surface): Curve[] {
 		if (surface2 instanceof PlaneSurface) {
 			return this.isCurvesWithPlane(surface2.plane)
 		} else if (surface2 instanceof SemiCylinderSurface) {
 			if (surface2.dir1.isParallelTo(this.dir1)) {
 				const projEllipse = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
 				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => {
-					const lineDir = sign(this.normalAt(info.p).cross(surface2.normalAt(info.p)).dot(this.dir1)) || 1
+					const lineDir = sign(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir1)) || 1
 					return new L3(info.p, this.dir1.times(lineDir))
 				})
 			} else if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
@@ -138,7 +135,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		}
 	}
 
-	getCenterLine() {
+	getCenterLine(): L3 {
 		return new L3(this.baseCurve.center, this.dir1)
 	}
 
@@ -168,89 +165,16 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)))
 	}
 
-	/**
-	 * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse
-	 * ==> Elliptic integrals/numeric calculation is necessary
-	 */
-	calculateArea(edges: Edge[]): number {
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof SemiEllipseCurve) {
-				const f = (t) => {
-					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
-					return at.dot(this.dir1) * tangent.rejected1Length(this.dir1)
-				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
-				const val = glqInSteps(f, edge.aT, edge.bT, 4)
-				return val * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))
-	}
-
-	/**
-	 * at(t)
-	 * |\                                    ^
-	 * | \ at(t).projectedOn(dir1)            \  dir1
-	 * |  \                                    \
-	 * |   \ at(t).rejectedFrom(dir1)
-	 * |   |
-	 * |___|
-	 *        z = 0
-	 *
-	 *
-	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
-	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
-	 */
-	zDirVolume(edges: Edge[]): {volume: number, centroid: any} {
-		if (V3.Z.cross(this.dir1).isZero()) return {volume: 0}
-		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
-		const scalingVector = this.dir1.cross(V3.Z).unit()
-		// the length of the base of the trapezoid is calculated by dotting with the baseVector
-		const baseVector = this.dir1.rejectedFrom(V3.Z).unit()
-		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-		const totalArea = edges.map(edge => {
-			if (edge.curve instanceof SemiEllipseCurve) {
-				const f = (t) => {
-					// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-					const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-					const area = (at.z + at.rejectedFrom(this.dir1).z) / 2 * at.projectedOn(this.dir1).dot(baseVector)
-					const scale = tangent.dot(scalingVector)
-					//assert(Math.sign(scale) == Math.sign(this.normalAt(at).dot(V3.Z)), this.normalAt(at).dot(V3.Z))
-					//console.log(
-					//	"", t,
-					//	",", area,
-					//	",", scale,
-					//	"atz", at.z)
-					return area * scale
-				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
-				const sign = -Math.sign(edge.curve.normal.dot(this.dir1))
-				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				return val * sign
-			} else if (edge.curve instanceof L3) {
-				return 0
-			} else {
-				assertNever()
-			}
-		}).sum()
-
-		return {volume: totalArea * Math.sign(this.baseCurve.normal.dot(this.dir1))}
-	}
-
 	facesOutwards(): boolean {
 		return this.baseCurve.normal.dot(this.dir1) > 0
 	}
 
 	getSeamPlane(): P3 {
 		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir1)
+	}
+
+	clipCurves(curves: Curve[]): Curve[] {
+		return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()))
 	}
 
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, 0, 1)
