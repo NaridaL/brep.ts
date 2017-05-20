@@ -36,7 +36,7 @@ abstract class Edge extends Transformable {
 
 	abstract tangentAt(t: number): V3
 
-	toString(f?): string {
+	toString(): string {
 		return callsce('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, null, this.aDir, this.bDir)
 	}
 
@@ -45,8 +45,7 @@ abstract class Edge extends Transformable {
 		const pDir = this.tangentAt(t)
 		return [
 			Edge.create(this.curve, this.a, p, this.aT, t, undefined, this.aDir, pDir, this.name + 'left'),
-			Edge.create(this.curve, p, this.b, t, this.bT, undefined, pDir, this.bDir, this.name + 'left')
-		]
+			Edge.create(this.curve, p, this.b, t, this.bT, undefined, pDir, this.bDir, this.name + 'left')]
 	}
 
 	abstract edgeISTsWithSurface(surface: Surface): number[]
@@ -54,15 +53,14 @@ abstract class Edge extends Transformable {
 	/**
 	 * Returns the intersections of the edge with the plane.
 	 * Values are snapped to aT and bT, ie aT === t || !eq(aT, t)
-	 * @param plane
 	 */
 	abstract edgeISTsWithPlane(plane: P3): number[]
 
-	colinearToLine(line): boolean {
+	colinearToLine(line: L3): boolean {
 		return this.curve instanceof L3 && this.curve.isColinearTo(line)
 	}
 
-	tValueInside(t) {
+	tValueInside(t: number) {
 		return this.aT < this.bT
 			? lt(this.aT, t) && lt(t, this.bT)
 			: lt(this.bT, t) && lt(t, this.aT)
@@ -93,7 +91,6 @@ abstract class Edge extends Transformable {
 		} else {
 			return new PCurveEdge(curve, a, b, aT, bT, flippedOf as PCurveEdge, aDir, bDir, name)
 		}
-
 	}
 
 
@@ -108,7 +105,7 @@ abstract class Edge extends Transformable {
 		if (e1.curve.hlol < e2.curve.hlol) {
 			[e2, e1] = [e1, e2]
 		}
-		let sts = e1.curve.isInfosWithCurve(e2.curve)
+		const sts = e1.curve.isInfosWithCurve(e2.curve)
 		if (sts.some(info => isNaN(info.tThis) || isNaN(info.tOther))) {
 			console.log(e1.sce)
 			console.log(e2.sce)
@@ -145,7 +142,7 @@ abstract class Edge extends Transformable {
         return hashCode | 0
     }
 
-    like(edge) {
+    like(edge: Edge) {
         // TODO this breaks on colinear edges,
         // TODO: what, where?
         return this === edge ||
@@ -214,7 +211,7 @@ abstract class Edge extends Transformable {
 		return StraightEdge.chain(vertices)
 	}
 
-	static reverseLoop(loop: Edge[]): Edge[] {
+	static reversePath(loop: Edge[]): Edge[] {
 		return arrayFromFunction(loop.length, i => loop[loop.length - 1 - i].flipped())
 	}
 
@@ -263,10 +260,10 @@ abstract class Edge extends Transformable {
 				return Edge.arbitraryCorner(edge, nextEdge, radius)
 			}
 		})
-		const result = edges.map((edge, i) => {
+		const result = edges.flatMap((edge, i) => {
 			const h = (i + edges.length - 1) % edges.length, j = (i + 1) % edges.length
 			const prevCorner = corners[h], nextCorner = corners[i]
-			if (!prevCorner && !nextCorner) {
+			if (!prevCorner && !nextCorner) {  
 				return edge
 			}
 			const [aT, a, aDir] = !prevCorner ? [edge.aT, edge.a, edge.aDir] :
@@ -275,19 +272,19 @@ abstract class Edge extends Transformable {
 				[edge.curve.pointT(nextCorner.a), nextCorner.a, nextCorner.aDir]
 			const newEdge = Edge.create(edge.curve, a, b, aT, bT, undefined, aDir, bDir)
 			return !nextCorner ? newEdge : [newEdge, nextCorner]
-		}).concatenated()
+		})
 		return result
 	}
 
-	static arbitraryCorner(e1: Edge, e2: Edge, radius) {
+	static arbitraryCorner(e1: Edge, e2: Edge, radius: number) {
 		const c1 = e1.curve, c2 = e2.curve
-		function f([t1, t2]) {
+		function f([t1, t2]: [number, number]) {
 			const p1 = c1.at(t1), p2 = c2.at(t2)
 			const dp1 = c1.tangentAt(t1), dp2 = c2.tangentAt(t2)
 			const virtualPlaneNormal = dp1.cross(dp2)
 			const normal1 = virtualPlaneNormal.cross(dp1).unit(), normal2 = virtualPlaneNormal.cross(dp2).unit()
 			const dirCross = normal1.cross(normal2)
-			if (virtualPlaneNormal.isZero()) {
+			if (virtualPlaneNormal.likeO()) {
 				assert(false)
 			} // lines parallel
 			const p1p2 = p1.to(p2)
@@ -321,9 +318,9 @@ abstract class Edge extends Transformable {
 	}
 
     static pathFromSVG(pathString: String): Edge[] {
-        let currentPos = undefined
+        let currentPos: V3 = undefined
         const parsed: any[] =
-		        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).commands
+		        new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).annotateArcs().commands
         const path: Edge[] = []
         for (const c of parsed) {
             const endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
@@ -347,43 +344,26 @@ abstract class Edge extends Transformable {
 		            break
 	            }
                 case SVGPathData.ARC: {
-	                //noinspection TsLint
-	                let {rX, rY, xRot, lArcFlag, sweep} = c
-	                rX = abs(rX)
-	                rY = abs(rY)
-	                const rads = xRot * DEG
-	                const midPoint = currentPos.minus(endPos).times(0.5)
-	                const midPointTransformed = M4.rotationZ(-rads).transformPoint(midPoint)
-	                const testValue = midPointTransformed.x ** 2 / rX ** 2 + midPointTransformed.y ** 2 / rY ** 2
-	                console.log(testValue)
-	                if (testValue > 1) {
-		                rX *= Math.sqrt(testValue)
-		                rY *= Math.sqrt(testValue)
-	                }
-	                const temp = (rX ** 2 * midPointTransformed.y ** 2 + rY ** 2 * midPointTransformed.x ** 2)
-	                const centerTransformedScale = (lArcFlag != sweep ? 1 : -1) * Math.sqrt(max(0, (rX ** 2 * rY ** 2 - temp) / temp))
-	                const centerTransformed = V(rX * midPointTransformed.y / rY, -rY * midPointTransformed.x / rX).times(centerTransformedScale)
-	                const center = M4.rotationZ(rads).transformPoint(centerTransformed).plus(currentPos.plus(endPos).times(0.5))
-	                let f1 = new V3(rX * cos(rads), rX * sin(rads), 0)
-	                const f2 = new V3(rY * -sin(rads), rY * cos(rads), 0)
-	                let curve = new EllipseCurve(center, f1, f2)
-	                let aT = curve.pointT(currentPos, PI)
-	                let bT = curve.pointT(endPos, PI)
-	                if (aT < bT != sweep) {
-		                assert((aT != PI) || (bT != PI))
-		                if (aT == PI) {
-			                aT = -PI
-		                } else if (bT == PI) {
-			                bT = -PI
-		                } else {
-			                f1 = f1.negated()
-			                curve = new EllipseCurve(center, f1, f2)
-			                aT = curve.pointT(currentPos, PI)
-			                bT = curve.pointT(endPos, PI)
-		                }
-	                }
-	                const edge = new PCurveEdge(curve, currentPos, endPos, aT, bT, undefined, curve.tangentAt(aT).times(sign(bT - aT)), curve.tangentAt(bT).times(sign(bT - aT)))
-	                path.push(edge)
+                	const phi1 = c.phi1 * DEG, phi2 = c.phi2 * DEG, [phiMin, phiMax] = [phi1, phi2].sort(MINUS)
+	                const stops = arrayRange(-3, 4, 1).map(n => n * PI).filter(stop => phiMin <= stop && stop <= phiMax)
+	                const center = V(c.cX, c.cY)
+	                const f1 = V3.polar(c.rX, c.xRot * DEG)
+	                const f2 = V3.polar(c.rY, c.xRot * DEG + Math.PI / 2)
+	                const edges = getIntervals(stops, phiMin, phiMax).map(([t1, t2]) => {
+						const deltaT = t2 - t1
+                		const t1_ = mod(t1, TAU)
+                		const t2_ = t1_ + deltaT
+		                assert(t1_ >= 0 == t2_ >= 0)
+                		const gtPI = t1_ > PI || t2_ > PI
+		                const aT = gtPI ? t1_ - PI : t1_
+		                const bT = gtPI ? t2_ - PI : t2_
+		                const curve = new SemiEllipseCurve(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2)
+		                const a = phi1 == t1 ? currentPos : phi2 == t1 ? endPos : curve.at(aT)
+		                const b = phi1 == t2 ? currentPos : phi2 == t2 ? endPos : curve.at(bT)
+		                return new PCurveEdge(curve, a, b, aT, bT, undefined,
+			                curve.tangentAt(aT), curve.tangentAt(bT))
+	                })
+	                path.pushAll(c.phiDelta > 0 ? edges : Edge.reversePath(edges))
 	                break
                 }
             }
@@ -413,12 +393,17 @@ class PCurveEdge extends Edge {
 	            name?: string) {
 		super(curve, a, b, aT, bT, flippedOf, name)
 		assertVectors(aDir, bDir)
-		assertf(() => !aDir.isZero(), curve)
-		assertf(() => !bDir.isZero(), curve)
+		assertf(() => !aDir.likeO(), curve)
+		assertf(() => !bDir.likeO(), curve)
+		if (!(curve instanceof PICurve)) {
+			// TODO
 		assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce)
 		assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
-		assert(this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
-		assert(this.reversed === this.bDir.dot(curve.tangentAt(bT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
+		}
+		assert(this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0,
+				aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
+		assert(this.reversed === this.bDir.dot(curve.tangentAt(bT)) < 0,
+				aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT))
 	}
 
 	toSource(): string {
@@ -438,7 +423,7 @@ class PCurveEdge extends Edge {
 		return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, true)
 	}
 
-	rotViaPlane(normal, reversed) {
+	rotViaPlane(normal: V3, reversed: boolean) {
 		let rot = this.aDir.angleRelativeNormal(this.bDir, normal)
 		const counterClockWise = (normal.dot(this.curve.normal) > 0) === !this.reversed
 		if (counterClockWise) {
@@ -478,8 +463,7 @@ class PCurveEdge extends Edge {
 			m4.transformVector(this.aDir), m4.transformVector(this.bDir), this.name + desc)
 	}
 
-
-	isCoEdge(edge) {
+	isCoEdge(edge: Edge): boolean {
 		return this === edge || this === edge.flippedOf ||
 			this.curve.isColinearTo(edge.curve) && (
 				this.a.like(edge.a) && this.b.like(edge.b)
@@ -525,14 +509,14 @@ class StraightEdge extends Edge {
 		return [this.a, this.b]
 	}
 
-	edgeISTsWithPlane(plane): number[] {
-		let edgeT = this.curve.intersectWithPlaneLambda(plane)
+	edgeISTsWithPlane(plane: P3): number[] {
+		let edgeT = this.curve.isTWithPlane(plane)
 		edgeT = snap(edgeT, this.aT)
 		edgeT = snap(edgeT, this.bT)
 		return (this.minT <= edgeT && edgeT <= this.maxT) ? [edgeT] : []
 	}
 
-	edgeISTsWithSurface(surface): number[] {
+	edgeISTsWithSurface(surface: Surface): number[] {
 		if (surface instanceof PlaneSurface) {
 			return this.edgeISTsWithPlane(surface.plane)
 		} else {
@@ -542,7 +526,7 @@ class StraightEdge extends Edge {
 		}
 	}
 
-	tangentAt(p) {
+	tangentAt() {
 		return this.tangent
 	}
 
@@ -566,7 +550,7 @@ class StraightEdge extends Edge {
 			m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, null, this.name + desc)
 	}
 
-	isCoEdge(edge): boolean {
+	isCoEdge(edge: Edge): boolean {
 		return this === edge || this === edge.flippedOf || edge.constructor === StraightEdge && (
 				this.a.like(edge.a) && this.b.like(edge.b)
 				|| this.a.like(edge.b) && this.b.like(edge.a)

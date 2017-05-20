@@ -28,7 +28,8 @@ abstract class Face extends Transformable {
 			if (loopInfos.length == 0) {
 				loopInfos.push(newLoopInfo)
 			} else {
-				const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, newLoopInfo.loop, surface))
+				const subLoopInfo = loopInfos.find(
+					loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
 				if (subLoopInfo) {
 					placeRecursively(newLoopInfo, subLoopInfo.subloops)
 				} else {
@@ -36,7 +37,7 @@ abstract class Face extends Transformable {
 					for (let i = loopInfos.length; --i >= 0;) {
 						const subLoopInfo = loopInfos[i]
 						//console.log('cheving subLoopInfo', surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a))
-						if (B2.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) {
+						if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
 							newLoopInfo.subloops.push(subLoopInfo)
 							loopInfos.splice(i, 1) // remove it
 						}
@@ -48,8 +49,8 @@ abstract class Face extends Transformable {
 
 		function newFacesRecursive(loopInfo: LoopInfo): void {
 			newFaces.push(new faceConstructor(surface,
-				loopInfo.ccw ? loopInfo.loop : Edge.reverseLoop(loopInfo.loop),
-				loopInfo.subloops.map(sl => sl.ccw ? Edge.reverseLoop(sl.loop) : sl.loop)))
+				loopInfo.ccw ? loopInfo.loop : Edge.reversePath(loopInfo.loop),
+				loopInfo.subloops.map(sl => sl.ccw ? Edge.reversePath(sl.loop) : sl.loop)))
 			loopInfo.subloops.forEach(sl => sl.subloops.forEach(sl2 => newFacesRecursive(sl2)))
 		}
 
@@ -60,13 +61,13 @@ abstract class Face extends Transformable {
 		return newFaces
 	}
 
-	fromLoops(loops: Edge[][], surface) {
+	fromLoops(loops: Edge[][], surface: Surface) {
 		type LoopInfo = {loop: Edge[], ccw: boolean, subloops: LoopInfo[]}
 		function placeRecursively(newLoopInfo: LoopInfo, loopInfos: LoopInfo[]) {
 			if (loopInfos.length == 0) {
 				loopInfos.push(newLoopInfo)
 			} else {
-				const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, newLoopInfo.loop, surface))
+				const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
 				if (subLoopInfo) {
 					placeRecursively(newLoopInfo, subLoopInfo.subloops)
 				} else {
@@ -159,9 +160,9 @@ abstract class Face extends Transformable {
 			}
 			return hashCode
 		}
-		function loopHashCode(loop) { return arrayHashCode(loop.map(edge => edge.hashCode()).sort()) }
+		function loopHashCode(loop) { return arrayHashCode(loop.map(edge => edge.hashCode()).sort(MINUS)) }
 		let hashCode = 0
-		hashCode = hashCode * 31 + arrayHashCode(this.holes.map(loop => loopHashCode(loop)).sort()) | 0
+		hashCode = hashCode * 31 + arrayHashCode(this.holes.map(loop => loopHashCode(loop)).sort(MINUS)) | 0
 		hashCode = hashCode * 31 + loopHashCode(this.contour) | 0
 		hashCode = hashCode * 31 + this.surface.hashCode() | 0
 		return hashCode
@@ -187,7 +188,7 @@ abstract class Face extends Transformable {
 
 	addEdgeLines(mesh) {
 		assert(false, 'buggy, fix')
-		const vertices = this.contour.map(edge => edge.getVerticesNo0()).concatenated(), mvl = mesh.vertices.length
+		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0()), mvl = mesh.vertices.length
 		for (let i = 0; i < vertices.length; i++) {
 			mesh.vertices.push(vertices[i])
 			mesh.lines.push(mvl + i, mvl + (i + 1) % vertices.length)
@@ -395,7 +396,7 @@ class PlaneFace extends Face {
 
 	intersectsLine(line): number {
 		assertInst(L3, line)
-		const lambda = line.intersectWithPlaneLambda(this.surface.plane)
+		const lambda = line.isTWithPlane(this.surface.plane)
 		if (!Number.isFinite(lambda)) {
 			return NaN
 		}
@@ -557,7 +558,7 @@ class PlaneFace extends Face {
 								const aEdgeDir = a.edge.tangentAt(a.edgeT)
 								const bEdgeDir = b.edge.tangentAt(b.edgeT)
 								const testVector = aEdgeDir.rejectedFrom(bEdgeDir)
-								assert(!testVector.isZero())
+								assert(!testVector.likeO())
 								const sVEF1 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector, thisPlane.normal1)
 								const sVEF2 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector.negated(), thisPlane.normal1)
 								if (INSIDE == sVEF1 || INSIDE == sVEF2) {
@@ -842,15 +843,17 @@ class RotationFace extends Face {
 		return {verticesUV: verticesST.map(vST => new V3(vST.x / uStep, vST.y / vStep, 0)), vertices: vertices, normals: normals, loopStarts: loopStarts}
 	}
 
-	unrollCylinderLoops(loops, uStep, vStep) {
-		const vertexLoops = loops.map(loop => loop.map(edge => edge.getVerticesNo0()).concatenated())
+	unrollCylinderLoops(loops: Edge[][], uStep: number, vStep: number) {
+		const vertexLoops = loops.map(loop => loop.flatMap(edge => edge.getVerticesNo0()))
+		const surface = this.surface as ParametricSurface
 		const vertices: V3[] = vertexLoops.concatenated()
 		// this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
 		const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last() + loop.length), arr), [0])
-		const stPFunc = this.surface.stP()
-		const verticesUV = vertices.map(v => { const uv = stP(v); return new V3(uv.x / uStep, uv.y / vStep, 0) })
-		const pN = this.surface.normalST()
-		const normals: V3[] = verticesUV.map(({x, y}) => pN(x, y))
+		const stPFunc = surface.stPFunc()
+		const verticesST = vertices.map(v => stPFunc(v))
+		const verticesUV = verticesST.map(st => new V3(st.x / uStep, st.y / vStep, 0))
+		const normalST = surface.normalSTFunc()
+		const normals: V3[] = verticesST.map(({x, y}) => normalST(x, y))
 		return {verticesUV: verticesUV, vertices: vertices, normals: normals, loopStarts: loopStarts}
 	}
 
@@ -890,9 +893,9 @@ class RotationFace extends Face {
 		vStep = vStep || this.surface.vStep
 		uStep = uStep || this.surface.uStep
 		assertf(() => uStep > 0 && vStep > 0, uStep, vStep, 'Surface: ' + this.surface)
-		const triangles = []
-		const f = (i, j) => this.surface.pSTFunc()(i * uStep, j * vStep)
-		const normalF = (i, j) => this.surface.normalSTFunc()(i * uStep, j * vStep)
+		const triangles: int[] = []
+		const pIJFunc = (i: number, j: number) => this.surface.pSTFunc()(i * uStep, j * vStep)
+		const normalIJFunc = (i, j) => this.surface.normalSTFunc()(i * uStep, j * vStep)
 		const loops = [this.contour].concat(this.holes)
 		const {vertices, verticesUV, normals, loopStarts} = this.surface instanceof SemiEllipsoidSurface || this.surface instanceof ConicSurface
 			? this.unrollEllipsoidLoops(loops, uStep, vStep)
@@ -921,6 +924,10 @@ class RotationFace extends Face {
 			minV = min(minV, v)
 			maxV = max(maxV, v)
 		})
+		if (ParametricSurface.is(this.surface)) {
+			assert(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION)
+			assert(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION)
+		}
 		const uOffset = floor(minU + NLA_PRECISION), vOffset = floor(minV + NLA_PRECISION)
 		const uRes = ceil(maxU - NLA_PRECISION) - uOffset, vRes = ceil(maxV - NLA_PRECISION) - vOffset
 		console.log(uStep, vStep, uRes, vRes)
@@ -1028,8 +1035,8 @@ class RotationFace extends Face {
 
 			function addVertex(u, v): int {
 				verticesUV.push(new V3(u, v, 0))
-				normals.push(normalF(u, v))
-				return vertices.push(f(u, v)) - 1
+				normals.push(normalIJFunc(u, v))
+				return vertices.push(pIJFunc(u, v)) - 1
 			}
 
 			function getGridVertexIndex(i, j): int {
@@ -1289,7 +1296,7 @@ class RotationFace extends Face {
 				// console.log(ribs.map(r=>r.toSource()).join('\n'))
 			})
 		})
-		let vertices = [], triangles = [], normals = []
+		const vertices = [], triangles0: int[] = [], normals = []
 		for (let i = 0; i < ribs.length; i++) {
 			let ribLeft = ribs[i], ribRight = ribs[(i + 1) % ribs.length]
 			assert(ribLeft.right.length == ribRight.left.length)
@@ -1324,7 +1331,7 @@ class RotationFace extends Face {
 				if (!inside) {
 					if (ribLeft.right[colPos] < detailZ && ribRight.left[colPos] < detailZ) {
 						if (ribLeft.right[colPos + 1] < detailZ || ribRight.left[colPos + 1] < detailZ) {
-							pushQuad(triangles, flipped2,
+							pushQuad(triangles0, flipped2,
 								vsStart + colPos * 2,
 								vsStart + (colPos + 1) * 2,
 								vsStart + colPos * 2 + 1,
@@ -1334,7 +1341,7 @@ class RotationFace extends Face {
 								j--
 							}
 						} else {
-							pushQuad(triangles, flipped2,
+							pushQuad(triangles0, flipped2,
 								vsStart + colPos * 2,
 								vsStart + colPos * 2 + 1,
 								detailVerticesStart + i * detailZs.length + j,
@@ -1345,7 +1352,7 @@ class RotationFace extends Face {
 					}
 				} else {
 					if (ribLeft.right[colPos] < detailZ || ribRight.left[colPos] < detailZ) {
-						pushQuad(triangles, flipped2,
+						pushQuad(triangles0, flipped2,
 							detailVerticesStart + i * detailZs.length + j - 1,
 							detailVerticesStart + ipp * detailZs.length + j - 1,
 							vsStart + colPos * 2,
@@ -1356,7 +1363,7 @@ class RotationFace extends Face {
 							j--
 						}
 					} else {
-						pushQuad(triangles, flipped2,
+						pushQuad(triangles0, flipped2,
 							detailVerticesStart + i * detailZs.length + j,
 							detailVerticesStart + i * detailZs.length + j - 1,
 							detailVerticesStart + ipp * detailZs.length + j,
@@ -1366,8 +1373,8 @@ class RotationFace extends Face {
 			}
 			vsStart += ribLeft.right.length * 2
 		}
-		//console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(), triangles.map(i => vertices[i].$).toSource() )
-		triangles = triangles.map(index => index + mesh.vertices.length)
+		//console.log('trinagle', triangles0.max(), vertices.length, triangles0.length, triangles0.toSource(), triangles0.map(i => vertices[i].$).toSource() )
+		const triangles = triangles0.map(index => index + mesh.vertices.length)
 		//assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
 		Array.prototype.push.apply(mesh.vertices, vertices)
 		Array.prototype.push.apply(mesh.triangles, triangles)
@@ -1525,7 +1532,7 @@ class RotationFace extends Face {
 							// edge / edge center intersection
 							// todo: is this even necessary considering we add edges anyway? i think so...
 							const testVector = a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
-							assert(!testVector.isZero())
+							assert(!testVector.likeO())
 							const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p))
 							const sVEF2 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p))
 							if (INSIDE == sVEF1 || INSIDE == sVEF2) {
@@ -1564,7 +1571,7 @@ class RotationFace extends Face {
 			const normal1 = surface.normalP(p), normal2 = surface2.normalP(p), dp2 = normal1.cross(normal2)
 			assert(surface.containsCurve(isCurve))
 			assert(surface2.containsCurve(isCurve))
-			if (!dp2.isZero()) {
+			if (!dp2.likeO()) {
 				//assert(dp2.dot(dp) > 0)
 				// TODO assert(dp2.isParallelTo(dp))
 			}

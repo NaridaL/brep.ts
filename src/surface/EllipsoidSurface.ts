@@ -51,7 +51,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
         if (surface instanceof PlaneSurface) {
         	return this.isCurvesWithPlane(surface.plane)
         } else if (surface instanceof CylinderSurface) {
-            if (surface.dir1.isParallelTo(this.dir1)) {
+            if (surface.dir.isParallelTo(this.dir1)) {
                 const ellipseProjected = surface.baseCurve.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
                 return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
             } else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
@@ -61,22 +61,22 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
             }
         } else if (surface instanceof ProjectedCurveSurface) {
             const surfaceLC = surface.transform(this.inverseMatrix)
-            const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir1, 0))
+            const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir, 0))
             const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
             const insideIntervals = iii(ists, EllipsoidSurface.UNIT, baseCurveLC)
-            const curves = insideIntervals.map(ii => {
-                const aLine = new L3(baseCurveLC.at(ii[0]), surfaceLC.dir1)
+            const curves = insideIntervals.flatMap(ii => {
+                const aLine = new L3(baseCurveLC.at(ii[0]), surfaceLC.dir)
                 const a = EllipsoidSurface.UNIT.isTsForLine(aLine).map(t => aLine.at(t))
-                const bLine = new L3(baseCurveLC.at(ii[1]), surfaceLC.dir1)
+                const bLine = new L3(baseCurveLC.at(ii[1]), surfaceLC.dir)
                 const b = EllipsoidSurface.UNIT.isTsForLine(bLine).map(t => bLine.at(t))
                 return [0, 1].map(i => {
                     let aP = a[i] || a[0], bP = b[i] || b[0]
                     0 !== i && ([aP, bP] = [bP, aP])
                     assert(EllipsoidSurface.UNIT.containsPoint(aP))
                     assert(EllipsoidSurface.UNIT.containsPoint(bP))
-                    return new PICurve(surface, this.asEllipsoidSurface(), aP, bP)
+                    return PICurve.forStartEnd(surface, this.asEllipsoidSurface(), aP, bP)
                 })
-            }).concatenated()
+            })
             const f = (t) => baseCurveLC.at(t).length() - 1
             const fRoots = null
             return curves
@@ -118,7 +118,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
         }
     }
 
-    transform(m4) {
+    transform(m4: M4) {
         return new EllipsoidSurface(
             m4.transformPoint(this.center),
             m4.transformVector(this.f1),
@@ -540,7 +540,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 			f1l = mainAxes.f1.length(),
 			f2l = mainAxes.f2.length(),
 			f3l = mainAxes.f3.length(),
-			[c, b, a] = [f1l, f2l, f3l].sort()
+			[c, b, a] = [f1l, f2l, f3l].sort(MINUS)
 
 		// https://en.wikipedia.org/w/index.php?title=Spheroid&oldid=761246800#Area
 		function spheroidArea(a, c) {

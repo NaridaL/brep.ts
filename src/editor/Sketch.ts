@@ -116,7 +116,7 @@ class Sketch extends Feature {
 		this.b.push(distance)
 		const px = this.varMap.get(point), py = px + 1
 		const lineA_SC = this.worldToSketchMatrix.transformPoint(lineWC.anchor)
-		const lineB_SC = lineA_SC.plus(this.worldToSketchMatrix.transformVector(lineWC.dir1))
+		const lineB_SC = lineA_SC.plus(this.worldToSketchMatrix.transformVector(lineWC.dir))
 		// console.log(lineA_SC, lineB_SC);
 		if (eq0(distance)) {
 			this.F.push(x => distanceLinePointSigned(lineA_SC.x, lineA_SC.y, lineB_SC.x, lineB_SC.y, x[px], x[py]))
@@ -138,7 +138,7 @@ class Sketch extends Feature {
 		console.log('WARGH')
 		// indexes:
 		const ia = this.varMap.get(segment.a), ib = this.varMap.get(segment.b)
-		const lineDirSC = this.worldToSketchMatrix.transformVector(lineWC.dir1)
+		const lineDirSC = this.worldToSketchMatrix.transformVector(lineWC.dir)
 		if (1 == cosAngle || -1 == cosAngle) {
 			this.b.push(0)
 			this.F.push(
@@ -363,7 +363,7 @@ class Sketch extends Feature {
 			//console.log(cst);
 			if (cst.type == 'parallel' || cst.type == 'colinear' || cst.type == 'equalLength') {
 				if (cst.fixed) {
-					let fixed = cst.fixed.getOrThrow(), lineWC
+					let fixed = cst.fixed.getOrThrow(), lineWC: L3
 					if (fixed instanceof Face || fixed instanceof CustomPlane) {
 						const plane = fixed instanceof Face ? fixed.surface.plane : fixed.plane
 						lineWC = this.plane.intersectionWithPlane(plane)
@@ -396,8 +396,7 @@ class Sketch extends Feature {
 						if ('equalLength' == cst.type) {
 							sketch.constrainEqualDistance.apply(sketch,
 								[0, j]
-									.map((segmentsIndex) => cst.segments[segmentsIndex].points)
-									.concatenated()
+									.flatMap((segmentsIndex) => cst.segments[segmentsIndex].points)
 									.map((point) => sketch.varMap.get(point)))
 						}
 					}
@@ -456,9 +455,9 @@ class Sketch extends Feature {
 				/*
 				 constrainAngle2D.apply(undefined,
 				 [0, 1]
-				 .map((whichIndex) => cst.constrains[whichIndex].points).concatenated()
+				 .flatMap((whichIndex) => cst.constrains[whichIndex].points)
 				 .map((point) => varMap.get(point))
-				 .map((pointXCoord) => [pointXCoord, pointXCoord + 1]).concatenated()
+				 .flatMap((pointXCoord) => [pointXCoord, pointXCoord + 1])
 				 .concat(cst.value));
 				 */
 			}

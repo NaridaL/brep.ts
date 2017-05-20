@@ -36,7 +36,7 @@ class ParabolaCurve extends XiEtaCurve {
      * t = -f1 / 2 / f2 (for individual dimensions)
      */
     roots(): [number[], number[], number[]] {
-	    const dimRoots = dim => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)]
+	    const dimRoots = (dim:int) => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)]
 	    return arrayFromFunction(3, dimRoots) as [number[], number[], number[]]
     }
 
@@ -67,7 +67,7 @@ class ParabolaCurve extends XiEtaCurve {
 		// tMin' = pointT(at(tMin)) =
 		const raCenter = this.at(t0)
 		const raF1 = this.tangentAt(t0), raF1Length = raF1.length(), raF11 = raF1.unit()
-		const repos = t => this.at(t).minus(raCenter).dot(raF11)
+		const repos = (t: number) => this.at(t).minus(raCenter).dot(raF11)
 		return new ParabolaCurve(raCenter, raF11, f2.div(raF1Length ** 2), repos(this.tMin), repos(this.tMax))
 	}
 
@@ -83,7 +83,7 @@ class ParabolaCurve extends XiEtaCurve {
 		const f1Length = f1.length()
 		const a = f2.length() / f1Length
 
-		function F(x) {
+		function F(x: number) {
 			return Math.asinh(a * 2 * x) / 4 / a + x * Math.sqrt(1 + a * a * 4 * x * x) / 2
 		}
 
@@ -94,7 +94,7 @@ class ParabolaCurve extends XiEtaCurve {
 		return 1
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, line: L3): ISInfo[] {
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
 		// para: x² = y
 		// line(t) = anchor + t dir
 		// (ax + t dx)² = ay + t dy
@@ -106,7 +106,7 @@ class ParabolaCurve extends XiEtaCurve {
 			.map(tOther => ({
 				tThis: dirLC.x * tOther + anchorLC.x,
 				tOther: tOther,
-				p: line.at(tOther)}))
+				p: L3.at(anchorWC, dirWC, tOther)}))
 	}
 
 	static magic(a: number, b: number, c: number): number[] {

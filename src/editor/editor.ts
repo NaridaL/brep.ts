@@ -177,7 +177,7 @@ function colorFor(highlighted, selected) {
 		: (!highlighted ? 0xFF3399 : 0x330A1E)
 }
 function getAllPoints(sketch) {
-	return sketch.elements.map(segment => segment.points).concatenated()
+	return sketch.elements.flatMap(segment => segment.points)
 }
 function getCachedCurve(other: NameRef|any, plane: P3) {
 	if (other instanceof NameRef) other = other.lastHit
@@ -422,7 +422,7 @@ function isSketchEl(el) {
 }
 
 //var sketchPlane = new CustomPlane(V3(0, 0,1), V3.X, V3.Y, -500, 500, -500, 500, 0xff00ff);
-let editingSketch: Sketch, featureStack = []
+let editingSketch: Sketch, featureStack: Feature[] = []
 function initModel() {
 
 }
@@ -445,7 +445,7 @@ function rebuildModel() {
 
 	namesPublishedBy = new Map()
 	publishedObjects = new Map()
-	function publish(name, object, feature = null) {
+	function publish(name: string, object: any, feature: Feature = null) {
 		if (!namesPublishedBy.has(name)) {
 			namesPublishedBy.set(name, feature)
 			publishedObjects.set(name, object)
@@ -504,19 +504,19 @@ function rebuildModel() {
 }
 // DECLARATIONS
 // GLOBALS
-let setupCameraListener
-let missingEls = [], namesPublishedBy, publishedObjects
+let setupCameraListener: (e: typeof eye) => void
+let missingEls: any[] = [], namesPublishedBy: Map<string, Feature>, publishedObjects: Map<string, any>
 let faces = []
-let highlighted = [], selected = [], paintDefaultColor = 0x000000
+let highlighted: any[] = [], selected: any[] = [], paintDefaultColor = 0x000000
 let gl: LightGLContext
-let modelBREP, brepMesh, brepPoints, planes, brepEdges
-let rebuildLimit = -1, rollBackIndex = -1, featureError
-let drPs = [], drVs: {anchor: V3, dir1: V3, color: int}[] = []
+let modelBREP: B2, brepMesh: Mesh, brepPoints, planes, brepEdges
+let rebuildLimit = -1, rollBackIndex = -1, featureError: Error
+let drPs: V3[] = [], drVs: {anchor: V3, dir1: V3, color: int}[] = []
 
 let eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
-let hoverHighlight = undefined
+let hoverHighlight: any = undefined
 // console.log = oldConsole;
-let modeStack = []
+let modeStack: any[] = []
 let shaders: { [name: string]: Shader } = {}
 
 function renderColor(mesh, color, mode?) {
@@ -644,7 +644,7 @@ CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 function paintLineXY(a, b, color = paintDefaultColor, width = 2) {
 	const ab = b.minus(a)
-	if (ab.isZero()) { return }
+	if (ab.likeO()) { return }
 	const abT = ab.getPerpendicular().toLength(width)
 	//console.log(ab)
 	gl.pushMatrix()
@@ -1161,8 +1161,9 @@ function initPointInfoEvents(_gl = gl) {
 		paintScreen()
 	})
 }
-function initNavigationEvents(_gl = gl, eye, paintScreen) {
+function initNavigationEvents(_gl = gl, eye: {pos: V3, focus: V3, up: V3, zoomFactor: number}, paintScreen: () => void) {
 	const canvas: HTMLCanvasElement = $(_gl.canvas)
+	let lastPos: V3 = V3.O
 	//_gl.onmousedown.push((e) => {
 	//	e.preventDefault()
 	//	e.stopPropagation()
@@ -1171,37 +1172,37 @@ function initNavigationEvents(_gl = gl, eye, paintScreen) {
 	//	e.preventDefault()
 	//	e.stopPropagation()
 	//})
-	_gl.onmousemove.push(function (e) {
-
-		if (e.dragging) {
-
-			//noinspection JSBitwiseOperatorUsage
-			if (e.buttons & 4) {
-				// pan
-				const moveCamera = V(-e.deltaX, e.deltaY, 0).times(2 / _gl.canvas.width)
-				const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
-				const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
-				eye.pos = eye.pos.plus(worldMoveCamera)
-				eye.focus = eye.focus.plus(worldMoveCamera)
-				setupCamera(eye, _gl)
-			}
-			// scene rotation
-			//noinspection JSBitwiseOperatorUsage
-			if (e.buttons & 2) {
-				const rotateLR = -e.deltaX / 6.0 * DEG
-				const rotateUD = -e.deltaY / 6.0 * DEG
-				// rotate
-				let matrix = M4.rotationLine(eye.focus, eye.up, rotateLR)
-				//let horizontalRotationAxis = focus.minus(pos).cross(up)
-				const horizontalRotationAxis = eye.up.cross(eye.pos.minus(eye.focus))
-				matrix = matrix.times(M4.rotationLine(eye.focus, horizontalRotationAxis, rotateUD))
-				eye.pos = matrix.transformPoint(eye.pos)
-				eye.up = matrix.transformVector(eye.up)
-
-				setupCamera(eye, _gl)
-			}
+	canvas.addEventListener('mousemove', e => {
+		const pagePos = V(e.pageX, e.pageY)
+		const delta = lastPos.to(pagePos)
+		//noinspection JSBitwiseOperatorUsage
+		if (e.buttons & 4) {
+			// pan
+			const moveCamera = V(-delta.x * 2 / _gl.canvas.width, delta.y * 2 / _gl.canvas.height)
+			const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
+			const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
+			eye.pos = eye.pos.plus(worldMoveCamera)
+			eye.focus = eye.focus.plus(worldMoveCamera)
+			setupCamera(eye, _gl)
+			paintScreen()
 		}
-		paintScreen()
+		// scene rotation
+		//noinspection JSBitwiseOperatorUsage
+		if (e.buttons & 2) {
+			const rotateLR = -delta.x / 6.0 * DEG
+			const rotateUD = -delta.y / 6.0 * DEG
+			// rotate
+			let matrix = M4.rotationLine(eye.focus, eye.up, rotateLR)
+			//let horizontalRotationAxis = focus.minus(pos).cross(up)
+			const horizontalRotationAxis = eye.up.cross(eye.pos.minus(eye.focus))
+			matrix = matrix.times(M4.rotationLine(eye.focus, horizontalRotationAxis, rotateUD))
+			eye.pos = matrix.transformPoint(eye.pos)
+			eye.up = matrix.transformVector(eye.up)
+
+			setupCamera(eye, _gl)
+			paintScreen()
+		}
+		lastPos = pagePos
 	})
 	canvas.addEvent('mousewheel', function (e) {
 		//console.log(e)
@@ -1442,12 +1443,14 @@ function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points
 					checkEl(edge, t - prio)
 				}
 			} else {
-				const projCurve = curve.project(projPlane)
-				const curveT = edge.clampedT(projCurve.closestTToPoint(projPoint))
-				const p = curve.at(curveT)
-				const t = mouseLine.pointT(p)
-				if (projCurve.at(curveT).distanceTo(projPoint) < mindist) {
-					checkEl(edge, t - prio)
+				if (!(curve instanceof ImplicitCurve)) {
+					const projCurve = curve.project(projPlane)
+					const curveT = edge.clampedT(projCurve.closestTToPoint(projPoint))
+					const p = curve.at(curveT)
+					const t = mouseLine.pointT(p)
+					if (projCurve.at(curveT).distanceTo(projPoint) < mindist) {
+						checkEl(edge, t - prio)
+					}
 				}
 			}
 		}
@@ -1624,7 +1627,7 @@ function setupSelectors(el, feature, mode) {
 		})
 
 }
-function featureDelete(feature) {
+function featureDelete(featur: Feature) {
 	const correspondingMode = modeStack.find(mode => mode.feature && mode.feature == feature)
 	correspondingMode && modeEnd(correspondingMode)
 
@@ -1769,11 +1772,11 @@ function makeGroup(type) {
 	const els = selected.filter((el) => el instanceof SketchLineSeg || ('equalLength' != type && isFixed(el)))
 	if (els.length < 2) return
 
-	const newGroup = els.map(el => {
+	const newGroup = els.flatMap(el => {
 		if (isFixed(el)) el = NameRef.forObject(el)
 		const c = getGroupConstraint(el, editingSketch, type)
 		return c ? c.cs : el
-	}).concatenated().unique()
+	}).unique()
 	const fixeds = newGroup.filter(el => el instanceof NameRef)
 	if (1 < fixeds.length) {
 		throw new Error('cannot have two fixed')
@@ -2081,7 +2084,7 @@ class Rotate extends Feature {
 		const rads = min(TAU, abs(feature.end - feature.start))
 		// TODO: test for self-intersection of edgeloop
 		if (new PlaneSurface(P3.ZX, loopSketch.right, loopSketch.up).edgeLoopCCW(edgeLoopXZ)) {
-			edgeLoopXZ = Edge.reverseLoop(edgeLoopXZ)
+			edgeLoopXZ = Edge.reversePath(edgeLoopXZ)
 		}
 		//console.log(polygonPoints.map(v =>v.$))
 		const length = feature.end - feature.start
@@ -2244,7 +2247,7 @@ interface Mode {
 }
 
 
-function tooltipShow(htmlContent, x, y) {
+function tooltipShow(htmlContent: string, x, y) {
 	const tipWrap = $('tip-wrap') as HTMLDivElement
 	assert(tipWrap)
 	const tip = $('tip') as HTMLDivElement
@@ -2355,8 +2358,9 @@ function unserialize(string) {
 			return v
 		} else if ('object' == typeof v && null != v) {
 			if ('#PROTO' in v) {
-				const proto = window[v['#PROTO']] || CLASSES[v['#PROTO']] || eval(v['#PROTO'])
-				assert(proto, v['#PROTO'] + ' Missing ' + window[v['#PROTO']])
+				const protoName = v['#PROTO'] as string
+				const proto = window[protoName] || CLASSES[protoName] || /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/.test(protoName) && eval(protoName)
+				assert(proto, protoName + ' Missing ' + window[protoName])
 				const result = Object.create((proto).prototype)
 				const keys = Object.keys(v)
 				for (let i = 0; i < keys.length; i++) {

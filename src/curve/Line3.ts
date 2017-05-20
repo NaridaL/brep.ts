@@ -86,13 +86,13 @@ class L3 extends Curve {
 		//return x.minus(this.anchor).cross(x.minus(this.anchor.plus(this.dir1))).length()
 	}
 
-	asSegmentDistanceToPoint(x, sStart, sEnd) {
+	asSegmentDistanceToPoint(x: V3, sStart: number, sEnd: number) {
 		let t = x.minus(this.anchor).dot(this.dir1)
 		t = clamp(t, sStart, sEnd)
 		return this.at(t).minus(x).length()
 	}
 
-	asSegmentDistanceToLine(line, sStart, sEnd) {
+	asSegmentDistanceToLine(line: L3, sStart: number, sEnd: number) {
 		assertInst(L3, line)
 		const dirCross = this.dir1.cross(line.dir1)
 		const div = dirCross.squared()
@@ -157,7 +157,7 @@ class L3 extends Curve {
 
 	isInfosWithCurve(curve: Curve) {
 		assertInst(L3, curve)
-
+		curve = (curve as L3)
 		const dirCross = this.dir1.cross(curve.dir1)
 		const div = dirCross.squared()
 		if (eq0(div)) {
@@ -279,7 +279,7 @@ class L3 extends Curve {
 		return this.dir1
 	}
 
-	intersectWithPlaneLambda(plane): number {
+	isTWithPlane(plane: P3): number {
 		// plane: plane.normal1 * p = plane.w
 		// line: p=line.point + lambda * line.dir1
 		const div = plane.normal1.dot(this.dir1)
@@ -293,14 +293,14 @@ class L3 extends Curve {
 	}
 
 	isTsWithPlane(plane: P3) {
-		return [this.intersectWithPlaneLambda(plane)]
+		return [this.isTWithPlane(plane)]
 	}
 
 	flipped() {
 		return new L3(this.anchor, this.dir1.negated())
 	}
 
-	transform(m4: M4): this {
+	transform(m4: M4) {
 		const newAnchor = m4.transformPoint(this.anchor)
 		const newDir = m4.transformVector(this.dir1)
 		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length())
@@ -313,9 +313,13 @@ class L3 extends Curve {
 	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
 
 
-	static pointTNotNormalized(anchor, dir, x) {
+	static pointT(anchor: V3, dir: V3, x: V3) {
 		assertVectors(anchor, dir, x)
 		return x.minus(anchor).dot(dir) / dir.squared()
+	}
+
+	static at(anchor: V3, dir: V3, t: number) {
+		return anchor.plus(dir.times(t))
 	}
 
 	hashCode(): int {
@@ -337,5 +341,10 @@ class L3 extends Curve {
 	static readonly Y: L3 = new L3(V3.O, V3.Y)
 	static readonly Z: L3 = new L3(V3.O, V3.Z)
 
+	static containsPoint(anchor: V3, dir: V3, p: V3) {
+		const closestT = L3.pointT(anchor, dir, p)
+		const distance = L3.at(anchor, dir, closestT).distanceTo(p)
+		return eq0(distance)
+	}
 }
 L3.prototype.hlol = Curve.hlol++

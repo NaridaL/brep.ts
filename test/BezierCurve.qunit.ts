@@ -6,7 +6,7 @@
 
 	QUnit.testDifferentSystems('BezierCurve.isTsWithSurface(SemiCylinderSurface)', function (assert, m4) {
 		let bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3).rotateX(15 * DEG).translate(0, 0, 100).transform(m4)
-		let cyl = new SemiCylinderSurface(SemiEllipseCurve.forAB(4, 1).rotateY(10 * DEG), V3.Z).transform(m4)
+		let cyl = new SemiCylinderSurface(SemiEllipseCurve.forAB(4, 1).rotateY(10 * DEG), V3.Z, undefined, undefined).transform(m4)
 		testISTs(assert, bez, cyl, 3)
 	})
 
@@ -111,6 +111,12 @@
 			// TODO
 			//testISTs(assert, curve.translate(-0.00635), s, 3)
 			//console.log(arrayRange(-0.00640, -0.00630, 0.000005).map(i => curve.translate(i).isTsWithSurface(s).length))
+		},
+		'isInfosWithEllipseCurve'(assert) {
+			const bc = new BezierCurve(V(2, 0, 1.2185119342628936),V(1, 0, 0.8800363969676455),V(-1, 0, 0.5415608596723974),V(-2, 0, 0.2030853223771491),-0.10000000000000009,1.1)
+			const sec = new SemiEllipseCurve(V3.O, V3.X, V3.Z)
+			//const curve = ParabolaCurve.XY.asBezier().scale(5).translate(0, 1)
+			testCurveISInfos(assert, bc, sec, 2)
 		},
 	})
 }

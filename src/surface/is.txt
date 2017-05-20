@@ -1,0 +1,8 @@
+            Conic       Cyl         SemiCyl         Plane       RotRFZ      Ellipsoid       SemiEll
+Conic
+Cyl
+SemiCyl
+Plane       <
+RotRFZ
+Ellipsoid
+SemiEll

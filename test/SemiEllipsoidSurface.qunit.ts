@@ -60,7 +60,19 @@
 		'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface one isCurve cross y = 0 twice, one isCurve y > 0'(assert) {
 			const s1 = SemiEllipsoidSurface.UNIT
 			const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-			testISCurves(assert, s1, s2.translate(0.2).rotateZ(90 * DEG).rotateX(80 * DEG), 3)
+			testISCurves(assert, s1, s2.translate(0.2).rotateZ(90 * DEG).rotateX(80 * DEG), 2)
+		},
+		'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface'(assert) {
+			const s1 = SemiEllipsoidSurface.UNIT.rotateZ(PI).flipped()
+			const s2 = new ProjectedCurveSurface(BezierCurve.QUARTER_CIRCLE, V3.Z, undefined, undefined, -2, 2)
+				.scale(0.2, 0.2, 2)
+				.translate(0.1, -0.1, 1.2)
+			testISCurves(assert, s1, s2, 2)
+		},
+		'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface 2'(assert) {
+			const s1 = SemiEllipsoidSurface.UNIT
+			const s2 = new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2),V(0.30000000000000004, 0.010456949966158674, 1.2),V(0.2104569499661587, 0.1, 1.2),V(0.10000000000000002, 0.1, 1.2),0,1),V(0, 0, 2),0,1,-1,0)
+			testISCurves(assert, s1, s2, 1)
 		},
 		'loopCCW'(assert) {
 			const s1 = SemiEllipsoidSurface.UNIT
@@ -70,7 +82,7 @@
 					new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
 					V(0.7084172378801449, 0.2005401547874497, 0),
 					V(1, 0.20120122195537427, 0), 0.01, 1),
-					V(0.047968750000000004, 0.010000000000000009, 0.9987987780446257), V(-0.032863624384797126, 4.024633241122271e-18, 0.9994598452125503), 29.159020715355332, 0, null, V(-0.003388613668575339, 0, 0.00016274305244215148), V(-0.002184873829710333, -0.0006707444983087241, -0.00007184167849434948)),
+					V(0.047968750000000004, 0.010000000000000009, 0.9987987780446257), V(-0.032863624384797126, 4.024633241122271e-18, 0.9994598452125503), 30, 0, null, V(-0.003388613668575339, 0, 0.00016274305244215148), V(-0.002184873829710333, -0.0006707444983087241, -0.00007184167849434948)),
 				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -1), V(-1, 1.2246467991473532e-16, 0), 0, 3.141592653589793), V(-0.032863624384797126, 4.024633241122271e-18, 0.9994598452125503), V(0, 0, 1), 3.108723110778215, 3.141592653589793, null, V(0.9994598452125503, -1.2239853003158589e-16, 0.032863624384797126), V(1, -1.2246467991473532e-16, 0)),
 				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -1), V(1, 0, 0)), V(0, 0, 1), V(0.11093749999999993, 0, 0.9938273849586506), 3.141592653589793, 3.030426330354509, null, V(1, 0, 0), V(0.9938273849586506, 0, -0.11093749999999993)),
 				new PCurveEdge(new SemiEllipseCurve(V(0.11093750000000002, 0, 0), V(0, 0, 0.9938273849586506), V(0, 0.9938273849586506, 0), 0, 3.141592653589793), V(0.11093749999999993, 0, 0.9938273849586506), V(0.11093750000000002, 0.010000000000000009, 0.9937770731375071), 0, 0.010062279327831384, null, V(0, 0.9938273849586506, 0), V(0, 0.993777073137507, -0.010000000000000007)),

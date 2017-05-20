@@ -56,13 +56,18 @@ function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, faceConstru
     assertf(() => 1 == assembledFaces.length)
     return assembledFaces[0]
 }
-
-function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], faceNormalAtCurrentB: V3): int {
-	let minValue = -20, advanced = false, result = Number.MAX_SAFE_INTEGER
-	const normVector = currentEdge.bDir.negated().cross(faceNormalAtCurrentB)
+/**
+ * ## Markdown header
+ * ![foo](screenshots/Capture.PNG)
+ * {@link ../screenshots/Capture.PNG}
+ * find the next edge with the MAXIMUM angle
+ */
+function calcNextEdgeIndex(currentEdge: Edge , possibleEdges: Edge[], faceNormalAtCurrentB: V3): int {
+	let maxValue = -20, advanced = false, result = Number.MAX_SAFE_INTEGER
+	const normVector = currentEdge.bDir.cross(faceNormalAtCurrentB)
 	const eps = 1e-4
 	const dir = sign(currentEdge.deltaT())
-	const ecd = -currentEdge.curve.diff(currentEdge.bT, - dir * eps).dot(normVector)
+	const ecd = currentEdge.curve.diff(currentEdge.bT, - dir * eps).dot(normVector)
 	for (let i = possibleEdges.length ; i--;) {
 		const edge = possibleEdges[i]
 		const angle1 = currentEdge.bDir.negated().angleRelativeNormal(edge.aDir, faceNormalAtCurrentB)
@@ -72,17 +77,18 @@ function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], faceNormalA
 			if (currentEdge.curve.isColinearTo(edge.curve)) {
 				continue
 			}
-			const dirFactor = -sign(currentEdge.bDir.dot(edge.curve.tangentAt(edge.aT)))
-			const iscd = edge.curve.at(edge.aT).to(edge.curve.at(edge.aT + dirFactor* eps)).dot(normVector)
+			const edgeDir = sign(edge.deltaT())
+			const iscd = edge.curve.diff(edge.aT, edgeDir * eps).dot(normVector)
 			const diff = (iscd - ecd)
-			if (diff > 0 && (!advanced || diff > minValue)) {
+			// if diff > 0, the angle is actually ~= 0
+			if (diff < 0 && (!advanced || diff > maxValue)) {
 				advanced = true
-				minValue = diff
+				maxValue = diff
 				result = i
 			}
 		} else if (!advanced) {
-			if (gt(angle, minValue)) {
-				minValue = angle
+			if (gt(angle, maxValue)) {
+				maxValue = angle
 				result = i
 			}
 		}
@@ -165,7 +171,7 @@ class B2 extends Transformable {
             if (faceGroup.length == 1) {
                 newFaces.push(faceGroup[0])
             } else {
-                const allEdges = faceGroup.map(face => face.getAllEdges()).concatenated()
+                const allEdges = faceGroup.flatMap(face => face.getAllEdges())
                 for (let i = allEdges.length; i-- > 0;) {
                     for (let j = 0; j < i; j++) {
                         console.log('blugh', total)
@@ -230,9 +236,9 @@ class B2 extends Transformable {
             this.generator && other.generator && this.generator + '.xor(' + other.generator + ')')
     }
 
-    equals(brep): boolean {
-        return this.faces.length == brep.faces.length &&
-            this.faces.every((face) => brep.faces.some((face2) => face.equals(face2)))
+    equals(obj: any): boolean {
+        return this.faces.length == obj.faces.length &&
+            this.faces.every((face) => obj.faces.some((face2) => face.equals(face2)))
     }
 
     like(brep): boolean {
@@ -327,14 +333,15 @@ class B2 extends Transformable {
      *
      */
     reconstituteFaces(oldFaces: Face[],
-                      edgeSubEdges,
+                      edgeSubEdges: Map<Edge, Edge[]>,
                       faceMap: Map<Face, Edge[]>,
                       newFaces: Face[],
                       infoFactory: FaceInfoFactory<any>): void {
+
         const oldFaceStatuses: Map<Face, string> = new Map()
         // reconstitute faces
-        const insideEdges = []
-        oldFaces.forEach((face, faceIndex) => {
+        const insideEdges: Edge[] = []
+        for (const face of oldFaces) {
             const usableOldEdges = face.getAllEdges().filter(edge => !edgeSubEdges.get(edge))
             const subEdges = face.getAllEdges().mapFilter(edge => edgeSubEdges.get(edge)).concatenated()
             const newEdges = faceMap.get(face) || []
@@ -346,16 +353,17 @@ class B2 extends Transformable {
                 // have been visited when starting a loop search with a new edge, OR they can be stranded, OR they can
                 // remain in their old loop
                 function getNextStart() {
-                    return newEdges.find(edge => !visitedEdges.has(edge))
-                        || subEdges.find(edge => !visitedEdges.has(edge))
-                        || usableOldEdges.find(edge => !visitedEdges.has(edge))
+                   return newEdges.find(edge => !visitedEdges.has(edge))
+                    || subEdges.find(edge => !visitedEdges.has(edge))
+                    || usableOldEdges.find(edge => !visitedEdges.has(edge))
                 }
                 const visitedEdges = new Set()
 
                 // search for a loop:
                 let currentEdge: Edge
                 while (currentEdge = getNextStart()) {
-                    let startEdge = currentEdge, edges = [], i = 0
+                    const startEdge = currentEdge, edges = []
+	                let i = 0
                     // wether only new edges are used (can include looseSegments)
                     do {
                         visitedEdges.add(currentEdge)
@@ -386,15 +394,13 @@ class B2 extends Transformable {
                         loops.push(edges)
                     }
                 }
-
-                const faceNewFaces = B2.assembleFacesFromLoops(loops, face.surface,
-	                face, infoFactory)
+	            const faceNewFaces = B2.assembleFacesFromLoops(loops, face.surface, face, infoFactory)
                 newFaces.pushAll(faceNewFaces)
-                const faceNewFacesEdges = faceNewFaces.map(face => face.getAllEdges()).concatenated()
+                const faceNewFacesEdges = faceNewFaces.flatMap(face => face.getAllEdges())
                 insideEdges.pushAll(usableOldEdges.filter(edge => faceNewFacesEdges.includes(edge)))
             }
-        })
-        while (insideEdges.length != 0) {
+        }
+	    while (insideEdges.length != 0) {
             const insideEdge = insideEdges.pop()
             const adjacentFaces = this.edgeFaces.get(insideEdge.getCanon())
             adjacentFaces.forEach(info => {
@@ -407,39 +413,39 @@ class B2 extends Transformable {
         newFaces.pushAll(oldFaces.filter(face => oldFaceStatuses.get(face) == 'inside'))
     }
 
-    reconstituteCoplanarFaces(likeSurfacePlanes, edgeLooseSegments, faceMap, newFaces) {
-        likeSurfacePlanes.forEach(faceGroup => {
-            // calculate total contours
-            let surface = faceGroup[0].surface, bag = []
-            faceGroup.forEach(face => {
-                Array.prototype.push.apply(bag, faceMap(face))
-                face.getAllEdges().forEach(edge => {
-                    let edgeSubSegments
-                    if (edgeSubSegments = edgeLooseSegments.get(edge)) {
-                        Array.prototype.push.apply(bag, edgeSubSegments)
-                    } else {
-                        bag.push(edge)
-                    }
-                })
-            })
-            let currentEdge, loops = []
-            while (currentEdge = bag.find(edge => !edge.visited)) {
-                let path = []
-                do {
-                    currentEdge.visited = true
-                    path.push(currentEdge)
-                    let possibleNextEdges = bag.filter(edge => currentEdge.b.like(edge.a))
-                    // lowest angle, i.e. the right-most next edge
-                    let nextEdgeIndex = possibleNextEdges.indexWithMax((edge, index) => -currentEdge.bDir.angleRelativeNormal(edge.aDir, surface.normalP(currentEdge.b)))
-                    currentEdge = possibleNextEdges[nextEdgeIndex]
-                } while (!currentEdge.visited)
-                let startIndex = path.find(currentEdge)
-                if (-1 != startIndex) {
-                    loops.push(path.slice(startIndex))
-                }
-            }
-        })
-    }
+    //reconstituteCoplanarFaces(likeSurfacePlanes, edgeLooseSegments, faceMap, newFaces) {
+    //    likeSurfacePlanes.forEach(faceGroup => {
+    //        // calculate total contours
+    //        let surface = faceGroup[0].surface, bag = []
+    //        faceGroup.forEach(face => {
+    //            Array.prototype.push.apply(bag, faceMap(face))
+    //            face.getAllEdges().forEach(edge => {
+    //                let edgeSubSegments
+    //                if (edgeSubSegments = edgeLooseSegments.get(edge)) {
+    //                    Array.prototype.push.apply(bag, edgeSubSegments)
+    //                } else {
+    //                    bag.push(edge)
+    //                }
+    //            })
+    //        })
+    //        let currentEdge, loops = []
+    //        while (currentEdge = bag.find(edge => !edge.visited)) {
+    //            let path = []
+    //            do {
+    //                currentEdge.visited = true
+    //                path.push(currentEdge)
+    //                let possibleNextEdges = bag.filter(edge => currentEdge.b.like(edge.a))
+    //                // lowest angle, i.e. the right-most next edge
+    //                let nextEdgeIndex = possibleNextEdges.indexWithMax((edge, index) => -currentEdge.bDir.angleRelativeNormal(edge.aDir, surface.normalP(currentEdge.b)))
+    //                currentEdge = possibleNextEdges[nextEdgeIndex]
+    //            } while (!currentEdge.visited)
+    //            let startIndex = path.find(currentEdge)
+    //            if (-1 != startIndex) {
+    //                loops.push(path.slice(startIndex))
+    //            }
+    //        }
+    //    })
+    //}
 
     getLooseEdgeSegments(
         edgePointInfoss: CustomMap<Edge, IntersectionPointInfo[]>,
@@ -501,7 +507,7 @@ class B2 extends Transformable {
     }
 
     static join(b2s: B2[], generator?: string) {
-        return new B2(b2s.map(b2 => b2.faces).concatenated(), false, generator)
+        return new B2(b2s.flatMap(b2 => b2.faces), false, generator)
     }
 
     shellCount(): int {
@@ -531,7 +537,7 @@ class B2 extends Transformable {
 
 	assertSanity(): void {
         if (!NLA_DEBUG) return
-		const allFaceEdges = this.faces.map(face => face.getAllEdges()).concatenated()
+		const allFaceEdges = this.faces.flatMap(face => face.getAllEdges())
 		for (const {i, j} of combinations(allFaceEdges.length)) {
 			const a = allFaceEdges[i], b = allFaceEdges[j]
 			//assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
@@ -626,7 +632,7 @@ class B2 extends Transformable {
         for (const edge of otherEdgePoints.keys()) {
             assert(other.edgeFaces.get(edge))
         }
-        const newFaces = []
+        const newFaces: Face[] = []
 
         if (0 == faceMap.size && 0 == thisEdgePoints.size && 0 == otherEdgePoints.size) {
             const thisInOther = other.containsPoint(this.faces[0].contour[0].a, true)
@@ -644,7 +650,7 @@ class B2 extends Transformable {
                 const els = other.faces.map(face => [face,
                     Array.from(edgeLooseSegments.entries())
                         .filter(([edge, subs]) => face.getAllEdges().some(e => e.equals(edge)))
-                        .map(([edge, subs]) => subs).concatenated()])
+                        .flatMap(([edge, subs]) => subs)])
                 other.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
             }
         }
@@ -715,7 +721,7 @@ class B2 extends Transformable {
     //
     //}
 
-    transform(m4: M4, desc?: string): this {
+    transform(m4: M4, desc?: string) {
 
         let vertexNames: Map<V3,string>
         if (this.vertexNames) {
@@ -1215,8 +1221,8 @@ function fff(info: {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reve
     }
     assert(false)
 }
-function makeLink(values) {
-	return 'viewer.html?' + Object.getOwnPropertyNames(values).map(name => {
+function makeLink(values: any) {
+	return 'viewer.html#' + Object.getOwnPropertyNames(values).map(name => {
 			const val = values[name]
 			return name + '=' + (typeof val == 'string' ? val : val.toSource())
 		}).join(';')
@@ -1332,117 +1338,155 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
 }
 
 
-/*
- implicitCurve: (s: number, t: number) => number,
- sStart: number, tStart: number,
- step_size: number,
- dids: (s, t) => number,
- didt: (s, t) => number,
- */
-function followAlgorithm2d(implicitCurve: (s: number, t: number) => number,
+//function followAlgorithm2d(implicitCurve: (s: number, t: number) => number,
+//                           start: V3,
+//                           stepLength: number = 0.5,
+//                           dids: (s: number, t: number) => number,
+//                           didt: (s: number, t: number) => number,
+//                           bounds: (s: number, t: number) => boolean,
+//                           endp: V3 = start): {points: V3[], tangents: V3[]} {
+//	assertNumbers(stepLength, implicitCurve(0, 0))
+//	assertVectors(start)
+//	//assert (!startDir || startDir instanceof V3)
+//	const points = []
+//	//let tangents = tangents || []
+//	const tangents = []
+//	assert (eq02(implicitCurve(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+//	const eps = stepLength / 32
+//	let p = start, prevp = p
+//	let i = 0
+//	do {
+//		const dfpdx = dids(p.x, p.y), dfpdy = didt(p.x, p.y)
+//		let tangent = new V3(-dfpdy, dfpdx, 0)
+//		const reversedDir = p.minus(prevp).dot(tangent) < 0
+//		tangent = tangent.toLength(stepLength)
+//		const tangentEndPoint = p.plus(tangent)
+//		points.push(p)
+//		tangents.push(tangent)
+//		prevp = p
+//		let newP = curvePoint(implicitCurve, tangentEndPoint, dids, didt)
+//		if (newP.equals(p)) {
+//			assertNever()
+//		}
+//		p = newP
+//		assert(eq0(implicitCurve(p.x, p.y)))
+//	} while (i++ < 1000 && (i < 4 || prevp.distanceTo(endp) > stepLength && bounds(p.x, p.y)))
+//	assert(i != 1000)
+//	//assert(bounds(p.x, p.y))
+//	const end = (i < 4 || prevp.distanceTo(endp) > stepLength) ? p : endp
+//	const endTangent = new V3(-didt(end.x, end.y), dids(end.x, end.y), 0).toLength(stepLength)
+//	points.push(end)
+//	tangents.push(endTangent)
+//
+//	//assert(points.length > 6)
+//	// TODO gleichmäßige Verteilung der Punkte
+//	return {points, tangents}
+//}
+function followAlgorithm2d(ic: MathFunctionR2_R,
                            start: V3,
                            stepLength: number = 0.5,
-                           dids: (s, t) => number,
-                           didt: (s, t) => number,
-                           bounds: (s, t) => boolean,
+                           bounds: (s: number, t: number) => boolean,
                            endp: V3 = start): {points: V3[], tangents: V3[]} {
-	assertNumbers(stepLength, implicitCurve(0, 0))
+	assertNumbers(stepLength, ic(0, 0))
 	assertVectors(start)
 	//assert (!startDir || startDir instanceof V3)
 	const points = []
 	//let tangents = tangents || []
 	const tangents = []
-	assert (eq02(implicitCurve(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	assert (eq02(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
 	const eps = stepLength / 32
-	let p = start, prevp = p
+	let p = start, prevp = p, prevTangent = V3.O, broke = false
 	let i = 0
 	do {
-		const dfpdx = dids(p.x, p.y), dfpdy = didt(p.x, p.y)
+		const dfpdx = ic.x(p.x, p.y), dfpdy = ic.y(p.x, p.y)
 		let tangent = new V3(-dfpdy, dfpdx, 0)
 		const reversedDir = p.minus(prevp).dot(tangent) < 0
 		tangent = tangent.toLength(stepLength)
+		if (prevTangent.dot(tangent) < 0) {
+			// singularity
+			const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y)
+			if (eq0(ic(singularity.x, singularity.y)) && singularity.distanceTo(p) < abs(stepLength)) {
+                // end on this point
+                points.push(singularity)
+                tangents.push(p.to(singularity))
+                broke = true
+                break
+            } else {
+				throw new Error()
+			}
+		}
 		const tangentEndPoint = p.plus(tangent)
 		points.push(p)
 		tangents.push(tangent)
 		prevp = p
-		let newP = curvePoint(implicitCurve, tangentEndPoint, dids, didt)
+        prevTangent = tangent
+		const newP = curvePointMF(ic, tangentEndPoint)
+		if (newP.equals(p)) {
+			assertNever()
+		}
+		p = newP
+		assert(eq0(ic(p.x, p.y)))
+	} while (++i < 1000 && (i < 4 || prevp.distanceTo(endp) > stepLength && bounds(p.x, p.y)))
+	assert(i != 1000)
+	//assert(bounds(p.x, p.y))
+    if (!broke) {
+        const end = (i < 4 || prevp.distanceTo(endp) > stepLength) ? p : endp
+        const endTangent = new V3(-ic.y(end.x, end.y), ic.x(end.x, end.y), 0).toLength(stepLength)
+        points.push(end)
+        tangents.push(endTangent)
+    }
+
+	//assert(points.length > 6)
+	// TODO gleichmäßige Verteilung der Punkte
+	return {points, tangents}
+}
+function followAlgorithm2dAdjustable(ic: MathFunctionR2_R,
+                                     start: V3,
+                                     stepLength: number = 0.5,
+                                     bounds: (s: number, t: number) => boolean,
+                                     endp: V3 = start): {points: V3[], tangents: V3[]} {
+	assertNumbers(stepLength, ic(0, 0))
+	assertVectors(start)
+	//assert (!startDir || startDir instanceof V3)
+	const points = []
+	//let tangents = tangents || []
+	const tangents = []
+	assert (eq02(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	const eps = stepLength / 32
+	let p = start, prevp = p
+	let i = 0
+	do {
+		const dfpdx = ic.x(p.x, p.y), dfpdy = ic.y(p.x, p.y)
+        const dfpdxx = ic.xx(p.x, p.y), dfpdyy = ic.yy(p.x, p.y), dfpdxy = ic.xy(p.x, p.y)
+		const c2factor = abs((dfpdy ** 2 * dfpdxx - 2 * dfpdx * dfpdy * dfpdxy + dfpdx ** 2 * dfpdyy) /
+								(dfpdx ** 2 + dfpdy ** 2) ** 2)
+		const c2 = new V3(dfpdx, dfpdy, 0).times(c2factor)
+		const s = 1 / 16 / c2.length()
+		const tangent = new V3(-dfpdy, dfpdx, 0).unit()
+		const reversedDir = p.minus(prevp).dot(tangent) < 0
+		const newPStart = p.plus(tangent.times(s).plus(c2.times(s ** 2 / 2)))
+		points.push(p)
+		tangents.push(tangent)
+		prevp = p
+		const newP = curvePointMF(ic, newPStart)
         if (newP.equals(p)) {
             assertNever()
         }
-        p = newP
-		assert(eq0(implicitCurve(p.x, p.y)))
-	} while (i++ < 1000 && (i < 4 || p.distanceTo(start) > stepLength) && bounds(p.x, p.y))
+		console.log(p.to(newP).length())
+		p = newP
+
+		assert(eq0(ic(p.x, p.y)))
+	} while (i++ < 1000 && (i < 4 || prevp.distanceTo(endp) > stepLength) && bounds(p.x, p.y))
 	assert(i != 1000)
 	//assert(bounds(p.x, p.y))
-	const end = p
-	const endTangent = new V3(-didt(end.x, end.y), dids(end.x, end.y), 0).toLength(stepLength)
+	const end = (i < 4 || prevp.distanceTo(endp) > stepLength) ? p : endp
+	const endTangent = new V3(-ic.y(end.x, end.y), ic.x(end.x, end.y), 0).toLength(stepLength)
 	points.push(end)
 	tangents.push(endTangent)
 
 	//assert(points.length > 6)
 	// TODO gleichmäßige Verteilung der Punkte
 	return {points, tangents}
-}
-function followAlgorithm2 (implicitCurve, startPoint, endPoint, stepLength, startDir, tangents, boundsFunction, dir, didx, didy) {
-    assertNumbers(stepLength, implicitCurve(0, 0))
-    assertVectors(startPoint, endPoint)
-    assert (!startDir || startDir instanceof V3)
-    const points = []
-    tangents = tangents || []
-    assert (eq0(implicitCurve(startPoint.x, startPoint.y)), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
-    stepLength = stepLength || 0.5
-    const eps = stepLength / 32
-    let p = startPoint, prevp = startDir ? p.minus(startDir) : p
-    let i = 0
-    do {
-        const fp = implicitCurve(p.x, p.y)
-        const dfpdx = didx(p.x, p.y), dfpdy = didy(p.x, p.y)
-        let tangent = new V3(-dfpdy, dfpdx, 0)
-        const reversedDir = p.minus(prevp).dot(tangent) < 0
-        tangent = tangent.toLength(dir * stepLength)
-        const tangentEndPoint = p.plus(tangent)
-        points.push(p)
-        tangents.push(tangent)
-        prevp = p
-        p = curvePoint(implicitCurve, tangentEndPoint)
-    } while (i++ < 1000 && (i < 4 || p.distanceTo(endPoint) > stepLength) && boundsFunction(p.x, p.y))
-	assert(i != 1000)
-	assert(boundsFunction(p.x, p.y))
-	const endPointTangent = new V3(-didy(endPoint.x, endPoint.y), didx(endPoint.x, endPoint.y), 0)
-	points.push(endPoint)
-	tangents.push(endPointTangent)
-
-    //assert(points.length > 6)
-    // TODO gleichmäßige Verteilung der Punkte
-    return points
-}
-function followAlgorithm (implicitCurve, startPoint, endPoint, stepLength, startDir, tangents, boundsFunction, dir) {
-    assertNumbers(stepLength, implicitCurve(0, 0))
-    assertVectors(startPoint, endPoint)
-    assert (!startDir || startDir instanceof V3)
-    const points = []
-    tangents = tangents || []
-    assert (eq0(implicitCurve(startPoint.x, startPoint.y)), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
-    stepLength = stepLength || 0.5
-    const eps = stepLength / 32
-    let p = startPoint, prevp = startDir ? p.minus(startDir) : p
-    let i = 0
-    do {
-        const fp = implicitCurve(p.x, p.y)
-        const dfpdx = (implicitCurve(p.x + eps, p.y) - fp) / eps,
-            dfpdy = (implicitCurve(p.x, p.y + eps) - fp) / eps
-        let tangent = new V3(-dfpdy, dfpdx, 0)
-        const reversedDir = p.minus(prevp).dot(tangent) < 0
-        tangent = tangent.toLength(dir * stepLength)
-        const tangentEndPoint = p.plus(tangent)
-        points.push(p)
-        tangents.push(tangent)
-        prevp = p
-        p = curvePoint(implicitCurve, tangentEndPoint)
-    } while (i++ < 1000 && (i < 4 || prevp.distanceTo(endPoint) > 0.5 * stepLength) && boundsFunction(p.x, p.y))
-    //assert(points.length > 6)
-    // TODO gleichmäßige Verteilung der Punkte
-    return points
 }
 // both curves must be in the same s-t coordinates for this to make sense
 function intersectionICurveICurve(
@@ -1505,9 +1549,6 @@ function intersectionPCurveISurface(parametricCurve, searchStart, searchEnd, sea
 }
 function intersectionICurvePSurface(f0, f1, parametricSurface) {
 
-}
-function cassini(a: number, c: number): (x: number, y: number) => number {
-	return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
 }
 
 

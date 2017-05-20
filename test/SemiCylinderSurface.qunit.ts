@@ -2,18 +2,18 @@
 	QUnit.module('SemiCylinderSurface')
 	registerTests({
 		'testSurface'(assert) {
-			const ps = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, 0, 1)
+			const ps = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 			testParametricSurface(assert, ps)
 			testParametricSurface(assert, ps.rotateZ(PI))
 		},
 		'is curves w/ SemiCylinderSurface'(assert) {
 			const cyl = SemiCylinderSurface.UNIT.scale(5,5,1)
-			const ell = new SemiCylinderSurface(new SemiEllipseCurve(V(6, 1, 4), V(3, 1, 4), V(4, 0, 0)), V3.Z)
+			const ell = new SemiCylinderSurface(new SemiEllipseCurve(V(6, 1, 4), V(3, 1, 4), V(4, 0, 0)), V3.Z, undefined, undefined)
 			testISCurves(assert, cyl, ell, 1)
 		},
 		'is curves w/ SemiCylinderSurface 2'(assert) {
 			const cyl = SemiCylinderSurface.UNIT.scale(5,5,1)
-			const scs = new SemiCylinderSurface(new SemiEllipseCurve(V(-1.5, 2.5980762113533173, 0), V(1.250, 2.1650635094610964, 0), V(-2.165063509461096, 1.25, 0), 0, 3.141592653589793), V(0, 0, -1), -2, 2)
+			const scs = new SemiCylinderSurface(new SemiEllipseCurve(V(-1.5, 2.5980762113533173, 0), V(1.250, 2.1650635094610964, 0), V(-2.165063509461096, 1.25, 0), 0, 3.141592653589793), V(0, 0, -1), undefined, undefined, -2, 2)
 			testISCurves(assert, cyl, scs, 2)
 		},
 		'is curves w/ SemiEllipsoidSurface'(assert) {
@@ -29,7 +29,7 @@
 		'is curves w/ SemiEllipsoidSurface 3'(assert) {
 			const cyl = SemiCylinderSurface.UNIT.rotateZ(PI).scale(0.5,0.05, 4).translate(0.25,0,-2)
 			const sphere = SemiEllipsoidSurface.UNIT
-			testISCurves(assert, sphere, cyl, 0)
+			testISCurves(assert, sphere, cyl, 2)
 		},
 		'is curves w/ plane'(assert) {
 			testISCurves(assert, SemiCylinderSurface.UNIT, P3.XY, 1)
@@ -39,14 +39,14 @@
 
 
 			testISCurves(assert,
-				new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0.2, 0), V(-0.2, 2.4492935982947065e-17, 0), V(-2.4492935982947065e-17, -0.2, 0), 0, 3.141592653589793), V(0, 0, -1), -Infinity, Infinity),
+				new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0.2, 0), V(-0.2, 2.4492935982947065e-17, 0), V(-2.4492935982947065e-17, -0.2, 0), 0, 3.141592653589793), V(0, 0, -1), undefined, undefined, -Infinity, Infinity),
 				new PlaneSurface(new P3(V(0, -1, 0), 0), V(0, 0, -1), V(1, 0, 0)),
 				1)
 
 
 		},
 		'intersectionLine 2'(assert) {
-			const cylSurface = new SemiCylinderSurface(new SemiEllipseCurve(V3.O, V(8, 0, 0), V(0, 5, 0)), V3.Z)
+			const cylSurface = new SemiCylinderSurface(new SemiEllipseCurve(V3.O, V(8, 0, 0), V(0, 5, 0)), V3.Z, undefined, undefined)
 			const line = L3.throughPoints(V(10, 0, 0), V(-10, 2, 10))
 			testISTs(assert, line, cylSurface, 2)
 		},
@@ -69,7 +69,7 @@
 			const face2 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
 			const face3 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0).rotateY(-80 * DEG), StraightEdge.throughPoints(V3.X, V3.X.negated()).rotateY(-80 * DEG)], P3.XY.flipped().rotateY(-80 * DEG), new V3(-10, -1, 0).unit(), 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
 			const modface = face.rotateY(-45 * DEG).translate(1, 0, 2)
-			const e0 = modface.contour[0].project(new P3(modface.surface.dir1, 0))
+			const e0 = modface.contour[0].project(new P3(modface.surface.dir, 0))
 			const face4 = Face.create(modface.surface, [e0, StraightEdge.throughPoints(e0.b, modface.contour[2].a), modface.contour[2], StraightEdge.throughPoints(modface.contour[2].b, e0.a)])
 
 			testZDirVolume(assert, face)
@@ -87,7 +87,7 @@
 			testZDirVolume(assert, face4.translate(1, 0, 2))
 		},
 		'loopContainsPoint'(assert) {
-			const surface = new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(0, 0, -1))
+			const surface = new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(0, 0, -1), undefined, undefined)
 			const loop = [
 				StraightEdge.throughPoints(V(1, 7.937253933193773, 4), V(1, 7.937253933193773, 1)),
 				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), 1.4454684956268313, 0.7227342478134156, null, V(7.937253933193772, -0.9999999999999991, 0), V(5.2915026221291805, -6, 0)),

@@ -32,7 +32,7 @@ QUnit.module('SemiEllipseCurve')
 			const s = new PlaneSurface(P3.ZX)
 			testISTs(assert, c, s, 1)
 		},
-		'SemiEllipseCurve.distanceToPoint'(assert) {
+		'distanceToPoint'(assert) {
 			const curve = SemiEllipseCurve.forAB(10, 15)
 			const p = V(12, 12)
 			const closestT = curve.closestTToPoint(p)
@@ -42,10 +42,10 @@ QUnit.module('SemiEllipseCurve')
 				'' + (pDist - curve.at(closestT - EPS).distanceTo(p)) + 'larger')
 			assert.push(pDist < curve.at(closestT + EPS).distanceTo(p), curve.at(closestT + EPS).distanceTo(p), '> ' + pDist)
 		},
-		'SemiEllipseCurve.isColinearTo'(assert) {
+		'isColinearTo'(assert) {
 			assert.ok(SemiEllipseCurve.forAB(1, 2).isColinearTo(SemiEllipseCurve.forAB(1, -2)))
 		},
-		'SemiEllipseCurve.isInfosWithEllipse'(assert) {
+		'isInfosWithEllipse'(assert) {
 			const c1 = SemiEllipseCurve.semicircle(5), c2 = SemiEllipseCurve.semicircle(5, V(3, 0))
 			testCurveISInfos(assert, c1, c2, 1)
 
@@ -72,7 +72,7 @@ QUnit.module('SemiEllipseCurve')
 			testCurveISInfos(assert, c1, verticalEllipse2, 0)
 
 			const smallEllipse = EllipseCurve.forAB(2, 3)
-			testCurveISInfos(assert, c1, smallEllipse, 0)
+			testCurveISInfos(assert, c1, smallEllipse, 0) 
 
 			const test = new EllipseCurve(V(6, 1, 0), V(3, 1, 0), V(4, 0, 0))
 			testCurveISInfos(assert, c1, test, 2)

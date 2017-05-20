@@ -18,23 +18,20 @@ class CylinderSurface extends ProjectedCurveSurface {
 
 
 	getConstructorParameters(): any[] {
-		return [this.baseCurve, this.dir1]
+		return [this.baseCurve, this.dir]
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
 
 		// create plane that goes through cylinder seam
-		const line = new L3(p, this.dir1)
+		const line = new L3(p, this.dir)
 		const seamBase = this.baseCurve.at(PI)
-		const lineOut = this.dir1.cross(this.normalP(p))
+		const lineOut = this.dir.cross(this.normalP(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
-	/**
-	 * @inheritDoc
-	 */
-	isTsForLine(line) {
+	isTsForLine(line: L3) {
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
@@ -48,27 +45,27 @@ class CylinderSurface extends ProjectedCurveSurface {
 		return CylinderSurface.unitISLineTs(localAnchor, localDir)
 	}
 
-	isCoplanarTo(surface) {
+	isCoplanarTo(surface: Surface): surface is this {
 		return this == surface ||
 			surface instanceof CylinderSurface
-			&& this.dir1.isParallelTo(surface.dir1)
+			&& this.dir.isParallelTo(surface.dir)
 			&& this.containsEllipse(surface.baseCurve)
 	}
 
-	like(object) {
+	like(object: any) {
 		if (!this.isCoplanarTo(object)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
-		let thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir1)
-		let objectFacesOut = 0 < object.baseCurve.normal.dot(object.dir1)
+		const thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir)
+		const objectFacesOut = 0 < object.baseCurve.normal.dot(object.dir)
 		return thisFacesOut == objectFacesOut
 	}
 
-	containsEllipse(ellipse) {
-		const ellipseProjected = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
-		return this == ellipse || this.baseCurve.isColinearTo(ellipseProjected)
+	containsEllipse(ellipse: EllipseCurve | SemiEllipseCurve) {
+		const ellipseProjected = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(ellipseProjected)
 	}
 
-	containsCurve(curve) {
+	containsCurve(curve: Curve) {
 		if (curve instanceof EllipseCurve) {
 			return this.containsEllipse(curve)
 		} else if (curve instanceof L3) {
@@ -80,43 +77,26 @@ class CylinderSurface extends ProjectedCurveSurface {
 		}
 	}
 
-	transform(m4) {
-		return new CylinderSurface(
-			this.baseCurve.transform(m4),
-			m4.transformVector(this.dir1).toLength(m4.isMirroring() ? -1 : 1),
-			this.tMin, this.tMax)
-	}
-
-	flipped() {
-		return new CylinderSurface(
-			this.baseCurve,
-			this.dir1.negated())
-	}
-
-	toMesh(zStart: number = -30, zEnd: number = 30) {
-		return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(), -PI, PI, zStart, zEnd, 16, 1)
-	}
-
-	normalP(p) {
+	normalP(p: V3) {
 		const pLC = this.inverseMatrix.transformPoint(p)
 		return this.normalSTFunc()(pLC.angleXY(), pLC.z)
 	}
 
 	implicitFunction() {
-		return (pWC) => {
+		return (pWC: V3) => {
 			const p = this.inverseMatrix.transformPoint(pWC)
 			const radiusLC = p.lengthXY()
-			const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir1))
+			const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir))
 			return normalDir * (1 - radiusLC)
 		}
 	}
 
-	containsPoint(p) {
+	containsPoint(p: V3): boolean {
 		return eq0(this.implicitFunction()(p))
 	}
 
 	pointToParameterFunction() {
-		return (pWC, hint?) => {
+		return (pWC: V3, hint?: number) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			let angle = pLC.angleXY()
 			if (abs(angle) > Math.PI - NLA_PRECISION) {
@@ -127,14 +107,14 @@ class CylinderSurface extends ProjectedCurveSurface {
 		}
 	}
 
-	isCurvesWithSurface(surface2) {
-		if (surface2 instanceof PlaneSurface) {
-			return this.isCurvesWithPlane(surface2.plane)
-		} else if (surface2 instanceof CylinderSurface) {
-			if (surface2.dir1.isParallelTo(this.dir1)) {
-				const ellipseProjected = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
-				return this.baseCurve.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
-			} else if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+	isCurvesWithSurface(surface: Surface): Curve[] {
+		if (surface instanceof PlaneSurface) {
+			return this.isCurvesWithPlane(surface.plane)
+		} else if (surface instanceof CylinderSurface) {
+			if (surface.dir.isParallelTo(this.dir)) {
+				const projEllipse = surface.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => new L3(info.p, this.dir))
+			} else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
 				assert(false)
 			} else {
 				assert(false)
@@ -143,21 +123,21 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	getCenterLine() {
-		return new L3(this.baseCurve.center, this.dir1)
+		return new L3(this.baseCurve.center, this.dir)
 	}
 
-	edgeLoopCCW(contour) {
-		if (contour.length < 56) {
+	edgeLoopCCW(loop: Edge[]): boolean {
+		if (loop.length < 56) {
 			let totalAngle = 0
-			for (let i = 0; i < contour.length; i++) {
-				const ipp = (i + 1) % contour.length
-				const edge = contour[i], nextEdge = contour[ipp]
+			for (let i = 0; i < loop.length; i++) {
+				const ipp = (i + 1) % loop.length
+				const edge = loop[i], nextEdge = loop[ipp]
 				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b))
 			}
 			return totalAngle > 0
 		} else {
 			const ptpF = this.stPFunc()
-			return isCCW(contour.map(e => ptpF(e.a)), V3.Z)
+			return isCCW(loop.map(e => ptpF(e.a)), V3.Z)
 		}
 	}
 
@@ -188,11 +168,11 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	facesOutwards(): boolean {
-		return this.baseCurve.normal.dot(this.dir1) > 0
+		return this.baseCurve.normal.dot(this.dir) > 0
 	}
 
 	getSeamPlane(): P3 {
-		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir1)
+		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir)
 	}
 
 	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)

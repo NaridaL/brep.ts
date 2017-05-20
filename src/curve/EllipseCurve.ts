@@ -20,7 +20,7 @@ class EllipseCurve extends XiEtaCurve {
 			const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
 			return area
 		}
-		const f = t => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
+		const f = (t: number) => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
 		return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
 	}
 
@@ -206,10 +206,10 @@ class EllipseCurve extends XiEtaCurve {
 				return []
 			}
 
-			const f = t => ellipseLCRA.at(t).lengthXY() - 1
-			const df = t => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
+			const f = (t: number) => ellipseLCRA.at(t).lengthXY() - 1
+			const df =(t: number) => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
 			checkDerivate(f, df, -PI, PI, 1)
-			const ts = []
+			const ts: number[] = []
 			const tsvs = arrayRange(-4/5 * PI, PI, PI/4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
 			for (let startT = -4/5 * PI; startT < PI; startT += PI / 4) {
 				let t = newtonIterateSmart(f, startT, 16, df, 1e-4)
@@ -261,7 +261,7 @@ class EllipseCurve extends XiEtaCurve {
 		}
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, line: L3): ISInfo[] {
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
 		// ell: x² + y² = 1 = p²
 		// line(t) = anchor + t dir
 		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
@@ -270,10 +270,10 @@ class EllipseCurve extends XiEtaCurve {
 		return lineTs.map(tOther => ({
 			tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
 			tOther: tOther,
-			p: line.at(tOther)}))
+			p: L3.at(anchorWC, dirWC, tOther)}))
 	}
 
-	isInfosWithCurve(curve): ISInfo[] {
+	isInfosWithCurve(curve: Curve): ISInfo[] {
 		if (curve instanceof EllipseCurve) {
 			return this.isInfosWithEllipse(curve)
 		}
@@ -292,7 +292,7 @@ class EllipseCurve extends XiEtaCurve {
 		})
 	}
 
-	closestTToPoint(p) {
+	closestTToPoint(p: V3, tStart?: number): number {
 		// (at(t) - p) * tangentAt(t) = 0
 		// (xi f1 + eta f2 + q) * (xi f2 - eta f1) = 0
 		// xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
@@ -301,7 +301,7 @@ class EllipseCurve extends XiEtaCurve {
 		// atan2 of p is a good first approximation for the searched t
 		const startT = this.inverseMatrix.transformPoint(p).angleXY()
 		const pRelCenter = p.minus(this.center)
-		const f = t => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
+		const f = (t: number) => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
 		return newtonIterate1d(f, startT)
 	}
 

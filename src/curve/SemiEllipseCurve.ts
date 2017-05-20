@@ -1,3 +1,6 @@
+///<reference path="../../node_modules/ts3dutils/out/complete.d.ts"/>
+
+
 class SemiEllipseCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
@@ -29,7 +32,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)))
 	}
 
-	isCircular() {
+	isCircular(): boolean {
 		return eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2)
 	}
 
@@ -65,7 +68,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 		return angle < 0 ? (assert(eq0(angle) || eq(PI, abs(angle))) && abs(angle)) : angle
 	}
 
-	isValidT(t) {
+	isValidT(t: number) {
 		return le(0, t) && le(t, PI)
 	}
 
@@ -78,7 +81,7 @@ class SemiEllipseCurve extends XiEtaCurve {
         return t
 	}
 
-	reversed(): this {
+	reversed(): SemiEllipseCurve {
 		return new SemiEllipseCurve(this.center, this.f1.negated(), this.f2, PI - this.tMax, PI - this.tMin)
 	}
 
@@ -173,7 +176,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 		}
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, line: L3): ISInfo[] {
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
 		// ell: x² + y² = 1 = p²
 		// line(t) = anchor + t dir
 		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
@@ -183,7 +186,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 			.map(tOther => ({
 				tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
 				tOther: tOther,
-				p: line.at(tOther)}))
+				p: L3.at(anchorWC, dirWC, tOther)}))
 	}
 
 	isInfosWithCurve(curve: Curve): ISInfo[] {
@@ -205,7 +208,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 		})
 	}
 
-	closestTToPoint(p) {
+	closestTToPoint(p: V3) {
 		// (at(t) - p) * tangentAt(t) = 0
 		// (xi f1 + eta f2 + q) * (xi f2 - eta f1) = 0
 		// xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
@@ -214,7 +217,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 		// atan2 of p is a good first approximation for the searched t
 		const startT = this.inverseMatrix.transformPoint(p).angleXY()
 		const pRelCenter = p.minus(this.center)
-		const f = t => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
+		const f = (t: number) => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
 		return newtonIterate1d(f, startT)
 	}
 

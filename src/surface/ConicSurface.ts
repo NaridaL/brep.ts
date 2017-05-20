@@ -207,8 +207,8 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		}
 	}
 
-	implicitFunction() {
-		return (pWC) => {
+	implicitFunction(): (pWC: V3) => number {
+		return pWC => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			const radiusLC = pLC.lengthXY()
 			return this.normalDir * (radiusLC - pLC.z)
@@ -239,7 +239,7 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (surface instanceof PlaneSurface) {
 			return this.isCurvesWithPlane(surface.plane)
 		} else if (ImplicitSurface.is(surface)) {
-			return ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.02)
+			return ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / this.dir.length(), 0.02)
 		}
 		return super.isCurvesWithSurface(surface)
 	}
@@ -262,23 +262,23 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		const wcMatrix = eq0(planeNormal.lengthXY())
 			? this.matrix
 			: this.matrix.times(rotationMatrix)
-		return ConicSurface.unitISPlane(a, c, d).map(curve => {
+		return ConicSurface.unitISPlane(a, c, d).flatMap<Curve>(curve => {
 			const curveWC = curve.transform(wcMatrix)
 			if (curve instanceof EllipseCurve) {
 				const curveLC = curve.transform(rotationMatrix)
 				const ts = curveLC.isTsWithPlane(P3.ZX)
 				const intervals = getIntervals(ts, -PI, PI).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0)
-				return intervals.map(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b)).concatenated()
+				return intervals.flatMap(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b))
 			}
 			const p = curveWC.at(0.2)
 			return this.normalP(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
 				? curveWC : curveWC.reversed()
-		}).concatenated() as Curve[]
+		})
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {
 		const ptpF = this.stPFunc()
-		return isCCW(contour.map(e => e.getVerticesNo0()).concatenated().map(v => ptpF(v)), V3.Z)
+		return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
 	}
 
 

@@ -82,8 +82,8 @@ function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface 
 				const pN2 = surface2.normalP(p)
 				const expectedTangent = pN1.cross(pN2)
 				// expectedTangent can be zero if the surfaces just touch and dont cross each other
-				//!expectedTangent.isZero() && assert.ok(expectedTangent.isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
-				//!expectedTangent.isZero() && assert.ok(expectedTangent.dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
+				//!expectedTangent.likeZero() && assert.ok(expectedTangent.isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
+				//!expectedTangent.likeZero() && assert.ok(expectedTangent.dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
 			}
 		} else {
 			linkB2(assert, `./viewer.html#mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
@@ -94,7 +94,7 @@ function testLoopCCW(assert: Assert, surface: ConicSurface, loop: Edge[]) {
 	const points = [loop[0].a, loop[0].atAvgT()]
 	linkB2(assert, `viewer.html#mesh=${surface.sce}.toMesh();edges=${loop.toSource()};points=${points.sce}`)
 	assert.push(surface.edgeLoopCCW(loop))
-	assert.push(!surface.edgeLoopCCW(Edge.reverseLoop(loop)))
+	assert.push(!surface.edgeLoopCCW(Edge.reversePath(loop)))
 }
 function testZDirVolume(assert: Assert, face: Face) {
 	linkB2(assert, `mesh=${face.sce}.toMesh()`)
@@ -123,9 +123,9 @@ function testCurve(ass: Assert, curve: Curve) {
 	}
 }
 
-function testParametricSurface(ass: Assert, surf: Surface) {
+function testParametricSurface(ass: Assert, surf: ParametricSurface) {
 	linkB2(ass, `viewer.html#mesh=[${surf}.toMesh()]`, 'view')
-	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.6)]
+	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)]
 		.map(pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0))
 	const points = params.map(({x, y}) => surf.pST(x, y))
 	const psFlipped = surf.flipped()
@@ -212,7 +212,7 @@ function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: i
 }
 
 function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
-	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reverseLoop(loop)
+	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
 	linkB2(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }

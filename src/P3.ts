@@ -91,7 +91,7 @@ class P3 extends Transformable {
 		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2)
 	}
 
-	distanceToLine(line): number {
+	distanceToLine(line: L3): number {
 		assertInst(L3, line)
 		if (!this.isParallelToLine(line)) {
 			return this.distanceToPoint(line.anchor)

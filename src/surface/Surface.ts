@@ -36,7 +36,7 @@ abstract class Surface extends Transformable implements Equalable {
 			}
 			return true
 		} else {
-			assertNever()
+			return false
 		}
 	}
 
@@ -58,7 +58,7 @@ abstract class Surface extends Transformable implements Equalable {
 	/**
 	 * coplanar and same normals
 	 */
-	abstract like(object): boolean
+	abstract like(object: any): boolean
 
 
 	abstract edgeLoopCCW(loop: Edge[]): boolean
@@ -70,7 +70,7 @@ abstract class Surface extends Transformable implements Equalable {
 		const colinearEdges = loop.map((edge) => edge.colinearToLine(testLine))
 		let inside = false
 
-		function logIS(isP) {
+		function logIS(isP: V3) {
 			const isT = testLine.pointT(isP)
 			if (eq0(isT)) {
 				return true
@@ -121,6 +121,10 @@ abstract class Surface extends Transformable implements Equalable {
 
 	}
 
+	clipCurves(curves: Curve[]): Curve[] {
+		return curves
+	}
+
 	abstract equals(obj: any): boolean
 	hashCode(): int {
 		return this.getConstructorParameters().hashCode()
@@ -135,4 +139,3 @@ abstract class Surface extends Transformable implements Equalable {
 	}
 }
 enum PointVsFace {INSIDE, OUTSIDE, ON_EDGE}
-

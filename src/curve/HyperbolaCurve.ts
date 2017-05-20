@@ -30,7 +30,7 @@ class HyperbolaCurve extends XiEtaCurve {
         return this.f1.times(Math.cosh(t)).plus(this.f2.times(Math.sinh(t)))
     }
 
-    isColinearTo(curve: Curve) {
+    isColinearTo(curve: Curve): boolean {
 	    if (!((x): x is HyperbolaCurve => x.constructor == this.constructor)(curve)) {
             return false
         }
@@ -45,8 +45,8 @@ class HyperbolaCurve extends XiEtaCurve {
             && eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
-	reversed(): this {
-		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
+	reversed() {
+		return new HyperbolaCurve(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
 	}
 
 	static XYLCValid(pLC: V3): boolean {
@@ -79,14 +79,14 @@ class HyperbolaCurve extends XiEtaCurve {
 	 * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
 	 */
     static magic(a: number, b: number, c: number): number[] {
-	    if (eq0(b)) {
+		if (eq0(b)) {
 	    	const sqrtVal = snap0(c ** 2 / a ** 2 - 1)
 	    	if (sqrtVal < 0 || c * a < 0) {
 	    		return []
 		    } else if (sqrtVal == 0) {
 	    		return [0]
 		    }
-		    const eta1 = sqrt(sqrtVal)
+		    const eta1 = Math.sqrt(sqrtVal)
 		    return [-Math.asinh(eta1), Math.asinh(eta1)]
 	    } else if (eq(abs(a), abs(b))) {
 	    	if (le(c * a, 0)) {
@@ -99,11 +99,13 @@ class HyperbolaCurve extends XiEtaCurve {
 		    if (sqrtVal < 0) {
 			    return []
 		    }
-		    const xi1 = (a * c - sqrt(sqrtVal)) / (a ** 2 - b ** 2)
-		    const xi2 = (a * c + sqrt(sqrtVal)) / (a ** 2 - b ** 2)
-		    const eta1 = (b ** 2 * c - a * sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
-		    const eta2 = (b ** 2 * c + a * sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
-		    return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter(x => x)
+		    const xi1 = (a * c - Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
+		    const xi2 = (a * c + Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
+		    const eta1 = (b ** 2 * c - a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
+		    const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
+			const foo: number = 20
+			const bar = foo > 0 && foo
+		    return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x:any) => x !== false)
 	    }
 
     }

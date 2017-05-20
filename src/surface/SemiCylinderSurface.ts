@@ -6,19 +6,30 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	readonly normalDir: number
 	readonly baseCurve: SemiEllipseCurve
 
-	constructor(baseCurve: SemiEllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
-		super(baseCurve, dir1, undefined, undefined, zMin, zMax)
+	constructor(baseCurve: SemiEllipseCurve,
+	            dir1: V3,
+	            sMin: number,
+	            sMax: number,
+	            zMin = -Infinity,
+	            zMax = Infinity) {
+		super(baseCurve, dir1, sMin, sMax, zMin, zMax)
 		assertInst(SemiEllipseCurve, baseCurve)
 		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
-		this.normalDir = sign(this.baseCurve.normal.dot(this.dir1))
+		this.normalDir = sign(this.baseCurve.normal.dot(this.dir))
 		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		if (!sema) {
+			sema = true
+			assert(this)
+			const src = this.toSource()
+			const n = eval(src)
+			sema = false
+		}
 	}
 
-
 	getConstructorParameters(): any[] {
-		return [this.baseCurve, this.dir1, this.tMin, this.tMax]
+		return [this.baseCurve, this.dir, this.sMin, this.sMax, this.tMin, this.tMax]
 	}
 
 	normalP(p: V3): V3 {
@@ -29,13 +40,13 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		assertVectors(p)
         if (!this.containsPoint(p)) return OUTSIDE
 		// create plane that goes through cylinder seam
-		const line = new L3(p, this.dir1)
+		const line = new L3(p, this.dir)
 		const seamBase = this.baseCurve.at(PI)
-		const lineOut = this.dir1.cross(this.normalP(p))
+		const lineOut = this.dir.cross(this.normalP(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
-	isTsForLine(line) {
+	isTsForLine(line: L3) {
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
@@ -52,25 +63,25 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	isCoplanarTo(surface: Surface): boolean {
 		return this == surface ||
 			surface instanceof SemiCylinderSurface
-			&& this.dir1.isParallelTo(surface.dir1)
+			&& this.dir.isParallelTo(surface.dir)
 			&& this.containsSemiEllipse(surface.baseCurve, false)
 	}
 
 	like(surface: Surface): boolean {
 		if (!this.isCoplanarTo(surface)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
-		const thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir1)
-		const objectFacesOut = 0 < surface.baseCurve.normal.dot(surface.dir1)
+		const thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir)
+		const objectFacesOut = 0 < surface.baseCurve.normal.dot(surface.dir)
 		return thisFacesOut == objectFacesOut
 	}
 
-	containsSemiEllipse(ellipse, checkAABB = true) {
-		const projEllipse = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
-		return this == ellipse || this.baseCurve.isColinearTo(projEllipse) &&
+	containsSemiEllipse(ellipse: SemiEllipseCurve, checkAABB: boolean = true) {
+		const projEllipse = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(projEllipse) &&
 			(!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y))
 	}
 
-	containsCurve(curve) {
+	containsCurve(curve: Curve) {
 		if (curve instanceof L3) {
 			return this.containsLine(curve)
 		} else if (curve instanceof SemiEllipseCurve) {
@@ -82,30 +93,16 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		}
 	}
 
-	transform(m4) {
-		const newDir = m4.transformVector(this.dir1)
-		return new SemiCylinderSurface(
-			this.baseCurve.transform(m4),
-			newDir.toLength(m4.isMirroring() ? -1 : 1),
-			this.tMin * newDir.length(), this.tMax * newDir.length())
-	}
-
-	flipped() {
-		return new SemiCylinderSurface(
-			this.baseCurve,
-			this.dir1.negated())
-	}
-
 	implicitFunction() {
 		return (pWC) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
 			const radiusLC = pLC.lengthXY()
-			const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir1))
+			const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir))
 			return normalDir * (1 - radiusLC)
 		}
 	}
 
-	containsPoint(pWC): boolean {
+	containsPoint(pWC: V3): boolean {
 	    const pLC = this.inverseMatrix.transformPoint(pWC)
 		return SemiEllipseCurve.XYLCValid(pLC)
 	}
@@ -121,11 +118,11 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		if (surface2 instanceof PlaneSurface) {
 			return this.isCurvesWithPlane(surface2.plane)
 		} else if (surface2 instanceof SemiCylinderSurface) {
-			if (surface2.dir1.isParallelTo(this.dir1)) {
-				const projEllipse = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir1))
+			if (surface2.dir.isParallelTo(this.dir)) {
+				const projEllipse = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
 				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => {
-					const lineDir = sign(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir1)) || 1
-					return new L3(info.p, this.dir1.times(lineDir))
+					const lineDir = sign(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir)) || 1
+					return new L3(info.p, this.dir.times(lineDir))
 				})
 			} else if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				assert(false)
@@ -136,11 +133,11 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	getCenterLine(): L3 {
-		return new L3(this.baseCurve.center, this.dir1)
+		return new L3(this.baseCurve.center, this.dir)
 	}
 
 	static semicylinder(radius: number): SemiCylinderSurface {
-		return new SemiCylinderSurface(new SemiEllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z)
+		return new SemiCylinderSurface(new SemiEllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, undefined, undefined)
 	}
 
 	/**
@@ -166,18 +163,18 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	facesOutwards(): boolean {
-		return this.baseCurve.normal.dot(this.dir1) > 0
+		return this.baseCurve.normal.dot(this.dir) > 0
 	}
 
 	getSeamPlane(): P3 {
-		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir1)
+		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir)
 	}
 
 	clipCurves(curves: Curve[]): Curve[] {
 		return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()))
 	}
 
-	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, 0, 1)
+	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 }
 SemiCylinderSurface.prototype.uStep = TAU  / 32
 SemiCylinderSurface.prototype.vStep = 256

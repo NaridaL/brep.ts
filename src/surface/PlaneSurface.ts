@@ -44,7 +44,7 @@ class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {
-		return isCCW(contour.map(edge => edge.points()).concatenated(), this.plane.normal1)
+		return isCCW(contour.flatMap(edge => edge.points()), this.plane.normal1)
 		let totalAngle = 0
 		for (let i = 0; i < contour.length; i++) {
 			const ipp = (i + 1) % contour.length

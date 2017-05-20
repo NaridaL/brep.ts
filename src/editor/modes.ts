@@ -75,8 +75,7 @@ MODES.SKETCH = {
 					selected = [hoverHighlight]
 				}
 				selected.filter(el => isSketchEl(el) && editingSketch == el.sketch)
-					.map(el => el instanceof SegmentEndPoint ? el : el.points)
-					.concatenated()
+					.flatMap(el => el instanceof SegmentEndPoint ? el : el.points)
 					.forEach(p => this.relPoss.set(p, p.V3().minus(mouseSC)))
 				console.log(this.relPoss)
 			}

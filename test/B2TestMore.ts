@@ -486,7 +486,7 @@ registerTests({
 		let pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 		let result = new B2([
-            new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V3.Z), [
+            new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V3.Z, undefined, undefined), [
                 new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 5), V(8, 0, 0), 5, 0),
                 new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 0), V(-8, 0, 0), 0, 3.141592653589793, null, V(0, 8, 0), V(-0, -8, 0)),
                 new StraightEdge(new L3(V(-8, 0, 0), V(0, 0, 1)), V(-8, 0, 0), V(-8, 0, 5), 0, 5),

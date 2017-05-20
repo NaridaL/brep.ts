@@ -21,7 +21,7 @@
 				new StraightEdge(new L3(V(-131.35224103228387, 1.6086010154101807e-14, 180.2100595549249), V(-0.7197488536413841, 8.814381298018978e-17, 0.6942345336281635)), V(-198.46477746372744, 2.4304925446444556e-14, 244.94352900661897), V(-131.35224103228387, 1.6086010154101807e-14, 180.2100595549249), 93.24438113642698, 0),
 				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 180.2100595549249),V(131.35224103228387, 0, 0),V(0, 131.35224103228387, 0),0,3.141592653589793),V(-131.35224103228387, 1.6086010154101807e-14, 180.2100595549249),V(131.35224103228387, 0, 180.2100595549249),3.141592653589793,0,null,V(1.6086010154101807e-14, 131.35224103228387, 0),V(0, -131.35224103228387, 0))
 			].map(e => e.scale(1/200))
-			testLoopCCW(assert, surface, Edge.reverseLoop(loop))
+			testLoopCCW(assert, surface, Edge.reversePath(loop))
 			testLoopCCW(assert, surface.flipped(), loop)
 		},
 		'isCoplanarTo'(assert) {
@@ -76,14 +76,14 @@
 			const b = SemiEllipsoidSurface.UNIT
 			testISCurves(assert, a, b, 2)
 			testISCurves(assert, cone, sphere, 2)
-		},		
+		},
 		'isCurvesWithEllipsoid 2'(assert) {
- 
+
 			const cone = new ConicSurface(V(2, 0.2, 0.7),V(2.2496396739927868e-33, 0.6000000000000001, 3.67394039744206e-17),V(-1.469576158976824e-16, 1.469576158976824e-16, -2.4000000000000004),V(-12, 0, 7.347880794884119e-16))
 			const sphere = new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V(0, 0, -1))
- 
 
-			testISCurves(assert, cone, sphere, 2) 
+
+			testISCurves(assert, cone, sphere, 2)
 		},
 		'containsParabola'(assert) {
 			const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]

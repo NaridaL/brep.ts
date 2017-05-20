@@ -5,11 +5,11 @@ function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	}
 	if (curve instanceof SemiEllipseCurve) {
 		const curveDir = flipped ? offset : offset.negated()
-		return new SemiCylinderSurface(curve, curveDir.unit())
+		return new SemiCylinderSurface(curve, curveDir.unit(), undefined, undefined)
 	}
 	if (curve instanceof BezierCurve || curve instanceof ParabolaCurve) {
-		const curveDir = flipped ? offset : offset.negated()
-		return new ProjectedCurveSurface(curve, curveDir.unit(), 0, 1)
+		const curveDir = offset.times(flipped ? 1 : -1)
+		return new ProjectedCurveSurface(curve, curveDir, 0, 1, flipped ? 0 : -1, flipped ? 1 : 0)
 	}
 	assertNever()
 }
@@ -21,7 +21,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 				return
 			}
 			let flipped = line.anchor.z > edge.b.z
-			surface = new SemiCylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated())
+			surface = new SemiCylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated(), undefined, undefined)
 		} else if (curve.dir1.isPerpendicularTo(V3.Z)) {
 			let flipped = line.anchor.x > edge.b.x
 			let surface = new PlaneSurface(new P3(V3.Z, line.anchor.z))
@@ -64,7 +64,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	}
 	if (curve instanceof SemiEllipseCurve) {
 		let curveDir = flipped ? offset : offset.negated()
-		return new SemiCylinderSurface(curve, curveDir.unit())
+		return new SemiCylinderSurface(curve, curveDir.unit(), undefined, undefined)
 	}
 	if (curve instanceof BezierCurve) {
 		let curveDir = flipped ? offset : offset.negated()
@@ -262,7 +262,9 @@ namespace B2T {
 						return
 					}
 					const flipped = edge.a.z > edge.b.z
-					return new SemiCylinderSurface(baseRibCurves[i], !flipped ? V3.Z : V3.Z.negated())
+					const [tMin, tMax] = [0, edge.b.z - edge.a.z].sort(MINUS)
+					return new SemiCylinderSurface(baseRibCurves[i], !flipped ? V3.Z : V3.Z.negated(),
+						undefined, undefined, tMin, tMax)
 				} else if (line.dir1.isPerpendicularTo(V3.Z)) {
 					const flipped = edge.a.x > edge.b.x
 					let surface = new PlaneSurface(new P3(V3.Z, edge.a.z))
@@ -337,7 +339,7 @@ namespace B2T {
 			stepStartEdges = stepEndEdges
 		}
 		if (open) {
-			const endFaceEdges = Edge.reverseLoop(stepEndEdges)
+			const endFaceEdges = Edge.reversePath(stepEndEdges)
 			const infoStart = infoFactory && infoFactory.rotationStart(basePlane, baseLoop, undefined)
 			const infoEnd = infoFactory && infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined)
 			faces.push(
@@ -438,7 +440,7 @@ namespace B2T {
                     .reduce((a,b) => a.plus(b), V3.O)
                     .unit()))
         vs.forEach(v => B2T.sphere().and(baseK.rotateAB(V3.Y, v)))
-        const ss = new B2(vs.map(v => baseK.rotateAB(V3.Y, v).faces).concatenated(), false)
+        const ss = new B2(vs.flatMap(v => baseK.rotateAB(V3.Y, v).faces), false)
         return ss
     }
 
@@ -446,9 +448,9 @@ namespace B2T {
 	    return new B2(
             extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(
 	        face, face.translate(dir.x,dir.y,dir.z).flipped(),
-	        face.holes.map(
+	        face.holes.flatMap(
 	            hole =>
-                    extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2)).concatenated()), false)
+                    extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false)
     }
 
     let defaultFont: opentypejs.Font
@@ -499,7 +501,7 @@ namespace B2T {
         const loops = subpaths.map(sp => {
             const path = new opentype.Path()
             path.commands = sp
-            const loop = Edge.reverseLoop(Edge.pathFromSVG(path.toPathData(13))).map(e => e.mirroredY())
+            const loop = Edge.reversePath(Edge.pathFromSVG(path.toPathData(13))).map(e => e.mirroredY())
             assert(Edge.isLoop(loop))
             return loop
         })
@@ -631,7 +633,7 @@ namespace B2T {
 	}
 
 	export function fixEdges(edges: Edge[]): Edge[] {
-		return edges.map(edge => {
+		return edges.flatMap(edge => {
 			const c = edge.curve
 			if (c instanceof EllipseCurve) {
 				const splitEdges = (edge.minT < 0 && edge.maxT > 0)
@@ -662,7 +664,7 @@ namespace B2T {
 				}
 			}
 			return edge
-		}).concatenated() as Edge[]
+		})
 	}
 
 	export function extrudeVertices(baseVertices: V3[], baseFacePlane: P3, offset: V3, name?, generator?) {

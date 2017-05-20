@@ -1,0 +1,22 @@
+<!--suppress ALL -->
+<patterneditor>
+
+	<p id="patternEditor">tessst {opts}</p>
+	<editor feature={opts}></editor>
+</patterneditor>
+<script type="text/tsx">
+	const foo: any;
+	type x = {foo: number};
+</script>
+<editor>
+
+	<div id={ id }  class='editorBox' style='display: block;'>
+		<span className='header'>{opts.feature.constructor.name}</span>
+	</div>
+	<script>
+	  this.on('update', function (e) {
+	    this.feature = this.opts.feature
+	  })
+	</script>
+</editor>
+

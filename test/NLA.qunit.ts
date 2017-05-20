@@ -40,7 +40,7 @@ QUnit.testDifferentSystems('Matrix4x4 eigenValues and eigenVectors', function (a
 	console.log(eigenVectors)
 	eigenVectors.forEach((eigenVector, i) => {
 		/*m4.isNormal() && */assert.ok(eigenVector.isPerpendicularTo(eigenVectors[(i + 1) % eigenVectors.length]), `eigenVector${i}.isPerpendicularTo(eigenVector${(i + 1) % eigenVectors.length})`)
-		assert.ok(!eigenVector.isZero(), `'!eigenVector${i}.isZero()` + !eigenVector.isZero())
+		assert.ok(!eigenVector.likeO(), `'!eigenVector${i}.isZero()` + !eigenVector.likeO())
 		assert.ok(eigenVector.isParallelTo(m4.transformVector(eigenVector)), `eigenVector${i}.isParallelTo(m4.transformVector(eigenVector))`)
 	})
 
@@ -90,7 +90,7 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 	}
 
 
-	const loopReverse = Edge.reverseLoop(loop)
+	const loopReverse = Edge.reversePath(loop)
 	const holeArea = surface.calculateArea(loopReverse)
 	if (m4.isOrthogonal()) {
 		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
@@ -124,7 +124,7 @@ QUnit.testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert
 		}
 
 
-		const loopReverse = Edge.reverseLoop(loop)
+		const loopReverse = Edge.reversePath(loop)
 		const holeArea = surface.calculateArea(loopReverse)
 		if (m4.isOrthogonal()) {
 			assert.push(eq(holeArea, -1), area, -1)
@@ -152,7 +152,7 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 	assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
 
 
-	//const loopReverse = Edge.reverseLoop(loop)
+	//const loopReverse = Edge.reversePath(loop)
 	//const holeArea = surface.calculateArea(loopReverse)
 	//if (m4.isOrthogonal()) {
 	//	assert.push(eq(holeArea, -PI/2), area, -PI / 2)
@@ -187,7 +187,7 @@ QUnit.testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m
 	//	}
 	//
 	//
-	//	const loopReverse = Edge.reverseLoop(loop)
+	//	const loopReverse = Edge.reversePath(loop)
 	//	const holeArea = surface.calculateArea(loopReverse)
 	//	if (m4.isOrthogonal()) {
 	//		assert.push(eq(holeArea, -1), area, -1)
@@ -381,8 +381,8 @@ registerTests({
 		assert.deepEqual(arr, [1, 2, 2.5, 3, 4])
 
 		const arr2 = []
-		arr2.binaryInsert(-2, minus)
-		arr2.binaryInsert(5, minus)
+		arr2.binaryInsert(-2)
+		arr2.binaryInsert(5)
 		assert.deepEqual(arr2, [-2, 5])
 	},
 	'arrayBinaryIndexOf'(assert) {
@@ -433,7 +433,7 @@ registerTests({
 	//		StraightEdge.throughPoints(V(97.2126948127275, 76.30648974050503, -100), V(275.99999999999966, 255.99999999999972, -100)),
 	//		new PCurveEdge(new BezierCurve(V(219.75148278474705, -90.44615667066816, -100), V(-82.00000000000018, -138.00000000000023, -100), V(539.9999999999997, 225.9999999999997, -100), V(275.99999999999966, 255.99999999999972, -100), -0.1, 1.1), V(275.99999999999966, 255.99999999999972, -100), V(219.75148278474705, -90.44615667066816, -100), 1, 0, null, V(792, -90.00000000000009, 0), V(905.2544483542417, 142.6615299879962, 0))], [])
 	//	console.log(face.intersectsLine(line), face.surface.isTsForLine(line), face.surface.isTsForLine(line))
-	//	const t = line.intersectWithPlaneLambda(face2.surface.plane);
+	//	const t = line.isTWithPlane(face2.surface.plane);
 	//	console.log(face2.intersectsLine(line), t, line.at(t).sce)
 	//	assert.ok(face.intersectsLine(line))
 	//},

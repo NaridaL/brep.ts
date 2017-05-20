@@ -38,8 +38,8 @@ function initB2() {
 		drVs.pushAll(gets.vectors)
 	}
 
-	//cMesh && cMesh.computeNormalLines(1) && cMesh.compile()
-	//aMesh && aMesh.computeNormalLines(1) && aMesh.compile()
+	//cMesh && cMesh.computeNormalLines(0.1) && cMesh.compile()
+	//aMesh && aMesh.computeNormalLines(0.1) && aMesh.compile()
 
     if (gets.edges) {
         console.log('edges from GET')
@@ -51,12 +51,12 @@ function initB2() {
             const points = edge.points()
             for (let i = 0; i < points.length - 1; i++) {
 	            const color = edgeViewerColors[(edgeIndex + (i % 2)) % edgeViewerColors.length]
-	            const tangent = edge.tangentAt(i)
-                dMesh.curve1.push(points[i], points[i].plus(tangent.toLength(1)))
+	            // const tangent = edge.tangentAt(i)
+                // dMesh.curve1.push(points[i], points[i].plus(tangent.toLength(1)))
                 dMesh.curve1.push(points[i], points[i + 1])
                 dMesh.curve1colors.push(color, color)
             }
-	        //edge.curve.addToMesh(dMesh, 8, 0.02, 2, edge.minT, edge.maxT)
+	        ;(edge.curve instanceof PICurve) && edge.curve.addToMesh(dMesh, 8, 0.02, 2, edge.minT, edge.maxT)
         })
 	    //dMesh.computeWireframeFromFlatTriangles()
     }
@@ -230,14 +230,14 @@ function initInfoEvents() {
 		hovering = getHovering(mouseLine, faces, undefined, [], testEdges, 0.1, 'faces', 'edges')
 		let html = '', pp
 		if (hovering instanceof Edge) {
-			pp = V({x: e.clientX, y: e.clientY})
+			pp = V(e.clientX, e.clientY)
 			defaultRoundFunction = x => round10(x, -3)
 			html = hovering.toString(x => round10(x, -3)) + ' length=' + hovering.length().toFixed(3)
 		} else if (hovering instanceof Face) {
-			pp = V({x: e.clientX, y: e.clientY})
+			pp = V(e.clientX, e.clientY)
 			defaultRoundFunction = x => round10(x, -3)
 			let area, f = hovering
-			try { area = hovering.calcArea()} catch (e) {}
+			try { area = hovering.calcArea() } catch (e) {}
 			html = `face surface=${f.surface.constructor.name} edges=${f.contour.length} area=${area}`
 		}
 		if (pp) {
@@ -317,7 +317,7 @@ function test2() {
 	assert(eq02(ic(start.x, start.y), 0.1))
 	const bounds = (s, t) => -5 <= s && s <= 5 && -5 <= t && t <= 5
 	//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
-	const curves =  Curve.breakDownIC(ic2, -5, 5, -5, 5, 0.1, 0.1, 0.02, di2ds, di2dt)
+	const curves =  Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt)
 	//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
 	//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
 		.map(({points, tangents}, i) => {
@@ -330,57 +330,98 @@ function test2() {
 	return curves
 
 }
-function HJK_() {
-	const ses = SemiEllipsoidSurface.UNIT
-	const cs = ConicSurface.UNIT.scale(0.05,0.2)
-		.rotateZ(90*DEG)
-		.rotateY(-90*DEG)
-		.translate(2,0.2,1.1)
-	const pf = cs.parametricFunction(), icc = ses.implicitFunction()
-	const ic = (x, y) => icc(pf(x, y))
+function cassini(a: number, c: number): (x: number, y: number) => number {
+	return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
+}
+
+/**
+ * A function R² -> R with first and second derivatives.
+ */
+interface MathFunctionR2_R {
+	(s: number, t: number): number
+	readonly x: R2_R
+	readonly y: R2_R
+	readonly xx?: R2_R
+	readonly xy?: R2_R
+	readonly yy?: R2_R
+}
+namespace MathFunctionR2_R {
+	export function forNerdamer(expression: nerdamer.ExpressionParam, args: [string, string] = ['x', 'y']): MathFunctionR2_R {
+		const ndf = nerdamer(expression)
+		const ndfs = nerdamer.diff(ndf, args[0])
+		const ndft = nerdamer.diff(ndf, args[1])
+		const f = ndf.buildFunction(args) as any
+		f.x = ndfs.buildFunction(args)
+		f.y = ndft.buildFunction(args)
+		f.xx = nerdamer.diff(ndfs, args[0]).buildFunction(args)
+		f.xy = nerdamer.diff(ndfs, args[1]).buildFunction(args)
+		f.yy = nerdamer.diff(ndft, args[1]).buildFunction(args)
+		return f
+	}
+
+	export function nerdamerToR2_R(expression: nerdamer.Expression, args: [string, string] = ['x', 'y']) {
+		return expression.buildFunction(args)
+	}
+
+	export function forFFxFy(f: R2_R, fx: R2_R, fy: R2_R): MathFunctionR2_R {
+		0;(f as any).x = fx
+		0;(f as any).y = fy
+		return f as any
+	}
+}
+const cas2 = cassini(0.9, 1.02)
+function HJK() {
+	const x = math.compile('x^2')
+	//math.derivative('x^2', 'x')
+	nerdamer.setFunction('cassini', 'acxy'.split(''), '(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
+	const cassini = nerdamer('(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
+	const ndf = nerdamer('cassini(1, 1, x, y)')
+	const mf = MathFunctionR2_R.forNerdamer(ndf)
+	//const pf = cs.parametricFunction(), icc = ses.implicitFunction()
 	//const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
 	//assert(eq02(ic(start.x, start.y), 0.1))
-	const sMin = 0, sMax = PI, tMin = 0, tMax = 5
+
+	const bounds2={sMin: -2, sMax : 2, tMin : -2, tMax : 2}
+	const {sMin, tMin, sMax, tMax} = bounds2
 	const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
 	//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
-	const edges =  Curve.breakDownIC(ic, sMin, sMax, tMin, tMax, 0.1, 0.1, 0.02)
+	const {points, tangents}
+		= followAlgorithm2d(mf, curvePointMF(mf, V(1, 0.5)), 0.02, bounds)
+	//const edges = [Edge.forCurveAndTs(new ImplicitCurve(points, tangents).scale(10))]
+	const edges =  Curve.breakDownIC(mf, bounds2, 0.1, 0.1, 0.05)
+		.map(({points, tangents}, i) => Edge.forCurveAndTs(new ImplicitCurve(points, tangents, 1)).translate(0,0,i*0.1))
 	//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
 	//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
-		.map(({points, tangents}, i) => {
-			const curve = new ImplicitCurve(ic, points, tangents)
-			return Edge.forCurveAndTs(curve)
-			//return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i))
-		})
-	//checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5, 0)
-	//checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0)
 	console.log(edges.length)
-	return {meshes: [ses.toMesh(), cs.toMesh()], edges: edges.concat(edges.map(e => e.translate(0, -1)))}
+	return {edges: edges, points: edges[0].curve.points}
 
 }
-function HJK() {
+function HJK_() {
 	//return {}
-	const a = B2T.cone(12, 12).scale(0.05,0.2)
-		.rotateZ(90*DEG)
-		.rotateY(-90*DEG)
-		.translate(2,0.2,0.7)
-	const b = B2T.sphere(1, undefined, PI)
-	const cone = new ConicSurface(
-		V(2, 0.2, 1.1),
-		V(0, 0.6, 0),
-		V(0, 0, -2.4),
-		V(-12, 0, 0))
-	const sphere = new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V(0, 0, -1))
-	//const curves = cone.isCurvesWithSurface(sphere)
-	//assert(sphere.containsCurve(curves[0]))
-	const c = a.minus(b).translate(0,3)
-	const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625, -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009, 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
+	//const a = B2T.cone(12, 12).scale(0.05,0.2)
+	//	.rotateZ(90*DEG)
+	//	.rotateY(-90*DEG)
+	//	.translate(2,0.2,0.7)
+	//const b = B2T.sphere(1, undefined, PI)
+	//const cone = new ConicSurface(
+	//	V(2, 0.2, 1.1),
+	//	V(0, 0.6, 0),
+	//	V(0, 0, -2.4),
+	//	V(-12, 0, 0))
+	//const sphere = new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V(0, 0, -1))
+	////const curves = cone.isCurvesWithSurface(sphere)
+	////assert(sphere.containsCurve(curves[0]))
+	//const c = a.minus(b).translate(0,3)
+	//const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625, -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009, 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
+	const pcs = SemiCylinderSurface.UNIT.scale(0.5, 0.05, 4).translate(0.5,0,-2).flipped()
 	const ses = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
+	const curves = ses.isCurvesWithSurface(pcs)
 	return {
 		//a,
 		//b,
 		//c,
-		//mesh: [pcs.toMesh(), ses.toMesh()]
-		edges: [Edge.forCurveAndTs(HyperbolaCurve.XY.shearedX(2, 3))]
+		mesh: [pcs.toMesh(), ses.toMesh()],
+		//edges: [Edge.forCurveAndTs(HyperbolaCurve.XY.shearedX(2, 3))]
 	}
 
 }
