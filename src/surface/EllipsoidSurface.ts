@@ -15,7 +15,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.f3))
-		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
 		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
 	}
 
@@ -230,7 +230,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
     implicitFunction() {
-        return (pWC) => {
+        return (pWC: V3) => {
             const pLC = this.inverseMatrix.transformPoint(pWC)
             return pLC.length() - 1
         }
@@ -239,7 +239,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
     // = d/dp (this.inverseMatrix.transformPoint(p).length() - 1)
     // = d/dp (this.inverseMatrix.transformPoint(p) * this.inverseMatrix.transformPoint(pWC).unit()
     // = this.inverseMatrix.transformPoint(this.inverseMatrix.transformPoint(pWC).unit())
-    didp(pWC) {
+    didp(pWC: V3) {
         const pLC = this.inverseMatrix.transformPoint(pWC)
         return this.inverseMatrix.transformVector(pLC.unit())
     }

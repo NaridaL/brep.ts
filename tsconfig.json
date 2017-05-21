@@ -11,7 +11,7 @@
     "alwaysStrict": true,
     "noImplicitThis": true,
 //    "noImplicitReturns": true,
-//    "strictNullChecks": true,
+   "strictNullChecks": true,
     "sourceMap": true,
 //    "inlineSourceMap": true,
     "emitDecoratorMetadata": true,

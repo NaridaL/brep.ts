@@ -33,7 +33,7 @@ QUnit.testDifferentSystems('Matrix4x4 eigenValues and eigenVectors', function (a
 	console.log(eigenValues)
 //		assert.equal(eigenValues.length, 3)
 	eigenValues.forEach((eigenValue, i)=> {
-		assert.ok(eq0(M4.IDENTITY.timesScalar(-eigenValue).plus(m4.as3x3()).determinant()))
+		assert.ok(eq0(M4.IDENTITY.scale(-eigenValue).plus(m4.as3x3()).determinant()))
 		//assert.ok(ei)
 	})
 	let eigenVectors = m4.realEigenVectors3()

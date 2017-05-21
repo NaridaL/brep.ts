@@ -317,7 +317,7 @@ abstract class Curve extends Transformable implements Equalable {
 					console.log(V(s, t).sce)
 					const subresult = mkcurves(implicitCurve, s, t, stepSize, implicitCurve.x, implicitCurve.y, bounds)
 					for (const curvedata of subresult) {
-					// assert (curvedata.points.length> 2)
+					assert (curvedata.points.length> 2)
 						for (const {x, y} of curvedata.points) {
 							const lif = (x - sMin) / sStep, ljf = (y - tMin) / tStep
 							set((lif - 0.5) | 0, (ljf - 0.5) | 0)
@@ -371,8 +371,9 @@ function mkcurves(implicitCurve: MathFunctionR2_R,
 		return [{points: points1, tangents: tangents1}, {points: points2, tangents: tangents2}]
 	} else {
 		// not a loop: check in the other direction
-		const {points: reversePoints} = followAlgorithm2d(implicitCurve, start, -stepSize, bounds)
-		const result = followAlgorithm2d(implicitCurve, reversePoints.last(), stepSize, bounds)
+		const {points: reversePoints, tangents: reverseTangents} = followAlgorithm2d(implicitCurve, start, -stepSize, bounds)
+		const result = followAlgorithm2d(implicitCurve, reversePoints.last(), stepSize, bounds, undefined, reverseTangents.last().negated())
+		assert(result.points.length > 2)
 		return [result]
 	}
 }
@@ -392,15 +393,15 @@ function curvePoint(implicitCurve: R2_R, startPoint: V3,
 	}
 	return p
 }
-function curvePointMF(mf: MathFunctionR2_R, startPoint: V3) {
-	const eps = 1 / (1 << 20)
+function curvePointMF(mf: MathFunctionR2_R, startPoint: V3, steps: int = 8, eps: number = 1 / (1 << 30)) {
 	let p = startPoint
-	for (let i = 0; i < 8; i++) {
+	for (let i = 0; i < steps; i++) {
 		const fp = mf(p.x, p.y)
 		const dfpdx = mf.x(p.x, p.y), dfpdy = mf.y(p.x, p.y)
 		const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
 		//console.log(p.$)
 		p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
+		if (abs(fp) <= eps) break
 	}
 	return p
 }

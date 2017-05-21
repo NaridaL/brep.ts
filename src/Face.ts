@@ -14,7 +14,9 @@ abstract class Face extends Transformable {
 		assert(contour.every(f => f instanceof Edge), 'contour.every(f => f instanceof Edge)' + contour.toSource())
 		// contour.forEach(e => !surface.containsCurve(e.curve) &&
 		// console.log('FAIL:'+surface.distanceToPoint(e.curve.anchor)))
-		contour.forEach(e => assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface))
+		contour.forEach(e => {
+			assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
+		})
 		assert(surface.edgeLoopCCW(contour), surface.toString()+contour.join('\n'))
 		holes && holes.forEach(hole => Edge.assertLoop(hole))
 		holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)))
@@ -1531,8 +1533,8 @@ class RotationFace extends Face {
 						} else {
 							// edge / edge center intersection
 							// todo: is this even necessary considering we add edges anyway? i think so...
-							const testVector = a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
-							assert(!testVector.likeO())
+							// const testVector = a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
+							// assert(!testVector.likeO())
 							const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p))
 							const sVEF2 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p))
 							if (INSIDE == sVEF1 || INSIDE == sVEF2) {

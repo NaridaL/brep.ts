@@ -62,10 +62,10 @@ class SemiEllipseCurve extends XiEtaCurve {
 		return le(0, y) && eq0(x ** 2 + y ** 2 - 1)
 	}
 
-	static XYLCPointT(pLC: V3): number {
-		assert(le(0, pLC.y))
+	static XYLCPointT(pLC: V3): number {  
+		// assert(le(0, pLC.y)) 
 		const angle = Math.atan2(pLC.y, pLC.x)
-		return angle < 0 ? (assert(eq0(angle) || eq(PI, abs(angle))) && abs(angle)) : angle
+		return angle < -PI/2 ? angle + TAU : angle // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) : angle
 	}
 
 	isValidT(t: number) {

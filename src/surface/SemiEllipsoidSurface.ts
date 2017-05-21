@@ -14,7 +14,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.f3))
-		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
 		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
 	}
 
@@ -85,7 +85,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 	}
 
 	isCurvesWithPCS(surface: ProjectedCurveSurface): Curve[] {
-		let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.02)
+		let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.05)
 		curves2 = this.clipCurves(curves2)
 		curves2 = surface.clipCurves(curves2)
 		return curves2

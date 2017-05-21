@@ -40,7 +40,8 @@ registerTests({
 			M230 230
 			A 45 45, 0, 1, 1, 275 275
 			L 275 230 Z`
-		const edges = Edge.pathFromSVG('m 2 0, 1 1, -2 1 Z')
+		const edges = Edge.pathFromSVG(path)
+        linkB3(assert, {edges})
 		assert.equal(edges.length, 14)
 	},
 	'rotateEdges'(assert){

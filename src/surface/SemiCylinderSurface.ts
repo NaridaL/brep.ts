@@ -18,7 +18,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.baseCurve.normal.dot(this.dir))
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
 		if (!sema) {
 			sema = true
 			assert(this)
@@ -167,7 +167,9 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	getSeamPlane(): P3 {
-		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir)
+		let normal = this.baseCurve.f1.cross(this.dir)
+		normal = normal.times(-sign(normal.dot(this.baseCurve.f2)))
+		return P3.normalOnAnchor(normal, this.baseCurve.center)
 	}
 
 	clipCurves(curves: Curve[]): Curve[] {

@@ -1383,58 +1383,67 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
 //	return {points, tangents}
 //}
 function followAlgorithm2d(ic: MathFunctionR2_R,
-                           start: V3,
+                           startP: V3,
                            stepLength: number = 0.5,
                            bounds: (s: number, t: number) => boolean,
-                           endp: V3 = start): {points: V3[], tangents: V3[]} {
+                           endP: V3 = startP,
+                           startTangent?: V3): {points: V3[], tangents: V3[]} {
 	assertNumbers(stepLength, ic(0, 0))
-	assertVectors(start)
-	//assert (!startDir || startDir instanceof V3)
-	const points = []
-	//let tangents = tangents || []
-	const tangents = []
-	assert (eq02(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	assertVectors(startP)
+	if (!startTangent) {
+		startTangent = new V3(-ic.y(startP.x, startP.y), ic.x(startP.x, startP.y), 0).toLength(stepLength)
+	}
+	assertVectors(startTangent)
+	const points: V3[] = []
+	const tangents: V3[] = []
+	assert (eq02(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
 	const eps = stepLength / 32
-	let p = start, prevp = p, prevTangent = V3.O, broke = false
-	let i = 0
+	let i = 0, p = startP, tangent = startTangent, broke = false
+    // try {
 	do {
-		const dfpdx = ic.x(p.x, p.y), dfpdy = ic.y(p.x, p.y)
-		let tangent = new V3(-dfpdy, dfpdx, 0)
-		const reversedDir = p.minus(prevp).dot(tangent) < 0
-		tangent = tangent.toLength(stepLength)
-		if (prevTangent.dot(tangent) < 0) {
-			// singularity
+		points.push(p)
+		tangents.push(tangent)
+		const searchStart = p.plus(tangent)
+		assert(searchStart)
+		const newP = curvePointMF(ic, searchStart)
+		const dfpdx = ic.x(newP.x, newP.y), dfpdy = ic.y(newP.x, newP.y)
+		const newTangent = new V3(-dfpdy, dfpdx, 0).toLength(stepLength)
+		//const reversedDir = p.minus(prevp).dot(tangent) < 0
+		if (p.equals(newP)) {
+			assertNever()
+		}
+		// check if we passed a singularity
+		if (tangent.dot(newTangent) < 0) {
 			const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y)
 			if (eq0(ic(singularity.x, singularity.y)) && singularity.distanceTo(p) < abs(stepLength)) {
                 // end on this point
                 points.push(singularity)
                 tangents.push(p.to(singularity))
-                broke = true
                 break
             } else {
 				throw new Error()
 			}
 		}
-		const tangentEndPoint = p.plus(tangent)
-		points.push(p)
-		tangents.push(tangent)
-		prevp = p
-        prevTangent = tangent
-		const newP = curvePointMF(ic, tangentEndPoint)
-		if (newP.equals(p)) {
-			assertNever()
+		if (i > 4) {
+			if (!bounds(p.x, p.y)) {
+				break
+			}
+			// full loop or arrived at end
+			if (p.distanceTo(endP) < stepLength) {
+				points.push(endP)
+				const endTangent = new V3(-ic.y(endP.x, endP.y), ic.x(endP.x, endP.y), 0).toLength(stepLength)
+				tangents.push(endTangent)
+                break
+			}
 		}
+		assert(eq02(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)
+		tangent = newTangent
 		p = newP
-		assert(eq0(ic(p.x, p.y)))
-	} while (++i < 1000 && (i < 4 || prevp.distanceTo(endp) > stepLength && bounds(p.x, p.y)))
-	assert(i != 1000)
-	//assert(bounds(p.x, p.y))
-    if (!broke) {
-        const end = (i < 4 || prevp.distanceTo(endp) > stepLength) ? p : endp
-        const endTangent = new V3(-ic.y(end.x, end.y), ic.x(end.x, end.y), 0).toLength(stepLength)
-        points.push(end)
-        tangents.push(endTangent)
-    }
+	} while (++i < 1000)
+    // } catch(e) {
+    //     return {points, tangents}
+    // }
+	assert(i < 1000)
 
 	//assert(points.length > 6)
 	// TODO gleichmäßige Verteilung der Punkte
@@ -1449,7 +1458,6 @@ function followAlgorithm2dAdjustable(ic: MathFunctionR2_R,
 	assertVectors(start)
 	//assert (!startDir || startDir instanceof V3)
 	const points = []
-	//let tangents = tangents || []
 	const tangents = []
 	assert (eq02(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
 	const eps = stepLength / 32

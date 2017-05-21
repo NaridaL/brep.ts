@@ -786,7 +786,7 @@ function setupCamera(eye, _gl: LightGLContext = gl) {
 	//_gl.perspective(70, _gl.canvas.width / _gl.canvas.height, 0.1, 1000);
 	const lr = _gl.canvas.width / 2 / zoomFactor
 	const bt = _gl.canvas.height / 2 /zoomFactor
-	_gl.ortho(-lr, lr, -bt, bt, -1e5, 1e5)
+	_gl.ortho(-lr, lr, -bt, bt, -1e4, 1e4)
 	_gl.lookAt(pos, focus, up)
 	_gl.matrixMode(_gl.MODELVIEW)
 	setupCameraListener && setupCameraListener(eye)

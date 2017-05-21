@@ -155,10 +155,18 @@ class PICurve extends ImplicitCurve {
 
 	at(t: number): V3 {
 	    assert(!isNaN(t))
+		const pointParams = this.stT(t)
+        const result = this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y)
+		// assert(eq(t, this.pointT(result)))
+		return result
+    }
+
+	stT(t: number): V3 {
+	    assert(!isNaN(t))
 	    if (t % 1 == 0) return this.points[t]
         const startParams = V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1)
-        return this.closestPointToParams(startParams)
-    }
+        return curvePoint(this.implicitCurve(), startParams, this.dids, this.didt)
+	}
 
 
 	closestTToPoint(p: V3, tStart?: number): number {
@@ -239,7 +247,8 @@ class PICurve extends ImplicitCurve {
 			m4.transformPoint(this.points[0]),
 			m4.transformPoint(this.points.last()),
 			this.stepSize * dirFactor,
-			this.dir)
+			m4.transformVector(this.tangents[0]),
+			this.at(this.tMin), this.at(this.tMax))
 		//return PICurve.forParametricStartEnd(
 		//	this.parametricSurface.transform(m4),
 		//	this.implicitSurface.transform(m4),
@@ -272,12 +281,12 @@ class PICurve extends ImplicitCurve {
 		const result = callsce('PICurve.forParametricStartEnd',
 			this.parametricSurface, this.implicitSurface,
 			this.pmPoints[0], this.pmPoints.last(),
-			this.stepSize, this.dir, this.tMin, this.tMax)
+			this.stepSize, this.pmTangents[0], this.tMin, this.tMax)
 		return result
 	}
 
 	static forParametricStartEnd(ps: ParametricSurface, is: ImplicitSurface,
-	                             pmStart: V3, pmEnd: V3, stepSize: number = 0.02, dir: number,
+	                             pmStart: V3, pmEnd: V3, stepSize: number = 0.02, startPMTangent: V3,
 	                             tMin?: number, tMax?: number): PICurve {
 		const pFunc = ps.pSTFunc(), iFunc = is.implicitFunction()
 		const dpds = ps.dpds()
@@ -287,13 +296,19 @@ class PICurve extends ImplicitCurve {
 			(x, y) => iFunc(pFunc(x, y)),
 			(s, t) => didp(pFunc(s, t)).dot(dpds(s, t)),
 			(s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)))
-		const {points, tangents} = followAlgorithm2d(mf, pmStart, stepSize, ps.bounds.bind(ps), pmEnd)
-		return PICurve.forParametricPointsTangents(ps, is, points, tangents, stepSize, dir, tMin, tMax)
+		const {points, tangents} = followAlgorithm2d(mf, pmStart, stepSize, ps.bounds.bind(ps), pmEnd, startPMTangent)
+		return PICurve.forParametricPointsTangents(ps, is, points, tangents, stepSize, 1, tMin, tMax)
 	}
 
 	static forStartEnd(ps: ParametricSurface, is: ImplicitSurface,
-	                   start: V3, end: V3, stepSize: number = 0.02, dir: number = 1): PICurve {
-		return PICurve.forParametricStartEnd(ps, is, ps.stP(start), ps.stP(end), stepSize, dir)
+	                   start: V3, end: V3, stepSize: number = 0.02, startTangent: V3, min?: V3, max?: V3): PICurve {
+		const startPM = ps.stP(start)
+		const dpds = ps.dpds()(startPM.x, startPM.y), dpdt = ps.dpdt()(startPM.x, startPM.y)
+		const startPMTangent = M4.forSys(dpds, dpdt).inversed().transformVector(startTangent)
+		assert(dpds.times(startPMTangent.x).plus(dpdt.times(startPMTangent.y)).like(startTangent))
+		const curve = PICurve.forParametricStartEnd(ps, is, startPM, ps.stP(end), stepSize, startPMTangent)
+
+		return curve.withBounds(min && curve.pointT(min), max && curve.pointT(max))
 	}
 
 	static forParametricPointsTangents(ps: ParametricSurface, is: ImplicitSurface,

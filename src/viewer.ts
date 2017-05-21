@@ -200,7 +200,7 @@ function viewerPaint() {
     //edges.forEach((e, i) => drawEdge(e, 0x0ff000, 0.01))
 
     //drPs.forEach(v => drawPoint(v, undefined, 0.3))
-    drawPoints(0.05)
+    drawPoints(0.005)
 	b2planes.forEach(plane => drawPlane(plane, plane.color))
 }
 
@@ -370,7 +370,7 @@ namespace MathFunctionR2_R {
 	}
 }
 const cas2 = cassini(0.9, 1.02)
-function HJK() {
+function HJKl() {
 	const x = math.compile('x^2')
 	//math.derivative('x^2', 'x')
 	nerdamer.setFunction('cassini', 'acxy'.split(''), '(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
@@ -386,17 +386,17 @@ function HJK() {
 	const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
 	//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
 	const {points, tangents}
-		= followAlgorithm2d(mf, curvePointMF(mf, V(1, 0.5)), 0.02, bounds)
-	//const edges = [Edge.forCurveAndTs(new ImplicitCurve(points, tangents).scale(10))]
-	const edges =  Curve.breakDownIC(mf, bounds2, 0.1, 0.1, 0.05)
-		.map(({points, tangents}, i) => Edge.forCurveAndTs(new ImplicitCurve(points, tangents, 1)).translate(0,0,i*0.1))
+		= followAlgorithm2d(mf, curvePointMF(mf, V(1, 0.5)), 0.05, bounds)
+	// const edges = [Edge.forCurveAndTs(new ImplicitCurve(points, tangents).scale(10))]
+	const edges =  Curve.breakDownIC(mf, bounds2, 0.1, 0.1, 0.1)
+		.map(({points, tangents}, i) => Edge.forCurveAndTs(new ImplicitCurve(points, tangents, 1)).translate(0,0,i*0.1).scale(10))
 	//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
 	//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
 	console.log(edges.length)
 	return {edges: edges, points: edges[0].curve.points}
 
 }
-function HJK_() {
+function HJK() {
 	//return {}
 	//const a = B2T.cone(12, 12).scale(0.05,0.2)
 	//	.rotateZ(90*DEG)
@@ -413,7 +413,11 @@ function HJK_() {
 	////assert(sphere.containsCurve(curves[0]))
 	//const c = a.minus(b).translate(0,3)
 	//const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625, -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009, 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
-	const pcs = SemiCylinderSurface.UNIT.scale(0.5, 0.05, 4).translate(0.5,0,-2).flipped()
+	const pcs = SemiCylinderSurface.UNIT
+	.rotateZ(-40*DEG)
+	.scale(0.5, 0.05, 4)
+	.translate(0.5,0,-2)
+	.flipped()
 	const ses = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
 	const curves = ses.isCurvesWithSurface(pcs)
 	return {
@@ -421,7 +425,8 @@ function HJK_() {
 		//b,
 		//c,
 		mesh: [pcs.toMesh(), ses.toMesh()],
-		//edges: [Edge.forCurveAndTs(HyperbolaCurve.XY.shearedX(2, 3))]
+		edges: curves.map(c => Edge.forCurveAndTs(c)),
+		points: curves.flatMap(c => c.points)
 	}
 
 }

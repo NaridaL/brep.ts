@@ -22,7 +22,7 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		this.matrix = M4.forSys(f1, f2, dir, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().timesScalar(this.normalDir)
+		this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
 	}
 
 

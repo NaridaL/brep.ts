@@ -29,7 +29,7 @@
 		'is curves w/ SemiEllipsoidSurface 3'(assert) {
 			const cyl = SemiCylinderSurface.UNIT.rotateZ(PI).scale(0.5,0.05, 4).translate(0.25,0,-2)
 			const sphere = SemiEllipsoidSurface.UNIT
-			testISCurves(assert, sphere, cyl, 2)
+			testISCurves(assert, sphere, cyl, 0)
 		},
 		'is curves w/ plane'(assert) {
 			testISCurves(assert, SemiCylinderSurface.UNIT, P3.XY, 1)

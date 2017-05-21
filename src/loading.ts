@@ -4,9 +4,11 @@ function drawPSI(ctx: CanvasRenderingContext2D, ps: ParametricSurface, is: Impli
 	const sStep = 0.1, tStep = 0.05
 	const dpds = ps.dpds()
 	const dpdt = ps.dpdt()
-	const didp = is.didp.bind(is)
+	const ist = (x: number, y: number) => icc(pf(x, y))
 	const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
 	const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
+	const mf = MathFunctionR2_R.forFFxFy(ist, dids, didt)
+	const didp = is.didp.bind(is)
 	let {sMin, tMin, sMax, tMax} = ps
 	//sMin -= 1
 
@@ -14,17 +16,17 @@ function drawPSI(ctx: CanvasRenderingContext2D, ps: ParametricSurface, is: Impli
 	const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
 	const result: { points: V3[], tangents: V3[] }[] = []
 	const bounds2 = (s: number, t: number) => pf(s, t).y > 0
-	const test = MathFunctionR2_R.forNerdamer('x * y * (-x - y + 1.5) - 0.0') 
-	const flower = MathFunctionR2_R.forNerdamer('(3x^2 - y^2)^2 y^2 - (x^2 +y^2)^4') 
+	const test = MathFunctionR2_R.forNerdamer('x * y * (-x - y + 1.5) - 0.0')
+	const flower = MathFunctionR2_R.forNerdamer('(3x^2 - y^2)^2 y^2 - (x^2 +y^2)^4')
 	const implicit = MathFunctionR2_R.forNerdamer('x^3 + 2x - 3x* y - y^2')
 	nerdamer.setFunction('cassini', 'acxy'.split(''), '(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
 	const cassini = MathFunctionR2_R.forNerdamer('cassini(1,1,x,y)')
 	const heart = MathFunctionR2_R.forNerdamer('(x^2+(-y)^2-1)^3-x^2 (-y)^3')
 	nerdamer.setConstant('pi', PI)
 	const grid = MathFunctionR2_R.forNerdamer('cos(pi* y) - cos(pi *x)')
-	const what = test
-	// draw3(ctx, implicitCurve, dids, didt, ps, sStep, tStep)
-	draw3(ctx, what, what.x, what.y, {sMin: -2, sMax: 2, tMin: -1.7, tMax: 1.3}, 0.07, 0.07)
+	const what = mf
+	// draw3(ctx, implicitCurve, dids, didt, ps, sStep, tStep){sMin: -2, sMax: 2, tMin: -1.7, tMax: 1.3}
+	draw3(ctx, what, what.x, what.y, ps, 0.07, 0.07)
 }
 function draw3(ctx, implicitCurve, dids, didt, bounds, sStep, tStep) {
 	ctx.save()
@@ -166,14 +168,14 @@ function loadingMain() {
 	canvas.height = window.innerHeight
 	canvas.width = window.innerWidth
 	let frameCount = 0
-	const is = SemiEllipsoidSurface.UNIT
-	const ps = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
+	const is = new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V3.Z)
+	const ps = new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0, -2),V(0.5, 0, 0),V(0, 0.05, 0),0,3.141592653589793),V(0, 0, -1),0,3.141592653589793,-4,0)
 	const stepSize = 0.02
 	//const is = SemiEllipsoidSurface.UNIT
 	//const ps = new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2), V(0.30000000000000004,
 	// 0.010456949966158674, 1.2), V(0.2104569499661587, 0.1, 1.2), V(0.10000000000000002, 0.1, 1.2), 0, 1), V(0, 0,
 	// 2), 0, 1, -1, 0)
 
-	const ps3 = SemiCylinderSurface.UNIT.rotateZ(-20 * DEG).scale(0.5, 0.05, 4).translate(0.5 - 0.01,0,-2).flipped()
-	requestAnimationFrame(time => drawPSI(ctx, ps3, is))
+	const ps3 = SemiCylinderSurface.UNIT.rotateZ(-20 * DEG).scale(0.5, 0.05, 4).translate(0.5 - 0.00,0,-2).flipped()
+	requestAnimationFrame(time => drawPSI(ctx, ps, is))
 }
