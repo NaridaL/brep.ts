@@ -152,7 +152,7 @@ abstract class XiEtaCurve extends Curve {
 	pointT(p: V3): number {
 		assertVectors(p)
 		const pLC = this.inverseMatrix.transformPoint(p)
-		return this.constructor.XYLCPointT(pLC)
+		return this.constructor.XYLCPointT(pLC, PI)
 	}
 
 	containsPoint(p: V3): boolean {

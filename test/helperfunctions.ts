@@ -45,8 +45,15 @@ QUnit.assert.V3ArraysLike = function (actual, expected, message) {
 }
 
 
-function registerTests(o: { [key: string]: (assert: Assert) => void }) {
-	for (const key in o) {
+function registerTests(o: { [key: string]: (assert: Assert) => void })
+function registerTests(moduleName: string, o: { [key: string]: (assert: Assert) => void })
+function registerTests(moduleName: any, o?: any) {
+	if ('string' == typeof moduleName) {
+	    QUnit.module(moduleName)
+    } else {
+	    o = moduleName
+    }
+    for (const key in o) {
 		QUnit.test(key, o[key])
 	}
 }
@@ -111,8 +118,8 @@ function testCurve(ass: Assert, curve: Curve) {
 			result: eq(t, curve.pointT(p)),
 			actual: curve.pointT(p),
 			expected: t,
-			message: 't eq pointT(at(t) for ' + t})
-		ass.ok(curve.containsPoint(p), `containsPoint(at(t = ${t}) = ${p})`)
+			message: 't eq pointT(at(t)) for ' + t})
+		ass.ok(curve.containsPoint(p), `containsPoint(at(t == ${t}) == ${p})`)
 	})
 
 	// test curve length
@@ -163,7 +170,7 @@ function testParametricSurface(ass: Assert, surf: ParametricSurface) {
 			assert(eq0(surf.implicitFunction()(p)))
 		}
 	}
-	const matrices = [M4.mirroring(P3.XY), M4.mirroring(P3.YZ), M4.mirroring(P3.ZX)]
+	const matrices = [M4.mirror(P3.XY), M4.mirror(P3.YZ), M4.mirror(P3.ZX)]
 	for (let mI = 0; mI < matrices.length; mI++) {
 		const m = matrices[mI]
 		for (let i = 0; i < points.length; i++) {
@@ -213,6 +220,6 @@ function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: i
 
 function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
 	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
-	linkB2(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
+	linkB2(assert, `viewer.html#mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }

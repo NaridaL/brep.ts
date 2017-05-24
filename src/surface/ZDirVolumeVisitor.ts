@@ -40,6 +40,12 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 		return {volume: totalVolume * Math.sign(this.normal.dot(this.dir))}
 	},
 
+    [PlaneSurface.name](): {centroid: V3, volume: number} {
+        const {centroid, area} = this.calculateArea()
+        return {volume: this.surface.plane.normal1.z * centroid.z * area,
+            centroid: new V3(centroid.x, centroid.y, centroid.z / 2) }
+
+    }
 	/**
 	 * at(t)
 	 * |\                                    ^
@@ -200,7 +206,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	// and then sum the zDir volumes of the resulting loops
 	[EllipsoidSurface.name](this: EllipsoidSurface, loop: Edge[]): {centroid: V3, volume: number} {
 		const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
-		const T = M4.rotationAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
+		const T = M4.rotateAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix)
 		function calc(loop) {
 			let totalVolume = 0
 			assert(V3.Z.isParallelTo(T.transformVector(V3.Z)))
@@ -231,8 +237,8 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	},
 	zDirVolumeForLoop2(loop: Edge[]): number {
 		const angles = this.inverseMatrix.getZ().toAngles()
-		const T = M4.rotationY(-angles.theta).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
-		const rot90x = M4.rotationX(PI / 2)
+		const T = M4.rotateY(-angles.theta).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix)
+		const rot90x = M4.rotateX(PI / 2)
 		let totalVolume = 0
 		assert(V3.X.isParallelTo(T.transformVector(V3.Z)))
 		//const zDistanceFactor = toT.transformVector(V3.Z).length()
@@ -271,7 +277,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	// and then sum the zDir volumes of the resulting loops
 	[SemiEllipsoidSurface.name](loop: Edge[]): {volume: number, centroid: V3} {
 		const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
-		const T = M4.rotationAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
+		const T = M4.rotateAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix)
 		function calc(loop) {
 			let totalVolume = 0
 			assert(V3.Z.isParallelTo(T.transformVector(V3.Z)))

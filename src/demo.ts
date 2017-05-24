@@ -1,3 +1,4 @@
+declare const hljs: any
 const demos = []
 function makeDemo(id: string, f: (...args: any[]) => B2 | B2[], args) {
 	demos.push({id, f, args})
@@ -32,7 +33,7 @@ async function demoMain() {
 
 		initShaders(gl.shaders = {})
 		initMeshes(gl.meshes = {})
-		demo.eye = {eyePos: V(10, 10, 100), eyeFocus: V(5, 5, 0), eyeUp: V3.Y, zoomFactor: 8}
+		demo.eye = {pos: V(10, 10, 100), focus: V(5, 5, 0), up: V3.Y, zoomFactor: 8}
 		initNavigationEvents(gl, demo.eye, () => paintDemo(demo))
 		//initInfoEvents()
 		//initPointInfoEvents()
@@ -57,9 +58,17 @@ async function demoMain() {
 				return new MooEl('span.incont').adopt(input).appendText(arg.name)
 			}),
 			new MooEl('span.info'),
-			new MooEl('span.navinfo', {text: 'pan: drag-mmb | rotate: drag-rmb | zoom: scroll'})
+			new MooEl('span.navinfo', {text: 'pan: drag-mmb | rotate: drag-rmb | zoom: scroll'}),
+			demo.srcLink = new MooEl('a.sourcelink', {text: 'show source', href: '#'})
+                .addEvent('click', e => {
+                    const showing = demo.srcLink.get('text') == 'hide source'
+                    demo.srcContainer.setStyle('display', showing ? 'none':'block' )
+                    demo.srcLink.set('text', showing ? 'show source' : 'hide source')
+                    return false
+                })
 		)
-
+		demo.srcContainer = new MooEl('code.src', {text: demo.f.toSource(), style: 'display: none;'}).inject(container, 'after')
+        hljs.highlightBlock(demo.srcContainer)
 		update(demo, args.map(a => a.def))
 
 	})
@@ -90,7 +99,7 @@ function paintDemo(demo) {
 		gl.pushMatrix()
 		//gl.translate(30, 0, 0)
 		gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
-		mesh.lines && gl.shaders.singleColor.uniforms({ color: chroma('#bfbfbf').gl() }).draw(mesh, 'LINES')
+		mesh.lines && gl.shaders.singleColor.uniforms({ color: chroma('#bfbfbf').gl() }).draw(mesh, gl.LINES)
 		gl.projectionMatrix.m[11] += 1 / (1 << 22)
 
 		let faceIndex = b2.faces.length
@@ -99,8 +108,8 @@ function paintDemo(demo) {
 			const face = b2.faces[faceIndex]
 			const faceTriangleIndexes = mesh.faceIndexes.get(face)
 			gl.shaders.lighting.uniforms({
-				color: hovering == face ? chroma('purple').gl() : meshColorss[i % meshColorss.length][faceIndex % randomColors.length]
-			}).draw(mesh, 'TRIANGLES', faceTriangleIndexes.start, faceTriangleIndexes.count)
+				color: hovering == face ? chroma('purple').gl() : meshColorss.emod(i).emod(faceIndex)
+			}).draw(mesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
 			//shaders.singleColor.uniforms({
 			//color: hexIntToGLColor(0x0000ff)
 			//}).draw(brepMesh, 'LINES')

@@ -22,6 +22,172 @@ class RotateEditor extends Component<{feature: Rotate, done: any, del: any}, any
 			<BrepOpSelect notifier={notifier} feature={feature} propName='operation' />)
 	}
 }
+class SelectedItem extends Component<any, any> {
+    onMouseOver = () => {
+
+    }
+    remove = (e: Event) => {
+        editingSketch.removeElement(target)
+        updateSelected()
+        paintScreen()
+    }
+    render({sel}: any) {
+        let target, name
+        if (sel instanceof NameRef) {
+            target = sel.get()
+            name = sel.ref
+        } else {
+            target = sel
+            name = sel.name || modelBREP && modelBREP.vertexNames && modelBREP.vertexNames.get(sel)
+        }
+        return <div onMouseOver={this.onMouseOver}>
+            <span style='width: 10em; display: inline-block; text-transform: uppercase'>{sel.constructor.name}</span>
+            {name}
+            <a href='#' class='unsel icon-link'>U</a>
+            <a href='#' class='featureDelete icon-link remove' name='delete' onClick ={this.remove}>&#x274C;</a>
+        </div>
+    }
+}
+class Selection2 extends Component<any, any> {
+    render(props: any) {
+        return <div>
+            {props.els.map(el => <SelectedItem sel={el} />)}
+        </div>
+    }
+}
+/*
+function updateSelected() {
+	let div = $('selectedElements')
+	div.erase('text')
+	selected.forEach(sel => {
+		// TODO, if only necessary part of model is rebuilt, this probably wont be necessary:
+		let target, name
+		if (sel instanceof NameRef) {
+			target = sel.get()
+			name = sel.ref
+		} else {
+			target = sel
+			name = sel.name || modelBREP && modelBREP.vertexNames && modelBREP.vertexNames.get(sel)
+		}
+		const newChild = template('template', {what: sel.constructor.name, name: name})
+		if (!target) {
+			newChild.addClass('notfound')
+		}
+		newChild.onmouseover = function (e) {
+			if (target) {
+				hoverHighlight = target
+			} else {
+				// lookup missing
+				missingEls.push(sel.lastHit)
+			}
+			paintScreen()
+		}
+		newChild.onmouseout = function (e) {
+			if (target) {
+				hoverHighlight = null
+			} else {
+				missingEls.remove(sel.lastHit)
+			}
+			paintScreen()
+		}
+		newChild.getElement('.remove').onclick = function (e) {
+			editingSketch.removeElement(target)
+			updateSelected()
+			paintScreen()
+		}
+		newChild.getElement('.unsel').onclick = function (e) {
+			selected.remove(sel)
+			updateSelected()
+			paintScreen()
+		}
+		sel.toBrepEdge && newChild.grab(new MooEl('span', {
+			text: sel.toBrepEdge().curve.toSource(x => round10(x, -3)),
+			style: 'font-size: small;'
+		}))
+		sel.surface && newChild.grab(new MooEl('textarea', {
+			text: sel.sce,
+			style: 'font-size: xx-small;display:block;width:100%;'
+		}))
+		newChild.inject(div)
+	})
+	div = $('selectedConstraints')
+	div.erase('text')
+	if (MODES.SKETCH == modeGetCurrent()) {
+		selected.flatMap((el) => editingSketch.getConstraintsFor(el)).unique().forEach(cst => {
+			let newChild
+			if ('pointDistance' == cst.type
+				|| 'pointLineDistance' == cst.type
+				|| 'pointPlaneDistance' == cst.type) {
+				newChild = template('templateDistance', {name: cst.type, id: cst.id})
+				newChild.getElement('.distanceInput').value = cst.distance
+				newChild.getElement('.distanceInput').onchange = function (e) {
+					cst.distance = e.target.value
+					rebuildModel()
+					paintScreen()
+				}
+			} else if ('angle' == cst.type) {
+				newChild = template('templateAngle', {name: cst.type, id: cst.id})
+				const input = newChild.getElement('.distanceInput')
+				newChild.getElement('.distanceInput').value = round10(rad2deg(cst.value), -5)
+				newChild.getElement('.fa').onclick = () => {
+					cst.f[0] *= -1
+					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))))
+					paintScreen()
+				}
+				newChild.getElement('.fb').onclick = () => {
+					cst.f[1] *= -1
+					input.value = round(rad2deg(abs(cst.value = (-PI + cst.value) % (2 * PI))))
+					paintScreen()
+				}
+				newChild.getElement('.fv').onclick = () => {
+					input.value = round(rad2deg(abs(cst.value -= sign(cst.value) * 2 * PI)))
+					paintScreen()
+				}
+				input.onchange = function (e) {
+					cst.value = e.target.value * DEG
+					rebuildModel()
+					paintScreen()
+				}
+			} else {
+				newChild = template('templateConstraint', {name: cst.type})
+
+				cst.cs.forEach(function (el) {
+					const subChild = template('templateConstraintSub', {what: el.constructor.name, name: el.name})
+					subChild.inject(newChild)
+					subChild.getElement('.removeFromConstraint').onclick = function (e) {
+						removeFromConstraint(el, editingSketch, cst)
+						updateSelected()
+						paintScreen()
+					}
+					subChild.onmouseover = function (e) {
+						hoverHighlight = el
+						e.stopPropagation()
+						paintScreen()
+					}
+					subChild.onmouseout = function (e) {
+						hoverHighlight = null
+						paintScreen()
+					}
+				})
+			}
+			newChild.getElement('.remove').onclick = function (e) {
+                editingSketch.deleteConstraint(cst)
+				updateSelected()
+			}
+			newChild.onmouseover = function (e) {
+				hoverHighlight = cst
+				paintScreen()
+			}
+			newChild.onmouseout = function (el) {
+				hoverHighlight = null
+				paintScreen()
+			}
+			newChild.inject(div)
+		})
+	}
+}
+
+ */
 
 class PatternEditor extends Component<{feature: Pattern, done: any, del: any}, any> {
 	render({feature, done, del, notifier}) {
@@ -83,7 +249,8 @@ class SketchEditor extends Component<{feature: Extrude, done: any, del: any}, an
 			<PlaneSelect notifier={notifier} feature={feature} propName='planeRef' />)
 	}
 }
-
+import {observer} from 'mobx-react'
+@observer
 class FeatureEditor extends Component<any, any> {
 	render({done, del, children, notifier, feature, ...props}) {
 		const color = '#ff6b6d'
@@ -96,8 +263,8 @@ class FeatureEditor extends Component<any, any> {
 			</div>
 			{children}
 			<div style='display: flex; justify-content: space-between;'>
-				<button style='flex: 1; margin: 2px;' onClick={done}>Done</button>
-				<button style='flex: 1; margin: 2px;' onClick={del}>Delete</button>
+				<button style='flex: 1; margin: 2px;' onClick ={done}>Done</button>
+				<button style='flex: 1; margin: 2px;' onClick ={del}>Delete</button>
 			</div>
 		</div>
 	}
@@ -258,7 +425,7 @@ class SketchLoopSelect extends Component<any, any> {
 		super(props)
 		this.state = {selecting: false}
 	}
-	onClick = e => {
+	onClick = (e: Event) => {
 		const {feature, notifier, propName} = this.props
 		if (!this.state.selecting) {
 			modePush(MODES.SELECT_SEGMENT, segmentRef => {
@@ -274,14 +441,14 @@ class SketchLoopSelect extends Component<any, any> {
 		const value = feature[propName]
 		const classes = classNames('selector', {selecting: state.selecting})
 		return <OneLineThing label={label}>
-			<div class={classes} onClick={this.onClick} style='display: inline-block; text-align: center; width: 70%'>
+			<div class={classes} onClick ={this.onClick} style='display: inline-block; text-align: center; width: 70%'>
 				{(state.selecting ? 'Click on a segment' : value ? <RefItem value={value}/> : 'undefined')}
 			</div>
 		</OneLineThing>
 	}
 }
 class RefItem  extends Component<any, any> {
-	onMouseEnter = e => {
+	onMouseEnter= (e: Event) => {
 		const target = this.props.value.get()
 		if (target) {
 			hoverHighlight = target
@@ -290,7 +457,7 @@ class RefItem  extends Component<any, any> {
 		}
 		paintScreen()
 	}
-	onMouseLeave = e => {
+	onMouseLeave= (e: Event) => {
 		hoverHighlight = undefined
 		missingEls.remove(this.props.value.lastHit)
 		paintScreen()
@@ -304,7 +471,7 @@ class PlaneSelect extends Component<any, any> {
 		super(props)
 		this.state = {selecting: false}
 	}
-	onClick = e => {
+	onClick = (e: Event) => {
 		const {feature, notifier, propName} = this.props
 		if (!this.state.selecting) {
 			modePush(MODES.SELECT_PLANE, segmentRef => {
@@ -330,7 +497,7 @@ abstract class MagicSelect extends Component<any, any> {
 		this.state = {selecting: false}
 	}
 
-	onClick = e => {
+	onClick = (e: Event) => {
 		const {feature, notifier, propName} = this.props
 		if (!this.state.selecting) {
 			modePush(this.constructor.mode, refs => {
@@ -340,13 +507,13 @@ abstract class MagicSelect extends Component<any, any> {
 		}
 		this.setState({selecting: !this.state.selecting})
 	}
-	abstract onMouseOver: (e) => void
-	abstract onMouseOut: (e) => void
+	abstract onMouseOver: (e: Event) => void
+	abstract onMouseOut: (e: Event) => void
 	render(props, state) {
 		//const selecting = modeStack.some(mode => mode == MODES.SELECT_SEGMENT && )
 		const refs = props.feature[props.propName]
 		const classes = classNames({selecting: state.selecting})
-		return <div class={classes} onClick={this.onClick} onMouseOver={this.onMouseOver} onMouseOut={this.onMouseOut}>
+		return <div class={classes} onClick ={this.onClick} onMouseOver={this.onMouseOver} onMouseOut={this.onMouseOut}>
 			<div style='font-size: small'>{props.label}</div>
 			{0 == refs.length
 				? 'nothing selected'
@@ -357,7 +524,7 @@ abstract class MagicSelect extends Component<any, any> {
 class DirectionSelect extends MagicSelect {
 	static mode = MODES.SELECT_DIRECTION
 	hit
-	onMouseOver = e => {
+	onMouseOver= (e: Event) => {
 		const {feature, propName} = this.props
 		const whats = feature[propName].map(what => what.get())
 		if (whats.every(x => x)) {
@@ -368,14 +535,14 @@ class DirectionSelect extends MagicSelect {
 			}
 		}
 	}
-	onMouseOut = e => {
+	onMouseOut= (e: Event) => {
 		this.hit && missingEls.remove(this.hit)
 	}
 }
 class LineSelect extends MagicSelect {
 	static readonly mode = MODES.SELECT_LINE
 	hit
-	onMouseOver = e => {
+	onMouseOver= (e: Event) => {
 		const {feature, propName} = this.props
 		const whats = feature[propName].map(what => what.get())
 		if (whats.every(x => x)) {
@@ -386,7 +553,7 @@ class LineSelect extends MagicSelect {
 			}
 		}
 	}
-	onMouseOut = e => {
+	onMouseOut= (e: Event) => {
 		this.hit && missingEls.remove(this.hit)
 	}
 }
@@ -397,7 +564,7 @@ class FeaturesSelect extends Component<any, any> {
 		this.state = {selecting: false}
 	}
 
-	onClick = e => {
+	onClick = (e: Event) => {
 		const {feature, notifier, propName} = this.props
 		if (!this.state.selecting) {
 			modePush(MODES.SELECT_FEATURE, refs => {
@@ -411,7 +578,7 @@ class FeaturesSelect extends Component<any, any> {
 		//const selecting = modeStack.some(mode => mode == MODES.SELECT_SEGMENT && )
 		const refs = props.feature[props.propName]
 		const classes = classNames({selecting: state.selecting})
-		return <div class={classes} onClick={this.onClick}
+		return <div class={classes} onClick ={this.onClick}
 		            data-tooltipside='left'
 		            style='display: flex; justify-content: space-between; align-items: top; margin: 2px;'
 		            data-tooltip='Select features by clicking on them in the model or the feature stack.'>
@@ -425,7 +592,7 @@ class FeaturesSelect extends Component<any, any> {
 }
 
 class BrepOpSelect extends Component<any, any> {
-	onChange = e => {
+	onChange= (e: Event) => {
 		const {feature, notifier, propName} = this.props
 		notifier(feature, propName, e.target.value)
 	}
@@ -476,18 +643,18 @@ class FeatureStackDisplay extends Component<any, any> {
 				<span style='width: 42px; display: inline-block;'>{snAndNames[feature.constructor.name][0]}</span>
 				<span style='width: 105px; display: inline-block;color: purple;'>{feature.name}</span>
 
-				<a class='icon-link featureDelete' name='delete' onClick={e => featureDelete(feature)}
+				<a class='icon-link featureDelete' name='delete' onClick ={e => featureDelete(feature)}
 				   data-tooltip='Delete feature. Dependent features will fail to build and will need to be modified.'>❌</a>
 
 				<a class='icon-link featureEdit' name='edit'
-				   onClick={e => modePush(snAndNames[feature.constructor.name][1], feature)}
+				   onClick ={e => modePush(snAndNames[feature.constructor.name][1], feature)}
 				   data-tooltip='Modify this feature.'>🖉</a>
 
 				<a class={classNames('icon-link', {'hidden': feature.hide})}
-				   onClick={e => this.toggleHide(feature)}
+				   onClick ={e => this.toggleHide(feature)}
 				   data-tooltip='Temporarily prevent this feature from being built. Dependent features will not be built.'>👁</a>
 
-				<a class='icon-link' name='rollBack' onClick={e => featureRollBack(feature, featureIndex)}
+				<a class='icon-link' name='rollBack' onClick ={e => featureRollBack(feature, featureIndex)}
 				   data-tooltip='Rollback feature.'>R</a>
 
 				{featureError && featureError.feature == feature &&

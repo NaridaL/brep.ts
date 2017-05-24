@@ -88,7 +88,7 @@ class ProjectedCurveSurface extends ParametricSurface {
                 return new L3(this.baseCurve.at(t), l3dir.unit())
             })
         } else {
-            let projCurve = this.baseCurve.transform(M4.projection(plane, this.dir))
+            let projCurve = this.baseCurve.transform(M4.project(plane, this.dir))
             if (this.dir.dot(plane.normal1) > 0) {
                 // we need to flip the ellipse so the tangent is correct
                 projCurve = projCurve.reversed()

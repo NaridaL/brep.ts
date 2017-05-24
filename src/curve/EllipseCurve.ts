@@ -73,7 +73,7 @@ class EllipseCurve extends XiEtaCurve {
 		const factor = this.matrix.xyAreaFactor() // * upLC.length()
 		//console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
 		assert(!eq0(factor))
-		return {area: area * factor, centroid: this.matrix.transformPoint(M4.rotationZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0)))}
+		return {area: area * factor, centroid: this.matrix.transformPoint(M4.rotateZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0)))}
 
 	}
 
@@ -221,7 +221,7 @@ class EllipseCurve extends XiEtaCurve {
 			}
 			return ts.map(raT => {
 				const p = this.matrix.transformPoint(ellipseLCRA.at(raT))
-				return {tThis: this.pointT(p), tOther: ellipse.pointT(p), p}
+				return {tThis: this.pointT(p), tOther: ellipse.pointT(p, PI), p}
 			})
 
 			//const angle = ellipseLCRA.f1.angleXY()
@@ -238,7 +238,7 @@ class EllipseCurve extends XiEtaCurve {
 			//const f2 = (x, y) => (x * x + y * y - 1)
 			//const f3 = (x, y) => ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1)
 			//const results = []
-			//const resetMatrix = this.matrix.times(M4.rotationZ(angle))
+			//const resetMatrix = this.matrix.times(M4.rotateZ(angle))
 			//for (let startT = Math.PI / 4; startT < 2 * Math.PI; startT += Math.PI / 2) {
 			//	const startP = EllipseCurve.XY.at(startT)
 			//	const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)

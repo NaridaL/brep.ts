@@ -269,7 +269,7 @@ abstract class Curve extends Transformable implements Equalable {
 		})
 	}
 
-	static breakDownIC(implicitCurve: MathFunctionR2_R,
+	static breakDownIC(implicitCurve: MathFunctionR2R,
 	                   {sMin, sMax, tMin, tMax}: {sMin: number, sMax: number, tMin: number, tMax: number},
 	                   sStep: number, tStep: number,
 	                   stepSize: number,
@@ -342,15 +342,15 @@ abstract class Curve extends Transformable implements Equalable {
 
 }
 
-function mkcurves(implicitCurve: MathFunctionR2_R,
+function mkcurves(implicitCurve: MathFunctionR2R,
                   sStart: number, tStart: number,
                   stepSize: number,
                   dids: R2_R,
                   didt: R2_R,
                   bounds: (s: number, t: number) => boolean): {points: V3[], tangents: V3[]}[] {
 	const start = V(sStart, tStart)
-	checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
-	checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
+	// checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
+	// checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
 	const {points, tangents} = followAlgorithm2d(implicitCurve, start, stepSize, bounds)
 	if (points[0].distanceTo(points.last()) < stepSize && points.length > 2) {
 		// this is a loop: split it
@@ -393,7 +393,7 @@ function curvePoint(implicitCurve: R2_R, startPoint: V3,
 	}
 	return p
 }
-function curvePointMF(mf: MathFunctionR2_R, startPoint: V3, steps: int = 8, eps: number = 1 / (1 << 30)) {
+function curvePointMF(mf: MathFunctionR2R, startPoint: V3, steps: int = 8, eps: number = 1 / (1 << 30)) {
 	let p = startPoint
 	for (let i = 0; i < steps; i++) {
 		const fp = mf(p.x, p.y)

@@ -90,7 +90,7 @@ abstract class Surface extends Transformable implements Equalable {
 				}
 				// edge colinear to intersection
 				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
-				if (nextInside) {
+				if (!nextInside) {
 					if (logIS(edge.b)) return PointVsFace.ON_EDGE
 				}
 			} else {
@@ -126,6 +126,7 @@ abstract class Surface extends Transformable implements Equalable {
 	}
 
 	abstract equals(obj: any): boolean
+
 	hashCode(): int {
 		return this.getConstructorParameters().hashCode()
 	}

@@ -115,29 +115,29 @@
 
 		},
 		'M4.prototype.isAxisAligned'(assert) {
-			assert.ok(M4.rotationX(Math.PI / 2).isAxisAligned())
-			console.log(M4.rotationX(Math.PI / 4).toString())
+			assert.ok(M4.rotateX(Math.PI / 2).isAxisAligned())
+			console.log(M4.rotateX(Math.PI / 4).toString())
 			console.log(false + true + true)
-			assert.notOk(M4.rotationX(Math.PI / 4).isAxisAligned())
+			assert.notOk(M4.rotateX(Math.PI / 4).isAxisAligned())
 		},
 		'M4.prototype.rotationLine'(assert) {
-			assert.matrixEquals(M4.rotationLine(V3.O, V3.X, 1), M4.rotationX(1))
-			assert.matrixEquals(M4.rotationLine(V3.O, V3.Y, 1), M4.rotationY(1))
-			assert.matrixEquals(M4.rotationLine(V3.O, V3.Z, 1), M4.rotationZ(1))
+			assert.matrixEquals(M4.rotateLine(V3.O, V3.X, 1), M4.rotateX(1))
+			assert.matrixEquals(M4.rotateLine(V3.O, V3.Y, 1), M4.rotateY(1))
+			assert.matrixEquals(M4.rotateLine(V3.O, V3.Z, 1), M4.rotateZ(1))
 
 			const a = V(1, 2, 3), PI = Math.PI
 			assert.matrixEquals(
-				M4.rotationLine(a, V(1, 1, 0).unit(), 1),
-				M4.multiplyMultiple(M4.translation(a), M4.rotationZ(PI / 4), M4.rotationX(1), M4.rotationZ(-PI / 4), M4.translation(a.negated())),
+				M4.rotateLine(a, V(1, 1, 0).unit(), 1),
+				M4.multiplyMultiple(M4.translate(a), M4.rotateZ(PI / 4), M4.rotateX(1), M4.rotateZ(-PI / 4), M4.translate(a.negated())),
 				'',
 				1e-6)
 		},
 		'M4.multiplyMultiple'(assert) {
-			assert.matrixEquals(M4.multiplyMultiple(M4.rotationX(1), M4.rotationZ(1)), M4.rotationX(1).times(M4.rotationZ(1)))
+			assert.matrixEquals(M4.multiplyMultiple(M4.rotateX(1), M4.rotateZ(1)), M4.rotateX(1).times(M4.rotateZ(1)))
 		},
 		'M4.projection'(assert) {
 			const plane = new P3(V(1, 2, 3).unit(), 5)
-			const proj = M4.projection(plane)
+			const proj = M4.project(plane)
 			console.log(proj.transformPoint(V(2, 4, 6)))
 			assert.V3like(proj.transformPoint(V(2, 4, 6)), plane.anchor)
 			assert.V3like(proj.transformVector(V(2, 4, 6)), V3.O)
@@ -150,7 +150,7 @@
 		'M4.projection 2'(assert) {
 			[V(1, 1, 1), V(0, 0, -1)].forEach(dir => {
 				const plane = new P3(V(1, 2, 3).unit(), 5)
-				const proj = M4.projection(plane, dir)
+				const proj = M4.project(plane, dir)
 				const p2 = V(3, 5, 22)
 				assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
 				assert.ok(plane.containsPoint(proj.transformPoint(p2)))
@@ -162,7 +162,7 @@
 		},
 		'M4.isIdentity'(assert) {
 			assert.ok(M4.identity().isIdentity())
-			assert.notOk(M4.scaling(1, 2, 3).isIdentity())
+			assert.notOk(M4.scale(1, 2, 3).isIdentity())
 		},
 
 		'M4.gauss'(assert) {

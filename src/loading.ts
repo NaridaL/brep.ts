@@ -7,7 +7,7 @@ function drawPSI(ctx: CanvasRenderingContext2D, ps: ParametricSurface, is: Impli
 	const ist = (x: number, y: number) => icc(pf(x, y))
 	const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
 	const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
-	const mf = MathFunctionR2_R.forFFxFy(ist, dids, didt)
+	const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
 	const didp = is.didp.bind(is)
 	let {sMin, tMin, sMax, tMax} = ps
 	//sMin -= 1
@@ -16,14 +16,14 @@ function drawPSI(ctx: CanvasRenderingContext2D, ps: ParametricSurface, is: Impli
 	const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
 	const result: { points: V3[], tangents: V3[] }[] = []
 	const bounds2 = (s: number, t: number) => pf(s, t).y > 0
-	const test = MathFunctionR2_R.forNerdamer('x * y * (-x - y + 1.5) - 0.0')
-	const flower = MathFunctionR2_R.forNerdamer('(3x^2 - y^2)^2 y^2 - (x^2 +y^2)^4')
-	const implicit = MathFunctionR2_R.forNerdamer('x^3 + 2x - 3x* y - y^2')
+	const test = MathFunctionR2R.forNerdamer('x * y * (-x - y + 1.5) - 0.0')
+	const flower = MathFunctionR2R.forNerdamer('(3x^2 - y^2)^2 y^2 - (x^2 +y^2)^4')
+	const implicit = MathFunctionR2R.forNerdamer('x^3 + 2x - 3x* y - y^2')
 	nerdamer.setFunction('cassini', 'acxy'.split(''), '(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
-	const cassini = MathFunctionR2_R.forNerdamer('cassini(1,1,x,y)')
-	const heart = MathFunctionR2_R.forNerdamer('(x^2+(-y)^2-1)^3-x^2 (-y)^3')
+	const cassini = MathFunctionR2R.forNerdamer('cassini(1,1,x,y)')
+	const heart = MathFunctionR2R.forNerdamer('(x^2+(-y)^2-1)^3-x^2 (-y)^3')
 	nerdamer.setConstant('pi', PI)
-	const grid = MathFunctionR2_R.forNerdamer('cos(pi* y) - cos(pi *x)')
+	const grid = MathFunctionR2R.forNerdamer('cos(pi* y) - cos(pi *x)')
 	const what = mf
 	// draw3(ctx, implicitCurve, dids, didt, ps, sStep, tStep){sMin: -2, sMax: 2, tMin: -1.7, tMax: 1.3}
 	draw3(ctx, what, what.x, what.y, ps, 0.07, 0.07)
@@ -47,7 +47,7 @@ function draw3(ctx, implicitCurve, dids, didt, bounds, sStep, tStep) {
 const colorScale = chroma.scale(['white', 'red', 'green', 'white']).domain([0, 127, 128, 255])
 const colors = arrayFromFunction(256, i => colorScale(i) as Chroma.Color)
 const colorsBright =colors.map(c => c.darken(0.5))
-function draw(ctx: CanvasRenderingContext2D, ic: MathFunctionR2_R, bounds: {sMin, tMin, sMax, tMax}, sStep, tStep) {
+function draw(ctx: CanvasRenderingContext2D, ic: MathFunctionR2R, bounds: {sMin, tMin, sMax, tMax}, sStep, tStep) {
 	let {sMin, tMin, sMax, tMax} = bounds
 	const deltaS = sMax - sMin, deltaT = tMax - tMin
 	const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)

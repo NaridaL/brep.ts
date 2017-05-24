@@ -35,10 +35,6 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 			&& this.dir.equals(obj.dir)
 	}
 
-	hashCode(): int {
-		return [this.center, this.f1, this.f2, this.dir].hashCode()
-	}
-
 	get apex() {
 		return this.center
 	}
@@ -223,16 +219,10 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		assert(false)
 	}
 
-	stPFunc() {
-		return (pWC: V3, hint = PI) => {
-			const pLC = this.inverseMatrix.transformPoint(pWC)
-			let angle = pLC.angleXY()
-			if (abs(angle) > Math.PI - NLA_PRECISION) {
-				assert(hint == -PI || hint == PI)
-				angle = hint
-			}
-			return new V3(angle, pLC.z, 0)
-		}
+	stP(pWC: V3) {
+        const pLC = this.inverseMatrix.transformPoint(pWC)
+        const angle = pLC.angleXY()
+        return new V3(angle < -PI / 2 ? angle + TAU : angle, pLC.z, 0)
 	}
 
 	isCurvesWithSurface(surface: Surface): Curve[] {
@@ -258,7 +248,7 @@ class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		const a = planeNormal.lengthXY()
 		const d = planeLC.w
 		// generated curves need to be rotated back before transforming to world coordinates
-		const rotationMatrix = M4.rotationZ(planeNormal.angleXY())
+		const rotationMatrix = M4.rotateZ(planeNormal.angleXY())
 		const wcMatrix = eq0(planeNormal.lengthXY())
 			? this.matrix
 			: this.matrix.times(rotationMatrix)

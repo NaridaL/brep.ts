@@ -40,7 +40,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		assertVectors(p)
         if (!this.containsPoint(p)) return OUTSIDE
 		// create plane that goes through cylinder seam
-		const line = new L3(p, this.dir)
+		const line = new L3(p, this.dir.unit())
 		const seamBase = this.baseCurve.at(PI)
 		const lineOut = this.dir.cross(this.normalP(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
@@ -76,7 +76,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	containsSemiEllipse(ellipse: SemiEllipseCurve, checkAABB: boolean = true) {
-		const projEllipse = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+		const projEllipse = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir))
 		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(projEllipse) &&
 			(!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y))
 	}
@@ -119,7 +119,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 			return this.isCurvesWithPlane(surface2.plane)
 		} else if (surface2 instanceof SemiCylinderSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
-				const projEllipse = surface2.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+				const projEllipse = surface2.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir))
 				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => {
 					const lineDir = sign(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir)) || 1
 					return new L3(info.p, this.dir.times(lineDir))

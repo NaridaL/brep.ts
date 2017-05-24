@@ -1,17 +1,17 @@
 {
 	QUnit.module('ProjectedCurveSurface')
-	QUnit.testDifferentSystems('ProjectedCurveSurface', function (assert, m4) {
+	testDifferentSystems('ProjectedCurveSurface', function (assert, m4) {
 		const baseCurve = BezierCurve.graphXY(2, -3, -3, 2)
 		const pcs = new ProjectedCurveSurface(baseCurve, V3.Z, undefined, undefined, -100, 100).transform(m4)
 		testParametricSurface(assert, pcs)
 	})
-	QUnit.testDifferentSystems('Face line intersection test', function (assert, m4) {
+	testDifferentSystems('Face line intersection test', function (assert, m4) {
 		const curve = BezierCurve.graphXY(2, -3, -3, 2)
 		const edge = PCurveEdge.forCurveAndTs(curve, 0, 1)
 		const edges = [
 			edge,
 			StraightEdge.throughPoints(curve.at(1), curve.at(1).plus(V(0, 0, 10))),
-			edge.flipped().transform(M4.translation(0, 0, 10)),
+			edge.flipped().transform(M4.translate(0, 0, 10)),
 			StraightEdge.throughPoints(curve.at(0).plus(V(0, 0, 10)), curve.at(0))]
 		const surface = new ProjectedCurveSurface(curve, V3.Z)
 		const face = new RotationFace(surface, edges).transform(m4)

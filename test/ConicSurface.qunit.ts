@@ -89,8 +89,8 @@
 			const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]
 			assert.ok(UCS.containsParabola(pb))
 
-			const c2 = UCS.shearedX(2, 3)
-			const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearedX(2, 3))[0]
+			const c2 = UCS.shearX(2, 3)
+			const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearX(2, 3))[0]
 			assert.ok(c2.containsParabola(pb2))
 		},
 		'containsHyperbola'(assert) {

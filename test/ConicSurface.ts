@@ -41,8 +41,8 @@ suite('ConicSurface', function () {
         const pb = unitCone.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]
         assert.ok(unitCone.containsParabola(pb))
 
-        const c2 = unitCone.shearedX(2, 3)
-        const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearedX(2, 3))[0]
+        const c2 = unitCone.shearX(2, 3)
+        const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearX(2, 3))[0]
         assert.ok(c2.containsParabola(pb2))
     })
 })

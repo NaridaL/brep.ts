@@ -176,9 +176,14 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             const surfaceLC = surface.transform(this.inverseMatrix)
 	        const curves = SemiEllipsoidSurface.unitISCurvesWithEllipsoidSurface(surfaceLC)
 		        .map(c => c.transform(this.matrix))
-	        return -1 == surface.normalDir ? curves.map(c => c.reversed()) : curves
+	        return surface.clipCurves(curves)
         } else if (surface instanceof ProjectedCurveSurface) {
         	return this.isCurvesWithPCS(surface)
+        } else if (surface instanceof ParametricSurface) {
+			let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1, 0.05)
+			curves2 = this.clipCurves(curves2)
+			curves2 = surface.clipCurves(curves2)
+			return curves2
         } else {
             assert(false)
         }
@@ -192,7 +197,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
     isCurvesWithSemiCylinderSurface(surface: SemiCylinderSurface): Curve[] {
         if (L3.containsPoint(surface.baseCurve.center, surface.dir, this.center)) {
             assert(this.isSphere())
-            const ellipseProjected = surface.baseCurve.transform(M4.projection(surface.baseCurve.getPlane(), surface.dir))
+            const ellipseProjected = surface.baseCurve.transform(M4.project(surface.baseCurve.getPlane(), surface.dir))
             if (ellipseProjected.isCircular()) {
 	            const thisRadius = this.f1.length()
 	            const surfaceRadius = ellipseProjected.f1.length()
@@ -434,7 +439,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             } else {
                 const f2 = (plane.normal1.isParallelTo(V3.Y) ? V3.X : plane.normal1.cross(V3.Y)).toLength(isCircleRadius)
                 const f1 = f2.cross(plane.normal1)
-                const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max(-1, minXi))
+                const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max(-1, minXi - NLA_PRECISION))
                 return [new SemiEllipseCurve(plane.anchor, f1.negated(), f2, PI - maxT, PI),
                     new SemiEllipseCurve(plane.anchor, f1, f2.negated(), 0, maxT)]
             }
@@ -469,7 +474,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 
     static unitISCurvesWithSemiCylinderSurface(surface: SemiCylinderSurface): SemiEllipseCurve[] {
         if (new L3(surface.baseCurve.center, surface.dir).containsPoint(V3.O)) {
-            const projEllipse = surface.baseCurve.transform(M4.projection(new P3(surface.dir, 0)))
+            const projEllipse = surface.baseCurve.transform(M4.project(new P3(surface.dir, 0)))
             const f1Length = projEllipse.f1.length(), f2Length = projEllipse.f2.length()
             if (lt(1, min(f1Length, f2Length))) return []
             if (projEllipse.isCircular()) {
@@ -601,8 +606,8 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 
     zDirVolumeForLoop2(loop: Edge[]): number {
     	const angles = this.inverseMatrix.getZ().toAngles()
-	    const T = M4.rotationY(-angles.theta).times(M4.rotationZ(-angles.phi)).times(this.inverseMatrix)
-	    const rot90x = M4.rotationX(PI / 2)
+	    const T = M4.rotateY(-angles.theta).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix)
+	    const rot90x = M4.rotateX(PI / 2)
 	    let totalVolume = 0
 	    assert(V3.X.isParallelTo(T.transformVector(V3.Z)))
 	    //const zDistanceFactor = toT.transformVector(V3.Z).length()

@@ -52,7 +52,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
         	return this.isCurvesWithPlane(surface.plane)
         } else if (surface instanceof CylinderSurface) {
             if (surface.dir.isParallelTo(this.dir1)) {
-                const ellipseProjected = surface.baseCurve.transform(M4.projection(this.baseEllipse.getPlane(), this.dir1))
+                const ellipseProjected = surface.baseCurve.transform(M4.project(this.baseEllipse.getPlane(), this.dir1))
                 return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1))
             } else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
                 assert(false)

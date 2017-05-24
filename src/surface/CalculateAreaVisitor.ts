@@ -1,5 +1,6 @@
 ///<reference path="ConicSurface.ts"/>
 ///<reference path="CylinderSurface.ts"/>
+///<reference path="PlaneSurface.ts"/>
 ///<reference path="EllipsoidSurface.ts"/>
 ///<reference path="SemiCylinderSurface.ts"/>
 ///<reference path="../ignore/ProjectedCurveSurface.ts"/>
@@ -28,6 +29,44 @@ const CalculateAreaVisitor: {[className: string]: <T extends Surface>(this: T, a
 		// Math.abs is not an option as "holes" may also be passed
 		return totalArea * Math.sign(this.normal.dot(this.dir))
 	},
+
+    [PlaneSurface.name](this: PlaneSurface, edges: Edge[]) {
+            let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0
+            let r1 = this.surface.right, u1 = this.surface.up
+            this.contour.forEach(edge => {
+                let edgeCentroid, edgeArea: number, centroidS, centroidT
+                if (edge instanceof StraightEdge) {
+                    const midPoint = edge.a.lerp(edge.b, 0.5)
+                    edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
+                    centroidS = midPoint.dot(r1) / 2
+                    centroidT = midPoint.dot(u1)
+                    const edgeLength = edge.a.distanceTo(edge.b)
+                    edgeArea = edgeLength * edge.curve.dir1.dot(r1)
+                    edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
+                } else {
+                    let curve = edge.curve
+                    if (curve instanceof SemiEllipseCurve) {
+                        let info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT)
+                        edgeArea = info.area
+                        let parametricCentroid = this.surface.stPFunc()(info.centroid)
+                        centroidS = parametricCentroid.x
+                        centroidT = parametricCentroid.y
+                    } else if (curve instanceof BezierCurve) {
+                        edgeArea = curve.getAreaInDirSurface(u1, this.surface, edge.aT, edge.bT).area
+                    } else {
+                        assertNever()
+                    }
+                }
+
+
+                tcs += edgeArea * centroidS
+                tct += edgeArea * centroidT
+                totalArea += edgeArea
+            })
+            centroid = r1.times(tcs).plus(u1.times(tct))
+            assert(isFinite(totalArea))
+            return {area: totalArea, centroid: centroid}
+    },
 
 	/**
 	 * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse

@@ -61,7 +61,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	containsEllipse(ellipse: EllipseCurve | SemiEllipseCurve) {
-		const ellipseProjected = ellipse.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+		const ellipseProjected = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir))
 		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(ellipseProjected)
 	}
 
@@ -112,7 +112,7 @@ class CylinderSurface extends ProjectedCurveSurface {
 			return this.isCurvesWithPlane(surface.plane)
 		} else if (surface instanceof CylinderSurface) {
 			if (surface.dir.isParallelTo(this.dir)) {
-				const projEllipse = surface.baseCurve.transform(M4.projection(this.baseCurve.getPlane(), this.dir))
+				const projEllipse = surface.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir))
 				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => new L3(info.p, this.dir))
 			} else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
 				assert(false)

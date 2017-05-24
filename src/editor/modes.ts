@@ -1,4 +1,12 @@
-const MODES:any = {}
+type MODE = {
+	init(): void,
+	end(): void,
+	mousemove(e: Event, mouseLine: L3): void,
+	mousedown(e: Event, mouseLine: L3): void,
+	mouseup(e: Event, mouseLine: L3): void,
+	comp: Element
+}
+const MODES:{[modeName: string]: MODE} = {}
 MODES.DEFAULT = {
 	init: function () {},
 	end: function () {
@@ -197,7 +205,7 @@ MODES.PLANE_DEFINITION = {
 						// mode = 'pointAndNormal'
 						return P3.normalOnAnchor(curve.dir1, p)
 					} else {
-						let planeVector2 = M4.rotation(rads, curve.dir1, M4.temp0).transformVector(p.minus(curve.anchor))
+						let planeVector2 = M4.rotate(rads, curve.dir1, M4.temp0).transformVector(p.minus(curve.anchor))
 						return P3.forAnchorAndPlaneVectors(curve.anchor, curve.dir1, planeVector2)
 					}
 				} else if (curve.containsPoint(p)) {
@@ -489,8 +497,8 @@ MODES.ADD_SEGMENT = {
 		this.constructor = constructor
 	},
 	end: function () {
-		this.currentAddingSegment.points.forEach(p => removeFromCoincidence(p, editingSketch))
-		editingSketch.elements.remove(this.currentAddingSegment)
+        this.currentAddingSegment.points.forEach(p => editingSketch.removeFromCoincidence(p))
+        editingSketch.elements.remove(this.currentAddingSegment)
 		paintScreen()
 	},
 	mousemove: function (e, mouseLine) {
@@ -504,8 +512,8 @@ MODES.ADD_SEGMENT = {
 			this.arcmode = 0
 		}
 		let mouseSC = editingSketch.worldToSketchMatrix.transformPoint(intersection)
-		removeFromCoincidence(this.currentAddingSegment.points[this.arcmode], editingSketch)
-		//console.log(mousePos);
+        editingSketch.removeFromCoincidence(this.currentAddingSegment.points[this.arcmode])
+        //console.log(mousePos);
 		const points = getAllPoints(editingSketch)
 		points.removeAll(this.currentAddingSegment.points)
 		const pointDistances = points
@@ -513,8 +521,8 @@ MODES.ADD_SEGMENT = {
 			.filter(function (pair) { return pair.distance < 16 })
 			.sort(function (a, b) { return a.distance - b.distance })
 		if (pointDistances.length != 0 && this.currentAddingSegment) {
-			makeCoincident(pointDistances[0].point, this.currentAddingSegment.points[this.arcmode], editingSketch)
-			mouseSC = pointDistances[0].point
+            editingSketch.makeCoincident(pointDistances[0].point, this.currentAddingSegment.points[this.arcmode])
+            mouseSC = pointDistances[0].point
 		}
 		for (let i = this.arcmode; i < this.currentAddingSegment.points.length; i++) {
 			this.currentAddingSegment.points[i].x = mouseSC.x

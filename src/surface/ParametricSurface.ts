@@ -83,7 +83,7 @@ abstract class ParametricSurface extends Surface {
 		const ist = (x: number, y: number) => icc(pf(x, y))
 		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
 		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
-		const mf = MathFunctionR2_R.forFFxFy(ist, dids, didt)
+		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
 		const curves
 			= Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, dids, didt)
 				.map(({points, tangents}, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize))

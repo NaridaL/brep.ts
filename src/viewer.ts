@@ -9,10 +9,10 @@ function parseGetParams(str) {
         })
     return result
 }
-let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering
+let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
+    wireframe: boolean = false, normallines: boolean = false, b2s: B2[] = []
 const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
 function initB2() {
-    dMesh = new Mesh()
     eye.pos = V(1, 2, 101)
 	eye.focus = V(0, 1, 0)
 	eye.up = V(0, 1, 0)
@@ -26,7 +26,7 @@ function initB2() {
 	let gets: any = {a, b, c, d, mesh, edges, points, vectors}
 	hjk && (gets = HJK())
 	i && Object.assign(eye, i)
-	'abcd'.split('').forEach(k => gets[k] && eval(`${k}Mesh = (${k} = gets.${k}).toMesh()`))
+	'abcd'.split('').forEach(k => gets[k] && eval(`aMeshes.push((${k} = gets.${k}).toMesh()); b2s.push(${k})`))
 
     //cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()
     if (gets.points) {
@@ -38,8 +38,11 @@ function initB2() {
 		drVs.pushAll(gets.vectors)
 	}
 
-	//cMesh && cMesh.computeNormalLines(0.1) && cMesh.compile()
-	//aMesh && aMesh.computeNormalLines(0.1) && aMesh.compile()
+	for (let i = 0; i < aMeshes.length; i++) {
+        aMeshes[i].computeWireframeFromFlatTriangles('wireframe')
+        aMeshes[i].computeNormalLines(0.1, 'normallines')
+        aMeshes[i].compile()
+    }
 
     if (gets.edges) {
         console.log('edges from GET')
@@ -56,7 +59,7 @@ function initB2() {
                 dMesh.curve1.push(points[i], points[i + 1])
                 dMesh.curve1colors.push(color, color)
             }
-	        ;(edge.curve instanceof PICurve) && edge.curve.addToMesh(dMesh, 8, 0.02, 2, edge.minT, edge.maxT)
+	        edge.curve instanceof PICurve && edge.curve.addToMesh(dMesh, 8, 0.02, 2, edge.minT, edge.maxT)
         })
 	    //dMesh.computeWireframeFromFlatTriangles()
     }
@@ -75,102 +78,50 @@ function initB2() {
 
 
 
-const randomColors = chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20).map(s => chroma(s).gl())
-let aMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
-	bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
-	cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
+const meshColors = [
+    chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20).map(s => chroma(s)),
+    chroma.scale(['#ffe93a', '#ff6e35']).mode('lab').colors(20).map(s => chroma(s)),
+    chroma.scale(['#1eff33', '#4960ff']).mode('lab').colors(20).map(s => chroma(s)),
+    chroma.scale(['#31fff8', '#2dff2a']).mode('lab').colors(20).map(s => chroma(s))
+]
+const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()))
+let aMeshes: (Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>})[] = [],
+	//bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
+	//cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 	dMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
-	sMesh: Mesh,
 	b2meshes: Mesh[] = []
 function viewerPaint() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
 
     drawVectors()
-
+    shaders.lighting.uniforms({ camPos: eye.pos })
     //gl.scale(100, 100, 100)
-
-    if (aMesh) {
-        gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        aMesh.lines && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.PP_STROKE) }).draw(aMesh, DRAW_MODES.LINES)
-        gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        shaders.lighting.uniforms({ color: hexIntToGLColor(COLORS.PP_FILL),
-            camPos: eye.pos }).draw(aMesh)
-    }
-
-    if (bMesh) {
-        gl.pushMatrix()
-        //gl.translate(15, 0, 0)
-        gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        bMesh.lines && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.PP_STROKE) }).draw(bMesh, DRAW_MODES.LINES)
-        gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        shaders.lighting.uniforms({ color: hexIntToGLColor(COLORS.RD_FILL),
-            camPos: eye.pos }).draw(bMesh)
-        bMesh.edgeTangents && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
-            .drawBuffers({LGL_Vertex: bMesh.vertexBuffers.edgeTangents}, null, gl.LINES)
-        bMesh.edgeTangents2 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.RD_STROKE) })
-            .drawBuffers({LGL_Vertex: bMesh.vertexBuffers.edgeTangents2}, null, gl.LINES)
-        gl.popMatrix()
-    }
-    if (cMesh) {
+    for (let i = 0; i < aMeshes.length; i++) {
+        const aMesh = aMeshes[i]
         gl.pushMatrix()
         //gl.translate(30, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        cMesh.lines && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) }).draw(cMesh, DRAW_MODES.LINES)
+        wireframe && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
+            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.wireframe, DRAW_MODES.LINES)
+        normallines && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
+            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.normallines, DRAW_MODES.LINES)
+        shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
+            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.LINES, DRAW_MODES.LINES)
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
 
-        let faceIndex = c.faces.length
+        let faceIndex = b2s[i].faces.length
         while (faceIndex--) {
-
-            const face = c.faces[faceIndex]
-            const faceTriangleIndexes = cMesh.faceIndexes.get(face)
+            const face = b2s[i].faces[faceIndex]
+            const faceTriangleIndexes = aMesh.faceIndexes.get(face)
             shaders.lighting.uniforms({
-                color: hovering == face ? chroma('purple').gl() : randomColors[faceIndex % randomColors.length]
-            }).draw(cMesh, DRAW_MODES.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
+                color: hovering == face ? meshColors.emod(i).emod(faceIndex).darken(2).gl() : meshColorssGL.emod(i).emod(faceIndex)
+            }).draw(aMesh, DRAW_MODES.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
         }
 
         gl.popMatrix()
     }
-    if (dMesh && dMesh.hasBeenCompiled) {
-        gl.pushMatrix()
-        //gl.scale(10, 10, 10)
-        gl.projectionMatrix.m[11] -= 1 / (1 << 21) // prevent Z-fighting
-        dMesh.lines && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.RD_STROKE) }).draw(dMesh, DRAW_MODES.LINES)
-        gl.projectionMatrix.m[11] += 1 / (1 << 21)
-        dMesh.triangles && shaders.lighting.uniforms({ color: chroma('#ff8b23').gl(),
-            camPos: eye.pos }).draw(dMesh)
 
-        dMesh.curve1 && shaders.multiColor
-            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve1, color: dMesh.vertexBuffers.curve1colors}, null, gl.LINES)
-        dMesh.curve2 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.RD_STROKE) })
-            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve2}, null, gl.LINES)
-
-        dMesh.curve3 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.PP_STROKE) })
-            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve3}, null, gl.LINES)
-        dMesh.curve4 && shaders.singleColor.uniforms({ color: hexIntToGLColor(0x00ff00) })
-            .drawBuffers({LGL_Vertex: dMesh.vertexBuffers.curve4}, null, gl.LINES)
-        gl.popMatrix()
-    }
-    if (sMesh && sMesh.hasBeenCompiled) {
-        gl.pushMatrix()
-        //gl.scale(10, 10, 10)
-        gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        sMesh.lines && shaders.singleColor.uniforms({ color: hexIntToGLColor(0xFF6600) }).draw(sMesh, DRAW_MODES.LINES)
-        gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        sMesh.triangles && shaders.lighting.uniforms({ color: hexIntToGLColor(0xffFF00),
-            camPos: eye.pos }).draw(sMesh)
-
-        sMesh.curve1 && shaders.singleColor.uniforms({ color: hexIntToGLColor(0xff00000) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve1}, null, gl.LINES)
-        sMesh.curve2 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.RD_STROKE) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve2}, null, gl.LINES)
-
-        sMesh.curve3 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.PP_STROKE) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve3}, null, gl.LINES)
-        sMesh.curve4 && shaders.singleColor.uniforms({ color: hexIntToGLColor(0x00ff00) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve4}, null, gl.LINES)
-        gl.popMatrix()
-    }
     for (const sMesh of b2meshes) {
         gl.pushMatrix()
         //gl.scale(10, 10, 10)
@@ -179,29 +130,21 @@ function viewerPaint() {
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
         sMesh.triangles && shaders.lighting.uniforms({ color: hexIntToGLColor(0xffFF00),
             camPos: eye.pos }).draw(sMesh)
-
-        sMesh.curve1 && shaders.singleColor.uniforms({ color: hexIntToGLColor(0xff00000) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve1}, null, gl.LINES)
-        sMesh.curve2 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.RD_STROKE) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve2}, null, gl.LINES)
-
-        sMesh.curve3 && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.PP_STROKE) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve3}, null, gl.LINES)
-        sMesh.curve4 && shaders.singleColor.uniforms({ color: hexIntToGLColor(0x00ff00) })
-            .drawBuffers({LGL_Vertex: sMesh.vertexBuffers.curve4}, null, gl.LINES)
         gl.popMatrix()
     }
 
     if (hovering instanceof Edge) {
 	    gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-	    drawEdge(hovering, 0x000000, 0.01)
+	    drawEdge(hovering, 0x000000, 2 / eye.zoomFactor)
 	    gl.projectionMatrix.m[11] += 1 / (1 << 20)
     }
     //edges.forEach((e, i) => drawEdge(e, 0x0ff000, 0.01))
 
     //drPs.forEach(v => drawPoint(v, undefined, 0.3))
-    drawPoints(0.005)
+    drawPoints(5 / eye.zoomFactor)
 	b2planes.forEach(plane => drawPlane(plane, plane.color))
+
+    //console.log(gl.drawCallCount)
 }
 
 
@@ -221,32 +164,32 @@ function viewerPaint() {
 
 
 function initInfoEvents() {
-	gl.onmousemove.push(function (e) {
+	gl.canvas.addEventListener('mousemove', function (e) {
 		const mouseLine = getMouseLine({x: e.clientX, y: e.clientY})
 		const faces = [a,b,c,d].mapFilter(b2 => b2 && b2.faces).concatenated()
 		const testEdges: Edge[] = [a,b,c,d].mapFilter(b2 => b2 && (b2.buildAdjacencies(), Array.from(b2.edgeFaces.keys())))
 			.concatenated()
 			.concat(edges)
 		hovering = getHovering(mouseLine, faces, undefined, [], testEdges, 0.1, 'faces', 'edges')
-		let html = '', pp
-		if (hovering instanceof Edge) {
-			pp = V(e.clientX, e.clientY)
-			defaultRoundFunction = x => round10(x, -3)
-			html = hovering.toString(x => round10(x, -3)) + ' length=' + hovering.length().toFixed(3)
-		} else if (hovering instanceof Face) {
-			pp = V(e.clientX, e.clientY)
-			defaultRoundFunction = x => round10(x, -3)
-			let area, f = hovering
-			try { area = hovering.calcArea() } catch (e) {}
-			html = `face surface=${f.surface.constructor.name} edges=${f.contour.length} area=${area}`
-		}
-		if (pp) {
-			//const pSC = gl.projectionMatrix.times(gl.modelViewMatrix).transformPoint(pp)
-			//const x = (pSC.x * 0.5 + 0.5) * window.innerWidth, y = (-pSC.y * 0.5 + 0.5) * window.innerHeight
-			tooltipShow(html, pp.x, pp.y)
-		} else {
-			tooltipHide()
-		}
+		//let html = '', pp
+		//if (hovering instanceof Edge) {
+		//	pp = V(e.clientX, e.clientY)
+		//	defaultRoundFunction = x => round10(x, -3)
+		//	html = hovering.toString(x => round10(x, -3)) + ' length=' + hovering.length().toFixed(3)
+		//} else if (hovering instanceof Face) {
+		//	pp = V(e.clientX, e.clientY)
+		//	defaultRoundFunction = x => round10(x, -3)
+         //   let area
+         //   try { area = hovering.calcArea() } catch (e) {}
+		//	html = `face surface=${hovering.surface.constructor.name} edges=${hovering.contour.length} area=${area}`
+		//}
+		//if (pp) {
+		//	//const pSC = gl.projectionMatrix.times(gl.modelViewMatrix).transformPoint(pp)
+		//	//const x = (pSC.x * 0.5 + 0.5) * window.innerWidth, y = (-pSC.y * 0.5 + 0.5) * window.innerHeight
+		//	tooltipShow(html, pp.x, pp.y)
+		//} else {
+		//	tooltipHide()
+		//}
 		paintScreen()
 	})
 }
@@ -261,7 +204,7 @@ const b2planes = [
 ]
 
 async function viewerMain() {
-	paintScreen = viewerPaint
+	paintScreen = () => requestAnimationFrame(viewerPaint)
 	await B2T.loadFonts()
 	modeStack.push({})
 	window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
@@ -299,6 +242,7 @@ async function viewerMain() {
 		window.history.replaceState(undefined, undefined, '#' + result)
 	}
 	initInfoEvents()
+    //initToolTips() // hide tooltip on mouseover
 	//initPointInfoEvents()
 	initB2()
 	setupCamera(eye, gl)
@@ -337,7 +281,7 @@ function cassini(a: number, c: number): (x: number, y: number) => number {
 /**
  * A function R² -> R with first and second derivatives.
  */
-interface MathFunctionR2_R {
+interface MathFunctionR2R {
 	(s: number, t: number): number
 	readonly x: R2_R
 	readonly y: R2_R
@@ -345,8 +289,8 @@ interface MathFunctionR2_R {
 	readonly xy?: R2_R
 	readonly yy?: R2_R
 }
-namespace MathFunctionR2_R {
-	export function forNerdamer(expression: nerdamer.ExpressionParam, args: [string, string] = ['x', 'y']): MathFunctionR2_R {
+namespace MathFunctionR2R {
+	export function forNerdamer(expression: nerdamer.ExpressionParam, args: [string, string] = ['x', 'y']): MathFunctionR2R {
 		const ndf = nerdamer(expression)
 		const ndfs = nerdamer.diff(ndf, args[0])
 		const ndft = nerdamer.diff(ndf, args[1])
@@ -363,7 +307,7 @@ namespace MathFunctionR2_R {
 		return expression.buildFunction(args)
 	}
 
-	export function forFFxFy(f: R2_R, fx: R2_R, fy: R2_R): MathFunctionR2_R {
+	export function forFFxFy(f: R2_R, fx: R2_R, fy: R2_R): MathFunctionR2R {
 		0;(f as any).x = fx
 		0;(f as any).y = fy
 		return f as any
@@ -376,7 +320,7 @@ function HJKl() {
 	nerdamer.setFunction('cassini', 'acxy'.split(''), '(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
 	const cassini = nerdamer('(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
 	const ndf = nerdamer('cassini(1, 1, x, y)')
-	const mf = MathFunctionR2_R.forNerdamer(ndf)
+	const mf = MathFunctionR2R.forNerdamer(ndf)
 	//const pf = cs.parametricFunction(), icc = ses.implicitFunction()
 	//const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
 	//assert(eq02(ic(start.x, start.y), 0.1))

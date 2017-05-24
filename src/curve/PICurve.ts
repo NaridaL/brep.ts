@@ -101,7 +101,8 @@ class PICurve extends ImplicitCurve {
 
 	containsPoint(p: V3): boolean {
 		assertVectors(p)
-		return !isNaN(this.pointT(p))
+		const t = this.pointT(p)
+		return !isNaN(t) && this.isValidT(t)
 	}
 
 	equals(obj: any): boolean {
@@ -154,11 +155,15 @@ class PICurve extends ImplicitCurve {
 	}
 
 	at(t: number): V3 {
+	    // assert(!isNaN(t))
+		// const pointParams = this.stT(t)
+        // const result = this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y)
+		// // assert(eq(t, this.pointT(result)))
+		// return result
 	    assert(!isNaN(t))
-		const pointParams = this.stT(t)
-        const result = this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y)
-		// assert(eq(t, this.pointT(result)))
-		return result
+	    if (t % 1 == 0) return this.points[t]
+        const startParams = V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1)
+        return this.closestPointToParams(startParams)
     }
 
 	stT(t: number): V3 {
@@ -187,11 +192,11 @@ class PICurve extends ImplicitCurve {
 		        const iscs = is.isCurvesWithSurface(surface)
 		        const points = iscs.flatMap(isc => isc.isTsWithSurface(ps).map(t => isc.at(t)))
 		        const ts = fuzzyUniques(points.map(p => this.pointT(p)))
-		        return ts.filter(t => !isNaN(t))
+		        return ts.filter(t => !isNaN(t) && this.isValidT(t))
 	        }
 
         }
-        assertNever()
+		throw new Error()
     }
 
     isTsWithPlane(plane: P3): number[] {
@@ -201,7 +206,7 @@ class PICurve extends ImplicitCurve {
 	    const iscs = is.isCurvesWithPlane(plane)
 	    const infos = iscs.flatMap(isc => pscs.flatMap(psc => isc.isInfosWithCurve(psc)))
 	    const ts = fuzzyUniques(infos.map(info => this.pointT(info.p)))
-	    return ts.filter(t => !isNaN(t))
+	    return ts.filter(t => !isNaN(t) && this.isValidT(t))
     }
 
 
@@ -217,15 +222,15 @@ class PICurve extends ImplicitCurve {
 		const pmPoint = this.parametricSurface.stPFunc()(p)
 		const ps = this.points, pmps = this.pmPoints
 		let t = 0, prevDistance, pmDistance = pmPoint.distanceTo(pmps[0])
-		while (pmDistance > this.stepSize && t < ps.length - 1) { // TODO -1?
+		while (pmDistance > abs(this.stepSize) && t < ps.length - 1) { // TODO -1?
 			//console.log(t, pmps[t].$, pmDistance)
-			t = min(pmps.length - 1, t + max(1, Math.round(pmDistance / this.stepSize / 2 / 2)))
+			t = min(pmps.length - 1, t + max(1, Math.round(pmDistance / abs(this.stepSize) / 2 / 2)))
 			pmDistance = pmPoint.distanceTo(pmps[t])
 		}
         // if (t < this.pmPoints.length - 1 && pmDistance > pmPoint.distanceTo(pmps[t + 1])) {
         //     t++
         // }
-		if (pmDistance > this.stepSize * 1.1) {
+		if (pmDistance > abs(this.stepSize) * 1.1) {
 			// p is not on this curve
 			return NaN
 		}
@@ -248,7 +253,8 @@ class PICurve extends ImplicitCurve {
 			m4.transformPoint(this.points.last()),
 			this.stepSize * dirFactor,
 			m4.transformVector(this.tangents[0]),
-			this.at(this.tMin), this.at(this.tMax))
+			m4.transformPoint(this.at(this.tMin)),
+			m4.transformPoint(this.at(this.tMax)))
 		//return PICurve.forParametricStartEnd(
 		//	this.parametricSurface.transform(m4),
 		//	this.implicitSurface.transform(m4),
@@ -286,13 +292,13 @@ class PICurve extends ImplicitCurve {
 	}
 
 	static forParametricStartEnd(ps: ParametricSurface, is: ImplicitSurface,
-	                             pmStart: V3, pmEnd: V3, stepSize: number = 0.02, startPMTangent: V3,
+	                             pmStart: V3, pmEnd: V3, stepSize: number = 0.02, startPMTangent?: V3,
 	                             tMin?: number, tMax?: number): PICurve {
 		const pFunc = ps.pSTFunc(), iFunc = is.implicitFunction()
 		const dpds = ps.dpds()
 		const dpdt = ps.dpdt()
 		const didp = is.didp.bind(is)
-		const mf = MathFunctionR2_R.forFFxFy(
+		const mf = MathFunctionR2R.forFFxFy(
 			(x, y) => iFunc(pFunc(x, y)),
 			(s, t) => didp(pFunc(s, t)).dot(dpds(s, t)),
 			(s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)))
@@ -304,8 +310,8 @@ class PICurve extends ImplicitCurve {
 	                   start: V3, end: V3, stepSize: number = 0.02, startTangent: V3, min?: V3, max?: V3): PICurve {
 		const startPM = ps.stP(start)
 		const dpds = ps.dpds()(startPM.x, startPM.y), dpdt = ps.dpdt()(startPM.x, startPM.y)
-		const startPMTangent = M4.forSys(dpds, dpdt).inversed().transformVector(startTangent)
-		assert(dpds.times(startPMTangent.x).plus(dpdt.times(startPMTangent.y)).like(startTangent))
+		const startPMTangent = startTangent && M4.forSys(dpds, dpdt).inversed().transformVector(startTangent)
+		// assert(dpds.times(startPMTangent.x).plus(dpdt.times(startPMTangent.y)).like(startTangent))
 		const curve = PICurve.forParametricStartEnd(ps, is, startPM, ps.stP(end), stepSize, startPMTangent)
 
 		return curve.withBounds(min && curve.pointT(min), max && curve.pointT(max))

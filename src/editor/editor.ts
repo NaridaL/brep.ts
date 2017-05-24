@@ -32,49 +32,9 @@ function formatStack(stack) {
 }
 
 
-function Point(x, y) {
-	this.x = x
-	this.y = y
-}
-
-
-function makeCoincident(p1, p2, sketch) {
-	if (p1.coincidence && p2.coincidence) {
-		for (let i = 0; i < p2.coincidence.length; i++) {
-			p1.coincidence.cs.push(p2.coincidence.cs[i])
-			p2.coincidence.cs[i].coincidence = p1.coincidence
-		}
-		p1.coincidence.cs.push(p2)
-		p2.coincidence = p1.coincidence
-	} else if (p1.coincidence) {
-		p1.coincidence.cs.push(p2)
-		p2.coincidence = p1.coincidence
-	} else if (p2.coincidence) {
-		p2.coincidence.cs.push(p1)
-		p1.coincidence = p2.coincidence
-	} else {
-		sketch.constraints.push(p1.coincidence = p2.coincidence = new Constraint('coincident', [p1, p2]))
-	}
-	p2.x = p1.x
-	p2.y = p1.y
-}
-function removeFromCoincidence(p, sketch) {
-	if (!p.coincidence) return
-	p.coincidence.cs.remove(p)
-	if (p.coincidence.cs.length == 1) {
-		sketch.constraints.remove(p.coincidence)
-		p.coincidence.cs[0].coincidence = null
-	}
-	p.coincidence = null
-}
-function deleteCoincidence(coincidence, sketch) {
-	sketch.constraints.remove(coincidence)
-	coincidence.cs.forEach(p => p.coincidence = null)
-}
-
 
 let savedTextures = new Map()
-function getTextureForString(str) {
+function getTextureForString(str: string) {
 	let texture
 	if (texture = savedTextures.get(str)) {
 		return texture
@@ -96,8 +56,7 @@ function getTextureForString(str) {
 	ctx.fillStyle = '#ffffff'
 	ctx.textAlign = 'left'	// This determines the alignment of text, e.g. left, center, right
 	ctx.textBaseline = 'top'	// This determines the baseline of the text, e.g. top, middle, bottom
-	;
-	(ctx as any).imageSmoothingEnabled = false
+	;(ctx as any).imageSmoothingEnabled = false
 
 
 	ctx.fillText(str, 0, 0)
@@ -110,7 +69,7 @@ function getTextureForString(str) {
 
 	return texture
 }
-function paintLooseSeg(seg, color) {
+function paintLooseSeg(seg: SketchSegment, color: int) {
 	const sketch = seg.sketch
 	if (!sketch.plane || !sketch.sketchToWorldMatrix || !sketch.sketchToWorldMatrix.m) return
 
@@ -119,14 +78,12 @@ function paintLooseSeg(seg, color) {
 	paintSeg(seg, color)
 	gl.popMatrix()
 }
-function paintSeg(seg, color?) {
+function paintSeg(seg: SketchSegment, color?: int) {
 	function drawPoint(p) {
 		paintArc(p.V3(), 1.5, 3, colorFor(highlighted.includes(p) || hoverHighlight == p, selected.includes(p)))
 	}
 
-	color = 'undefined' !== typeof color
-		? color
-		: colorFor(highlighted.includes(seg) || hoverHighlight == seg, selected.includes(seg))
+	undefined == color && colorFor(highlighted.includes(seg) || hoverHighlight == seg, selected.includes(seg))
 	if (seg instanceof SketchLineSeg) {
 		//console.log("seg", seg);
 		//console.log("hoverHighlight.length", hoverHighlight.length);
@@ -139,7 +96,8 @@ function paintSeg(seg, color?) {
 		drawPoint(seg.b)
 	} else if (seg instanceof SketchArc) {
 		const radius = seg.radiusA()
-		let angleA = seg.angleA(), angleB = seg.angleB()
+		const angleA = seg.angleA()
+        let angleB = seg.angleB()
 		if (angleB <= angleA) { angleB += Math.PI * 2 }
 		paintArc(seg.c.V3(), radius, 2, color, angleA, angleB)
 		drawPoint(seg.a)
@@ -156,7 +114,7 @@ function paintSeg(seg, color?) {
 	}
 
 }
-function paintSketch(sketch) {
+function paintSketch(sketch: Sketch) {
 
 	if (!sketch.plane || !sketch.sketchToWorldMatrix || !sketch.sketchToWorldMatrix.m) return
 	//console.log("painting segments", sketch.elements.length);
@@ -372,12 +330,12 @@ function paintConstraints(sketch: Sketch) {
 }
 
 
-function serializeFeatures(features) {
+function serializeFeatures(features: Feature[]) {
 	return serialize(features)
 	//return '[' + featureStack.map(f => f.toSource()).join(',') + ']'
 }
 
-function load(key) {
+function load(key: string) {
 	$<HTMLInputElement>('saveNameInput').value = key
 	window.location.hash = key
 	console.log(localStorage.getItem(key))
@@ -416,7 +374,7 @@ function initLoadSave() {
 	}
 }
 
-function isSketchEl(el) {
+function isSketchEl(el: any): el is SketchSegment | SegmentEndPoint {
 	return el instanceof SketchBezier || el instanceof SegmentEndPoint
 		|| el instanceof SketchLineSeg || el instanceof SketchArc
 }
@@ -435,7 +393,7 @@ function directionObjectToVector(dirObj) {
 	}
 }
 const modelColorCount = 8
-const modelColors = chroma.scale(['#59f7ff', '#ff2860']).mode('lab').colors(modelColorCount).map(s => chroma(s).gl())
+const modelColors = chroma.scale(['#59f7ff', '#ff2860']).mode('lab').colors(modelColorCount).map(s => chroma(s).gl() as GL_COLOR)
 function rebuildModel() {
 	const DISABLE_CONSOLE = false
 	DISABLE_CONSOLE && disableConsole()
@@ -509,8 +467,8 @@ let missingEls: any[] = [], namesPublishedBy: Map<string, Feature>, publishedObj
 let faces = []
 let highlighted: any[] = [], selected: any[] = [], paintDefaultColor = 0x000000
 let gl: LightGLContext
-let modelBREP: B2, brepMesh: Mesh, brepPoints, planes, brepEdges
-let rebuildLimit = -1, rollBackIndex = -1, featureError: Error
+let modelBREP: B2, brepMesh: Mesh, brepPoints: V3[], planes: P3[], brepEdges: Edge[]
+let rebuildLimit = -1, rollBackIndex = -1, featureError: {feature: Feature, error: any}
 let drPs: V3[] = [], drVs: {anchor: V3, dir1: V3, color: int}[] = []
 
 let eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
@@ -519,18 +477,18 @@ let hoverHighlight: any = undefined
 let modeStack: any[] = []
 let shaders: { [name: string]: Shader } = {}
 
-function renderColor(mesh, color, mode?) {
+function renderColor(mesh: Mesh, color: int, mode?: DRAW_MODES) {
 	shaders.singleColor.uniforms({
 		color: hexIntToGLColor(color)
 	}).draw(mesh, mode)
 }
-function renderColorLines(mesh, color) {
+function renderColorLines(mesh: Mesh, color: int) {
 	shaders.singleColor.uniforms({
 		color: hexIntToGLColor(color)
 	}).draw(mesh, DRAW_MODES.LINES)
 }
 let TEXT_TEXTURE_HEIGHT = 128
-function renderText(string, color) {
+function renderText(string: string, color: int) {
 	const texture = getTextureForString(string)
 	texture.bind(0)
 	gl.pushMatrix()
@@ -541,7 +499,7 @@ function renderText(string, color) {
 	}).draw(meshes.text)
 	gl.popMatrix()
 }
-function drawVector(vector, anchor, color = 0x0000ff, size = 1, _gl = gl) {
+function drawVector(vector: V3, anchor: V3, color = 0x0000ff, size = 1, _gl = gl) {
 	_gl.pushMatrix()
 
 	const vT = vector.getPerpendicular().unit()
@@ -578,7 +536,7 @@ function handleCatchErrors(e) {
 	catchErrors = e.target.value == 'on'
 	rebuildModel()
 }
-function conicPainter(mode, ellipse: SemiEllipseCurve, color, startT, endT, width = 2) {
+function conicPainter(mode: 0 | 1 | 2, ellipse: SemiEllipseCurve, color: int, startT: number, endT: number, width = 2) {
 	shaders.ellipse3d.uniforms({
 		f1: ellipse.f1,
 		f2: ellipse.f2,
@@ -642,7 +600,7 @@ const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: int
 CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 
-function paintLineXY(a, b, color = paintDefaultColor, width = 2) {
+function paintLineXY(a: V3, b: V3, color = paintDefaultColor, width = 2) {
 	const ab = b.minus(a)
 	if (ab.likeO()) { return }
 	const abT = ab.getPerpendicular().toLength(width)
@@ -652,7 +610,7 @@ function paintLineXY(a, b, color = paintDefaultColor, width = 2) {
 	renderColor(meshes.segment, color)
 	gl.popMatrix()
 }
-function paintArc(center, radius, width, color, startAngle = 0, endAngle = 2 * Math.PI) {
+function paintArc(center: V3, radius: number, width: number, color: int, startAngle = 0, endAngle = 2 * Math.PI) {
 	// startAngle = isFinite(startAngle) ? startAngle : 0
 	// endAngle = isFinite(endAngle) ? endAngle : 2 * Math.PI
 	gl.pushMatrix()
@@ -667,7 +625,7 @@ function paintArc(center, radius, width, color, startAngle = 0, endAngle = 2 * M
 	gl.popMatrix()
 }
 
-function paintBezier(ps, width, color, startT, endT) {
+function paintBezier(ps: V3[], width: number, color: int, startT: number, endT: number) {
 	// TODO PS AREN'T IN THE ORDER YOU EXPECT THEM TO BE!!!
 	assertVectors.apply(undefined, ps)
 	shaders.bezier.uniforms({
@@ -682,15 +640,14 @@ function paintBezier(ps, width, color, startT, endT) {
 	}).draw(meshes.segment)
 }
 
-function randomVec4Color(opacity) {
-	opacity = opacity || 1.0
+function randomVec4Color(opacity = 1.0) {
 	return [Math.random(), Math.random(), Math.random(), opacity]
 }
-function drawEdge(edge, color = 0x000000, width = 2) {
+function drawEdge(edge: Edge, color = 0x000000, width = 2) {
 	CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, edge.minT, edge.maxT, width)
 }
 const cachedMeshes = new Map()
-function drawFace(face, color) {
+function drawFace(face: Face, color: int) {
 	let mesh = cachedMeshes.get(face)
 	if (!mesh) {
 		mesh = new Mesh({triangles: true, lines: true, normals: true})
@@ -702,7 +659,7 @@ function drawFace(face, color) {
 }
 let meshes: any = {}
 let ZERO_EL = {}
-function drawEl(el, color) {
+function drawEl(el: any, color: int) {
 	if (el instanceof V3) {
 		drawPoint(el, color)
 	} else if (el instanceof Edge) {
@@ -778,8 +735,8 @@ let paintScreen = function () {
 	gl.projectionMatrix.m[11] += DZ
 }
 
-function setupCamera(eye, _gl: LightGLContext = gl) {
-	const {pos, focus, up, zoomFactor} = eye
+function setupCamera(_eye: typeof eye, _gl: LightGLContext = gl) {
+	const {pos, focus, up, zoomFactor} = _eye
 	//console.log("pos", pos.$, "focus", focus.$, "up", up.$)
 	_gl.matrixMode(_gl.PROJECTION)
 	_gl.loadIdentity()
@@ -789,9 +746,9 @@ function setupCamera(eye, _gl: LightGLContext = gl) {
 	_gl.ortho(-lr, lr, -bt, bt, -1e4, 1e4)
 	_gl.lookAt(pos, focus, up)
 	_gl.matrixMode(_gl.MODELVIEW)
-	setupCameraListener && setupCameraListener(eye)
+	setupCameraListener && setupCameraListener(_eye)
 }
-function drawPlane(customPlane, color, _gl = gl) {
+function drawPlane(customPlane: CustomPlane, color: int, _gl: LightGLContext = gl) {
 	_gl.pushMatrix()
 	_gl.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal1))
 	_gl.translate(customPlane.sMin, customPlane.rMin, customPlane.w)
@@ -815,7 +772,7 @@ function segmentIntersectsRay(a, b, p, dir) {
 	// s, "t", t, "div", div)
 	return t > 0 && s >= 0 && s <= 1
 }
-function template(templateName, map): HTMLElement {
+function template(templateName: string, map: {[key: string]: string}): HTMLElement {
 	let html = $<HTMLScriptElement>(templateName).text || $<HTMLScriptElement>(templateName).innerHTML
 	for (const key in map) {
 		html = html.replace(new RegExp('\\$' + key, 'g'), map[key])
@@ -826,7 +783,7 @@ function template(templateName, map): HTMLElement {
 function featureRollBack(feature: any, featureIndex: number) {
 	rollBackIndex = featureIndex
 }
-let featureComp
+let featureComp: Element
 function updateFeatureDisplay() {
 	const props = {features: featureStack}
 	featureComp = preact.render(h(FeatureStackDisplay, props), $('featureDisplay'), featureComp)
@@ -992,7 +949,7 @@ function updateSelected() {
 				})
 			}
 			newChild.getElement('.remove').onclick = function (e) {
-				deleteConstraint(editingSketch, cst)
+                editingSketch.deleteConstraint(cst)
 				updateSelected()
 			}
 			newChild.onmouseover = function (e) {
@@ -1010,16 +967,7 @@ function updateSelected() {
 class NameRef {
 	static pool: Map<string, NameRef> = new Map()
 
-	ref: string
-	lastHit: any
-
-	constructor(name, lastHit) {
-		const x = NameRef.pool.get(name)
-		if (x) return x
-		this.ref = name
-		this.lastHit = lastHit
-		NameRef.pool.set(name, this)
-	}
+	private constructor(public ref: string, public lastHit: any) {}
 
 	get() {
 		const hit = publishedObjects.get(this.ref)
@@ -1047,21 +995,22 @@ class NameRef {
 		return this.getPlane()
 	}
 
-	get what() {
-		return this.get() instanceof Face ? 'face' : 'plane'
-	}
-
 	get name() {
 		const hit = this.get()
 		return hit && hit.name
 	}
 
-	static forObject(o) {
+	static forRef(ref: string, lastHit?: any) {
+        const x = NameRef.pool.get(ref)
+        if (x) return x
+        return new NameRef(ref, lastHit)
+    }
+	static forObject(o: any) {
 		if (o instanceof V3) {
-			return new NameRef(modelBREP.vertexNames.get(o), o)
+			return NameRef.forRef(modelBREP.vertexNames.get(o), o)
 		} else {
 			assert(o.name)
-			return new NameRef(o.name, o)
+			return NameRef.forRef(o.name, o)
 		}
 	}
 
@@ -1110,12 +1059,12 @@ function initOtherEvents() {
 			paintScreen()
 		}
 	}
-	gl.onmouseup.push(function (e) {
+	gl.canvas.addEventListener('mouseup', function (e) {
 		// don't put modeGetCurrent().mouseup in local var as 'this' won't be bound correctly
 		modeGetCurrent().mouseup && modeGetCurrent().mouseup(e, getMouseLine(e))
 		paintScreen()
 	})
-	gl.onmousedown.push(function (e) {
+	gl.canvas.addEventListener('mousedown', function (e) {
 		if (1 == e.button) {
 			modePop()
 		}
@@ -1130,7 +1079,7 @@ function initOtherEvents() {
 
 }
 function initPointInfoEvents(_gl = gl) {
-	_gl.onmousemove.push(function (e) {
+	_gl.canvas.addEventListener('mousemove', function (e) {
 		const mouseLine = getMouseLine({x: e.clientX, y: e.clientY})
 		modeGetCurrent().mousemove && modeGetCurrent().mousemove(e, mouseLine)
 		{
@@ -1192,10 +1141,10 @@ function initNavigationEvents(_gl = gl, eye: {pos: V3, focus: V3, up: V3, zoomFa
 			const rotateLR = -delta.x / 6.0 * DEG
 			const rotateUD = -delta.y / 6.0 * DEG
 			// rotate
-			let matrix = M4.rotationLine(eye.focus, eye.up, rotateLR)
+			let matrix = M4.rotateLine(eye.focus, eye.up, rotateLR)
 			//let horizontalRotationAxis = focus.minus(pos).cross(up)
 			const horizontalRotationAxis = eye.up.cross(eye.pos.minus(eye.focus))
-			matrix = matrix.times(M4.rotationLine(eye.focus, horizontalRotationAxis, rotateUD))
+			matrix = matrix.times(M4.rotateLine(eye.focus, horizontalRotationAxis, rotateUD))
 			eye.pos = matrix.transformPoint(eye.pos)
 			eye.up = matrix.transformVector(eye.up)
 
@@ -1226,7 +1175,7 @@ function initNavigationEvents(_gl = gl, eye: {pos: V3, focus: V3, up: V3, zoomFa
 //const cylface = cyl.faces.find(face => face instanceof RotationFace)//.rotateX(50 * DEG)
 //assert(cylface.surface.facesOutwards())
 //const cyl = B2T.extrudeEdges([Edge.forCurveAndTs(EllipseCurve.forAB(1, -1), -PI, 0), StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl')
-function tooltipShowEl(htmlContent: string, target: HTMLElement, side) {
+function tooltipShowEl(htmlContent: string, target: HTMLElement, side: string) {
 	const tipWrap = $('tip-wrap') as HTMLDivElement
 	const arrow = tipWrap.getElement('#tip-arrow') as HTMLDivElement
 	assert(tipWrap)
@@ -1285,12 +1234,12 @@ function tooltipShowEl(htmlContent: string, target: HTMLElement, side) {
 }
 function initToolTips() {
 	const DELAY_DEFAULT = 1000
-	let timeout, target
+	let timeout: number, target: HTMLElement
 
-	const handler = function (e) {
-		let el: any = e.target, tt
+    window.addEventListener('mouseover', function (e) {
+		let el = e.target as HTMLElement, tt
 		while (!(tt = el.dataset.tooltip || el.dataset.tooltipsrc) && el != document.body) {
-			el = el.getParent()
+			el = el.getParent()  as HTMLElement
 		}
 		if (tt) {
 			target = el
@@ -1299,10 +1248,8 @@ function initToolTips() {
 				tooltipShowEl(html, el, el.dataset.tooltipside)
 			}, DELAY_DEFAULT)
 		}
-	}
-	window.addEventListener('mouseover', handler, true)
+	}, true)
 	window.addEventListener('mouseout', function (e) {
-		console.log('mouseout', timeout, target)
 		if (e.target == target) {
 			clearTimeout(timeout)
 			tooltipHide()
@@ -1370,19 +1317,19 @@ window.onload = function () {
 	paintScreen()
 
 	const lastInterst = featureStack.last()
-	modePush(snAndNames[lastInterst.constructor.name][1], lastInterst)
+	lastInterst && modePush(snAndNames[lastInterst.constructor.name][1], lastInterst)
 
 }
 
 function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points: V3[], edges: Edge[],
                      mindist: number,
-                     ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges' | 'features')[]) {
+                     ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges' | 'features')[]): any {
 	let hoverHighlight = null, nearest = Infinity
 
 	const checkFeatures = consider.includes('features')
 	assert(!checkFeatures || !consider.includes('faces'))
 
-	function checkEl(el, distance) {
+	function checkEl(el: any, distance: number) {
 		if (distance < nearest) {
 			nearest = distance
 			hoverHighlight = el
@@ -1400,7 +1347,7 @@ function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points
 		}
 	}
 	if (consider.includes('sketchElements')) {
-		featureStack.filter(f => f instanceof Sketch).forEach(sketch => {
+        0;(featureStack.filter(f => f instanceof Sketch) as Sketch[]).forEach(sketch => {
 			if (!sketch.hide && sketch.plane && sketch.plane.normal1.dot(mouseLine.dir1) < -0.1) {
 				// sketch plane is facing user; ensures there is an intersection
 
@@ -1472,162 +1419,7 @@ function getMouseLine(pos: {x: number, y: number}): L3 {
 }
 
 
-function setupSelectors(el, feature, mode) {
-	el.getElements('.face-select, .plane-select, .segment-select, .direction-select, .features-select')
-		.removeEvents()
-		.removeClass('selecting')
-		.addEvent('mouseover', function (e) {
-			if (this.linkRef && this.linkRef.get) {
-				const target = this.linkRef.get()
-				if (target) {
-					hoverHighlight = target
-				} else {
-					missingEls.push(this.linkRef.lastHit)
-				}
-				paintScreen()
-			}
-		})
-		.addEvent('mouseout', function (e) {
-			hoverHighlight = null
-			this.linkRef && missingEls.remove(this.linkRef.lastHit)
-			paintScreen()
-		})
-
-	el.getElements('.face-select')
-		.addEvent('click', function (e) {
-			const selector = this
-			this.addClass('selecting')
-			selector.set('text', 'Click on a face')
-			modePush(MODES.SELECT_FACE, function (face) {
-				selector.removeClass('selecting')
-				selector.set('text', face.name)
-
-				feature[selector.dataset.featureProperty] = face.name
-				rebuildModel()
-			})
-		})
-
-	el.getElements('.features-select')
-		.each(el => {
-			el.dataset.tooltip = 'Select features by clicking on them in the model or the feature stack.'
-			el.dataset.tooltipside = 'left'
-			const whats = feature[el.dataset.featureProperty].map(r => r.get())
-			el.set('text', whats.map(w => w.name).join())
-		})
-		.addEvent('click', function (e) {
-			const el = this
-			this.addClass('selecting')
-			el.set('text', 'Click on a feature')
-			modePush(MODES.SELECT_FEATURE, function (ref) {
-				const whats = ref.map(r => r.getOrThrow())
-				el.removeClass('selecting')
-				el.set('text', whats.map(w => w.name).join())
-
-				feature[el.dataset.featureProperty] = ref
-				rebuildModel()
-			})
-		})
-
-
-	el.getElements('.segment-select')
-		.addEvent('click', function (e) {
-			const selector = this
-			this.addClass('selecting')
-			selector.set('text', 'Click on a sketch segment')
-			modePush(MODES.SELECT_SEGMENT, function (segmentRef) {
-				selector.removeClass('selecting')
-				selector.set('text', segmentRef.ref)
-				selector.linkRef = segmentRef
-
-				feature[selector.dataset.featureProperty] = segmentRef
-				rebuildModel()
-			})
-		})
-
-	el.getElements('.direction-select')
-		.addEvent('click', function (e) {
-			const selector = this
-			this.addClass('selecting')
-			modePush(MODES.SELECT_DIRECTION, function (dirRefs) {
-				selector.removeClass('selecting')
-				const things = dirRefs.map(r => r.get())
-				const [vector, type] = MODES.SELECT_DIRECTION.magic(things)
-				selector.getElement('.direction-select-info').set('text', type)
-				selector.getElement('.direction-select-things').set('text', things.map(t => t.name).join('\n'))
-				selector.linkRefs = dirRefs
-
-				feature[selector.dataset.featureProperty] = dirRefs
-				rebuildModel()
-			})
-		})
-
-	el.getElements('.string-id-input, .select-text')
-		.removeEvents()
-		.each(el => {
-			el.value = feature[el.dataset.featureProperty]
-			el.dataset.tooltip = 'Feature ID. Must be unique.'
-			el.dataset.tooltipside = 'left'
-		})
-		.addEvent('change', function (e) {
-			// TODO: check if unique
-			const propName = this.dataset.featureProperty
-			feature[propName] = this.value
-			rebuildModel()
-		})
-
-	el.getElements('.select-select')
-		.removeEvents()
-		.each(el => el.value = feature[el.dataset.featureProperty])
-		.addEvent('change', function (e) {
-			const propName = this.dataset.featureProperty
-			feature[propName] = this.value
-			rebuildModel()
-		})
-
-	el.getElements('.dimension-input')
-		.removeEvents()
-		.each(el => el.value = feature[el.dataset.featureProperty])
-		.addEvent('mousewheel', function (e) {
-			console.log(e)
-			const delta = (e.shift ? 1 : 10) * Math.sign(e.wheel)
-			this.set('value', round10(parseFloat(this.value) + delta, -6))
-			this.fireEvent('change')
-		})
-		.addEvent('click', function (e) {
-			if (e.event.button == 1) {
-				this.set('value', this.dataset.defaultValue)
-				this.fireEvent('change')
-			}
-		})
-		.addEvent('change', function (e) {
-			const propName = this.dataset.featureProperty
-			feature[propName] = this.value = forceFinite(this.value)
-			rebuildModel()
-		})
-
-	el.getElements('.boolean-input')
-		.removeEvents()
-		.each(el => el.checked = feature[el.dataset.featureProperty])
-		.addEvent('change', function (e) {
-			const propName = this.dataset.featureProperty
-			feature[propName] = this.checked
-			rebuildModel()
-		})
-
-	el.getElement('[name=done]')
-		.removeEvents()
-		.addEvent('click', function () {
-			modeEnd(mode)
-		})
-	el.getElement('[name=done]').dataset.tooltip = 'Finish editing. Shortcut: MMB'
-	el.getElement('[name=delete]')
-		.removeEvents()
-		.addEvent('click', function () {
-			featureDelete(feature)
-		})
-
-}
-function featureDelete(featur: Feature) {
+function featureDelete(feature: Feature) {
 	const correspondingMode = modeStack.find(mode => mode.feature && mode.feature == feature)
 	correspondingMode && modeEnd(correspondingMode)
 
@@ -1639,13 +1431,13 @@ function featureDelete(featur: Feature) {
 	updateFeatureDisplay()
 	rebuildModel()
 }
-function featureDependents(feature) {
+function featureDependents(feature: Feature) {
 	const featureIndex = featureStack.indexOf(feature)
 	return featureStack
 		.slice(featureIndex + 1)
 		.filter(followingFeature => featureDependencies(followingFeature).includes(feature))
 }
-function featureDependencies(feature) {
+function featureDependencies(feature: Feature) {
 	const result = new Set()
 	const featureNameDependecies = feature.dependentOnNames()
 	featureNameDependecies.forEach(nameRef => {
@@ -1654,7 +1446,7 @@ function featureDependencies(feature) {
 	})
 	return Array.from(result.values())
 }
-function chainComparison(diff1, diff2) {
+function chainComparison(diff1: number, diff2: number) {
 	return diff1 != 0 ? diff1 : diff2
 }
 function pointsFirst(a, b) {
@@ -1667,61 +1459,11 @@ function exportModel() {
 	saveAs(brepMesh.toBinarySTL(), 'export.stl')
 }
 function clicky() {
-	MODES.PATTERN.vue.$forceUpdate()
 	for (let j = 0; j < 1; j++) {
 		editingSketch.gaussNewtonStep()
 	}
 	editingSketch.reverse()
 	paintScreen()
-}
-function deleteConstraint(sketch, constraint) {
-	if ('coincident' == constraint.type) {
-		deleteCoincidence(constraint, sketch)
-	} else {
-		sketch.constraints.remove(constraint)
-	}
-	sketch.recalculate()
-	paintScreen()
-}
-function getGroupConstraint(el, sketch, type) {
-	return sketch.constraints.find(function (c) {
-		return c.type == type && (c.fixed == el || c.segments.includes(el))
-	})
-}
-// removes segment or plane from group constraint
-function removeFromGroupConstraint(el, sketch, type) {
-	const groupConstraint = getGroupConstraint(el, sketch, type)
-	if (!groupConstraint) return
-	groupConstraint.cs.remove(el)
-	if (1 == groupConstraint.cs.length) {
-		sketch.constraints.remove(groupConstraint)
-	}
-	groupConstraint.segments.remove(el)
-	if (groupConstraint.fixed == el) {
-		groupConstraint.fixed = undefined
-	}
-}
-function removeFromConstraint(el: SketchSegment | SegmentEndPoint, sketch: Sketch, constraint: Constraint) {
-	switch (constraint.type) {
-		case 'coincident':
-			removeFromCoincidence(el, sketch)
-			break
-		case 'parallel':
-		case 'colinear':
-		case 'equalLength':
-			removeFromGroupConstraint(el, sketch, constraint.type)
-			break
-		case 'perpendicular':
-		case 'pointDistance':
-		case 'pointLineDistance':
-		case 'pointOnLine':
-		case 'angle':
-			sketch.constraints.remove(constraint)
-			break
-		default:
-			throw new Error('unknown constraint ' + constraint.type)
-		// console.log('errror', constraint.type);
-	}
 }
 // colinear, equal length or parallel
 /*
@@ -1774,7 +1516,7 @@ function makeGroup(type) {
 
 	const newGroup = els.flatMap(el => {
 		if (isFixed(el)) el = NameRef.forObject(el)
-		const c = getGroupConstraint(el, editingSketch, type)
+		const c = editingSketch.getGroupConstraint(el, type)
 		return c ? c.cs : el
 	}).unique()
 	const fixeds = newGroup.filter(el => el instanceof NameRef)
@@ -1782,7 +1524,7 @@ function makeGroup(type) {
 		throw new Error('cannot have two fixed')
 	}
 
-	const oldConstraints = newGroup.map(el => getGroupConstraint(el, editingSketch, type))
+	const oldConstraints = newGroup.map(el => editingSketch.getGroupConstraint(el, type))
 	editingSketch.constraints.removeAll(oldConstraints)
 
 	// add new constraint
@@ -1884,8 +1626,8 @@ function makeSelCoincident() {
 	const selPoints = selected.filter(function (s) { return s instanceof SegmentEndPoint })
 	if (selPoints.length >= 2) {
 		for (let i = 1; i < selPoints.length; i++) {
-			makeCoincident(selPoints[0], selPoints[i], editingSketch)
-		}
+            editingSketch.makeCoincident(selPoints[0], selPoints[i])
+        }
 		rebuildModel()
 		paintScreen()
 		updateSelected()
@@ -1933,14 +1675,14 @@ class Extrude extends Feature {
 	dependentOnNames(): NameRef[] {
 		return []
 	}
-	getB2(m4, color?: colorstr, genFeature?: Feature) {
+	getB2(m4: M4, color?: colorstr, genFeature?: Feature) {
 		const feature = this
 		const loopSegment = feature.segmentName.getOrThrow()
 		const loopSketch = loopSegment.sketch
 		// opposite dir to plane normal1:
 		const startOffset = loopSketch.plane.normal1.times(-min(feature.start, feature.end))
 		const lengthOffset = m4.transformVector(loopSketch.plane.normal1.times(-Math.abs(feature.start - feature.end)))
-		const startMatrix = m4.times(M4.translation(startOffset).times(loopSketch.sketchToWorldMatrix))
+		const startMatrix = m4.times(M4.translate(startOffset).times(loopSketch.sketchToWorldMatrix))
 		let edgeLoop = loopSketch.getLoopForSegment(loopSegment)
 		edgeLoop = edgeLoop.map(edge => edge.transform(startMatrix, ''))
 		// TODO: test for self-intersection of edgeloop
@@ -2069,7 +1811,7 @@ class Rotate extends Feature {
 		return []
 	}
 
-	getB2(m4, color?: colorstr, genFeature?: Feature) {
+	getB2(m4: M4, color?: colorstr, genFeature?: Feature) {
 		const feature = this
 		const loopSegment = feature.segmentName.getOrThrow()
 		const loopSketch = loopSegment.sketch
@@ -2078,7 +1820,7 @@ class Rotate extends Feature {
 		const m1 = M4.forSys(axis.dir1.cross(loopSketch.plane.normal1).negated(), loopSketch.plane.normal1, axis.dir1, axis.anchor)
 		const m1i = m1.inversed()
 		// opposite dir to plane normal1:
-		const startMatrix = M4.multiplyMultiple(m4, m1, M4.rotationZ(feature.start))
+		const startMatrix = M4.multiplyMultiple(m4, m1, M4.rotateZ(feature.start))
 		const edgeLoopXY = loopSketch.getLoopForSegment(loopSegment)
 		let edgeLoopXZ = edgeLoopXY.map(edge => edge.transform(m1i, ''))
 		const rads = min(TAU, abs(feature.end - feature.start))
@@ -2171,7 +1913,7 @@ class Pattern extends Feature {
 			const patFeature = featureRef.getOrThrow()
 			for (let i = 0; i < feature.count; i++) {
 				const offset = dir.times((i + 1) * feature.intervalLength)
-				const matrix = M4.translation( offset)
+				const matrix = M4.translate( offset)
 				patFeature.apply(publish, color, m4.times(matrix), genFeature)
 			}
 		}
@@ -2202,7 +1944,7 @@ function modeGetName(mode) {
 function modeUpdateDisplay() {
 	$('modeBox').set('html', modeStack.map(modeGetName).join('<br>'))
 }
-function modePush(mode, ...args) {
+function modePush(mode: MODE, ...args: any[]) {
 	assert(mode.init && mode.end && mode.mousemove && mode.mousedown)
 	mode.before && mode.before()
 	const feature = args[0]
@@ -2215,7 +1957,7 @@ function modePush(mode, ...args) {
 	mode.init.apply(mode, args)
 	modeUpdateDisplay()
 }
-function modeEnd(mode) {
+function modeEnd(mode: MODE) {
 	if (modeStack.includes(mode)) {
 		let popped
 		do {
@@ -2238,16 +1980,7 @@ function modeGetCurrent() {
 	return modeStack.last()
 }
 
-interface Mode {
-	end()
-	init()
-	mousemove()
-	mousedown()
-
-}
-
-
-function tooltipShow(htmlContent: string, x, y) {
+function tooltipShow(htmlContent: string, x: number, y: number) {
 	const tipWrap = $('tip-wrap') as HTMLDivElement
 	assert(tipWrap)
 	const tip = $('tip') as HTMLDivElement
@@ -2278,9 +2011,9 @@ function tooltipHide() {
 }
 
 
-function serialize(v) {
-	function gatherList(v) {
-		if (v && v.constructor === Array) {
+function serialize(v: {}) {
+	function gatherList(v: {}) {
+		if (Array.isArray(v)) {
 			if (visited.has(v)) {
 				if (!listMap.has(v)) {
 					listMap.set(v, resultList.length)
@@ -2338,7 +2071,8 @@ function serialize(v) {
 	}
 
 	const visited = new Set()
-	let listMap = new Map(), resultList = []
+	const listMap = new Map()
+    let resultList: {}[] = []
 	listMap.set(v, 0)
 	resultList.push(v)
 	gatherList(v)
@@ -2349,7 +2083,7 @@ function serialize(v) {
 	return JSON.stringify(resultList)
 }
 
-function unserialize(string) {
+function unserialize(string: string) {
 	function fixObjects(v) {
 		if (v && v.constructor === Array) {
 			for (let i = 0; i < v.length; i++) {
@@ -2359,7 +2093,7 @@ function unserialize(string) {
 		} else if ('object' == typeof v && null != v) {
 			if ('#PROTO' in v) {
 				const protoName = v['#PROTO'] as string
-				const proto = window[protoName] || CLASSES[protoName] || /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/.test(protoName) && eval(protoName)
+				const proto = (window[protoName] as string) || CLASSES[protoName] || /^[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*$/.test(protoName) && eval(protoName)
 				assert(proto, protoName + ' Missing ' + window[protoName])
 				const result = Object.create((proto).prototype)
 				const keys = Object.keys(v)

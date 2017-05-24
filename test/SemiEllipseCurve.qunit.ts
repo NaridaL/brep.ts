@@ -1,6 +1,6 @@
 QUnit.module('SemiEllipseCurve')
 {
-	const curve = SemiEllipseCurve.UNIT.shearedX(2, 1)
+	const curve = SemiEllipseCurve.UNIT.shearX(2, 1)
 	registerTests({
 		'withBounds'(assert) {
 			const newCurve = curve.withBounds(1, 2)
@@ -72,7 +72,7 @@ QUnit.module('SemiEllipseCurve')
 			testCurveISInfos(assert, c1, verticalEllipse2, 0)
 
 			const smallEllipse = EllipseCurve.forAB(2, 3)
-			testCurveISInfos(assert, c1, smallEllipse, 0) 
+			testCurveISInfos(assert, c1, smallEllipse, 0)
 
 			const test = new EllipseCurve(V(6, 1, 0), V(3, 1, 0), V(4, 0, 0))
 			testCurveISInfos(assert, c1, test, 2)

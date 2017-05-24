@@ -6,7 +6,7 @@ registerTests({
 		testCurve(assert, HyperbolaCurve.XY)
 	},
 	'HyperbolaCurve'(assert) {
-		const hbSheared = HyperbolaCurve.XY.shearedX(2, 3)
+		const hbSheared = HyperbolaCurve.XY.shearX(2, 3)
 		assert.notOk(hbSheared.isOrthogonal())
 		const hbShearedRA = hbSheared.rightAngled()
 		assert.ok(hbShearedRA.isOrthogonal(), 'hbShearedRA.isOrthogonal()')
