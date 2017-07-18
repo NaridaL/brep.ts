@@ -74,9 +74,9 @@ async function demoMain() {
 	})
 }
 const meshColorss = [
-	chroma.scale(['#ffa621', '#ffd026']).mode('lab').colors(20).map(s => chroma(s).gl()),
-	chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20).map(s => chroma(s).gl()),
-	chroma.scale(['#19ff66', '#1ffff2']).mode('lab').colors(20).map(s => chroma(s).gl())
+	chroma.scale(['#ffa621', '#ffd026']).mode('lab').colors(20, 'gl'),
+	chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20, 'gl'),
+	chroma.scale(['#19ff66', '#1ffff2']).mode('lab').colors(20, 'gl')
 ]
 const demoPlanes = [
 	new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000, -5, 5, -5, 5),

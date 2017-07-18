@@ -163,6 +163,10 @@ abstract class Edge extends Transformable {
         })
     }
 
+    isCanon() {
+        return !this.reversed
+    }
+
     getCanon() {
         return this.reversed
             ? this.flipped()

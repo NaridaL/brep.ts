@@ -1,4 +1,3 @@
-///<reference path="P3.ts"/>
 
 class CustomPlane extends P3 {
 	readonly up: V3
@@ -55,4 +54,7 @@ class CustomPlane extends P3 {
 		return new CustomPlane(plane.anchor, right, up, name, color)
 	}
 
+    static fromPlaneSurface(surface: PlaneSurface) {
+        return new CustomPlane(surface.plane.anchor, surface.right, surface.up, 'genCustomPlane' + globalId++)
+    }
 }

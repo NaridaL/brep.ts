@@ -49,7 +49,7 @@ abstract class ParametricSurface extends Surface {
 		return between(s, this.sMin, this.sMax) && between(t, this.tMin, this.tMax)
 	}
 
-	footParameters(pWC: V3, ss: number, st: number): V3 {
+	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
 		throw new Error()
 	}
 
@@ -90,8 +90,8 @@ abstract class ParametricSurface extends Surface {
 		return curves
 	}
 
-	static is(surface: any): surface is ParametricSurface {
-		return surface.pSTFunc
+	static is(obj: any): surface is ParametricSurface {
+		return obj.pSTFunc
 	}
 }
 abstract class ImplicitSurface extends Surface {

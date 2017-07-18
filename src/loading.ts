@@ -44,8 +44,8 @@ function draw3(ctx, implicitCurve, dids, didt, bounds, sStep, tStep) {
 	// ctx.restore()
 
 }
-const colorScale = chroma.scale(['white', 'red', 'green', 'white']).domain([0, 127, 128, 255])
-const colors = arrayFromFunction(256, i => colorScale(i) as Chroma.Color)
+const colorScale: chroma.Scale = chroma.scale(['white', 'red', 'green', 'white']).domain([0, 127, 128, 255])
+const colors = arrayFromFunction(256, i => colorScale(i))
 const colorsBright =colors.map(c => c.darken(0.5))
 function draw(ctx: CanvasRenderingContext2D, ic: MathFunctionR2R, bounds: {sMin, tMin, sMax, tMax}, sStep, tStep) {
 	let {sMin, tMin, sMax, tMax} = bounds

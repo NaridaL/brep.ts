@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "module": "commonjs",
+    "module": "none",
     "outFile": "out/complete.js",
 //    "outDir": "out",
     "declaration": true,
@@ -21,7 +21,7 @@
     "lib": ["dom","es7"],
     "baseUrl": ".",
     "allowJs": false,
-    "listFiles": true,
+//    "listFiles": true,
     "watch": true,
     "paths": {
       "*": ["*", "../*"]
@@ -32,7 +32,7 @@
     "node_modules/ts3dutils/out/complete.d.ts",
     "node_modules/nerdamer/index.d.ts",
     "node_modules/tsgl/out/complete.d.ts",
-//    "src/Transformable.ts",
+    //    "src/Transformable.ts",
 //    "src/Vector.ts",
 //    "src/Vector3.ts",
     "src/ignore/Line.ts",

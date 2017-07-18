@@ -1,6 +1,8 @@
 ///<reference path="surface/ConicSurface.ts"/>
-function parseGetParams(str) {
-    const result = {}
+///<reference path="CustomPlane.ts"/>
+
+function parseGetParams(str: string) {
+    const result: {[key:string]: string} = {}
     str
         .split('&')
         .forEach(function (item) {
@@ -9,8 +11,23 @@ function parseGetParams(str) {
         })
     return result
 }
+const COLORS = {
+    RD_FILL: chroma('#9EDBF9'),
+    RD_STROKE: chroma('#77B0E0'),
+    TS_FILL: chroma('#D19FE3'),
+    TS_STROKE: chroma('#A76BC2'),
+    PP_FILL: chroma('#F3B6CF'),
+    PP_STROKE: chroma('#EB81B4'),
+}
+let setupCameraListener: (e: typeof eye) => void
+const SHADER_TYPE_VAR = (false as true) && initShaders()
+let shaders: typeof SHADER_TYPE_VAR
 let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
     wireframe: boolean = false, normallines: boolean = false, b2s: B2[] = []
+let eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
+let hoverHighlight: any
+let drPs: (V3 | {info: string, p: V3})[] = [], drVs: any[] = []
+let gl: LightGLContext
 const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
 function initB2() {
     eye.pos = V(1, 2, 101)
@@ -75,14 +92,77 @@ function initB2() {
 }
 
 
+function conicPainter(mode: 0 | 1 | 2, ellipse: SemiEllipseCurve, color: GL_COLOR, startT: number, endT: number, width = 2) {
+    shaders.ellipse3d.uniforms({
+        f1: ellipse.f1,
+        f2: ellipse.f2,
+        center: ellipse.center,
+        color: color,
+        startT: startT,
+        endT: endT,
+        scale: width,
+        mode: mode
+    }).draw(meshes.pipe)
+}
+const cachedMeshes = new Map()
+const CURVE_PAINTERS: {[curveConstructorName: string]: (curve: Curve, color: GL_COLOR, startT: number, endT: number, width: number) => void} = {
+    [SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
+    [EllipseCurve.name]: conicPainter.bind(undefined, 0),
+    [ParabolaCurve.name]: conicPainter.bind(undefined, 1),
+    [HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
+    [ImplicitCurve.name](curve: ImplicitCurve, color, startT, endT, width = 2, normal = V3.Z) {
+        let mesh = cachedMeshes.get(curve)
+        if (!mesh) {
+            mesh = new Mesh({triangles: true, normals: true, lines: false, colors: false})
+            curve.addToMesh(mesh)
+            mesh.compile()
+            //mesh=Mesh.sphere(2)
+            cachedMeshes.set(curve, mesh)
+        }
+        // TODO: draw only part
+        //startT: startT,
+        //	endT: endT,
+        shaders.generic3d.uniforms({
+            color: color,
+            scale: width,
+        }).draw(mesh)
+    },
+    [BezierCurve.name](curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
+        shaders.bezier3d.uniforms({
+            p0: curve.p0,
+            p1: curve.p1,
+            p2: curve.p2,
+            p3: curve.p3,
+            color: color,
+            startT: startT,
+            endT: endT,
+            scale: width,
+            normal: normal
+        }).draw(meshes.pipe)
+    },
+    [L3.name](curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
+        gl.pushMatrix()
+        const a = curve.at(startT), b = curve.at(endT)
+        const ab = b.minus(a), abT = ab.getPerpendicular().unit()
+        const m = M4.forSys(ab, abT, ab.cross(abT).unit(), a)
+        gl.multMatrix(m)
+        gl.scale(1, width, width)
+        shaders.singleColor.uniforms({
+            color: color, // TODO: error checking
+        }).draw(meshes.pipe)
+
+        gl.popMatrix()
+    },
+}
+CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 
 
 const meshColors = [
-    chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20).map(s => chroma(s)),
-    chroma.scale(['#ffe93a', '#ff6e35']).mode('lab').colors(20).map(s => chroma(s)),
-    chroma.scale(['#1eff33', '#4960ff']).mode('lab').colors(20).map(s => chroma(s)),
-    chroma.scale(['#31fff8', '#2dff2a']).mode('lab').colors(20).map(s => chroma(s))
+    chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20, null),
+    chroma.scale(['#ffe93a', '#ff6e35']).mode('lab').colors(20, null),
+    chroma.scale(['#1eff33', '#4960ff']).mode('lab').colors(20, null),
+    chroma.scale(['#31fff8', '#2dff2a']).mode('lab').colors(20, null)
 ]
 const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()))
 let aMeshes: (Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>})[] = [],
@@ -90,6 +170,25 @@ let aMeshes: (Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>})[] = []
 	//cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 	dMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 	b2meshes: Mesh[] = []
+function drawVector(vector: V3, anchor: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 1, _gl = gl) {
+    _gl.pushMatrix()
+
+    const vT = vector.getPerpendicular().unit()
+    _gl.multMatrix(M4.forSys(vector, vT, vector.cross(vT).unit(), anchor))
+    1 != size && _gl.scale(size, size, size)
+    _gl.shaders.singleColor.uniforms({
+        color: color
+    }).draw(_gl.meshes.vector)
+
+    _gl.popMatrix()
+}
+function drawVectors(_gl = gl) {
+    drawVector(V3.X, V3.O, chroma('red').gl(), undefined, _gl)
+    drawVector(V3.Y, V3.O, chroma('green').gl(), undefined, _gl)
+    drawVector(V3.Z, V3.O, chroma('blue').gl(), undefined, _gl)
+
+    drVs.forEach(vi => drawVector(vi.dir1, vi.anchor, vi.color, undefined, _gl))
+}
 function viewerPaint() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.loadIdentity()
@@ -102,11 +201,11 @@ function viewerPaint() {
         gl.pushMatrix()
         //gl.translate(30, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        wireframe && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
+        wireframe && shaders.singleColor.uniforms({ color: COLORS.TS_STROKE.gl() })
             .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.wireframe, DRAW_MODES.LINES)
-        normallines && shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
+        normallines && shaders.singleColor.uniforms({ color: COLORS.TS_STROKE.gl() })
             .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.normallines, DRAW_MODES.LINES)
-        shaders.singleColor.uniforms({ color: hexIntToGLColor(COLORS.TS_STROKE) })
+        shaders.singleColor.uniforms({ color: COLORS.TS_STROKE.gl() })
             .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.LINES, DRAW_MODES.LINES)
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
 
@@ -135,16 +234,28 @@ function viewerPaint() {
 
     if (hovering instanceof Edge) {
 	    gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-	    drawEdge(hovering, 0x000000, 2 / eye.zoomFactor)
+	    drawEdge(hovering, GL_COLOR_BLACK, 2 / eye.zoomFactor)
 	    gl.projectionMatrix.m[11] += 1 / (1 << 20)
     }
     //edges.forEach((e, i) => drawEdge(e, 0x0ff000, 0.01))
 
     //drPs.forEach(v => drawPoint(v, undefined, 0.3))
-    drawPoints(5 / eye.zoomFactor)
-	b2planes.forEach(plane => drawPlane(plane, plane.color))
+    drPs.forEach(info => drawPoint(info.p || info, hexIntToGLColor(0xcc0000), 5 / eye.zoomFactor))
+	b2planes.forEach(plane => drawPlane(plane, hexIntToGLColor(plane.color), gl, hoverHighlight))
 
     //console.log(gl.drawCallCount)
+}
+let meshes: any = {}
+function drawPoint(p: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 5) {
+    gl.pushMatrix()
+    gl.translate(p)
+    gl.scale(size, size, size)
+    shaders.singleColor.uniforms({color: color}).draw(meshes.sphere1)
+    gl.popMatrix()
+}
+
+function drawEdge(edge: Edge, color: GL_COLOR = GL_COLOR_BLACK, width = 2) {
+    CURVE_PAINTERS[edge.curve.constructor.name](edge.curve, color, edge.minT, edge.maxT, width)
 }
 
 
@@ -156,16 +267,89 @@ function viewerPaint() {
 
 
 
+/**
+ * Transforms mouse positions on the screen into a line in world coordinates.
+ */
+function getMouseLine(pos: { x: number; y: number }, _gl = gl): L3 {
+    const ndc1 = V(pos.x * 2 / _gl.canvas.width - 1, -pos.y * 2 / _gl.canvas.height + 1, 0)
+    const ndc2 = V(pos.x * 2 / _gl.canvas.width - 1, -pos.y * 2 / _gl.canvas.height + 1, 1)
+    //console.log(ndc)
+    const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
+    const s = inverseProjectionMatrix.transformPoint(ndc1)
+    const dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s)
+    return L3.anchorDirection(s, dir)
+}
+
+
+function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points: V3[], edges: Edge[],
+                     mindist: number,
+                     ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges' | 'features')[]): any {
+    let hoverHighlight = null, nearest = Infinity
+
+    const checkFeatures = consider.includes('features')
+    assert(!checkFeatures || !consider.includes('faces'))
+
+    function checkEl(el: any, distance: number) {
+        if (distance < nearest) {
+            nearest = distance
+            hoverHighlight = el
+        }
+    }
+
+    if (faces && (consider.includes('faces') || consider.includes('features'))) {
+        for (const face of faces) {
+            checkEl(checkFeatures ? face.info.feature : face, face.intersectsLine(mouseLine))
+        }
+    }
+    if (planes && consider.includes('planes')) {
+        for (const plane of planes) {
+            checkEl(plane, plane.distanceTo(mouseLine,mindist))
+        }
+    }
+    if (consider.includes('points')) {
+        for (const p of points) {
+            const t = mouseLine.pointT(p)
+            if (mouseLine.at(t).distanceTo(p) < mindist * 1.2) {
+                checkEl(p, t - 0.1)
+            }
+        }
+    }
+    if (consider.includes('edges')) {
+        const projPlane = new P3(mouseLine.dir1, 0)
+        const projPoint = projPlane.projectedPoint(mouseLine.anchor)
+        for (const edge of edges) {
+            const curve = edge.curve
+            const prio = 0.05
+            if (curve instanceof L3 && curve.dir1.isParallelTo(mouseLine.dir1)) {
+                const d = mouseLine.distanceToPoint(edge.a)
+                const t = mouseLine.pointT(edge.a)
+
+                if (d < mindist) {
+                    checkEl(edge, t - prio)
+                }
+            } else {
+                if (!(curve instanceof ImplicitCurve)) {
+                    const projCurve = curve.project(projPlane)
+                    const curveT = edge.clampedT(projCurve.closestTToPoint(projPoint))
+                    const p = curve.at(curveT)
+                    const t = mouseLine.pointT(p)
+                    if (projCurve.at(curveT).distanceTo(projPoint) < mindist) {
+                        checkEl(edge, t - prio)
+                    }
+                }
+            }
+        }
+    }
+
+    return hoverHighlight
+}
 
 
 
 
-
-
-
-function initInfoEvents() {
+function initInfoEvents(paintScreen: () => {}) {
 	gl.canvas.addEventListener('mousemove', function (e) {
-		const mouseLine = getMouseLine({x: e.clientX, y: e.clientY})
+		const mouseLine = getMouseLine({x: e.clientX, y: e.clientY}, gl)
 		const faces = [a,b,c,d].mapFilter(b2 => b2 && b2.faces).concatenated()
 		const testEdges: Edge[] = [a,b,c,d].mapFilter(b2 => b2 && (b2.buildAdjacencies(), Array.from(b2.edgeFaces.keys())))
 			.concatenated()
@@ -204,9 +388,8 @@ const b2planes = [
 ]
 
 async function viewerMain() {
-	paintScreen = () => requestAnimationFrame(viewerPaint)
+	const paintScreen = () => requestAnimationFrame(viewerPaint)
 	await B2T.loadFonts()
-	modeStack.push({})
 	window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 		console.log(errorMsg, url, lineNumber, column, errorObj)
 	}
@@ -241,12 +424,132 @@ async function viewerMain() {
 			: hash + ';' + iSource
 		window.history.replaceState(undefined, undefined, '#' + result)
 	}
-	initInfoEvents()
+	initInfoEvents(paintScreen)
     //initToolTips() // hide tooltip on mouseover
 	//initPointInfoEvents()
 	initB2()
 	setupCamera(eye, gl)
 	paintScreen()
+}
+function initNavigationEvents(_gl = gl, eye: {pos: V3, focus: V3, up: V3, zoomFactor: number}, paintScreen: () => void) {
+    const canvas: HTMLCanvasElement = $(_gl.canvas)
+    let lastPos: V3 = V3.O
+    //_gl.onmousedown.push((e) => {
+    //	e.preventDefault()
+    //	e.stopPropagation()
+    //})
+    //_gl.onmouseup.push((e) => {
+    //	e.preventDefault()
+    //	e.stopPropagation()
+    //})
+    canvas.addEventListener('mousemove', e => {
+        const pagePos = V(e.pageX, e.pageY)
+        const delta = lastPos.to(pagePos)
+        //noinspection JSBitwiseOperatorUsage
+        if (e.buttons & 4) {
+            // pan
+            const moveCamera = V(-delta.x * 2 / _gl.canvas.width, delta.y * 2 / _gl.canvas.height)
+            const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
+            const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
+            eye.pos = eye.pos.plus(worldMoveCamera)
+            eye.focus = eye.focus.plus(worldMoveCamera)
+            setupCamera(eye, _gl)
+            paintScreen()
+        }
+        // scene rotation
+        //noinspection JSBitwiseOperatorUsage
+        if (e.buttons & 2) {
+            const rotateLR = -delta.x / 6.0 * DEG
+            const rotateUD = -delta.y / 6.0 * DEG
+            // rotate
+            let matrix = M4.rotateLine(eye.focus, eye.up, rotateLR)
+            //let horizontalRotationAxis = focus.minus(pos).cross(up)
+            const horizontalRotationAxis = eye.up.cross(eye.pos.minus(eye.focus))
+            matrix = matrix.times(M4.rotateLine(eye.focus, horizontalRotationAxis, rotateUD))
+            eye.pos = matrix.transformPoint(eye.pos)
+            eye.up = matrix.transformVector(eye.up)
+
+            setupCamera(eye, _gl)
+            paintScreen()
+        }
+        lastPos = pagePos
+    })
+    canvas.addEvent('mousewheel', function (e) {
+        //console.log(e)
+        eye.zoomFactor *= pow(0.9, -e.wheel)
+        const targetPos = e.target.getPosition()
+        const mouseCoords = {x: e.page.x - targetPos.x, y: e.page.y - targetPos.y}
+        const moveCamera = V(mouseCoords.x * 2 / _gl.canvas.width - 1, -mouseCoords.y * 2 / _gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
+        const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
+        const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
+        //console.log("moveCamera", moveCamera)
+        //console.log("worldMoveCamera", worldMoveCamera)
+        eye.pos = eye.pos.plus(worldMoveCamera)
+        eye.focus = eye.focus.plus(worldMoveCamera)
+        setupCamera(eye, _gl)
+        paintScreen()
+        e.preventDefault()
+    })
+}
+function makeDottedLinePlane(count: int = 128) {
+    const mesh = new Mesh({triangles: false, normals: false, lines: true})
+    const OXvertices = arrayFromFunction(count, i => new V3(i / count, 0, 0))
+    mesh.vertices.pushAll(OXvertices)
+    mesh.vertices.pushAll(M4.forSys(V3.Y, V3.O, V3.O, V3.X).transformedPoints(OXvertices))
+    mesh.vertices.pushAll(M4.forSys(V3.X.negated(), V3.O, V3.O, new V3(1, 1, 0)).transformedPoints(OXvertices))
+    mesh.vertices.pushAll(M4.forSys(V3.Y.negated(), V3.O, V3.O, V3.Y).transformedPoints(OXvertices))
+    mesh.lines = arrayFromFunction(count * 4, i => i - (i >= count * 2 ? 1 : 0))
+    mesh.compile()
+    return mesh
+}
+function initMeshes(_meshes: { [name: string]: Mesh }) {
+    _meshes.sphere1 = Mesh.sphere(2)
+    _meshes.segment = Mesh.plane({startY: -0.5, height: 1, detailX: 128})
+    _meshes.text = Mesh.plane()
+    _meshes.vector = Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true)
+    _meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
+    _meshes.xyLinePlane = Mesh.plane()
+    _meshes.xyDottedLinePlane = makeDottedLinePlane()
+}
+function initShaders() {
+    return {
+        singleColor: Shader.create(vertexShaderBasic, fragmentShaderColor),
+        multiColor: Shader.create(vertexShaderColor, fragmentShaderVaryingColor),
+        singleColorHighlight: Shader.create(vertexShaderBasic, fragmentShaderColorHighlight),
+        textureColor: Shader.create(vertexShaderTexture, fragmentShaderTextureColor),
+        arc: Shader.create(vertexShaderRing, fragmentShaderColor),
+        arc2: Shader.create(vertexShaderArc, fragmentShaderColor),
+        ellipse3d: Shader.create(vertexShaderConic3d, fragmentShaderColor),
+        generic3d: Shader.create(vertexShaderGeneric, fragmentShaderColor),
+        bezier3d: Shader.create(vertexShaderBezier3d, fragmentShaderColor),
+        bezier: Shader.create(vertexShaderBezier, fragmentShaderColor),
+        lighting: Shader.create(vertexShaderLighting, fragmentShaderLighting),
+        waves: Shader.create(vertexShaderWaves, fragmentShaderLighting),
+    }
+}
+function setupCamera(_eye: typeof eye, _gl: LightGLContext = gl) {
+    const {pos, focus, up, zoomFactor} = _eye
+    //console.log("pos", pos.$, "focus", focus.$, "up", up.$)
+    _gl.matrixMode(_gl.PROJECTION)
+    _gl.loadIdentity()
+    //_gl.perspective(70, _gl.canvas.width / _gl.canvas.height, 0.1, 1000);
+    const lr = _gl.canvas.width / 2 / zoomFactor
+    const bt = _gl.canvas.height / 2 /zoomFactor
+    _gl.ortho(-lr, lr, -bt, bt, -1e4, 1e4)
+    _gl.lookAt(pos, focus, up)
+    _gl.matrixMode(_gl.MODELVIEW)
+    setupCameraListener && setupCameraListener(_eye)
+}
+function drawPlane(customPlane: CustomPlane, color: GL_COLOR, _gl: LightGLContext = gl, dotted: boolean = false) {
+    _gl.pushMatrix()
+    _gl.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal1))
+    _gl.translate(customPlane.sMin, customPlane.rMin, customPlane.w)
+    _gl.scale(customPlane.sMax - customPlane.sMin, customPlane.tMax - customPlane.rMin, 1)
+
+    const mesh = dotted ? _gl.meshes.xyDottedLinePlane : _gl.meshes.xyLinePlane
+    _gl.shaders.singleColor.uniforms({color: color}).draw(mesh, DRAW_MODES.LINES)
+
+    _gl.popMatrix()
 }
 
 

@@ -56,7 +56,7 @@ class ProjectedCurveSurface extends ParametricSurface {
         return this.baseCurve.at(s).plus(this.dir.times(t))
     }
 
-    footParameters(pWC: V3, ss: number, st: number): V3 {
+    pointFoot(pWC: V3, ss: number, st: number): V3 {
         const basePlane = new P3(this.dir, 0)
         const projCurve = this.baseCurve.project(basePlane)
         const projPoint = basePlane.projectedPoint(pWC)

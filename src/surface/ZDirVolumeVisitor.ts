@@ -45,7 +45,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
         return {volume: this.surface.plane.normal1.z * centroid.z * area,
             centroid: new V3(centroid.x, centroid.y, centroid.z / 2) }
 
-    }
+    }, 
 	/**
 	 * at(t)
 	 * |\                                    ^
