@@ -2,7 +2,10 @@
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
  * Choose dir appropriately to select surface orientation.
  */
-class ProjectedCurveSurface extends ParametricSurface {
+import {Curve} from '../curve/Curve'
+import {P3} from '../P3'
+
+export class ProjectedCurveSurface extends ParametricSurface {
     constructor(readonly baseCurve: Curve,
                 readonly dir: V3,
                 readonly sMin: number = baseCurve.tMin,

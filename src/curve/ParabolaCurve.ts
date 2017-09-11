@@ -1,3 +1,8 @@
+import {int} from 'ts3dutils'
+import {XiEtaCurve} from './XiEtaCurve'
+import {BezierCurve} from './BezierCurve'
+import {L3} from './Line3'
+
 /**
  * eta = xi²
  */
@@ -36,7 +41,7 @@ class ParabolaCurve extends XiEtaCurve {
      * t = -f1 / 2 / f2 (for individual dimensions)
      */
     roots(): [number[], number[], number[]] {
-	    const dimRoots = (dim:int) => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)]
+	    const dimRoots = (dim: int) => eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)]
 	    return arrayFromFunction(3, dimRoots) as [number[], number[], number[]]
     }
 

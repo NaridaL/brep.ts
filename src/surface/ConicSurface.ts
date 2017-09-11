@@ -1,6 +1,7 @@
-///<reference path="ParametricSurface.ts"/>
 
-class ConicSurface extends ParametricSurface implements ImplicitSurface {
+import {ImplicitSurface, ParametricSurface} from './ParametricSurface'
+
+export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4

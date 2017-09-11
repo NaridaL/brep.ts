@@ -1,5 +1,5 @@
 {
-  "extends": "../tslint.json",
+  "extends": "naridal-tslib-config/tslint.json",
   "rules": {
   }
 }

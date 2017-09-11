@@ -1,6 +1,10 @@
-///<reference path="Surface.ts"/>
+import {Mesh} from 'tsgl'
 
-abstract class ParametricSurface extends Surface {
+import {Surface} from './Surface'
+import {Curve} from '../curve/Curve'
+
+
+export abstract class ParametricSurface extends Surface {
 	pST(s: number, t: number): V3 {
 		return this.pSTFunc()(s, t)
 	}
@@ -94,7 +98,7 @@ abstract class ParametricSurface extends Surface {
 		return obj.pSTFunc
 	}
 }
-abstract class ImplicitSurface extends Surface {
+export abstract class ImplicitSurface extends Surface {
 	abstract implicitFunction(): (pWC: V3) => number
 
 	abstract didp(pWC: V3): V3

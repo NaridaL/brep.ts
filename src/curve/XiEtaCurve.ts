@@ -1,4 +1,9 @@
-abstract class XiEtaCurve extends Curve {
+import {Mesh, pushQuad} from 'tsgl'
+
+import {Curve} from './Curve'
+import {BezierCurve} from './BezierCurve'
+
+export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3
 	readonly matrix: M4
 	readonly inverseMatrix: M4

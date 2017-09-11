@@ -1,5 +1,9 @@
+
+import {ImplicitCurve} from './ImplicitCurve'
+import {ImplicitSurface, ParametricSurface} from '../surface/ParametricSurface'
+
 let sema = false
-class PICurve extends ImplicitCurve {
+export class PICurve extends ImplicitCurve {
 	dids: (s: number, t: number) => number
 	didt: (s: number, t: number) => number
 

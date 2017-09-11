@@ -1,6 +1,13 @@
-///<reference path="Curve.ts"/>
+import {Mesh} from 'tsgl'
 
-class BezierCurve extends Curve {
+import { Curve } from './Curve'
+import { P3 } from '../P3'
+import { SemiCylinderSurface } from '../surface/SemiCylinderSurface'
+import { Surface } from '../surface/Surface'
+import { ProjectedCurveSurface } from '../surface/ProjectedCurveSurface'
+import { L3 } from './Line3'
+
+export class BezierCurve extends Curve {
 	readonly p0: V3
 	readonly p1: V3
 	readonly p2: V3
@@ -445,14 +452,14 @@ class BezierCurve extends Curve {
 		tMin = isFinite(tMin) ? tMin : this.tMin
 		tMax = isFinite(tMax) ? tMax : this.tMax
 
-		let anchorDotDir1 = line.anchor.dot(line.dir1)
-		let f = t => {
-			let atT = this.at(t);
+		const anchorDotDir1 = line.anchor.dot(line.dir1)
+		const f = (t: number) => {
+			const atT = this.at(t)
 			return (atT.minus(line.at(atT.dot(line.dir1) - anchorDotDir1))).dot(this.tangentAt(t))
 		}
 
 		const STEPS = 32
-		let startT = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
+		const startT = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
 
 		return newtonIterate1d(f, startT, 8)
 

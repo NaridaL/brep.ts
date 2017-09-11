@@ -1,5 +1,8 @@
+import {ProjectedCurveSurface} from './ProjectedCurveSurface'
+import {SemiEllipseCurve} from '../curve/SemiEllipseCurve'
 
-class SemiCylinderSurface extends ProjectedCurveSurface {
+
+export class SemiCylinderSurface extends ProjectedCurveSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4

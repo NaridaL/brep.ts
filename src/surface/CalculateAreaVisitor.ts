@@ -1,10 +1,7 @@
-///<reference path="ConicSurface.ts"/>
-///<reference path="CylinderSurface.ts"/>
-///<reference path="PlaneSurface.ts"/>
-///<reference path="EllipsoidSurface.ts"/>
-///<reference path="SemiCylinderSurface.ts"/>
-///<reference path="../ignore/ProjectedCurveSurface.ts"/>
-const CalculateAreaVisitor: {[className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => number } = {
+import {Surface} from './Surface'
+import {Edge} from '../Edge'
+
+export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => number } = {
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): number {
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const totalArea = edges.map(edge => {

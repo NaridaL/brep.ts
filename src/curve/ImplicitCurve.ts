@@ -1,4 +1,6 @@
-class ImplicitCurve extends Curve {
+import {Curve} from './Curve'
+
+export class ImplicitCurve extends Curve {
 	constructor(readonly points: V3[],
 	            readonly tangents: V3[],
 	            readonly dir: number = 1,

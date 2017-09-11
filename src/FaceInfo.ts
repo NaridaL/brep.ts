@@ -1,7 +1,10 @@
+import {Edge} from './Edge'
+import {Surface} from './surface/Surface'
+
 /**
  * Created by aval on 19.04.2017.
  */
-abstract class FaceInfoFactory<T> {
+export abstract class FaceInfoFactory<T> {
 	info(surface: Surface, contour: Edge[], holes: Edge[][]): T {
 		throw new Error('no default implementation')
 	}

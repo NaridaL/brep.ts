@@ -1,6 +1,6 @@
-///<reference path="XiEtaCurve.ts"/>
+import {XiEtaCurve} from './XiEtaCurve'
 
-class EllipseCurve extends XiEtaCurve {
+export class EllipseCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = -PI, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
 		assert(EllipseCurve.isValidT(tMin))

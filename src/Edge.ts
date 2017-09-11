@@ -1,8 +1,7 @@
-///<reference path="P3.ts"/>
+import {SVGPathData} from 'svg-pathdata'
 ///<reference path="../node_modules/svg-pathdata/index.d.ts" />
 
-
-abstract class Edge extends Transformable {
+export abstract class Edge extends Transformable {
     readonly aDir: V3
     readonly bDir: V3
     readonly reversed: boolean

@@ -1,4 +1,5 @@
-///<reference path="Face.ts"/>
+import {Face} from './Face'
+
 let eps = 1e-5
 
 let globalId = 0
@@ -304,7 +305,7 @@ class B2 extends Transformable {
             if (loopInfo.ccw) {
                 if (loopInfo.subloops.every(sl => !sl.ccw)) {
 	                const holes = loopInfo.subloops.map(sl => sl.loop)
-                    const info = infoFactory && infoFactory.newSubFace(originalFace, surface, loopInfo.loop, holes)
+	                const info = infoFactory && infoFactory.newSubFace(originalFace, surface, loopInfo.loop, holes)
                     const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface' + globalId++, info)
                     newFaces.push(newFace)
                     loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl)))
@@ -436,16 +437,10 @@ class B2 extends Transformable {
     //                path.push(currentEdge)
     //                let possibleNextEdges = bag.filter(edge => currentEdge.b.like(edge.a))
     //                // lowest angle, i.e. the right-most next edge
-    //                let nextEdgeIndex = possibleNextEdges.indexWithMax((edge, index) => -currentEdge.bDir.angleRelativeNormal(edge.aDir, surface.normalP(currentEdge.b)))
-    //                currentEdge = possibleNextEdges[nextEdgeIndex]
-    //            } while (!currentEdge.visited)
-    //            let startIndex = path.find(currentEdge)
-    //            if (-1 != startIndex) {
-    //                loops.push(path.slice(startIndex))
-    //            }
-    //        }
-    //    })
-    //}
+    //                let nextEdgeIndex = possibleNextEdges.indexWithMax((edge, index) =>
+    // -currentEdge.bDir.angleRelativeNormal(edge.aDir, surface.normalP(currentEdge.b))) currentEdge =
+    // possibleNextEdges[nextEdgeIndex] } while (!currentEdge.visited) let startIndex = path.find(currentEdge) if (-1
+    // != startIndex) { loops.push(path.slice(startIndex)) } } }) }
 
     getLooseEdgeSegments(
         edgePointInfoss: CustomMap<Edge, IntersectionPointInfo[]>,
@@ -735,7 +730,7 @@ class B2 extends Transformable {
             this.faces.map(f => f.transform(m4)),
             this.infiniteVolume,
             this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
-            vertexNames
+            vertexNames,
         ) as this
     }
 
@@ -1027,7 +1022,7 @@ function intersectionUnitCircleLine(a: number, b: number, c: number): {x1: numbe
 		x1: (a * c + b * term) / (a * a + b * b),
 		x2: (a * c - b * term) / (a * a + b * b),
 		y1: (b * c - a * term) / (a * a + b * b),
-		y2: (b * c + a * term) / (a * a + b * b)
+		y2: (b * c + a * term) / (a * a + b * b),
 	}
 }
 function intersectionUnitCircleLine2(a: number, b: number, c: number): [number, number][] {
@@ -1055,7 +1050,7 @@ function intersectionCircleLine(a: number, b: number, c: number, r: number): {x1
         x1: (a * c + b * term) / (a * a + b * b),
         x2: (a * c - b * term) / (a * a + b * b),
         y1: (b * c - a * term) / (a * a + b * b),
-        y2: (b * c + a * term) / (a * a + b * b)
+        y2: (b * c + a * term) / (a * a + b * b),
     }
 }
 /**
@@ -1078,7 +1073,7 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
         x1: (-2 * a * c + xTerm) / 2 / (bb - aa),
         x2: (-2 * a * c - xTerm) / 2 / (bb - aa),
         y1: (2 * b * c - yTerm) / 2 / (bb - aa),
-        y2: (2 * b * c + yTerm) / 2 / (bb - aa)
+        y2: (2 * b * c + yTerm) / 2 / (bb - aa),
     }
 }
 

@@ -1,75 +1,38 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
-    "module": "none",
-    "outFile": "out/complete.js",
-//    "outDir": "out",
-    "declaration": true,
-    "rootDir": ".",
-    "target": "es2016",
-    // "noImplicitAny": true,
+    "allowJs": false,
     "alwaysStrict": true,
-    "noImplicitThis": true,
-//    "noImplicitReturns": true,
-//    "strictNullChecks": true,
-    "sourceMap": true,
-//    "inlineSourceMap": true,
+    "baseUrl": ".",
+    "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "skipLibCheck": true,
     "jsx": "react",
     "jsxFactory": "h",
-    "lib": ["dom","es7"],
-    "baseUrl": ".",
-    "allowJs": false,
-//    "listFiles": true,
+    "lib": [
+      "dom",
+      "es2017",
+      "es6"
+    ],
+    "module": "es6",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "outDir": "out",
     "paths": {
-      "*": ["*", "../*"]
-    }
+      "*": [
+        "*",
+        "../*"
+      ]
+    },
+    "rootDir": "src",
+    "sourceMap": true,
+    "target": "es6"
   },
-  "include": [
-//    "src/NLA.ts",
-    "node_modules/ts3dutils/out/complete.d.ts",
-    "node_modules/nerdamer/index.d.ts",
-    "node_modules/tsgl/out/complete.d.ts",
-    //    "src/Transformable.ts",
-//    "src/Vector.ts",
-//    "src/Vector3.ts",
-    "src/glob.ts",
-    "src/ignore/Line.ts",
-//    "src/Matrix.ts",
-//    "src/Matrix4x4.ts",
-//    "src/AABB.ts",
-    "src/P3.ts",
-
-    "src/curve/Curve.ts",
-    "src/curve/*.ts",
-
-    "src/surface/Surface.ts",
-    "src/surface/*.ts",
-
-    "src/Edge.ts",
-    "src/Face.ts",
-    "src/FaceInfo.ts",
-    "src/B2.ts",
-    "src/b2.generators.ts",
-
-
-    "src/lightgl.ts",
-    "src/CustomPlane.ts",
-    "src/editor/editor.ts",
-    "src/editor/viewer.ts",
-    "src/editor/modes.ts",
-    "src/editor/SketchBezier.ts",
-    "src/ignore/react/Rotate.ts",
-    "src/lightgl.ts",
-    "src/shaders.ts",
-    "src/editor/Sketch.ts",
-    "src/**/*.*",
-
-    "node_modules/preact/dist/preact.d.ts"
-  ],
   "exclude": [
     "src/ignore/*"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }

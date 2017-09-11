@@ -1,4 +1,10 @@
-abstract class Surface extends Transformable implements Equalable {
+import {Equalable} from 'javasetmap.ts'
+import {Transformable} from 'ts3dutils'
+import {Curve} from 'src/curve/Curve'
+import {P3} from '../P3'
+import {Edge} from '../Edge'
+
+export abstract class Surface extends Transformable implements Equalable {
 	toString(): string {
 		return this.toSource()
 	}

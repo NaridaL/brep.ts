@@ -1,6 +1,8 @@
-///<reference path="../../node_modules/ts3dutils/out/complete.d.ts"/>
+import {XiEtaCurve} from './XiEtaCurve'
+import {Curve} from './Curve'
+import { EllipseCurve } from './EllipseCurve'
 
-class SemiEllipseCurve extends XiEtaCurve {
+export class SemiEllipseCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
 		assert(0 <= this.tMin && this.tMin < PI)
@@ -36,6 +38,9 @@ class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isColinearTo(curve: Curve): boolean {
+		if (!((x): x is SemiEllipseCurve => x.constructor == this.constructor)(curve)) {
+			return false
+		}
 		if (!hasConstructor(curve, SemiEllipseCurve)) return false
 		if (!this.center.like(curve.center)) {
 			return false

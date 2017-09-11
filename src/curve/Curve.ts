@@ -1,9 +1,12 @@
-type ISInfo = {tThis: number, tOther: number, p: V3}
-abstract class Curve extends Transformable implements Equalable {
+import {Equalable} from 'javasetmap.ts'
+import {Transformable} from 'ts3dutils'
+
+export type ISInfo = {tThis: number, tOther: number, p: V3}
+export abstract class Curve extends Transformable implements Equalable {
 	tIncrement: number
 	hlol: number
 
-    'constructor': new (...args: any[]) => this;
+    'constructor': new (...args: any[]) => this
 
     constructor(readonly tMin: number, readonly tMax: number) {
 		super()

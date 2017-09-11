@@ -1,29 +1,32 @@
+import {XiEtaCurve} from './XiEtaCurve'
+import {Curve} from './Curve'
+
 /**
  * x² - y² = 1
  *
  */
-class HyperbolaCurve extends XiEtaCurve {
-	constructor(center: V3, f1: V3, f2: V3, tMin: number = -7, tMax: number = 7) {
-		super(center, f1, f2, tMin, tMax)
-	}
+export class HyperbolaCurve extends XiEtaCurve {
+    constructor(center: V3, f1: V3, f2: V3, tMin: number = -7, tMax: number = 7) {
+        super(center, f1, f2, tMin, tMax)
+    }
 
     at(t: number): V3 {
-	    assertNumbers(t)
-	    // = center + f1 cosh t + f2 sinh t
+        assertNumbers(t)
+        // = center + f1 cosh t + f2 sinh t
         return this.center.plus(this.f1.times(Math.cosh(t))).plus(this.f2.times(Math.sinh(t)))
     }
 
     tangentAt(t: number): V3 {
         assertNumbers(t)
-	    // = f1 sinh t + f2 cosh t
+        // = f1 sinh t + f2 cosh t
         return this.f1.times(Math.sinh(t)).plus(this.f2.times(Math.cosh(t)))
     }
 
-	tangentAt2(xi: number, eta: number): V3 {
-		assertNumbers(xi, eta)
-		// = f1 eta + f2 xi
-		return this.f1.times(eta).plus(this.f2.times(xi))
-	}
+    tangentAt2(xi: number, eta: number): V3 {
+        assertNumbers(xi, eta)
+        // = f1 eta + f2 xi
+        return this.f1.times(eta).plus(this.f2.times(xi))
+    }
 
     ddt(t: number): V3 {
         assertNumbers(t)
@@ -43,17 +46,17 @@ class HyperbolaCurve extends XiEtaCurve {
             && eq(f2.squared(), Math.abs(f2.dot(c2)))
     }
 
-	reversed() {
-		return new HyperbolaCurve(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
-	}
+    reversed() {
+        return new HyperbolaCurve(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
+    }
 
-	static XYLCValid(pLC: V3): boolean {
-		return pLC.x > 0 && eq(1, pLC.x * pLC.x - pLC.y * pLC.y)
-	}
+    static XYLCValid(pLC: V3): boolean {
+        return pLC.x > 0 && eq(1, pLC.x * pLC.x - pLC.y * pLC.y)
+    }
 
-	static XYLCPointT(pLC: V3): number {
-		return Math.asinh(pLC.y)
-	}
+    static XYLCPointT(pLC: V3): number {
+        return Math.asinh(pLC.y)
+    }
 
     rightAngled(): HyperbolaCurve {
         const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() + f1.squared()
@@ -72,53 +75,54 @@ class HyperbolaCurve extends XiEtaCurve {
         return Math.sqrt(1 + b * b / a / a)
     }
 
-	/**
-	 * http://www.wolframalpha.com/input/?i=x%C2%B2-y%C2%B2%3D1,ax%2Bby%3Dc
-	 * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
-	 */
+    /**
+     * http://www.wolframalpha.com/input/?i=x%C2%B2-y%C2%B2%3D1,ax%2Bby%3Dc
+     * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
+     */
     static magic(a: number, b: number, c: number): number[] {
-		if (eq0(b)) {
-	    	const sqrtVal = snap0(c ** 2 / a ** 2 - 1)
-	    	if (sqrtVal < 0 || c * a < 0) {
-	    		return []
-		    } else if (sqrtVal == 0) {
-	    		return [0]
-		    }
-		    const eta1 = Math.sqrt(sqrtVal)
-		    return [-Math.asinh(eta1), Math.asinh(eta1)]
-	    } else if (eq(abs(a), abs(b))) {
-	    	if (le(c * a, 0)) {
-	    		return []
-		    }
-		    const eta = sign(a * b) * (c ** 2 - a ** 2) / 2 / a / c
-		    return [Math.asinh(eta)]
-	    } else {
-		    const sqrtVal = snap0(b ** 2 * (-(a ** 2) + b ** 2 + c ** 2))
-		    if (sqrtVal < 0) {
-			    return []
-		    }
-		    const xi1 = (a * c - Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
-		    const xi2 = (a * c + Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
-		    const eta1 = (b ** 2 * c - a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
-		    const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
-			const foo: number = 20
-			const bar = foo > 0 && foo
-		    return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x:any): x is number => x !== false)
-	    }
+        if (eq0(b)) {
+            const sqrtVal = snap0(c ** 2 / a ** 2 - 1)
+            if (sqrtVal < 0 || c * a < 0) {
+                return []
+            } else if (sqrtVal == 0) {
+                return [0]
+            }
+            const eta1 = Math.sqrt(sqrtVal)
+            return [-Math.asinh(eta1), Math.asinh(eta1)]
+        } else if (eq(abs(a), abs(b))) {
+            if (le(c * a, 0)) {
+                return []
+            }
+            const eta = sign(a * b) * (c ** 2 - a ** 2) / 2 / a / c
+            return [Math.asinh(eta)]
+        } else {
+            const sqrtVal = snap0(b ** 2 * (-(a ** 2) + b ** 2 + c ** 2))
+            if (sqrtVal < 0) {
+                return []
+            }
+            const xi1 = (a * c - Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
+            const xi2 = (a * c + Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
+            const eta1 = (b ** 2 * c - a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
+            const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
+            const foo: number = 20
+            const bar = foo > 0 && foo
+            return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x: any) => x !== false)
+        }
 
     }
 
-	roots(): [number[], number[], number[]] {
-		// tangent(t) = f1 sinh t + f2 cosh t = 0
-		// tangentAt2(xi, eta) = f1 eta + f2 xi = V3.O
-		// xi² - eta² = 1 (by def for hyperbola)
+    roots(): [number[], number[], number[]] {
+        // tangent(t) = f1 sinh t + f2 cosh t = 0
+        // tangentAt2(xi, eta) = f1 eta + f2 xi = V3.O
+        // xi² - eta² = 1 (by def for hyperbola)
 
-		return arrayFromFunction(3, dim => {
-			const a = this.f2.e(dim), b = this.f1.e(dim)
-			return HyperbolaCurve.magic(a, b, 0)
-		})
-	}
+        return arrayFromFunction(3, dim => {
+            const a = this.f2.e(dim), b = this.f1.e(dim)
+            return HyperbolaCurve.magic(a, b, 0)
+        })
+    }
 
     static XY = new HyperbolaCurve(V3.O, V3.X, V3.Y)
 }
+
 HyperbolaCurve.prototype.tIncrement = PI / 16

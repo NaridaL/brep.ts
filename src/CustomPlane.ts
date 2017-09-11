@@ -1,5 +1,7 @@
 
-class CustomPlane extends P3 {
+import {P3} from './P3'
+
+export class CustomPlane extends P3 {
 	readonly up: V3
 	readonly right: V3
 	readonly rMin: number

@@ -1,5 +1,6 @@
+import {AABB, Transformable} from 'ts3dutils'
 
-abstract class Face extends Transformable {
+export abstract class Face extends Transformable {
 	'constructor': { new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string, info?: any): Face }
 	allEdges: Edge[]
 	protected aabb: AABB

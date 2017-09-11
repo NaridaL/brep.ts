@@ -1,7 +1,9 @@
+import {Curve} from './Curve'
+
 /**
  * 3-dimensional line
  */
-class L3 extends Curve {
+export class L3 extends Curve {
 
 	constructor(readonly anchor: V3, // line anchor
 	            readonly dir1: V3, // normalized line dir
@@ -264,7 +266,7 @@ class L3 extends Curve {
 			s: s,
 			closest: this.at(t),
 			closest2: line.at(s),
-			distance: this.at(t).distanceTo(line.at(s))
+			distance: this.at(t).distanceTo(line.at(s)),
 		}
 	}
 
