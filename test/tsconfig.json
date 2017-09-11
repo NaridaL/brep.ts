@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "outFile": "../out/test/complete.js",
+    "rootDir": ".",
+    "target": "es2017",
+    "noImplicitAny": false,
+    "alwaysStrict": true,
+    "sourceMap": true,
+    //"inlineSourceMap": true,
+    "lib": [
+      "dom",
+      "es6"
+    ]
+  },
+  "include": [
+    "../../ts3dutils/out/complete.d.ts",
+    "../out/complete.d.ts",
+    "*.qunit.ts"
+  ]
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>BREP.TS</title>
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/styles/default.min.css">
+	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/highlight.min.js"></script>
+	<script type="text/javascript" src="node_modules/chroma-js/chroma.js"></script>
+	<script type="text/javascript" src="lib/toSource.js"></script>
+	<script type="text/javascript" src="lib/opentype.js"></script>
+	<script type="text/javascript" src="node_modules/svg-pathdata/dist/SVGPathData.js"></script>
+	<script type="text/javascript" src="lib/MooTools-Core-1.6.0.js"></script>
+	<script type="text/javascript" src="lib/MooTools-More-1.6.0.js"></script>
+	<script type="text/javascript" src="lib/earcut.dev.js"></script>
+	<script type="text/javascript" src="node_modules/preact/dist/preact.dev.js"></script>
+	<script type="text/javascript" src="node_modules/classnames/index.js"></script>
+
+	<script type="text/javascript" src="node_modules/ts3dutils/out/complete.js"></script>
+	<script type="text/javascript" src="node_modules/mathjs/dist/math.js"></script>
+	<script type="text/javascript" src="node_modules/nerdamer/nerdamer.core.js"></script>
+	<script type="text/javascript" src="node_modules/nerdamer/Calculus.js"></script>
+	<script type="text/javascript" src="node_modules/tsgl/out/complete.js"></script>
+	<script type="text/javascript" src="out/complete.js"></script>
+
+	<script type="text/javascript">
+		window.onload = demoMain
+	</script>
+	<style>
+		@font-face {
+			font-family: FiraMedia;
+			src: url(fonts/FiraSansMedium.woff);
+		}
+
+		body {
+			font-family: FiraMedia, Verdana, sans-serif;
+			max-width: 1280px;
+			padding: 8px;
+			margin: auto;
+		}
+
+		.democontainer {
+			position: relative;
+			width: 400px;
+			height: 300px;
+			border: 1px solid cornflowerblue;
+		}
+
+		canvas {
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+
+		.incont {
+			position: relative;
+			font-size: smaller;
+			display: table;
+			color: dimgrey;
+			background-color: white;
+			padding: 2px;
+		}
+		.incont input {
+			width: 40px;
+			margin-right: 0.5em;
+		}
+		.scrollable {
+			cursor: s-resize;
+		}
+		.info {
+			position: absolute;
+			bottom: 0;
+			margin: 2px;
+			font-size: x-small;
+		}
+		.navinfo {
+			position: absolute;
+			top: 0;
+			right: 0;
+			margin: 2px;
+			font-size: x-small;
+		}
+		.sourcelink {
+			position: absolute;
+			bottom: 0;
+			right: 0;
+			margin: 2px;
+			font-size: x-small;
+		}
+		.src {
+			white-space: pre;
+			font-family: Consolas, monospace;
+			font-size: smaller;
+			padding: 8px;
+			background-color: aliceblue;
+		}
+
+		.canvasinput {
+			text-align: right;
+		}
+	</style>
+</head>
+<body>
+<h1>BREP.TS</h1>
+<p>This library describes volumes using a boundary representation model. Basically like triangle meshes, except faces can be any shape and are not necessarily planar. This allows for fast operations while maintaining a high degree of accuracy.</p>
+
+<p>Once you have two volumes, you can combine them using boolean operations. For instance:</p>
+<h4>box - sphere</h4>
+<div id="boxminussphere" class="democontainer" style="width: 100%; height: 500px"></div>
+<script>
+	makeDemo('boxminussphere', function (sphereRadius, sphereZ) {
+		const box = B2T.box(10, 10, 3)
+		const sphere = B2T.sphere(sphereRadius).translate(5, 5, sphereZ)
+		const result = box.minus(sphere)
+		return [box, sphere, result.translate(12)]
+	}, [
+		{name: 'sphere radius', type: 'number', fix: val => NLA.clamp(val, 0.1, 1000), def: 2, step: 0.5},
+	{name: 'sphere height', type: 'number', fix: val => NLA.clamp(val, 0.1, 1000), def: 2, step: 0.5}]
+	)
+</script>
+<h3>Functionality this library implements</h3>
+<ul>
+	<li>Parametric curves: lines, ellipses, parabolas, hyperbolas, quadratic/cubic beziers, intersection curves between parametric and implicit surfaces.</li>
+	<li>Surfaces: planes, cylinders, spheres, projected beziers. Functionality includes:
+		<ul>
+			<li>surface/surface intersections</li>
+			<li>testing if two surfaces are coplanar</li>
+			<li>testing if a surface contains a point</li>
+			<li>testing if a surface contains a curve</li>
+		</ul></li>
+	<li>Edge: segment of a curve</li>
+	<li>Faces: test line intersection/point containment</li>
+	<li>BREP volumes: intersection/union/subtraction, conversion to triangle mesh</li>
+</ul>
+<h3>Generator function examples</h3>
+<h4>cylinder(radius: number = 1, height: number = 1, rads: number = TAU)</h4>
+<div id="cyl" class="democontainer" style="width: 50%; height: 400px"></div>
+<script>
+	makeDemo('cyl', B2T.cylinder, [
+		{name: 'radius', type: 'number', fix: val => NLA.clamp(val, 0.1, 1000), def: 10, step: 1},
+	{name: 'height', type: 'number', fix: val => NLA.clamp(val, 0.1, 1000), def: 10, step: 1},
+	{name: 'degrees', type: 'angle', fix: val => NLA.clamp(val, 0.1, TAU), def: 360, step: 10}])
+</script>
+<h4>text(text: string, size: number, depth: number = 1, font: opentypejs.Font = defaultFont)</h4>
+<div id="text" class="democontainer" style="width: 50%; height: 400px"></div>
+<script>
+	makeDemo('text', B2T.text, [
+		{name: 'text', type: 'text', fix: val => val, def: 'foo'},
+	{name: 'size', type: 'number', fix: val => NLA.clamp(val, 0.1, 100), def: 10, step: 5},
+	{name: 'depth', type: 'number', fix: val => NLA.clamp(val, 0.1, 100), def: 10, step: 1}])
+</script>
+<h3>Advanced example: cylinder - extruded rounded edges</h3>
+<div id="test1" class="democontainer" style="width: 50%; height: 400px"></div>
+<script>
+	makeDemo('test1', (outsideRadius, n, insideRadius, cornerRadius, depth) => {
+		const cylinder = B2T.cylinder(outsideRadius, 10)
+
+		// create an n-gon centered on the XY-plane with corners insideRadius away from the origin
+		// the ngon is counter-clockwise (CCW) when viewed from +Z
+		const ngon = Edge.ngon(n, insideRadius)
+
+		// round the corners of the ngon with radius cornerRadius
+		const ngonRounded = Edge.round(ngon, cornerRadius)
+
+		// create a hole punch by extruding ngonRounded in direction +Z
+		// Like triangles in opengl, faces face the direction they are CCW when viewed from.
+		// Because we extrude in the direction the outline faces, the resulting is "inside-out",
+		// with faces facing inwards. As we want to remove the 'punch' volume, this is not a
+		// problem. Otherwise we could call volume.flipped() or extrude in -Z and volume.translate(...)
+		// into the correct position.
+		const punch = B2T.extrudeEdges(ngonRounded, P3.XY, V(0, 0, 10)).translate(0, 0, depth)
+
+		// punch is already inside-out, so use volume.and(...) instead of volume.minus(...)
+		const result = cylinder.and(punch)
+
+		return [cylinder, punch, result.translate(2 + outsideRadius * 2)]
+	}, [
+		{name: 'outside radius', type: 'number', fix: val => NLA.clamp(val, 0.1, 10), def: 5, step: 1},
+	{name: 'corner count', type: 'int', fix: val => NLA.clamp(val, 3, 21), def: 3, step: 1},
+	{name: 'ngon radius', type: 'number', fix: val => NLA.clamp(val, 0.1, 12), def: 4, step: 1},
+	{name: 'corner radius', type: 'number', fix: val => NLA.clamp(val, 0.1, 5), def: 0.5, step: 0.1},
+	{name: 'depth', type: 'number', fix: val => NLA.clamp(val, -9, 9), def: 0, step: 1}]
+	)
+</script>
+</body>
+</html>
