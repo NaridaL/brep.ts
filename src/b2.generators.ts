@@ -496,7 +496,7 @@ namespace B2T {
             if (c.type == 'M') {
                 subpaths.push([])
             }
-            subpaths.last().push(c)
+            subpaths.last.push(c)
         })
         const loops = subpaths.map(sp => {
             const path = new opentype.Path()

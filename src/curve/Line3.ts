@@ -23,7 +23,7 @@ class L3 extends Curve {
 			const start = mesh.vertices.length
 			if (0 !== i) {
 				for (let j = 0; j < res; j++) {
-					pushQuad(mesh.triangles, true,
+					pushQuad(mesh.TRIANGLES, true,
 						start - res + j, start + j,
 						start - res + (j + 1) % res, start + (j + 1) % res)
 				}

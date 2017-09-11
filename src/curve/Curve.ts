@@ -3,9 +3,9 @@ abstract class Curve extends Transformable implements Equalable {
 	tIncrement: number
 	hlol: number
 
-	'constructor':new (...args: any[]) => this
+    'constructor': new (...args: any[]) => this;
 
-	constructor(readonly tMin: number, readonly tMax: number) {
+    constructor(readonly tMin: number, readonly tMax: number) {
 		super()
 		assertNumbers(tMin, tMax)
 		assert('number' == typeof tMin && !isNaN(tMin))
@@ -352,7 +352,7 @@ function mkcurves(implicitCurve: MathFunctionR2R,
 	// checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
 	// checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
 	const {points, tangents} = followAlgorithm2d(implicitCurve, start, stepSize, bounds)
-	if (points[0].distanceTo(points.last()) < stepSize && points.length > 2) {
+	if (points[0].distanceTo(points.last) < stepSize && points.length > 2) {
 		// this is a loop: split it
 		for (let i = 0; i < points.length - 1; i++) {
 			assert(!points[i].equals(points[i + 1]))
@@ -372,7 +372,7 @@ function mkcurves(implicitCurve: MathFunctionR2R,
 	} else {
 		// not a loop: check in the other direction
 		const {points: reversePoints, tangents: reverseTangents} = followAlgorithm2d(implicitCurve, start, -stepSize, bounds)
-		const result = followAlgorithm2d(implicitCurve, reversePoints.last(), stepSize, bounds, undefined, reverseTangents.last().negated())
+		const result = followAlgorithm2d(implicitCurve, reversePoints.last, stepSize, bounds, undefined, reverseTangents.last.negated())
 		assert(result.points.length > 2)
 		return [result]
 	}

@@ -250,7 +250,7 @@ class PICurve extends ImplicitCurve {
 			this.parametricSurface.transform(m4),
 			this.implicitSurface.transform(m4),
 			m4.transformPoint(this.points[0]),
-			m4.transformPoint(this.points.last()),
+			m4.transformPoint(this.points.last),
 			this.stepSize * dirFactor,
 			m4.transformVector(this.tangents[0]),
 			m4.transformPoint(this.at(this.tMin)),
@@ -259,7 +259,7 @@ class PICurve extends ImplicitCurve {
 		//	this.parametricSurface.transform(m4),
 		//	this.implicitSurface.transform(m4),
 		//	this.pmPoints[0],
-		//	this.pmPoints.last(),
+		//	this.pmPoints.last,
 		//	this.stepSize,
 		//	this.dir,
 		//	this.tMin,
@@ -286,7 +286,7 @@ class PICurve extends ImplicitCurve {
 	toSource(rounder: (x: number) => number = x => x): string {
 		const result = callsce('PICurve.forParametricStartEnd',
 			this.parametricSurface, this.implicitSurface,
-			this.pmPoints[0], this.pmPoints.last(),
+			this.pmPoints[0], this.pmPoints.last,
 			this.stepSize, this.pmTangents[0], this.tMin, this.tMax)
 		return result
 	}

@@ -340,9 +340,23 @@ class BezierCurve extends Curve {
 	}
 
 	split(t: number): [BezierCurve, BezierCurve] {
+		// do de Casteljau's algorithm at t, the resulting points are the points needed to create 2 new curves
 		const s = (1 - t)
 		const {p0, p1, p2, p3} = this
-		const b01 = p0.times(s).plus(p1.times(t)), b11 = p1.times(s).plus(p2.times(t)), b21 = p2.times(s).plus(p3.times(t))
+		/*
+		p3 // n3
+		b01 = s p0 + t p1
+		b11 = s p1 + t p2
+		b21 = s p2 + t p3 // n2
+		b02 = s b01 + t b11
+		b12 = s b11 + t b21 // n1
+		b03 = s b02 + t b12 // n0
+
+		c01 =
+		*/
+		const b01 = p0.times(s).plus(p1.times(t)),
+			b11 = p1.times(s).plus(p2.times(t)),
+			b21 = p2.times(s).plus(p3.times(t))
 		const b02 = b01.times(s).plus(b11.times(t)), b12 = b11.times(s).plus(b21.times(t))
 		const b03 = b02.times(s).plus(b12.times(t))
 		return [new BezierCurve(p0, b01, b02, b03), new BezierCurve(b03, b12, b21, p3)]
@@ -352,7 +366,7 @@ class BezierCurve extends Curve {
 		return isFinite(this.pointT(p))
 	}
 
-	roots(): [number[], number[], number[]] {
+	roots(): Tuple3<number[]> {
 		/**
 		 *            := (3 (p3 - p2) - 6 (p2 - p1) + 3 (p1 - p0)) t²*
 		 *                + (-6 (p1 - p0) + 6 (p2 - p1)) t

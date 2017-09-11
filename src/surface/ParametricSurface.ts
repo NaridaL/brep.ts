@@ -90,7 +90,7 @@ abstract class ParametricSurface extends Surface {
 		return curves
 	}
 
-	static is(obj: any): surface is ParametricSurface {
+	static is(obj: any): obj is ParametricSurface {
 		return obj.pSTFunc
 	}
 }

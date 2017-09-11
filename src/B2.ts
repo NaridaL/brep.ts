@@ -487,10 +487,10 @@ class B2 extends Transformable {
         return result
     }
 
-    getIntersectionEdges(brep2) {
+    getIntersectionEdges(brep2: B2) {
         const faceMap = new Map(), thisEdgePoints = new CustomMap(), otherEdgePoints = new CustomMap()
 
-        const likeSurfaceFaces = []
+        const likeSurfaceFaces: Map<Edge, IntersectionPointInfo[]> = []
 
         this.faces.forEach(face => {
             //console.log('face', face.toString())
@@ -1031,13 +1031,13 @@ function intersectionUnitCircleLine2(a: number, b: number, c: number): [number, 
 	// TODO: disambiguate on a < b
 	// cf. pqFormula
 	const termSqr = snap0(a * a + b * b - c * c)
-	const term = sqrt(termSqr)
 	if (termSqr < 0) {
 		return []
 	} else if (termSqr == 0) {
-		return [    [   (a * c + b * term) / (a * a + b * b),
-				        (b * c - a * term) / (a * a + b * b)]]
+		return [    [   (a * c) / (a * a + b * b),
+				        (b * c) / (a * a + b * b)]]
 	} else {
+        const term = sqrt(termSqr)
 		return [    [   (a * c + b * term) / (a * a + b * b),
 						(b * c - a * term) / (a * a + b * b)],
 					[   (a * c - b * term) / (a * a + b * b),
@@ -1193,7 +1193,7 @@ function intersectionICurveICurve(
     iCurve1: (s: number, t: number) => number,
     startParams1: V3,
     endParams1: V3,
-    startDir,
+    startDir: V3,
     stepLength: number,
     iCurve2: (s: number, t: number) => number) {
 

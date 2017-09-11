@@ -76,7 +76,7 @@ class ImplicitCurve extends Curve {
 			const start = mesh.vertices.length
 			if (ceil(this.tMin) !== i) {
 				for (let j = 0; j < res; j++) {
-					pushQuad(mesh.triangles, true,
+					pushQuad(mesh.TRIANGLES, true,
 						start - res + j, start + j,
 						start - res + (j + 1) % res, start + (j + 1) % res)
 				}

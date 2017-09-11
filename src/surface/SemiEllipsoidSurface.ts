@@ -89,12 +89,12 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 		curves2 = this.clipCurves(curves2)
 		curves2 = surface.clipCurves(curves2)
 		return curves2
-		function iii(ists, surface, curve, min, max) {
+		function iii(ists: number[], surface: Surface, curve: Curve, min: number, max: number) {
 			ists.sort((a, b) => a - b)
 			if (!eq(ists[0], min)) {
 				ists.splice(0, 0, min)
 			}
-			if (!eq(ists.last(), max)) {
+			if (!eq(ists.last, max)) {
 				ists.push(max)
 			}
 			const result = []

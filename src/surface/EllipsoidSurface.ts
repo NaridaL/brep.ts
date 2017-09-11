@@ -506,7 +506,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 		////if (1 == i) {
     //    	//frontParts.push(
     //    	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(), curve.tangentAt(iss[0].t)),
-		////        Edge.create(curve, iss.last().p, V3.Y.negated(), iss.last().t, PI, undefined, curve.tangentAt(iss.last().t), V3.Z.negated()))
+		////        Edge.create(curve, iss.last.p, V3.Y.negated(), iss.last.t, PI, undefined, curve.tangentAt(iss.last.t), V3.Z.negated()))
 		////}
 		//for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i += 2) {
     //    	let is0 = iss[i], is1 = iss[(i + 1) % iss.length]

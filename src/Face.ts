@@ -662,7 +662,7 @@ abstract class Face extends Transformable {
 		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0()), mvl = mesh.vertices!.length
 		for (let i = 0; i < vertices.length; i++) {
 			mesh.vertices!.push(vertices[i])
-			mesh.lines!.push(mvl + i, mvl + (i + 1) % vertices.length)
+			mesh.LINES!.push(mvl + i, mvl + (i + 1) % vertices.length)
 
 		}
 	}
@@ -808,7 +808,7 @@ class PlaneFace extends Face {
 		const mvl = mesh.vertices!.length
 		const normal = this.surface.plane.normal1
 		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0())
-		for (let i = 0; i < vertices.length; i++) { mesh.lines!.push(mvl + i, mvl + (i + 1) % vertices.length) }
+		for (let i = 0; i < vertices.length; i++) { mesh.LINES!.push(mvl + i, mvl + (i + 1) % vertices.length) }
 		const holeStarts: number[] = []
 		this.holes.forEach(hole => {
 			holeStarts.push(vertices.length)
@@ -816,7 +816,7 @@ class PlaneFace extends Face {
 		})
 		const triangles = triangulateVertices(normal, vertices, holeStarts).map(index => index + mvl)
 		Array.prototype.push.apply(mesh.vertices, vertices)
-		Array.prototype.push.apply(mesh.triangles, triangles)
+		Array.prototype.push.apply(mesh.TRIANGLES, triangles)
 		Array.prototype.push.apply(mesh.normals, arrayFromFunction(vertices.length, () => normal))
 	}
 
@@ -1290,7 +1290,7 @@ class RotationFace extends Face {
 
 					const stLast = verticesST.pop()!
 					verticesST.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0))
-					vertices.push(vertices.last())
+					vertices.push(vertices.last)
 				}
 				verticesST.forEach(({x: u, y: v}) => {
 					assert(isFinite(u))
@@ -1315,7 +1315,7 @@ class RotationFace extends Face {
 		const surface = this.surface as ParametricSurface
 		const vertices: V3[] = vertexLoops.concatenated()
 		// this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
-		const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last() + loop.length), arr), [0])
+		const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last + loop.length), arr), [0])
 		const stPFunc = surface.stPFunc()
 		const verticesST = vertices.map(v => stPFunc(v))
 		const verticesUV = verticesST.map(st => new V3(st.x / uStep, st.y / vStep, 0))
@@ -1372,7 +1372,7 @@ class RotationFace extends Face {
 			const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart
 			const base = mesh.vertices!.length + loopStarts[vertexLoopIndex]
 			for (let i = 0; i < vertexLoopLength; i++) {
-				mesh.lines!.push(base + i, base + (i + 1) % vertexLoopLength)
+				mesh.LINES!.push(base + i, base + (i + 1) % vertexLoopLength)
 			}
 		}
 
@@ -1538,7 +1538,7 @@ class RotationFace extends Face {
 							let currentPart = startPart
 							do {
 								outline.pushAll(currentPart)
-								const currentPartEndOpos = opos(currentPart.last())
+								const currentPartEndOpos = opos(currentPart.last)
 								const nextPartIndex = parts.indexWithMax(part => -mod(opos(part[0]) - currentPartEndOpos, 4))
 								const nextPart = parts.removeIndex(nextPartIndex)
 								let currentOpos = currentPartEndOpos
@@ -1589,7 +1589,7 @@ class RotationFace extends Face {
 		}
 		//console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(), triangles.map(col => vertices[col].$).toSource() )
 		//assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
-		Array.prototype.push.apply(mesh.triangles, triangles.map(index => index + mesh.vertices!.length))
+		Array.prototype.push.apply(mesh.TRIANGLES, triangles.map(index => index + mesh.vertices!.length))
 		Array.prototype.push.apply(mesh.vertices, vertices)
 		Array.prototype.push.apply(mesh.normals, normals)
 		//this.addEdgeLines(mesh)
@@ -1724,7 +1724,7 @@ class RotationFace extends Face {
 		const triangles = triangles0.map(index => index + mesh.vertices!.length)
 		//assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
 		Array.prototype.push.apply(mesh.vertices, vertices)
-		Array.prototype.push.apply(mesh.triangles, triangles)
+		Array.prototype.push.apply(mesh.TRIANGLES, triangles)
 		Array.prototype.push.apply(mesh.normals, normals)
 		//this.addEdgeLines(mesh)
 
