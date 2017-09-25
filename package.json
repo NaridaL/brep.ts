@@ -23,6 +23,7 @@
     "svg-pathdata": "^4.0.1"
   },
   "dependencies": {
+    "chroma-js": "^1.3.4",
     "nerdamer": "^0.7.9",
     "ts3dutils": "file:../ts3dutils",
     "tsgl": "file:../tsgl"

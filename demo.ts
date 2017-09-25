@@ -32,8 +32,8 @@ async function demoMain() {
 
 		gl.loadIdentity()
 
-		initShaders(gl.shaders = {})
-		initMeshes(gl.meshes = {})
+		initShaders(gl.shaders = {}, gl)
+		initMeshes(gl.meshes = {}, gl)
 		demo.eye = { pos: V(10, 10, 100), focus: V(5, 5, 0), up: V3.Y, zoomFactor: 8 }
 		initNavigationEvents(gl, demo.eye, () => paintDemo(demo))
 		//initInfoEvents()

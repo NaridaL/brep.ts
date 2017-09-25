@@ -26,7 +26,7 @@ abstract class XiEtaCurve extends Curve {
 		}
 	}
 
-	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1): void {
+	addToMesh(mesh: Mesh & {TRIANGLES: int[], normals: V3[]}, res: int = 4, radius: number = 0, pointStep = 1): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
 		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
 		const inc = this.tIncrement
@@ -200,7 +200,7 @@ abstract class XiEtaCurve extends Curve {
 				.flatMap(curve => this.isInfosWithCurve(curve))
 				.map(info => info.tThis)
 		} else {
-			assert(false)
+			throw new Error()
 		}
 	}
 

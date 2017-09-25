@@ -1,7 +1,6 @@
 ///<reference path="P3.ts"/>
+///<reference path="../node_modules/svg-pathdata/index.d.ts" />
 
-
-declare const SVGPathData: any
 
 abstract class Edge extends Transformable {
     readonly aDir: V3
@@ -321,7 +320,8 @@ abstract class Edge extends Transformable {
         return cornerEdge
     }
 
-    static pathFromSVG(pathString: String): Edge[] {
+    static pathFromSVG(pathString: string): Edge[] {
+		const {SVGPathData} = svgpathdata
         let currentPos: V3 = undefined
         const parsed: any[] =
             new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).annotateArcs().commands

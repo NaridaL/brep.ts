@@ -197,19 +197,21 @@ class B2 extends Transformable {
         return this.faces.map(face => face.zDirVolume().volume).sum()
     }
 
-    toMesh(): Mesh & {faceIndexes: Map<Face, {start: int, count: int}>} {
-        const mesh = new Mesh({triangles: true, normals: true, lines: true}) as any
+    toMesh(): Mesh & {faceIndexes: Map<Face, {start: int, count: int}>, TRIANGLES: int[], LINES: int[], normals: V3[]} {
+        const mesh = new Mesh()
+            .addVertexBuffer('normals', 'LGL_Normal')
+            .addIndexBuffer('TRIANGLES')
+            .addIndexBuffer('LINES') as any
         mesh.faceIndexes = new Map()
         for (const face of this.faces) {
-            const triangleStart = mesh.triangles.length
+            const triangleStart = mesh.TRIANGLES.length
             face.addToMesh(mesh)
-            mesh.faceIndexes.set(face, {start: triangleStart, count: mesh.triangles.length - triangleStart})
+            mesh.faceIndexes.set(face, {start: triangleStart, count: mesh.TRIANGLES.length - triangleStart})
         }
         //this.buildAdjacencies()
         //for (const edge of this.edgeFaces.keys()) {
         //
         //}
-	    mesh.compile()
         return mesh
     }
 
@@ -302,8 +304,8 @@ class B2 extends Transformable {
             if (loopInfo.ccw) {
                 if (loopInfo.subloops.every(sl => !sl.ccw)) {
 	                const holes = loopInfo.subloops.map(sl => sl.loop)
-	                const info = infoFactory && infoFactory.newSubFace(originalFace, surface, loopInfo.loop, holes)
-	                const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface'+globalId++, info)
+                    const info = infoFactory && infoFactory.newSubFace(originalFace, surface, loopInfo.loop, holes)
+                    const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface' + globalId++, info)
                     newFaces.push(newFace)
                     loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl)))
                 } else {
@@ -555,7 +557,7 @@ class B2 extends Transformable {
 	}
 
 
-    buildAdjacencies(): void {
+    buildAdjacencies() {
         if (this.edgeFaces) return
 
         this.edgeFaces = new CustomMap() as any
@@ -585,6 +587,8 @@ class B2 extends Transformable {
             })
             edgeFaceInfos.sort((a, b) => snap(a.angle - b.angle, 0)) // TODO  || assertNever()
         }
+
+        return this
     }
 
     /**
@@ -744,8 +748,8 @@ class B2 extends Transformable {
     }
 
 
-    static EMPTY = new B2([], false, 'B2.EMPTY', new Map())
-    static R3 = new B2([], true, 'B2.R3', new Map())
+    static EMPTY = new B2([], false, 'B2.EMPTY', new Map()).buildAdjacencies()
+    static R3 = new B2([], true, 'B2.R3', new Map()).buildAdjacencies()
 }
 namespace B2 {
 	export const asldk = 0

@@ -56,8 +56,8 @@ abstract class Curve extends Transformable implements Equalable {
 		// f = (this.at(t) - p) . (this.tangentAt(t)
 		// df = this.tangentAt(t) . this.tangentAt(t) + (this.at(t) - p) . this.ddt(t)
 		//    = this.tangentAt(t)² + (this.at(t) - p) . this.ddt(t)
-		const f = t => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
-		const df = t => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
+		const f = (t:number) => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
+		const df = (t:number) => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
 
 		const STEPS = 32
 		const startT = undefined !== tStart ? tStart :
@@ -159,7 +159,7 @@ abstract class Curve extends Transformable implements Equalable {
 
 	abstract isTsWithPlane(plane: P3): number[]
 
-	arcLength(startT: number, endT: number, steps?: int): number {
+	arcLength(startT: number, endT: number, steps: int = 1): number {
 		assert(startT < endT, 'startT < endT')
 		return glqInSteps(t => this.tangentAt(t).length(), startT, endT, steps)
 	}
@@ -215,8 +215,8 @@ abstract class Curve extends Transformable implements Equalable {
                 const f1 = (t: number, s: number) => curve1.tangentAt(t).dot(curve1.at(t).minus(curve2.at(s)))
                 const f2 = (t: number, s: number) => curve2.tangentAt(s).dot(curve1.at(t).minus(curve2.at(s)))
                 // f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
-                const dfdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
-                const dfdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
+                const dfdt1 = (b1: Curve, b2: Curve, t1: number, t2: number) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
+                const dfdt2 = (b1: Curve, b2: Curve, t1: number, t2: number) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
                 const ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
                     dfdt1.bind(undefined, curve1, curve2), dfdt2.bind(undefined, curve1, curve2),
                     (t, s) => -dfdt2(curve2, curve1, s, t), (t, s) => -dfdt1(curve2, curve1, s, t))

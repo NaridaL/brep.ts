@@ -1,6 +1,5 @@
 ///<reference path="../../node_modules/ts3dutils/out/complete.d.ts"/>
 
-
 class SemiEllipseCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)

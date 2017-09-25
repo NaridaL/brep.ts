@@ -105,7 +105,7 @@ class HyperbolaCurve extends XiEtaCurve {
 		    const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
 			const foo: number = 20
 			const bar = foo > 0 && foo
-		    return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x:any) => x !== false)
+		    return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x:any): x is number => x !== false)
 	    }
 
     }

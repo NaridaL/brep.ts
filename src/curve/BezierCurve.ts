@@ -142,7 +142,7 @@ class BezierCurve extends Curve {
         if (surface instanceof SemiEllipsoidSurface) {
 		    return this.isTsWithSurface(surface.asEllipsoidSurface()).filter(t => surface.containsPoint(this.at(t)))
         }
-		assert(false)
+		throw new Error()
 	}
 
 	likeCurve(curve: Curve): boolean {
@@ -239,7 +239,7 @@ class BezierCurve extends Curve {
 	pointT(p: V3): number {
 	    return this.closestTToPoint(p)
     }
-	pointT3(p) {
+	pointT3(p: V3) {
 		const {p0, p1, p2, p3} = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -266,7 +266,7 @@ class BezierCurve extends Curve {
 		assert(false, 'multiple intersection ' + this.toString() + p.sce)
 	}
 
-	pointT2(p) {
+	pointT2(p: V3) {
 		const {p0, p1, p2, p3} = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -327,16 +327,16 @@ class BezierCurve extends Curve {
 		return this.p1.like(this.p2)
 	}
 
-	debugToMesh(mesh: Mesh, bufferName: string) {
-		mesh.addVertexBuffer(bufferName, bufferName)
+	debugToMesh<T extends string>(mesh: Mesh, bufferName: T) {
+		const result = mesh.addVertexBuffer(bufferName, bufferName)
 		for (let t = -2; t <= 2; t += 0.01) {
 			const p = this.at(t)
-			mesh[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
-			mesh[bufferName].push(p, p.plus(this.normalP(t).toLength(1)))
+			result[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
+			result[bufferName].push(p, p.plus(this.normalP(t).toLength(1)))
 		}
-		mesh[bufferName].push(this.p0, this.p1)
-		mesh[bufferName].push(this.p1, this.p2)
-		mesh[bufferName].push(this.p2, this.p3)
+		result[bufferName].push(this.p0, this.p1)
+		result[bufferName].push(this.p1, this.p2)
+		result[bufferName].push(this.p2, this.p3)
 	}
 
 	split(t: number): [BezierCurve, BezierCurve] {
@@ -471,8 +471,8 @@ class BezierCurve extends Curve {
 	isInfosWithBezie3(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number) {
 		const handleStartTS = (startT: number, startS: number) => {
 			if (!result.some(info => eq(info.tThis, startT) && eq(info.tOther, startS))) {
-				const f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
-				const f2 = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
+				const f1: R2_R = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
+				const f2: R2_R = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
 				const fdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
 				const fdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
@@ -483,10 +483,10 @@ class BezierCurve extends Curve {
 			}
 		}
 
-		tMin = isFinite(tMin) ? tMin : this.tMin
-		tMax = isFinite(tMax) ? tMax : this.tMax
-		sMin = isFinite(sMin) ? sMin : bezier.tMin
-		sMax = isFinite(sMax) ? sMax : bezier.tMax
+		tMin = 'number' == typeof tMin && isFinite(tMin) ? tMin : this.tMin
+		tMax = 'number' == typeof tMax && isFinite(tMax) ? tMax : this.tMax
+		sMin = 'number' == typeof sMin && isFinite(sMin) ? sMin : bezier.tMin
+		sMax = 'number' == typeof sMax && isFinite(sMax) ? sMax : bezier.tMax
 
 		// stack of indices:
 		const indices = [tMin, tMax, sMin, sMax]
@@ -526,10 +526,11 @@ class BezierCurve extends Curve {
 
 	isInfosWithBezier(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number): ISInfo[] {
 
-		tMin = isFinite(tMin) ? tMin : this.tMin
-		tMax = isFinite(tMax) ? tMax : this.tMax
-		sMin = isFinite(sMin) ? sMin : bezier.tMin
-		sMax = isFinite(sMax) ? sMax : bezier.tMax
+		tMin = 'number' == typeof tMin && isFinite(tMin) ? tMin : this.tMin
+		tMax = 'number' == typeof tMax && isFinite(tMax) ? tMax : this.tMax
+		sMin = 'number' == typeof sMin && isFinite(sMin) ? sMin : bezier.tMin
+		sMax = 'number' == typeof sMax && isFinite(sMax) ? sMax : bezier.tMax
+
 		assertf(() => tMin < tMax)
 		assertf(() => sMin < sMax)
 		const result: ISInfo[] = []
