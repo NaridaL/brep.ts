@@ -1,6 +1,18 @@
-import {Face} from './Face'
+import { Equalable, JavaMap as CustomMap } from 'javasetmap.ts'
+import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, TAU, assertInst, SCE } from 'ts3dutils'
 
-let eps = 1e-5
+import { P3 } from './P3'
+import { Surface } from './surface/Surface'
+import { XiEtaCurve } from './curve/XiEtaCurve'
+import { Curve } from './curve/Curve'
+import {Face} from './Face'
+import { Edge } from './Edge'
+import { FaceInfoFactory } from './FaceInfo'
+
+const { abs, sign, PI, sqrt } = Math
+
+
+const EPS = 1e-5
 
 let globalId = 0
 function addLikeSurfaceFaces(likeSurfaceFaces: Face[][], face1: Face, face2: Face) {
@@ -107,7 +119,7 @@ class B2 extends Transformable {
     constructor(faces: Face[], infiniteVolume: boolean, generator?: string, vertexNames?) {
         super()
         this.faces = faces
-        assertInst.apply(undefined, [Face as any].concat(faces))
+        assertInst(Face, ...faces)
 	    this.infiniteVolume = infiniteVolume
 	    assert(false === this.infiniteVolume || true === this.infiniteVolume)
 	    this.generator = generator
@@ -143,7 +155,8 @@ class B2 extends Transformable {
 			    }
 		    }
 		    return inside
-	    }
+        }
+        return false
     }
 
     withMergedFaces(): B2 {
@@ -1014,7 +1027,7 @@ function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
  *
  * a * b + (b -c) * (b + c)
  */
-function intersectionUnitCircleLine(a: number, b: number, c: number): {x1: number, y1: number, x2: number, y2: number} {
+export function intersectionUnitCircleLine(a: number, b: number, c: number): {x1: number, y1: number, x2: number, y2: number} {
 	assertNumbers(a, b, c)
 	// TODO: disambiguate on a < b
 	const term = sqrt(a * a + b * b - c * c)
@@ -1025,7 +1038,7 @@ function intersectionUnitCircleLine(a: number, b: number, c: number): {x1: numbe
 		y2: (b * c + a * term) / (a * a + b * b),
 	}
 }
-function intersectionUnitCircleLine2(a: number, b: number, c: number): [number, number][] {
+export function intersectionUnitCircleLine2(a: number, b: number, c: number): [number, number][] {
 	assertNumbers(a, b, c)
 	// TODO: disambiguate on a < b
 	// cf. pqFormula
@@ -1043,7 +1056,7 @@ function intersectionUnitCircleLine2(a: number, b: number, c: number): [number, 
 						(b * c + a * term) / (a * a + b * b)]]
 	}
 }
-function intersectionCircleLine(a: number, b: number, c: number, r: number): {x1: number, x2: number, y1: number, y2: number} {
+export function intersectionCircleLine(a: number, b: number, c: number, r: number): {x1: number, x2: number, y1: number, y2: number} {
     assertNumbers(a, b, c, r)
     const term = sqrt(r * r * (a * a + b * b) - c * c)
     return {
@@ -1062,7 +1075,7 @@ function intersectionCircleLine(a: number, b: number, c: number, r: number): {x1
  * @returns with x1 >= x2 and y1 <= y2
  * a * b + (b -c) * (b + c)
  */
-function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: number, y1: number, x2: number, y2: number } {
+export function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: number, y1: number, x2: number, y2: number } {
     assertNumbers(a, b, c)
     const aa = a * a, bb = b * b, cc = c * c
     // TODO: disambiguate on a < b
@@ -1078,7 +1091,7 @@ function intersectionUnitHyperbolaLine(a: number, b: number, c: number): { x1: n
 }
 
 
-function followAlgorithm2d(ic: MathFunctionR2R,
+export function followAlgorithm2d(ic: MathFunctionR2R,
                            startP: V3,
                            stepLength: number = 0.5,
                            bounds: (s: number, t: number) => boolean,
@@ -1233,7 +1246,7 @@ function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
     return iss
 }
 
-function intersectionPCurveISurface(parametricCurve, searchStart, searchEnd, searchStep, implicitSurface) {
+function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart, searchEnd, searchStep, implicitSurface) {
     assertNumbers(searchStart, searchEnd, searchStep)
     const iss = []
     let val = implicitSurface(parametricCurve(searchStart)), lastVal

@@ -1,3 +1,8 @@
+import { Equalable } from 'javasetmap.ts'
+import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf } from 'ts3dutils'
+import { followAlgorithm2d } from '../B2'
+import { P3 } from '../P3'
+import { Surface } from '../surface/Surface'
 import {XiEtaCurve} from './XiEtaCurve'
 
 export class EllipseCurve extends XiEtaCurve {
@@ -15,7 +20,7 @@ export class EllipseCurve extends XiEtaCurve {
 		const ft = t => this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
 		// f(t) = c + f1 cos + f2 sin
 		// p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
-		function fp(p) {
+		function fp(p: V3) {
 			const p0ToP = dir1.times(dir1.dot(p))
 			const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
 			return area

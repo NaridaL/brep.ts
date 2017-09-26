@@ -1,2 +1,5 @@
-export * from './curve/*.ts'
-export * from './surface/*.ts'
+export * from './curve/Curve'
+export * from './curve/BezierCurve'
+export * from './surface/Surface'
+export * from './surface/ParametricSurface'
+export * from './surface/ProjectedCurveSurface'

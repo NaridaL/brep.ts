@@ -1,5 +1,19 @@
 import {SVGPathData} from 'svg-pathdata'
-///<reference path="../node_modules/svg-pathdata/index.d.ts" />
+import { Equalable, JavaMap as CustomMap } from 'javasetmap.ts'
+import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, TAU, assertInst, SCE, fuzzyBetween, assertVectors, snap, lt, DEG } from 'ts3dutils'
+
+import { P3 } from './P3'
+import { Surface } from './surface/Surface'
+import { XiEtaCurve } from './curve/XiEtaCurve'
+import { Curve } from './curve/Curve'
+import {Face} from './Face'
+import { FaceInfoFactory } from './FaceInfo'
+import { L3 } from './curve/Line3'
+import { PICurve } from './curve/PICurve'
+import { SemiEllipseCurve } from './curve/SemiEllipseCurve'
+import { BezierCurve } from './index'
+
+const { abs, sign, PI, sqrt, floor, ceil } = Math
 
 export abstract class Edge extends Transformable {
     readonly aDir: V3
@@ -323,7 +337,6 @@ export abstract class Edge extends Transformable {
     }
 
     static pathFromSVG(pathString: string): Edge[] {
-		const {SVGPathData} = svgpathdata
         let currentPos: V3 = undefined!
         const parsed: any[] =
             new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).annotateArcs().commands

@@ -1,6 +1,13 @@
+import { Equalable } from 'javasetmap.ts'
+import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, assertNever, assertVectors } from 'ts3dutils'
+import { followAlgorithm2d, intersectionUnitHyperbolaLine } from '../B2'
+import { P3 } from '../P3'
+import { XiEtaCurve } from './XiEtaCurve'
+import { Curve } from './Curve'
+import { Surface, ProjectedCurveSurface, ParametricSurface, ImplicitSurface } from '../index'
+import { ImplicitCurve } from './ImplicitCurve'
 
-import {ImplicitCurve} from './ImplicitCurve'
-import {ImplicitSurface, ParametricSurface} from '../surface/ParametricSurface'
+const { abs, sign, PI, floor, ceil } = Math
 
 let sema = false
 export class PICurve extends ImplicitCurve {

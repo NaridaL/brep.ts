@@ -1,7 +1,15 @@
-import {int} from 'ts3dutils'
-import {XiEtaCurve} from './XiEtaCurve'
-import {BezierCurve} from './BezierCurve'
-import {L3} from './Line3'
+import { Equalable } from 'javasetmap.ts'
+import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, pqFormula } from 'ts3dutils'
+
+import { followAlgorithm2d, intersectionUnitHyperbolaLine } from '../B2'
+import { P3 } from '../P3'
+import { Surface } from '../surface/Surface'
+import { XiEtaCurve } from './XiEtaCurve'
+import { Curve, ISInfo } from './Curve'
+import { L3 } from './Line3'
+import { BezierCurve } from './BezierCurve'
+
+const { abs, sign, PI } = Math
 
 /**
  * eta = xi²

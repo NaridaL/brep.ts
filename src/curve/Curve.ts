@@ -1,5 +1,10 @@
-import {Equalable} from 'javasetmap.ts'
-import {Transformable} from 'ts3dutils'
+import { Equalable } from 'javasetmap.ts'
+import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals } from 'ts3dutils'
+import { followAlgorithm2d } from '../B2'
+import { P3 } from '../P3'
+import { Surface } from '../surface/Surface'
+
+const { floor, abs, ceil } = Math
 
 export type ISInfo = {tThis: number, tOther: number, p: V3}
 export abstract class Curve extends Transformable implements Equalable {
@@ -110,7 +115,7 @@ export abstract class Curve extends Transformable implements Equalable {
 		return this.at(closestT).distanceTo(p)
 	}
 
-	asSegmentDistanceToPoint(p, tStart, tEnd) {
+	asSegmentDistanceToPoint(p: V3, tStart: number, tEnd: number) {
 		let t = this.closestTToPoint(p, tStart, tEnd)
 		t = clamp(t, tStart, tEnd)
 		return this.at(t).distanceTo(p)

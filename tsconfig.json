@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": false,
     "alwaysStrict": true,
-    "baseUrl": ".",
+    "strict": true,
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -18,12 +18,6 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "outDir": "out",
-    "paths": {
-      "*": [
-        "*",
-        "../*"
-      ]
-    },
     "rootDir": "src",
     "sourceMap": true,
     "target": "es6"
