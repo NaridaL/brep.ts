@@ -153,7 +153,7 @@ abstract class Curve extends Transformable implements Equalable {
 
 	abstract isInfosWithLine(anchorWC: V3, dirWC: V3, tMin?: number, tMax?: number, lineMin?: number, lineMax?: number): ISInfo[]
 
-	abstract transform(m4: M4, desc?: string): Curve
+	abstract transform(m4: M4, desc?: string): this
 
 	abstract isTsWithSurface(surface: Surface): number[]
 
@@ -222,7 +222,7 @@ abstract class Curve extends Transformable implements Equalable {
                     (t, s) => -dfdt2(curve2, curve1, s, t), (t, s) => -dfdt1(curve2, curve1, s, t))
                 assert(isFinite(ni.x))
                 assert(isFinite(ni.y))
-                if (ni == null) console.log(startT, startS, curve1.sce, curve2.sce)
+                if (ni == undefined) console.log(startT, startS, curve1.sce, curve2.sce)
                 result.push({tThis: ni.x, tOther: ni.y, p: curve1.at(ni.x)})
             }
         }

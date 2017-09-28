@@ -31,9 +31,7 @@ class HyperbolaCurve extends XiEtaCurve {
     }
 
     isColinearTo(curve: Curve): boolean {
-	    if (!((x): x is HyperbolaCurve => x.constructor == this.constructor)(curve)) {
-            return false
-        }
+		if (!hasConstructor(curve, HyperbolaCurve)) return false
         if (!curve.center || !this.center.like(curve.center)) {
             return false
         }

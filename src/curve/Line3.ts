@@ -49,7 +49,7 @@ class L3 extends Curve {
 
 	likeCurve(curve: Curve): boolean {
 		return this == curve ||
-			Object.getPrototypeOf(curve) == L3.prototype
+			hasConstructor(curve, L3)
 			&& this.anchor.like(curve.anchor)
 			&& this.dir1.like(curve.dir1)
 	}
@@ -97,12 +97,12 @@ class L3 extends Curve {
 		const dirCross = this.dir1.cross(line.dir1)
 		const div = dirCross.squared()
 		if (eq0(div)) {
-			return null
+			return undefined
 		} // lines parallel
 		const anchorDiff = line.anchor.minus(this.anchor)
 		// check if distance is zero (see also L3.distanceToLine)
 		if (!eq0(anchorDiff.dot(dirCross.unit()))) {
-			return null
+			return undefined
 		}
 		let t = this.infoClosestToLine(line).t
 		t = clamp(t, sStart, sEnd)

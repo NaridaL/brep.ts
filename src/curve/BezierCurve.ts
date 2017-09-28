@@ -147,7 +147,7 @@ class BezierCurve extends Curve {
 
 	likeCurve(curve: Curve): boolean {
 		return this == curve ||
-			((x): x is BezierCurve => x.constructor == this.constructor)(curve)
+			hasConstructor(curve, BezierCurve)
 			&& this.p0.like(curve.p0)
 			&& this.p1.like(curve.p1)
 			&& this.p2.like(curve.p2)
@@ -156,7 +156,7 @@ class BezierCurve extends Curve {
 
 	equals(obj: any): boolean {
 		return this == obj ||
-			Object.getPrototypeOf(obj) == BezierCurve.prototype
+			hasConstructor(obj, BezierCurve)
 			&& this.p0.equals(obj.p0)
 			&& this.p1.equals(obj.p1)
 			&& this.p2.equals(obj.p2)
@@ -279,7 +279,7 @@ class BezierCurve extends Curve {
 		const b = p0.plus(p2).times(3).minus(p1.times(6)).els()
 		const c = p1.minus(p0).times(3).els()
 		const d = p0.minus(p).els()
-		let results = null
+		let results = undefined
 
 		// assume passed point is on curve and that curve does not self-intersect,
 		// i.e. there is exactly one correct result for t
@@ -310,13 +310,13 @@ class BezierCurve extends Curve {
 		assert(false, 'multiple intersection ' + results + this.toString() + p.sce)
 	}
 
-	transform(m4: M4): BezierCurve {
+	transform(m4: M4) {
 		return new BezierCurve(
 			m4.transformPoint(this.p0),
 			m4.transformPoint(this.p1),
 			m4.transformPoint(this.p2),
 			m4.transformPoint(this.p3),
-			this.tMin, this.tMax)
+			this.tMin, this.tMax) as this
 	}
 
 	isClosed(): boolean {
@@ -328,7 +328,7 @@ class BezierCurve extends Curve {
 	}
 
 	debugToMesh<T extends string>(mesh: Mesh, bufferName: T) {
-		const result = mesh.addVertexBuffer(bufferName, bufferName)
+		const result = mesh.addVertexBuffer(bufferName, bufferName) as any
 		for (let t = -2; t <= 2; t += 0.01) {
 			const p = this.at(t)
 			result[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
@@ -706,13 +706,13 @@ class BezierCurve extends Curve {
 		const isInfo = aL.infoClosestToLine(bL)
 		if (isInfo.s < 0 || isInfo.t < 0
 			|| isInfo.distance > max3d
-			|| !eq2(isInfo.s, isInfo.t, eps)) {
+			|| !eq(isInfo.s, isInfo.t, eps)) {
 		} else {
 			const centerPoint = V3.lerp(isInfo.closest, isInfo.closest2, 0.5)
 			const testT1 = lerp(t0, t1, 1/2), testP1 = this.at(testT1)
 			const testT2 = lerp(t0, t1, 2/3), testP2 = this.at(testT2)
 			const radius = (isInfo.s + isInfo.t) / 2
-			if (eq2(centerPoint.distanceTo(testP1), radius, eps)) {
+			if (eq(centerPoint.distanceTo(testP1), radius, eps)) {
 				const newCurve = EllipseCurve.circleForCenter2P(centerPoint, a, b, radius)
 				result.push(newCurve)
 				return result

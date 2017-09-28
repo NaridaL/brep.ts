@@ -98,9 +98,9 @@ function calcNextEdgeIndex(currentEdge: Edge , possibleEdges: Edge[], faceNormal
 class B2 extends Transformable {
     faces: Face[]
     infiniteVolume: boolean
-    generator: string
+    generator: string | undefined
     vertexNames: Map<V3, string>
-    edgeFaces: CustomMap<Edge, {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}[]>
+    edgeFaces: CustomMap<Edge, {face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number}[]> | undefined
     vertFaces: CustomMap<V3, Edge[]>
 
     constructor(faces: Face[], infiniteVolume: boolean, generator?: string, vertexNames?) {
@@ -151,7 +151,7 @@ class B2 extends Transformable {
             let addedToGroup = false
             for (let j = 0; j < i; j++) {
                 if (this.faces[i].surface.isCoplanarTo(this.faces[j].surface)) {
-                    const faceGroup = likeSurfaceFaces.find(faceGroup => faceGroup.contains(this.faces[j]))
+                    const faceGroup = likeSurfaceFaces.find(faceGroup => faceGroup.includes(this.faces[j]))
                     if (faceGroup) {
                         faceGroup.push(this.faces[i])
                         addedToGroup = true
@@ -360,9 +360,9 @@ class B2 extends Transformable {
                 const visitedEdges = new Set()
 
                 // search for a loop:
-                let currentEdge: Edge
+                let currentEdge: Edge | undefined
                 while (currentEdge = getNextStart()) {
-                    const startEdge = currentEdge, edges = []
+                    const startEdge = currentEdge, edges: Edge[] = []
 	                let i = 0
                     // wether only new edges are used (can include looseSegments)
                     do {
@@ -473,7 +473,7 @@ class B2 extends Transformable {
                 const info = pointInfos[i]
                 const pDir = canonEdge.tangentAt(info.edgeT)
                 if (!eq(info.edgeT, startT) ) {
-                    const newEdge = Edge.create(canonEdge.curve, startP, info.p, startT, info.edgeT, null, startDir, pDir, 'looseSegment' + globalId++)
+                    const newEdge = Edge.create(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, 'looseSegment' + globalId++)
                     addNewEdge(startInfo, info, newEdge)
                 }
                 startP = info.p
@@ -482,7 +482,7 @@ class B2 extends Transformable {
                 startDir = pDir
             }
             if (startInfo && !eq(startT, canonEdge.bT)) {
-                const newEdge = Edge.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, null, startDir, canonEdge.bDir, 'looseSegment' + globalId++)
+                const newEdge = Edge.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, 'looseSegment' + globalId++)
                 addNewEdge(startInfo, undefined, newEdge)
             }
         }
@@ -557,8 +557,8 @@ class B2 extends Transformable {
 	}
 
 
-    buildAdjacencies() {
-        if (this.edgeFaces) return
+    buildAdjacencies(): this {
+        if (this.edgeFaces) return this
 
         this.edgeFaces = new CustomMap() as any
         for (const face of this.faces) {
@@ -736,7 +736,7 @@ class B2 extends Transformable {
             this.infiniteVolume,
             this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
             vertexNames
-        )
+        ) as this
     }
 
     flipped(): B2 {

@@ -78,7 +78,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
                 })
             })
             const f = (t) => baseCurveLC.at(t).length() - 1
-            const fRoots = null
+            const fRoots = undefined
             return curves
         }
     }

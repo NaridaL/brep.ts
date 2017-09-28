@@ -42,7 +42,7 @@ abstract class Surface extends Transformable implements Equalable {
 
 	abstract containsPoint(pWC: V3): boolean
 
-	abstract flipped<T extends Surface>(this: T): T
+	abstract flipped(): this
 
 	flipped2<T extends Surface>(this: T, doFlip: boolean): T {
 		return doFlip ? this.flipped() : this

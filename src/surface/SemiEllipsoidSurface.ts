@@ -162,7 +162,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 			}
 		}
 		const f = (t: number) => baseCurveLC.at(t).length() - 1
-		const fRoots = null
+		const fRoots = undefined
 
 		return surface.clipCurves(curves)
 	}
@@ -224,7 +224,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
 
 	isCoplanarTo(surface: Surface) {
 		if (this === surface) return true
-		if (surface.constructor !== SemiEllipsoidSurface) return false
+		if (!hasConstructor(surface, SemiEllipsoidSurface)) return false
 		if (!this.center.like(surface.center)) return false
 		if (this.isSphere()) return surface.isSphere() && eq(this.f1.length(), this.f2.length())
 

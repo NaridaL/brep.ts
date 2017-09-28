@@ -34,9 +34,9 @@ class Tutorial {
 }
 
 new Tutorial('Edge Champfer Tool', function (tut: Tutorial) {
-	tut.text(null, `Save and click <a href="javascript:loadModel('edgeChampferTutorialModel')">here to load the required model`)
+	tut.text(undefined, `Save and click <a href="javascript:loadModel('edgeChampferTutorialModel')">here to load the required model`)
 	tut.wait(e => e.type='loadModel' && e.modelName == 'edgeChampferTutorialModel')
-	tut.text(null, 'Select the highlighted edge')
+	tut.text(undefined, 'Select the highlighted edge')
 	const edge1 = elByName('edge1')
 	tut.setHighlight(edge1)
 	tut.wait(e => selected.equals([edge1]))

@@ -49,7 +49,7 @@ abstract class XiEtaCurve extends Curve {
 		}
 	}
 
-	'constructor': typeof XiEtaCurve & { new <T extends XiEtaCurve>(center: V3, f1: V3, f2: V3, tMin: number, tMax: number): T }
+	'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
 
 	getConstructorParameters(): any[] {
 		return [this.center, this.f1, this.f2, this.tMin, this.tMax]
@@ -75,12 +75,12 @@ abstract class XiEtaCurve extends Curve {
 		return super.isInfosWithCurve(curve)
 	}
 
-	transform<T extends XiEtaCurve>(this: T, m4: M4): T {
-		return new this.constructor<T>(
+	transform(m4: M4) {
+		return new this.constructor(
 			m4.transformPoint(this.center),
 			m4.transformVector(this.f1),
 			m4.transformVector(this.f2),
-			this.tMin, this.tMax)
+			this.tMin, this.tMax) as this
 	}
 
 	equals(obj: any): boolean {
@@ -100,7 +100,7 @@ abstract class XiEtaCurve extends Curve {
 	}
 
 	likeCurve(curve: Curve): boolean {
-		return ((x): x is XiEtaCurve => x.constructor == this.constructor)(curve)
+		return hasConstructor(curve, this.constructor)
 			&& this.center.like(curve.center)
 			&& this.f1.like(curve.f1)
 			&& this.f2.like(curve.f2)
@@ -152,7 +152,7 @@ abstract class XiEtaCurve extends Curve {
 	pointT(p: V3): number {
 		assertVectors(p)
 		const pLC = this.inverseMatrix.transformPoint(p)
-		return this.constructor.XYLCPointT(pLC, PI)
+		return this.constructor.XYLCPointT(pLC)
 	}
 
 	containsPoint(p: V3): boolean {

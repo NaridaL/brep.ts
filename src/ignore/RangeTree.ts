@@ -1,8 +1,8 @@
 class RangeTree {
 
 
-    nextIntervals: RangeTree = null
-    prevIntervals: RangeTree = null
+    nextIntervals: RangeTree = undefined
+    prevIntervals: RangeTree = undefined
     intervals: {left: number, right: number}[] = []
     recIntCount: int = 0
 

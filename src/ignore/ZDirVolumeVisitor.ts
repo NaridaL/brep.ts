@@ -45,7 +45,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
         return {volume: this.surface.plane.normal1.z * centroid.z * area,
             centroid: new V3(centroid.x, centroid.y, centroid.z / 2) }
 
-    }, 
+    },
 	/**
 	 * at(t)
 	 * |\                                    ^
@@ -233,7 +233,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 		const [front, back] = EllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
 		const localVolume = calc(front, PI) + calc(back, -PI)
 
-		return {area: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: null}
+		return {area: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: undefined}
 	},
 	zDirVolumeForLoop2(loop: Edge[]): number {
 		const angles = this.inverseMatrix.getZ().toAngles()
@@ -303,6 +303,6 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 		const [front, back] = SemiEllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
 		const localVolume = calc(front, PI) + calc(back, -PI)
 
-		return {volume: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: null}
+		return {volume: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: undefined}
 	},
 }

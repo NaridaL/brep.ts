@@ -101,7 +101,7 @@ class ProjectedCurveSurface extends ParametricSurface {
         if (surface instanceof PlaneSurface) {
             return this.isCurvesWithPlane(surface.plane)
         }
-        if (surface instanceof ProjectedCurveSurface || surface instanceof SemiCylinderSurface) {
+        if (surface instanceof ProjectedCurveSurface) {
             const dir1 = surface.dir
             if (this.dir.isParallelTo(dir1)) {
                 const otherCurve = surface.baseCurve
@@ -158,9 +158,7 @@ class ProjectedCurveSurface extends ParametricSurface {
 
     isCoplanarTo(surface: Surface): boolean {
         return this == surface ||
-	        ((x): x is ProjectedCurveSurface => x.constructor == ProjectedCurveSurface)(surface)
-	        //&& ProjectedCurveSurface == surface.constructor
-	        //ProjectedCurveSurface.prototype == Object.getPrototypeOf(surface)
+            hasConstructor(surface, ProjectedCurveSurface)
             && this.dir.isParallelTo(surface.dir)
             && this.containsCurve(surface.baseCurve)
     }

@@ -7,11 +7,11 @@
     "declaration": true,
     "rootDir": ".",
     "target": "es2016",
-    "noImplicitAny": true,
+    // "noImplicitAny": true,
     "alwaysStrict": true,
     "noImplicitThis": true,
 //    "noImplicitReturns": true,
-   "strictNullChecks": true,
+//    "strictNullChecks": true,
     "sourceMap": true,
 //    "inlineSourceMap": true,
     "emitDecoratorMetadata": true,
@@ -22,7 +22,6 @@
     "baseUrl": ".",
     "allowJs": false,
 //    "listFiles": true,
-    "watch": true,
     "paths": {
       "*": ["*", "../*"]
     }
@@ -35,6 +34,7 @@
     //    "src/Transformable.ts",
 //    "src/Vector.ts",
 //    "src/Vector3.ts",
+    "src/glob.ts",
     "src/ignore/Line.ts",
 //    "src/Matrix.ts",
 //    "src/Matrix4x4.ts",

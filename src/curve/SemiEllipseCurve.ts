@@ -36,9 +36,7 @@ class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isColinearTo(curve: Curve): boolean {
-		if (!((x): x is SemiEllipseCurve => x.constructor == this.constructor)(curve)) {
-			return false
-		}
+		if (!hasConstructor(curve, SemiEllipseCurve)) return false
 		if (!this.center.like(curve.center)) {
 			return false
 		}

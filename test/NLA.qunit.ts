@@ -265,25 +265,6 @@ registerTests({
 		assert.notOk(eqAngle(-Math.PI, 2 * Math.PI))
 		assert.notOk(eqAngle(0, Math.PI))
 	},
-	'eq etc'(assert) {
-		assert.notOk(lt(2, 2 + NLA_PRECISION / 2))
-		assert.notOk(lt(2, 2 - NLA_PRECISION / 2))
-		assert.ok(le(2, 2 + NLA_PRECISION / 2))
-		assert.ok(le(2, 2 - NLA_PRECISION / 2))
-
-		assert.notOk(gt(2, 2 + NLA_PRECISION / 2))
-		assert.notOk(gt(2, 2 - NLA_PRECISION / 2))
-		assert.ok(ge(2, 2 + NLA_PRECISION / 2))
-		assert.ok(ge(2, 2 - NLA_PRECISION / 2))
-
-		assert.ok(lt(2, 3))
-		assert.ok(gt(3, 2))
-		assert.ok(le(2, 3))
-		assert.ok(ge(3, 2))
-
-		assert.ok(eq(2, 2 + NLA_PRECISION) == !gt(2, 2 + NLA_PRECISION))
-		assert.ok(eq(2, 2 + NLA_PRECISION) == ge(2, 2 + NLA_PRECISION))
-	},
 	'arrayCopyStep'(assert) {
 		const a = [1, 2, 3, 4, 5, 6, 7, 8]
 		const b = [-1, -2, -3, -4]

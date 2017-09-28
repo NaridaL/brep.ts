@@ -106,13 +106,11 @@ class EllipseCurve extends XiEtaCurve {
 	}
 
 	reversed(): this {
-		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin)
+		return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin) as this
 	}
 
 	isColinearTo(curve: Curve): boolean {
-		if (!((x): x is EllipseCurve => x.constructor == this.constructor)(curve)) {
-			return false
-		}
+		if (!hasConstructor(curve, EllipseCurve)) return false
 		if (!this.center.like(curve.center)) {
 			return false
 		}

@@ -36,7 +36,7 @@ abstract class Edge extends Transformable {
     abstract tangentAt(t: number): V3
 
     toString(): string {
-        return callsce('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, null, this.aDir, this.bDir)
+        return callsce('new '+this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir)
     }
 
     split(t: number): [Edge, Edge] {
@@ -84,7 +84,7 @@ abstract class Edge extends Transformable {
             aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated())
     }
 
-    static create(curve: Curve, a: V3, b: V3, aT: number, bT: number, flippedOf: Edge, aDir: V3, bDir: V3, name?: string): Edge {
+    static create(curve: Curve, a: V3, b: V3, aT: number, bT: number, flippedOf: Edge | undefined, aDir: V3, bDir: V3, name?: string): Edge {
         if (curve instanceof L3) {
             return new StraightEdge(curve, a, b, aT, bT, flippedOf as StraightEdge, name)
         } else {
@@ -205,6 +205,8 @@ abstract class Edge extends Transformable {
 
     abstract isCoEdge(other: Edge): boolean
 
+    abstract points(): V3[]
+
     static ngon(n: int = 3, radius: number = 1): Edge[] {
         return StraightEdge.chain(arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)))
     }
@@ -253,6 +255,7 @@ abstract class Edge extends Transformable {
                 const l1offset = c1.transform(M4.translate(l1inside.toLength(radius)))
                 const l2offset = c2.transform(M4.translate(l2inside.toLength(radius)))
                 const center = l1offset.isInfoWithLine(l2offset)
+                if (!center) throw new Error('tangential curves')
                 const cornerA = center.plus(l1inside.toLength(-radius))
                 const cornerB = center.plus(l2inside.toLength(-radius))
                 const f1 = l1inside.toLength(-radius)
@@ -322,12 +325,13 @@ abstract class Edge extends Transformable {
 
     static pathFromSVG(pathString: string): Edge[] {
 		const {SVGPathData} = svgpathdata
-        let currentPos: V3 = undefined
+        let currentPos: V3 = undefined!
         const parsed: any[] =
             new SVGPathData(pathString).toAbs().normalizeHVZ().sanitize(NLA_PRECISION).annotateArcs().commands
         const path: Edge[] = []
         for (const c of parsed) {
-            const endPos = ('x' in c && 'y' in c) && new V3(c.x, c.y, 0)
+            assert('x' in c && 'y' in c)
+            const endPos = new V3(c.x, c.y, 0)
             switch (c.type) {
                 case SVGPathData.LINE_TO:
                     path.push(StraightEdge.throughPoints(currentPos, endPos))
@@ -391,7 +395,7 @@ class PCurveEdge extends Edge {
                 b: V3,
                 aT: number,
                 bT: number,
-                public flippedOf: PCurveEdge,
+                public flippedOf: PCurveEdge | undefined,
                 readonly aDir: V3,
                 readonly bDir: V3,
                 name?: string) {
@@ -441,13 +445,13 @@ class PCurveEdge extends Edge {
 
     edgeISTsWithSurface(surface: Surface): number[] {
         return this.curve.isTsWithSurface(surface)
-            .map(edgeT => snap(snap(edgeT, this.aT), this.bT))
+            .map(edgeT => snap2(edgeT, this.aT, this.bT))
             .filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
     }
 
     edgeISTsWithPlane(surface: P3): number[] {
         return this.curve.isTsWithPlane(surface)
-            .map(edgeT => snap(snap(edgeT, this.aT), this.bT))
+            .map(edgeT => snap2(edgeT, this.aT, this.bT))
             .filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
     }
 
@@ -463,8 +467,8 @@ class PCurveEdge extends Edge {
     transform(m4: M4, desc?: string): PCurveEdge {
         return new PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b),
             this.aT, this.bT,
-            null,
-            m4.transformVector(this.aDir), m4.transformVector(this.bDir), this.name + desc)
+            undefined,
+            m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc)
     }
 
     isCoEdge(edge: Edge): boolean {
@@ -514,9 +518,7 @@ class StraightEdge extends Edge {
     }
 
     edgeISTsWithPlane(plane: P3): number[] {
-        let edgeT = this.curve.isTWithPlane(plane)
-        edgeT = snap(edgeT, this.aT)
-        edgeT = snap(edgeT, this.bT)
+        const edgeT = snap2(this.curve.isTWithPlane(plane), this.aT, this.bT)
         return (this.minT <= edgeT && edgeT <= this.maxT) ? [edgeT] : []
     }
 
@@ -525,7 +527,7 @@ class StraightEdge extends Edge {
             return this.edgeISTsWithPlane(surface.plane)
         } else {
             return surface.isTsForLine(this.curve)
-                .map(edgeT => snap(snap(edgeT, this.aT), this.bT))
+                .map(edgeT => snap2(edgeT, this.aT, this.bT))
                 .filter(edgeT => this.minT <= edgeT && edgeT <= this.maxT)
         }
     }
@@ -551,7 +553,7 @@ class StraightEdge extends Edge {
         return new StraightEdge(
             this.curve.transform(m4),
             m4.transformPoint(this.a),
-            m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, null, this.name + desc)
+            m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, undefined, '' + this.name + desc)
     }
 
     isCoEdge(edge: Edge): boolean {
@@ -561,20 +563,19 @@ class StraightEdge extends Edge {
         )
     }
 
-    getEdgeT(p: V3): number|undefined {
+    getEdgeT(p: V3): number | undefined {
         assertVectors(p)
         let edgeT = p.minus(this.curve.anchor).dot(this.curve.dir1)
         if (!eq0(this.curve.at(edgeT).distanceTo(p))) {
             return
         }
-        edgeT = snap(edgeT, this.aT)
-        edgeT = snap(edgeT, this.bT)
+        edgeT = snap2(edgeT, this.aT, this.bT)
         return (this.minT <= edgeT && edgeT <= this.maxT) ? edgeT : undefined
     }
 
 
     static throughPoints(a: V3, b: V3, name?: string) {
-        return new StraightEdge(L3.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), null, name)
+        return new StraightEdge(L3.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), undefined, name)
     }
 
     /**
@@ -590,6 +591,4 @@ class StraightEdge extends Edge {
     }
 
 }
-StraightEdge.prototype.aDDT = V3.O
-StraightEdge.prototype.bDDT = V3.O
 

@@ -88,7 +88,7 @@ class P3 extends Transformable {
 			p2 = m4.transformPoint(this.anchor.plus(v)),
 			p3 = m4.transformPoint(this.anchor.plus(u))
 		// and create a new plane from the transformed points:
-		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2)
+		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2) as this
 	}
 
 	distanceToLine(line: L3): number {
@@ -124,7 +124,7 @@ class P3 extends Transformable {
 		return line.intersectionWithPlane(this)
 	}
 
-	intersectionWithPlane(plane: P3): L3 | null {
+	intersectionWithPlane(plane: P3): L3 | undefined {
 		/*
 
 		 this: n0 * x = w0

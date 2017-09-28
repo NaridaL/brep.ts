@@ -69,7 +69,7 @@ class PICurveOld extends Curve {
 			const pTPF = this.parametricSurface.pointToParameterFunction()
 			const startParams = pTPF(this.startPoint)
 			this.pmTangentEndPoints = []
-			this.pmPoints = followAlgorithm(curveFunction, startParams, startParams, STEP_SIZE, null,
+			this.pmPoints = followAlgorithm(curveFunction, startParams, startParams, STEP_SIZE, undefined,
 				this.pmTangentEndPoints, (s, t) => iBounds(pF(s, t)))
 			this.isLoop = this.pmPoints[0].distanceTo(this.pmPoints[this.pmPoints.length - 1]) < STEP_SIZE * 1.1
 			this.startT = 0

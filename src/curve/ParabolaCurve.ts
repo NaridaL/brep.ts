@@ -41,9 +41,7 @@ class ParabolaCurve extends XiEtaCurve {
     }
 
 	isColinearTo(curve: Curve): boolean {
-		if (!((x): x is ParabolaCurve => x.constructor == this.constructor)(curve)) {
-			return false
-		}
+		if (!hasConstructor(curve, ParabolaCurve)) return false
 		const thisRA = this.rightAngled(), curveRA = curve.rightAngled()
 		return thisRA.center.like(curveRA.center)
 			&& thisRA.f2.like(curveRA.f2)

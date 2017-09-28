@@ -60,9 +60,9 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 		return SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
-	isCoplanarTo(surface: Surface): boolean {
+	isCoplanarTo(surface: Surface): surface is SemiCylinderSurface {
 		return this == surface ||
-			surface instanceof SemiCylinderSurface
+			hasConstructor(surface, SemiCylinderSurface)
 			&& this.dir.isParallelTo(surface.dir)
 			&& this.containsSemiEllipse(surface.baseCurve, false)
 	}
@@ -180,10 +180,6 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
 }
 SemiCylinderSurface.prototype.uStep = TAU  / 32
 SemiCylinderSurface.prototype.vStep = 256
-SemiCylinderSurface.prototype.sMin = 0
-SemiCylinderSurface.prototype.sMax = PI
-SemiCylinderSurface.prototype.tMin = 0
-SemiCylinderSurface.prototype.tMax = 1
 
 
 

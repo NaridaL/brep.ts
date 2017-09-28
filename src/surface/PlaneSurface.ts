@@ -49,21 +49,21 @@ class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 
 	edgeLoopCCW(contour: Edge[]): boolean {
 		return isCCW(contour.flatMap(edge => edge.points()), this.plane.normal1)
-		let totalAngle = 0
-		for (let i = 0; i < contour.length; i++) {
-			const ipp = (i + 1) % contour.length
-			const edge = contour[i], nextEdge = contour[ipp]
-			assert(edge.b.like(nextEdge.a), 'edges dont form a loop')
-			if (edge.curve instanceof SemiEllipseCurve) {
-				totalAngle += edge.rotViaPlane(this.plane.normal1)
-				// console.log(edge.toString(), edge.rotViaPlane(this.plane.normal1))
-			}
-			totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal1)
-		}
-		const result = totalAngle > 0
-		const result2 = PlaneFace.prototype.calculateArea.apply({surface: this, contour: contour}).area > 0
-		//assert (result == result2)
-		return result2
+		// let totalAngle = 0
+		// for (let i = 0; i < contour.length; i++) {
+		// 	const ipp = (i + 1) % contour.length
+		// 	const edge = contour[i], nextEdge = contour[ipp]
+		// 	assert(edge.b.like(nextEdge.a), 'edges dont form a loop')
+		// 	if (edge.curve instanceof SemiEllipseCurve) {
+		// 		totalAngle += edge.rotViaPlane(this.plane.normal1)
+		// 		// console.log(edge.toString(), edge.rotViaPlane(this.plane.normal1))
+		// 	}
+		// 	totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal1)
+		// }
+		// const result = totalAngle > 0
+		// const result2 = PlaneFace.prototype.calculateArea.apply({surface: this, contour: contour}).area > 0
+		// //assert (result == result2)
+		// return result2
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
@@ -96,12 +96,12 @@ class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return this.plane.containsCurve(curve)
 	}
 
-	transform(m4: M4): PlaneSurface {
-		return new PlaneSurface(this.plane.transform(m4))
+	transform(m4: M4) {
+		return new PlaneSurface(this.plane.transform(m4)) as this
 	}
 
 	flipped() {
-		return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated())
+		return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated()) as this
 	}
 
 	getConstructorParameters(): any[] {
@@ -109,11 +109,13 @@ class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {
-		const mesh = new Mesh({triangles: true, lines: false, normals: true})
+		const mesh = new Mesh()
+			.addIndexBuffer('TRIANGLES')
+			.addVertexBuffer('normals', 'LGL_Normal')
 		const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor)
 		mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p))
 		mesh.normals = arrayFromFunction(4, i => this.plane.normal1)
-		pushQuad(mesh.triangles, false, 0, 1, 2, 3)
+		pushQuad(mesh.TRIANGLES, false, 0, 1, 2, 3)
 		mesh.compile()
 		return mesh
 	}
@@ -128,7 +130,7 @@ class PlaneSurface extends ParametricSurface implements ImplicitSurface {
     }
 
     equals(obj: any): boolean {
-        return null
+        return undefined
     }
 
     didp(pWC: V3): V3 {

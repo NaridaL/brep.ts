@@ -396,14 +396,14 @@ abstract class Face extends Transformable {
                     // segment end
                     startDir = isCurve.tangentAt(startT)
                     if (eq(startT, last.t)) {
-                        startP = false
+                        startP = undefined
                         continue
                     }
                     assert(lt(startT, last.t))
                     startT > last.t && (startDir = startDir.negated())
                     let endDir = isCurve.tangentAt(last.t)
                     startT > last.t && (endDir = endDir.negated())
-                    const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, null, startDir, endDir, 'genseg' + globalId++)
+                    const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, 'genseg' + globalId++)
                     startP = undefined
                     if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
                         handleEndPoint(startA || col1, startB || col2, newEdge)
@@ -424,7 +424,7 @@ abstract class Face extends Transformable {
                 startT > endT && (startDir = startDir.negated())
                 let endDir = isCurve.tangentAt(endT)
                 startT > endT && (endDir = endDir.negated())
-                const newEdge = Edge.create(isCurve, startP, isCurve.at(endT), startT, endT, null, startDir, endDir, 'genseg' + globalId++)
+                const newEdge = Edge.create(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, 'genseg' + globalId++)
                 if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
                     handleEndPoint(startA || col1, startB || col2, newEdge)
                 }
@@ -701,13 +701,15 @@ abstract class Face extends Transformable {
 	}
 
 	toMesh() {
-		const mesh = new Mesh({triangles: true, normals: true, lines: true})
+		const mesh = new Mesh()
+			.addIndexBuffer('TRIANGLES')
+			.addVertexBuffer('normals', 'LGL_Normal')
 		this.addToMesh(mesh)
 		//mesh.compile()
 		return mesh
 	}
 
-	abstract addToMesh(mesh: Mesh): void
+	abstract addToMesh(mesh: Mesh & {TRIANGLES: int[], normals: V3[]}): void
 
 	zDirVolume(): {centroid: V3, volume: number} {
 		return this.surface.zDirVolume(this.getAllEdges())
@@ -804,7 +806,7 @@ class PlaneFace extends Face {
 		super(p instanceof P3 ? new PlaneSurface(p) : p, contour, holes, name, info)
 	}
 
-	addToMesh(mesh: Mesh) {
+	addToMesh(mesh: Mesh & {TRIANGLES: int[], normals: V3[]}) {
 		const mvl = mesh.vertices!.length
 		const normal = this.surface.plane.normal1
 		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0())
@@ -1045,7 +1047,7 @@ class PlaneFace extends Face {
 	//		}
 	//		if (startP && !(in1 && in2)) {
 	//			// segment end
-	//			const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, null, 'genseg' + globalId++)
+	//			const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' + globalId++)
 	//			startP = undefined
 	//			last.used = true
 	//			if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {

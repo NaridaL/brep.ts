@@ -7,11 +7,11 @@ function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 		const curveDir = flipped ? offset : offset.negated()
 		return new SemiCylinderSurface(curve, curveDir.unit(), undefined, undefined)
 	}
-	if (curve instanceof BezierCurve || curve instanceof ParabolaCurve) {
+	if (curve instanceof BezierCurve || curve instanceof XiEtaCurve) {
 		const curveDir = offset.times(flipped ? 1 : -1)
 		return new ProjectedCurveSurface(curve, curveDir, 0, 1, flipped ? 0 : -1, flipped ? 1 : 0)
 	}
-	assertNever()
+	throw new Error()
 }
 function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	if (curve instanceof L3) {
@@ -70,7 +70,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 		let curveDir = flipped ? offset : offset.negated()
 		return new ProjectedCurveSurface(curve, curveDir.unit(), 0, 1)
 	}
-	assertNever()
+	throw new Error()
 }
 
 namespace B2T {
@@ -319,7 +319,7 @@ namespace B2T {
 				const b = stepEndEdges[i].a
 				if (!eq0(radius)) {
 					const curve = 0 == rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
-					return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
+					return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
 				}
 			})
 			for (let edgeIndex = 0; edgeIndex < baseLoop.length; edgeIndex++) {
@@ -365,7 +365,7 @@ namespace B2T {
 	//		if (!eq0(radius)) {
 	//			const curve = new SemiEllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
 	//			const aT = -PI, bT = -PI + rads
-	//			return new PCurveEdge(curve, a, b, aT, bT, null, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
+	//			return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
 	//		}
 	//	})
 	//	const faces = loop.map((edge, i) => {
