@@ -395,9 +395,9 @@ class B2 extends Transformable {
                     }
                 }
 	            const faceNewFaces = B2.assembleFacesFromLoops(loops, face.surface, face, infoFactory)
-                newFaces.pushAll(faceNewFaces)
+                newFaces.push(...faceNewFaces)
                 const faceNewFacesEdges = faceNewFaces.flatMap(face => face.getAllEdges())
-                insideEdges.pushAll(usableOldEdges.filter(edge => faceNewFacesEdges.includes(edge)))
+                insideEdges.push(...usableOldEdges.filter(edge => faceNewFacesEdges.includes(edge)))
             }
         }
 	    while (insideEdges.length != 0) {
@@ -410,7 +410,7 @@ class B2 extends Transformable {
                 }
             })
         }
-        newFaces.pushAll(oldFaces.filter(face => oldFaceStatuses.get(face) == 'inside'))
+        newFaces.push(...oldFaces.filter(face => oldFaceStatuses.get(face) == 'inside'))
     }
 
     //reconstituteCoplanarFaces(likeSurfacePlanes, edgeLooseSegments, faceMap, newFaces) {
@@ -557,7 +557,7 @@ class B2 extends Transformable {
 	}
 
 
-    buildAdjacencies(): this {
+    buildAdjacencies(): this & { edgeFaces: CustomMap<Edge, { face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number }[]> } {
         if (this.edgeFaces) return this
 
         this.edgeFaces = new CustomMap() as any
@@ -1097,7 +1097,7 @@ function followAlgorithm2d(ic: MathFunctionR2R,
 	assertVectors(startTangent)
 	const points: V3[] = []
 	const tangents: V3[] = []
-	assert (eq02(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	assert (eq0(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
 	const eps = stepLength / 32
 	let i = 0, p = startP, tangent = startTangent
 	do {
@@ -1136,7 +1136,7 @@ function followAlgorithm2d(ic: MathFunctionR2R,
                 break
 			}
 		}
-		assert(eq02(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)
+		assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)
 		tangent = newTangent
 		p = newP
 	} while (++i < 1000)
@@ -1155,7 +1155,7 @@ function followAlgorithm2dAdjustable(ic: MathFunctionR2R,
 	//assert (!startDir || startDir instanceof V3)
 	const points = []
 	const tangents = []
-	assert (eq02(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	assert (eq0(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
 	const eps = stepLength / 32
 	let p = start, prevp = p
 	let i = 0

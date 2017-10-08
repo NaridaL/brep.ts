@@ -1,6 +1,8 @@
 /// <reference path="../node_modules/ts3dutils/index.d.ts" />
+/// <reference path="../node_modules/tsgl/index.d.ts" />
 
 // Object.keys(ts3dutils).map(x => `import ${x} = ts3dutils.${x}`).join('\n')
+import Tuple2 = ts3dutils.Tuple2
 import Tuple3 = ts3dutils.Tuple3
 import Tuple4 = ts3dutils.Tuple4
 import FloatArray = ts3dutils.FloatArray
@@ -104,5 +106,18 @@ import CustomSet = javasetmap_ts.JavaSet
 import Pair = javasetmap_ts.Pair
 import Equalable = javasetmap_ts.Equalable
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2} = Math
+import GL_COLOR = tsgl.GL_COLOR
+import DRAW_MODES = tsgl.DRAW_MODES
+import Mesh = tsgl.Mesh
+import GL_COLOR_BLACK = tsgl.GL_COLOR_BLACK
+import SHADER_VAR_TYPES = tsgl.SHADER_VAR_TYPES
+import isArray = tsgl.isArray
+import Shader = tsgl.Shader
+import Texture = tsgl.Texture
+import currentGL = tsgl.currentGL
+import ShaderType = tsgl.ShaderType
+import LightGLContext = tsgl.LightGLContext
+import pushQuad = tsgl.pushQuad
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 // import LightGLContext = tsgl.LightGLContext

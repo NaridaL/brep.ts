@@ -552,7 +552,7 @@ class BezierCurve extends Curve {
 				if (Math.abs(i - j) > 2) {
 					// console.log(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
 					//findRecursive(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
-                    result.pushAll(Curve.ispsRecursive(this, splits[i], splits[i + 1], bezier, splits[j], splits[j + 1]))
+                    result.push(...Curve.ispsRecursive(this, splits[i], splits[i + 1], bezier, splits[j], splits[j + 1]))
 				}
 			})
 		} else {

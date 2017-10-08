@@ -83,9 +83,9 @@ class ImplicitCurve extends Curve {
 			}
 			const point = this.points[i], tangent = this.tangents[i]
 			const tangentMatrix = M4.rotateAB(prevTangent, tangent).times(prevMatrix)
-			mesh.normals.pushAll(tangentMatrix.transformedVectors(baseNormals))
+			mesh.normals.push(...tangentMatrix.transformedVectors(baseNormals))
 			const baseMatrix = M4.translate(point).times(tangentMatrix)
-			mesh.vertices.pushAll(baseMatrix.transformedPoints(baseVertices))
+			mesh.vertices.push(...baseMatrix.transformedPoints(baseVertices))
 			prevTangent = tangent
 			prevMatrix = tangentMatrix
 		}

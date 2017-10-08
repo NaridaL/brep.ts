@@ -16,6 +16,7 @@
 //    "inlineSourceMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "skipLibCheck": true,
     "jsx": "react",
     "jsxFactory": "h",
     "lib": ["dom","es7"],

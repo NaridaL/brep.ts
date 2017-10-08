@@ -44,8 +44,8 @@ abstract class XiEtaCurve extends Curve {
 			}
 			const point = this.at(t), tangent = this.tangentAt(t)
 			const matrix = M4.forSys(this.normal, tangent.cross(this.normal), tangent, point)
-			mesh.normals.pushAll(matrix.transformedVectors(baseNormals))
-			mesh.vertices.pushAll(matrix.transformedPoints(baseVertices))
+			mesh.normals.push(...matrix.transformedVectors(baseNormals))
+			mesh.vertices.push(...matrix.transformedPoints(baseVertices))
 		}
 	}
 

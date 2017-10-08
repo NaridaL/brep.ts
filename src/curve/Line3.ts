@@ -31,8 +31,8 @@ class L3 extends Curve {
 			const t = 0 == i ? tMin : tMax
 			const point = this.at(t), tangent = this.dir1, x = this.dir1.getPerpendicular()
 			const matrix = M4.forSys(x, this.dir1.cross(x), this.dir1, point)
-			mesh.normals.pushAll(matrix.transformedVectors(baseNormals))
-			mesh.vertices.pushAll(matrix.transformedPoints(baseVertices))
+			mesh.normals.push(...matrix.transformedVectors(baseNormals))
+			mesh.vertices.push(...matrix.transformedPoints(baseVertices))
 		}
 	}
 

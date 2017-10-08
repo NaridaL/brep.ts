@@ -12,7 +12,7 @@ abstract class Edge extends Transformable {
                 readonly b: V3,
                 readonly aT: number,
                 readonly bT: number,
-                public flippedOf?: Edge,
+                public flippedOf?: Edge | undefined,
                 readonly name?: string) {
         super()
         assertNumbers(aT, bT)
@@ -371,7 +371,7 @@ abstract class Edge extends Transformable {
                         return new PCurveEdge(curve, a, b, aT, bT, undefined,
                             curve.tangentAt(aT), curve.tangentAt(bT))
                     })
-                    path.pushAll(c.phiDelta > 0 ? edges : Edge.reversePath(edges))
+                    path.push(...c.phiDelta > 0 ? edges : Edge.reversePath(edges))
                     break
                 }
             }

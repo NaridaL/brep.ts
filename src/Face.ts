@@ -814,7 +814,7 @@ class PlaneFace extends Face {
 		const holeStarts: number[] = []
 		this.holes.forEach(hole => {
 			holeStarts.push(vertices.length)
-			vertices.pushAll(hole.flatMap(edge => edge.getVerticesNo0()))
+			vertices.push(...hole.flatMap(edge => edge.getVerticesNo0()))
 		})
 		const triangles = triangulateVertices(normal, vertices, holeStarts).map(index => index + mvl)
 		Array.prototype.push.apply(mesh.vertices, vertices)
@@ -1272,8 +1272,8 @@ class RotationFace extends Face {
 			for (let i = 0; i < edgeLoop.length; i++) {
 				const ipp = (i + 1) % edgeLoop.length
 				const verticesNo0 = edgeLoop[i].getVerticesNo0()
-				vertices.pushAll(verticesNo0)
-				verticesST.pushAll(verticesNo0.map(v => ptpf(v)))
+				vertices.push(...verticesNo0)
+				verticesST.push(...verticesNo0.map(v => ptpf(v)))
 				const nextStart = edgeLoop[ipp].a
 				//console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
 
@@ -1382,7 +1382,7 @@ class RotationFace extends Face {
 		let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity
 		//console.log('surface', this.surface.str)
 		//console.log(verticesUV)
-		//drPs.pushAll(verticesUV.map((v, i) => ({p: vertices[i], text: `${i} uv: ${v.toString(x => round10(x, -4))}`})))
+		//drPs.push(...verticesUV.map((v, i) => ({p: vertices[i], text: `${i} uv: ${v.toString(x => round10(x, -4))}`})))
 		verticesUV.forEach(({x: u, y: v}) => {
 			assert(isFinite(u))
 			assert(isFinite(v))
@@ -1401,7 +1401,7 @@ class RotationFace extends Face {
 		if (uRes == 1 && vRes == 1) {
 			// triangulate this face as if it were a plane
 			const polyTriangles = triangulateVertices(V3.Z, verticesUV, loopStarts.slice(1, 1 + this.holes.length))
-			triangles.pushAll(polyTriangles)
+			triangles.push(...polyTriangles)
 		} else {
 			const partss: int[][][] = new Array(uRes * vRes)
 
@@ -1539,7 +1539,7 @@ class RotationFace extends Face {
 							assert(startPart.length > 0)
 							let currentPart = startPart
 							do {
-								outline.pushAll(currentPart)
+								outline.push(...currentPart)
 								const currentPartEndOpos = opos(currentPart.last)
 								const nextPartIndex = parts.indexWithMax(part => -mod(opos(part[0]) - currentPartEndOpos, 4))
 								const nextPart = parts.removeIndex(nextPartIndex)
@@ -1577,10 +1577,10 @@ class RotationFace extends Face {
 							// triangulate outline
 							if (outline.length == 3) {
 								// its just a triangle
-								triangles.pushAll(outline)
+								triangles.push(...outline)
 							} else {
 								const polyTriangles = triangulateVertices(V3.Z, outline.map(i => verticesUV[i]), []).map(i => outline[i])
-								triangles.pushAll(polyTriangles)
+								triangles.push(...polyTriangles)
 							}
 							//console.log('outline', col, row, outline)
 						}

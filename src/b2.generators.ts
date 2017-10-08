@@ -201,7 +201,7 @@ namespace B2T {
         const punch = B2T.box(1/3, 1/3, 2).translate(1/3, 1/3, -1/2).flipped()
         const stencilFaces = []
         function recurse(steps: int, m4: M4) {
-            stencilFaces.pushAll(punch.transform(m4).faces)
+            stencilFaces.push(...punch.transform(m4).faces)
             if (steps > 1) {
                 const scaled = m4.times(M4.scale(1/3, 1/3, 1))
                 for (let i = 0; i < 9; i++) {
@@ -586,11 +586,11 @@ namespace B2T {
 				if (open) {
 					const newEdges: Edge[] = []
 					if (!eq0(edge.a.x)) {
-						newEdges.pushAll(arrayFromFunction(count, j => horizontalEdges[j][i]))
+						newEdges.push(...arrayFromFunction(count, j => horizontalEdges[j][i]))
 					}
 					newEdges.push(ribs[count][i])
 					if (!eq0(edge.b.x)) {
-						newEdges.pushAll(arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp].flipped()))
+						newEdges.push(...arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp].flipped()))
 					}
 					newEdges.push(edge.flipped())
 					face = new PlaneFace(surface, newEdges)

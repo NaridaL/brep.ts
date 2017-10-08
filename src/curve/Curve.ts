@@ -326,7 +326,7 @@ abstract class Curve extends Transformable implements Equalable {
 							set((lif + 0.5) | 0, (ljf + 0.5) | 0)
 						}
 					}
-					result.pushAll(subresult)
+					result.push(...subresult)
 				}
 
 			}

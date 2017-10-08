@@ -34,7 +34,7 @@ class BREPGLContext extends (Object as any as typeof LightGLContext) {
     constructor(gl: BREPGLContext) {
         super(gl)
         this.shaders = initShaders(gl)
-        initMeshes(this.meshes, this)
+        initMeshes(this.meshes = {}, gl)
     }
 
     drawPoint(p: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 5) {
@@ -184,7 +184,7 @@ function initB2() {
     }
     if (gets.vectors) {
         console.log('vectors from GET')
-        drVs.pushAll(gets.vectors)
+        drVs.push(...gets.vectors)
     }
 
     for (let i = 0; i < aMeshes.length; i++) {
@@ -275,9 +275,9 @@ function viewerPaint(time: int, gl: BREPGLContext) {
         gl.pushMatrix()
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-        sMesh.LINES && gl.shaders.singleColor.uniforms({ color: hexIntToGLColor(0xFF6600) }).draw(sMesh, DRAW_MODES.LINES)
+        sMesh.LINES && gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, DRAW_MODES.LINES)
         gl.projectionMatrix.m[11] += 1 / (1 << 20)
-        sMesh.TRIANGLES && gl.shaders.lighting.uniforms({ color: hexIntToGLColor(0xffFF00),
+        sMesh.TRIANGLES && gl.shaders.lighting.uniforms({ color: chroma('#ffFF00').gl(),
             camPos: eye.pos }).draw(sMesh)
         gl.popMatrix()
     }
@@ -290,8 +290,8 @@ function viewerPaint(time: int, gl: BREPGLContext) {
     //edges.forEach((e, i) => drawEdge(e, 0x0ff000, 0.01))
 
     //drPs.forEach(v => drawPoint(v, undefined, 0.3))
-    drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, hexIntToGLColor(0xcc0000), 5 / eye.zoomFactor))
-    b2planes.forEach(plane => gl.drawPlane(plane, hexIntToGLColor(plane.color), hoverHighlight))
+    drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor))
+    b2planes.forEach(plane => gl.drawPlane(plane, chroma(plane.color).gl(), hoverHighlight))
 
     //console.log(gl.drawCallCount)
 }
@@ -532,10 +532,10 @@ function makeDottedLinePlane(count: int = 128) {
     const mesh = new Mesh().
         addIndexBuffer('LINES')
     const OXvertices = arrayFromFunction(count, i => new V3(i / count, 0, 0))
-    mesh.vertices.pushAll(OXvertices)
-    mesh.vertices.pushAll(M4.forSys(V3.Y, V3.O, V3.O, V3.X).transformedPoints(OXvertices))
-    mesh.vertices.pushAll(M4.forSys(V3.X.negated(), V3.O, V3.O, new V3(1, 1, 0)).transformedPoints(OXvertices))
-    mesh.vertices.pushAll(M4.forSys(V3.Y.negated(), V3.O, V3.O, V3.Y).transformedPoints(OXvertices))
+    mesh.vertices.push(...OXvertices)
+    mesh.vertices.push(...M4.forSys(V3.Y, V3.O, V3.O, V3.X).transformedPoints(OXvertices))
+    mesh.vertices.push(...M4.forSys(V3.X.negated(), V3.O, V3.O, new V3(1, 1, 0)).transformedPoints(OXvertices))
+    mesh.vertices.push(...M4.forSys(V3.Y.negated(), V3.O, V3.O, V3.Y).transformedPoints(OXvertices))
     mesh.LINES = arrayFromFunction(count * 4, i => i - (i >= count * 2 ? 1 : 0))
     mesh.compile()
     return mesh

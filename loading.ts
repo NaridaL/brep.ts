@@ -110,7 +110,7 @@ function draw(ctx: CanvasRenderingContext2D, ic: MathFunctionR2R, bounds: {sMin,
 			//			set((lif + 0.5) | 0, (ljf + 0.5) | 0)
 			//		}
 			//	}
-			//	result.pushAll(subresult)
+			//	result.push(...subresult)
 			//}
 
 		}
