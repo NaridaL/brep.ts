@@ -1,17 +1,22 @@
-import {V3,assert,assertNever,eq,glqInSteps} from 'ts3dutils'
+import {assert, assertNever, eq, glqInSteps, V3} from 'ts3dutils'
 
-import {SemiCylinderSurface, Surface, ProjectedCurveSurface, L3, Edge,
-    HyperbolaCurve,
-    SemiEllipseCurve,
-    ParabolaCurve,
-    EllipseCurve, ConicSurface} from '../index'
+import {
+	ConicSurface,
+	Edge,
+	EllipseCurve,
+	HyperbolaCurve,
+	L3,
+	ParabolaCurve,
+	ProjectedCurveSurface,
+	SemiCylinderSurface,
+	SemiEllipseCurve,
+	Surface,
+} from '../index'
 
 const {PI} = Math
 
 
-
-
-export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => number } = {
+export const CalculateAreaVisitor: { [className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => number } = {
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): number {
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const totalArea = edges.map(edge => {
@@ -37,43 +42,43 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 		return totalArea * Math.sign(this.normal.dot(this.dir))
 	},
 
-    [PlaneSurface.name](this: PlaneSurface, edges: Edge[]) {
-            let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0
-            let r1 = this.surface.right, u1 = this.surface.up
-            this.contour.forEach(edge => {
-                let edgeCentroid, edgeArea: number, centroidS, centroidT
-                if (edge instanceof StraightEdge) {
-                    const midPoint = edge.a.lerp(edge.b, 0.5)
-                    edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
-                    centroidS = midPoint.dot(r1) / 2
-                    centroidT = midPoint.dot(u1)
-                    const edgeLength = edge.a.distanceTo(edge.b)
-                    edgeArea = edgeLength * edge.curve.dir1.dot(r1)
-                    edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
-                } else {
-                    let curve = edge.curve
-                    if (curve instanceof SemiEllipseCurve) {
-                        let info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT)
-                        edgeArea = info.area
-                        let parametricCentroid = this.surface.stPFunc()(info.centroid)
-                        centroidS = parametricCentroid.x
-                        centroidT = parametricCentroid.y
-                    } else if (curve instanceof BezierCurve) {
-                        edgeArea = curve.getAreaInDirSurface(u1, this.surface, edge.aT, edge.bT).area
-                    } else {
-                        assertNever()
-                    }
-                }
+	[PlaneSurface.name](this: PlaneSurface, edges: Edge[]) {
+		let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0
+		let r1 = this.surface.right, u1 = this.surface.up
+		this.contour.forEach(edge => {
+			let edgeCentroid, edgeArea: number, centroidS, centroidT
+			if (edge instanceof StraightEdge) {
+				const midPoint = edge.a.lerp(edge.b, 0.5)
+				edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
+				centroidS = midPoint.dot(r1) / 2
+				centroidT = midPoint.dot(u1)
+				const edgeLength = edge.a.distanceTo(edge.b)
+				edgeArea = edgeLength * edge.curve.dir1.dot(r1)
+				edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
+			} else {
+				let curve = edge.curve
+				if (curve instanceof SemiEllipseCurve) {
+					let info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT)
+					edgeArea = info.area
+					let parametricCentroid = this.surface.stPFunc()(info.centroid)
+					centroidS = parametricCentroid.x
+					centroidT = parametricCentroid.y
+				} else if (curve instanceof BezierCurve) {
+					edgeArea = curve.getAreaInDirSurface(u1, this.surface, edge.aT, edge.bT).area
+				} else {
+					assertNever()
+				}
+			}
 
 
-                tcs += edgeArea * centroidS
-                tct += edgeArea * centroidT
-                totalArea += edgeArea
-            })
-            centroid = r1.times(tcs).plus(u1.times(tct))
-            assert(isFinite(totalArea))
-            return {area: totalArea, centroid: centroid}
-    },
+			tcs += edgeArea * centroidS
+			tct += edgeArea * centroidT
+			totalArea += edgeArea
+		})
+		centroid = r1.times(tcs).plus(u1.times(tct))
+		assert(isFinite(totalArea))
+		return {area: totalArea, centroid: centroid}
+	},
 
 	/**
 	 * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse
@@ -88,7 +93,7 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					return at.dot(this.dir) * tangent.rejected1Length(this.dir)
 				}
 				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
-                // area
+				// area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
 				console.log('edge', edge, val)
@@ -116,7 +121,7 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
 					const localAt = this.inverseMatrix.transformPoint(at)
 					let angleXY = localAt.angleXY()
-					if(eq(Math.abs(angleXY), PI)) {
+					if (eq(Math.abs(angleXY), PI)) {
 						if (edge.curve.normal.isParallelTo(this.f2)) {
 							angleXY = PI * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2))
 						} else {
@@ -141,7 +146,6 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 		}).sum()
 
 
-
 		return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
 	},
 
@@ -157,7 +161,7 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
 					const localAt = this.inverseMatrix.transformPoint(at)
 					let angleXY = localAt.angleXY()
-					if(eq(Math.abs(angleXY), PI)) {
+					if (eq(Math.abs(angleXY), PI)) {
 						if (edge.curve.normal.isParallelTo(this.f2)) {
 							angleXY = PI * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2))
 						} else {
@@ -180,7 +184,6 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 		}).sum()
 
 
-
 		return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
 	},
 
@@ -193,7 +196,7 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					return at.dot(this.dir) * tangent.rejected1Length(this.dir)
 				}
 				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
-                // positive area
+				// positive area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
 				return val * sign
@@ -221,7 +224,7 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					return at.dot(this.dir) * tangent.rejected1Length(this.dir)
 				}
 				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
-                // area
+				// area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
 				return val * sign

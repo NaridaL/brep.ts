@@ -1,14 +1,24 @@
 import {int, M4} from 'ts3dutils'
 
-import {Surface, Edge, Face} from './index'
-
-
+import {Edge, Face, Surface} from './index'
 
 
 /**
  * Created by aval on 19.04.2017.
  */
 export abstract class FaceInfoFactory<T> {
+	static makeStatic<T>(staticInfo: T): FaceInfoFactory<T> {
+		return new class extends FaceInfoFactory<T> {
+			constructor() {
+				super()
+			}
+
+			info(surface: Surface, contour: Edge[], holes: Edge[][]): T {
+				return staticInfo
+			}
+		}
+	}
+
 	info(surface: Surface, contour: Edge[], holes: Edge[][]): T {
 		throw new Error('no default implementation')
 	}
@@ -43,17 +53,5 @@ export abstract class FaceInfoFactory<T> {
 
 	transform(original: Face, m4: M4, desc: string, surface: Surface, contour: Edge[], holes: Edge[][] = []): T {
 		return original.info
-	}
-
-	static makeStatic<T>(staticInfo: T): FaceInfoFactory<T> {
-		return new class extends FaceInfoFactory<T> {
-			constructor() {
-				super()
-			}
-
-			info(surface: Surface, contour: Edge[], holes: Edge[][]): T {
-				return staticInfo
-			}
-		}
 	}
 }

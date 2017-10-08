@@ -63,10 +63,12 @@ class Complex {
 
 
 function Z(re: number, im: number) { return new Complex(re, im) }
+
 namespace Z {
 	export function sqrt(real: number): Complex {
 		return real < 0 ? Z(0, Math.sqrt(-real)) : Z(Math.sqrt(real), 0)
 	}
+
 	export function polar(r: number, phi: number): Complex {
 		return Z(r * Math.cos(phi), r * Math.sin(phi))
 	}

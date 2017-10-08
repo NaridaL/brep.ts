@@ -1,23 +1,26 @@
-import {M4,V,V3,arrayFromFunction,assert,assertInst,isCCW} from 'ts3dutils'
+import {arrayFromFunction, assert, assertInst, isCCW, M4, V, V3} from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {Curve, P3, Surface, L3, ParametricSurface, ImplicitSurface,
-    Edge,
-    PointVsFace} from '../index'
+import {Curve, Edge, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface,} from '../index'
 
 export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
+
 	constructor(readonly plane: P3,
-	            readonly right: V3 = plane.normal1.getPerpendicular().unit(),
-	            readonly up: V3 = plane.normal1.cross(right).unit(),
-                readonly sMin: number = -100,
-                readonly sMax: number = 100,
-                readonly tMin: number = -100,
-                readonly tMax: number = 100) {
+				readonly right: V3 = plane.normal1.getPerpendicular().unit(),
+				readonly up: V3 = plane.normal1.cross(right).unit(),
+				readonly sMin: number = -100,
+				readonly sMax: number = 100,
+				readonly tMin: number = -100,
+				readonly tMax: number = 100) {
 		super()
 		assertInst(P3, plane)
 		assert(this.right.cross(this.up).like(this.plane.normal1))
 		this.matrix = M4.forSys(right, up, plane.normal1, plane.anchor)
+	}
+
+	static throughPoints(a: V3, b: V3, c: V3): PlaneSurface {
+		return new PlaneSurface(P3.throughPoints(a, b, c))
 	}
 
 	isCoplanarTo(surface: Surface): boolean {
@@ -32,11 +35,11 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
 	}
 
-    pST(s: number, t: number): V3 {
+	pST(s: number, t: number): V3 {
 		return this.matrix.transformPoint(new V3(s, t, 0))
 	}
 
-    implicitFunction(): (pWC: V3) => number {
+	implicitFunction(): (pWC: V3) => number {
 		return p => this.plane.distanceToPointSigned(p)
 	}
 
@@ -87,11 +90,11 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		}
 	}
 
-    pointFoot(pWC: V3): V3 {
-        return this.stP(pWC)
-    }
+	pointFoot(pWC: V3): V3 {
+		return this.stP(pWC)
+	}
 
-    normalP(pWC: V3): V3 {
+	normalP(pWC: V3): V3 {
 		return this.plane.normal1
 	}
 
@@ -127,24 +130,19 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return mesh
 	}
 
+	dpds(): (s: number, t: number) => V3 {
+		return () => this.right
+	}
 
-    dpds(): (s: number, t: number) => V3 {
-        return () => this.right
-    }
+	dpdt(): (s: number, t: number) => V3 {
+		return () => this.up
+	}
 
-    dpdt(): (s: number, t: number) => V3 {
-        return () => this.up
-    }
+	equals(obj: any): boolean {
+		return undefined
+	}
 
-    equals(obj: any): boolean {
-        return undefined
-    }
-
-    didp(pWC: V3): V3 {
-        return this.plane.normal1
-    }
-
-    static throughPoints(a: V3, b: V3, c: V3): PlaneSurface {
-		return new PlaneSurface(P3.throughPoints(a, b, c))
+	didp(pWC: V3): V3 {
+		return this.plane.normal1
 	}
 }

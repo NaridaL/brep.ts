@@ -1,18 +1,40 @@
 import {Equalable} from 'javasetmap.ts'
-import {AABB, arrayFromFunction, assert, assertNumbers, callsce, clamp, eq, eq0, fuzzyUniquesF, getIntervals, glqInSteps, int, le, M4, newtonIterate2dWithDerivatives, newtonIterateWithDerivative, NLA_PRECISION, Transformable, V, V3,} from 'ts3dutils'
+import {
+	AABB,
+	arrayFromFunction,
+	assert,
+	assertNumbers,
+	callsce,
+	clamp,
+	eq,
+	eq0,
+	fuzzyUniquesF,
+	getIntervals,
+	glqInSteps,
+	int,
+	le,
+	M4,
+	newtonIterate2dWithDerivatives,
+	newtonIterateWithDerivative,
+	NLA_PRECISION,
+	Transformable,
+	V,
+	V3,
+} from 'ts3dutils'
 
-import {ISInfo, P3, Surface, followAlgorithm2d} from '../index'
+import {followAlgorithm2d, ISInfo, P3, Surface} from '../index'
 
 const {ceil, floor, abs} = Math
 
-export type ISInfo = {tThis: number, tOther: number, p: V3}
+export type ISInfo = { tThis: number, tOther: number, p: V3 }
+
 export abstract class Curve extends Transformable implements Equalable {
+	static hlol = 0
 	tIncrement: number
 	hlol: number
+	'constructor': new (...args: any[]) => this
 
-    'constructor': new (...args: any[]) => this
-
-    constructor(readonly tMin: number, readonly tMax: number) {
+	constructor(readonly tMin: number, readonly tMax: number) {
 		super()
 		assertNumbers(tMin, tMax)
 		assert('number' == typeof tMin && !isNaN(tMin))
@@ -20,9 +42,155 @@ export abstract class Curve extends Transformable implements Equalable {
 		assert(tMin < tMax)
 	}
 
+	static integrate(curve: Curve, startT: number, endT: number, steps: int): number {
+		const step = (endT - startT) / steps
+		let length = 0
+		let p = curve.at(startT)
+		let i = 0, t = startT + step
+		for (; i < steps; i++, t += step) {
+			const next = curve.at(t)
+			length += p.distanceTo(next)
+			p = next
+		}
+		return length
+	}
+
+	static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number): ISInfo[] {
+		// the recursive function finds good approximates for the intersection points
+		// curve1 function uses newton iteration to improve the result as much as possible
+		function handleStartTS(startT: number, startS: number) {
+			if (!result.some(info => eq(info.tThis, startT) && eq(info.tOther, startS))) {
+				const f1 = (t: number, s: number) => curve1.tangentAt(t).dot(curve1.at(t).minus(curve2.at(s)))
+				const f2 = (t: number, s: number) => curve2.tangentAt(s).dot(curve1.at(t).minus(curve2.at(s)))
+				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
+				const dfdt1 = (b1: Curve, b2: Curve, t1: number, t2: number) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
+				const dfdt2 = (b1: Curve, b2: Curve, t1: number, t2: number) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
+				const ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
+					dfdt1.bind(undefined, curve1, curve2), dfdt2.bind(undefined, curve1, curve2),
+					(t, s) => -dfdt2(curve2, curve1, s, t), (t, s) => -dfdt1(curve2, curve1, s, t))
+				assert(isFinite(ni.x))
+				assert(isFinite(ni.y))
+				if (ni == undefined) console.log(startT, startS, curve1.sce, curve2.sce)
+				result.push({tThis: ni.x, tOther: ni.y, p: curve1.at(ni.x)})
+			}
+		}
+
+		// returns whether an intersection was immediately found (i.e. without further recursion)
+		function findRecursive(tMin: number, tMax: number, sMin: number, sMax: number,
+							   curve1AABB: AABB, curve2AABB: AABB, depth = 0) {
+			const EPS = NLA_PRECISION
+			if (curve1AABB.fuzzyTouchesAABB(curve2AABB)) {
+				const tMid = (tMin + tMax) / 2
+				const sMid = (sMin + sMax) / 2
+				if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
+					handleStartTS(tMid, sMid)
+					return true
+				} else {
+					const curve1AABBleft = curve1.getAABB(tMin, tMid)
+					const curve2AABBleft = curve2.getAABB(sMin, sMid)
+					let curve1AABBright, curve2AABBright
+					// if one of the following calls immediately finds an intersection, we don't want to call the others
+					// as that will lead to the same intersection being output multiple times
+					findRecursive(tMin, tMid, sMin, sMid, curve1AABBleft, curve2AABBleft, depth + 1)
+					|| findRecursive(tMin, tMid, sMid, sMax, curve1AABBleft, curve2AABBright = curve2.getAABB(sMid, sMax), depth + 1)
+					|| findRecursive(tMid, tMax, sMin, sMid, curve1AABBright = curve1.getAABB(tMid, tMax), curve2AABBleft, depth + 1)
+					|| findRecursive(tMid, tMax, sMid, sMax, curve1AABBright, curve2AABBright, depth + 1)
+				}
+			}
+			return false
+		}
+
+		const result: ISInfo[] = []
+		findRecursive(tMin, tMax, sMin, sMax, curve1.getAABB(tMin, tMax), curve2.getAABB(sMin, sMax))
+		return fuzzyUniquesF(result, info => info.tThis)
+	}
+
+	static breakDownIC(implicitCurve: MathFunctionR2R,
+					   {sMin, sMax, tMin, tMax}: { sMin: number, sMax: number, tMin: number, tMax: number },
+					   sStep: number, tStep: number,
+					   stepSize: number,
+					   dids?: R2_R,
+					   didt?: R2_R): { points: V3[], tangents: V3[] }[] {
+		const EPS = 1 / (1 << 20)
+		//undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
+		//undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
+
+		const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
+		const deltaS = sMax - sMin, deltaT = tMax - tMin
+		const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
+		const grid = new Array(sRes * tRes).fill(0)
+		arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n')
+		const at = (i: int, j: int) => grid[j * sRes + i]
+		const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
+		const result: { points: V3[], tangents: V3[] }[] = []
+		const logTable = []
+		for (let i = 0; i < sRes; i++) {
+			search: for (let j = 0; j < tRes; j++) {
+				if (at(i, j)) continue
+				set(i, j)
+				let s = sMin + (i + 0.5) * sStep, t = tMin + (j + 0.5) * tStep
+				const startS = s, startT = t
+				// basically curvePoint
+				for (let k = 0; k < 8; k++) {
+					const fp = implicitCurve(s, t)
+					const dfpdx = implicitCurve.x(s, t), dfpdy = implicitCurve.y(s, t)
+					if (0 == dfpdx * dfpdx + dfpdy * dfpdy) {
+						// top of a hill, keep looking
+						continue search
+					}
+					const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
+					s -= scale * dfpdx
+					t -= scale * dfpdy
+				}
+				const li = floor((s - sMin) / sStep), lj = floor((t - tMin) / tStep)
+				logTable.push({
+					i,
+					j,
+					li,
+					lj,
+					startS,
+					startT,
+					s,
+					t,
+					'bounds(s, t)': bounds(s, t),
+					'ic(s,t)': implicitCurve(s, t),
+				})
+				if (!(i == li && j == lj) && at(li, lj)) {
+					continue search
+				}
+				set(li, lj)
+				// s, t are now good starting coordinates to use follow algo
+				if (bounds(s, t) && eq0(implicitCurve(s, t))) {
+					console.log(V(s, t).sce)
+					const subresult = mkcurves(implicitCurve, s, t, stepSize, implicitCurve.x, implicitCurve.y, bounds)
+					for (const curvedata of subresult) {
+						assert(curvedata.points.length > 2)
+						for (const {x, y} of curvedata.points) {
+							const lif = (x - sMin) / sStep, ljf = (y - tMin) / tStep
+							set((lif - 0.5) | 0, (ljf - 0.5) | 0)
+							set((lif - 0.5) | 0, (ljf + 0.5) | 0)
+							set((lif + 0.5) | 0, (ljf - 0.5) | 0)
+							set((lif + 0.5) | 0, (ljf + 0.5) | 0)
+						}
+					}
+					result.push(...subresult)
+				}
+
+			}
+		}
+		//console.table(logTable)
+		for (const {points} of result) {
+			for (let i = 0; i < points.length - 1; i++) {
+				assert(!points[i].equals(points[i + 1]))
+			}
+		}
+		return result
+	}
+
 	toString() {
 		return this.toSource()
 	}
+
 	toSource(rounder: (x: number) => number = x => x): string {
 		return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters())
 	}
@@ -36,10 +204,10 @@ export abstract class Curve extends Transformable implements Equalable {
 		return new this.constructor(...this.getConstructorParameters().slice(0, -2), tMin, tMax)
 	}
 
-    /**
-     * Curve parameter t for point p on curve.
-     */
-    abstract pointT(p: V3): number
+	/**
+	 * Curve parameter t for point p on curve.
+	 */
+	abstract pointT(p: V3): number
 
 	/**
 	 * The point on the line that is closest to the given point.
@@ -56,15 +224,14 @@ export abstract class Curve extends Transformable implements Equalable {
 		return this.at(t).to(this.at(t + eps))
 	}
 
-
 	closestTToPoint(p: V3, tStart?: number): number {
 		// this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
 		// the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
 		// f = (this.at(t) - p) . (this.tangentAt(t)
 		// df = this.tangentAt(t) . this.tangentAt(t) + (this.at(t) - p) . this.ddt(t)
 		//    = this.tangentAt(t)² + (this.at(t) - p) . this.ddt(t)
-		const f = (t:number) => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
-		const df = (t:number) => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
+		const f = (t: number) => this.at(t).minus(p).dot(this.tangentAt(t)) // 5th degree polynomial
+		const df = (t: number) => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
 
 		const STEPS = 32
 		const startT = undefined !== tStart ? tStart :
@@ -127,20 +294,6 @@ export abstract class Curve extends Transformable implements Equalable {
 		return Curve.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax)
 	}
 
-
-	static integrate(curve: Curve, startT: number, endT: number, steps: int): number {
-		const step = (endT - startT) / steps
-		let length = 0
-		let p = curve.at(startT)
-		let i = 0, t = startT + step
-		for (; i < steps; i++, t += step) {
-			const next = curve.at(t)
-			length += p.distanceTo(next)
-			p = next
-		}
-		return length
-	}
-
 	/**
 	 * Curve point at parameter t.
 	 */
@@ -178,7 +331,7 @@ export abstract class Curve extends Transformable implements Equalable {
 
 	abstract equals(obj: any): boolean
 
-    abstract hashCode(): int
+	abstract hashCode(): int
 
 	/**
 	 * Return whether the curves occupy the same points in space. They do
@@ -210,59 +363,7 @@ export abstract class Curve extends Transformable implements Equalable {
 		return new AABB(V3.fromArray(mins), V3.fromArray(maxs))
 	}
 
-	static hlol = 0
-
-    abstract roots(): number[][]
-
-    static ispsRecursive(curve1: Curve, tMin: number, tMax: number, curve2: Curve, sMin: number, sMax: number): ISInfo[] {
-        // the recursive function finds good approximates for the intersection points
-        // curve1 function uses newton iteration to improve the result as much as possible
-        function handleStartTS(startT: number, startS: number) {
-            if (!result.some(info => eq(info.tThis, startT) && eq(info.tOther, startS))) {
-                const f1 = (t: number, s: number) => curve1.tangentAt(t).dot(curve1.at(t).minus(curve2.at(s)))
-                const f2 = (t: number, s: number) => curve2.tangentAt(s).dot(curve1.at(t).minus(curve2.at(s)))
-                // f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
-                const dfdt1 = (b1: Curve, b2: Curve, t1: number, t2: number) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
-                const dfdt2 = (b1: Curve, b2: Curve, t1: number, t2: number) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
-                const ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
-                    dfdt1.bind(undefined, curve1, curve2), dfdt2.bind(undefined, curve1, curve2),
-                    (t, s) => -dfdt2(curve2, curve1, s, t), (t, s) => -dfdt1(curve2, curve1, s, t))
-                assert(isFinite(ni.x))
-                assert(isFinite(ni.y))
-                if (ni == undefined) console.log(startT, startS, curve1.sce, curve2.sce)
-                result.push({tThis: ni.x, tOther: ni.y, p: curve1.at(ni.x)})
-            }
-        }
-
-        // returns whether an intersection was immediately found (i.e. without further recursion)
-        function findRecursive(tMin: number, tMax: number, sMin: number, sMax: number,
-                               curve1AABB: AABB, curve2AABB: AABB, depth = 0) {
-            const EPS = NLA_PRECISION
-            if (curve1AABB.fuzzyTouchesAABB(curve2AABB)) {
-                const tMid = (tMin + tMax) / 2
-                const sMid = (sMin + sMax) / 2
-                if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
-                    handleStartTS(tMid, sMid)
-                    return true
-                } else {
-                    const curve1AABBleft = curve1.getAABB(tMin, tMid)
-                    const curve2AABBleft = curve2.getAABB(sMin, sMid)
-                    let curve1AABBright, curve2AABBright
-                    // if one of the following calls immediately finds an intersection, we don't want to call the others
-                    // as that will lead to the same intersection being output multiple times
-                    findRecursive(tMin, tMid, sMin, sMid, curve1AABBleft, curve2AABBleft, depth + 1)
-                    || findRecursive(tMin, tMid, sMid, sMax, curve1AABBleft, curve2AABBright = curve2.getAABB(sMid, sMax), depth + 1)
-                    || findRecursive(tMid, tMax, sMin, sMid, curve1AABBright = curve1.getAABB(tMid, tMax), curve2AABBleft, depth + 1)
-                    || findRecursive(tMid, tMax, sMid, sMax, curve1AABBright, curve2AABBright, depth + 1)
-                }
-            }
-            return false
-        }
-
-        const result: ISInfo[] = []
-        findRecursive(tMin, tMax, sMin, sMax, curve1.getAABB(tMin, tMax), curve2.getAABB(sMin, sMax))
-        return fuzzyUniquesF(result, info => info.tThis)
-    }
+	abstract roots(): number[][]
 
 	reversed(): Curve {
 		throw new Error()
@@ -276,85 +377,14 @@ export abstract class Curve extends Transformable implements Equalable {
 		})
 	}
 
-	static breakDownIC(implicitCurve: MathFunctionR2R,
-	                   {sMin, sMax, tMin, tMax}: {sMin: number, sMax: number, tMin: number, tMax: number},
-	                   sStep: number, tStep: number,
-	                   stepSize: number,
-	                   dids?: R2_R,
-	                   didt?: R2_R): {points: V3[], tangents: V3[]}[] {
-		const EPS = 1 / (1 << 20)
-		//undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
-		//undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
-
-		const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
-		const deltaS = sMax - sMin, deltaT = tMax - tMin
-		const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
-		const grid = new Array(sRes * tRes).fill(0)
-		arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n')
-		const at = (i: int, j: int) => grid[j * sRes + i]
-		const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
-		const result: {points: V3[], tangents: V3[]}[] = []
-		const logTable = []
-		for (let i = 0; i < sRes; i++) {
-			search: for (let j = 0; j < tRes; j++) {
-				if (at(i, j)) continue
-				set(i, j)
-				let s = sMin + (i + 0.5) * sStep, t = tMin + (j + 0.5) * tStep
-				const startS = s, startT = t
-				// basically curvePoint
-				for (let k = 0; k < 8; k++) {
-					const fp = implicitCurve(s, t)
-					const dfpdx = implicitCurve.x(s, t), dfpdy = implicitCurve.y(s, t)
-					if(0 == dfpdx * dfpdx + dfpdy * dfpdy) {
-						// top of a hill, keep looking
-						continue search
-					}
-					const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
-					s -= scale * dfpdx
-					t -= scale * dfpdy
-				}
-				const li = floor((s - sMin) / sStep), lj = floor((t - tMin) / tStep)
-				logTable.push({i, j, li, lj, startS, startT, s, t, 'bounds(s, t)': bounds(s, t), 'ic(s,t)': implicitCurve(s, t)})
-				if (!(i == li && j == lj) && at(li, lj)) {
-					continue search
-				}
-				set(li, lj)
-				// s, t are now good starting coordinates to use follow algo
-				if (bounds(s, t) && eq0(implicitCurve(s, t))) {
-					console.log(V(s, t).sce)
-					const subresult = mkcurves(implicitCurve, s, t, stepSize, implicitCurve.x, implicitCurve.y, bounds)
-					for (const curvedata of subresult) {
-					assert (curvedata.points.length> 2)
-						for (const {x, y} of curvedata.points) {
-							const lif = (x - sMin) / sStep, ljf = (y - tMin) / tStep
-							set((lif - 0.5) | 0, (ljf - 0.5) | 0)
-							set((lif - 0.5) | 0, (ljf + 0.5) | 0)
-							set((lif + 0.5) | 0, (ljf - 0.5) | 0)
-							set((lif + 0.5) | 0, (ljf + 0.5) | 0)
-						}
-					}
-					result.push(...subresult)
-				}
-
-			}
-		}
-		//console.table(logTable)
-		for (const {points} of result) {
-			for (let i = 0; i < points.length - 1; i++) {
-				assert(!points[i].equals(points[i + 1]))
-			}
-		}
-		return result
-	}
-
 }
 
 function mkcurves(implicitCurve: MathFunctionR2R,
-                  sStart: number, tStart: number,
-                  stepSize: number,
-                  dids: R2_R,
-                  didt: R2_R,
-                  bounds: (s: number, t: number) => boolean): {points: V3[], tangents: V3[]}[] {
+				  sStart: number, tStart: number,
+				  stepSize: number,
+				  dids: R2_R,
+				  didt: R2_R,
+				  bounds: (s: number, t: number) => boolean): { points: V3[], tangents: V3[] }[] {
 	const start = V(sStart, tStart)
 	// checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
 	// checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
@@ -386,9 +416,10 @@ function mkcurves(implicitCurve: MathFunctionR2R,
 }
 
 type R2_R = (s: number, t: number) => number
+
 function curvePoint(implicitCurve: R2_R, startPoint: V3,
-                    dids: R2_R,
-                    didt: R2_R) {
+					dids: R2_R,
+					didt: R2_R) {
 	const eps = 1 / (1 << 20)
 	let p = startPoint
 	for (let i = 0; i < 8; i++) {
@@ -400,6 +431,7 @@ function curvePoint(implicitCurve: R2_R, startPoint: V3,
 	}
 	return p
 }
+
 function curvePointMF(mf: MathFunctionR2R, startPoint: V3, steps: int = 8, eps: number = 1 / (1 << 30)) {
 	let p = startPoint
 	for (let i = 0; i < steps; i++) {

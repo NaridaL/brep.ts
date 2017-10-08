@@ -1,18 +1,94 @@
-import {int, M4,NLA_PRECISION,TAU,V3,arrayFromFunction,arrayRange,assert,assertNumbers,assertf,checkDerivate,eq,eq0,glqInSteps,hasConstructor,le,lt,newtonIterate1d,newtonIterateSmart,pqFormula} from 'ts3dutils'
+import {
+	arrayFromFunction,
+	arrayRange,
+	assert,
+	assertf,
+	assertNumbers,
+	checkDerivate,
+	eq,
+	eq0,
+	glqInSteps,
+	hasConstructor,
+	int,
+	le,
+	lt,
+	M4,
+	newtonIterate1d,
+	newtonIterateSmart,
+	NLA_PRECISION,
+	pqFormula,
+	TAU,
+	V3,
+} from 'ts3dutils'
 
-import {Curve, L3, ISInfo,XiEtaCurve, intersectionUnitCircleLine, intersectionUnitCircleLine2} from '../index'
+import {Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, XiEtaCurve} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class EllipseCurve extends XiEtaCurve {
+	static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)
+
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = -PI, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
 		assert(EllipseCurve.isValidT(tMin))
-	    assert(EllipseCurve.isValidT(tMax))
+		assert(EllipseCurve.isValidT(tMax))
+	}
+
+	static isValidT(t) {
+		return -Math.PI <= t && t <= Math.PI
+	}
+
+	static XYLCValid(pLC: V3): boolean {
+		return eq(1, pLC.lengthXY())
+	}
+
+	/**
+	 * @param hint +-PI, whichever is correct
+	 */
+	static XYLCPointT(pLC: V3, hint?: number): number {
+		const angle = pLC.angleXY()
+		if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
+			assert(isFinite(hint))
+			return Math.sign(hint) * Math.PI
+		}
+		return angle
+	}
+
+	static magic(a: number, b: number, c: number): number[] {
+		const isLC = intersectionUnitCircleLine2(a, b, c)
+		return isLC.map(([xi, eta]) => Math.atan2(eta, xi))
+	}
+
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
+		// ell: x² + y² = 1 = p²
+		// line(t) = anchor + t dir
+		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
+		const pqDiv = dirLC.dot(dirLC)
+		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.dot(anchorLC) - 1) / pqDiv)
+		return lineTs.map(tOther => ({
+			tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
+			tOther: tOther,
+			p: L3.at(anchorWC, dirWC, tOther),
+		}))
+	}
+
+	/**
+	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
+	 */
+	static circle(radius: number, center: V3 = V3.O): EllipseCurve {
+		return new EllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
+	}
+
+	static circleForCenter2P(center: V3, a: V3, b: V3, radius: number) {
+		const f1 = center.to(a)
+		const normal = f1.cross(center.to(b))
+		const f2 = normal.cross(f1).toLength(f1.length())
+		const tMax = f1.angleTo(center.to(b))
+		return new EllipseCurve(center, f1, f2, 0, tMax)
 	}
 
 	// TODO: there'S alsoa commented out test
-	getVolZAnd(dir1: V3, tStart: number, tEnd: number): {volume: number, centroid: V3} {
+	getVolZAnd(dir1: V3, tStart: number, tEnd: number): { volume: number, centroid: V3 } {
 		// let p = at(t)
 		// integrate area [p -> plane.projectPoint(p)] to x axis...
 		// INTEGRATE[tStart, tEnd] fp(this.at(t)) dt
@@ -24,11 +100,12 @@ export class EllipseCurve extends XiEtaCurve {
 			const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2)
 			return area
 		}
+
 		const f = (t: number) => fp(this.at(t)) * this.tangentAt(t).cross(this.normal).unit().z
 		return {volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined}
 	}
 
-	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): {area: number, centroid: V3} {
+	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): { area: number, centroid: V3 } {
 		//assertf(() => tStart < tEnd)
 		assertf(() => right.isPerpendicularTo(this.normal))
 		assertf(() => up.isPerpendicularTo(this.normal))
@@ -70,19 +147,18 @@ export class EllipseCurve extends XiEtaCurve {
 		// cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
 		function cyTimesArea(t: number) { return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24 }
 
-		const restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart) )
+		const restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart))
 		const area = fArea(normTEnd) - fArea(normTStart) + restArea
 		const cxt = (cxTimesArea(normTEnd) - cxTimesArea(normTStart) + -transformedOriginY * (-Math.cos(normTEnd) - Math.cos(normTStart)) / 2 * restArea) / area
 		const cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area
 		const factor = this.matrix.xyAreaFactor() // * upLC.length()
 		//console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
 		assert(!eq0(factor))
-		return {area: area * factor, centroid: this.matrix.transformPoint(M4.rotateZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0)))}
+		return {
+			area: area * factor,
+			centroid: this.matrix.transformPoint(M4.rotateZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0))),
+		}
 
-	}
-
-	static isValidT(t) {
-		return -Math.PI <= t && t <= Math.PI
 	}
 
 	at(t: number): V3 {
@@ -132,22 +208,6 @@ export class EllipseCurve extends XiEtaCurve {
 		}
 	}
 
-	static XYLCValid(pLC: V3): boolean {
-		return eq(1, pLC.lengthXY())
-	}
-
-	/**
-	 * @param hint +-PI, whichever is correct
-	 */
-	static XYLCPointT(pLC: V3, hint?: number): number {
-		const angle = pLC.angleXY()
-		if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
-			assert(isFinite(hint))
-			return Math.sign(hint) * Math.PI
-		}
-		return angle
-	}
-
 	eccentricity() {
 		const mainAxes = this.rightAngled()
 		const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length()
@@ -187,18 +247,14 @@ export class EllipseCurve extends XiEtaCurve {
 			f1.times(-eta).plus(f2.times(xi)))
 	}
 
-	static magic(a: number, b: number, c: number): number[] {
-		const isLC = intersectionUnitCircleLine2(a, b, c)
-		return isLC.map(([xi, eta]) => Math.atan2(eta, xi))
-	}
-
 	isInfosWithEllipse(ellipse: EllipseCurve): ISInfo[] {
 		if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 
 			// ellipses are coplanar
 			const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled()
 
-			const r1 = ellipseLCRA.f1.lengthXY(), r2 = ellipseLCRA.f2.lengthXY(), centerDist = ellipseLCRA.center.lengthXY()
+			const r1 = ellipseLCRA.f1.lengthXY(), r2 = ellipseLCRA.f2.lengthXY(),
+				centerDist = ellipseLCRA.center.lengthXY()
 			const rMin = min(r1, r2), rMax = max(r1, r2)
 			if (lt(centerDist + rMax, 1) || // entirely inside unit circle
 				lt(1, centerDist - rMax) || // entirely outside unit circle
@@ -209,11 +265,11 @@ export class EllipseCurve extends XiEtaCurve {
 			}
 
 			const f = (t: number) => ellipseLCRA.at(t).lengthXY() - 1
-			const df =(t: number) => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
+			const df = (t: number) => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
 			checkDerivate(f, df, -PI, PI, 1)
 			const ts: number[] = []
-			const tsvs = arrayRange(-4/5 * PI, PI, PI/4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
-			for (let startT = -4/5 * PI; startT < PI; startT += PI / 4) {
+			const tsvs = arrayRange(-4 / 5 * PI, PI, PI / 4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
+			for (let startT = -4 / 5 * PI; startT < PI; startT += PI / 4) {
 				let t = newtonIterateSmart(f, startT, 16, df, 1e-4)
 				le(t, -PI) && (t += TAU)
 				assert(!isNaN(t))
@@ -238,21 +294,13 @@ export class EllipseCurve extends XiEtaCurve {
 			//	return lex * lex / aSqr + ley * ley / bSqr - 1
 			//}
 			//const f2 = (x, y) => (x * x + y * y - 1)
-			//const f3 = (x, y) => ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) / bSqr - 1)
-			//const results = []
-			//const resetMatrix = this.matrix.times(M4.rotateZ(angle))
-			//for (let startT = Math.PI / 4; startT < 2 * Math.PI; startT += Math.PI / 2) {
-			//	const startP = EllipseCurve.XY.at(startT)
-			//	const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10)
-			//	if (p && !results.some(r => r.like(p))) {
-			//		results.push(p)
-			//	}
-			//}
-			//const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0))
-			//return results.map(pLC => {
-			//	const p = resetMatrix.transformPoint(pLC)
-			//	return {tThis: this.pointT(p, PI), tOther: ellipse.pointT(p, PI), p}
-			//})
+			//const f3 = (x, y) => ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) /
+			// bSqr - 1) const results = [] const resetMatrix = this.matrix.times(M4.rotateZ(angle)) for (let startT =
+			// Math.PI / 4; startT < 2 * Math.PI; startT += Math.PI / 2) { const startP = EllipseCurve.XY.at(startT)
+			// const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10) if (p && !results.some(r => r.like(p))) {
+			// results.push(p) } } const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0)) return
+			// results.map(pLC => { const p = resetMatrix.transformPoint(pLC) return {tThis: this.pointT(p, PI),
+			// tOther: ellipse.pointT(p, PI), p} })
 		} else {
 			return this.isTsWithPlane(ellipse.getPlane()).mapFilter(t => {
 				const p = this.at(t)
@@ -261,18 +309,6 @@ export class EllipseCurve extends XiEtaCurve {
 				}
 			})
 		}
-	}
-
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
-		// ell: x² + y² = 1 = p²
-		// line(t) = anchor + t dir
-		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
-		const pqDiv = dirLC.dot(dirLC)
-		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.dot(anchorLC) - 1) / pqDiv)
-		return lineTs.map(tOther => ({
-			tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
-			tOther: tOther,
-			p: L3.at(anchorWC, dirWC, tOther)}))
 	}
 
 	isInfosWithCurve(curve: Curve): ISInfo[] {
@@ -289,7 +325,7 @@ export class EllipseCurve extends XiEtaCurve {
 
 		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim), b = -this.f1.e(dim)
-			const {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
+			const {x1, y1, x2, y2} = intersectionUnitCircleLine(a, b, 0)
 			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]
 		})
 	}
@@ -307,13 +343,6 @@ export class EllipseCurve extends XiEtaCurve {
 		return newtonIterate1d(f, startT)
 	}
 
-	/**
-	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
-	 */
-	static circle(radius: number, center: V3 = V3.O): EllipseCurve {
-		return new EllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
-	}
-
 	area(): number {
 		// see
 		// https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
@@ -326,16 +355,7 @@ export class EllipseCurve extends XiEtaCurve {
 		const dirLC = this.inverseMatrix.transformVector(phiDir)
 		return dirLC.angleXY()
 	}
-
-    static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)
-
-	static circleForCenter2P(center: V3, a: V3, b: V3, radius: number) {
-		const f1 = center.to(a)
-		const normal = f1.cross(center.to(b))
-		const f2 = normal.cross(f1).toLength(f1.length())
-		const tMax = f1.angleTo(center.to(b))
-		return new EllipseCurve(center, f1, f2, 0, tMax)
-	}
 }
+
 EllipseCurve.prototype.hlol = Curve.hlol++
 EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 800)

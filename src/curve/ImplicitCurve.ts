@@ -1,14 +1,14 @@
-import {int, M4,TAU,V3,arrayFromFunction,arrayRange,assert,assertVectors,clamp} from 'ts3dutils'
+import {arrayFromFunction, arrayRange, assert, assertVectors, clamp, int, M4, TAU, V3} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, } from '../index'
+import {Curve,} from '../index'
 
 const {ceil, floor} = Math
 
 export class ImplicitCurve extends Curve {
 	constructor(readonly points: V3[],
-	            readonly tangents: V3[],
-	            readonly dir: number = 1,
+				readonly tangents: V3[],
+				readonly dir: number = 1,
 				readonly generator?: string,
 				tMin: number = (1 == dir ? 0 : -(points.length - 1)),
 				tMax: number = (1 == dir ? points.length - 1 : 0)) {
@@ -64,15 +64,15 @@ export class ImplicitCurve extends Curve {
 	}
 
 	transform(m4: M4): ImplicitCurve {
-	    return new ImplicitCurve(
-		    m4.transformedPoints(this.points),
-		    m4.transformedVectors(this.tangents))
-    }
+		return new ImplicitCurve(
+			m4.transformedPoints(this.points),
+			m4.transformedVectors(this.tangents))
+	}
 
-    roots(): [number[], number[], number[]] {
+	roots(): [number[], number[], number[]] {
 		const allTs = arrayRange(0, this.points.length)
 		return [allTs, allTs, allTs]
-    }
+	}
 
 	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
@@ -98,4 +98,5 @@ export class ImplicitCurve extends Curve {
 		}
 	}
 }
+
 ImplicitCurve.prototype.tIncrement = 1

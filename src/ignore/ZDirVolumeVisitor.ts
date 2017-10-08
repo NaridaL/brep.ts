@@ -1,5 +1,5 @@
 ///<reference path="ConicSurface.ts"/>
-const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => {volume: number, centroid: any} } = {
+const ZDirVolumeVisitor: { [className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => { volume: number, centroid: any } } = {
 	/**
 	 * at(t)
 	 * |\                                    ^
@@ -14,7 +14,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	 * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
 	 * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
 	 */
-	[ConicSurface.name](this: ConicSurface, allEdges: Edge[]): {volume: number, centroid: any} {
+	[ConicSurface.name](this: ConicSurface, allEdges: Edge[]): { volume: number, centroid: any } {
 		// INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z
 		const totalVolume = allEdges.map(edge => {
 			if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
@@ -40,12 +40,14 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 		return {volume: totalVolume * Math.sign(this.normal.dot(this.dir))}
 	},
 
-    [PlaneSurface.name](): {centroid: V3, volume: number} {
-        const {centroid, area} = this.calculateArea()
-        return {volume: this.surface.plane.normal1.z * centroid.z * area,
-            centroid: new V3(centroid.x, centroid.y, centroid.z / 2) }
+	[PlaneSurface.name](): { centroid: V3, volume: number } {
+		const {centroid, area} = this.calculateArea()
+		return {
+			volume: this.surface.plane.normal1.z * centroid.z * area,
+			centroid: new V3(centroid.x, centroid.y, centroid.z / 2),
+		}
 
-    },
+	},
 	/**
 	 * at(t)
 	 * |\                                    ^
@@ -60,7 +62,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
 	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
 	 */
-	[SemiCylinderSurface.name](this: SemiCylinderSurface, allEdges: Edge[]): {volume: number, centroid: any} {
+	[SemiCylinderSurface.name](this: SemiCylinderSurface, allEdges: Edge[]): { volume: number, centroid: any } {
 		if (V3.Z.cross(this.dir).likeO()) return {volume: 0}
 		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
 		const scalingVector = this.dir.cross(V3.Z).unit()
@@ -82,7 +84,8 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 					//	"atz", at.z)
 					return area * scale
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
+				// area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
 				return val * sign
@@ -110,7 +113,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
 	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
 	 */
-	zDirVolume(edges: Edge[]): {volume: number, centroid: any} {
+	zDirVolume(edges: Edge[]): { volume: number, centroid: any } {
 		if (V3.Z.cross(this.dir).likeO()) return {volume: 0}
 		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
 		const scalingVector = this.dir.cross(V3.Z).unit()
@@ -132,7 +135,8 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 					//	"atz", at.z)
 					return area * scale
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
+				// area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
 				return val * sign
@@ -160,14 +164,14 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	 * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
 	 * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
 	 */
-	[CylinderSurface.name](this: CylinderSurface, edges: Edge[]): {volume: number} {
+	[CylinderSurface.name](this: CylinderSurface, edges: Edge[]): { volume: number } {
 		if (V3.Z.cross(this.dir).likeO()) return {volume: 0}
 		// the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
 		const scalingVector = this.dir.cross(V3.Z).unit()
 		// the length of the base of the trapezoid is calculated by dotting with the baseVector
 		const baseVector = this.dir.rejectedFrom(V3.Z).unit()
 		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-		console.log("scalingVector", scalingVector.sce)
+		console.log('scalingVector', scalingVector.sce)
 		const totalArea = edges.map(edge => {
 			if (edge.curve instanceof EllipseCurve) {
 				const f = (t) => {
@@ -183,10 +187,11 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 					//	"atz", at.z)
 					return area * scale
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
+				// area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val, sign)
+				console.log('edge', edge, val, sign)
 				return val * sign
 			} else if (edge.curve instanceof L3) {
 				return 0
@@ -204,9 +209,10 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	// now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
 	// we need to split the transformed loop along the local seam plane
 	// and then sum the zDir volumes of the resulting loops
-	[EllipsoidSurface.name](this: EllipsoidSurface, loop: Edge[]): {centroid: V3, volume: number} {
+	[EllipsoidSurface.name](this: EllipsoidSurface, loop: Edge[]): { centroid: V3, volume: number } {
 		const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
 		const T = M4.rotateAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix)
+
 		function calc(loop) {
 			let totalVolume = 0
 			assert(V3.Z.isParallelTo(T.transformVector(V3.Z)))
@@ -220,16 +226,18 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 					const at2d = at.withElement('z', 0)
 					const angleAdjusted = (at.angleXY() + TAU - NLA_PRECISION) % TAU + NLA_PRECISION
 					const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.unit())) * Math.sign(tangent.z)
-					//console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
+					//console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, '
+					// edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
 					return result
 				}
 
 				const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-				console.log("edge", edge, "volume", volume)
+				console.log('edge', edge, 'volume', volume)
 				totalVolume += volume
 			})
 			return totalVolume
 		}
+
 		const [front, back] = EllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
 		const localVolume = calc(front, PI) + calc(back, -PI)
 
@@ -244,25 +252,27 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 		//const zDistanceFactor = toT.transformVector(V3.Z).length()
 		loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
 			const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
-			function f (t) {
+
+			function f(t) {
 				const at2d = edge.curve.at(t).withElement('x', 0)
 				const result = 1 / 3 * (1 - (at2d.y ** 2 + at2d.z ** 2)) * edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()))
-				console.log("at2d", at2d.sce, "result", result)
+				console.log('at2d', at2d.sce, 'result', result)
 				return result
 			}
+
 			//if (edge.)
 			if (edge.b.like(V3.X)) {
 				const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
 				totalVolume += 2 / 3 * angleDiff
-				console.log("xaa")
+				console.log('xaa')
 			}
 			if (edge.b.like(V3.X.negated())) {
 				const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
 				totalVolume += 2 / 3 * angleDiff
-				console.log("xbb")
+				console.log('xbb')
 			}
 			const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-			console.log("edge", edge, "volume", volume)
+			console.log('edge', edge, 'volume', volume)
 			totalVolume += volume
 		})
 
@@ -275,9 +285,10 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 	// now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
 	// we need to split the transformed loop along the local seam plane
 	// and then sum the zDir volumes of the resulting loops
-	[SemiEllipsoidSurface.name](loop: Edge[]): {volume: number, centroid: V3} {
+	[SemiEllipsoidSurface.name](loop: Edge[]): { volume: number, centroid: V3 } {
 		const angles = this.inverseMatrix.transformVector(V3.Z).toAngles()
 		const T = M4.rotateAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix)
+
 		function calc(loop) {
 			let totalVolume = 0
 			assert(V3.Z.isParallelTo(T.transformVector(V3.Z)))
@@ -291,7 +302,8 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 					const at2d = at.withElement('z', 0)
 					const angleAdjusted = (at.angleXY() + TAU - NLA_PRECISION) % TAU + NLA_PRECISION
 					const result = angleAdjusted * Math.sqrt(1 - r * r) * r * Math.abs(tangent.dot(at2d.unit())) * Math.sign(tangent.z)
-					//console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, ' edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
+					//console.log("at2d", at2d.sce, "result", result, 'angle', angleAdjusted, '
+					// edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
 					return result
 				}
 
@@ -300,6 +312,7 @@ const ZDirVolumeVisitor: {[className: string]: <T extends Surface>(this: T, allE
 			})
 			return totalVolume
 		}
+
 		const [front, back] = SemiEllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw)
 		const localVolume = calc(front, PI) + calc(back, -PI)
 

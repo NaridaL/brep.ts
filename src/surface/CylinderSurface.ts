@@ -1,13 +1,21 @@
-import {M4,NLA_PRECISION,TAU,V3,assert,assertInst,assertVectors,eq0,isCCW,pqFormula} from 'ts3dutils'
+import {assert, assertInst, assertVectors, eq0, isCCW, M4, NLA_PRECISION, pqFormula, TAU, V3} from 'ts3dutils'
 
-import {Curve, P3, Surface, ProjectedCurveSurface, L3, Edge,
-    SemiEllipseCurve,
-    EllipseCurve,
-    PointVsFace} from '../index'
+import {
+	Curve,
+	Edge,
+	EllipseCurve,
+	L3,
+	P3,
+	PointVsFace,
+	ProjectedCurveSurface,
+	SemiEllipseCurve,
+	Surface,
+} from '../index'
 
 const {PI} = Math
 
 export class CylinderSurface extends ProjectedCurveSurface {
+	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly baseCurve: EllipseCurve
@@ -23,6 +31,31 @@ export class CylinderSurface extends ProjectedCurveSurface {
 		this.inverseMatrix = this.matrix.inversed()
 	}
 
+	static cylinder(radius: number): CylinderSurface {
+		return new CylinderSurface(new EllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z)
+	}
+
+	/**
+	 *
+	 * @param anchor
+	 * @param dir not necessarily unit
+	 */
+	static unitISLineTs(anchor: V3, dir: V3): number[] {
+		const {x: ax, y: ay} = anchor
+		const {x: dx, y: dy} = dir
+
+		// this cylinder: x² + y² = 1
+		// line: p = anchor + t * dir
+		// split line equation into 3 component equations, insert into cylinder equation
+		// x = ax + t * dx
+		// y = ay + t * dy
+		// (ax² + 2 ax t dx + t²dx²) + (ay² + 2 ay t dy + t²dy²) = 1
+		// transform to form (a t² + b t + c = 0) and solve with pqFormula
+		const a = dx ** 2 + dy ** 2
+		const b = 2 * (ax * dx + ay * dy)
+		const c = ax ** 2 + ay ** 2 - 1
+		return pqFormula(b / a, c / a)
+	}
 
 	getConstructorParameters(): any[] {
 		return [this.baseCurve, this.dir]
@@ -148,32 +181,6 @@ export class CylinderSurface extends ProjectedCurveSurface {
 		}
 	}
 
-	static cylinder(radius: number): CylinderSurface {
-		return new CylinderSurface(new EllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z)
-	}
-
-	/**
-	 *
-	 * @param anchor
-	 * @param dir not necessarily unit
-	 */
-	static unitISLineTs(anchor: V3, dir: V3): number[] {
-		const {x: ax, y: ay} = anchor
-		const {x: dx, y: dy} = dir
-
-		// this cylinder: x² + y² = 1
-		// line: p = anchor + t * dir
-		// split line equation into 3 component equations, insert into cylinder equation
-		// x = ax + t * dx
-		// y = ay + t * dy
-		// (ax² + 2 ax t dx + t²dx²) + (ay² + 2 ay t dy + t²dy²) = 1
-		// transform to form (a t² + b t + c = 0) and solve with pqFormula
-		const a = dx ** 2 + dy ** 2
-		const b = 2 * (ax * dx + ay * dy)
-		const c = ax ** 2 + ay ** 2 - 1
-		return pqFormula(b / a, c / a)
-	}
-
 	facesOutwards(): boolean {
 		return this.baseCurve.normal.dot(this.dir) > 0
 	}
@@ -181,10 +188,9 @@ export class CylinderSurface extends ProjectedCurveSurface {
 	getSeamPlane(): P3 {
 		return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir)
 	}
-
-	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)
 }
-CylinderSurface.prototype.uStep = TAU  / 128
+
+CylinderSurface.prototype.uStep = TAU / 128
 CylinderSurface.prototype.vStep = 256
 
 

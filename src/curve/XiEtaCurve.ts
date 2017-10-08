@@ -1,7 +1,21 @@
-import {int, M4,NLA_PRECISION,TAU,V,V3,arrayFromFunction,assertInst,assertNumbers,assertVectors,assertf,eq0,hasConstructor} from 'ts3dutils'
+import {
+	arrayFromFunction,
+	assertf,
+	assertInst,
+	assertNumbers,
+	assertVectors,
+	eq0,
+	hasConstructor,
+	int,
+	M4,
+	NLA_PRECISION,
+	TAU,
+	V,
+	V3,
+} from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {Curve, P3, Surface, ProjectedCurveSurface, L3, ISInfo, BezierCurve, EllipseCurve, ConicSurface,} from '../index'
+import {BezierCurve, ConicSurface, Curve, EllipseCurve, ISInfo, L3, P3, ProjectedCurveSurface, Surface,} from '../index'
 
 const {PI} = Math
 
@@ -9,12 +23,13 @@ export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3
 	readonly matrix: M4
 	readonly inverseMatrix: M4
+	'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
 
 	constructor(readonly center: V3,
-	            readonly f1: V3,
-	            readonly f2: V3,
-	            readonly tMin: number = -PI,
-	            readonly tMax: number = PI) {
+				readonly f1: V3,
+				readonly f2: V3,
+				readonly tMin: number = -PI,
+				readonly tMax: number = PI) {
 		super(tMin, tMax)
 		assertVectors(center, f1, f2)
 		this.normal = f1.cross(f2)
@@ -33,7 +48,35 @@ export abstract class XiEtaCurve extends Curve {
 		}
 	}
 
-	addToMesh(mesh: Mesh & {TRIANGLES: int[], normals: V3[]}, res: int = 4, radius: number = 0, pointStep = 1): void {
+	static magic(a: number, b: number, c: number): number[] {
+		throw new Error('abstract')
+	}
+
+	/**
+	 * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
+	 * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
+	 *
+	 * @param a length of the axis parallel to X axis
+	 * @param b length of the axis parallel to Y axis
+	 * @param center Defaults to V3.O
+	 */
+	static forAB(a: number, b: number, center: V3 = V3.O): XiEtaCurve {
+		return new (this as any)(center, V(a, 0, 0), V(0, b, 0))
+	}
+
+	static XYLCValid(pLC: V3): boolean {
+		throw new Error('abstract')
+	}
+
+	static XYLCPointT(pLC: V3): number {
+		throw new Error('abstract')
+	}
+
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
+		throw new Error('abstract')
+	}
+
+	addToMesh(mesh: Mesh & { TRIANGLES: int[], normals: V3[] }, res: int = 4, radius: number = 0, pointStep = 1): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
 		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
 		const inc = this.tIncrement
@@ -55,8 +98,6 @@ export abstract class XiEtaCurve extends Curve {
 			mesh.vertices.push(...matrix.transformedPoints(baseVertices))
 		}
 	}
-
-	'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
 
 	getConstructorParameters(): any[] {
 		return [this.center, this.f1, this.f2, this.tMin, this.tMax]
@@ -152,10 +193,6 @@ export abstract class XiEtaCurve extends Curve {
 		return this.constructor.magic(g1, g2, g3)
 	}
 
-	static magic(a: number, b: number, c: number): number[] {
-		throw new Error('abstract')
-	}
-
 	pointT(p: V3): number {
 		assertVectors(p)
 		const pLC = this.inverseMatrix.transformPoint(p)
@@ -186,7 +223,8 @@ export abstract class XiEtaCurve extends Curve {
 				return [{
 					tThis: this.constructor.XYLCPointT(isp),
 					tOther: otherTAtZ0,
-					p: anchorWC.plus(dirWC.times(otherTAtZ0))}]
+					p: anchorWC.plus(dirWC.times(otherTAtZ0)),
+				}]
 			}
 		}
 		return []
@@ -238,18 +276,6 @@ export abstract class XiEtaCurve extends Curve {
 		return this.f1.isPerpendicularTo(this.f2)
 	}
 
-	/**
-	 * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
-	 * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
-	 *
-	 * @param a length of the axis parallel to X axis
-	 * @param b length of the axis parallel to Y axis
-	 * @param center Defaults to V3.O
-	 */
-	static forAB(a: number, b: number, center: V3 = V3.O): XiEtaCurve {
-		return new (this as any)(center, V(a, 0, 0), V(0, b, 0))
-	}
-
 	at2(xi: number, eta: number): V3 {
 		assertNumbers(xi, eta)
 		// center + f1 xi + f2 eta
@@ -266,18 +292,6 @@ export abstract class XiEtaCurve extends Curve {
 		mesh[bufferName].push(this.center, this.center.plus(this.f1.times(1.2)))
 		mesh[bufferName].push(this.center, this.center.plus(this.f2))
 		mesh[bufferName].push(this.center, this.center.plus(this.normal))
-	}
-
-	static XYLCValid(pLC: V3): boolean {
-		throw new Error('abstract')
-	}
-
-	static XYLCPointT(pLC: V3): number {
-		throw new Error('abstract')
-	}
-
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
-		throw new Error('abstract')
 	}
 
 }

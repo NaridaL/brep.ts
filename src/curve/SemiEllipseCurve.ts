@@ -1,38 +1,112 @@
-import {int, TAU,V3,arrayFromFunction,assert,assertNumbers,assertVectors,eq,eq0,hasConstructor,le,newtonIterate1d,pqFormula} from 'ts3dutils'
-import {Mesh} from 'tsgl'
+import {
+	arrayFromFunction,
+	assert,
+	assertNumbers,
+	assertVectors,
+	eq,
+	eq0,
+	hasConstructor,
+	int,
+	le,
+	newtonIterate1d,
+	pqFormula,
+	TAU,
+	V3,
+} from 'ts3dutils'
 
-import {Curve, P3, L3, ISInfo,XiEtaCurve, EllipseCurve, intersectionUnitCircleLine2, intersectionUnitCircleLine} from '../index'
+import {
+	Curve,
+	EllipseCurve,
+	intersectionUnitCircleLine,
+	intersectionUnitCircleLine2,
+	ISInfo,
+	L3,
+	P3,
+	XiEtaCurve,
+} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class SemiEllipseCurve extends XiEtaCurve {
+	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
+
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
 		assert(0 <= this.tMin && this.tMin < PI)
 		assert(0 < this.tMax && this.tMax <= PI)
 	}
 
-	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): {area: number, centroid: V3} {
+	static XYLCValid(pLC: V3): boolean {
+		const {x, y} = pLC
+		return le(0, y) && eq0(x ** 2 + y ** 2 - 1)
+	}
+
+	static XYLCPointT(pLC: V3): number {
+		// assert(le(0, pLC.y))
+		const angle = Math.atan2(pLC.y, pLC.x)
+		return angle < -PI / 2 ? angle + TAU : angle // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) :
+													 // angle
+	}
+
+	static magic(a: number, b: number, c: number): number[] {
+		const isLC = intersectionUnitCircleLine2(a, b, c)
+		const result = []
+		let t
+		for (const [xi, eta] of isLC) {
+			le(0, eta) && result.push(SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0)))
+		}
+		return result
+	}
+
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
+		// ell: x² + y² = 1 = p²
+		// line(t) = anchor + t dir
+		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
+		const pqDiv = dirLC.squared()
+		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv)
+		return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y))
+			.map(tOther => ({
+				tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
+				tOther: tOther,
+				p: L3.at(anchorWC, dirWC, tOther),
+			}))
+	}
+
+	/**
+	 * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
+	 */
+	static semicircle(radius: number, center: V3 = V3.O): SemiEllipseCurve {
+		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
+	}
+
+	static fromEllipse(curve: EllipseCurve, tMin: number, tMax: number): SemiEllipseCurve[] {
+		return [
+			tMin < 0 && new SemiEllipseCurve(curve.center, curve.f1.negated(), curve.f2.negated(), tMin + PI, min(0, tMax) + PI),
+			tMax > 0 && new SemiEllipseCurve(curve.center, curve.f1, curve.f2, max(0, tMin), tMax),
+		].filter(x => x)
+	}
+
+	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): { area: number, centroid: V3 } {
 		return EllipseCurve.prototype.getAreaInDir.call(this, right, up, tStart, tEnd)
 	}
 
 	at(t: number): V3 {
-        assertNumbers(t)
-        //assert(this.isValidT(t))
-        // center + f1 cos t + f2 sin t
+		assertNumbers(t)
+		//assert(this.isValidT(t))
+		// center + f1 cos t + f2 sin t
 		return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
 	}
 
 	tangentAt(t: number): V3 {
 		assertNumbers(t)
-        //assert(this.isValidT(t))
+		//assert(this.isValidT(t))
 		// f2 cos(t) - f1 sin(t)
 		return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t)))
 	}
 
 	ddt(t: number): V3 {
 		assertNumbers(t)
-        assert(this.isValidT(t))
+		assert(this.isValidT(t))
 		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)))
 	}
 
@@ -62,28 +136,17 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		}
 	}
 
-	static XYLCValid(pLC: V3): boolean {
-		const {x, y} = pLC
-		return le(0, y) && eq0(x ** 2 + y ** 2 - 1)
-	}
-
-	static XYLCPointT(pLC: V3): number {
-		// assert(le(0, pLC.y))
-		const angle = Math.atan2(pLC.y, pLC.x)
-		return angle < -PI/2 ? angle + TAU : angle // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) : angle
-	}
-
 	isValidT(t: number) {
 		return le(0, t) && le(t, PI)
 	}
 
 	pointT(p: V3) {
 		assertVectors(p)
-        assert(this.containsPoint(p))
+		assert(this.containsPoint(p))
 		const pLC = this.inverseMatrix.transformPoint(p)
 		const t = SemiEllipseCurve.XYLCPointT(pLC)
 		assert(this.isValidT(t))
-        return t
+		return t
 	}
 
 	reversed(): SemiEllipseCurve {
@@ -118,7 +181,6 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 
-
 	/**
 	 * Radii of the ellipse are described by
 	 * q(phi) = f1 * cos(phi) + f2 * sin(phi)
@@ -141,26 +203,16 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	 * with g1 = 2 * a, g2 = b +- sqrt(b² - 4 * a²)
 	 * Solve (3), (2) with intersectionUnitCircleLine
 	 */
-    rightAngled(): SemiEllipseCurve {
-	    const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared()
-	    if (eq0(a)) {
-		    return this
-	    }
-	    const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a)
-	    const {x1: xi, y1: eta} = intersectionUnitCircleLine(g1, g2, 0)
-	    const f1RA = f1.times(xi).plus(f2.times(eta))
-	    const f2RA = f1.times(-eta).plus(f2.times(xi))
-        return new SemiEllipseCurve(this.center, f1RA, f2RA)
-    }
-
-	static magic(a: number, b: number, c: number): number[] {
-		const isLC = intersectionUnitCircleLine2(a, b, c)
-		const result = []
-		let t
-		for (const [xi, eta] of isLC) {
-			le(0, eta) && result.push(SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0)))
+	rightAngled(): SemiEllipseCurve {
+		const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared()
+		if (eq0(a)) {
+			return this
 		}
-		return result
+		const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a)
+		const {x1: xi, y1: eta} = intersectionUnitCircleLine(g1, g2, 0)
+		const f1RA = f1.times(xi).plus(f2.times(eta))
+		const f2RA = f1.times(-eta).plus(f2.times(xi))
+		return new SemiEllipseCurve(this.center, f1RA, f2RA)
 	}
 
 	asEllipse(): EllipseCurve {
@@ -181,25 +233,12 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		}
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
-		// ell: x² + y² = 1 = p²
-		// line(t) = anchor + t dir
-		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
-		const pqDiv = dirLC.squared()
-		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv)
-		return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y))
-			.map(tOther => ({
-				tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
-				tOther: tOther,
-				p: L3.at(anchorWC, dirWC, tOther)}))
-	}
-
 	isInfosWithCurve(curve: Curve): ISInfo[] {
-        if (curve instanceof SemiEllipseCurve || curve instanceof EllipseCurve) {
-            return this.isInfosWithEllipse(curve)
-        }
-        return super.isInfosWithCurve(curve)
-    }
+		if (curve instanceof SemiEllipseCurve || curve instanceof EllipseCurve) {
+			return this.isInfosWithEllipse(curve)
+		}
+		return super.isInfosWithCurve(curve)
+	}
 
 	roots(): [number[], number[], number[]] {
 		// tangent(t) = f2 cos t - f1 sin t
@@ -208,7 +247,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 
 		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim), b = -this.f1.e(dim)
-			const {x1,y1,x2,y2} = intersectionUnitCircleLine(a, b, 0)
+			const {x1, y1, x2, y2} = intersectionUnitCircleLine(a, b, 0)
 			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]
 		})
 	}
@@ -226,20 +265,11 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return newtonIterate1d(f, startT)
 	}
 
-	/**
-	 * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
-	 */
-	static semicircle(radius: number, center: V3 = V3.O): SemiEllipseCurve {
-		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
-	}
-
 	area(): number {
 		// see
 		// https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
 		return Math.PI * this.f1.cross(this.f2).length()
 	}
-
-	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
 
 	angleToT(phi: number): number {
 		// atan2(y, x) = phi
@@ -247,13 +277,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const localDir = this.inverseMatrix.transformVector(phiDir)
 		return localDir.angleXY()
 	}
-
-	static fromEllipse(curve: EllipseCurve, tMin: number, tMax: number): SemiEllipseCurve[] {
-		return [
-			tMin < 0 && new SemiEllipseCurve(curve.center, curve.f1.negated(), curve.f2.negated(), tMin + PI, min(0, tMax) + PI),
-			tMax > 0 && new SemiEllipseCurve(curve.center, curve.f1, curve.f2, max(0, tMin), tMax)
-		].filter(x => x)
-	}
 }
+
 SemiEllipseCurve.prototype.hlol = Curve.hlol++
 SemiEllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 32)

@@ -1,12 +1,15 @@
 interface ElementConstructor {
 	prototype: Element
+
 	new(): Element
-	new (tagNameOrCSSSelector: string, properties?: {[prop: string]: any})
+
+	new (tagNameOrCSSSelector: string, properties?: { [prop: string]: any })
 }
 
 /////// Element
 interface Element {
-	new (tagNameOrCSSSelector: string, properties: {[prop: string]: any})
+	new (tagNameOrCSSSelector: string, properties: { [prop: string]: any })
+
 	new (el: HTMLElement, properties: {})
 
 	/**
@@ -81,7 +84,8 @@ interface Element {
 	 Element, Element.Properties, Element:setProperty, Element:addEvents, Element:setStyles
 	 */
 	set(property: string, value: any)
-	set(properties: { [property: string] : any })
+
+	set(properties: { [property: string]: any })
 
 	/**
 	 *
@@ -129,22 +133,26 @@ interface Element {
 	 * @returns If the element matched, returns true. Otherwise, returns false.
 	 */
 	match(match: string): boolean
+
 	match(match: Element): boolean
 
 	contains(el: Element): boolean
 
 	inject(elOrId: Element | string, where?: 'top' | 'bottom' | 'after' | 'before'): this
+
 	grab(elOrId: Element | string, where?: 'top' | 'bottom' | 'after' | 'before'): this
 
 	adopt(elsOrId: Element | Element[] | string, ...others: (Element | Element[])[]): this
 
-	wraps(elOrId: Element | string, where: 'top'|'bottom'): this
+	wraps(elOrId: Element | string, where: 'top' | 'bottom'): this
 
-	addEvent(type: string, fn: (e: DOMEvent) => any):this
-	addEvents(events:{[type: string] :  (e: DOMEvent) => any}):this
+	addEvent(type: string, fn: (e: DOMEvent) => any): this
 
-	removeEvents(type:string):this
-	removeEvents(events:{[type: string] :  (e: DOMEvent) => any}):this
+	addEvents(events: { [type: string]: (e: DOMEvent) => any }): this
+
+	removeEvents(type: string): this
+
+	removeEvents(events: { [type: string]: (e: DOMEvent) => any }): this
 
 	/**
 	 Works like [Element:grab](#Element:grab), but instead of accepting an id or an element, it only accepts an HTML string.
@@ -171,6 +179,7 @@ interface Element {
 	 * @param where The position to inject the text to.  Defaults to 'bottom'.
 	 */
 	appendHTML(html: string, where?: 'top' | 'bottom' | 'after' | 'before')
+
 	/**
 
 	 Works like [Element:grab](#Element:grab), but instead of accepting an id or an element, it only accepts text.
@@ -201,6 +210,7 @@ interface Element {
 	 * @param where The position to inject the text to. Defaults to 'bottom'.
 	 */
 	appendText(text: string, where?: 'top' | 'bottom' | 'after' | 'before')
+
 	/**
 	 Removes the Element from the DOM.
 	 ### Examples:
@@ -214,7 +224,7 @@ interface Element {
 	 ### See Also:
 	 - [MDN Element:removeChild][]
 	 @returns This Element. Useful to always grab the return from this function, as the element could be
-	      [injected](#Element:inject) back.
+	 [injected](#Element:inject) back.
 	 */
 	dispose(): this
 
@@ -223,7 +233,7 @@ interface Element {
 	 ### Arguments:
 	 @param contents When set to false the Element's contents are not cloned. default=true
 	 @param keepid When true the cloned Element keeps the id attribute, if present. Same goes for any of the cloned
-	      childNodes. default=false
+	 childNodes. default=false
 	 ### Examples:
 	 ##### HTML
 	 <div id="myElement">ciao</div>
@@ -695,6 +705,7 @@ interface Element {
 	 <a></a>
 	 */
 	removeProperties(...properties: string[]): this
+
 	/**
 	 Stores an item in the Elements Storage, linked to this Element.
 
@@ -709,6 +720,7 @@ interface Element {
 
 	 */
 	store(key: string, value: any): this
+
 	/**
 	 Retrieves a value from the Elements storage.
 
@@ -727,6 +739,7 @@ interface Element {
 
 	 */
 	retrieve(key: string): any
+
 	/**
 	 Eliminates a key from the Elements storage.
 
@@ -757,7 +770,8 @@ interface Element {
 	 * @param value The value to which to set it. Numeric values of properties requiring a unit will automatically be
 	 *     appended with 'px'.
 	 */
-	setStyle(property:CSSProperty, value:string | number): this
+	setStyle(property: CSSProperty, value: string | number): this
+
 	/**
 	 * Returns the style of the Element given the property passed in.
 	 *
@@ -767,7 +781,8 @@ interface Element {
 	 * @returns
 	 * The style value.
 	 */
-	getStyle(property:CSSProperty): string
+	getStyle(property: CSSProperty): string
+
 	/*
 	 Applies a collection of styles to the Element.
 
@@ -789,7 +804,8 @@ interface Element {
 
 
 	 */
-	setStyles(styles: {[property: 'A' | 'b']: string|number}): this
+	setStyles(styles: { [property: 'A' | 'b']: string | number }): this
+
 	/**
 	 *
 	 ### Examples:
@@ -805,7 +821,7 @@ interface Element {
 	 * @returns
 	 * An key/value object with the CSS styles as computed by the browser.
 	 */
-	setStyles(...properties: CSSProperty[]): {[property: string]: string|number}
+	setStyles(...properties: CSSProperty[]): { [property: string]: string | number }
 }
 
 /////// Element.Position
@@ -837,6 +853,7 @@ interface Element {
 	 - [MDN Element:scrollLeft][], [MDN Element:scrollTop][]
 	 */
 	scrollTo(x: number, y: number): this
+
 	/*
 
 
@@ -864,7 +881,8 @@ interface Element {
 	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
 
 	 */
-	getSize(): {x: number, y: number}
+	getSize(): { x: number, y: number }
+
 	/*
 
 	 Element Method: getScrollSize {#Element:getScrollSize}
@@ -895,7 +913,8 @@ interface Element {
 	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
 
 	 */
-	getScrollSize(): {x: number, y: number}
+	getScrollSize(): { x: number, y: number }
+
 	/*
 
 	 Element Method: getScroll {#Element:getScroll}
@@ -922,7 +941,8 @@ interface Element {
 	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
 
 	 */
-	getScroll(): {x: number, y: number}
+	getScroll(): { x: number, y: number }
+
 	/*
 
 
@@ -955,7 +975,8 @@ interface Element {
 
 	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
 	 */
-	getPosition(relative?: Element): {x: number, y: number}
+	getPosition(relative?: Element): { x: number, y: number }
+
 	/*
 
 	 Element Method: setPosition {#Element:setPosition}
@@ -980,7 +1001,8 @@ interface Element {
 	 myElement.setPosition({x: 10, y: 100});
 
 	 */
-	setPosition(positions: {x: number | string, y: number | string}): this
+	setPosition(positions: { x: number | string, y: number | string }): this
+
 	/*
 
 
@@ -1025,7 +1047,9 @@ interface Element {
 	 If you need to measure the properties of elements that are not displayed (either their display style is none or one of their parents display style is none), you will need to use [Element.measure][] to expose it.
 	 */
 	getCoordinates(relative?: Element): {
-		top: number, left: number, width: number, height: number, right: number, bottom: number}
+		top: number, left: number, width: number, height: number, right: number, bottom: number
+	}
+
 	/*
 
 	 Element Method: getOffsetParent {#Element:getOffsetParent}
@@ -1057,8 +1081,9 @@ interface Element {
 }
 
 interface Elements extends Element, Array<Element> {
-	each(f: (el:Element)=>void):this
-    filter(f: (el:Element)=>boolean):Elements
+	each(f: (el: Element) => void): this
+
+	filter(f: (el: Element) => boolean): Elements
 }
 
 interface DOMEvent {
@@ -1071,12 +1096,12 @@ interface DOMEvent {
 	/**
 	 * The position of the mouse, relative to the full window.
 	 */
-	page: {x: number, y: number}
+	page: { x: number, y: number }
 
 	/**
 	 * The position of the mouse, relative to the viewport.
 	 */
-	client: {x: number, y: number}
+	client: { x: number, y: number }
 
 	/**
 	 * True if the user clicked the right mousebutton
@@ -1152,6 +1177,7 @@ interface DOMEvent {
 	defineKey(keyCode: number, keyName: string)
 
 }
+
 declare function $$(selector: string): Elements
 
 /**
@@ -1183,9 +1209,8 @@ declare function $$(selector: string): Elements
  */
 declare function $<T extends Element>(selector: string): T | null
 declare function $(elementable: { toElement: () => HTMLElement }): Element | null
-declare function $(anything:any|null): null
+declare function $(anything: any | null): null
 declare function $<T extends Element>(element: T): T
-
 
 
 type CSSProperty = 'azimuth'

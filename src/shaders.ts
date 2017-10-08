@@ -1,6 +1,6 @@
 import {ShaderType} from 'tsgl'
 
-export const fragmentShaderLighting: ShaderType<{color: 'FLOAT_VEC3', camPos: 'FLOAT_VEC3'}> = `
+export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3', camPos: 'FLOAT_VEC3' }> = `
 	uniform vec4 color;
 	uniform vec3 camPos;
 	varying vec3 normal;
@@ -17,7 +17,7 @@ export const fragmentShaderLighting: ShaderType<{color: 'FLOAT_VEC3', camPos: 'F
 		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
 	}
 `
-export const vertexShaderLighting: ShaderType<{color: 'FLOAT_VEC3'}> = `
+export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC3' }> = `
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
@@ -27,7 +27,7 @@ export const vertexShaderLighting: ShaderType<{color: 'FLOAT_VEC3'}> = `
 		normal = normalize(LGL_NormalMatrix * LGL_Normal);
 	}
 `
-export const vertexShaderWaves: ShaderType<{color: 'FLOAT_VEC3'}> = `
+export const vertexShaderWaves: ShaderType<{ color: 'FLOAT_VEC3' }> = `
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
@@ -48,7 +48,7 @@ export const vertexShader: ShaderType<{}> = `
 			vec4(position,1.0);
 	}
 `
-export const fragmentShader: ShaderType<{color: 'FLOAT_VEC3'}> = `
+export const fragmentShader: ShaderType<{ color: 'FLOAT_VEC3' }> = `
 	uniform vec3 color;
 	varying vec4 pos;
 	void main() {
@@ -91,11 +91,12 @@ export const vertexShaderColor: ShaderType<{}> = `
 	}
 `
 export const vertexShaderArc: ShaderType<{
-            color: 'FLOAT_VEC4',
-            step: 'FLOAT',
-            offset: 'FLOAT',
-            radius: 'FLOAT',
-            width: 'FLOAT' }> = `
+	color: 'FLOAT_VEC4',
+	step: 'FLOAT',
+	offset: 'FLOAT',
+	radius: 'FLOAT',
+	width: 'FLOAT'
+}> = `
 	uniform float step, offset;
 	uniform float radius, width;
 	void main() {
@@ -107,13 +108,14 @@ export const vertexShaderArc: ShaderType<{
 }
 `
 export const vertexShaderConic3d: ShaderType<{
-            startT: 'FLOAT',
-            endT: 'FLOAT',
-            scale: 'FLOAT',
-            center: 'FLOAT_VEC3',
-            f1: 'FLOAT_VEC3',
-            f2: 'FLOAT_VEC3',
-            mode: 'INT' }> = `
+	startT: 'FLOAT',
+	endT: 'FLOAT',
+	scale: 'FLOAT',
+	center: 'FLOAT_VEC3',
+	f1: 'FLOAT_VEC3',
+	f2: 'FLOAT_VEC3',
+	mode: 'INT'
+}> = `
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
 	uniform int mode;
@@ -143,13 +145,13 @@ export const vertexShaderConic3d: ShaderType<{
 	}
 `
 export const vertexShaderBezier: ShaderType<{
-    width: 'FLOAT',
-    startT: 'FLOAT',
-    endT: 'FLOAT',
-    p0: 'FLOAT_VEC3',
-    p1: 'FLOAT_VEC3',
-    p2: 'FLOAT_VEC3',
-    p3: 'FLOAT_VEC3',
+	width: 'FLOAT',
+	startT: 'FLOAT',
+	endT: 'FLOAT',
+	p0: 'FLOAT_VEC3',
+	p1: 'FLOAT_VEC3',
+	p2: 'FLOAT_VEC3',
+	p3: 'FLOAT_VEC3',
 }> = `
     // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
 	uniform float width, startT, endT;
@@ -167,14 +169,14 @@ export const vertexShaderBezier: ShaderType<{
 	}
 `
 export const vertexShaderBezier3d: ShaderType<{
-    scale: 'FLOAT',
-    startT: 'FLOAT',
-    endT: 'FLOAT',
-    p0: 'FLOAT_VEC3',
-    p1: 'FLOAT_VEC3',
-    p2: 'FLOAT_VEC3',
-    p3: 'FLOAT_VEC3',
-    normal: 'FLOAT_VEC3',
+	scale: 'FLOAT',
+	startT: 'FLOAT',
+	endT: 'FLOAT',
+	p0: 'FLOAT_VEC3',
+	p1: 'FLOAT_VEC3',
+	p2: 'FLOAT_VEC3',
+	p3: 'FLOAT_VEC3',
+	normal: 'FLOAT_VEC3',
 }> = `
     // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
@@ -194,7 +196,7 @@ export const vertexShaderBezier3d: ShaderType<{
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
-export const vertexShaderGeneric: ShaderType<{scale: 'FLOAT'}> = `
+export const vertexShaderGeneric: ShaderType<{ scale: 'FLOAT' }> = `
 	uniform float scale;
 	void main() {
 		vec3 normal = normalize(LGL_NormalMatrix * LGL_Normal);
@@ -202,7 +204,7 @@ export const vertexShaderGeneric: ShaderType<{scale: 'FLOAT'}> = `
 		gl_Position = LGL_ModelViewProjectionMatrix * vertexPos;
 	}
 `
-export const vertexShaderRing: ShaderType<{step: 'FLOAT', innerRadius: 'FLOAT', outerRadius: 'FLOAT'}> = `
+export const vertexShaderRing: ShaderType<{ step: 'FLOAT', innerRadius: 'FLOAT', outerRadius: 'FLOAT' }> = `
 	#define M_PI 3.1415926535897932384626433832795
 	uniform float step;
 	uniform float innerRadius, outerRadius;
@@ -214,7 +216,7 @@ export const vertexShaderRing: ShaderType<{step: 'FLOAT', innerRadius: 'FLOAT', 
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
 	}
 `
-export const fragmentShaderColor: ShaderType<{color: 'FLOAT_VEC4'}> = `
+export const fragmentShaderColor: ShaderType<{ color: 'FLOAT_VEC4' }> = `
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;

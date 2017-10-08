@@ -1,11 +1,8 @@
-import {int, V3,randomColor} from 'ts3dutils'
-import {Mesh, pushQuad} from 'tsgl'
+import {int, randomColor, V3} from 'ts3dutils'
 
-import {P3, L3} from './index'
+import {L3, P3} from './index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
-
-
 
 
 export class CustomPlane extends P3 {
@@ -19,12 +16,12 @@ export class CustomPlane extends P3 {
 	readonly name: string
 
 	constructor(anchor: V3, right: V3, up: V3,
-	            name: string,
-	            color: number = randomColor(),
-	            rightStart: number = -500,
-	            rightEnd: number = 500,
-	            upStart: number = -500,
-	            upEnd: number = 500) {
+				name: string,
+				color: number = randomColor(),
+				rightStart: number = -500,
+				rightEnd: number = 500,
+				upStart: number = -500,
+				upEnd: number = 500) {
 		const {normal1, w} = P3.forAnchorAndPlaneVectors(anchor, right, up)
 		super(normal1, w)
 		this.up = up
@@ -37,6 +34,18 @@ export class CustomPlane extends P3 {
 		this.name = name
 	}
 
+	get plane() { return this }
+
+	static forPlane(plane: P3, color: int, name?: string) {
+		//assert(!name)
+		const up = plane.normal1.getPerpendicular().unit(), right = up.cross(plane.normal1)
+		return new CustomPlane(plane.anchor, right, up, name, color)
+	}
+
+	static fromPlaneSurface(surface: PlaneSurface) {
+		return new CustomPlane(surface.plane.anchor, surface.right, surface.up, 'genCustomPlane' + globalId++)
+	}
+
 	distanceTo(line: L3, mindist: number) {
 		return [
 			new L3(this.anchor.plus(this.right.times(this.sMin)), this.up),
@@ -45,8 +54,8 @@ export class CustomPlane extends P3 {
 			new L3(this.anchor.plus(this.up.times(this.tMax)), this.right)].map(function (line2, line2Index) {
 			const info = line2.infoClosestToLine(line)
 			if ((isNaN(info.t) // parallel LINES
-				|| line2Index < 2 && this.rMin <= info.t && info.t <= this.tMax
-				|| line2Index >= 2 && this.sMin <= info.t && info.t <= this.sMax)
+					|| line2Index < 2 && this.rMin <= info.t && info.t <= this.tMax
+					|| line2Index >= 2 && this.sMin <= info.t && info.t <= this.sMax)
 				&& info.distance <= mindist) {
 				return info.s
 			} else {
@@ -54,16 +63,4 @@ export class CustomPlane extends P3 {
 			}
 		}, this).min()
 	}
-
-	get plane(){ return this }
-
-	static forPlane(plane: P3, color: int, name?: string) {
-		//assert(!name)
-		const up = plane.normal1.getPerpendicular().unit(), right = up.cross(plane.normal1)
-		return new CustomPlane(plane.anchor, right, up, name, color)
-	}
-
-    static fromPlaneSurface(surface: PlaneSurface) {
-        return new CustomPlane(surface.plane.anchor, surface.right, surface.up, 'genCustomPlane' + globalId++)
-    }
 }

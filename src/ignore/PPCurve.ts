@@ -52,7 +52,7 @@ class PPCurve extends Curve {
 			start = Math.floor(this.bT + 1)
 			end = ceil(this.aT)
 			arr = sliceCyclic(this.curve.points, start, end)
-			console.log("this.canon", !!this.canon, arr.length, start, end, this.aT)
+			console.log('this.canon', !!this.canon, arr.length, start, end, this.aT)
 			arr.reverse()
 		}
 		arr.push(this.b)
@@ -125,7 +125,7 @@ class PPCurve extends Curve {
 			let bParams = this.parametricSurface2.pointToParameterFunction()(Q)
 			console.log('aParams.sce', aParams.sce, pF1(bParams.x, bParams.y).sce)
 			console.log('bParams.sce', bParams.sce)
-				console.log(Q.sce)
+			console.log(Q.sce)
 			assert(pF1(aParams.x, aParams.y).like(Q))
 			assert(aParams.like(this.parametricSurface1.footParameters(Q, aParams.x, aParams.y)))
 			assert(bParams.like(this.parametricSurface2.footParameters(Q, bParams.x, bParams.y)))
@@ -182,7 +182,7 @@ class PPCurve extends Curve {
 		return n1.cross(n2)
 	}
 
-        at(t: number): V3 {
+	at(t: number): V3 {
 		return V3.lerp(this.points[Math.floor(t)], this.points[Math.ceil(t)], t % 1)
 	}
 

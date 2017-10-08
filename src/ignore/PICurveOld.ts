@@ -1,4 +1,5 @@
 const STEP_SIZE = 1
+
 class PICurveOld extends Curve {
 	parametricSurface: Surface
 	implicitSurface: Surface
@@ -53,7 +54,7 @@ class PICurveOld extends Curve {
 			start = Math.floor(this.bT + 1)
 			end = ceil(this.aT)
 			arr = sliceCyclic(this.curve.points, start, end)
-			console.log("this.canon", !!this.canon, arr.length, start, end, this.aT)
+			console.log('this.canon', !!this.canon, arr.length, start, end, this.aT)
 			arr.reverse()
 		}
 		arr.push(this.b)
@@ -90,8 +91,8 @@ class PICurveOld extends Curve {
 				this.pmTangentEndPoints = pmTangentEndPoints2.concat(this.pmTangentEndPoints)
 			}
 			this.points = this.pmPoints.map(({x: d, y: z}) => pF(d, z))
-			this.tangents = this.pmTangentEndPoints.map(({x: d, y: z}, i, ps) => pF(d, z).minus(this.points[i])
-		)
+			this.tangents = this.pmTangentEndPoints.map(({x: d, y: z}, i, ps) => pF(d, z).minus(this.points[i]),
+			)
 			//console.log('this.points', this.points.map(v => v.$).join(", "))
 			this.startTangent = this.tangentAt(this.startT)
 		}

@@ -1,7 +1,23 @@
-import {int, Tuple3, Tuple2, Tuple4,AABB,DEG,EllipticE,EllipticF,GOLDEN_RATIO,M4,MINUS,Matrix,NLA_DEBUG,NLA_PRECISION,P3XY,P3YZ,P3ZX,SCE,STR,TAU,Transformable,V,V3,Vector,addOwnProperties,arithmeticGeometricMean,arrayCopy,arrayCopyBlocks,arrayCopyStep,arrayFromFunction,arrayRange,arraySwap,assert,assertInst,assertNever,assertNumbers,assertVectors,assertf,between,bisect,callsce,canonAngle,ceil10,checkDerivate,clamp,combinations,defaultRoundFunction,disableConsole,doubleSignedArea,enableConsole,eq,eq0,eq02,eq2,eqAngle,floatHashCode,floor10,forceFinite,fuzzyBetween,fuzzyUniques,fuzzyUniquesF,gaussLegendre24Weights,gaussLegendre24Xs,gaussLegendreQuadrature24,ge,getIntervals,getRoots,glq24_11,glqInSteps,gt,hasConstructor,isCCW,le,lerp,lt,mapPush,midpointRuleQuadrature,mod,newtonIterate,newtonIterate1d,newtonIterate2d,newtonIterate2dWithDerivatives,newtonIterateSmart,newtonIterateWithDerivative,numberToStr,pqFormula,rad2deg,randomColor,repeatString,round10,snap,snap0,snap2,snapEPS,solveCubicReal2,time,zeroAngle} from 'ts3dutils'
+import {
+	arrayFromFunction,
+	assert,
+	assertf,
+	assertInst,
+	assertNumbers,
+	assertVectors,
+	clamp,
+	eq,
+	eq0,
+	hasConstructor,
+	int,
+	M4,
+	NLA_PRECISION,
+	TAU,
+	V3,
+} from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {Curve, P3, ISInfo} from '../index'
+import {Curve, ISInfo, P3} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
@@ -10,14 +26,49 @@ const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, ro
  */
 export class L3 extends Curve {
 
+	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
+	static readonly X: L3 = new L3(V3.O, V3.X)
+	static readonly Y: L3 = new L3(V3.O, V3.Y)
+	static readonly Z: L3 = new L3(V3.O, V3.Z)
+
 	constructor(readonly anchor: V3, // line anchor
-	            readonly dir1: V3, // normalized line dir
-	            tMin: number = -4096,
-	            tMax: number = 4096) {
+				readonly dir1: V3, // normalized line dir
+				tMin: number = -4096,
+				tMax: number = 4096) {
 		super(tMin, tMax)
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
 		assertf(() => !Number.isNaN(anchor.x))
+	}
+
+	static throughPoints(anchor: V3, b: V3, tMin?: number, tMax?: number): L3 {
+		return new L3(anchor, b.minus(anchor).unit(), tMin, tMax)
+	}
+
+	static pointT(anchor: V3, dir: V3, x: V3) {
+		assertVectors(anchor, dir, x)
+		return x.minus(anchor).dot(dir) / dir.squared()
+	}
+
+	static at(anchor: V3, dir: V3, t: number) {
+		return anchor.plus(dir.times(t))
+	}
+
+	static fromPlanes(p1: P3, p2: P3): L3 {
+		assertInst(P3, p1, p2)
+		const dir = p1.normal1.cross(p2.normal1)
+		const length = dir.length()
+		if (length < 1e-10) {
+			throw new Error('Parallel planes')
+		}
+
+		return p1.intersectionWithPlane(p2)
+	}
+
+	static containsPoint(anchor: V3, dir: V3, p: V3) {
+		const closestT = L3.pointT(anchor, dir, p)
+		const distance = L3.at(anchor, dir, closestT).distanceTo(p)
+		return eq0(distance)
 	}
 
 	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1, tMin = this.tMin, tMax = this.tMax): void {
@@ -43,9 +94,9 @@ export class L3 extends Curve {
 		}
 	}
 
-    roots(): [number[], number[], number[]] {
-        return [[], [], []]
-    }
+	roots(): [number[], number[], number[]] {
+		return [[], [], []]
+	}
 
 	containsPoint(p: V3): boolean {
 		assertVectors(p)
@@ -314,45 +365,9 @@ export class L3 extends Curve {
 		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length())
 	}
 
-	static throughPoints(anchor: V3, b: V3, tMin?: number, tMax?: number): L3 {
-		return new L3(anchor, b.minus(anchor).unit(), tMin, tMax)
-	}
-
-	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
-
-
-	static pointT(anchor: V3, dir: V3, x: V3) {
-		assertVectors(anchor, dir, x)
-		return x.minus(anchor).dot(dir) / dir.squared()
-	}
-
-	static at(anchor: V3, dir: V3, t: number) {
-		return anchor.plus(dir.times(t))
-	}
-
 	hashCode(): int {
 		return this.anchor.hashCode() * 31 + this.dir1.hashCode()
 	}
-
-	static fromPlanes(p1: P3, p2: P3): L3 {
-		assertInst(P3, p1, p2)
-		const dir = p1.normal1.cross(p2.normal1)
-		const length = dir.length()
-		if (length < 1e-10) {
-			throw new Error('Parallel planes')
-		}
-
-		return p1.intersectionWithPlane(p2)
-	}
-
-	static readonly X: L3 = new L3(V3.O, V3.X)
-	static readonly Y: L3 = new L3(V3.O, V3.Y)
-	static readonly Z: L3 = new L3(V3.O, V3.Z)
-
-	static containsPoint(anchor: V3, dir: V3, p: V3) {
-		const closestT = L3.pointT(anchor, dir, p)
-		const distance = L3.at(anchor, dir, closestT).distanceTo(p)
-		return eq0(distance)
-	}
 }
+
 L3.prototype.hlol = Curve.hlol++

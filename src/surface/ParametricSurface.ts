@@ -1,12 +1,42 @@
-import {V3,assert,between} from 'ts3dutils'
+import {assert, between, V3} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, Surface, PICurve} from '../index'
+import {Curve, PICurve, Surface} from '../index'
 
 const {ceil, min} = Math
 
 
 export abstract class ParametricSurface extends Surface {
+	sMin: number
+	sMax: number
+	tMin: number
+	tMax: number
+	uStep: number
+	vStep: number
+
+	static isCurvesParametricImplicitSurface(ps: ParametricSurface,
+											 is: ImplicitSurface,
+											 sStep: number,
+											 tStep: number = sStep,
+											 curveStepSize: number): Curve[] {
+		const pf = ps.pSTFunc(), icc = is.implicitFunction()
+		const dpds = ps.dpds()
+		const dpdt = ps.dpdt()
+		const didp = is.didp.bind(is)
+		const ist = (x: number, y: number) => icc(pf(x, y))
+		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
+		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
+		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
+		const curves
+			= Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, dids, didt)
+			.map(({points, tangents}, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize))
+		return curves
+	}
+
+	static is(obj: any): obj is ParametricSurface {
+		return obj.pSTFunc
+	}
+
 	pST(s: number, t: number): V3 {
 		return this.pSTFunc()(s, t)
 	}
@@ -60,52 +90,24 @@ export abstract class ParametricSurface extends Surface {
 	}
 
 	toMesh(): Mesh {
-		assert(isFinite(this.tMin) && isFinite(this.tMax)&&isFinite(this.sMin)&&isFinite(this.sMax))
+		assert(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax))
 		return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(),
 			this.sMin, this.sMax, this.tMin, this.tMax,
 			ceil((this.sMax - this.sMin) / this.uStep),
 			ceil((this.tMax - this.tMin) / this.vStep))
 	}
 
-	sMin: number
-	sMax: number
-	tMin: number
-	tMax: number
-	uStep: number
-	vStep: number
-
 	isCurvesWithImplicitSurface(is: ImplicitSurface, sStep: number, tStep: number, stepSize: number): Curve[] {
 		return ParametricSurface.isCurvesParametricImplicitSurface(this, is, sStep, tStep, stepSize)
 	}
-	static isCurvesParametricImplicitSurface(ps: ParametricSurface,
-	                                         is: ImplicitSurface,
-	                                         sStep: number,
-	                                         tStep: number = sStep,
-	                                         curveStepSize: number): Curve[] {
-		const pf = ps.pSTFunc(), icc = is.implicitFunction()
-		const dpds = ps.dpds()
-		const dpdt = ps.dpdt()
-		const didp = is.didp.bind(is)
-		const ist = (x: number, y: number) => icc(pf(x, y))
-		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
-		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
-		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
-		const curves
-			= Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, dids, didt)
-				.map(({points, tangents}, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize))
-		return curves
-	}
-
-	static is(obj: any): obj is ParametricSurface {
-		return obj.pSTFunc
-	}
 }
+
 export abstract class ImplicitSurface extends Surface {
-	abstract implicitFunction(): (pWC: V3) => number
-
-	abstract didp(pWC: V3): V3
-
 	static is(obj: any): obj is ImplicitSurface {
 		return obj.implicitFunction
 	}
+
+	abstract implicitFunction(): (pWC: V3) => number
+
+	abstract didp(pWC: V3): V3
 }

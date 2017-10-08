@@ -1,20 +1,30 @@
-import {M4,TAU,V3,assert,assertInst,assertVectors,eq,eq0,getIntervals,isCCW,pqFormula} from 'ts3dutils'
+import {assert, assertInst, assertVectors, eq, eq0, getIntervals, isCCW, M4, pqFormula, TAU, V3} from 'ts3dutils'
 
-import {Curve, P3, Surface, L3, ParametricSurface, ImplicitSurface,
-    Edge,
-    HyperbolaCurve,
-    SemiEllipseCurve,
-    ParabolaCurve,
-    EllipseCurve} from '../index'
+import {
+	Curve,
+	Edge,
+	EllipseCurve,
+	HyperbolaCurve,
+	ImplicitSurface,
+	L3,
+	P3,
+	ParabolaCurve,
+	ParametricSurface,
+	SemiEllipseCurve,
+	Surface,
+} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
+	/**
+	 * Unit cone. x² + y² = z², 0 <= z
+	 */
+	static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4
 	readonly normalDir: number // -1 | 1
-
 
 	/**
 	 * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
@@ -23,9 +33,9 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	 * @param dir Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
 	 */
 	constructor(readonly center: V3,
-	            readonly f1: V3,
-	            readonly f2: V3,
-	            readonly dir: V3) {
+				readonly f1: V3,
+				readonly f2: V3,
+				readonly dir: V3) {
 		super()
 		assertVectors(center, f1, f2, dir)
 		this.matrix = M4.forSys(f1, f2, dir, center)
@@ -34,6 +44,96 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
 	}
 
+	get apex() {
+		return this.center
+	}
+
+	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve): ConicSurface {
+		assertVectors(apex)
+		assertInst(SemiEllipseCurve, ellipse)
+		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center))
+	}
+
+	static unitISLineTs(anchor: V3, dir: V3): number[] {
+		const {x: ax, y: ay, z: az} = anchor
+		const {x: dx, y: dy, z: dz} = dir
+
+		// this cone: x² + y² = z²
+		// line: p = anchor + t * dir1
+		// split line equation into 3 component equations, insert into cone equation
+		// transform to form (a t² + b t + c = 0) and solve with pqFormula
+		const a = dx * dx + dy * dy - dz * dz
+		const b = 2 * (ax * dx + ay * dy - az * dz)
+		const c = ax * ax + ay * ay - az * az
+		// cone only defined for 0 <= z, so filter invalid values
+		return pqFormula(b / a, c / a).filter(t => 0 < az + t * dz)
+	}
+
+	// calculate intersection of plane ax + cz = d and cone x² + y² = z²
+	static unitISPlane(a: number, c: number, d: number): Curve[] {
+		if (eq0(c)) {
+			// plane is "vertical", i.e. parallel to Y and Z axes
+			assert(!eq0(a)) // normal would be zero, which is invalid
+			// z² - y² = d²/a²
+			if (eq0(d)) {
+				// d = 0 => z² - y² = 0 => z² = y² => z = y
+				// plane goes through origin/V3.O
+				return [new L3(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
+					new L3(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0)]
+			} else {
+
+				// hyperbola
+				const center = new V3(d / a, 0, 0)
+				const f1 = new V3(0, 0, abs(d / a)) // abs, because we always want the hyperbola to be pointing up
+				const f2 = new V3(0, d / a, 0)
+				return [new HyperbolaCurve(center, f1, f2)]
+			}
+
+		} else {
+			// c != 0
+			const aa = a * a, cc = c * c
+			if (eq0(d)) {
+				// ax + cz = d => x = d - cz / a => x² = d² - 2cdz/a + c²z²/a²
+				// x² + y² = z²
+				// => d² - 2cdz/a + c²z²/a² + y² = z²
+
+				if (eq(aa, cc)) {
+					return [new L3(V3.O, new V3(c, 0, -a).unit())]
+				} else if (aa < cc) {
+					assert(false, 'intersection is single point V3.O')
+				} else if (aa > cc) {
+					return [new L3(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
+						new L3(V3.O, new V3(c, -sqrt(aa - cc), -a).unit())]
+				}
+			} else {
+				if (eq(aa, cc)) {
+					// parabola
+					const parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
+					const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
+					const p2 = new V3(0, 0, d / c)
+					const f2 = p2.minus(parabolaVertex)
+					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0 ? f2.negated() : f2)]
+				} else if (aa < cc) {
+					// ellipse
+					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					if (center.z < 0) {
+						return []
+					}
+					const p1 = new V3(d / (a - c), 0, -d / (a - c))
+					const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa))
+					return [new EllipseCurve(center, center.to(p1), center.to(p2))]
+				} else if (aa > cc) {
+					// hyperbola
+					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					const p1 = new V3(d / (a - c), 0, -d / (a - c))
+					const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
+					const f1 = center.to(p1)
+					return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), center.to(p2))]
+				}
+			}
+		}
+
+	}
 
 	equals(obj: any): boolean {
 		return this == obj ||
@@ -44,19 +144,16 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 			&& this.dir.equals(obj.dir)
 	}
 
-	get apex() {
-		return this.center
-	}
-
 	like(object: any): boolean {
 		if (!this.isCoplanarTo(object)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
 		return this.normalDir == object.normalDir
 	}
+
 	getVectors() {
-		return [    {anchor: this.center, dir1: this.dir},
-					{anchor: this.center.plus(this.dir), dir1: this.f1},
-					{anchor: this.center.plus(this.dir), dir1: this.f2}]
+		return [{anchor: this.center, dir1: this.dir},
+			{anchor: this.center.plus(this.dir), dir1: this.f1},
+			{anchor: this.center.plus(this.dir), dir1: this.f2}]
 	}
 
 	getSeamPlane(): P3 {
@@ -72,7 +169,6 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 		return Surface.loopContainsPointGeneral(contour, p, line, lineOut)
 	}
-
 
 	getConstructorParameters(): any[] {
 		return [this.center, this.f1, this.f2, this.dir]
@@ -229,9 +325,9 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	stP(pWC: V3) {
-        const pLC = this.inverseMatrix.transformPoint(pWC)
-        const angle = pLC.angleXY()
-        return new V3(angle < -PI / 2 ? angle + TAU : angle, pLC.z, 0)
+		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const angle = pLC.angleXY()
+		return new V3(angle < -PI / 2 ? angle + TAU : angle, pLC.z, 0)
 	}
 
 	isCurvesWithSurface(surface: Surface): Curve[] {
@@ -279,100 +375,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		const ptpF = this.stPFunc()
 		return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
 	}
-
-
-	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve): ConicSurface {
-		assertVectors(apex)
-		assertInst(SemiEllipseCurve, ellipse)
-		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center))
-	}
-
-	static unitISLineTs(anchor: V3, dir: V3): number[] {
-		const {x: ax, y: ay, z: az} = anchor
-		const {x: dx, y: dy, z: dz} = dir
-
-		// this cone: x² + y² = z²
-		// line: p = anchor + t * dir1
-		// split line equation into 3 component equations, insert into cone equation
-		// transform to form (a t² + b t + c = 0) and solve with pqFormula
-		const a = dx * dx + dy * dy - dz * dz
-		const b = 2 * (ax * dx + ay * dy - az * dz)
-		const c = ax * ax + ay * ay - az * az
-		// cone only defined for 0 <= z, so filter invalid values
-		return pqFormula(b / a, c / a).filter(t => 0 < az + t * dz)
-	}
-
-	// calculate intersection of plane ax + cz = d and cone x² + y² = z²
-	static unitISPlane(a: number, c: number, d: number): Curve[] {
-		if (eq0(c)) {
-			// plane is "vertical", i.e. parallel to Y and Z axes
-			assert(!eq0(a)) // normal would be zero, which is invalid
-			// z² - y² = d²/a²
-			if (eq0(d)) {
-				// d = 0 => z² - y² = 0 => z² = y² => z = y
-				// plane goes through origin/V3.O
-				return [new L3(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
-						new L3(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0)]
-			} else {
-
-				// hyperbola
-				const center = new V3(d / a, 0, 0)
-				const f1 = new V3(0, 0, abs(d / a)) // abs, because we always want the hyperbola to be pointing up
-				const f2 = new V3(0, d / a, 0)
-				return [new HyperbolaCurve(center, f1, f2)]
-			}
-
-		} else {
-			// c != 0
-			const aa = a * a, cc = c * c
-			if (eq0(d)) {
-				// ax + cz = d => x = d - cz / a => x² = d² - 2cdz/a + c²z²/a²
-				// x² + y² = z²
-				// => d² - 2cdz/a + c²z²/a² + y² = z²
-
-				if (eq(aa, cc)) {
-					return [new L3(V3.O, new V3(c, 0, -a).unit())]
-				} else if (aa < cc) {
-					assert(false, 'intersection is single point V3.O')
-				} else if (aa > cc) {
-					return [new L3(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
-							new L3(V3.O, new V3(c, -sqrt(aa - cc), -a).unit())]
-				}
-			} else {
-				if (eq(aa, cc)) {
-					// parabola
-					const parabolaVertex = new V3(d / 2 / a, 0, d / 2 / c)
-					const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
-					const p2 = new V3(0, 0, d / c)
-					const f2 = p2.minus(parabolaVertex)
-					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0 ? f2.negated() : f2)]
-				} else if (aa < cc) {
-					// ellipse
-					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
-					if (center.z < 0) {
-						return []
-					}
-					const p1 = new V3(d / (a - c), 0, -d / (a - c))
-					const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa))
-					return [new EllipseCurve(center, center.to(p1), center.to(p2))]
-				} else if (aa > cc) {
-					// hyperbola
-					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
-					const p1 = new V3(d / (a - c), 0, -d / (a - c))
-					const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
-					const f1 = center.to(p1)
-					return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), center.to(p2))]
-				}
-			}
-		}
-
-	}
-
-	/**
-	 * Unit cone. x² + y² = z², 0 <= z
-	 */
-	static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
 }
+
 ConicSurface.prototype.uStep = PI / 16
 ConicSurface.prototype.vStep = 256
 ConicSurface.prototype.sMin = 0

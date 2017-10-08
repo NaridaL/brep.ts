@@ -1,6 +1,7 @@
-
 class Line {
 
+	static throughPoints = (anchor, b) => new Line(anchor, b.minus(anchor).normalized())
+	static anchorDirection = (anchor, direction) => new Line(anchor, direction.unit())
 	dir1: Vector
 	anchor: Vector
 
@@ -13,7 +14,7 @@ class Line {
 	 */
 	constructor(anchor, dir1) {
 		assertVectors(anchor, dir1)
-		assert(dir1.hasLength(1), "dir must be unit")
+		assert(dir1.hasLength(1), 'dir must be unit')
 		this.anchor = anchor
 		this.dir1 = dir1
 	}
@@ -43,7 +44,8 @@ class Line {
 
 	isParallelToLine(line) {
 		assertInst(Line, line)
-		// we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than isParallelTo()
+		// we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than
+		// isParallelTo()
 		return eq(1, Math.abs(this.dir1.dot(line.dir1)))
 	}
 
@@ -56,9 +58,4 @@ class Line {
 		assertNumbers(t)
 		return this.anchor.plus(this.dir1.times(t))
 	}
-
-
-
-	static throughPoints = (anchor, b) => new Line(anchor, b.minus(anchor).normalized())
-	static anchorDirection = (anchor, direction) => new Line(anchor, direction.unit())
 }
