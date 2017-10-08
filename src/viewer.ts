@@ -1,6 +1,28 @@
-///<reference path="surface/ConicSurface.ts"/>
+import {int, DEG, M4, TAU, V, V3, addOwnProperties, arrayFromFunction, assert} from 'ts3dutils'
+import {Mesh, LightGLContext, GL_COLOR_BLACK, GL_COLOR, DRAW_MODES, Shader} from 'tsgl'
+import * as nerdamer from 'nerdamer'
+import chroma from 'chroma-js'
 
-///<reference path="CustomPlane.ts"/>
+import * as shaders from './shaders'
+import {
+    Curve,
+    P3,
+    SemiCylinderSurface,
+    L3,
+    Edge,
+    HyperbolaCurve,
+    SemiEllipseCurve,
+    ParabolaCurve,
+    EllipseCurve,
+    PICurve,
+    CustomPlane,
+    BezierCurve,
+    ImplicitCurve,
+    followAlgorithm2d,
+    Face,
+    B2,
+    SemiEllipsoidSurface,
+} from './index'
 
 function parseGetParams(str: string) {
     const result: {[key:string]: string} = {}
@@ -60,7 +82,7 @@ class BREPGLContext extends (Object as any as typeof LightGLContext) {
         this.multMatrix(M4.forSys(vector, vT, vector.cross(vT).unit(), anchor))
         1 != size && this.scale(size, size, size)
         this.shaders.singleColor.uniforms({
-            color: color
+            color: color,
         }).draw(this.meshes.vector)
 
         this.popMatrix()
@@ -95,7 +117,7 @@ function conicPainter(mode: 0 | 1 | 2, gl: BREPGLContext, ellipse: SemiEllipseCu
         startT: startT,
         endT: endT,
         scale: width,
-        mode: mode
+        mode: mode,
     }).draw(gl.meshes.pipe)
 }
 const CURVE_PAINTERS: {[curveConstructorName: string]: (gl: BREPGLContext, curve: Curve, color: GL_COLOR, startT: number, endT: number, width: number) => void} = {
@@ -132,7 +154,7 @@ const CURVE_PAINTERS: {[curveConstructorName: string]: (gl: BREPGLContext, curve
             startT: startT,
             endT: endT,
             scale: width,
-            normal: normal
+            normal: normal,
         }).draw(gl.meshes.pipe)
     },
     [L3.name](gl, curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
@@ -231,7 +253,7 @@ const meshColors: any[][] = [
     chroma.scale(['#ff297f', '#6636FF']).mode('lab').colors(20, null),
     chroma.scale(['#ffe93a', '#ff6e35']).mode('lab').colors(20, null),
     chroma.scale(['#1eff33', '#4960ff']).mode('lab').colors(20, null),
-    chroma.scale(['#31fff8', '#2dff2a']).mode('lab').colors(20, null)
+    chroma.scale(['#31fff8', '#2dff2a']).mode('lab').colors(20, null),
 ]
 const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()))
 let aMeshes: (Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>, TRIANGLES: int[], normals: V3[]})[] = [],
@@ -264,7 +286,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
             const face = b2s[i].faces[faceIndex]
             const faceTriangleIndexes = aMesh.faceIndexes.get(face)
             gl.shaders.lighting.uniforms({
-                color: hovering == face ? meshColors.emod(i).emod(faceIndex).darken(2).gl() : meshColorssGL.emod(i).emod(faceIndex)
+                color: hovering == face ? meshColors.emod(i).emod(faceIndex).darken(2).gl() : meshColorssGL.emod(i).emod(faceIndex),
             }).draw(aMesh, DRAW_MODES.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
         }
 
@@ -553,18 +575,18 @@ function initMeshes(_meshes: { [name: string]: Mesh }, _gl) {
 function initShaders(_gl) {
     _gl.makeCurrent()
     return {
-        singleColor: Shader.create(vertexShaderBasic, fragmentShaderColor),
-        multiColor: Shader.create(vertexShaderColor, fragmentShaderVaryingColor),
-        singleColorHighlight: Shader.create(vertexShaderBasic, fragmentShaderColorHighlight),
-        textureColor: Shader.create(vertexShaderTexture, fragmentShaderTextureColor),
-        arc: Shader.create(vertexShaderRing, fragmentShaderColor),
-        arc2: Shader.create(vertexShaderArc, fragmentShaderColor),
-        ellipse3d: Shader.create(vertexShaderConic3d, fragmentShaderColor),
-        generic3d: Shader.create(vertexShaderGeneric, fragmentShaderColor),
-        bezier3d: Shader.create(vertexShaderBezier3d, fragmentShaderColor),
-        bezier: Shader.create(vertexShaderBezier, fragmentShaderColor),
-        lighting: Shader.create(vertexShaderLighting, fragmentShaderLighting),
-        waves: Shader.create(vertexShaderWaves, fragmentShaderLighting),
+        singleColor: Shader.create(shaders.vertexShaderBasic, shaders.fragmentShaderColor),
+        multiColor: Shader.create(shaders.vertexShaderColor, shaders.fragmentShaderVaryingColor),
+        singleColorHighlight: Shader.create(shaders.vertexShaderBasic, shaders.fragmentShaderColorHighlight),
+        textureColor: Shader.create(shaders.vertexShaderTexture, shaders.fragmentShaderTextureColor),
+        arc: Shader.create(shaders.vertexShaderRing, shaders.fragmentShaderColor),
+        arc2: Shader.create(shaders.vertexShaderArc, shaders.fragmentShaderColor),
+        ellipse3d: Shader.create(shaders.vertexShaderConic3d, shaders.fragmentShaderColor),
+        generic3d: Shader.create(shaders.vertexShaderGeneric, shaders.fragmentShaderColor),
+        bezier3d: Shader.create(shaders.vertexShaderBezier3d, shaders.fragmentShaderColor),
+        bezier: Shader.create(shaders.vertexShaderBezier, shaders.fragmentShaderColor),
+        lighting: Shader.create(shaders.vertexShaderLighting, shaders.fragmentShaderLighting),
+        waves: Shader.create(shaders.vertexShaderWaves, shaders.fragmentShaderLighting),
     }
 }
 
@@ -590,24 +612,15 @@ function setupCamera(_eye: typeof eye, _gl: LightGLContext) {
 //    const didt: R2_R = (x, y) => x * sin(x * y) + cos(x + y)
 //    const ic2: R2_R = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
 //    const di2ds: R2_R = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
-//    const di2dt: R2_R = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y ** 2 - 3 * x ** 2))
-//    const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-//    assert(eq02(ic(start.x, start.y), 0.1))
-//    const bounds = (s: number, t: number) => -5 <= s && s <= 5 && -5 <= t && t <= 5
-//    //const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
-//    const curves =  Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt)
-//    //const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
-//    //const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
-//            .map(({points, tangents}, i) => {
-//                const curve = new ImplicitCurve(ic, points, tangents)
-//                return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i))
-//            })
-//    //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5, 0)
-//    //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0)
-//    console.log(curves.length)
-//    return curves
-//
-//}
+//    const di2dt: R2_R = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y
+// ** 2 - 3 * x ** 2)) const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
+// assert(eq02(ic(start.x, start.y), 0.1)) const bounds = (s: number, t: number) => -5 <= s && s <= 5 && -5 <= t && t
+// <= 5 //const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt) const curves =
+// Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt) //const curves =
+// Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02) //const curves = mkcurves(ic, start.x, start.y,
+// 0.05, dids, didt, bounds) .map(({points, tangents}, i) => { const curve = new ImplicitCurve(ic, points, tangents)
+// return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i)) }) //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5,
+// 0) //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0) console.log(curves.length) return curves  }
 function cassini(a: number, c: number): (x: number, y: number) => number {
     return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
 }
@@ -689,7 +702,9 @@ function HJK() {
     ////const curves = cone.isCurvesWithSurface(sphere)
     ////assert(sphere.containsCurve(curves[0]))
     //const c = a.minus(b).translate(0,3)
-    //const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625, -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009, 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
+    //const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625,
+    // -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009,
+    // 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
     const pcs = SemiCylinderSurface.UNIT
             .rotateZ(-40*DEG)
             .scale(0.5, 0.05, 4)
@@ -703,7 +718,7 @@ function HJK() {
         //c,
         mesh: [pcs.toMesh(), ses.toMesh()],
         edges: curves.map(c => Edge.forCurveAndTs(c)),
-        points: curves.flatMap(c => (c as ImplicitCurve).points)
+        points: curves.flatMap(c => (c as ImplicitCurve).points),
     }
 
 }

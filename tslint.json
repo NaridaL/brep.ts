@@ -1,5 +1,6 @@
 {
   "extends": "naridal-tslib-config/tslint.json",
   "rules": {
+    "no-unused-variable": [true]
   }
 }

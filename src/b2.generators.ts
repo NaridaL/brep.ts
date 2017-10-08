@@ -1,3 +1,15 @@
+import {int, GOLDEN_RATIO,M4,MINUS,NLA_PRECISION,TAU,V,V3,arrayFromFunction,assert,assertInst,assertNumbers,assertVectors,assertf,callsce,eq,eq0,le,lerp,lt,snap} from 'ts3dutils'
+import {Mesh, pushQuad} from 'tsgl'
+
+import {Curve, P3, SemiCylinderSurface, Surface, ProjectedCurveSurface, L3, Edge,
+    SemiEllipseCurve,
+    EllipseCurve, PlaneSurface, XiEtaCurve, BezierCurve,PlaneFace} from './index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+
+
+
+
 function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	if (curve instanceof L3) {
 		const surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
@@ -82,7 +94,7 @@ namespace B2T {
 			new V3(0, 0, 0),
 			new V3(0, h, 0),
 			new V3(w, h, 0),
-			new V3(w, 0, 0)
+			new V3(w, 0, 0),
 		]
 	    const generator = callsce('B2T.box', w, h, d, name)
 		return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, d), name, generator)
@@ -111,8 +123,8 @@ namespace B2T {
 	                             infoFactory?: FaceInfoFactory<any>): B2 {
     	baseFaceEdges = fixEdges(baseFaceEdges)
 		//Array.from(combinations(baseFaceEdges.length)).forEach(({i, j}) => {
-		//	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce + baseFaceEdges[j].sce)
-		//})
+        //	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce +
+        // baseFaceEdges[j].sce) })
 		assertf(() => Edge.isLoop(baseFaceEdges))
 		// TODO checks..
 		//if (offset.dot(baseFacePlane.normal1) > 0) {
@@ -354,82 +366,38 @@ namespace B2T {
 	 * loop should be CCW on XZ plane for a bounded B2
 	 */
 	//export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): B2 {
-	//	assert(Edge.isLoop(loop))
-	//	const rotationMatrix = M4.rotateZ(rads)
-	//	const open = !eq(rads, 2 * PI)
-	//	const endEdges = open ? loop.map(edge => edge.transform(rotationMatrix)) : loop
-	//	const edgeCount = loop.length
-	//	const ribs = arrayFromFunction(edgeCount, i => {
-	//		const a = loop[i].a, radius = a.lengthXY()
-	//		const b = endEdges[i].a
-	//		if (!eq0(radius)) {
-	//			const curve = new SemiEllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
-	//			const aT = -PI, bT = -PI + rads
-	//			return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
-	//		}
-	//	})
-	//	const faces = loop.map((edge, i) => {
-	//		const ipp = (i + 1) % edgeCount
-	//		console.log('ljl', i, ipp, ribs)
-	//		const faceEdges = [
-	//			edge.flipped(),
-	//			!eq0(edge.a.x) && ribs[i],
-	//			endEdges[i],
-	//			!eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
-	//		if (edge instanceof StraightEdge) {
-	//			const line = edge.curve
-	//			let surface
-	//			if (line.dir1.isParallelTo(V3.Z)) {
-	//				if (eq0(edge.a.x)) {
-	//					return
-	//				}
-	//				let flipped = edge.a.z > edge.b.z
-	//				surface = new SemiCylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated())
-	//			} else if (line.dir1.isPerpendicularTo(V3.Z)) {
-	//				let flipped = edge.a.x > edge.b.x
-	//				let surface = new PlaneSurface(new P3(V3.Z, edge.a.z))
-	//				if (!flipped) surface = surface.flipped()
-	//				if (!open) {
-	//					const hole = flipped
-	//						? !eq0(edge.b.x) && ribs[ipp].flipped()
-	//						: !eq0(edge.a.x) && ribs[i]
-	//					return new PlaneFace(surface, [flipped ? ribs[i] : ribs[ipp].flipped()], hole && [[hole]])
-	//				}
-	//				return new PlaneFace(surface, faceEdges)
-	//			} else {
-	//				// apex is intersection of segment with Z-axis
-	//				let a = edge.a, b = edge.b
-	//				let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
-	//				let apex = new V3(0, 0, apexZ)
-	//				let flipped = edge.a.z > edge.b.z
-	//				surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as SemiEllipseCurve, !flipped ? 1 : -1)
-	//			}
-	//			return Face.create(surface, faceEdges)
-	//		}
-	//		if (edge.curve instanceof SemiEllipseCurve) {
-	//			let flipped = undefined
-	//			let ell = edge.curve.rightAngled()
-	//			let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
-	//			if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
-	//				let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
-	//				if (flipped) {
-	//					f3length *= -1
-	//				}
-	//				let surface = new SemiEllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
-	//				return new RotationFace(surface, faceEdges)
-	//			}
-	//		} else {
-	//			assert(false, edge)
-	//		}
-	//	}).filter(x => x)
-	//	if (open) {
-	//		const endFaceEdges = endEdges.map(edge => edge.flipped()).reverse()
-	//		faces.push(
-	//			new PlaneFace(new PlaneSurface(P3.ZX.flipped()), loop),
-	//			new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges))
-	//	}
-	//	return new B2(faces, undefined)
-	//}
+    //	assert(Edge.isLoop(loop))
+    //	const rotationMatrix = M4.rotateZ(rads)
+    //	const open = !eq(rads, 2 * PI)
+    //	const endEdges = open ? loop.map(edge => edge.transform(rotationMatrix)) : loop
+    //	const edgeCount = loop.length
+    //	const ribs = arrayFromFunction(edgeCount, i => {
+    //		const a = loop[i].a, radius = a.lengthXY()
+    //		const b = endEdges[i].a
+    //		if (!eq0(radius)) {
+    //			const curve = new SemiEllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
+    //			const aT = -PI, bT = -PI + rads
+    //			return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name
+    // + 'rib' + i) } }) const faces = loop.map((edge, i) => { const ipp = (i + 1) % edgeCount console.log('ljl', i,
+    // ipp, ribs) const faceEdges = [ edge.flipped(), !eq0(edge.a.x) && ribs[i], endEdges[i], !eq0(edge.b.x) &&
+    // ribs[ipp].flipped()].filter(x => x) if (edge instanceof StraightEdge) { const line = edge.curve let surface if
+    // (line.dir1.isParallelTo(V3.Z)) { if (eq0(edge.a.x)) { return } let flipped = edge.a.z > edge.b.z surface = new
+    // SemiCylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated()) } else if
+    // (line.dir1.isPerpendicularTo(V3.Z)) { let flipped = edge.a.x > edge.b.x let surface = new PlaneSurface(new
+    // P3(V3.Z, edge.a.z)) if (!flipped) surface = surface.flipped() if (!open) { const hole = flipped ? !eq0(edge.b.x)
+    // && ribs[ipp].flipped() : !eq0(edge.a.x) && ribs[i] return new PlaneFace(surface, [flipped ? ribs[i] :
+    // ribs[ipp].flipped()], hole && [[hole]]) } return new PlaneFace(surface, faceEdges) } else { // apex is
+    // intersection of segment with Z-axis let a = edge.a, b = edge.b let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
+    // let apex = new V3(0, 0, apexZ) let flipped = edge.a.z > edge.b.z surface =
+    // ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as SemiEllipseCurve, !flipped ? 1 : -1)
+    // } return Face.create(surface, faceEdges) } if (edge.curve instanceof SemiEllipseCurve) { let flipped = undefined
+    // let ell = edge.curve.rightAngled() let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp =
+    // ell.f2.isPerpendicularTo(V3.Z) if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) { let f3length = f1Perp
+    // ? ell.f1.length() : ell.f2.length() if (flipped) { f3length *= -1 } let surface = new
+    // SemiEllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length)) return new
+    // RotationFace(surface, faceEdges) } } else { assert(false, edge) } }).filter(x => x) if (open) { const
+    // endFaceEdges = endEdges.map(edge => edge.flipped()).reverse() faces.push( new PlaneFace(new
+    // PlaneSurface(P3.ZX.flipped()), loop), new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)) } return new B2(faces, undefined) }
 
 	export function quaffle() {
 	    const baseK = B2T.sphere(1).translate(0, 1.7).flipped()
@@ -673,23 +641,23 @@ namespace B2T {
 		assertVectors(offset)
 		if (baseFacePlane.normal1.dot(offset) > 0) baseFacePlane = baseFacePlane.flipped()
 		//if (!isCCW(baseVertices, baseFacePlane.normal1)) {
-		//	baseVertices = baseVertices.reverse()
-		//}
-		//let topVertices = baseVertices.map((v) => v.plus(offset)).reverse()
-		//let topPlane = basePlane.translated(offset)
-		//let top, bottom
-		//let faces = [
-		//	bottom = PlaneFace.forVertices(new PlaneSurface(baseFacePlane), baseVertices),
-		//	top = PlaneFace.forVertices(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topVertices)]
-		//let m = baseVertices.length
-		//let ribs = arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
-		//for (let i = 0; i < m; i++) {
-		//	let j = (i + 1) % m
-		//	faces.push(
-		//		new PlaneFace(
-		//			PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
-		//			[bottom.contour[i].flipped(), ribs[i], top.contour[m - j - 1].flipped(), ribs[j].flipped()], [], name + 'wall' + i))
-		//}
+        //	baseVertices = baseVertices.reverse()
+        //}
+        //let topVertices = baseVertices.map((v) => v.plus(offset)).reverse()
+        //let topPlane = basePlane.translated(offset)
+        //let top, bottom
+        //let faces = [
+        //	bottom = PlaneFace.forVertices(new PlaneSurface(baseFacePlane), baseVertices),
+        //	top = PlaneFace.forVertices(new PlaneSurface(baseFacePlane.flipped().translated(offset)), topVertices)]
+        //let m = baseVertices.length
+        //let ribs = arrayFromFunction(m, i => StraightEdge.throughPoints(baseVertices[i], topVertices[m - 1 - i]))
+        //for (let i = 0; i < m; i++) {
+        //	let j = (i + 1) % m
+        //	faces.push(
+        //		new PlaneFace(
+        //			PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
+        //			[bottom.contour[i].flipped(), ribs[i], top.contour[m - j - 1].flipped(), ribs[j].flipped()], [],
+        // name + 'wall' + i)) }
 		let edges = StraightEdge.chain(baseVertices, true)
 		generator = generator || callsce('B2T.extrudeVertices', baseVertices, baseFacePlane, offset, name)
 		return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator)
@@ -717,7 +685,7 @@ namespace B2T {
 			new PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()], [], name + 'abc'),
 			new PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()], [], name + 'adb'),
 			new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + 'bdc'),
-			new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda')
+			new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda'),
 		]
 		const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
 		return new B2(faces, false, gen)
@@ -727,7 +695,7 @@ namespace B2T {
         new V3( 1,  0, -1 / Math.sqrt(2)),
         new V3(-1,  0, -1 / Math.sqrt(2)),
         new V3( 0, -1,  1 / Math.sqrt(2)),
-        new V3( 0,  1,  1 / Math.sqrt(2))
+        new V3( 0,  1,  1 / Math.sqrt(2)),
     ].map(v => v.unit())
     export const DODECAHEDRON_VERTICES = [
         new V3( c,  0,  1),
@@ -749,7 +717,7 @@ namespace B2T {
         new V3( 1,  c,  0),
         new V3(-1,  c,  0),
         new V3(-1, -c,  0),
-        new V3( 1, -c,  0)
+        new V3( 1, -c,  0),
     ].map(v => v.unit())
     export const DODECAHEDRON_FACE_VERTICES = [
         [  4,  3,  2,  1,  0 ],

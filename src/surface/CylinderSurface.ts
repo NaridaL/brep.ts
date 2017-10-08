@@ -1,6 +1,13 @@
-///<reference path="ProjectedCurveSurface.ts"/>
+import {M4,NLA_PRECISION,TAU,V3,assert,assertInst,assertVectors,eq0,isCCW,pqFormula} from 'ts3dutils'
 
-class CylinderSurface extends ProjectedCurveSurface {
+import {Curve, P3, Surface, ProjectedCurveSurface, L3, Edge,
+    SemiEllipseCurve,
+    EllipseCurve,
+    PointVsFace} from '../index'
+
+const {PI} = Math
+
+export class CylinderSurface extends ProjectedCurveSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly baseCurve: EllipseCurve

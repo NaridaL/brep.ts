@@ -1,3 +1,10 @@
+import {M4,V3,assert,assertInst,eq0} from 'ts3dutils'
+
+import {ParametricSurface, ImplicitSurface} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+
+
 /**
  * Rotation surface with r = f(z)
  */

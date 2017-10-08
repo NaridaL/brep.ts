@@ -1,15 +1,15 @@
-import { Equalable, JavaMap as CustomMap } from 'javasetmap.ts'
-import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, TAU, assertInst, SCE } from 'ts3dutils'
+import {JavaMap as CustomMap, JavaSet as CustomSet} from 'javasetmap.ts'
+import {int, AABB,M4,NLA_DEBUG,NLA_PRECISION,SCE,TAU,Transformable,V,V3,assert,assertInst,assertNever,assertNumbers,assertVectors,assertf,callsce,combinations,eq,eq0,gt,lt,mapPush,newtonIterate1d,newtonIterate2d,snap,snap0} from 'ts3dutils'
+import {Mesh} from 'tsgl'
 
-import { P3 } from './P3'
-import { Surface } from './surface/Surface'
-import { XiEtaCurve } from './curve/XiEtaCurve'
-import { Curve } from './curve/Curve'
-import {Face} from './Face'
-import { Edge } from './Edge'
-import { FaceInfoFactory } from './FaceInfo'
+import {Curve, P3, Surface, L3, Edge,
+    PointVsFace,
+    FaceInfoFactory,
+    Face,
+    PlaneFace,} from './index'
 
-const { abs, sign, PI, sqrt } = Math
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+
 
 
 const EPS = 1e-5
@@ -108,7 +108,7 @@ function calcNextEdgeIndex(currentEdge: Edge , possibleEdges: Edge[], faceNormal
 	}
 	return result == Number.MAX_SAFE_INTEGER ? 0 : result
 }
-class B2 extends Transformable {
+export class B2 extends Transformable {
     faces: Face[]
     infiniteVolume: boolean
     generator: string | undefined
@@ -763,7 +763,7 @@ namespace B2 {
 	export const asldk = 0
 }
 
-type IntersectionPointInfo = {
+export type IntersectionPointInfo = {
     p: V3, // intersection point
     insideDir: V3,
     t: number, // param on intersection curve
@@ -772,13 +772,13 @@ type IntersectionPointInfo = {
     colinear: boolean, // whether edge is colinear to intersection line
     used?: boolean }
 
-function dotCurve(v: V3, cDir: V3, cDDT: V3): number {
+export function dotCurve(v: V3, cDir: V3, cDDT: V3): number {
 	let dot = v.dot(cDir)
 	if (eq0(dot)) { dot = v.dot(cDDT) }
 	assert(!eq0(dot))
 	return dot
 }
-function dotCurve2(curve: Curve, t: number, normal: V3, sign: number): number {
+export function dotCurve2(curve: Curve, t: number, normal: V3, sign: number): number {
 	assert(sign == 1 || sign == -1, sign)
 	const tangentDot = curve.tangentAt(t).dot(normal)
 	// if tangentDot != 0 the curve simply crosses the plane
@@ -792,7 +792,7 @@ function dotCurve2(curve: Curve, t: number, normal: V3, sign: number): number {
 	return numericDot
 }
 
-const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE= 3, ALONG_EDGE_OR_PLANE = 4
+export const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE= 3, ALONG_EDGE_OR_PLANE = 4
 /**
  *
  * @param brep BREP to check

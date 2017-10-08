@@ -1,9 +1,17 @@
-class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
+import {int, M4,MINUS,NLA_PRECISION,V3,arrayFromFunction,assert,assertInst,assertNever,assertNumbers,assertVectors,assertf,between,eq,eq0,gaussLegendreQuadrature24,ge,glqInSteps,le,lt,pqFormula} from 'ts3dutils'
+import {Mesh} from 'tsgl'
+
+import {Curve, P3, Surface, ProjectedCurveSurface, L3, ParametricSurface, ImplicitSurface,
+    Edge, EllipseCurve, CylinderSurface, PlaneSurface, PointVsFace} from '../index'
+
+const {PI} = Math
+
+export class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 	readonly inverseMatrix: M4
 	readonly normalMatrix: M4
 	readonly pLCNormalWCMatrix: M4
-	readonly pWCNormalWCMatrix
+	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number // -1 | 1
 
 	constructor(readonly center: V3,
@@ -277,9 +285,9 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 		//const mainF2Params = newtonIterate(f, this.stPFunc()(f2.rejectedFrom(mainF1)).toArray(2), 8),
 	     //   mainF2 = this.pSTFunc()(mainF2Params[0], mainF2Params[1])
 		//console.log(this.normalSTFunc()(mainF2Params[0], mainF2Params[1]).sce)
-		//assert(mainF1.isPerpendicularTo(mainF2), mainF1, mainF2, mainF1.dot(mainF2), mainF1Params)
-		//const mainF3Params = this.stPFunc()(mainF1.cross(mainF2)), mainF3 = this.pSTFunc()(mainF3Params[0], mainF3Params[1])
-		//return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
+        //assert(mainF1.isPerpendicularTo(mainF2), mainF1, mainF2, mainF1.dot(mainF2), mainF1Params)
+        //const mainF3Params = this.stPFunc()(mainF1.cross(mainF2)), mainF3 = this.pSTFunc()(mainF3Params[0],
+        // mainF3Params[1]) return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
 
 	    const {U, SIGMA} = this.matrix.svd3()
 	    assert(SIGMA.isDiagonal())
@@ -322,8 +330,9 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	    let distPlaneCenter = Math.abs(plane.w)
         if (lt(distPlaneCenter, 1)) {
             // result is a circle
-            // radius of circle: imagine right angled triangle (origin -> center of intersection circle -> point on intersection circle)
-            // pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 - distPlaneCenter²)
+            // radius of circle: imagine right angled triangle (origin -> center of intersection circle -> point on
+            // intersection circle) pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 -
+            // distPlaneCenter²)
             const isCircleRadius = Math.sqrt(1 - distPlaneCenter * distPlaneCenter)
             const center = plane.anchor
             const f1 = plane.normal1.getPerpendicular().toLength(isCircleRadius)
@@ -373,7 +382,7 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 				    return arcLength * scaling
 			    }
 			    const val = glqInSteps(f, edge.aT, edge.bT, 1)
-			    console.log("edge", edge, val)
+			    console.log('edge', edge, val)
 			    return val
 		    } else {
 			    assertNever()
@@ -458,60 +467,43 @@ class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 		//		(ccw ? 1 : -1) * seamPlane.normal1.dot(edge.curve.normal1) * (edge.bT - edge.aT))
     //
 		//for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-		//	const edge = loop[edgeIndex]
-		//	const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
-		//	//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-		//	if (colinearEdges[edgeIndex]) {
-		//		const nextSide = colinearEdges[nextEdgeIndex] ? colinearEdgesSide[nextEdgeIndex]
-		//			: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal1, nextEdge.bT - nextEdge.aT)
-		//		if (nextSide * colinearEdgesSide[edgeIndex] < 0) {
-		//			iss.push({p: edge.b, t: 0, out: nextSide > 0})
-		//		}
-		//		(colinearEdgesSide[edgeIndex] > 0 ? frontParts : backParts).push(edge)
-		//	} else {
-		//		const f = sign(edge.bT - edge.aT)
-		//		const ists = edge.edgeISTsWithPlane(seamPlane).sort((a, b) => f * (a - b))
-		//		let prevT = edge.aT,
-		//			prevP = edge.a,
-		//			prevDir = edge.aDir,
-		//			prevSide = snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y, f)
-		//		for (let i = 0; i < ists.length; i++) {
-		//			const t = ists[i]
-		//			if (edge.aT == t || edge.bT == t) {
-		//				edge.bT == t && iss.push({p: edge.b, t: 0, out: true})
-		//				continue
-		//			}
-		//			const nextSide = dotCurve2(edge.curve, t, V3.Y, 1)
-		//			if (prevSide * nextSide < 0) {
-		//				// switches sides, so:
-		//				const newP = edge.curve.at(t)
-		//				const newDir = edge.tangentAt(t)
-		//				const newEdge = Edge.create(edge.curve, prevP, newP, prevT, t, undefined, prevDir, newDir)
-		//				;(prevSide > 0 ? frontParts : backParts).push(newEdge)
-		//				iss.push({p: newP, t: 0, out: nextSide > 0})
-		//				prevP = newP
-		//				prevDir = newDir
-		//				prevT = t
-		//				prevSide = nextSide
-		//			}
-		//		}
-		//		const lastEdge = Edge.create(edge.curve, prevP, edge.b, prevT, edge.bT, undefined, prevDir, edge.bDir)
-		//		;(prevSide > 0 ? frontParts : backParts).push(lastEdge)
-		//	}
-		//}
-		//iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
-		//iss.sort((a, b) => a.t - b.t)
-		//let i = ccw == iss[0].out ? 1 : 0
-		//const curve = new EllipseCurve(V3.O, V3.X.negated(), V3.Z)
-		////if (1 == i) {
+        //	const edge = loop[edgeIndex]
+        //	const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
+        //	//console.log(edge.toSource()) {p:V(2, -2.102, 0),
+        //	if (colinearEdges[edgeIndex]) {
+        //		const nextSide = colinearEdges[nextEdgeIndex] ? colinearEdgesSide[nextEdgeIndex]
+        //			: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal1, nextEdge.bT - nextEdge.aT)
+        //		if (nextSide * colinearEdgesSide[edgeIndex] < 0) {
+        //			iss.push({p: edge.b, t: 0, out: nextSide > 0})
+        //		}
+        //		(colinearEdgesSide[edgeIndex] > 0 ? frontParts : backParts).push(edge)
+        //	} else {
+        //		const f = sign(edge.bT - edge.aT)
+        //		const ists = edge.edgeISTsWithPlane(seamPlane).sort((a, b) => f * (a - b))
+        //		let prevT = edge.aT,
+        //			prevP = edge.a,
+        //			prevDir = edge.aDir,
+        //			prevSide = snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y,
+        // f) for (let i = 0; i < ists.length; i++) { const t = ists[i] if (edge.aT == t || edge.bT == t) { edge.bT ==
+        // t && iss.push({p: edge.b, t: 0, out: true}) continue } const nextSide = dotCurve2(edge.curve, t, V3.Y, 1) if
+        // (prevSide * nextSide < 0) { // switches sides, so: const newP = edge.curve.at(t) const newDir =
+        // edge.tangentAt(t) const newEdge = Edge.create(edge.curve, prevP, newP, prevT, t, undefined, prevDir, newDir)
+        // ;(prevSide > 0 ? frontParts : backParts).push(newEdge) iss.push({p: newP, t: 0, out: nextSide > 0}) prevP =
+        // newP prevDir = newDir prevT = t prevSide = nextSide } } const lastEdge = Edge.create(edge.curve, prevP,
+        // edge.b, prevT, edge.bT, undefined, prevDir, edge.bDir) ;(prevSide > 0 ? frontParts :
+        // backParts).push(lastEdge) } } iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
+        // iss.sort((a, b) => a.t - b.t) let i = ccw == iss[0].out ? 1 : 0 const curve = new EllipseCurve(V3.O,
+        // V3.X.negated(), V3.Z) //if (1 == i) {
     //    	//frontParts.push(
-    //    	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(), curve.tangentAt(iss[0].t)),
-		////        Edge.create(curve, iss.last.p, V3.Y.negated(), iss.last.t, PI, undefined, curve.tangentAt(iss.last.t), V3.Z.negated()))
-		////}
-		//for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i += 2) {
+    //    	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(),
+    // curve.tangentAt(iss[0].t)),
+		////        Edge.create(curve, iss.last.p, V3.Y.negated(), iss.last.t, PI, undefined,
+        // curve.tangentAt(iss.last.t), V3.Z.negated())) //} for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i
+        // += 2) {
     //    	let is0 = iss[i], is1 = iss[(i + 1) % iss.length]
 		//	if (lt(is0.t, -PI) && lt(-PI, is1.t)) {
-    //    		iss.splice(i + 1, 0, is1 = {p: V3.Y.negated(), t: -PI, out: true}, {p: V3.Y.negated(), t: -PI, out: true})
+    //    		iss.splice(i + 1, 0, is1 = {p: V3.Y.negated(), t: -PI, out: true}, {p: V3.Y.negated(), t: -PI, out:
+    // true})
 		//	} else if (lt(is0.t, PI) && lt(PI, is1.t)) {
 		//		iss.splice(i + 1, 0, is1 = {p: V3.Y, t: -PI, out: true}, {p: V3.Y, t: PI, out: true})
 		//	}

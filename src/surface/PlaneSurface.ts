@@ -1,4 +1,11 @@
-class PlaneSurface extends ParametricSurface implements ImplicitSurface {
+import {M4,V,V3,arrayFromFunction,assert,assertInst,isCCW} from 'ts3dutils'
+import {Mesh, pushQuad} from 'tsgl'
+
+import {Curve, P3, Surface, L3, ParametricSurface, ImplicitSurface,
+    Edge,
+    PointVsFace} from '../index'
+
+export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 	constructor(readonly plane: P3,
 	            readonly right: V3 = plane.normal1.getPerpendicular().unit(),

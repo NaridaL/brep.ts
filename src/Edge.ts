@@ -1,19 +1,10 @@
+import {int, AABB,DEG,M4,MINUS,NLA_PRECISION,TAU,Transformable,V,V3,arrayFromFunction,arrayRange,assert,assertInst,assertNumbers,assertVectors,assertf,callsce,clamp,eq,eq0,fuzzyBetween,getIntervals,le,lt,mod,newtonIterate,snap2} from 'ts3dutils'
 import {SVGPathData} from 'svg-pathdata'
-import { Equalable, JavaMap as CustomMap } from 'javasetmap.ts'
-import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, TAU, assertInst, SCE, fuzzyBetween, assertVectors, snap, lt, DEG } from 'ts3dutils'
 
-import { P3 } from './P3'
-import { Surface } from './surface/Surface'
-import { XiEtaCurve } from './curve/XiEtaCurve'
-import { Curve } from './curve/Curve'
-import {Face} from './Face'
-import { FaceInfoFactory } from './FaceInfo'
-import { L3 } from './curve/Line3'
-import { PICurve } from './curve/PICurve'
-import { SemiEllipseCurve } from './curve/SemiEllipseCurve'
-import { BezierCurve } from './index'
+import {Curve, P3, Surface, L3, SemiEllipseCurve, ParabolaCurve, PICurve, BezierCurve} from './index'
 
-const { abs, sign, PI, sqrt, floor, ceil } = Math
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+
 
 export abstract class Edge extends Transformable {
     readonly aDir: V3
@@ -401,7 +392,7 @@ export abstract class Edge extends Transformable {
     }
 }
 
-class PCurveEdge extends Edge {
+export class PCurveEdge extends Edge {
     constructor(curve: Curve,
                 a: V3,
                 b: V3,
@@ -498,8 +489,7 @@ class PCurveEdge extends Edge {
     }
 }
 
-
-class StraightEdge extends Edge {
+export class StraightEdge extends Edge {
     readonly tangent: V3
     readonly curve: L3
     // flippedOf: StraightEdge

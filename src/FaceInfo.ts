@@ -1,5 +1,9 @@
-import {Edge} from './Edge'
-import {Surface} from './surface/Surface'
+import {int, M4} from 'ts3dutils'
+
+import {Surface, Edge, Face} from './index'
+
+
+
 
 /**
  * Created by aval on 19.04.2017.

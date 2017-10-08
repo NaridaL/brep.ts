@@ -1,32 +1,50 @@
 {
-  "name": "brepts",
-  "version": "0.0.1",
+  "author": "Adrian Leonhard <adrianleonhard@gmail.com> (https://github.com/NaridaL)",
+  "dependencies": {
+    "chroma-js": "^1.3.4",
+    "javasetmap.ts": "file:../../javasetmap.ts",
+    "nerdamer": "^0.7.9",
+    "svg-pathdata": "^4.0.1"
+  },
   "description": "Boundary representation volume modeling in TypeScript.",
-  "main": "lib/index.d.ts",
+  "devDependencies": {
+    "@types/chai": "^4.0.4",
+    "@types/chroma-js": "^1.3.0",
+    "@types/opentype": "0.0.4",
+    "chai": "^4.1.2",
+    "mocha": "^4.0.0",
+    "naridal-tslib-config": "^1.0.0",
+    "rollup": "^0.50.0",
+    "rollup-plugin-sourcemaps": "^0.4.2",
+    "ts-node": "^3.3.0",
+    "tslint": "^5.7.0",
+    "typescript": "^2.5.2",
+    "uglify-es": "^3.0.28"
+  },
   "directories": {
     "test": "test"
-  },
-  "scripts": {
-    "test": "browser-sync start -c bs-config.js --startPath brepts/test.html",
-    "linky": "npm link ../tsgl ../ts3dutils"
   },
   "keywords": [
     "geometry",
     "volume",
     "surface",
-    "curve"
+    "curve",
+    "typescript"
   ],
-  "author": "Adrian Leonhard",
   "license": "ISC",
-  "devDependencies": {
-    "@types/chroma-js": "^1.3.0",
-    "@types/opentype": "0.0.4",
-    "naridal-tslib-config": "^1.0.4"
+  "main": "dist/bundle.js",
+  "module": "dist/bundle.module.js",
+  "name": "brepts",
+  "scripts": {
+    "build": "tsc & rollup -c & rollup -c rollup.module.config.js & npm run minify",
+    "config": "node node_modules/naridal-tslib-config && npm install",
+    "linky": "npm link ../tsgl ../ts3dutils naridal-tslib-config",
+    "lint": "tslint --project tsconfig.json",
+    "minify": "uglifyjs dist/bundle.js --output dist/bundle.min.js --compress --mangle && uglifyjs dist/bundle.module.js --output dist/bundle.module.min.js --compress --mangle",
+    "test": "(cd tests && mocha --require ts-node/register ./**/*.mocha.js ./**/*.mocha.ts)",
+    "test:ci": "npm run build && npm run lint && npm test"
   },
-  "dependencies": {
-    "chroma-js": "^1.3.4",
-    "nerdamer": "^0.7.9",
-    "javasetmap.ts": "file:../../javasetmap.ts",
-    "svg-pathdata": "^4.0.1"
-  }
+  "types": "index.d.ts",
+  "umdGlobal": "brep_ts",
+  "version": "0.0.1"
 }

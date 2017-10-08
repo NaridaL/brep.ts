@@ -1,7 +1,9 @@
+import {int, M4,NLA_PRECISION,TAU,V,V3,arrayFromFunction,assertInst,assertNumbers,assertVectors,assertf,eq0,hasConstructor} from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {Curve} from './Curve'
-import {BezierCurve} from './BezierCurve'
+import {Curve, P3, Surface, ProjectedCurveSurface, L3, ISInfo, BezierCurve, EllipseCurve, ConicSurface,} from '../index'
+
+const {PI} = Math
 
 export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3

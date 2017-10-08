@@ -1,5 +1,12 @@
+import {int, V3,randomColor} from 'ts3dutils'
+import {Mesh, pushQuad} from 'tsgl'
 
-import {P3} from './P3'
+import {P3, L3} from './index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+
+
+
 
 export class CustomPlane extends P3 {
 	readonly up: V3

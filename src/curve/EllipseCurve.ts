@@ -1,15 +1,14 @@
-import { Equalable } from 'javasetmap.ts'
-import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf } from 'ts3dutils'
-import { followAlgorithm2d } from '../B2'
-import { P3 } from '../P3'
-import { Surface } from '../surface/Surface'
-import {XiEtaCurve} from './XiEtaCurve'
+import {int, M4,NLA_PRECISION,TAU,V3,arrayFromFunction,arrayRange,assert,assertNumbers,assertf,checkDerivate,eq,eq0,glqInSteps,hasConstructor,le,lt,newtonIterate1d,newtonIterateSmart,pqFormula} from 'ts3dutils'
+
+import {Curve, L3, ISInfo,XiEtaCurve, intersectionUnitCircleLine, intersectionUnitCircleLine2} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class EllipseCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = -PI, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
 		assert(EllipseCurve.isValidT(tMin))
-		assert(EllipseCurve.isValidT(tMax))
+	    assert(EllipseCurve.isValidT(tMax))
 	}
 
 	// TODO: there'S alsoa commented out test
@@ -54,7 +53,7 @@ export class EllipseCurve extends XiEtaCurve {
 		// = INTEGRAL[0; t] -sin(t) * -sin(t) dt
 		// = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
 		// = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
-		function fArea(t) { return (t - Math.sin(t) * Math.cos(t)) / 2 }
+		function fArea(t: number) { return (t - Math.sin(t) * Math.cos(t)) / 2 }
 
 		// for the centroid, we want
 		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
@@ -63,13 +62,13 @@ export class EllipseCurve extends XiEtaCurve {
 		// ...
 		// cx = 1 / area * INTEGRAL[0; t] cos(t) * sin²(t) dt // WA
 		// cx = 1 / area * (sin^3(t) / 3)[0; t]
-		function cxTimesArea(t) { return Math.pow(Math.sin(t), 3) / 3 }
+		function cxTimesArea(t: number) { return Math.pow(Math.sin(t), 3) / 3 }
 
 		// cy = 1 / area * INTEGRAL[cos(t); PI/2] f²(x) / 2 dx
 		// cy = 1 / area * INTEGRAL[cos(0); cos(t)] -(1 - x²) / 2 dx
 		// cy = 1 / area * INTEGRAL[0; t] (cos²(t) - 1) * -sin(t) / 2 dt
 		// cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
-		function cyTimesArea(t) { return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24 }
+		function cyTimesArea(t: number) { return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24 }
 
 		const restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart) )
 		const area = fArea(normTEnd) - fArea(normTStart) + restArea

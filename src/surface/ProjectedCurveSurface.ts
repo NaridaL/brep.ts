@@ -1,10 +1,14 @@
+import {int, M4,V3,assert,assertInst,assertNever,assertNumbers,assertVectors,hasConstructor,isCCW} from 'ts3dutils'
+
+import {Curve, P3, Surface, L3, ParametricSurface, Edge,
+    PointVsFace, PICurve} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
  * Choose dir appropriately to select surface orientation.
  */
-import {Curve} from '../curve/Curve'
-import {P3} from '../P3'
-
 export class ProjectedCurveSurface extends ParametricSurface {
     constructor(readonly baseCurve: Curve,
                 readonly dir: V3,

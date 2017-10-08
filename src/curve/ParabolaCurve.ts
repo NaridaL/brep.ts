@@ -1,20 +1,11 @@
-import { Equalable } from 'javasetmap.ts'
-import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0, pqFormula } from 'ts3dutils'
+import {int, V3,arrayFromFunction,assertNumbers,eq,eq0,hasConstructor,le,pqFormula} from 'ts3dutils'
 
-import { followAlgorithm2d, intersectionUnitHyperbolaLine } from '../B2'
-import { P3 } from '../P3'
-import { Surface } from '../surface/Surface'
-import { XiEtaCurve } from './XiEtaCurve'
-import { Curve, ISInfo } from './Curve'
-import { L3 } from './Line3'
-import { BezierCurve } from './BezierCurve'
-
-const { abs, sign, PI } = Math
+import {Curve, L3, ISInfo, XiEtaCurve,} from '../index'
 
 /**
  * eta = xi²
  */
-class ParabolaCurve extends XiEtaCurve {
+export class ParabolaCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = -10, tMax: number = 10) {
 		super(center, f1, f2, tMin, tMax)
 	}

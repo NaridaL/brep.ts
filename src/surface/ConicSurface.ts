@@ -1,5 +1,13 @@
+import {M4,TAU,V3,assert,assertInst,assertVectors,eq,eq0,getIntervals,isCCW,pqFormula} from 'ts3dutils'
 
-import {ImplicitSurface, ParametricSurface} from './ParametricSurface'
+import {Curve, P3, Surface, L3, ParametricSurface, ImplicitSurface,
+    Edge,
+    HyperbolaCurve,
+    SemiEllipseCurve,
+    ParabolaCurve,
+    EllipseCurve} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4

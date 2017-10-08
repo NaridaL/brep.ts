@@ -1,10 +1,9 @@
-import { Equalable } from 'javasetmap.ts'
-import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals } from 'ts3dutils'
-import { followAlgorithm2d } from '../B2'
-import { P3 } from '../P3'
-import { Surface } from '../surface/Surface'
+import {Equalable} from 'javasetmap.ts'
+import {AABB, arrayFromFunction, assert, assertNumbers, callsce, clamp, eq, eq0, fuzzyUniquesF, getIntervals, glqInSteps, int, le, M4, newtonIterate2dWithDerivatives, newtonIterateWithDerivative, NLA_PRECISION, Transformable, V, V3,} from 'ts3dutils'
 
-const { floor, abs, ceil } = Math
+import {ISInfo, P3, Surface, followAlgorithm2d} from '../index'
+
+const {ceil, floor, abs} = Math
 
 export type ISInfo = {tThis: number, tOther: number, p: V3}
 export abstract class Curve extends Transformable implements Equalable {

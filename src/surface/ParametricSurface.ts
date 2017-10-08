@@ -1,7 +1,9 @@
+import {V3,assert,between} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Surface} from './Surface'
-import {Curve} from '../curve/Curve'
+import {Curve, Surface, PICurve} from '../index'
+
+const {ceil, min} = Math
 
 
 export abstract class ParametricSurface extends Surface {

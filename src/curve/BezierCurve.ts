@@ -1,11 +1,10 @@
+import {int, Tuple3, M4,MINUS,Matrix,NLA_PRECISION,V,V3,Vector,arrayFromFunction,assert,assertInst,assertNever,assertNumbers,assertVectors,assertf,between,combinations,eq,eq0,fuzzyUniques,fuzzyUniquesF,gaussLegendre24Weights,gaussLegendre24Xs,gaussLegendreQuadrature24,hasConstructor,lerp,newtonIterate1d,newtonIterate2dWithDerivatives,newtonIterateWithDerivative,solveCubicReal2} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import { Curve } from './Curve'
-import { P3 } from '../P3'
-import { SemiCylinderSurface } from '../surface/SemiCylinderSurface'
-import { Surface } from '../surface/Surface'
-import { ProjectedCurveSurface } from '../surface/ProjectedCurveSurface'
-import { L3 } from './Line3'
+import {Curve, P3, SemiCylinderSurface, Surface, ProjectedCurveSurface, L3, ISInfo, EllipsoidSurface,
+	SemiEllipsoidSurface,} from '../index'
+
+const {PI, abs} = Math
 
 export class BezierCurve extends Curve {
 	readonly p0: V3

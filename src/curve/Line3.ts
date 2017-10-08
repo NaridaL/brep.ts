@@ -1,4 +1,9 @@
-import {Curve} from './Curve'
+import {int, Tuple3, Tuple2, Tuple4,AABB,DEG,EllipticE,EllipticF,GOLDEN_RATIO,M4,MINUS,Matrix,NLA_DEBUG,NLA_PRECISION,P3XY,P3YZ,P3ZX,SCE,STR,TAU,Transformable,V,V3,Vector,addOwnProperties,arithmeticGeometricMean,arrayCopy,arrayCopyBlocks,arrayCopyStep,arrayFromFunction,arrayRange,arraySwap,assert,assertInst,assertNever,assertNumbers,assertVectors,assertf,between,bisect,callsce,canonAngle,ceil10,checkDerivate,clamp,combinations,defaultRoundFunction,disableConsole,doubleSignedArea,enableConsole,eq,eq0,eq02,eq2,eqAngle,floatHashCode,floor10,forceFinite,fuzzyBetween,fuzzyUniques,fuzzyUniquesF,gaussLegendre24Weights,gaussLegendre24Xs,gaussLegendreQuadrature24,ge,getIntervals,getRoots,glq24_11,glqInSteps,gt,hasConstructor,isCCW,le,lerp,lt,mapPush,midpointRuleQuadrature,mod,newtonIterate,newtonIterate1d,newtonIterate2d,newtonIterate2dWithDerivatives,newtonIterateSmart,newtonIterateWithDerivative,numberToStr,pqFormula,rad2deg,randomColor,repeatString,round10,snap,snap0,snap2,snapEPS,solveCubicReal2,time,zeroAngle} from 'ts3dutils'
+import {Mesh, pushQuad} from 'tsgl'
+
+import {Curve, P3, ISInfo} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 /**
  * 3-dimensional line

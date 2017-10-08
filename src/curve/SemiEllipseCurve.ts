@@ -1,6 +1,9 @@
-import {XiEtaCurve} from './XiEtaCurve'
-import {Curve} from './Curve'
-import { EllipseCurve } from './EllipseCurve'
+import {int, TAU,V3,arrayFromFunction,assert,assertNumbers,assertVectors,eq,eq0,hasConstructor,le,newtonIterate1d,pqFormula} from 'ts3dutils'
+import {Mesh} from 'tsgl'
+
+import {Curve, P3, L3, ISInfo,XiEtaCurve, EllipseCurve, intersectionUnitCircleLine2, intersectionUnitCircleLine} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class SemiEllipseCurve extends XiEtaCurve {
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {

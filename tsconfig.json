@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
+    "// target": [
+      [
+        "//    \"strict\": true,"
+      ]
+    ],
     "allowJs": false,
+    "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
-    "strict": true,
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -17,6 +22,7 @@
     "moduleResolution": "node",
     "noImplicitAny": true,
     "noImplicitThis": true,
+    "noUnusedLocals": false,
     "outDir": "out",
     "rootDir": "src",
     "sourceMap": true,

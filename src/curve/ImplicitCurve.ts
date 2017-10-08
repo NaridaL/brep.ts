@@ -1,4 +1,9 @@
-import {Curve} from './Curve'
+import {int, M4,TAU,V3,arrayFromFunction,arrayRange,assert,assertVectors,clamp} from 'ts3dutils'
+import {Mesh} from 'tsgl'
+
+import {Curve, } from '../index'
+
+const {ceil, floor} = Math
 
 export class ImplicitCurve extends Curve {
 	constructor(readonly points: V3[],

@@ -1,12 +1,9 @@
-import { Equalable } from 'javasetmap.ts'
-import { V3, assertNumbers, assert, Transformable, le, ge, arrayFromFunction, newtonIterateWithDerivative, NLA_PRECISION, int, callsce, eq, fuzzyUniquesF, clamp, AABB, glqInSteps, M4, newtonIterate2dWithDerivatives, V, eq0, getIntervals, assertf, snap0 } from 'ts3dutils'
-import { followAlgorithm2d, intersectionUnitHyperbolaLine } from '../B2'
-import { P3 } from '../P3'
-import { Surface } from '../surface/Surface'
-import { XiEtaCurve } from './XiEtaCurve'
-import { Curve } from './Curve'
+import {V3,arrayFromFunction,assertNumbers,eq,eq0,hasConstructor,le,snap0} from 'ts3dutils'
+import {Mesh} from 'tsgl'
 
-const { abs, sign, PI } = Math
+import {Curve, XiEtaCurve} from '../index'
+
+const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 /**
  * x² - y² = 1

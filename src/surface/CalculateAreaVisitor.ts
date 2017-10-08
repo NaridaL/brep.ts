@@ -1,5 +1,15 @@
-import {Surface} from './Surface'
-import {Edge} from '../Edge'
+import {V3,assert,assertNever,eq,glqInSteps} from 'ts3dutils'
+
+import {SemiCylinderSurface, Surface, ProjectedCurveSurface, L3, Edge,
+    HyperbolaCurve,
+    SemiEllipseCurve,
+    ParabolaCurve,
+    EllipseCurve, ConicSurface} from '../index'
+
+const {PI} = Math
+
+
+
 
 export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(this: T, allEdges: Edge[]) => number } = {
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): number {
@@ -77,7 +87,8 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					return at.dot(this.dir) * tangent.rejected1Length(this.dir)
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
+                // area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
 				console.log('edge', edge, val)
@@ -122,7 +133,7 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					return arcLength * scaling
 				}
 				const val = glqInSteps(f, edge.aT, edge.bT, 1)
-				console.log("edge", edge, val)
+				console.log('edge', edge, val)
 				return val
 			} else {
 				assertNever()
@@ -181,7 +192,8 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					return at.dot(this.dir) * tangent.rejected1Length(this.dir)
 				}
-				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
+                // positive area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
 				return val * sign
@@ -208,7 +220,8 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 					const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 					return at.dot(this.dir) * tangent.rejected1Length(this.dir)
 				}
-				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive area
+				// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
+                // area
 				const sign = -Math.sign(edge.curve.normal.dot(this.dir))
 				const val = glqInSteps(f, edge.aT, edge.bT, 4)
 				return val * sign
@@ -221,5 +234,5 @@ export const CalculateAreaVisitor: {[className: string]: <T extends Surface>(thi
 		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
 		// Math.abs is not an option as "holes" may also be passed
 		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir))
-	}
+	},
 }
