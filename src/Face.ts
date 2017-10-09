@@ -1,3 +1,4 @@
+import {Equalable, Pair} from 'javasetmap.ts'
 import {
 	AABB,
 	arrayFromFunction,
@@ -31,7 +32,15 @@ import {
 } from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {B2, Curve, Edge, L3, P3, ParametricSurface, PlaneSurface, PointVsFace, Surface,} from './index'
+import {getGlobalId,B2, Curve, Edge, L3, P3, ParametricSurface, PlaneSurface, PointVsFace, Surface,
+	IntersectionPointInfo, dotCurve2, SemiEllipsoidSurface, EllipsoidSurface, triangulateVertices,
+	StraightEdge,
+	COPLANAR_SAME,
+	INSIDE,
+	splitsVolumeEnclosingFacesP,
+	fff,
+	splitsVolumeEnclosingCone2,
+	splitsVolumeEnclosingFacesP2} from './index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
@@ -441,7 +450,7 @@ export abstract class Face extends Transformable {
 					startT > last.t && (startDir = startDir.negated())
 					let endDir = isCurve.tangentAt(last.t)
 					startT > last.t && (endDir = endDir.negated())
-					const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, 'genseg' + globalId++)
+					const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, 'genseg' + getGlobalId())
 					startP = undefined
 					if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
 						handleEndPoint(startA || col1, startB || col2, newEdge)
@@ -462,7 +471,7 @@ export abstract class Face extends Transformable {
 				startT > endT && (startDir = startDir.negated())
 				let endDir = isCurve.tangentAt(endT)
 				startT > endT && (endDir = endDir.negated())
-				const newEdge = Edge.create(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, 'genseg' + globalId++)
+				const newEdge = Edge.create(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, 'genseg' + getGlobalId())
 				if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
 					handleEndPoint(startA || col1, startB || col2, newEdge)
 				}
@@ -959,7 +968,64 @@ export class PlaneFace extends Face {
 	// face2, thisBrep, face2Brep, false, hasPair, addPair) const c2 = handleEdgeInFace(col2, col1, face2, face,
 	// face2Brep, thisBrep, true, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) if (c1 || c2) return true  if (col1
 	// && col2) { if (hasPair(col1.getCanon(), col2.getCanon())) return  addPair(col1.getCanon(), col2.getCanon())
-	// function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean, thisEdgePoints, has, add) { // not entirely sure for what i had the dirInsides in? //const aDirNegatedInside = (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA) const edgeInside = sVEF == INSIDE || coplanarSameIsInside && sVEF == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped() edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) }) } handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, true, thisEdgePoints, hasPair, addPair) handleColinearEdgeFaces(col2, col1, face2Brep, thisBrep, false, otherEdgePoints, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) } }   // what needs to be generated: new edges on face // points on edges where they are cut by faces so that sub edges will be generated for loops // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B //         you don't want thos to be marked as 'inside', otherwise invalid faces will be added // if a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) { // ends in the middle of b's face if (a && !b) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } // else colinear segment ends in middle of other face, do nothing } // ends in the middle of a's face if (b && !a) { if (!b.colinear && b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) { mapPush(otherEdgePoints, b.edge.getCanon(), b) assert(b.edge.isValidT(b.edgeT)) } // else colinear segment ends in middle of other face, do nothing } if (a && b) { // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge // segment starts/ends on edge/edge intersection function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) { addPair(a.edge.getCanon(), b.edge.getCanon()) // ends on a, on colinear segment b bT != a.edge.bT && // b can be colinear, so edgeT == aT is possible if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) { const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b // face2brep corner on edge const sVEC1 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir) const sVEC2 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir.negated()) // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge  if (INSIDE == sVEC1 || INSIDE == sVEC2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector, thisPlane.normal1) const sVEF2 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector.negated(), thisPlane.normal1) if (INSIDE == sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } } } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2, face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2) const face: PlaneFace = this // get intersection const thisPlane = this.surface.plane, face2Plane = face2.surface.plane if (thisPlane.isParallelToPlane(face2Plane)) { if (thisPlane.like(face2Plane)) { // normal1 same and same location in space // addLikeSurfaceFaces(likeSurfaceFaces, this, face2) } return } const isLine = L3.fromPlanes(thisPlane, face2Plane) // get intersections of newCurve with other edges of face and face2 const ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane) const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine, thisPlane) if (ps1.length == 0 || ps2.length == 0) { // faces to not intersect return }  let col1: IntersectionPointInfo, col2: IntersectionPointInfo let in1 = false, in2 = false let i = 0, j = 0, last let startP, startDir, startT, startA, startB while (i < ps1.length || j < ps2.length) { assert(i <= ps1.length) assert(j <= ps2.length) const a = ps1[i], b = ps2[j] assert(a || b) if (j == ps2.length || i < ps1.length && lt(a.t, b.t)) { last = a in1 = !in1 a.used = true in1 && (col1 = a.colinear && a) i++ } else if (i == ps1.length || gt(a.t, b.t)) { last = b in2 = !in2 b.used = true in2 && (col2 = b.colinear && b) j++ } else { // TODO: this will break if 3 points on the same t last = a in1 = !in1 in2 = !in2 //if (in1 == in2) { a.used = true b.used = true in1 && (col1 = a.colinear && a) in2 && (col2 = b.colinear && b) //} i++ j++ } if (startP && !(in1 && in2)) { // segment end const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' + globalId++) startP = undefined last.used = true if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) { handleEndPoint(startA || col1, startB || col2, newEdge) handleEndPoint(a && a.used && a || col1, b && b.used && b || col2, newEdge) } } else if (in1 && in2) { // new segment just started startP = last.p startDir = last.insideDir startT = last.t startA = a && a.used && a startB = b && b.used && b } if (!in1 && a && last == a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used) && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
+	// function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean, thisEdgePoints,
+	// has, add) { // not entirely sure for what i had the dirInsides in? //const aDirNegatedInside =
+	// (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a,
+	// newEdge.aDir.negated()) == INSIDE //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
+	// splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
+	// thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { const sVEF = splitsVolumeEnclosingFaces(face2Brep,
+	// col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA) const edgeInside = sVEF == INSIDE ||
+	// coplanarSameIsInside && sVEF == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge
+	// : newEdge.flipped() edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) }) } handleColinearEdgeFaces(col1,
+	// col2, thisBrep, face2Brep, true, thisEdgePoints, hasPair, addPair) handleColinearEdgeFaces(col2, col1,
+	// face2Brep, thisBrep, false, otherEdgePoints, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) } }   // what
+	// needs to be generated: new edges on face // points on edges where they are cut by faces so that sub edges will
+	// be generated for loops // points on ends of edges where the edge will be an edge in the new volume where it goes
+	// from A to B //         you don't want thos to be marked as 'inside', otherwise invalid faces will be added // if
+	// a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be
+	// function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) { // ends in the
+	// middle of b's face if (a && !b) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
+	// mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } // else colinear segment ends
+	// in middle of other face, do nothing } // ends in the middle of a's face if (b && !a) { if (!b.colinear &&
+	// b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) { mapPush(otherEdgePoints, b.edge.getCanon(), b)
+	// assert(b.edge.isValidT(b.edgeT)) } // else colinear segment ends in middle of other face, do nothing } if (a &&
+	// b) { // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge //
+	// segment starts/ends on edge/edge intersection function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep,
+	// face2Brep, first, thisEdgePoints) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { if
+	// (!hasPair(a.edge.getCanon(), b.edge.getCanon())) { addPair(a.edge.getCanon(), b.edge.getCanon()) // ends on a,
+	// on colinear segment b bT != a.edge.bT && // b can be colinear, so edgeT == aT is possible if (a.p.like(b.edge.a)
+	// || a.p.like(b.edge.b)) { const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b // face2brep corner on edge
+	// const sVEC1 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir) const sVEC2 =
+	// splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir.negated()) // if either of these return
+	// ALONG_EDGE_OR_PLANE, then the breps share a colinear edge  if (INSIDE == sVEC1 || INSIDE == sVEC2) {
+	// mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center
+	// intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const
+	// testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 =
+	// splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector, thisPlane.normal1) const sVEF2 =
+	// splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector.negated(), thisPlane.normal1) if (INSIDE ==
+	// sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } }
+	// } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2,
+	// face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2)
+	// const face: PlaneFace = this // get intersection const thisPlane = this.surface.plane, face2Plane =
+	// face2.surface.plane if (thisPlane.isParallelToPlane(face2Plane)) { if (thisPlane.like(face2Plane)) { // normal1
+	// same and same location in space // addLikeSurfaceFaces(likeSurfaceFaces, this, face2) } return } const isLine =
+	// L3.fromPlanes(thisPlane, face2Plane) // get intersections of newCurve with other edges of face and face2 const
+	// ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane) const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine,
+	// thisPlane) if (ps1.length == 0 || ps2.length == 0) { // faces to not intersect return }  let col1:
+	// IntersectionPointInfo, col2: IntersectionPointInfo let in1 = false, in2 = false let i = 0, j = 0, last let
+	// startP, startDir, startT, startA, startB while (i < ps1.length || j < ps2.length) { assert(i <= ps1.length)
+	// assert(j <= ps2.length) const a = ps1[i], b = ps2[j] assert(a || b) if (j == ps2.length || i < ps1.length &&
+	// lt(a.t, b.t)) { last = a in1 = !in1 a.used = true in1 && (col1 = a.colinear && a) i++ } else if (i == ps1.length
+	// || gt(a.t, b.t)) { last = b in2 = !in2 b.used = true in2 && (col2 = b.colinear && b) j++ } else { // TODO: this
+	// will break if 3 points on the same t last = a in1 = !in1 in2 = !in2 //if (in1 == in2) { a.used = true b.used =
+	// true in1 && (col1 = a.colinear && a) in2 && (col2 = b.colinear && b) //} i++ j++ } if (startP && !(in1 && in2))
+	// { // segment end const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' +
+	// getGlobalId()) startP = undefined last.used = true if (handleNewEdge(newEdge, col1 && col1.edge, col2 &&
+	// col2.edge)) { handleEndPoint(startA || col1, startB || col2, newEdge) handleEndPoint(a && a.used && a || col1, b
+	// && b.used && b || col2, newEdge) } } else if (in1 && in2) { // new segment just started startP = last.p startDir
+	// = last.insideDir startT = last.t startA = a && a.used && a startB = b && b.used && b } if (!in1 && a && last ==
+	// a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used)
+	// && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
 
 	withHole(holeEdges: Edge[]) {
 		return new PlaneFace(this.surface, this.contour, [holeEdges])
@@ -1473,20 +1539,20 @@ export class RotationFace extends Face {
 								//inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2 < 1)
 								while (lt(nextOpos, nextPartStartOpos)) {
 									switch (nextOpos % 4) {
-										case 0:
-											outline.push(getGridVertexIndex(col, row))
-											break
-										case 1:
-											inside = inside != flipping
-											outline.push(getGridVertexIndex(col + 1, row))
-											break
-										case 2:
-											outline.push(getGridVertexIndex(col + 1, row + 1))
-											break
-										case 3:
-											inside = inside != flipping
-											outline.push(getGridVertexIndex(col, row + 1))
-											break
+									case 0:
+										outline.push(getGridVertexIndex(col, row))
+										break
+									case 1:
+										inside = inside != flipping
+										outline.push(getGridVertexIndex(col + 1, row))
+										break
+									case 2:
+										outline.push(getGridVertexIndex(col + 1, row + 1))
+										break
+									case 3:
+										inside = inside != flipping
+										outline.push(getGridVertexIndex(col, row + 1))
+										break
 
 									}
 									flipping = true

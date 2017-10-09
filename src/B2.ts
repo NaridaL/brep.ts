@@ -1,4 +1,5 @@
-import {JavaMap as CustomMap, JavaSet as CustomSet} from 'javasetmap.ts'
+import {JavaMap as CustomMap, JavaSet as CustomSet, Pair} from 'javasetmap.ts'
+import * as nerdamer from 'nerdamer'
 import {
 	AABB,
 	assert,
@@ -30,16 +31,19 @@ import {
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, Edge, Face, FaceInfoFactory, L3, P3, PlaneFace, PointVsFace, Surface,} from './index'
+import {Curve, curvePoint, curvePointMF, Edge, Face, FaceInfoFactory, L3, P3, PlaneFace, PointVsFace, R2_R, Surface,} from './index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI,sign, abs, sqrt} = Math
 
 
 const EPS = 1e-5
 
 let globalId = 0
+export function getGlobalId() {
+	return globalId++
+}
 
-function addLikeSurfaceFaces(likeSurfaceFaces: Face[][], face1: Face, face2: Face) {
+export function addLikeSurfaceFaces(likeSurfaceFaces: Face[][], face1: Face, face2: Face) {
 	// There cannot be two subgroups which will later be connected, as the "graph" of like surface faces is fully
 	// connected
 	for (let i = 0; i < likeSurfaceFaces.length; i++) {
@@ -66,7 +70,7 @@ function addLikeSurfaceFaces(likeSurfaceFaces: Face[][], face1: Face, face2: Fac
 	likeSurfaceFaces.push([face1, face2])
 }
 
-function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, faceConstructor: typeof Face.constructor): Face {
+export function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, faceConstructor: typeof Face.constructor): Face {
 	const visited = new Set()
 
 	function nextStart() { return edges.find(edge => !visited.has(edge)) }
@@ -102,7 +106,7 @@ function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, faceConstru
  * {@link ../screenshots/Capture.PNG}
  * find the next edge with the MAXIMUM angle
  */
-function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], faceNormalAtCurrentB: V3): int {
+export function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], faceNormalAtCurrentB: V3): int {
 	let maxValue = -20, advanced = false, result = Number.MAX_SAFE_INTEGER
 	const normVector = currentEdge.bDir.cross(faceNormalAtCurrentB)
 	const eps = 1e-4
@@ -209,7 +213,7 @@ export class B2 extends Transformable {
 				if (loopInfo.subloops.every(sl => !sl.ccw)) {
 					const holes = loopInfo.subloops.map(sl => sl.loop)
 					const info = infoFactory && infoFactory.newSubFace(originalFace, surface, loopInfo.loop, holes)
-					const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface' + globalId++, info)
+					const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface' + getGlobalId(), info)
 					newFaces.push(newFace)
 					loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl)))
 				} else {
@@ -521,7 +525,7 @@ export class B2 extends Transformable {
 				const info = pointInfos[i]
 				const pDir = canonEdge.tangentAt(info.edgeT)
 				if (!eq(info.edgeT, startT)) {
-					const newEdge = Edge.create(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, 'looseSegment' + globalId++)
+					const newEdge = Edge.create(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, 'looseSegment' + getGlobalId())
 					addNewEdge(startInfo, info, newEdge)
 				}
 				startP = info.p
@@ -530,7 +534,7 @@ export class B2 extends Transformable {
 				startDir = pDir
 			}
 			if (startInfo && !eq(startT, canonEdge.bT)) {
-				const newEdge = Edge.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, 'looseSegment' + globalId++)
+				const newEdge = Edge.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, 'looseSegment' + getGlobalId())
 				addNewEdge(startInfo, undefined, newEdge)
 			}
 		}
@@ -797,7 +801,7 @@ export class B2 extends Transformable {
 	}
 }
 
-namespace B2 {
+export namespace B2 {
 	export const asldk = 0
 }
 
@@ -859,7 +863,7 @@ export const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE = 3, 
 // - b.angle) // assert(relFaces.length % 2 == 0, edge.toSource()) // even number of touching faces  if
 // (eq0(relFaces[0].angle)) { //assert(false) todo const coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0;
 // return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE } else { return !relFaces[0].reversed ? INSIDE : OUTSIDE } }
-function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
+export function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
 	assert(arguments.length == 4)
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
@@ -880,7 +884,7 @@ function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, f
 	}
 }
 
-function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: V3, faceNormal: V3): int {
+export function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: V3, faceNormal: V3): int {
 	assert(arguments.length == 5)
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
@@ -904,7 +908,7 @@ function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: 
 	}
 }
 
-function splitsVolumeEnclosingFacesP2(brep: B2, canonEdge: Edge, p: V3, testCurve: Curve, curveT: number, dir: -1 | 1, faceNormal: V3): int {
+export function splitsVolumeEnclosingFacesP2(brep: B2, canonEdge: Edge, p: V3, testCurve: Curve, curveT: number, dir: -1 | 1, faceNormal: V3): int {
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
 	assertf(() => brep.edgeFaces)
@@ -952,7 +956,7 @@ function splitsVolumeEnclosingFacesP2(brep: B2, canonEdge: Edge, p: V3, testCurv
 	return result
 }
 
-function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
+export function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
 	const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular())
 	const rays = []
 	for (let k = 0; k < brep.faces.length; k++) {
@@ -989,7 +993,7 @@ function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
 	}
 }
 
-function splitsVolumeEnclosingCone2(brep: B2, p: V3, curve: Curve, curveT: number, fb: 1 | -1) {
+export function splitsVolumeEnclosingCone2(brep: B2, p: V3, curve: Curve, curveT: number, fb: 1 | -1) {
 	assert(curve.containsPoint(p))
 	const dir = curve.tangentAt(curveT).times(fb)
 	const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular())
@@ -1008,7 +1012,7 @@ function splitsVolumeEnclosingCone2(brep: B2, p: V3, curve: Curve, curveT: numbe
 	return brep.containsPoint(curve.at(curveT + fb * EPS), true) ? INSIDE : OUTSIDE
 }
 
-function fff(info: { face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number }, surface: Surface): int {
+export function fff(info: { face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, reversed: boolean, angle: number }, surface: Surface): int {
 	const canonA = info.edge.reversed ? info.edge.b : info.edge.a
 	const surfaceNormalAtCanonA = surface.normalP(canonA)
 	const dot = snap0(info.inside.dot(surfaceNormalAtCanonA))
@@ -1021,7 +1025,7 @@ function fff(info: { face: Face, edge: Edge, normalAtCanonA: V3, inside: V3, rev
 	assert(false)
 }
 
-function makeLink(values: any) {
+export function makeLink(values: any) {
 	return 'viewer.html#' + Object.getOwnPropertyNames(values).map(name => {
 		const val = values[name]
 		return name + '=' + (typeof val == 'string' ? val : val.toSource())
@@ -1030,7 +1034,7 @@ function makeLink(values: any) {
 
 declare function earcut(data: FloatArray, holeIndices: number[], dim?: int): int[]
 
-function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
+export function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
 	const absMaxDim = normal.maxAbsDim(), factor = sign(normal.e(absMaxDim))
 	const contour = new Float64Array(vertices.length * 2)
 	let i = vertices.length
@@ -1046,18 +1050,18 @@ function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
 		// unroll disambiguation instead of accessing elements by string name ([coord0] etc)
 		// as it confuses google closure
 		switch (absMaxDim) {
-			case 0:
-				contour[i * 2] = vertices[i].y * factor
-				contour[i * 2 + 1] = vertices[i].z
-				break
-			case 1:
-				contour[i * 2] = vertices[i].z * factor
-				contour[i * 2 + 1] = vertices[i].x
-				break
-			case 2:
-				contour[i * 2] = vertices[i].x * factor
-				contour[i * 2 + 1] = vertices[i].y
-				break
+		case 0:
+			contour[i * 2] = vertices[i].y * factor
+			contour[i * 2 + 1] = vertices[i].z
+			break
+		case 1:
+			contour[i * 2] = vertices[i].z * factor
+			contour[i * 2 + 1] = vertices[i].x
+			break
+		case 2:
+			contour[i * 2] = vertices[i].x * factor
+			contour[i * 2 + 1] = vertices[i].y
+			break
 		}
 	}
 	return earcut(contour, holeStarts)
@@ -1206,7 +1210,7 @@ export function followAlgorithm2d(ic: MathFunctionR2R,
 	return {points, tangents}
 }
 
-function followAlgorithm2dAdjustable(ic: MathFunctionR2R,
+export function followAlgorithm2dAdjustable(ic: MathFunctionR2R,
 									 start: V3,
 									 stepLength: number = 0.5,
 									 bounds: (s: number, t: number) => boolean,
@@ -1255,7 +1259,7 @@ function followAlgorithm2dAdjustable(ic: MathFunctionR2R,
 }
 
 // both curves must be in the same s-t coordinates for this to make sense
-function intersectionICurveICurve(iCurve1: (s: number, t: number) => number,
+export function intersectionICurveICurve(iCurve1: (s: number, t: number) => number,
 								  startParams1: V3,
 								  endParams1: V3,
 								  startDir: V3,
@@ -1286,7 +1290,7 @@ function intersectionICurveICurve(iCurve1: (s: number, t: number) => number,
 
 }
 
-function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
+export function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
 	let p = loopPoints1[0], val = iCurve2(p.x, p.y), lastVal
 	const iss = []
 	for (let i = 0; i < loopPoints1.length; i++) {
@@ -1300,7 +1304,7 @@ function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
 	return iss
 }
 
-function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart, searchEnd, searchStep, implicitSurface) {
+export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number, searchStep: number, implicitSurface) {
 	assertNumbers(searchStart, searchEnd, searchStep)
 	const iss = []
 	let val = implicitSurface(parametricCurve(searchStart)), lastVal
@@ -1314,9 +1318,67 @@ function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStar
 	return iss
 }
 
-function intersectionICurvePSurface(f0, f1, parametricSurface) {
+export function intersectionICurvePSurface(f0, f1, parametricSurface) {
 
 }
 
 
+//
+//function test2() {
+//    const ic: R2_R = (x, y) => sin(x+y)-cos(x*y)+1
+//    const dids: R2_R = (x, y) => y * sin(x * y) + cos(x + y)
+//    const didt: R2_R = (x, y) => x * sin(x * y) + cos(x + y)
+//    const ic2: R2_R = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
+//    const di2ds: R2_R = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
+//    const di2dt: R2_R = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y
+// ** 2 - 3 * x ** 2)) const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
+// assert(eq02(ic(start.x, start.y), 0.1)) const bounds = (s: number, t: number) => -5 <= s && s <= 5 && -5 <= t && t
+// <= 5 //const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt) const curves =
+// Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt) //const curves =
+// Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02) //const curves = mkcurves(ic, start.x, start.y,
+// 0.05, dids, didt, bounds) .map(({points, tangents}, i) => { const curve = new ImplicitCurve(ic, points, tangents)
+// return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i)) }) //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5,
+// 0) //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0) console.log(curves.length) return curves  }
+export function cassini(a: number, c: number): (x: number, y: number) => number {
+	return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
+}
+
+/**
+ * A function R² -> R with first and second derivatives.
+ */
+export interface MathFunctionR2R {
+	readonly x: R2_R
+	readonly y: R2_R
+	readonly xx?: R2_R
+	readonly xy?: R2_R
+	readonly yy?: R2_R
+
+	(s: number, t: number): number
+}
+
+export namespace MathFunctionR2R {
+	export function forNerdamer(expression: nerdamer.ExpressionParam, args: [string, string] = ['x', 'y']): MathFunctionR2R {
+		const ndf = nerdamer(expression)
+		const ndfs = nerdamer.diff(ndf, args[0])
+		const ndft = nerdamer.diff(ndf, args[1])
+		const f = ndf.buildFunction(args) as any
+		f.x = ndfs.buildFunction(args)
+		f.y = ndft.buildFunction(args)
+		f.xx = nerdamer.diff(ndfs, args[0]).buildFunction(args)
+		f.xy = nerdamer.diff(ndfs, args[1]).buildFunction(args)
+		f.yy = nerdamer.diff(ndft, args[1]).buildFunction(args)
+		return f
+	}
+
+	export function nerdamerToR2_R(expression: nerdamer.Expression, args: [string, string] = ['x', 'y']) {
+		return expression.buildFunction(args)
+	}
+
+	export function forFFxFy(f: R2_R, fx: R2_R, fy: R2_R): MathFunctionR2R {
+		(f as any).x = fx
+		;(f as any).y = fy
+		return f as any
+	}
+}
+export const cas2 = cassini(0.9, 1.02)
 

@@ -40,6 +40,8 @@ import {
 	SemiCylinderSurface,
 	SemiEllipseCurve,
 	Surface,
+	dotCurve,
+	dotCurve2,
 } from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math

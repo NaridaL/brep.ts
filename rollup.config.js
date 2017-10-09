@@ -8,7 +8,7 @@ export default {
 	name: pkg.umdGlobal,
 	sourcemap: true,
 	external: Object.keys(pkg.dependencies),
-	// globals: {'javasetmap.ts': '' },
+	globals: moduleName => require(moduleName + '/package.json').umdGlobal,
 	plugins: [
 		sourcemaps()
 	],

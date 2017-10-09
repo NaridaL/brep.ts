@@ -22,7 +22,7 @@ import {
 	V3,
 } from 'ts3dutils'
 
-import {followAlgorithm2d, ISInfo, P3, Surface} from '../index'
+import {followAlgorithm2d, ISInfo, P3, Surface, MathFunctionR2R} from '../index'
 
 const {ceil, floor, abs} = Math
 
@@ -415,9 +415,9 @@ function mkcurves(implicitCurve: MathFunctionR2R,
 	}
 }
 
-type R2_R = (s: number, t: number) => number
+export type R2_R = (s: number, t: number) => number
 
-function curvePoint(implicitCurve: R2_R, startPoint: V3,
+export function curvePoint(implicitCurve: R2_R, startPoint: V3,
 					dids: R2_R,
 					didt: R2_R) {
 	const eps = 1 / (1 << 20)
@@ -432,7 +432,7 @@ function curvePoint(implicitCurve: R2_R, startPoint: V3,
 	return p
 }
 
-function curvePointMF(mf: MathFunctionR2R, startPoint: V3, steps: int = 8, eps: number = 1 / (1 << 30)) {
+export function curvePointMF(mf: MathFunctionR2R, startPoint: V3, steps: int = 8, eps: number = 1 / (1 << 30)) {
 	let p = startPoint
 	for (let i = 0; i < steps; i++) {
 		const fp = mf(p.x, p.y)

@@ -35,17 +35,20 @@ import {Mesh} from 'tsgl'
 
 import {
 	Curve,
+	Edge,
+	EllipseCurve,
 	EllipsoidSurface,
 	ISInfo,
 	L3,
-	P3,
+	P3, PlaneSurface,
 	ProjectedCurveSurface,
 	SemiCylinderSurface,
 	SemiEllipsoidSurface,
-	Surface,
+	Surface
+	R2_R,,
 } from '../index'
 
-const {PI, abs} = Math
+const {PI, abs, sin, cos} = Math
 
 export class BezierCurve extends Curve {
 	/**

@@ -4,6 +4,7 @@ import {addOwnProperties, arrayFromFunction, assert, DEG, int, M4, TAU, V, V3} f
 import {DRAW_MODES, GL_COLOR, GL_COLOR_BLACK, LightGLContext, Mesh, Shader} from 'tsgl'
 import {
 	B2,
+	B2T,
 	BezierCurve,
 	Curve,
 	CustomPlane,
@@ -20,7 +21,11 @@ import {
 	SemiCylinderSurface,
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
+	R2_R,
+	MathFunctionR2R,
 } from './index'
+
+const {pow} = Math
 
 import * as shaders from './shaders'
 
@@ -44,7 +49,7 @@ const COLORS = {
 	PP_STROKE: chroma('#EB81B4'),
 }
 
-class BREPGLContext extends (Object as any as typeof LightGLContext) {
+export class BREPGLContext extends (Object as any as typeof LightGLContext) {
 	shaders: typeof SHADER_TYPE_VAR
 
 	cachedMeshes: WeakMap<any, Mesh & { TRIANGLES: int[], normals: V3[] }> = new WeakMap()
@@ -488,7 +493,7 @@ async function viewerMain() {
 	paintScreen()
 }
 
-function initNavigationEvents(_gl: BREPGLContext, eye: { pos: V3, focus: V3, up: V3, zoomFactor: number }, paintScreen: () => void) {
+export function initNavigationEvents(_gl: BREPGLContext, eye: { pos: V3, focus: V3, up: V3, zoomFactor: number }, paintScreen: () => void) {
 	const canvas: HTMLCanvasElement = $(_gl.canvas)
 	let lastPos: V3 = V3.O
 	//_gl.onmousedown.push((e) => {
@@ -561,7 +566,7 @@ function makeDottedLinePlane(count: int = 128) {
 	return mesh
 }
 
-function initMeshes(_meshes: { [name: string]: Mesh }, _gl) {
+export function initMeshes(_meshes: { [name: string]: Mesh }, _gl) {
 	_gl.makeCurrent()
 	_meshes.sphere1 = Mesh.sphere(2)
 	_meshes.segment = Mesh.plane({startY: -0.5, height: 1, detailX: 128})
@@ -572,7 +577,7 @@ function initMeshes(_meshes: { [name: string]: Mesh }, _gl) {
 	_meshes.xyDottedLinePlane = makeDottedLinePlane()
 }
 
-function initShaders(_gl) {
+export function initShaders(_gl: LightGLContext) {
 	_gl.makeCurrent()
 	return {
 		singleColor: Shader.create(shaders.vertexShaderBasic, shaders.fragmentShaderColor),
@@ -591,7 +596,7 @@ function initShaders(_gl) {
 }
 
 
-function setupCamera(_eye: typeof eye, _gl: LightGLContext) {
+export function setupCamera(_eye: typeof eye, _gl: LightGLContext) {
 	const {pos, focus, up, zoomFactor} = _eye
 	//console.log("pos", pos.$, "focus", focus.$, "up", up.$)
 	_gl.matrixMode(_gl.PROJECTION)
@@ -605,64 +610,6 @@ function setupCamera(_eye: typeof eye, _gl: LightGLContext) {
 	setupCameraListener && setupCameraListener(_eye)
 }
 
-//
-//function test2() {
-//    const ic: R2_R = (x, y) => sin(x+y)-cos(x*y)+1
-//    const dids: R2_R = (x, y) => y * sin(x * y) + cos(x + y)
-//    const didt: R2_R = (x, y) => x * sin(x * y) + cos(x + y)
-//    const ic2: R2_R = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
-//    const di2ds: R2_R = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
-//    const di2dt: R2_R = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y
-// ** 2 - 3 * x ** 2)) const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-// assert(eq02(ic(start.x, start.y), 0.1)) const bounds = (s: number, t: number) => -5 <= s && s <= 5 && -5 <= t && t
-// <= 5 //const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt) const curves =
-// Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt) //const curves =
-// Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02) //const curves = mkcurves(ic, start.x, start.y,
-// 0.05, dids, didt, bounds) .map(({points, tangents}, i) => { const curve = new ImplicitCurve(ic, points, tangents)
-// return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i)) }) //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5,
-// 0) //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0) console.log(curves.length) return curves  }
-function cassini(a: number, c: number): (x: number, y: number) => number {
-	return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
-}
-
-/**
- * A function R² -> R with first and second derivatives.
- */
-interface MathFunctionR2R {
-	readonly x: R2_R
-	readonly y: R2_R
-	readonly xx?: R2_R
-	readonly xy?: R2_R
-	readonly yy?: R2_R
-
-	(s: number, t: number): number
-}
-
-namespace MathFunctionR2R {
-	export function forNerdamer(expression: nerdamer.ExpressionParam, args: [string, string] = ['x', 'y']): MathFunctionR2R {
-		const ndf = nerdamer(expression)
-		const ndfs = nerdamer.diff(ndf, args[0])
-		const ndft = nerdamer.diff(ndf, args[1])
-		const f = ndf.buildFunction(args) as any
-		f.x = ndfs.buildFunction(args)
-		f.y = ndft.buildFunction(args)
-		f.xx = nerdamer.diff(ndfs, args[0]).buildFunction(args)
-		f.xy = nerdamer.diff(ndfs, args[1]).buildFunction(args)
-		f.yy = nerdamer.diff(ndft, args[1]).buildFunction(args)
-		return f
-	}
-
-	export function nerdamerToR2_R(expression: nerdamer.Expression, args: [string, string] = ['x', 'y']) {
-		return expression.buildFunction(args)
-	}
-
-	export function forFFxFy(f: R2_R, fx: R2_R, fy: R2_R): MathFunctionR2R {
-		;(f as any).x = fx
-		;(f as any).y = fy
-		return f as any
-	}
-}
-const cas2 = cassini(0.9, 1.02)
 
 function HJKl() {
 	//math.derivative('x^2', 'x')

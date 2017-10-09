@@ -9,7 +9,7 @@ Boundary representation volume modeling in TypeScript.
 ## Installation
 NPM:  `npm install brepts --save`
     
-In the browser, you can include the [UMD bundle](./dist/bundle.js) in a script tag, and the module will be available under the global `nla` 
+In the browser, you can include the [UMD bundle](./dist/bundle.js) in a script tag, and the module will be available under the global `brep_ts` 
     
 <!--- CONTENT-START --->
 Some content

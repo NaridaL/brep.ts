@@ -1,3 +1,4 @@
+import {Font, PathCommand} from 'opentype.js'
 import {
 	arrayFromFunction,
 	assert,
@@ -16,6 +17,7 @@ import {
 	M4,
 	MINUS,
 	NLA_PRECISION,
+	raddd,
 	snap,
 	TAU,
 	V,
@@ -23,22 +25,30 @@ import {
 } from 'ts3dutils'
 
 import {
+	B2,
 	BezierCurve,
 	Curve,
 	Edge,
 	EllipseCurve,
+	Face,
+	FaceInfoFactory,
+	getGlobalId,
 	L3,
 	P3,
+	PCurveEdge,
 	PlaneFace,
 	PlaneSurface,
 	ProjectedCurveSurface,
+	RotationFace,
 	SemiCylinderSurface,
 	SemiEllipseCurve,
+	SemiEllipsoidSurface,
+	StraightEdge,
 	Surface,
 	XiEtaCurve,
 } from './index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI, min, max, ceil} = Math
 
 
 function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
@@ -64,10 +74,10 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 			if (eq0(line.anchor.x)) {
 				return
 			}
-			let flipped = line.anchor.z > edge.b.z
+			const flipped = line.anchor.z > edge.b.z
 			surface = new SemiCylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated(), undefined, undefined)
 		} else if (curve.dir1.isPerpendicularTo(V3.Z)) {
-			let flipped = line.anchor.x > edge.b.x
+			const flipped = line.anchor.x > edge.b.x
 			let surface = new PlaneSurface(new P3(V3.Z, line.anchor.z))
 			if (!flipped) surface = surface.flipped()
 			if (!open) {
@@ -79,45 +89,45 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 			return new PlaneFace(surface, faceEdges)
 		} else {
 			// apex is intersection of segment with Z-axis
-			let a = line.anchor, b = edge.b
-			let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
-			let apex = new V3(0, 0, apexZ)
-			let flipped = line.anchor.z > edge.b.z
+			const a = line.anchor, b = edge.b
+			const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
+			const apex = new V3(0, 0, apexZ)
+			const flipped = line.anchor.z > edge.b.z
 			surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as SemiEllipseCurve, !flipped ? 1 : -1)
 		}
 		return Face.create(surface, faceEdges)
 	}
 	if (edge.curve instanceof SemiEllipseCurve) {
-		let flipped = undefined
-		let ell = edge.curve.rightAngled()
-		let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
+		const flipped = undefined
+		const ell = edge.curve.rightAngled()
+		const f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
 		if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
 			let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
 			if (flipped) {
 				f3length *= -1
 			}
-			let surface = new SemiEllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
+			const surface = new SemiEllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
 			return new RotationFace(surface, faceEdges)
 		}
 	} else {
 		assert(false, edge)
 	}
 	if (curve instanceof L3) {
-		let surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
+		const surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
 		return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor))
 	}
 	if (curve instanceof SemiEllipseCurve) {
-		let curveDir = flipped ? offset : offset.negated()
+		const curveDir = flipped ? offset : offset.negated()
 		return new SemiCylinderSurface(curve, curveDir.unit(), undefined, undefined)
 	}
 	if (curve instanceof BezierCurve) {
-		let curveDir = flipped ? offset : offset.negated()
+		const curveDir = flipped ? offset : offset.negated()
 		return new ProjectedCurveSurface(curve, curveDir.unit(), 0, 1)
 	}
 	throw new Error()
 }
 
-namespace B2T {
+export namespace B2T {
 
 	export function box(w: number = 1, h: number = 1, d: number = 1, name?: string): B2 {
 		assertNumbers(w, h, d)
@@ -137,7 +147,7 @@ namespace B2T {
 		assertf(() => lt(0, rads) && le(rads, TAU))
 		assertf(() => lt(0, height))
 		const edges = StraightEdge.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true)
-		return B2T.rotateEdges(edges, rads, name || 'puckman' + globalId++)
+		return B2T.rotateEdges(edges, rads, name || 'puckman' + getGlobalId())
 	}
 
 	export function registerVertexName(map, name, p) {
@@ -150,7 +160,7 @@ namespace B2T {
 	export function extrudeEdges(baseFaceEdges: Edge[],
 								 baseFacePlane: P3 = P3.XY,
 								 offset: V3 = V3.Z,
-								 name: string = 'extrude' + globalId++,
+								 name: string = 'extrude' + getGlobalId(),
 								 gen?: string,
 								 infoFactory?: FaceInfoFactory<any>): B2 {
 		baseFaceEdges = fixEdges(baseFaceEdges)
@@ -198,17 +208,17 @@ namespace B2T {
 	}
 
 
-	export function cylinder(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cylinder' + globalId++): B2 {
+	export function cylinder(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cylinder' + getGlobalId()): B2 {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return rotateEdges(StraightEdge.chain(vertices, true), rads, name)
 	}
 
-	export function cone(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cone' + globalId++): B2 {
+	export function cone(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cone' + getGlobalId()): B2 {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return rotateEdges(StraightEdge.chain(vertices, true), rads, name)
 	}
 
-	export function sphere(radius: number = 1, name: string = 'sphere' + globalId++, rot: raddd = TAU): B2 {
+	export function sphere(radius: number = 1, name: string = 'sphere' + getGlobalId(), rot: raddd = TAU): B2 {
 		const ee = PCurveEdge.create(
 			new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
 			new V3(0, 0, -radius), new V3(0, 0, radius),
@@ -219,7 +229,7 @@ namespace B2T {
 		return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator)
 	}
 
-	export function menger(res: int = 2, name: string = 'menger' + globalId++): B2 {
+	export function menger(res: int = 2, name: string = 'menger' + getGlobalId()): B2 {
 		let result = B2T.box(1, 1, 1)
 		if (0 == res) return result
 		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
@@ -242,7 +252,7 @@ namespace B2T {
 		return result
 	}
 
-	export function menger2(res: int = 2, name: string = 'menger' + globalId++): B2 {
+	export function menger2(res: int = 2, name: string = 'menger' + getGlobalId()): B2 {
 		if (0 == res) return B2T.box(1, 1, 1)
 
 		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
@@ -273,14 +283,14 @@ namespace B2T {
 		assertf(() => rLarge > rSmall)
 		const curve = SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0))
 		const baseEdges = [PCurveEdge.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge.forCurveAndTs(curve, 0, Math.PI)]
-		return B2T.rotateEdges(baseEdges, rads, name || 'torus' + globalId++)
+		return B2T.rotateEdges(baseEdges, rads, name || 'torus' + getGlobalId())
 	}
 
 	export function torusUnsplit(rSmall: number, rLarge: number, rads: raddd, name: string): B2 {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		const baseEdge = PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI)
-		return B2T.rotateEdges([baseEdge], rads, name || 'torus' + globalId++)
+		return B2T.rotateEdges([baseEdge], rads, name || 'torus' + getGlobalId())
 	}
 
 	/**
@@ -460,16 +470,16 @@ namespace B2T {
 						extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false)
 	}
 
-	let defaultFont: opentypejs.Font
+	let defaultFont: Font
 
-	export function loadFonts(): Promise<opentypejs.Font> {
+	export function loadFonts(): Promise<Font> {
 		return loadFont('fonts/FiraSansMedium.woff').then(font => defaultFont = font)
 	}
 
-	const loadedFonts = new Map<string, opentypejs.Font>()
+	const loadedFonts = new Map<string, Font>()
 
-	export function loadFont(fontPath: string): Promise<opentypejs.Font> {
-		return new Promise<opentypejs.Font>(function (executor, reject) {
+	export function loadFont(fontPath: string): Promise<Font> {
+		return new Promise<Font>(function (executor, reject) {
 			const font = loadedFonts.get(fontPath)
 			if (font) {
 				executor(font)
@@ -501,9 +511,9 @@ namespace B2T {
 		}
 	}
 
-	export function text(text: string, size: number, depth: number = 1, font: opentypejs.Font = defaultFont) {
+	export function text(text: string, size: number, depth: number = 1, font: Font = defaultFont) {
 		const path = font.getPath(text, 0, 0, size)
-		const subpaths = []
+		const subpaths: PathCommand[][] = []
 		path.commands.forEach(c => {
 			if (c.type == 'M') {
 				subpaths.push([])
@@ -586,14 +596,14 @@ namespace B2T {
 				}
 			})
 		})
-		const faces = []
+		const faces: Face[] = []
 		let surface, face
 		edges.forEach((edge, i) => {
 			const ipp = (i + 1) % edges.length
 			const projDir = V3.O
 			const surface = projectCurve(ribs[r][i], projDir, ribs[r][i].deltaT() < 0)
 			if (edge instanceof StraightEdge && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
-				let flipped = edge.a.x > edge.b.x
+				const flipped = edge.a.x > edge.b.x
 				surface = new PlaneSurface(flipped ? new P3(V3.Z, edge.a.z) : new P3(V3.Z.negated(), -edge.a.z))
 				if (open) {
 					const newEdges: Edge[] = []
@@ -702,7 +712,7 @@ namespace B2T {
 		//			PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
 		//			[bottom.contour[i].flipped(), ribs[i], top.contour[m - j - 1].flipped(), ribs[j].flipped()], [],
 		// name + 'wall' + i)) }
-		let edges = StraightEdge.chain(baseVertices, true)
+		const edges = StraightEdge.chain(baseVertices, true)
 		generator = generator || callsce('B2T.extrudeVertices', baseVertices, baseFacePlane, offset, name)
 		return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator)
 	}
@@ -710,7 +720,7 @@ namespace B2T {
 	// Returns a tetrahedron (3 sided pyramid).
 	// Faces will face outwards.
 	// abcd can be in any order. The only constraint is that abcd cannot be on a common plane.
-	export function tetrahedron(a: V3, b: V3, c: V3, d: V3, name: string = 'tetra' + globalId++): B2 {
+	export function tetrahedron(a: V3, b: V3, c: V3, d: V3, name: string = 'tetra' + getGlobalId()): B2 {
 		assertVectors(a, b, c, d)
 		const dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
 		if (eq0(dDistance)) {
@@ -870,8 +880,8 @@ namespace B2T {
 		return new B2(faces, false, generator)
 	}
 
-	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + globalId++): B2 {
-		assertInst.apply(undefined, [Edge, ...baseEdges])
+	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + getGlobalId()): B2 {
+		assertInst(Edge, ...baseEdges)
 		assertVectors(apex)
 
 		const ribs = baseEdges.map(baseEdge => StraightEdge.throughPoints(apex, baseEdge.a))

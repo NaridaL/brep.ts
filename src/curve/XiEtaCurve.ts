@@ -15,7 +15,9 @@ import {
 } from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {BezierCurve, ConicSurface, Curve, EllipseCurve, ISInfo, L3, P3, ProjectedCurveSurface, Surface,} from '../index'
+import {BezierCurve, ConicSurface, Curve, EllipseCurve, ISInfo, L3, P3, ProjectedCurveSurface, Surface, EllipsoidSurface,
+	SemiEllipsoidSurface,
+	PlaneSurface,} from '../index'
 
 const {PI} = Math
 

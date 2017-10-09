@@ -12,9 +12,14 @@ import {
 	V3,
 } from 'ts3dutils'
 
-import {Curve, ImplicitCurve, ImplicitSurface, P3, ParametricSurface, ProjectedCurveSurface, Surface,} from '../index'
+import {Curve, ImplicitCurve, ImplicitSurface, P3, ParametricSurface, ProjectedCurveSurface, Surface, EllipsoidSurface,
+	PlaneSurface,
+	SemiEllipsoidSurface,
+	curvePoint,} from '../index'
 
 let sema = false
+
+const {floor, abs, ceil, min, max} = Math
 
 export class PICurve extends ImplicitCurve {
 	dids: (s: number, t: number) => number

@@ -1,10 +1,5 @@
 {
   "compilerOptions": {
-    "// target": [
-      [
-        "//    \"strict\": true,"
-      ]
-    ],
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
@@ -20,9 +15,10 @@
     ],
     "module": "es6",
     "moduleResolution": "node",
-    "noImplicitAny": true,
+//    "noImplicitAny": true,
     "noImplicitThis": true,
-    "noUnusedLocals": false,
+    "skipLibCheck": true,
+//    "noUnusedLocals": true,
     "outDir": "out",
     "rootDir": "src",
     "sourceMap": true,

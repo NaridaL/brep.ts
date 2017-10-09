@@ -1,5 +1,5 @@
 import {arrayFromFunction, arrayRange, assert, assertVectors, clamp, int, M4, TAU, V3} from 'ts3dutils'
-import {Mesh} from 'tsgl'
+import {Mesh, pushQuad} from 'tsgl'
 
 import {Curve,} from '../index'
 

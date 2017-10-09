@@ -11,7 +11,7 @@ import {
 	V3,
 } from 'ts3dutils'
 
-import {Curve, Edge, L3, P3, ParametricSurface, PICurve, PointVsFace, Surface,} from '../index'
+import {Curve, Edge, L3, P3, ParametricSurface, PICurve, PointVsFace, Surface, PlaneSurface, SemiEllipsoidSurface,} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
