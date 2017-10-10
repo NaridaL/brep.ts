@@ -2,10 +2,10 @@ import {assert, assertInst, assertVectors, eq, eq0, getIntervals, isCCW, M4, pqF
 
 import {
 	Curve, Edge, EllipseCurve, HyperbolaCurve, ImplicitSurface, L3, P3, ParabolaCurve, ParametricSurface,
-	SemiEllipseCurve, Surface,
+	SemiEllipseCurve, Surface, PlaneSurface, PointVsFace,
 } from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI, cos, sin, min, max, tan, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	/**

@@ -2,7 +2,7 @@ import {assert, assertInst, eq0, M4, V3} from 'ts3dutils'
 
 import {ImplicitSurface, ParametricSurface} from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI, cos, sin, min, max, sign, tan, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 
 /**

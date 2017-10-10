@@ -2,7 +2,7 @@
 //	console.log(errorMsg, url, lineNumber, column, errorObj)
 //}
 
-QUnit.module('NLA')
+suite('NLA', () => {
 
 function testDifferentSystems(name: string, test: (assert: Assert, m4: M4) => void, ...what: M4[]) {
 	if (!what.length) {
@@ -133,10 +133,10 @@ testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4) {
 	M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
 	M4.FOO.as3x3())
 
-registerTests({
 
 
-	'Edge.edgesIntersects'(assert) {
+
+	test('Edge.edgesIntersects', assert => {
 		const curve1 = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
 		const curve2 = curve1.transform(M4.rotateLine(V(0.5, 0), V3.Z, PI / 2))
 		const edge1 = PCurveEdge.forCurveAndTs(curve1, 0, 1)
@@ -146,28 +146,28 @@ registerTests({
 		assert.notOk(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
 	},
 
-	'Plane3.prototype.projectedVector'(assert) {
+	test('Plane3.prototype.projectedVector', assert => {
 		const p = new P3(V(0, 0, 1), 2)
 		assert.ok(V(1, 1, 0).like(p.projectedVector(V(1, 1, 1))))
 	},
-	'Line3.prototype.distanceToLine'(assert) {
+	test('Line3.prototype.distanceToLine', assert => {
 		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.Y)), 1)
 		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.X)), 1)
 	},
-	'Plane3.prototype.transformed'(assert) {
+	test('Plane3.prototype.transformed', assert => {
 		const p = new P3(V(0, 0, 1), 2)
 		assert.ok(P3.XY.like(P3.XY.transform(M4.identity())))
 	},
-	'Plane3.prototype.intersectionWithPlane'(assert) {
+	test('Plane3.prototype.intersectionWithPlane', assert => {
 		assert.ok(P3.XY.intersectionWithPlane(P3.ZX).isColinearTo(L3.X))
 		assert.ok(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.X))
 		assert.notOk(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.Y))
 	},
-	'Line3.prototype.isTsForLine'(assert) {
+	test('Line3.prototype.isTsForLine', assert => {
 		console.log(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).sce)
 		assert.ok(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).equals(V3.X))
 	},
-	'V3.areDisjoint2'(assert) {
+	test('V3.areDisjoint2', assert => {
 		console.log(~~2147483657)
 		const s = new CustomSet()
 		const a = V(0, 2.7499999999999996, -5), b = V(0, 2.749999999999999, -5)
@@ -175,15 +175,15 @@ registerTests({
 		console.log(s._map, a.like(b), a.hashCodes(), b.hashCodes(), a.hashCode(), b.hashCode())
 		assert.ok(s.canonicalizeLike(b) == a)
 	},
-	'intersectionUnitCircleLine'(assert) {
+	test('intersectionUnitCircleLine', assert => {
 		// y = -x + 1 => x + y = 1
 		assert.deepEqual(intersectionUnitCircleLine(1, 1, 1), {x1: 1, x2: 0, y1: 0, y2: 1})
 	},
-	'intersectionCircleLine'(assert) {
+	test('intersectionCircleLine', assert => {
 		// y = -x + 2 => x + y = 2
 		assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), {x1: 2, x2: 0, y1: 0, y2: 2})
 	},
-	'serialization'(assert) {
+	test('serialization', assert => {
 		let a = {a: 2, b: 3}
 		assert.equal(unserialize(serialize(a)).toString(), a.toString())
 
@@ -198,11 +198,11 @@ registerTests({
 		a = [1, 2, 3]
 		assert.equal(unserialize(serialize(a)).toString(), a.toString())
 	},
-	'PlaneSurface.loopContainsPoint'(assert) {
+	test('PlaneSurface.loopContainsPoint', assert => {
 		const loop = StraightEdge.chain([V(0, 0), V(10, 0), V(10, 10), V(0, 10)], true)
 		assert.equal(new PlaneSurface(P3.XY).loopContainsPoint(loop, V(8, 10)), PointVsFace.ON_EDGE)
 	},
-	'PlaneSurface.loopContainsPoint 2'(assert) {
+	test('PlaneSurface.loopContainsPoint 2', assert => {
 		const loop = [
 			new StraightEdge(new L3(V(2, 10, 0), V3.Z), V(2, 10, 3), V(2, 10, 5), 3, 5),
 			new StraightEdge(new L3(V(0, 10, 5), V3.X), V(2, 10, 5), V(0, 10, 5), 2, 0),
@@ -216,7 +216,7 @@ registerTests({
 		const p = V(6, 10, 3)
 		testLoopContainsPoint(assert, new PlaneSurface(new P3(V(0, -1, 0), -10)), loop, p, PointVsFace.ON_EDGE)
 	},
-	//'EllipsoidSurface.splitOnPlaneLoop'(assert) {
+	//test('EllipsoidSurface.splitOnPlaneLoop', assert => {
 	//    //const es = SemiEllipsoidSurface.UNIT
 	//    const a = V3.sphere(30 * DEG, 70 * DEG), z = a.z, xy = a.lengthXY(), center = V(0, 0, z), f1 = V(a.x, a.y,
 	// 0), f2 = V(-a.y, a.x) const curve = new SemiEllipseCurve(center, f1, f2) const seamCurve =
@@ -229,7 +229,7 @@ registerTests({
 	// [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)] },
 
 
-	//'SemiCylinderSurface Face containsPoint'(assert) {
+	//test('SemiCylinderSurface Face containsPoint', assert => {
 	//	let face = new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(73.03583314037537,
 	// -69.86032483338774, 0), V(-24.176861672352132, -146.16681457389276, 0), V(146.16681457389276,
 	// -24.176861672352132, 0)), V(0, 0, 1)), [ new PCurveEdge(new SemiEllipseCurve(V(73.03583314037537,
@@ -260,7 +260,7 @@ registerTests({
 	// face.surface.isTsForLine(line)) const t = line.isTWithPlane(face2.surface.plane);
 	// console.log(face2.intersectsLine(line), t, line.at(t).sce) assert.ok(face.intersectsLine(line)) },
 
-	//'SemiEllipseCurve.getVolZAnd'(assert) {
+	//test('SemiEllipseCurve.getVolZAnd', assert => {
 	//
 	//	assert.equal(SemiEllipseCurve.UNIT.getVolZAnd(V3.Z, -PI, PI).volume, 0)
 	//	assert.equal(SemiEllipseCurve.UNIT.rotateY(90 * DEG).translate(1, 0, 0).getVolZAnd(V3.Z, -PI, PI).volume, PI)

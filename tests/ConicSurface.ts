@@ -1,15 +1,9 @@
-/// <reference path="../src/ts" />
-/// <reference path="../src/Vector3.ts" />
-/// <reference path="../src/surface/ConicSurface.ts" />
-/// <reference path="../src/curve/SemiEllipseCurve.ts" />
-/// <reference path="../src/P3.ts" />
-
-import {assert} from 'chai'
-import 'mocha'
-
+import {V, V3} from 'ts3dutils'
+import {ConicSurface, P3, SemiEllipseCurve} from '..'
+import {suite, test} from './manager'
 
 suite('ConicSurface', function () {
-	test('ConicSurface.isCoplanarTo', function () {
+	test('isCoplanarTo', assert => {
 		const unitCone = ConicSurface.UNIT
 		assert.ok(unitCone.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
 		assert.v3like(unitCone.pSTFunc()(0, 3), V(3, 0, 3))
@@ -36,7 +30,7 @@ suite('ConicSurface', function () {
 		assert.ok(ell2Cone.isCoplanarTo(ell1Cone))
 		assert.ok(ell1Cone.foo().isCoplanarTo(ell2Cone.foo()))
 	})
-	test('ConicSurface.containsParabola', function () {
+	test('containsParabola', assert => {
 		const unitCone = ConicSurface.UNIT
 		const pb = unitCone.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]
 		assert.ok(unitCone.containsParabola(pb))
