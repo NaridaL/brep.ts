@@ -1,16 +1,8 @@
 import {assert, assertNever, eq, glqInSteps, V3} from 'ts3dutils'
 
 import {
-	ConicSurface,
-	Edge,
-	EllipseCurve,
-	HyperbolaCurve,
-	L3,
-	ParabolaCurve,
-	ProjectedCurveSurface,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	Surface,
+	BezierCurve, ConicSurface, dotCurve, Edge, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, PlaneSurface,
+	ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve, StraightEdge, Surface,
 } from '../index'
 
 const {PI} = Math

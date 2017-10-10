@@ -1,17 +1,10 @@
 import {
-	assert,
-	assertInst,
-	assertNever,
-	assertNumbers,
-	assertVectors,
-	hasConstructor,
-	int,
-	isCCW,
-	M4,
-	V3,
+	assert, assertInst, assertNever, assertNumbers, assertVectors, hasConstructor, int, isCCW, M4, V3,
 } from 'ts3dutils'
 
-import {Curve, Edge, L3, P3, ParametricSurface, PICurve, PointVsFace, Surface, PlaneSurface, SemiEllipsoidSurface,} from '../index'
+import {
+	Curve, Edge, L3, P3, ParametricSurface, PICurve, PlaneSurface, PointVsFace, SemiEllipsoidSurface, Surface,
+} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 

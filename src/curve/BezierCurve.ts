@@ -1,51 +1,14 @@
 import {
-	arrayFromFunction,
-	assert,
-	assertf,
-	assertInst,
-	assertNever,
-	assertNumbers,
-	assertVectors,
-	between,
-	combinations,
-	eq,
-	eq0,
-	fuzzyUniques,
-	fuzzyUniquesF,
-	gaussLegendre24Weights,
-	gaussLegendre24Xs,
-	gaussLegendreQuadrature24,
-	hasConstructor,
-	int,
-	lerp,
-	M4,
-	Matrix,
-	MINUS,
-	newtonIterate1d,
-	newtonIterate2dWithDerivatives,
-	newtonIterateWithDerivative,
-	NLA_PRECISION,
-	solveCubicReal2,
-	Tuple3,
-	V,
-	V3,
-	Vector,
+	arrayFromFunction, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, between, combinations,
+	eq, eq0, fuzzyUniques, fuzzyUniquesF, gaussLegendre24Weights, gaussLegendre24Xs, gaussLegendreQuadrature24,
+	hasConstructor, int, lerp, M4, Matrix, MINUS, newtonIterate1d, newtonIterate2dWithDerivatives,
+	newtonIterateWithDerivative, NLA_PRECISION, solveCubicReal2, Tuple3, V, V3, Vector,
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
 import {
-	Curve,
-	Edge,
-	EllipseCurve,
-	EllipsoidSurface,
-	ISInfo,
-	L3,
-	P3, PlaneSurface,
-	ProjectedCurveSurface,
-	SemiCylinderSurface,
-	SemiEllipsoidSurface,
-	Surface
-	R2_R,,
+	Curve, Edge, EllipseCurve, EllipsoidSurface, ISInfo, L3, P3, PlaneSurface, ProjectedCurveSurface, R2_R,
+	SemiCylinderSurface, SemiEllipsoidSurface, Surface,
 } from '../index'
 
 const {PI, abs, sin, cos} = Math
@@ -363,8 +326,8 @@ export class BezierCurve extends Curve {
 		// a t³ + b t² + c t + d = 0 is 3 cubic equations, some of which can be degenerate
 		const maxDim = NLA_PRECISION < a.maxAbsElement() ? a.maxAbsDim()
 			: NLA_PRECISION < b.maxAbsElement() ? b.maxAbsDim()
-				: NLA_PRECISION < c.maxAbsElement() ? c.maxAbsDim()
-					: assertNever()
+						   : NLA_PRECISION < c.maxAbsElement() ? c.maxAbsDim()
+				  : assertNever()
 
 		const results = solveCubicReal2(a.e(maxDim), b.e(maxDim), c.e(maxDim), d.e(maxDim)).filter(t => this.at(t).like(p))
 		if (0 == results.length) return NaN

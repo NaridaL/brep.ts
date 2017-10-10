@@ -1,28 +1,10 @@
 import {
-	arrayFromFunction,
-	assert,
-	assertNumbers,
-	assertVectors,
-	eq,
-	eq0,
-	hasConstructor,
-	int,
-	le,
-	newtonIterate1d,
-	pqFormula,
-	TAU,
-	V3,
+	arrayFromFunction, assert, assertNumbers, assertVectors, eq, eq0, hasConstructor, int, le, newtonIterate1d,
+	pqFormula, TAU, V3,
 } from 'ts3dutils'
 
 import {
-	Curve,
-	EllipseCurve,
-	intersectionUnitCircleLine,
-	intersectionUnitCircleLine2,
-	ISInfo,
-	L3,
-	P3,
-	XiEtaCurve,
+	Curve, EllipseCurve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, P3, XiEtaCurve,
 } from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math

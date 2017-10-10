@@ -1,19 +1,6 @@
 import {
-	arrayFromFunction,
-	assert,
-	assertf,
-	assertInst,
-	assertNumbers,
-	assertVectors,
-	clamp,
-	eq,
-	eq0,
-	hasConstructor,
-	int,
-	M4,
-	NLA_PRECISION,
-	TAU,
-	V3,
+	arrayFromFunction, assert, assertf, assertInst, assertNumbers, assertVectors, clamp, eq, eq0, hasConstructor, int,
+	M4, NLA_PRECISION, TAU, V3,
 } from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 

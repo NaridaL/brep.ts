@@ -1,6 +1,6 @@
 import {arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, snap0, V3} from 'ts3dutils'
 
-import {Curve, XiEtaCurve} from '../index'
+import {Curve, XiEtaCurve, intersectionUnitHyperbolaLine} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 

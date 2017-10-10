@@ -1,24 +1,6 @@
 import {
-	arrayFromFunction,
-	arrayRange,
-	assert,
-	assertf,
-	assertNumbers,
-	checkDerivate,
-	eq,
-	eq0,
-	glqInSteps,
-	hasConstructor,
-	int,
-	le,
-	lt,
-	M4,
-	newtonIterate1d,
-	newtonIterateSmart,
-	NLA_PRECISION,
-	pqFormula,
-	TAU,
-	V3,
+	arrayFromFunction, arrayRange, assert, assertf, assertNumbers, checkDerivate, eq, eq0, glqInSteps, hasConstructor,
+	int, le, lt, M4, newtonIterate1d, newtonIterateSmart, NLA_PRECISION, pqFormula, TAU, V3,
 } from 'ts3dutils'
 
 import {Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, XiEtaCurve} from '../index'

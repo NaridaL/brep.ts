@@ -26,7 +26,7 @@
 		},
 		'isCoplanarTo'(assert) {
 			assert.ok(UCS.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
-			assert.V3like(UCS.pSTFunc()(0, 3), V(3, 0, 3))
+			assert.v3like(UCS.pSTFunc()(0, 3), V(3, 0, 3))
 			const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
 			const planeAtZ3 = P3.XY.translate(0, 0, 3)
 

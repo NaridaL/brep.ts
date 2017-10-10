@@ -1,6 +1,6 @@
 import {arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, int, le, pqFormula, V3} from 'ts3dutils'
 
-import {Curve, ISInfo, L3, XiEtaCurve,} from '../index'
+import {BezierCurve, Curve, ISInfo, L3, XiEtaCurve,} from '../index'
 
 /**
  * eta = xi²

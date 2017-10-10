@@ -1,51 +1,13 @@
-import {Font, PathCommand} from 'opentype.js'
+import * as opentype from 'opentype.js'
 import {
-	arrayFromFunction,
-	assert,
-	assertf,
-	assertInst,
-	assertNumbers,
-	assertVectors,
-	callsce,
-	eq,
-	eq0,
-	GOLDEN_RATIO,
-	int,
-	le,
-	lerp,
-	lt,
-	M4,
-	MINUS,
-	NLA_PRECISION,
-	raddd,
-	snap,
-	TAU,
-	V,
-	V3,
+	arrayFromFunction, assert, assertf, assertInst, assertNumbers, assertVectors, callsce, eq, eq0, GOLDEN_RATIO, int,
+	le, lerp, lt, M4, MINUS, NLA_PRECISION, raddd, snap, TAU, V, V3,
 } from 'ts3dutils'
 
 import {
-	B2,
-	BezierCurve,
-	Curve,
-	Edge,
-	EllipseCurve,
-	Face,
-	FaceInfoFactory,
-	getGlobalId,
-	L3,
-	P3,
-	PCurveEdge,
-	PlaneFace,
-	PlaneSurface,
-	ProjectedCurveSurface,
-	RotationFace,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
-	StraightEdge,
-	Surface,
-	XiEtaCurve,
+	B2, BezierCurve, ConicSurface, Curve, Edge, EllipseCurve, Face, FaceInfoFactory, getGlobalId, L3, P3, PCurveEdge,
+	PlaneFace, PlaneSurface, ProjectedCurveSurface, RotationFace, SemiCylinderSurface, SemiEllipseCurve,
+	SemiEllipsoidSurface, StraightEdge, Surface, XiEtaCurve,
 } from './index'
 
 const {PI, min, max, ceil} = Math
@@ -93,7 +55,9 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 			const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
 			const apex = new V3(0, 0, apexZ)
 			const flipped = line.anchor.z > edge.b.z
-			surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as SemiEllipseCurve, !flipped ? 1 : -1)
+			surface = ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x
+				? i
+				: ipp].curve as SemiEllipseCurve, !flipped ? 1 : -1)
 		}
 		return Face.create(surface, faceEdges)
 	}
@@ -470,16 +434,16 @@ export namespace B2T {
 						extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false)
 	}
 
-	let defaultFont: Font
+	let defaultFont: opentype.Font
 
-	export function loadFonts(): Promise<Font> {
+	export function loadFonts(): Promise<opentype.Font> {
 		return loadFont('fonts/FiraSansMedium.woff').then(font => defaultFont = font)
 	}
 
-	const loadedFonts = new Map<string, Font>()
+	const loadedFonts = new Map<string, opentype.Font>()
 
-	export function loadFont(fontPath: string): Promise<Font> {
-		return new Promise<Font>(function (executor, reject) {
+	export function loadFont(fontPath: string): Promise<opentype.Font> {
+		return new Promise<opentype.Font>(function (executor, reject) {
 			const font = loadedFonts.get(fontPath)
 			if (font) {
 				executor(font)
@@ -511,9 +475,9 @@ export namespace B2T {
 		}
 	}
 
-	export function text(text: string, size: number, depth: number = 1, font: Font = defaultFont) {
+	export function text(text: string, size: number, depth: number = 1, font: opentype.Font = defaultFont) {
 		const path = font.getPath(text, 0, 0, size)
-		const subpaths: PathCommand[][] = []
+		const subpaths: opentype.PathCommand[][] = []
 		path.commands.forEach(c => {
 			if (c.type == 'M') {
 				subpaths.push([])

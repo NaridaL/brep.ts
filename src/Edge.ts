@@ -1,33 +1,8 @@
 import {SVGPathData} from 'svg-pathdata'
 import {
-	AABB,
-	arrayFromFunction,
-	arrayRange,
-	assert,
-	assertf,
-	assertInst,
-	assertNumbers,
-	assertVectors,
-	callsce,
-	clamp,
-	DEG,
-	eq,
-	eq0,
-	fuzzyBetween,
-	getIntervals,
-	int,
-	le,
-	lt,
-	M4,
-	MINUS,
-	mod,
-	newtonIterate,
-	NLA_PRECISION,
-	snap2,
-	TAU,
-	Transformable,
-	V,
-	V3,
+	AABB, arrayFromFunction, arrayRange, assert, assertf, assertInst, assertNumbers, assertVectors, callsce, clamp, DEG,
+	eq, eq0, fuzzyBetween, getIntervals, int, le, lt, M4, MINUS, mod, newtonIterate, NLA_PRECISION, snap2, TAU,
+	Transformable, V, V3,
 } from 'ts3dutils'
 
 import {BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, SemiEllipseCurve, Surface} from './index'
@@ -116,7 +91,9 @@ export abstract class Edge extends Transformable {
 	}
 
 	static star(pointCount: int = 5, r0: number = 1, r1: number = 0.5): Edge[] {
-		const vertices = arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2))
+		const vertices = arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2
+			? r0
+			: r1, TAU * i / pointCount / 2))
 		return StraightEdge.chain(vertices)
 	}
 
@@ -176,10 +153,12 @@ export abstract class Edge extends Transformable {
 			if (!prevCorner && !nextCorner) {
 				return edge
 			}
-			const [aT, a, aDir] = !prevCorner ? [edge.aT, edge.a, edge.aDir] :
-				[edge.curve.pointT(prevCorner.b), prevCorner.b, prevCorner.bDir]
-			const [bT, b, bDir] = !nextCorner ? [edge.bT, edge.b, edge.bDir] :
-				[edge.curve.pointT(nextCorner.a), nextCorner.a, nextCorner.aDir]
+			const [aT, a, aDir] = !prevCorner
+				? [edge.aT, edge.a, edge.aDir]
+				: [edge.curve.pointT(prevCorner.b), prevCorner.b, prevCorner.bDir]
+			const [bT, b, bDir] = !nextCorner
+				? [edge.bT, edge.b, edge.bDir]
+				: [edge.curve.pointT(nextCorner.a), nextCorner.a, nextCorner.aDir]
 			const newEdge = Edge.create(edge.curve, a, b, aT, bT, undefined, aDir, bDir)
 			return !nextCorner ? newEdge : [newEdge, nextCorner]
 		})

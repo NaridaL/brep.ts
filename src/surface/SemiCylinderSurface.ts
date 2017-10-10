@@ -1,10 +1,13 @@
 import {assert, assertInst, assertVectors, eq0, hasConstructor, le, M4, pqFormula, TAU, V3,} from 'ts3dutils'
 
-import {Curve, Edge, L3, P3, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface, BezierCurve, PlaneSurface,} from '../index'
+import {
+	BezierCurve, Curve, Edge, L3, P3, PlaneSurface, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface,
+} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
 let sema
+
 export class SemiCylinderSurface extends ProjectedCurveSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 	readonly matrix: M4

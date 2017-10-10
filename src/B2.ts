@@ -1,44 +1,23 @@
 import {JavaMap as CustomMap, JavaSet as CustomSet, Pair} from 'javasetmap.ts'
-import * as nerdamer from 'nerdamer'
+import nerdamer from 'nerdamer'
 import {
-	AABB,
-	assert,
-	assertf,
-	assertInst,
-	assertNever,
-	assertNumbers,
-	assertVectors,
-	callsce,
-	combinations,
-	eq,
-	eq0,
-	gt,
-	int,
-	lt,
-	M4,
-	mapPush,
-	newtonIterate1d,
-	newtonIterate2d,
-	NLA_DEBUG,
-	NLA_PRECISION,
-	SCE,
-	snap,
-	snap0,
-	TAU,
-	Transformable,
-	V,
-	V3,
+	AABB, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, callsce, combinations, eq, eq0, gt,
+	int, lt, M4, mapPush, newtonIterate1d, newtonIterate2d, NLA_DEBUG, NLA_PRECISION, SCE, snap, snap0, TAU,
+	Transformable, V, V3,
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, curvePoint, curvePointMF, Edge, Face, FaceInfoFactory, L3, P3, PlaneFace, PointVsFace, R2_R, Surface,} from './index'
+import {
+	Curve, curvePoint, curvePointMF, Edge, Face, FaceInfoFactory, L3, P3, PlaneFace, PointVsFace, R2_R, Surface,
+} from './index'
 
-const {PI,sign, abs, sqrt} = Math
+const {PI, sign, abs, sqrt} = Math
 
 
 const EPS = 1e-5
 
 let globalId = 0
+
 export function getGlobalId() {
 	return globalId++
 }
@@ -801,10 +780,6 @@ export class B2 extends Transformable {
 	}
 }
 
-export namespace B2 {
-	export const asldk = 0
-}
-
 export type IntersectionPointInfo = {
 	p: V3, // intersection point
 	insideDir: V3,
@@ -874,7 +849,9 @@ export function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA
 	const aDir1 = canonEdge.aDir.unit()
 	const angleToCanon = (faceInfo0.inside.angleRelativeNormal(dirAtEdgeA, aDir1) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) - NLA_PRECISION
 	const nearestFaceInfoIndex = edgeFaceInfos.findIndex(faceInfo => lt(angleToCanon, faceInfo.angle))
-	const nearestFaceInfo = edgeFaceInfos[nearestFaceInfoIndex == -1 ? edgeFaceInfos.length - 1 : nearestFaceInfoIndex - 1]
+	const nearestFaceInfo = edgeFaceInfos[nearestFaceInfoIndex == -1
+		? edgeFaceInfos.length - 1
+		: nearestFaceInfoIndex - 1]
 	if (eq(nearestFaceInfo.angle, angleToCanon)) {
 		//assert(false) todo
 		const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0
@@ -1050,18 +1027,18 @@ export function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[
 		// unroll disambiguation instead of accessing elements by string name ([coord0] etc)
 		// as it confuses google closure
 		switch (absMaxDim) {
-		case 0:
-			contour[i * 2] = vertices[i].y * factor
-			contour[i * 2 + 1] = vertices[i].z
-			break
-		case 1:
-			contour[i * 2] = vertices[i].z * factor
-			contour[i * 2 + 1] = vertices[i].x
-			break
-		case 2:
-			contour[i * 2] = vertices[i].x * factor
-			contour[i * 2 + 1] = vertices[i].y
-			break
+			case 0:
+				contour[i * 2] = vertices[i].y * factor
+				contour[i * 2 + 1] = vertices[i].z
+				break
+			case 1:
+				contour[i * 2] = vertices[i].z * factor
+				contour[i * 2 + 1] = vertices[i].x
+				break
+			case 2:
+				contour[i * 2] = vertices[i].x * factor
+				contour[i * 2 + 1] = vertices[i].y
+				break
 		}
 	}
 	return earcut(contour, holeStarts)
@@ -1211,10 +1188,10 @@ export function followAlgorithm2d(ic: MathFunctionR2R,
 }
 
 export function followAlgorithm2dAdjustable(ic: MathFunctionR2R,
-									 start: V3,
-									 stepLength: number = 0.5,
-									 bounds: (s: number, t: number) => boolean,
-									 endp: V3 = start): { points: V3[], tangents: V3[] } {
+											start: V3,
+											stepLength: number = 0.5,
+											bounds: (s: number, t: number) => boolean,
+											endp: V3 = start): { points: V3[], tangents: V3[] } {
 	assertNumbers(stepLength, ic(0, 0))
 	assertVectors(start)
 	//assert (!startDir || startDir instanceof V3)
@@ -1260,11 +1237,11 @@ export function followAlgorithm2dAdjustable(ic: MathFunctionR2R,
 
 // both curves must be in the same s-t coordinates for this to make sense
 export function intersectionICurveICurve(iCurve1: (s: number, t: number) => number,
-								  startParams1: V3,
-								  endParams1: V3,
-								  startDir: V3,
-								  stepLength: number,
-								  iCurve2: (s: number, t: number) => number) {
+										 startParams1: V3,
+										 endParams1: V3,
+										 startDir: V3,
+										 stepLength: number,
+										 iCurve2: (s: number, t: number) => number) {
 
 	assertNumbers(stepLength, iCurve1(0, 0), iCurve2(0, 0))
 	assertVectors(startParams1, endParams1)

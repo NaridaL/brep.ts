@@ -1,9 +1,11 @@
 {
   "author": "Adrian Leonhard <adrianleonhard@gmail.com> (https://github.com/NaridaL)",
   "dependencies": {
+    "@types/qunit": "^2.0.31",
     "chroma-js": "^1.3.4",
     "javasetmap.ts": "file:../../javasetmap.ts",
     "nerdamer": "^0.7.9",
+    "opentype.js": "^0.7.3",
     "svg-pathdata": "^4.0.1",
     "ts3dutils": "file:../ts3dutils",
     "tsgl": "file:../tsgl"

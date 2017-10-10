@@ -1,28 +1,10 @@
 import {Equalable} from 'javasetmap.ts'
 import {
-	AABB,
-	arrayFromFunction,
-	assert,
-	assertNumbers,
-	callsce,
-	clamp,
-	eq,
-	eq0,
-	fuzzyUniquesF,
-	getIntervals,
-	glqInSteps,
-	int,
-	le,
-	M4,
-	newtonIterate2dWithDerivatives,
-	newtonIterateWithDerivative,
-	NLA_PRECISION,
-	Transformable,
-	V,
-	V3,
+	AABB, arrayFromFunction, assert, assertNumbers, callsce, clamp, eq, eq0, fuzzyUniquesF, getIntervals, glqInSteps,
+	int, le, M4, newtonIterate2dWithDerivatives, newtonIterateWithDerivative, NLA_PRECISION, Transformable, V, V3,
 } from 'ts3dutils'
 
-import {followAlgorithm2d, ISInfo, P3, Surface, MathFunctionR2R} from '../index'
+import {followAlgorithm2d, ISInfo, MathFunctionR2R, P3, Surface} from '../index'
 
 const {ceil, floor, abs} = Math
 
@@ -234,9 +216,10 @@ export abstract class Curve extends Transformable implements Equalable {
 		const df = (t: number) => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)))
 
 		const STEPS = 32
-		const startT = undefined !== tStart ? tStart :
-			arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
-				.withMax(t => -this.at(t).distanceTo(p))
+		const startT = undefined !== tStart
+			? tStart
+			: arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
+						   .withMax(t => -this.at(t).distanceTo(p))
 
 		return newtonIterateWithDerivative(f, startT, 16, df)
 	}
@@ -418,8 +401,8 @@ function mkcurves(implicitCurve: MathFunctionR2R,
 export type R2_R = (s: number, t: number) => number
 
 export function curvePoint(implicitCurve: R2_R, startPoint: V3,
-					dids: R2_R,
-					didt: R2_R) {
+						   dids: R2_R,
+						   didt: R2_R) {
 	const eps = 1 / (1 << 20)
 	let p = startPoint
 	for (let i = 0; i < 8; i++) {

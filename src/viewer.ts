@@ -3,31 +3,13 @@ import * as nerdamer from 'nerdamer'
 import {addOwnProperties, arrayFromFunction, assert, DEG, int, M4, TAU, V, V3} from 'ts3dutils'
 import {DRAW_MODES, GL_COLOR, GL_COLOR_BLACK, LightGLContext, Mesh, Shader} from 'tsgl'
 import {
-	B2,
-	B2T,
-	BezierCurve,
-	Curve,
-	CustomPlane,
-	Edge,
-	EllipseCurve,
-	Face,
-	followAlgorithm2d,
-	HyperbolaCurve,
-	ImplicitCurve,
-	L3,
-	P3,
-	ParabolaCurve,
-	PICurve,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
+	B2, B2T, BezierCurve, Curve, curvePointMF, CustomPlane, Edge, EllipseCurve, Face, followAlgorithm2d, HyperbolaCurve,
+	ImplicitCurve, L3, MathFunctionR2R, P3, ParabolaCurve, PICurve, SemiCylinderSurface, SemiEllipseCurve,
 	SemiEllipsoidSurface,
-	R2_R,
-	MathFunctionR2R,
 } from './index'
+import * as shaders from './shaders'
 
 const {pow} = Math
-
-import * as shaders from './shaders'
 
 function parseGetParams(str: string) {
 	const result: { [key: string]: string } = {}
@@ -50,7 +32,7 @@ const COLORS = {
 }
 
 export class BREPGLContext extends (Object as any as typeof LightGLContext) {
-	shaders: typeof SHADER_TYPE_VAR
+	shaders: SHADERS_TYPE
 
 	cachedMeshes: WeakMap<any, Mesh & { TRIANGLES: int[], normals: V3[] }> = new WeakMap()
 
@@ -184,8 +166,9 @@ CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 
 let setupCameraListener: (e: typeof eye) => void
-const SHADER_TYPE_VAR = (false as true) && initShaders(0 as any)
-// let shaders: typeof SHADER_TYPE_VAR
+export const SHADERS_TYPE_VAR = (false as true) && initShaders(0 as any)
+export type SHADERS_TYPE = typeof SHADERS_TYPE_VAR
+// let shaders: typeof SHADERS_TYPE_VAR
 let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
 	wireframe: boolean = false, normallines: boolean = false, b2s: B2[] = []
 let eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
@@ -296,7 +279,9 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 			const face = b2s[i].faces[faceIndex]
 			const faceTriangleIndexes = aMesh.faceIndexes.get(face)
 			gl.shaders.lighting.uniforms({
-				color: hovering == face ? meshColors.emod(i).emod(faceIndex).darken(2).gl() : meshColorssGL.emod(i).emod(faceIndex),
+				color: hovering == face
+					? meshColors.emod(i).emod(faceIndex).darken(2).gl()
+					: meshColorssGL.emod(i).emod(faceIndex),
 			}).draw(aMesh, DRAW_MODES.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
 		}
 

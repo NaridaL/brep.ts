@@ -1,46 +1,17 @@
 import {Equalable, Pair} from 'javasetmap.ts'
 import {
-	AABB,
-	arrayFromFunction,
-	arrayRange,
-	assert,
-	assertf,
-	assertInst,
-	assertVectors,
-	disableConsole,
-	doubleSignedArea,
-	enableConsole,
-	eq,
-	eq0,
-	ge,
-	GOLDEN_RATIO,
-	gt,
-	int,
-	isCCW,
-	le,
-	lerp,
-	lt,
-	M4,
-	mapPush,
-	MINUS,
-	mod,
-	NLA_PRECISION,
-	snap,
-	TAU,
-	Transformable,
-	V3,
+	AABB, arrayFromFunction, arrayRange, assert, assertf, assertInst, assertVectors, disableConsole, doubleSignedArea,
+	enableConsole, eq, eq0, ge, GOLDEN_RATIO, gt, int, isCCW, le, lerp, lt, M4, mapPush, MINUS, mod, NLA_PRECISION,
+	snap, TAU, Transformable, V3,
 } from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {getGlobalId,B2, Curve, Edge, L3, P3, ParametricSurface, PlaneSurface, PointVsFace, Surface,
-	IntersectionPointInfo, dotCurve2, SemiEllipsoidSurface, EllipsoidSurface, triangulateVertices,
-	StraightEdge,
-	COPLANAR_SAME,
-	INSIDE,
-	splitsVolumeEnclosingFacesP,
-	fff,
-	splitsVolumeEnclosingCone2,
-	splitsVolumeEnclosingFacesP2} from './index'
+import {
+	B2, ConicSurface, COPLANAR_SAME, Curve, dotCurve, dotCurve2, Edge, EllipsoidSurface, fff, getGlobalId, INSIDE,
+	IntersectionPointInfo, L3, P3, ParametricSurface, PlaneSurface, PointVsFace, SemiEllipsoidSurface,
+	splitsVolumeEnclosingCone2, splitsVolumeEnclosingFaces, splitsVolumeEnclosingFacesP, splitsVolumeEnclosingFacesP2,
+	StraightEdge, Surface, triangulateVertices,
+} from './index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
@@ -232,7 +203,9 @@ export abstract class Face extends Transformable {
 						//if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
 						const pointsInsideFace = fff(faceInfo, face2.surface)
 						const edgeInside = pointsInsideFace == INSIDE || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME
-						const pushEdge = faceInfo.edge.tangentAt(faceInfo.edge.curve.pointT(newEdge.a)).like(newEdge.aDir) ? newEdge : newEdge.flipped()
+						const pushEdge = faceInfo.edge.tangentAt(faceInfo.edge.curve.pointT(newEdge.a)).like(newEdge.aDir)
+							? newEdge
+							: newEdge.flipped()
 						assert(faceInfo.edge.tangentAt(faceInfo.edge.curve.pointT(pushEdge.a)).like(pushEdge.aDir))
 						edgeInside && mapPush(faceMap, faceInfo.face, pushEdge)
 					})
@@ -1533,26 +1506,28 @@ export class RotationFace extends Face {
 								const nextPartIndex = parts.indexWithMax(part => -mod(opos(part[0]) - currentPartEndOpos, 4))
 								const nextPart = parts.removeIndex(nextPartIndex)
 								let currentOpos = currentPartEndOpos
-								const nextPartStartOpos = opos(nextPart[0]) > currentOpos ? opos(nextPart[0]) : opos(nextPart[0]) + 4
+								const nextPartStartOpos = opos(nextPart[0]) > currentOpos
+									? opos(nextPart[0])
+									: opos(nextPart[0]) + 4
 								let nextOpos = ceil(currentOpos + NLA_PRECISION)
 								let flipping = eq0((currentOpos + NLA_PRECISION) % 1 - NLA_PRECISION)
 								//inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2 < 1)
 								while (lt(nextOpos, nextPartStartOpos)) {
 									switch (nextOpos % 4) {
-									case 0:
-										outline.push(getGridVertexIndex(col, row))
-										break
-									case 1:
-										inside = inside != flipping
-										outline.push(getGridVertexIndex(col + 1, row))
-										break
-									case 2:
-										outline.push(getGridVertexIndex(col + 1, row + 1))
-										break
-									case 3:
-										inside = inside != flipping
-										outline.push(getGridVertexIndex(col, row + 1))
-										break
+										case 0:
+											outline.push(getGridVertexIndex(col, row))
+											break
+										case 1:
+											inside = inside != flipping
+											outline.push(getGridVertexIndex(col + 1, row))
+											break
+										case 2:
+											outline.push(getGridVertexIndex(col + 1, row + 1))
+											break
+										case 3:
+											inside = inside != flipping
+											outline.push(getGridVertexIndex(col, row + 1))
+											break
 
 									}
 									flipping = true

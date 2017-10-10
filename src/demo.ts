@@ -1,6 +1,6 @@
 /// <reference path="./MooTools-Core-1.6.0.d.ts" />
 import * as chroma from 'chroma-js'
-import {DEG, V, V3, round10} from 'ts3dutils'
+import {DEG, round10, V, V3} from 'ts3dutils'
 import {LightGLContext} from 'tsgl'
 
 import {B2, B2T, CustomPlane} from './index'
@@ -148,11 +148,11 @@ function paintDemo(demo) {
 function update(demo: Demo, params) {
 	const fixedParams = params.map((p, i) => {
 		switch (demo.args[i].type) {
-		case 'number':
-		case 'int':
-			return parseFloat(p)
-		case 'angle':
-			return parseFloat(p) * DEG
+			case 'number':
+			case 'int':
+				return parseFloat(p)
+			case 'angle':
+				return parseFloat(p) * DEG
 		}
 		return p
 	})

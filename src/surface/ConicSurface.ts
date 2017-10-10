@@ -1,17 +1,8 @@
 import {assert, assertInst, assertVectors, eq, eq0, getIntervals, isCCW, M4, pqFormula, TAU, V3} from 'ts3dutils'
 
 import {
-	Curve,
-	Edge,
-	EllipseCurve,
-	HyperbolaCurve,
-	ImplicitSurface,
-	L3,
-	P3,
-	ParabolaCurve,
-	ParametricSurface,
-	SemiEllipseCurve,
-	Surface,
+	Curve, Edge, EllipseCurve, HyperbolaCurve, ImplicitSurface, L3, P3, ParabolaCurve, ParametricSurface,
+	SemiEllipseCurve, Surface,
 } from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
@@ -112,7 +103,9 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 					const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
 					const p2 = new V3(0, 0, d / c)
 					const f2 = p2.minus(parabolaVertex)
-					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0 ? f2.negated() : f2)]
+					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0
+						? f2.negated()
+						: f2)]
 				} else if (aa < cc) {
 					// ellipse
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))

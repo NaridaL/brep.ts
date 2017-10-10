@@ -1,44 +1,15 @@
 import {
-	arrayFromFunction,
-	assert,
-	assertf,
-	assertInst,
-	assertNever,
-	assertNumbers,
-	assertVectors,
-	between,
-	eq,
-	eq0,
-	gaussLegendreQuadrature24,
-	ge,
-	glqInSteps,
-	int,
-	le,
-	lt,
-	M4,
-	MINUS,
-	NLA_PRECISION,
-	pqFormula,
-	V3,
+	arrayFromFunction, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, between, eq, eq0,
+	gaussLegendreQuadrature24, ge, glqInSteps, int, le, lt, M4, MINUS, NLA_PRECISION, pqFormula, V3,
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
 import {
-	Curve,
-	CylinderSurface,
-	Edge,
-	EllipseCurve,
-	ImplicitSurface,
-	L3,
-	P3,
-	ParametricSurface,
-	PlaneSurface,
-	PointVsFace,
-	ProjectedCurveSurface,
-	Surface,
+	Curve, CylinderSurface, Edge, EllipseCurve, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface, PointVsFace,
+	ProjectedCurveSurface, Surface, dotCurve,
 } from '../index'
 
-const {PI, cos, sin} = Math
+const {PI, cos, sin, abs} = Math
 
 export class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)

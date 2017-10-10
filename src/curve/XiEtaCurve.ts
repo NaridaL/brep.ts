@@ -1,23 +1,13 @@
 import {
-	arrayFromFunction,
-	assertf,
-	assertInst,
-	assertNumbers,
-	assertVectors,
-	eq0,
-	hasConstructor,
-	int,
-	M4,
-	NLA_PRECISION,
-	TAU,
-	V,
-	V3,
+	arrayFromFunction, assertf, assertInst, assertNumbers, assertVectors, eq0, hasConstructor, int, M4, NLA_PRECISION,
+	TAU, V, V3,
 } from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {BezierCurve, ConicSurface, Curve, EllipseCurve, ISInfo, L3, P3, ProjectedCurveSurface, Surface, EllipsoidSurface,
-	SemiEllipsoidSurface,
-	PlaneSurface,} from '../index'
+import {
+	BezierCurve, ConicSurface, Curve, EllipseCurve, EllipsoidSurface, ISInfo, L3, P3, PlaneSurface,
+	ProjectedCurveSurface, SemiEllipsoidSurface, Surface,
+} from '../index'
 
 const {PI} = Math
 

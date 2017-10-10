@@ -1,6 +1,6 @@
 import {int, randomColor, V3} from 'ts3dutils'
 
-import {L3, P3, getGlobalId, PlaneSurface} from './index'
+import {getGlobalId, L3, P3, PlaneSurface} from './index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
@@ -52,15 +52,15 @@ export class CustomPlane extends P3 {
 			new L3(this.anchor.plus(this.right.times(this.sMax)), this.up),
 			new L3(this.anchor.plus(this.up.times(this.rMin)), this.right),
 			new L3(this.anchor.plus(this.up.times(this.tMax)), this.right)].map((line2, line2Index) => {
-				const info = line2.infoClosestToLine(line)
-				if ((isNaN(info.t) // parallel LINES
-						|| line2Index < 2 && this.rMin <= info.t && info.t <= this.tMax
-						|| line2Index >= 2 && this.sMin <= info.t && info.t <= this.sMax)
-					&& info.distance <= mindist) {
-					return info.s
-				} else {
-					return Infinity
-				}
-			}).min()
+			const info = line2.infoClosestToLine(line)
+			if ((isNaN(info.t) // parallel LINES
+					|| line2Index < 2 && this.rMin <= info.t && info.t <= this.tMax
+					|| line2Index >= 2 && this.sMin <= info.t && info.t <= this.sMax)
+				&& info.distance <= mindist) {
+				return info.s
+			} else {
+				return Infinity
+			}
+		}).min()
 	}
 }

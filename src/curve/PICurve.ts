@@ -1,21 +1,11 @@
 import {
-	arrayRange,
-	assert,
-	assertInst,
-	assertNever,
-	assertVectors,
-	callsce,
-	fuzzyUniques,
-	int,
-	M4,
-	newtonIterate1d,
-	V3,
+	arrayRange, assert, assertInst, assertNever, assertVectors, callsce, fuzzyUniques, int, M4, newtonIterate1d, V3,
 } from 'ts3dutils'
 
-import {Curve, ImplicitCurve, ImplicitSurface, P3, ParametricSurface, ProjectedCurveSurface, Surface, EllipsoidSurface,
-	PlaneSurface,
-	SemiEllipsoidSurface,
-	curvePoint,} from '../index'
+import {
+	Curve, curvePoint, EllipsoidSurface, ImplicitCurve, ImplicitSurface, P3, ParametricSurface, PlaneSurface,
+	ProjectedCurveSurface, SemiEllipsoidSurface, Surface,
+} from '../index'
 
 let sema = false
 
@@ -74,31 +64,31 @@ export class PICurve extends ImplicitCurve {
 		return PICurve.forParametricPointsTangents(ps, is, points, tangents, stepSize, 1, tMin, tMax)
 	}
 
-//	assert(!startPoint.like(endPoint))
-//	assert(ParametricSurface.is(parametricSurface))
-//	assert(ImplicitSurface.is(implicitSurface))
-//	this.parametricSurface = parametricSurface
-//	this.implicitSurface = implicitSurface
-//	if (!startPoint) {
-//	const pmPoint = curvePoint(this.implicitCurve(), V(1, 1, 0))
-//	this.startPoint = this.parametricSurface.pSTFunc()(pmPoint.x, pmPoint.y)
-//} else {
-//	this.startPoint = startPoint
-//}
-//this.endPoint = endPoint
-//this.dir = dir
-//this.isLoop = false
-//try {
-//	this.calcPoints(startPoint, endPoint)
-//	this.startPoint = startPoint
-//	this.endPoint = endPoint
-//} catch (e) {
-//	this.calcPoints(this.endPoint, this.startPoint)
-//	this.startPoint = endPoint
-//	this.endPoint = startPoint
-//}
-//this.tMin = 0
-//this.tMax = this.points.length - 1
+	//	assert(!startPoint.like(endPoint))
+	//	assert(ParametricSurface.is(parametricSurface))
+	//	assert(ImplicitSurface.is(implicitSurface))
+	//	this.parametricSurface = parametricSurface
+	//	this.implicitSurface = implicitSurface
+	//	if (!startPoint) {
+	//	const pmPoint = curvePoint(this.implicitCurve(), V(1, 1, 0))
+	//	this.startPoint = this.parametricSurface.pSTFunc()(pmPoint.x, pmPoint.y)
+	//} else {
+	//	this.startPoint = startPoint
+	//}
+	//this.endPoint = endPoint
+	//this.dir = dir
+	//this.isLoop = false
+	//try {
+	//	this.calcPoints(startPoint, endPoint)
+	//	this.startPoint = startPoint
+	//	this.endPoint = endPoint
+	//} catch (e) {
+	//	this.calcPoints(this.endPoint, this.startPoint)
+	//	this.startPoint = endPoint
+	//	this.endPoint = startPoint
+	//}
+	//this.tMin = 0
+	//this.tMax = this.points.length - 1
 
 	static forStartEnd(ps: ParametricSurface, is: ImplicitSurface,
 					   start: V3, end: V3, stepSize: number = 0.02, startTangent: V3, min?: V3, max?: V3): PICurve {

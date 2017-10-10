@@ -1,19 +1,8 @@
 import {
-	assert,
-	assertInst,
-	assertNumbers,
-	assertVectors,
-	callsce,
-	eq,
-	eq0,
-	floatHashCode,
-	int,
-	M4,
-	Transformable,
-	V3,
+	assert, assertInst, assertNumbers, assertVectors, callsce, eq, eq0, floatHashCode, int, M4, Transformable, V3,
 } from 'ts3dutils'
 
-import {Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve} from './index'
+import {BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve} from './index'
 
 export class P3 extends Transformable {
 

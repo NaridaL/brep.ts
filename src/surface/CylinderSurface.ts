@@ -1,15 +1,7 @@
 import {assert, assertInst, assertVectors, eq0, isCCW, M4, NLA_PRECISION, pqFormula, TAU, V3} from 'ts3dutils'
 
 import {
-	Curve,
-	Edge,
-	EllipseCurve,
-	L3,
-	P3,
-	PointVsFace,
-	ProjectedCurveSurface,
-	SemiEllipseCurve,
-	Surface,
+	Curve, Edge, EllipseCurve, L3, P3, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface,
 } from '../index'
 
 const {PI} = Math

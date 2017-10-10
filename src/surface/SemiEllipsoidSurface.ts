@@ -1,47 +1,13 @@
 import {
-	arrayFromFunction,
-	assert,
-	assertf,
-	assertInst,
-	assertNever,
-	assertNumbers,
-	assertVectors,
-	between,
-	checkDerivate,
-	clamp,
-	eq,
-	eq0,
-	gaussLegendreQuadrature24,
-	getIntervals,
-	getRoots,
-	glqInSteps,
-	hasConstructor,
-	le,
-	lt,
-	M4,
-	MINUS,
-	NLA_PRECISION,
-	pqFormula,
-	snap,
-	V3,
+	arrayFromFunction, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, between, checkDerivate,
+	clamp, eq, eq0, gaussLegendreQuadrature24, getIntervals, getRoots, glqInSteps, hasConstructor, le, lt, M4, MINUS,
+	NLA_PRECISION, pqFormula, snap, V3,
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
 import {
-	Curve,
-	Edge,
-	EllipsoidSurface,
-	L3,
-	P3,
-	ParametricSurface,
-	PICurve,
-	PointVsFace,
-	ProjectedCurveSurface,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	Surface,
-	dotCurve,
-	dotCurve2,
+	Curve, dotCurve, dotCurve2, Edge, EllipsoidSurface, L3, P3, ParametricSurface, PICurve, PointVsFace,
+	ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve, Surface,
 } from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
@@ -132,7 +98,9 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 				const minEta = -anchorY / f2.y, minT = max(0, Math.asin(minEta))
 				return [new SemiEllipseCurve(plane.anchor, f1, f2, minT, PI - minT)]
 			} else {
-				const f2 = (plane.normal1.isParallelTo(V3.Y) ? V3.X : plane.normal1.cross(V3.Y)).toLength(isCircleRadius)
+				const f2 = (plane.normal1.isParallelTo(V3.Y)
+					? V3.X
+					: plane.normal1.cross(V3.Y)).toLength(isCircleRadius)
 				const f1 = f2.cross(plane.normal1)
 				const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max(-1, minXi - NLA_PRECISION))
 				return [new SemiEllipseCurve(plane.anchor, f1.negated(), f2, PI - maxT, PI),
@@ -307,7 +275,9 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 				const atSqr = snap(baseCurveLC.at(t).squared(), 1)
 				const lineISTs = /* +- */ sqrt(1 - atSqr)
 				//assert(!isNaN(lineISTs))
-				return eq0(lineISTs) ? baseCurveLC.at(t) : baseCurveLC.at(t).plus(surfaceLC.dir.times(sign(id - 0.5) * lineISTs))
+				return eq0(lineISTs)
+					? baseCurveLC.at(t)
+					: baseCurveLC.at(t).plus(surfaceLC.dir.times(sign(id - 0.5) * lineISTs))
 			}
 		})
 		const dProjectedCurves = [0, 1].map(id => {
@@ -598,7 +568,9 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 
 		if (P3.normalOnAnchor(this.f2.unit(), this.center).containsPoint(p)) {
 			let edgeT
-			return loop.some(edge => edge.curve.containsPoint(p) && le(edge.minT, edgeT = edge.curve.pointT(p)) && le(edgeT, edge.maxT)) ? PointVsFace.ON_EDGE : PointVsFace.OUTSIDE
+			return loop.some(edge => edge.curve.containsPoint(p) && le(edge.minT, edgeT = edge.curve.pointT(p)) && le(edgeT, edge.maxT))
+				? PointVsFace.ON_EDGE
+				: PointVsFace.OUTSIDE
 		}
 
 		const lineOut = testLine.normal
