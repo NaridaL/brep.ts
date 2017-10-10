@@ -1,6 +1,6 @@
 import {assert, assertInst, eq0, M4, V3} from 'ts3dutils'
 
-import {ImplicitSurface, ParametricSurface} from '../index'
+import {ImplicitSurface, ParametricSurface, EPS} from '../index'
 
 const {PI, cos, sin, min, max, sign, tan, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
@@ -8,7 +8,7 @@ const {PI, cos, sin, min, max, sign, tan, ceil, floor, abs, sqrt, pow, atan2, ro
 /**
  * Rotation surface with r = f(z)
  */
-class RotationREqFOfZ extends ParametricSurface implements ImplicitSurface {
+export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurface {
 	matrixInverse: M4
 
 	constructor(readonly matrix: M4,
@@ -16,7 +16,7 @@ class RotationREqFOfZ extends ParametricSurface implements ImplicitSurface {
 				readonly tMin: number,
 				readonly tMax: number,
 				readonly normalDir: number,
-				readonly drdz: (z: number) => number = z => (rt(z + eps) - rt(z)) / eps) { // d/dz (r(z))
+				readonly drdz: (z: number) => number = z => (rt(z + EPS) - rt(z)) / EPS) { // d/dz (r(z))
 		super()
 		assertInst(M4, matrix)
 		assert(matrix.isNoProj())

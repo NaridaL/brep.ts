@@ -1,6 +1,7 @@
+import {suite, test, testParametricSurface} from './manager'
+
 import {M4, TAU} from 'ts3dutils'
 import {RotationREqFOfZ} from '..'
-import {suite, test, testParametricSurface} from './manager'
 
 const {sin, cos} = Math
 

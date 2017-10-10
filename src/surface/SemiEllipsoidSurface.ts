@@ -7,7 +7,7 @@ import {Mesh} from 'tsgl'
 
 import {
 	Curve, dotCurve, dotCurve2, Edge, EllipsoidSurface, L3, P3, ParametricSurface, PICurve, PointVsFace,
-	ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve, Surface,
+	ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve, Surface, PlaneSurface,
 } from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math

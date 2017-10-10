@@ -9,7 +9,7 @@ import {
 	ProjectedCurveSurface, Surface, dotCurve,
 } from '../index'
 
-const {PI, cos, sin, abs} = Math
+const {PI, cos, sin, abs, sign} = Math
 
 export class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)

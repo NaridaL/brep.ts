@@ -8,7 +8,7 @@ export default {
 	name: pkg.umdGlobal,
 	sourcemap: true,
 	external: Object.keys(pkg.dependencies),
-	globals: moduleName => require(moduleName + '/package.json').umdGlobal,
+	globals: moduleName => require(moduleName + '/package.json').umdGlobal || pkg.umdGlobals && pkg.umdGlobals[moduleName],
 	plugins: [
 		sourcemaps()
 	],

@@ -1,7 +1,7 @@
 import {assert, between, V3} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, PICurve, Surface} from '../index'
+import {Curve, PICurve, Surface, MathFunctionR2R} from '../index'
 
 const {ceil, min} = Math
 

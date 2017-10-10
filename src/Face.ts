@@ -10,7 +10,7 @@ import {
 	B2, ConicSurface, COPLANAR_SAME, Curve, dotCurve, dotCurve2, Edge, EllipsoidSurface, fff, getGlobalId, INSIDE,
 	IntersectionPointInfo, L3, P3, ParametricSurface, PlaneSurface, PointVsFace, SemiEllipsoidSurface,
 	splitsVolumeEnclosingCone2, splitsVolumeEnclosingFaces, splitsVolumeEnclosingFacesP, splitsVolumeEnclosingFacesP2,
-	StraightEdge, Surface, triangulateVertices,
+	StraightEdge, Surface, triangulateVertices, EPS,
 } from './index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
@@ -168,16 +168,16 @@ export abstract class Face extends Transformable {
 						curveDir = sign(canonDir.dot(curve.tangentAt(curveT)))
 					const curve2 = face2.surface.isCurvesWithPlane(plane)[0], curve2T = curve2.pointT(p),
 						curve2Dir = sign(canonDir.dot(curve.tangentAt(curve2T)))
-					const foo = curve.diff(curveT, eps * curveDir).dot(up)
-					const foo2 = curve2.diff(curve2T, eps * curve2Dir).dot(up)
+					const foo = curve.diff(curveT, EPS * curveDir).dot(up)
+					const foo2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up)
 					if (foo2 < foo) {
 						mapPush(faceMap, face2, sameDir ? newEdge.flipped() : newEdge)
 					}
 					if (up.dot(face2.surface.normalP(p)) < 0 == foo2 < foo) {
 						mapPush(faceMap, face, newEdge.flipped())
 					}
-					const bar = curve.diff(curveT, eps * curveDir).dot(up)
-					const bar2 = curve2.diff(curve2T, eps * curve2Dir).dot(up)
+					const bar = curve.diff(curveT, EPS * curveDir).dot(up)
+					const bar2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up)
 					if (bar2 < bar) {
 						mapPush(faceMap, face2, sameDir ? newEdge : newEdge.flipped())
 					}

@@ -14,7 +14,7 @@ import {
 const {PI, sign, abs, sqrt} = Math
 
 
-const EPS = 1e-5
+export const EPS = 1e-5
 
 let globalId = 0
 
@@ -1281,19 +1281,19 @@ export function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
 	return iss
 }
 
-export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number, searchStep: number, implicitSurface) {
-	assertNumbers(searchStart, searchEnd, searchStep)
-	const iss = []
-	let val = implicitSurface(parametricCurve(searchStart)), lastVal
-	for (let t = searchStart + searchStep; t <= searchEnd; t += searchStep) {
-		lastVal = val
-		val = implicitSurface(parametricCurve(t))
-		if (val * lastVal <= 0) {
-			iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t))
-		}
-	}
-	return iss
-}
+//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number, searchStep: number, implicitSurface) {
+//	assertNumbers(searchStart, searchEnd, searchStep)
+//	const iss = []
+//	let val = implicitSurface(parametricCurve(searchStart)), lastVal
+//	for (let t = searchStart + searchStep; t <= searchEnd; t += searchStep) {
+//		lastVal = val
+//		val = implicitSurface(parametricCurve(t))
+//		if (val * lastVal <= 0) {
+//			iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t))
+//		}
+//	}
+//	return iss
+//}
 
 export function intersectionICurvePSurface(f0, f1, parametricSurface) {
 

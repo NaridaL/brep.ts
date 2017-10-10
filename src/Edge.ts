@@ -5,7 +5,7 @@ import {
 	Transformable, V, V3,
 } from 'ts3dutils'
 
-import {BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, SemiEllipseCurve, Surface} from './index'
+import {BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, SemiEllipseCurve, Surface, PlaneSurface} from './index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 

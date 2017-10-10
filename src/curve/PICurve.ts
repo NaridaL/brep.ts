@@ -4,10 +4,8 @@ import {
 
 import {
 	Curve, curvePoint, EllipsoidSurface, ImplicitCurve, ImplicitSurface, P3, ParametricSurface, PlaneSurface,
-	ProjectedCurveSurface, SemiEllipsoidSurface, Surface,
+	ProjectedCurveSurface, SemiEllipsoidSurface, Surface, MathFunctionR2R, followAlgorithm2d,
 } from '../index'
-
-let sema = false
 
 const {floor, abs, ceil, min, max} = Math
 
@@ -38,14 +36,6 @@ export class PICurve extends ImplicitCurve {
 		for (let i = 0; i < points.length - 1; i++) {
 			assert(!points[i].equals(points[i + 1]))
 			//assert(parametricSurface.pST(pmPoints[i].x, pmPoints[i].y).equals(points[i]))
-		}
-		if (!sema) {
-			sema = true
-			assert(this)
-			const src = this.toSource()
-			const n = eval(src) as PICurve
-			assert(n.points.equals(this.points))
-			sema = false
 		}
 	}
 

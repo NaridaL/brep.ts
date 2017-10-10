@@ -5,6 +5,8 @@ import {
 } from '..'
 import {linkB2, suite, test, testISCurves, testLoopCCW, testLoopContainsPoint, testParametricSurface} from './manager'
 
+const {PI} = Math
+
 suite('ConicSurface', () => {
 	const UCS = ConicSurface.UNIT
 

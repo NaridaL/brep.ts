@@ -1,137 +1,145 @@
-//window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
-//	console.log(errorMsg, url, lineNumber, column, errorObj)
-//}
+import {JavaSet as CustomSet} from 'javasetmap.ts'
+import {DEG, M4, V, V3, P3XY} from 'ts3dutils'
+import {
+	BezierCurve, Edge, intersectionCircleLine, intersectionUnitCircleLine, L3, P3, PCurveEdge, PlaneSurface,
+	PointVsFace, SemiEllipseCurve, StraightEdge,
+} from '..'
+import {inDifferentSystems, suite, test, testLoopContainsPoint} from './manager'
+
+const {sqrt, cos, sin, PI} = Math
 
 suite('NLA', () => {
-
-function testDifferentSystems(name: string, test: (assert: Assert, m4: M4) => void, ...what: M4[]) {
-	if (!what.length) {
-		what = [M4.IDENTITY, M4.FOO]
-	}
-	what.forEach((m, i) => {
-		QUnit.test(name + '_' + i, assert => {
-			console.log(`TESTING '${name}' WITH '${m.toString()}`)
-			assert.push(true, undefined, undefined, `<html>'${name}' WITH <pre style="font-weight: bold">${m.toString()}</pre>`)
-			test(assert, m)
+	test('isPointsWithBezier()', inDifferentSystems((assert, m4) => {
+		const ell = new SemiEllipseCurve(V(-223.34900663163222, -176.63214006755936, 0), V(-169.5891804980124, -35.54247345835796, 0), V(35.54247345835796, -169.5891804980124, 0))
+		const bez = new BezierCurve(V(-267.6481190901419, -368.37017217006473, 0), V(563.959389388763, 94.96018577817034, 0), V(-1110.7787051488917, -95.8394860073627, 0), V(-59.14331799274822, -299.7830665459221, 0))
+		const isPoints = ell.isInfosWithBezier(bez).map(info => info.p)
+		assert.equal(isPoints.length, 3)
+		isPoints.forEach(p => {
+			assert.ok(ell.containsPoint(p), `ell.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`)
+			assert.ok(bez.containsPoint(p), `bez.distanceToPoint(${p}) = ${bez.distanceToPoint(p)}`)
 		})
-	})
-}
+	}))
 
-testDifferentSystems('SemiEllipseCurve.isPointsWithBezier()', function (assert, m4: M4) {
-	const ell = new SemiEllipseCurve(V(-223.34900663163222, -176.63214006755936, 0), V(-169.5891804980124, -35.54247345835796, 0), V(35.54247345835796, -169.5891804980124, 0))
-	const bez = new BezierCurve(V(-267.6481190901419, -368.37017217006473, 0), V(563.959389388763, 94.96018577817034, 0), V(-1110.7787051488917, -95.8394860073627, 0), V(-59.14331799274822, -299.7830665459221, 0))
-	const isPoints = ell.isInfosWithBezier(bez).map(info => info.p)
-	assert.equal(isPoints.length, 3)
-	isPoints.forEach(p => {
-		assert.ok(ell.containsPoint(p), `ell.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`)
-		assert.ok(bez.containsPoint(p), `bez.distanceToPoint(${p}) = ${bez.distanceToPoint(p)}`)
-	})
-})
+	//testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert, m4) {
+	//	const surface = SemiCylinderSurface.UNIT.transform(m4)
+	//	// loop which is 1 high and goes around a quarter of the cylinder
+	//	const loop = [
+	//		StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
+	//		Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 0, PI / 2),
+	//		StraightEdge.throughPoints(V(0, 1, 0), V(0, 1, 1)),
+	//		Edge.forCurveAndTs(SemiEllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0)].map(edge => edge.transform(m4))
+	//	const face = Face.create(surface, loop)
+	//	linkB2(assert, `mesh=${face.sce}.scale(100, 100, 100).toMesh()`)
+	//	const area = face.calcArea()
+	//	if (m4.isOrthogonal()) {
+	//		assert.push(eq(area, PI/2), area, PI / 2)
+	//	} else {
+	//		const expectedArea = face.toMesh().calcVolume().area
+	//		assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
+	//	}
+	//
+	//
+	//	const loopReverse = Edge.reversePath(loop)
+	//	const holeArea = surface.calculateArea(loopReverse)
+	//	if (m4.isOrthogonal()) {
+	//		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
+	//	} else {
+	//		const expectedArea = face.toMesh().calcVolume().area
+	//		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	//	}
+	//
+	//	const flippedSurfaceArea = surface.flipped().calculateArea(loop)
+	//	if (m4.isOrthogonal()) {
+	//		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
+	//	} else {
+	//		const expectedArea = face.toMesh().calcVolume().area
+	//		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	//	}
+	//
+	//
+	//	{
+	//		const loop = [
+	//			StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
+	//			Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, 1), 0, PI/2),
+	//			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0)].map(edge =>
+	// edge.transform(m4)) const face = Face.create(surface, loop) linkB2(assert, `mesh=${face.sce}.scale(100, 100,
+	// 100).toMesh()`) const area = face.calcArea() if (m4.isOrthogonal()) { assert.push(eq(area, 1), area, 1) } else {
+	// const expectedArea = face.toMesh().calcVolume().area assert.push(eq2(area, expectedArea, 0.1), area,
+	// expectedArea) } const loopReverse = Edge.reversePath(loop) const holeArea = surface.calculateArea(loopReverse)
+	// if (m4.isOrthogonal()) { assert.push(eq(holeArea, -1), area, -1) } else { const expectedArea =
+	// face.toMesh().calcVolume().area console.log('expectedArea', expectedArea) console.log('expectedArea',
+	// eval(face.sce).toMesh().calcVolume().area) assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea,
+	// -expectedArea) } } }, M4.IDENTITY, M4.translate(0, 0, 4).times(M4.rotateY(10 * DEG)), M4.scale(1, 2, 1))
+	// testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m4) { const surface =
+	// SemiEllipsoidSurface.UNIT.transform(m4) // loop which is 1 high and goes around a quarter of the cylinder const
+	// loop = [ Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 10 * DEG, 40 * DEG), Edge.forCurveAndTs(new
+	// SemiEllipseCurve(V3.O, V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2), Edge.forCurveAndTs(new SemiEllipseCurve(V3.O,
+	// V3.sphere(10 * DEG, 0), V3.Z), PI / 2, 0)].map(edge => edge.transform(m4)) const face = Face.create(surface,
+	// loop) assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+	// href='brep2.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`) const area = face.calcArea() const
+	// expectedArea = face.toMesh().calcVolume().area assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
+	// //const loopReverse = Edge.reversePath(loop) //const holeArea = surface.calculateArea(loopReverse) //if
+	// (m4.isOrthogonal()) { //	assert.push(eq(holeArea, -PI/2), area, -PI / 2) //} else { //	const expectedArea
+	// = face.toMesh().calcVolume().area //	assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	// //} // //const flippedSurfaceArea = surface.flipped().calculateArea(loop) //if (m4.isOrthogonal()) {
+	// //	assert.push(eq(holeArea, -PI/2), area, -PI / 2) //} else { //	const expectedArea =
+	// face.toMesh().calcVolume().area //	assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
+	// //} // // //{ //	const loop = [ //		StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
+	// //		Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, -1), 0, -PI / 2), //		Edge.forCurveAndTs(new
+	// SemiEllipseCurve(V3.O, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4)) //	const face =
+	// Face.create(surface, loop) //	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;'
+	// target='blank' //					href='viewer.html?mesh=${face.sce}.scale(100, 100,
+	// 100).toMesh()'>view</a>`) //	const area = face.calcArea() //	if (m4.isOrthogonal()) {
+	// //		assert.push(eq(area, 1), area, 1) //	} else { //		const expectedArea =
+	// face.toMesh().calcVolume().area //		assert.push(eq2(area, expectedArea, 0.1), area, expectedArea) //	}
+	// // // //	const loopReverse = Edge.reversePath(loop) //	const holeArea = surface.calculateArea(loopReverse)
+	// //	if (m4.isOrthogonal()) { //		assert.push(eq(holeArea, -1), area, -1) //	} else { //		const
+	// expectedArea = face.toMesh().calcVolume().area //		console.log("expectedArea", expectedArea)
+	// //		console.log("expectedArea", eval(face.sce).toMesh().calcVolume().area)
+	// //		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea) //	} //} }, M4.IDENTITY,
+	// M4.translate(0, 0, 4).times(M4.rotateY(10 * DEG)), M4.scale(1, 1, 2))
 
-//testDifferentSystems('SemiCylinderSurface.calculateArea', function (assert, m4) {
-//	const surface = SemiCylinderSurface.UNIT.transform(m4)
-//	// loop which is 1 high and goes around a quarter of the cylinder
-//	const loop = [
-//		StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
-//		Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 0, PI / 2),
-//		StraightEdge.throughPoints(V(0, 1, 0), V(0, 1, 1)),
-//		Edge.forCurveAndTs(SemiEllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0)].map(edge => edge.transform(m4))
-//	const face = Face.create(surface, loop)
-//	linkB2(assert, `mesh=${face.sce}.scale(100, 100, 100).toMesh()`)
-//	const area = face.calcArea()
-//	if (m4.isOrthogonal()) {
-//		assert.push(eq(area, PI/2), area, PI / 2)
-//	} else {
-//		const expectedArea = face.toMesh().calcVolume().area
-//		assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)
-//	}
-//
-//
-//	const loopReverse = Edge.reversePath(loop)
-//	const holeArea = surface.calculateArea(loopReverse)
-//	if (m4.isOrthogonal()) {
-//		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
-//	} else {
-//		const expectedArea = face.toMesh().calcVolume().area
-//		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
-//	}
-//
-//	const flippedSurfaceArea = surface.flipped().calculateArea(loop)
-//	if (m4.isOrthogonal()) {
-//		assert.push(eq(holeArea, -PI/2), area, -PI / 2)
-//	} else {
-//		const expectedArea = face.toMesh().calcVolume().area
-//		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
-//	}
-//
-//
-//	{
-//		const loop = [
-//			StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
-//			Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, 1), 0, PI/2),
-//			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0)].map(edge =>
-// edge.transform(m4)) const face = Face.create(surface, loop) linkB2(assert, `mesh=${face.sce}.scale(100, 100,
-// 100).toMesh()`) const area = face.calcArea() if (m4.isOrthogonal()) { assert.push(eq(area, 1), area, 1) } else {
-// const expectedArea = face.toMesh().calcVolume().area assert.push(eq2(area, expectedArea, 0.1), area, expectedArea) }
-//   const loopReverse = Edge.reversePath(loop) const holeArea = surface.calculateArea(loopReverse) if
-// (m4.isOrthogonal()) { assert.push(eq(holeArea, -1), area, -1) } else { const expectedArea =
-// face.toMesh().calcVolume().area console.log('expectedArea', expectedArea) console.log('expectedArea',
-// eval(face.sce).toMesh().calcVolume().area) assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea) }
-// } }, M4.IDENTITY, M4.translate(0, 0, 4).times(M4.rotateY(10 * DEG)), M4.scale(1, 2, 1))
-// testDifferentSystems('EllipsoidSurface.calculateArea', function (assert, m4) { const surface =
-// SemiEllipsoidSurface.UNIT.transform(m4) // loop which is 1 high and goes around a quarter of the cylinder const loop
-// = [ Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 10 * DEG, 40 * DEG), Edge.forCurveAndTs(new SemiEllipseCurve(V3.O,
-// V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2), Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(10 * DEG, 0),
-// V3.Z), PI / 2, 0)].map(edge => edge.transform(m4)) const face = Face.create(surface, loop) assert.ok(true, `<html><a
-// style='color: #0000ff; text-decoration: underline;' target='blank' href='brep2.html?mesh=${face.sce}.scale(100, 100,
-// 100).toMesh()'>view</a>`) const area = face.calcArea() const expectedArea = face.toMesh().calcVolume().area
-// assert.push(eq2(area, expectedArea, 0.1), area, expectedArea)   //const loopReverse = Edge.reversePath(loop) //const
-// holeArea = surface.calculateArea(loopReverse) //if (m4.isOrthogonal()) { //	assert.push(eq(holeArea, -PI/2),
-// area, -PI / 2) //} else { //	const expectedArea = face.toMesh().calcVolume().area //	assert.push(eq2(holeArea,
-// -expectedArea, 0.1), holeArea, -expectedArea) //} // //const flippedSurfaceArea =
-// surface.flipped().calculateArea(loop) //if (m4.isOrthogonal()) { //	assert.push(eq(holeArea, -PI/2), area, -PI / 2) //} else { //	const expectedArea = face.toMesh().calcVolume().area //	assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea) //} // // //{ //	const loop = [ //		StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)), //		Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, -1), 0, -PI / 2), //		Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(0, 1, 0), V(1, 0, 1)), 0, PI / 2)].map(edge => edge.transform(m4)) //	const face = Face.create(surface, loop) //	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank' //					href='viewer.html?mesh=${face.sce}.scale(100, 100, 100).toMesh()'>view</a>`) //	const area = face.calcArea() //	if (m4.isOrthogonal()) { //		assert.push(eq(area, 1), area, 1) //	} else { //		const expectedArea = face.toMesh().calcVolume().area //		assert.push(eq2(area, expectedArea, 0.1), area, expectedArea) //	} // // //	const loopReverse = Edge.reversePath(loop) //	const holeArea = surface.calculateArea(loopReverse) //	if (m4.isOrthogonal()) { //		assert.push(eq(holeArea, -1), area, -1) //	} else { //		const expectedArea = face.toMesh().calcVolume().area //		console.log("expectedArea", expectedArea) //		console.log("expectedArea", eval(face.sce).toMesh().calcVolume().area) //		assert.push(eq2(holeArea, -expectedArea, 0.1), holeArea, -expectedArea) //	} //} }, M4.IDENTITY, M4.translate(0, 0, 4).times(M4.rotateY(10 * DEG)), M4.scale(1, 1, 2))
+	test('SemiEllipseCurve.getAreaInDir', inDifferentSystems((assert, m4) => {
+			const k = 1;
+			[
+				{right: V3.X, up: V3.Y, s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
+				{right: V3.X, up: V3.Y, s: PI, t: 0, result: -PI / 2, c: V(0, 4 / 3 / PI)},
+				{right: V3.X, up: V3.Y, s: -PI / 2, t: PI / 2, result: PI / 2, c: V(4 / 3 / PI, 0)},
+				{right: V3.X, up: V3.Y, s: -PI, t: 0, result: PI / 2, c: V(0, -4 / 3 / PI)},
+				// let 'down' be X
+				{right: V3.Y, up: V3.X.negated(), s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
+				{right: V3.Y, up: V3.X.negated(), s: -PI, t: 0, result: PI / 2, c: V(0, -4 / 3 / PI)},
+			].forEach(test => {
+				[0, 4].forEach(yDiff => {
+					const r = m4.transformVector(test.right)
+					const areaFactor = m4.transformVector(V3.X).cross(m4.transformVector(V3.Y)).length()
+					console.log(areaFactor)
+					const ell = SemiEllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
+					const up = m4.transformVector(test.up).unit()
+					const offsetArea = yDiff * ((1 - cos(test.t)) - (1 - cos(test.s))) * test.up.dot(V3.Y)
+					const totalArea = test.result + offsetArea
+					const expectedArea = totalArea * areaFactor
+					const result = ell.getAreaInDir(r, up, test.s, test.t)
+					const offsetCentroid = V((cos(test.t) + cos(test.s)) / 2, yDiff / 2)
+					const movedCentroid = test.c.plus(V(0, yDiff))
+					const expectedCentroid = m4.transformPoint(movedCentroid.times(test.result).plus(offsetCentroid.times(offsetArea)).div(totalArea))
+					console.log(test.t, test.s, 1 - cos(test.t), 1 - cos(test.s))
+					console.log(test.c.times(test.result).str, offsetCentroid.str, offsetArea, offsetCentroid.times(offsetArea).str, test.c.times(test.result).plus(offsetCentroid.times(offsetArea)).str, totalArea, expectedCentroid.str)
+					assert.fuzzyEqual(
+						result.area,
+						expectedArea,
+						`yDiff: ${yDiff}, ${test.sce}, offsetArea: ${offsetArea}, expected: ${expectedArea}, ${areaFactor * offsetArea}`)
 
-testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4) {
-		const k = 1;
-		[
-			{right: V3.X, up: V3.Y, s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
-			{right: V3.X, up: V3.Y, s: PI, t: 0, result: -PI / 2, c: V(0, 4 / 3 / PI)},
-			{right: V3.X, up: V3.Y, s: -PI / 2, t: PI / 2, result: PI / 2, c: V(4 / 3 / PI, 0)},
-			{right: V3.X, up: V3.Y, s: -PI, t: 0, result: PI / 2, c: V(0, -4 / 3 / PI)},
-			// let 'down' be X
-			{right: V3.Y, up: V3.X.negated(), s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
-			{right: V3.Y, up: V3.X.negated(), s: -PI, t: 0, result: PI / 2, c: V(0, -4 / 3 / PI)},
-		].forEach(test => {
-			[0, 4].forEach(yDiff => {
-				const r = m4.transformVector(test.right)
-				const areaFactor = m4.transformVector(V3.X).cross(m4.transformVector(V3.Y)).length()
-				console.log(areaFactor)
-				const ell = SemiEllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
-				const up = m4.transformVector(test.up).unit()
-				const offsetArea = yDiff * ((1 - cos(test.t)) - (1 - cos(test.s))) * test.up.dot(V3.Y)
-				const totalArea = test.result + offsetArea
-				const expectedArea = totalArea * areaFactor
-				const result = ell.getAreaInDir(r, up, test.s, test.t)
-				const offsetCentroid = V((cos(test.t) + cos(test.s)) / 2, yDiff / 2)
-				const movedCentroid = test.c.plus(V(0, yDiff))
-				const expectedCentroid = m4.transformPoint(movedCentroid.times(test.result).plus(offsetCentroid.times(offsetArea)).div(totalArea))
-				console.log(test.t, test.s, 1 - cos(test.t), 1 - cos(test.s))
-				console.log(test.c.times(test.result).str, offsetCentroid.str, offsetArea, offsetCentroid.times(offsetArea).str, test.c.times(test.result).plus(offsetCentroid.times(offsetArea)).str, totalArea, expectedCentroid.str)
-				assert.fuzzyEquals(
-					result.area,
-					expectedArea,
-					`yDiff: ${yDiff}, ${test.sce}, offsetArea: ${offsetArea}, expected: ${expectedArea}, ${areaFactor * offsetArea}`)
-
-				assert.fuzzyEquals(result.centroid.x, expectedCentroid.x, 'cx ' + result.centroid.x)
-				assert.fuzzyEquals(result.centroid.y, expectedCentroid.y, 'cy ' + result.centroid.y)
-				// if (!k--) throw new Error()
+					assert.fuzzyEqual(result.centroid.x, expectedCentroid.x, 'cx ' + result.centroid.x)
+					assert.fuzzyEqual(result.centroid.y, expectedCentroid.y, 'cy ' + result.centroid.y)
+					// if (!k--) throw new Error()
+				})
 			})
-		})
-	},
-	M4.IDENTITY,
-	M4.rotateZ(45 * DEG),
-	M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
-	M4.FOO.as3x3())
+		},
+		M4.IDENTITY,
+		M4.rotateZ(45 * DEG),
+		M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
+		M4.FOO.as3x3()))
 
 
 
@@ -144,29 +152,29 @@ testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4) {
 		assert.ok(Edge.edgesIntersect(edge1, edge2))
 		assert.notOk(Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0)))
 		assert.notOk(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
-	},
+	})
 
 	test('Plane3.prototype.projectedVector', assert => {
 		const p = new P3(V(0, 0, 1), 2)
 		assert.ok(V(1, 1, 0).like(p.projectedVector(V(1, 1, 1))))
-	},
+	})
 	test('Line3.prototype.distanceToLine', assert => {
 		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.Y)), 1)
 		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.X)), 1)
-	},
+	})
 	test('Plane3.prototype.transformed', assert => {
 		const p = new P3(V(0, 0, 1), 2)
 		assert.ok(P3.XY.like(P3.XY.transform(M4.identity())))
-	},
+	})
 	test('Plane3.prototype.intersectionWithPlane', assert => {
 		assert.ok(P3.XY.intersectionWithPlane(P3.ZX).isColinearTo(L3.X))
 		assert.ok(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.X))
 		assert.notOk(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.Y))
-	},
+	})
 	test('Line3.prototype.isTsForLine', assert => {
 		console.log(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).sce)
 		assert.ok(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).equals(V3.X))
-	},
+	})
 	test('V3.areDisjoint2', assert => {
 		console.log(~~2147483657)
 		const s = new CustomSet()
@@ -174,15 +182,15 @@ testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4) {
 		s.canonicalizeLike(a)
 		console.log(s._map, a.like(b), a.hashCodes(), b.hashCodes(), a.hashCode(), b.hashCode())
 		assert.ok(s.canonicalizeLike(b) == a)
-	},
+	})
 	test('intersectionUnitCircleLine', assert => {
 		// y = -x + 1 => x + y = 1
 		assert.deepEqual(intersectionUnitCircleLine(1, 1, 1), {x1: 1, x2: 0, y1: 0, y2: 1})
-	},
+	})
 	test('intersectionCircleLine', assert => {
 		// y = -x + 2 => x + y = 2
 		assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), {x1: 2, x2: 0, y1: 0, y2: 2})
-	},
+	})
 	test('serialization', assert => {
 		let a = {a: 2, b: 3}
 		assert.equal(unserialize(serialize(a)).toString(), a.toString())
@@ -197,11 +205,11 @@ testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4) {
 
 		a = [1, 2, 3]
 		assert.equal(unserialize(serialize(a)).toString(), a.toString())
-	},
+	})
 	test('PlaneSurface.loopContainsPoint', assert => {
 		const loop = StraightEdge.chain([V(0, 0), V(10, 0), V(10, 10), V(0, 10)], true)
 		assert.equal(new PlaneSurface(P3.XY).loopContainsPoint(loop, V(8, 10)), PointVsFace.ON_EDGE)
-	},
+	})
 	test('PlaneSurface.loopContainsPoint 2', assert => {
 		const loop = [
 			new StraightEdge(new L3(V(2, 10, 0), V3.Z), V(2, 10, 3), V(2, 10, 5), 3, 5),
@@ -215,7 +223,7 @@ testDifferentSystems('SemiEllipseCurve.getAreaInDir', function (assert, m4) {
 		]
 		const p = V(6, 10, 3)
 		testLoopContainsPoint(assert, new PlaneSurface(new P3(V(0, -1, 0), -10)), loop, p, PointVsFace.ON_EDGE)
-	},
+	})
 	//test('EllipsoidSurface.splitOnPlaneLoop', assert => {
 	//    //const es = SemiEllipsoidSurface.UNIT
 	//    const a = V3.sphere(30 * DEG, 70 * DEG), z = a.z, xy = a.lengthXY(), center = V(0, 0, z), f1 = V(a.x, a.y,
@@ -300,7 +308,7 @@ suite('P3 projection tests', () => {
 		assert.v3like(m4.transformPoint(V(4, 8, 1)), V(2, 4, 0))
 		assert.v3like(m4.transformPoint(V(4, 8, 2)), V(4 / 3, 8 / 3, 0))
 		assert.m4equiv(
-			M4.projectPlanePoint(M4.FOO.transformPoint(V3.Z.negated()), P3XY.transform(M4.FOO)),
+			M4.projectPlanePoint(M4.FOO.transformPoint(V3.Z.negated()), P3.XY.transform(M4.FOO)),
 			M4.multiplyMultiple(M4.FOO, m4, M4.BAR))
 	})
 })

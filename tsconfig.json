@@ -1,5 +1,15 @@
 {
   "compilerOptions": {
+    "// noImplicitThis": [
+      [
+        "//    \"noImplicitAny\": true,"
+      ]
+    ],
+    "// outDir": [
+      [
+        "//    \"noUnusedLocals\": true,"
+      ]
+    ],
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
@@ -15,12 +25,12 @@
     ],
     "module": "es6",
     "moduleResolution": "node",
-//    "noImplicitAny": true,
+    "noImplicitAny": true,
     "noImplicitThis": true,
-    "skipLibCheck": true,
-//    "noUnusedLocals": true,
+    "noUnusedLocals": true,
     "outDir": "out",
     "rootDir": "src",
+    "skipLibCheck": true,
     "sourceMap": true,
     "target": "es6"
   },

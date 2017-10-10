@@ -1,6 +1,7 @@
-import {lerp, V} from 'ts3dutils'
-import {Curve, Edge, P3, ParabolaCurve, HyperbolaCurve, intersectionUnitHyperbolaLine} from '..'
-import {Assert, linkB3, suite, test, testCurve, testISTs} from './manager'
+import {suite, test, testCurve, testISTs} from './manager'
+
+import {V} from 'ts3dutils'
+import {HyperbolaCurve, intersectionUnitHyperbolaLine, P3} from '..'
 
 const {sqrt} = Math
 
@@ -9,7 +10,7 @@ suite('HyperbolaCurve', () => {
 
 	test('testCurve', assert => {
 		testCurve(assert, HyperbolaCurve.XY)
-	},
+	})
 	test('HyperbolaCurve', assert => {
 		const hbSheared = HyperbolaCurve.XY.shearX(2, 3)
 		assert.notOk(hbSheared.isOrthogonal())
@@ -19,7 +20,7 @@ suite('HyperbolaCurve', () => {
 		testCurve(assert, hbShearedRA)
 
 		assert.deepEqual(intersectionUnitHyperbolaLine(1, 0, 2), {x1: 2, y1: sqrt(3), x2: 2, y2: -sqrt(3)})
-	},
+	})
 	test('isTsWithPlane', assert => {
 		testISTs(assert, HyperbolaCurve.XY, P3.YZ, 0)
 		testISTs(assert, HyperbolaCurve.XY, P3.YZ.translate(1), 1)
@@ -35,7 +36,7 @@ suite('HyperbolaCurve', () => {
 		testISTs(assert, HyperbolaCurve.XY, new P3(V(2, 1).unit(), 2).flipped(), 2)
 		testISTs(assert, HyperbolaCurve.XY, new P3(V(2, 1).unit(), 0.85), 2)
 		testISTs(assert, HyperbolaCurve.XY, new P3(V(2, 1).unit(), 0.5), 0)
-	},
+	})
 	test('isTsWithPlane no IS with planes X < 0', assert => {
 		testISTs(assert, HyperbolaCurve.XY, P3.YZ, 0)
 		testISTs(assert, HyperbolaCurve.XY, P3.YZ.translate(-2), 0)

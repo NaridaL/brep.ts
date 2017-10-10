@@ -1,7 +1,7 @@
 import {Equalable} from 'javasetmap.ts'
 import {callsce, eq0, int, NLA_PRECISION, Transformable, V3,} from 'ts3dutils'
 
-import {Curve, dotCurve, Edge, L3, P3,} from '../index'
+import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3,} from '../index'
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 

@@ -6,8 +6,6 @@ import {
 
 const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
 
-let sema
-
 export class SemiCylinderSurface extends ProjectedCurveSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 	readonly matrix: M4
@@ -29,13 +27,6 @@ export class SemiCylinderSurface extends ProjectedCurveSurface {
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.baseCurve.normal.dot(this.dir))
 		this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
-		if (!sema) {
-			sema = true
-			assert(this)
-			const src = this.toSource()
-			const n = eval(src)
-			sema = false
-		}
 	}
 
 	static semicylinder(radius: number): SemiCylinderSurface {

@@ -1,4 +1,8 @@
-import {suite, test, inDifferentSystems} from './manager'
+import {DEG, V, V3, eq, eq0, NLA_PRECISION, M4} from 'ts3dutils'
+import {BezierCurve, P3, SemiCylinderSurface, SemiEllipseCurve, L3, EllipsoidSurface} from '..'
+import {inDifferentSystems, suite, test, testCurve, testISTs, testCurveISInfos} from './manager'
+
+const {PI} = Math
 
 suite('BezierCurve', () => {
 	test('isTsWithSurface(SemiCylinderSurface)', inDifferentSystems((assert, m4) => {
@@ -65,7 +69,7 @@ suite('BezierCurve', () => {
 			// test self-intersections
 			;[
 				new BezierCurve(V(133, 205, 0), V(33, 240, 0), V(63, 168, 0), V(151, 231, 0)),
-				new BezierCurve(V3.O, V(10, 10), V(-9, 10), V3.X)
+				new BezierCurve(V3.O, V(10, 10), V(-9, 10), V3.X),
 			].forEach(curve => {
 				assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
 				const isInfos = curve.isInfosWithBezier(curve, 0, 1, 0, 1)
