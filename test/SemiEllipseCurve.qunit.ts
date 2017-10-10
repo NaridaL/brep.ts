@@ -28,7 +28,7 @@ QUnit.module('SemiEllipseCurve')
 			testISTs(assert, c, s, 2)
 		},
 		'isTsWithSurface(PlaneSurface)'(assert) {
-			const c = SemiEllipseCurve.UNIT.translate(1.2,-1)
+			const c = SemiEllipseCurve.UNIT.translate(1.2, -1)
 			const s = new PlaneSurface(P3.ZX)
 			testISTs(assert, c, s, 1)
 		},

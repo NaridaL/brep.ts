@@ -12,6 +12,7 @@ QUnit.module('ParabolaCurve')
 			}
 		}
 	}
+
 	const curve = new ParabolaCurve(V(1, 1), V(4, 1, -2), V(1, 10, 2))
 	registerTests({
 		'testCurve'(assert) {

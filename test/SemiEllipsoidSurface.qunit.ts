@@ -8,8 +8,8 @@
 		testISCurves(assert, SemiEllipsoidSurface.UNIT, new PlaneSurface(new P3(V(-1.249000902703301e-16, 1, 0), 0.11006944444444443)), 2)
 	})
 	QUnit.test('getAABB', function (assert) {
-		assert.V3ArraysLike(ses2.getExtremePoints(), [V(0,2,0)])
-		assert.V3ArraysLike(ses2.rotateZ(30 * DEG).getExtremePoints(), [V(-2,0,0),V(0,2,0)])
+		assert.V3ArraysLike(ses2.getExtremePoints(), [V(0, 2, 0)])
+		assert.V3ArraysLike(ses2.rotateZ(30 * DEG).getExtremePoints(), [V(-2, 0, 0), V(0, 2, 0)])
 	})
 	registerTests({
 
@@ -33,7 +33,7 @@
 		},
 		'SemiEllipsoidSurface.intersect SES'(assert) {
 			const a = SemiEllipsoidSurface.sphere(5)
-			const b = SemiEllipsoidSurface.sphere(1).rotateAB(V3.Y, V3.X.negated()).translate(5,2)
+			const b = SemiEllipsoidSurface.sphere(1).rotateAB(V3.Y, V3.X.negated()).translate(5, 2)
 			testISCurves(assert, a, b, 2)
 			testISCurves(assert, a, b.flipped(), 2)
 			testISCurves(assert, a.flipped(), b, 2)
@@ -71,7 +71,7 @@
 		},
 		'SemiEllipsoidSurface.isCurvesWithProjectedCurveSurface 2'(assert) {
 			const s1 = SemiEllipsoidSurface.UNIT
-			const s2 = new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2),V(0.30000000000000004, 0.010456949966158674, 1.2),V(0.2104569499661587, 0.1, 1.2),V(0.10000000000000002, 0.1, 1.2),0,1),V(0, 0, 2),0,1,-1,0)
+			const s2 = new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2), V(0.30000000000000004, 0.010456949966158674, 1.2), V(0.2104569499661587, 0.1, 1.2), V(0.10000000000000002, 0.1, 1.2), 0, 1), V(0, 0, 2), 0, 1, -1, 0)
 			testISCurves(assert, s1, s2, 1)
 		},
 		'loopCCW'(assert) {
@@ -117,7 +117,7 @@
 			const es = SemiEllipsoidSurface.sphere(5)
 			testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)), 0)
 			testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)).flipped(), 0)
-			testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI/2, sin(3/5)), 4)), 0)
+			testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI / 2, sin(3 / 5)), 4)), 0)
 			testISCurves(assert, es, new PlaneSurface(new P3(V(0, -0.1, 1).unit(), 4)), 1)
 			testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0, 1), 4)), 1)
 			testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0.1, 1).unit(), 4)), 2)

@@ -13,7 +13,7 @@ function b2equals(assert: Assert, actual, expected, message = '') {
 	})
 }
 
-QUnit.assert.fuzzyEquals = function(actual, expected, message) {
+QUnit.assert.fuzzyEquals = function (actual, expected, message) {
 	this.push(eq(actual, expected), actual, expected, message)
 }
 
@@ -23,6 +23,7 @@ function b2Equal(test, a, b, actual, expected) {
 	linkB2(test, `a=${a.toSource()};b=${b.toSource()};c=${actual.translate(20, 0, 0).toSource(false)}`, 'actual')
 	b2equals(test, actual, expected)
 }
+
 function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
 	let actual
 	try {
@@ -31,7 +32,11 @@ function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
 		if (actual) {
 			const abWidth = a.getAABB().addAABB(b.getAABB()).size().x
 			linkB3(test, {
-				a, b, c: actual.translate(abWidth + 1).toSource(false), d: expected.translate(2 * (abWidth + 1)).toSource(false)})
+				a,
+				b,
+				c: actual.translate(abWidth + 1).toSource(false),
+				d: expected.translate(2 * (abWidth + 1)).toSource(false),
+			})
 			b2equals(test, actual, expected)
 		} else {
 			linkB3(test, {a, b})
@@ -49,14 +54,15 @@ function registerTests(o: { [key: string]: (assert: Assert) => void })
 function registerTests(moduleName: string, o: { [key: string]: (assert: Assert) => void })
 function registerTests(moduleName: any, o?: any) {
 	if ('string' == typeof moduleName) {
-	    QUnit.module(moduleName)
-    } else {
-	    o = moduleName
-    }
-    for (const key in o) {
+		QUnit.module(moduleName)
+	} else {
+		o = moduleName
+	}
+	for (const key in o) {
 		QUnit.test(key, o[key])
 	}
 }
+
 function linkB2(assert: Assert, link, msg = 'view') {
 	//link = link.replace(/, /g, ',').replace(/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/g, (numberStr) => {
 	//	const f = parseFloat(numberStr), rd = round10(f, -7)
@@ -64,9 +70,11 @@ function linkB2(assert: Assert, link, msg = 'view') {
 	//})
 	assert.ok(true, `<html><a href='${link}'>${msg}</a>`)
 }
+
 function linkB3(assert: Assert, values, msg = 'view') {
 	linkB2(assert, makeLink(values), msg)
 }
+
 function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface | P3, curveCount: int) {
 	surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
 	surface2 instanceof P3 && (surface2 = new PlaneSurface(surface2))
@@ -77,7 +85,7 @@ function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface 
 		if (isCurves) {
 			linkB2(assert, `./viewer.html#mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
 
-			assert.equal(isCurves.length, curveCount, 'number of curves = ' +  curveCount)
+			assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
 			for (const curve of isCurves) {
 				assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
 				assert.ok(surface2.containsCurve(curve), 'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str)
@@ -89,25 +97,29 @@ function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface 
 				const pN2 = surface2.normalP(p)
 				const expectedTangent = pN1.cross(pN2)
 				// expectedTangent can be zero if the surfaces just touch and dont cross each other
-				//!expectedTangent.likeZero() && assert.ok(expectedTangent.isParallelTo(dp), 'pN1.cross(pN2).isParallelTo(dp)')
-				//!expectedTangent.likeZero() && assert.ok(expectedTangent.dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
+				//!expectedTangent.likeZero() && assert.ok(expectedTangent.isParallelTo(dp),
+				// 'pN1.cross(pN2).isParallelTo(dp)') !expectedTangent.likeZero() && assert.ok(expectedTangent.dot(dp)
+				// > 0, 'pN1.cross(pN2).dot(dp) > 0')
 			}
 		} else {
 			linkB2(assert, `./viewer.html#mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
 		}
 	}
 }
+
 function testLoopCCW(assert: Assert, surface: ConicSurface, loop: Edge[]) {
 	const points = [loop[0].a, loop[0].atAvgT()]
 	linkB2(assert, `viewer.html#mesh=${surface.sce}.toMesh();edges=${loop.toSource()};points=${points.sce}`)
 	assert.push(surface.edgeLoopCCW(loop))
 	assert.push(!surface.edgeLoopCCW(Edge.reversePath(loop)))
 }
+
 function testZDirVolume(assert: Assert, face: Face) {
 	linkB2(assert, `mesh=${face.sce}.toMesh()`)
 	const actual = face.zDirVolume().volume, expected = face.toMesh().calcVolume().volume
 	assert.push(eq2(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
 }
+
 function testCurve(ass: Assert, curve: Curve) {
 	const STEPS = 12
 	arrayFromFunction(STEPS, i => {
@@ -118,7 +130,8 @@ function testCurve(ass: Assert, curve: Curve) {
 			result: eq(t, curve.pointT(p)),
 			actual: curve.pointT(p),
 			expected: t,
-			message: 't eq pointT(at(t)) for ' + t})
+			message: 't eq pointT(at(t)) for ' + t,
+		})
 		ass.ok(curve.containsPoint(p), `containsPoint(at(t == ${t}) == ${p})`)
 	})
 
@@ -126,7 +139,12 @@ function testCurve(ass: Assert, curve: Curve) {
 	if (curve.arcLength !== Curve.prototype.arcLength) {
 		const expected = glqInSteps(t => curve.tangentAt(t).length(), curve.tMin, curve.tMax, 4)
 		const actual = curve.arcLength(curve.tMin, curve.tMax)
-		ass.pushResult({result: eq2(expected, actual, 1e-6), expected, actual, message: 'curve should have same length as the numericaly calculated value'})
+		ass.pushResult({
+			result: eq2(expected, actual, 1e-6),
+			expected,
+			actual,
+			message: 'curve should have same length as the numericaly calculated value',
+		})
 	}
 }
 
@@ -193,6 +211,7 @@ function testParametricSurface(ass: Assert, surf: ParametricSurface) {
 	}
 
 }
+
 function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isInfosWithCurve') {
 	const intersections = c1[f](c2).map(info => info.p)
 	linkB3(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections}, `view ${c1} ${c2}`)
@@ -203,13 +222,14 @@ function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isIn
 		assert.ok(c2.containsPoint(is), `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
 	})
 }
+
 function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: int) {
 	surface instanceof P3 && (surface = new PlaneSurface(surface))
 	const ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
 	const points = ists.map(t => curve.at(t))
 	linkB2(assert, `viewer.html#mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
 		ists.join(', ') || 'view')
-	assert.equal(ists.length, tCount, 'number of isps = ' +  tCount)
+	assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
 	for (const t of ists) {
 		const p = curve.at(t)
 		assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
