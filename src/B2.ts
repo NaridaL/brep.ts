@@ -380,6 +380,10 @@ export class B2 extends Transformable {
 		return `new B2([\n${this.faces.join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
 	}
 
+	getConstructorParameters() {
+		return [this.faces, this.infiniteVolume]
+	}
+
 	toSource(useGenerator: boolean = true): string {
 		return useGenerator && this.generator ||
 			`new B2([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
@@ -1003,7 +1007,7 @@ export function fff(info: { face: Face, edge: Edge, normalAtCanonA: V3, inside: 
 }
 
 export function makeLink(values: any) {
-	return 'viewer.html#' + Object.getOwnPropertyNames(values).map(name => {
+	return Object.getOwnPropertyNames(values).map(name => {
 		const val = values[name]
 		return name + '=' + (typeof val == 'string' ? val : val.toSource())
 	}).join(';')

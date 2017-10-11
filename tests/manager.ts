@@ -30,8 +30,8 @@ export function b2equals(assert: Assert, actual, expected, message = '') {
 
 export function b2Equal(test, a, b, actual, expected) {
 
-	linkB2(test, `a=${a.toSource()};b=${b.toSource()};c=${expected.translate(20, 0, 0).toSource(false)}'`, 'expected')
-	linkB2(test, `a=${a.toSource()};b=${b.toSource()};c=${actual.translate(20, 0, 0).toSource(false)}`, 'actual')
+	test.link(`a=${a.toSource()};b=${b.toSource()};c=${expected.translate(20, 0, 0).toSource(false)}'`, 'expected')
+	test.link(`a=${a.toSource()};b=${b.toSource()};c=${actual.translate(20, 0, 0).toSource(false)}`, 'actual')
 	b2equals(test, actual, expected)
 }
 
@@ -56,9 +56,6 @@ export function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
 }
 
 
-//QUnit.assert.V3ArraysLike = function (actual, expected, message) {
-//	this.push(expected.every((v, i) => v.like(actual[i])), actual.toSource(), expected.toSource(), message)
-//}
 
 
 export function registerTests(o: { [key: string]: (assert: Assert) => void })
@@ -74,14 +71,6 @@ export function registerTests(moduleName: any, o?: any) {
 	}
 }
 
-export function linkB2(assert: Assert, link, msg = 'view') {
-	//link = link.replace(/, /g, ',').replace(/[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?/g, (numberStr) => {
-	//	const f = parseFloat(numberStr), rd = round10(f, -7)
-	//	return eq(f, rd) ? rd : f
-	//})
-	assert.ok(true, `<html><a href='${link}'>${msg}</a>`)
-}
-
 export function linkB3(assert: Assert, values, msg = 'view') {
 	linkB2(assert, makeLink(values), msg)
 }
@@ -94,7 +83,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 		isCurves = surface1.isCurvesWithSurface(surface2)
 	} finally {
 		if (isCurves) {
-			linkB2(assert, `./viewer.html#mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
+			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
 
 			assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
 			for (const curve of isCurves) {
@@ -113,14 +102,14 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 				// > 0, 'pN1.cross(pN2).dot(dp) > 0')
 			}
 		} else {
-			linkB2(assert, `./viewer.html#mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
+			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
 		}
 	}
 }
 
 export function testLoopCCW(assert: Assert, surface: ConicSurface, loop: Edge[]) {
 	const points = [loop[0].a, loop[0].atAvgT()]
-	linkB2(assert, `viewer.html#mesh=${surface.sce}.toMesh();edges=${loop.toSource()};points=${points.sce}`)
+	linkB2(assert, `mesh=${surface.sce}.toMesh();edges=${loop.toSource()};points=${points.sce}`)
 	assert.push(surface.edgeLoopCCW(loop))
 	assert.push(!surface.edgeLoopCCW(Edge.reversePath(loop)))
 }
@@ -160,7 +149,7 @@ export function testCurve(ass: Assert, curve: Curve) {
 }
 
 export function testParametricSurface(ass: Assert, surf: ParametricSurface) {
-	linkB2(ass, `viewer.html#mesh=[${surf}.toMesh()]`, 'view')
+	linkB2(ass, `mesh=[${surf}.toMesh()]`, 'view')
 	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)]
 		.map(pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0))
 	const points = params.map(({x, y}) => surf.pST(x, y))
@@ -238,7 +227,7 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 	surface instanceof P3 && (surface = new PlaneSurface(surface))
 	const ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
 	const points = ists.map(t => curve.at(t))
-	linkB2(assert, `viewer.html#mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
+	linkB2(assert, `mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
 		ists.join(', ') || 'view')
 	assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
 	for (const t of ists) {
@@ -249,8 +238,13 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 	}
 }
 
+export function linkB2(assert: Assert, hash: string, message = 'view') {
+	const escapedHash = encodeURIComponent(hash.replace(/(, |\n|\t)+/g, '')).replace(/\(/g, '%28').replace(/\)/g, '%29')
+	assert.link('http://localhost:3000/cs/viewer.html#' + escapedHash, message)
+}
+
 export function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
 	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
-	linkB2(assert, `viewer.html#mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
+	linkB2(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }

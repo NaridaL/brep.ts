@@ -20,10 +20,10 @@
 	<script type="text/javascript" src="node_modules/nerdamer/nerdamer.core.js"></script>
 	<script type="text/javascript" src="node_modules/nerdamer/Calculus.js"></script>
 	<script type="text/javascript" src="node_modules/tsgl/out/complete.js"></script>
-	<script type="text/javascript" src="out/complete.js"></script>
+	<script type="text/javascript" src="dist/demo.js"></script>
 
 	<script type="text/javascript">
-		window.onload = demoMain
+		makeDemo = viewer.makeDemo
 	</script>
 	<style>
 		@font-face {
@@ -135,7 +135,7 @@
 <h4>cylinder(radius: number = 1, height: number = 1, rads: number = TAU)</h4>
 <div id="cyl" class="democontainer" style="width: 50%; height: 400px"></div>
 <script>
-	makeDemo('cyl', B2T.cylinder, [
+	makeDemo('cyl', brepts.B2T.cylinder, [
 		{name: 'radius', type: 'number', fix: val => NLA.clamp(val, 0.1, 1000), def: 10, step: 1},
 	{name: 'height', type: 'number', fix: val => NLA.clamp(val, 0.1, 1000), def: 10, step: 1},
 	{name: 'degrees', type: 'angle', fix: val => NLA.clamp(val, 0.1, TAU), def: 360, step: 10}])

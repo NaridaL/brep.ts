@@ -1,15 +1,5 @@
 {
   "compilerOptions": {
-    "// noImplicitThis": [
-      [
-        "//    \"noImplicitAny\": true,"
-      ]
-    ],
-    "// outDir": [
-      [
-        "//    \"noUnusedLocals\": true,"
-      ]
-    ],
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
@@ -18,19 +8,14 @@
     "experimentalDecorators": true,
     "jsx": "react",
     "jsxFactory": "h",
-    "lib": [
-      "dom",
-      "es2017",
-      "es6"
-    ],
     "module": "es6",
     "moduleResolution": "node",
     "noImplicitAny": true,
     "noImplicitThis": true,
-    "noUnusedLocals": true,
+    // "noUnusedLocals": true,
     "outDir": "out",
     "rootDir": "src",
-    "skipLibCheck": true,
+    // "skipLibCheck": true,
     "sourceMap": true,
     "target": "es6"
   },
@@ -38,7 +23,6 @@
     "src/ignore/*"
   ],
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/index.ts"
   ]
 }

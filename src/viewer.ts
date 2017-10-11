@@ -1,5 +1,5 @@
 import chroma from 'chroma-js'
-import * as nerdamer from 'nerdamer'
+import nerdamer from 'nerdamer'
 import {addOwnProperties, arrayFromFunction, assert, DEG, int, M4, TAU, V, V3} from 'ts3dutils'
 import {DRAW_MODES, GL_COLOR, GL_COLOR_BLACK, LightGLContext, Mesh, Shader} from 'tsgl'
 import {
@@ -9,9 +9,9 @@ import {
 } from './index'
 import * as shaders from './shaders'
 
-const {pow} = Math
+const {pow, sign} = Math
 
-function parseGetParams(str: string) {
+export function parseGetParams(str: string) {
 	const result: { [key: string]: string } = {}
 	str
 		.split('&')
@@ -30,14 +30,13 @@ const COLORS = {
 	PP_FILL: chroma('#F3B6CF'),
 	PP_STROKE: chroma('#EB81B4'),
 }
-
-export class BREPGLContext extends (Object as any as typeof LightGLContext) {
+export interface BREPGLContext extends LightGLContext {}
+export class BREPGLContext {
 	shaders: SHADERS_TYPE
 
 	cachedMeshes: WeakMap<any, Mesh & { TRIANGLES: int[], normals: V3[] }> = new WeakMap()
 
 	constructor(gl: BREPGLContext) {
-		super(gl)
 		this.shaders = initShaders(gl)
 		initMeshes(this.meshes = {}, gl)
 	}
@@ -111,7 +110,7 @@ function conicPainter(mode: 0 | 1 | 2, gl: BREPGLContext, ellipse: SemiEllipseCu
 	}).draw(gl.meshes.pipe)
 }
 
-const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContext, curve: Curve, color: GL_COLOR, startT: number, endT: number, width: number) => void } = {
+export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContext, curve: Curve, color: GL_COLOR, startT: number, endT: number, width: number) => void } = {
 	[SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
@@ -169,14 +168,47 @@ let setupCameraListener: (e: typeof eye) => void
 export const SHADERS_TYPE_VAR = (false as true) && initShaders(0 as any)
 export type SHADERS_TYPE = typeof SHADERS_TYPE_VAR
 // let shaders: typeof SHADERS_TYPE_VAR
-let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
-	wireframe: boolean = false, normallines: boolean = false, b2s: B2[] = []
-let eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
-let hoverHighlight: any
-let drPs: (V3 | { info: string, p: V3 })[] = [], drVs: any[] = []
+// declare let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
+// 	, normallines: boolean = false, b2s: B2[] = []
+// const
+const eye = {pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1}
+const drPs: (V3 | { info: string, p: V3 })[] = []
+const drVs: any[] = []
+const b2s: B2[] = []
 const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
+const aMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int, count: int }>, TRIANGLES: int[], normals: V3[] })[] = []
+	//bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
+	//cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
+let dMesh: Mesh & { faceIndexes?: Map<Face, { start: int, count: int }>, TRIANGLES: int[], normals: V3[], curve1: V3[], curve1colors: GL_COLOR[] }
+let b2meshes: (Mesh & { TRIANGLES: int[], normals: V3[] })[] = []
+let hovering: {}
 
+import * as ts3dutils from 'ts3dutils'
+import * as tsgl from 'tsgl'
+import * as brepts from '..'
+const addMissing = (to: any, from: any) => Object.keys(from).forEach(key => 'Buffer' != key && !to[key] && (to[key] = from[key]))
+// tslint:disable-next-line:class-name
+class __Context {
+	a: B2 = undefined
+	b: B2 = undefined
+	c: B2 = undefined
+	d: B2 = undefined
+	edges: Edge[] = []
+	wireframe: boolean = false
+	normallines: boolean = false
+	i: any = undefined
+	hjk: any = undefined
+	points: V3[] = undefined
+	vectors: any = undefined
+	mesh: (Mesh & { TRIANGLES: int[], normals: V3[] }) = undefined
+}
+interface Window extends __Context {}
+Object.assign(window, new __Context())
+const g = window as any as Window & __Context
 function initB2() {
+	addMissing(window, ts3dutils)
+	addMissing(window, tsgl)
+	addMissing(window, brepts)
 	eye.pos = V(1, 2, 101)
 	eye.focus = V(0, 1, 0)
 	eye.up = V(0, 1, 0)
@@ -184,22 +216,27 @@ function initB2() {
 
 	const hash = window.location.search.substr(1) || window.location.hash.substr(1)
 	//noinspection TsLint
-	let i, points, vectors, mesh, hjk
+	// let i, points, vectors, mesh, hjk
 	//Object.assign(window, HJK())
 	eval(decodeURI(hash))
-	let gets: any = {a, b, c, d, mesh, edges, points, vectors}
-	hjk && (gets = HJK())
-	i && Object.assign(eye, i)
-	'abcd'.split('').forEach(k => gets[k] && eval(`aMeshes.push((${k} = gets.${k}).toMesh()); b2s.push(${k})`))
+	Object.assign(eye, g.i)
+	// let gets: any = {a, b, c, d, mesh, edges, points, vectors}
+	g.hjk && Object.assign(g, HJK())
+	'abcd'.split('').forEach(k => {
+		if (g[k]) {
+			aMeshes.push(g[k].toMesh())
+			b2s.push(g[k])
+		}
+	})
 
 	//cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()
-	if (gets.points) {
+	if (g.points) {
 		console.log('drPs from GET')
-		drPs = gets.points
+		drPs.push(...g.points)
 	}
-	if (gets.vectors) {
+	if (g.vectors) {
 		console.log('vectors from GET')
-		drVs.push(...gets.vectors)
+		drVs.push(...g.vectors)
 	}
 
 	for (let i = 0; i < aMeshes.length; i++) {
@@ -208,15 +245,14 @@ function initB2() {
 		aMeshes[i].compile()
 	}
 
-	if (gets.edges) {
+	if (g.edges) {
 		console.log('edges from GET')
-		edges = gets.edges
 		dMesh = new Mesh()
 			.addIndexBuffer('TRIANGLES')
 			.addVertexBuffer('normals', 'LGL_Normal')
 			.addVertexBuffer('curve1', 'curve1')
 			.addVertexBuffer('curve1colors', 'curve1colors')
-		edges.forEach((edge, edgeIndex) => {
+		g.edges.forEach((edge, edgeIndex) => {
 			const points = edge.points()
 			for (let i = 0; i < points.length - 1; i++) {
 				const color = edgeViewerColors[(edgeIndex + (i % 2)) % edgeViewerColors.length]
@@ -229,9 +265,9 @@ function initB2() {
 		})
 		//dMesh.computeWireframeFromFlatTriangles()
 	}
-	if (gets.mesh) {
+	if (g.mesh) {
 		console.log('mesh/es from GET', b2meshes)
-		b2meshes = gets.mesh instanceof Array ? gets.mesh : [gets.mesh]
+		b2meshes = g.mesh instanceof Array ? g.mesh : [g.mesh]
 		b2meshes.forEach(m => m.computeWireframeFromFlatTriangles())
 		b2meshes.forEach(m => m.computeNormalLines(0.5))
 		b2meshes.forEach(m => m.compile())
@@ -248,11 +284,6 @@ const meshColors: any[][] = [
 	chroma.scale(['#31fff8', '#2dff2a']).mode('lab').colors(20, null),
 ]
 const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()))
-let aMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int, count: int }>, TRIANGLES: int[], normals: V3[] })[] = [],
-	//bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
-	//cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
-	dMesh: Mesh & { faceIndexes?: Map<Face, { start: int, count: int }>, TRIANGLES: int[], normals: V3[], curve1: V3[], curve1colors: GL_COLOR[] },
-	b2meshes: (Mesh & { TRIANGLES: int[], normals: V3[] })[] = []
 
 function viewerPaint(time: int, gl: BREPGLContext) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -266,9 +297,9 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		gl.pushMatrix()
 		//gl.translate(30, 0, 0)
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-		wireframe && gl.shaders.singleColor.uniforms({color: COLORS.TS_STROKE.gl()})
+		g.wireframe && gl.shaders.singleColor.uniforms({color: COLORS.TS_STROKE.gl()})
 			.drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.wireframe, DRAW_MODES.LINES)
-		normallines && gl.shaders.singleColor.uniforms({color: COLORS.TS_STROKE.gl()})
+		g.normallines && gl.shaders.singleColor.uniforms({color: COLORS.TS_STROKE.gl()})
 			.drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.normallines, DRAW_MODES.LINES)
 		gl.shaders.singleColor.uniforms({color: COLORS.TS_STROKE.gl()})
 			.drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.LINES, DRAW_MODES.LINES)
@@ -310,13 +341,12 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 
 	//drPs.forEach(v => drawPoint(v, undefined, 0.3))
 	drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor))
-	b2planes.forEach(plane => gl.drawPlane(plane, chroma(plane.color).gl(), hoverHighlight))
+	b2planes.forEach(plane => gl.drawPlane(plane, chroma(plane.color).gl(), hovering == plane))
 
 	//console.log(gl.drawCallCount)
 }
 
 // let meshes: any = {}
-
 
 /**
  * Transforms position on the screen into a line in world coordinates.
@@ -330,8 +360,6 @@ function getMouseLine(pos: { x: number; y: number }, _gl: LightGLContext): L3 {
 	const dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s)
 	return L3.anchorDirection(s, dir)
 }
-
-
 function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points: V3[], edges: Edge[],
 					 mindist: number,
 					 ...consider: ('faces' | 'planes' | 'sketchElements' | 'points' | 'edges' | 'features')[]): any {
@@ -395,14 +423,13 @@ function getHovering(mouseLine: L3, faces: Face[], planes: CustomPlane[], points
 	return hoverHighlight
 }
 
-
 function initInfoEvents(paintScreen: () => {}, gl: BREPGLContext) {
 	gl.canvas.addEventListener('mousemove', function (e) {
 		const mouseLine = getMouseLine({x: e.clientX, y: e.clientY}, gl)
-		const faces = [a, b, c, d].mapFilter(b2 => b2 && b2.faces).concatenated()
-		const testEdges: Edge[] = [a, b, c, d].mapFilter(b2 => b2 && (b2.buildAdjacencies(), Array.from(b2.edgeFaces.keys())))
-			.concatenated()
-			.concat(edges)
+		const faces = b2s.flatMap(b2 => b2 && b2.faces)
+		const testEdges: Edge[] = [
+			...b2s.flatMap(b2 => Array.from<Edge, Edge>(b2.buildAdjacencies().edgeFaces.keys())),
+			...g.edges]
 		hovering = getHovering(mouseLine, faces, undefined, [], testEdges, 0.1, 'faces', 'edges')
 		//let html = '', pp
 		//if (hovering instanceof Edge) {
@@ -436,7 +463,7 @@ const b2planes = [
 	//	sketchPlane
 ]
 
-async function viewerMain() {
+export async function viewerMain() {
 	const paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl))
 	await B2T.loadFonts()
 	window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
@@ -479,7 +506,7 @@ async function viewerMain() {
 }
 
 export function initNavigationEvents(_gl: BREPGLContext, eye: { pos: V3, focus: V3, up: V3, zoomFactor: number }, paintScreen: () => void) {
-	const canvas: HTMLCanvasElement = $(_gl.canvas)
+	const canvas=_gl.canvas
 	let lastPos: V3 = V3.O
 	//_gl.onmousedown.push((e) => {
 	//	e.preventDefault()
@@ -521,12 +548,13 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: { pos: V3, focus: 
 		}
 		lastPos = pagePos
 	})
-	canvas.addEvent('mousewheel', function (e) {
-		//console.log(e)
-		eye.zoomFactor *= pow(0.9, -e.wheel)
-		const targetPos = e.target.getPosition()
-		const mouseCoords = {x: e.page.x - targetPos.x, y: e.page.y - targetPos.y}
-		const moveCamera = V(mouseCoords.x * 2 / _gl.canvas.width - 1, -mouseCoords.y * 2 / _gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -e.wheel))
+	canvas.addEventListener('wheel', function (e) {
+		const wheelY = sign(e.deltaY) * 2
+		console.log(e.deltaY, e.deltaX)
+		eye.zoomFactor *= pow(0.9, -wheelY)
+		const target =(e.target as HTMLCanvasElement), targetPos = V(target.offsetLeft, target.offsetTop)
+		const mouseCoordsOnCanvas = {x: e.pageX - targetPos.x, y: e.pageY - targetPos.y}
+		const moveCamera = V(mouseCoordsOnCanvas.x * 2 / _gl.canvas.width - 1, -mouseCoordsOnCanvas.y * 2 / _gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -wheelY))
 		const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 		const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
 		//console.log("moveCamera", moveCamera)

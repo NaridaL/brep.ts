@@ -1,3 +1,10 @@
+import {suite, test, testCurve, testISTs} from './manager'
+
+import {DEG, V, V3} from 'ts3dutils'
+import {
+	BezierCurve, EllipsoidSurface, P3, PICurve, PlaneSurface, ProjectedCurveSurface, SemiEllipsoidSurface,
+} from '..'
+
 suite('PICurve', () => {
 	test('pointT', assert => {
 		const pic = PICurve.forStartEnd(

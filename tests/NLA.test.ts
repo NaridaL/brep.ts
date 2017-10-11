@@ -1,10 +1,13 @@
+import {inDifferentSystems, suite, test, testLoopContainsPoint, b2Equal, b2equals} from './manager'
+
 import {JavaSet as CustomSet} from 'javasetmap.ts'
-import {DEG, M4, V, V3, P3XY} from 'ts3dutils'
+import {DEG, M4, P3XY, V, V3} from 'ts3dutils'
+import * as ts3dutils from 'ts3dutils'
+import * as brepts from '..'
 import {
-	BezierCurve, Edge, intersectionCircleLine, intersectionUnitCircleLine, L3, P3, PCurveEdge, PlaneSurface,
-	PointVsFace, SemiEllipseCurve, StraightEdge,
+BezierCurve, ClassSerializer, Edge, intersectionCircleLine, intersectionUnitCircleLine, L3, P3, PCurveEdge,
+PlaneSurface, PointVsFace, SemiEllipseCurve, StraightEdge, B2T,
 } from '..'
-import {inDifferentSystems, suite, test, testLoopContainsPoint} from './manager'
 
 const {sqrt, cos, sin, PI} = Math
 
@@ -100,8 +103,8 @@ suite('NLA', () => {
 	// M4.translate(0, 0, 4).times(M4.rotateY(10 * DEG)), M4.scale(1, 1, 2))
 
 	test('SemiEllipseCurve.getAreaInDir', inDifferentSystems((assert, m4) => {
-			const k = 1;
-			[
+		const k = 1;
+		[
 				{right: V3.X, up: V3.Y, s: 0, t: PI, result: PI / 2, c: V(0, 4 / 3 / PI)},
 				{right: V3.X, up: V3.Y, s: PI, t: 0, result: -PI / 2, c: V(0, 4 / 3 / PI)},
 				{right: V3.X, up: V3.Y, s: -PI / 2, t: PI / 2, result: PI / 2, c: V(4 / 3 / PI, 0)},
@@ -135,7 +138,7 @@ suite('NLA', () => {
 					// if (!k--) throw new Error()
 				})
 			})
-		},
+	},
 		M4.IDENTITY,
 		M4.rotateZ(45 * DEG),
 		M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
@@ -190,21 +193,6 @@ suite('NLA', () => {
 	test('intersectionCircleLine', assert => {
 		// y = -x + 2 => x + y = 2
 		assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), {x1: 2, x2: 0, y1: 0, y2: 2})
-	})
-	test('serialization', assert => {
-		let a = {a: 2, b: 3}
-		assert.equal(unserialize(serialize(a)).toString(), a.toString())
-
-		a.c = a
-
-		const a2 = unserialize(serialize(a))
-		assert.equal(a2.a, 2)
-		assert.equal(a2.b, 3)
-		assert.equal(a2.c, a2)
-
-
-		a = [1, 2, 3]
-		assert.equal(unserialize(serialize(a)).toString(), a.toString())
 	})
 	test('PlaneSurface.loopContainsPoint', assert => {
 		const loop = StraightEdge.chain([V(0, 0), V(10, 0), V(10, 10), V(0, 10)], true)
@@ -310,5 +298,32 @@ suite('P3 projection tests', () => {
 		assert.m4equiv(
 			M4.projectPlanePoint(M4.FOO.transformPoint(V3.Z.negated()), P3.XY.transform(M4.FOO)),
 			M4.multiplyMultiple(M4.FOO, m4, M4.BAR))
+	})
+})
+suite('serialization', () => {
+	test('serialization', assert => {
+		const sz = new ClassSerializer(), unserialize = x => sz.unserialize(x), serialize = x => sz.serialize(x)
+		let a: any = {a: 2, b: 3}
+		assert.equal(unserialize(serialize(a)).toString(), a.toString())
+
+		a.c = a
+
+		const a2 = unserialize(serialize(a))
+		assert.equal(a2.a, 2)
+		assert.equal(a2.b, 3)
+		assert.equal(a2.c, a2)
+
+
+		a = [1, 2, 3]
+		assert.equal(unserialize(serialize(a)).toString(), a.toString())
+	})
+	test('brep', assert => {
+		const cs = new ClassSerializer()
+		cs.addNamespace('ts3dutils', ts3dutils)
+		cs.addNamespace('brepts', brepts)
+		const input = B2T.box().rotateX(20 * DEG)
+		const str = cs.serialize(input)
+		const output = cs.unserialize(str)
+		b2equals(assert, output, input)
 	})
 })

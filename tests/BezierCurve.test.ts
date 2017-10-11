@@ -1,6 +1,7 @@
-import {DEG, V, V3, eq, eq0, NLA_PRECISION, M4} from 'ts3dutils'
-import {BezierCurve, P3, SemiCylinderSurface, SemiEllipseCurve, L3, EllipsoidSurface} from '..'
-import {inDifferentSystems, suite, test, testCurve, testISTs, testCurveISInfos} from './manager'
+import {inDifferentSystems, suite, test, testCurve, testCurveISInfos, testISTs} from './manager'
+
+import {DEG, eq, eq0, M4, NLA_PRECISION, V, V3} from 'ts3dutils'
+import {BezierCurve, EllipsoidSurface, L3, P3, SemiCylinderSurface, SemiEllipseCurve} from '..'
 
 const {PI} = Math
 
@@ -66,19 +67,19 @@ suite('BezierCurve', () => {
 		const curve2 = curve1.transform(M4.rotateLine(V(0.5, 0), V3.Z, PI / 2))
 		testCurveISInfos(assert, curve1, curve2, 9)
 
-			// test self-intersections
-			;[
-				new BezierCurve(V(133, 205, 0), V(33, 240, 0), V(63, 168, 0), V(151, 231, 0)),
-				new BezierCurve(V3.O, V(10, 10), V(-9, 10), V3.X),
-			].forEach(curve => {
-				assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
-				const isInfos = curve.isInfosWithBezier(curve, 0, 1, 0, 1)
-				assert.equal(isInfos.length, 1)
-				isInfos.forEach(info => {
-					const p = info.p
-					assert.ok(eq0(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
-				})
+		// test self-intersections
+		;[
+			new BezierCurve(V(133, 205, 0), V(33, 240, 0), V(63, 168, 0), V(151, 231, 0)),
+			new BezierCurve(V3.O, V(10, 10), V(-9, 10), V3.X),
+		].forEach(curve => {
+			assert.push(true, undefined, undefined, 'Testing ' + curve.sce)
+			const isInfos = curve.isInfosWithBezier(curve, 0, 1, 0, 1)
+			assert.equal(isInfos.length, 1)
+			isInfos.forEach(info => {
+				const p = info.p
+				assert.ok(eq0(curve.distanceToPoint(p)), `curve.distanceToPoint(${p}) = ${curve.distanceToPoint(p, -2, 3)}`)
 			})
+		})
 	})
 
 	test('isInfosWithLine', assert => {

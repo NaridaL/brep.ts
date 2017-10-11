@@ -1,7 +1,8 @@
 import {DEG, V, V3} from 'ts3dutils'
 import {
 	B2T, ConicSurface, Edge, HyperbolaCurve, L3, P3, PCurveEdge, PointVsFace, SemiEllipseCurve, SemiEllipsoidSurface,
-	StraightEdge,
+	StraightEdge
+	ParabolaCurve,,
 } from '..'
 import {linkB2, suite, test, testISCurves, testLoopCCW, testLoopContainsPoint, testParametricSurface} from './manager'
 
@@ -92,18 +93,18 @@ suite('ConicSurface', () => {
 		testISCurves(assert, cone, sphere, 2)
 	})
 	test('containsParabola', assert => {
-		const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0]
+		const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0] as ParabolaCurve
 		assert.ok(UCS.containsParabola(pb))
 
 		const c2 = UCS.shearX(2, 3)
-		const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearX(2, 3))[0]
+		const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearX(2, 3))[0] as ParabolaCurve
 		assert.ok(c2.containsParabola(pb2))
 	})
 	test('containsHyperbola', assert => {
 		const s = new ConicSurface(V(-242.1625189124994, 38.960257711878945, 0), V(197.87979681325515, -15.226749714620981, 2.4304925446444556e-14), V(2.4233285978328154e-14, -1.8647390299428456e-15, -198.46477746372744), V(14.686977871964286, 190.86517159433123, 0))
 		const c = new HyperbolaCurve(V(-242.16251891249937, 38.960257711878945, -100.00000000000003), V(7.400294429901329, 96.17080372320217, 0), V(-99.70524711843181, 7.672268051394617, -1.8369701987210304e-14))
 
-		linkB2(assert, `viewer.html?mesh=[${s.sce}.toMesh()]&edges=[Edge.forCurveAndTs(${c.sce})]`)
+		linkB2(assert, `mesh=[${s.sce}.toMesh()]&edges=[Edge.forCurveAndTs(${c.sce})]`)
 		assert.ok(s.containsCurve(c))
 	})
 	test('containsPoint', assert => {
