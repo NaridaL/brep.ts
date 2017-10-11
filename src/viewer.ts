@@ -549,11 +549,13 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: { pos: V3, focus: 
 		lastPos = pagePos
 	})
 	canvas.addEventListener('wheel', function (e) {
-		const wheelY = sign(e.deltaY) * 2
+		const wheelY = -sign(e.deltaY) * 2
 		console.log(e.deltaY, e.deltaX)
 		eye.zoomFactor *= pow(0.9, -wheelY)
-		const target =(e.target as HTMLCanvasElement), targetPos = V(target.offsetLeft, target.offsetTop)
-		const mouseCoordsOnCanvas = {x: e.pageX - targetPos.x, y: e.pageY - targetPos.y}
+		const target = (e.target as HTMLCanvasElement),
+			targetRect = target.getBoundingClientRect(),
+			targetPos = V(targetRect.left, targetRect.top)
+		const mouseCoordsOnCanvas = {x: e.clientX - targetPos.x, y: e.clientY - targetPos.y}
 		const moveCamera = V(mouseCoordsOnCanvas.x * 2 / _gl.canvas.width - 1, -mouseCoordsOnCanvas.y * 2 / _gl.canvas.height + 1, 0).times(1 - 1 / pow(0.9, -wheelY))
 		const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 		const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
