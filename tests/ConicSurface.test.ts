@@ -1,8 +1,8 @@
 import {DEG, V, V3} from 'ts3dutils'
 import {
 	B2T, ConicSurface, Edge, HyperbolaCurve, L3, P3, PCurveEdge, PointVsFace, SemiEllipseCurve, SemiEllipsoidSurface,
-	StraightEdge
-	ParabolaCurve,,
+	StraightEdge,
+	ParabolaCurve,
 } from '..'
 import {linkB2, suite, test, testISCurves, testLoopCCW, testLoopContainsPoint, testParametricSurface} from './manager'
 

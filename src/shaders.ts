@@ -1,6 +1,7 @@
 import {ShaderType} from 'tsgl'
 
 export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3', camPos: 'FLOAT_VEC3' }> = `
+	precision highp float;
 	uniform vec4 color;
 	uniform vec3 camPos;
 	varying vec3 normal;
@@ -17,7 +18,12 @@ export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3', camPos: '
 		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
 	}
 `
-export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC3' }> = `
+export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC4' }> = `
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	uniform mat4 LGL_ModelViewMatrix;
+	attribute vec4 LGL_Vertex;
+	uniform mat3 LGL_NormalMatrix;
+	attribute vec3 LGL_Normal;
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
@@ -28,12 +34,17 @@ export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC3' }> = `
 	}
 `
 export const vertexShaderWaves: ShaderType<{ color: 'FLOAT_VEC3' }> = `
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	uniform mat4 LGL_ModelViewMatrix;
+	attribute vec4 LGL_Vertex;
+	uniform mat3 LGL_NormalMatrix;
+	attribute vec3 LGL_Normal;
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
 	void main() {
 		normal = normalize(LGL_NormalMatrix * LGL_Normal);
-		float offset = mod  (((LGL_Vertex.x + LGL_Vertex.y + LGL_Vertex.z) * 31.0), 20.0) - 10.0; 
+		float offset = mod  (((LGL_Vertex.x + LGL_Vertex.y + LGL_Vertex.z) * 31.0), 20.0) - 10.0;
 		vec4 modPos = LGL_Vertex + vec4(normal * offset, 0);
 		gl_Position = LGL_ModelViewProjectionMatrix * modPos;
         vPosition = LGL_ModelViewMatrix * modPos;
@@ -49,6 +60,7 @@ export const vertexShader: ShaderType<{}> = `
 	}
 `
 export const fragmentShader: ShaderType<{ color: 'FLOAT_VEC3' }> = `
+	precision highp float;
 	uniform vec3 color;
 	varying vec4 pos;
 	void main() {
@@ -78,11 +90,15 @@ export const fragmentShader: ShaderType<{ color: 'FLOAT_VEC3' }> = `
 	 */
 `
 export const vertexShaderBasic: ShaderType<{}> = `
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	void main() {
 		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
 export const vertexShaderColor: ShaderType<{}> = `
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	attribute vec4 color;
 	varying vec4 fragColor;
 	void main() {
@@ -97,6 +113,8 @@ export const vertexShaderArc: ShaderType<{
 	radius: 'FLOAT',
 	width: 'FLOAT'
 }> = `
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	uniform float step, offset;
 	uniform float radius, width;
 	void main() {
@@ -116,6 +134,8 @@ export const vertexShaderConic3d: ShaderType<{
 	f2: 'FLOAT_VEC3',
 	mode: 'INT'
 }> = `
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
 	uniform int mode;
@@ -123,9 +143,9 @@ export const vertexShaderConic3d: ShaderType<{
 	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
 	void main() {
 		float t = startT + LGL_Vertex.x * (endT - startT);
-		
+
 		vec3 normal = normalize(cross(f1, f2));
-		
+
 		vec3 p, tangent;
 		if (0 == mode) { // ellipse
 			p = center + f1 * cos(t) + f2 * sin(t);
@@ -136,7 +156,7 @@ export const vertexShaderConic3d: ShaderType<{
 			tangent = f1 + f2 * t;
 		}
 		if (2 == mode) { // hyperbola
-			p = center + f1 * cosh(t) + f2 * sinh(t); 
+			p = center + f1 * cosh(t) + f2 * sinh(t);
 			tangent = f1 * sinh(t) + f2 * cosh(t);
 		}
 		vec3 outDir = normalize(cross(normal, tangent));
@@ -154,6 +174,8 @@ export const vertexShaderBezier: ShaderType<{
 	p3: 'FLOAT_VEC3',
 }> = `
     // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	uniform float width, startT, endT;
 	uniform vec3 p0, p1, p2, p3;
 	void main() {
@@ -182,6 +204,8 @@ export const vertexShaderBezier3d: ShaderType<{
 	uniform float scale, startT, endT;
 	uniform vec3 ps[4];
 	uniform vec3 p0, p1, p2, p3, normal;
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	void main() {
 		// LGL_Vertex.y is in [0, 1]
 		vec3 p5 = ps[0];
@@ -198,6 +222,10 @@ export const vertexShaderBezier3d: ShaderType<{
 `
 export const vertexShaderGeneric: ShaderType<{ scale: 'FLOAT' }> = `
 	uniform float scale;
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
+	uniform mat3 LGL_NormalMatrix;
+	attribute vec3 LGL_Normal;
 	void main() {
 		vec3 normal = normalize(LGL_NormalMatrix * LGL_Normal);
 		vec4 vertexPos = LGL_Vertex + vec4(normal * scale, 0);
@@ -209,6 +237,8 @@ export const vertexShaderRing: ShaderType<{ step: 'FLOAT', innerRadius: 'FLOAT',
 	uniform float step;
 	uniform float innerRadius, outerRadius;
 	attribute float index;
+	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 LGL_Vertex;
 	void main() {
 		gl_Position = LGL_ModelViewProjectionMatrix * vec4(index, index, index, 1);
 		float id = atan(LGL_Vertex.x, LGL_Vertex.y) / M_PI  * 32.0;
@@ -217,18 +247,21 @@ export const vertexShaderRing: ShaderType<{ step: 'FLOAT', innerRadius: 'FLOAT',
 	}
 `
 export const fragmentShaderColor: ShaderType<{ color: 'FLOAT_VEC4' }> = `
+	precision highp float;
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
 	}
 `
 export const fragmentShaderVaryingColor: ShaderType<{}> = `
+	precision highp float;
 	varying vec4 fragColor;
 	void main() {
 		gl_FragColor = fragColor;
 	}
 `
 export const fragmentShaderColorHighlight: ShaderType<{}> = `
+	precision highp float;
 	uniform vec4 color;
 	void main() {
 		float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
@@ -242,12 +275,15 @@ export const fragmentShaderColorHighlight: ShaderType<{}> = `
 `
 export const vertexShaderTexture: ShaderType<{}> = `
 	varying vec2 texturePos;
+	attribute vec4 LGL_Vertex;
+	uniform mat4 LGL_ModelViewProjectionMatrix;
 	void main() {
 		texturePos = LGL_Vertex.xy;
 		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
 	}
 `
 export const fragmentShaderTextureColor: ShaderType<{}> = `
+	precision highp float;
 	varying vec2 texturePos;
 	uniform vec4 color;
 	uniform sampler2D texture;
@@ -256,6 +292,7 @@ export const fragmentShaderTextureColor: ShaderType<{}> = `
 	}
 `
 export const fragmentShaderTexture: ShaderType<{}> = `
+	precision highp float;
 	varying vec2 texturePos;
 	uniform sampler2D texture;
 	void main() {

@@ -4,16 +4,11 @@
 	<meta charset="utf-8">
 	<title>BREP.js</title>
 	<!--<meta http-equiv="refresh" content="5">-->
-	<!--<script type="text/javascript" src="lib/live.js"></script>-->
-	<script type="text/javascript" src="node_modules/chroma-js/chroma.js"></script>
-	<script type="text/javascript" src="lib/toSource.js"></script>
-	<script type="text/javascript" src="lib/opentype.js"></script>
-	<script type="text/javascript" src="node_modules/svg-pathdata/dist/SVGPathData.js"></script>
-	<script type="text/javascript" src="lib/MooTools-Core-1.6.0.js"></script>
-	<script type="text/javascript" src="lib/MooTools-More-1.6.0.js"></script>
-	<script type="text/javascript" src="lib/earcut.dev.js"></script>
+	<!-- <script type="text/javascript" src="lib/toSource.js"></script> -->
+	<script type="text/javascript" src="/node_modules/svg-pathdata/dist/SVGPathData.js"></script>
+	<script type="text/javascript" src="/lib/earcut.dev.js"></script>
 
-	<script type="text/javascript" src="dist/viewer.js"></script>
+	<script type="text/javascript" src="/dist/viewer.js"></script>
 
 	<script type="text/javascript">
 		window.onload = viewer.viewerMain
@@ -128,9 +123,13 @@
 	</style>
 </head>
 <body>
+<script>
+	var BREPTS_ROOT = ''
+/*INSERT*/
+</script>
 <canvas id="testcanvas" width="1000px" height="500px"></canvas>
 <div id="tip-wrap" style="position: absolute;z-index: 6000; left: 100px; top:100px; color:red;">
-	<div id="tip">This should be visitble.</div>
+	<div id="tip">This should be visible.</div>
 	<div id="tip-arrow"></div>
 </div>
 </body>

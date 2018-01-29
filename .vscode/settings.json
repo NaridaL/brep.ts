@@ -1,3 +1,14 @@
 {
-    "typescript.tsdk": "node_modules\\typescript\\lib"
+    "typescript.tsdk": "node_modules\\typescript\\lib",
+    // "mocha.env": {
+    //     "TS_NODE_NO_WARNINGS": true
+    // },
+    "mocha.files.glob": "tests/**/*.test.ts",
+    "mocha.requires": ["ts-node/register"],
+    "mocha.options": {
+        "ui": "tdd",
+        "compilers": {
+            "ts": "ts-node/register"
+          }
+        },
 }

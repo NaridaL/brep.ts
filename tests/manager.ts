@@ -1,21 +1,29 @@
 declare const require: any
 try {
-	const mock = require('mock-require')
-	mock('tsgl', {})
-} catch (e) {}
+	global.WebGLRenderingContext = {}
+	//const mock = require('mock-require')
+	//mock('tsgl', {})
+} catch (e) { }
 
 export * from 'ts3dutils/tests/manager'
-import {arrayFromFunction, assert, DEG, eq, eq0, eq2, glqInSteps, int, lerp, M4, V, V3} from 'ts3dutils'
-import {Assert} from 'ts3dutils/tests/manager'
+import { arrayFromFunction, assert, DEG, eq, eq0, eq2, glqInSteps, int, lerp, M4, V, V3 } from 'ts3dutils'
+import { Assert } from 'ts3dutils/tests/manager'
+
+import slug from 'slug'
+function sanitizeFilename(s: string) {
+	return slug(s.replace(/-/g, 'minus').replace(/\+/g, 'plus'), '_')
+}
+
 import {
-	B2, ConicSurface, Curve, Edge, Face, ImplicitSurface, L3, makeLink, P3, ParametricSurface, PlaneSurface,
+	B2, ConicSurface, Curve, Edge, Face, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface,
 	PointVsFace, Surface,
 } from '..'
 
+import * as fs from 'fs'
 
 export function b2equals(assert: Assert, actual, expected, message = '') {
 	if (!(actual instanceof B2)) {
-		assert.push(false, actual, null, 'actual is not a B2')
+		assert.push(false, typeof actual, B2, 'actual is not a B2')
 		return
 	}
 
@@ -28,17 +36,13 @@ export function b2equals(assert: Assert, actual, expected, message = '') {
 	})
 }
 
-export function b2Equal(test, a, b, actual, expected) {
-
-	test.link(`a=${a.toSource()};b=${b.toSource()};c=${expected.translate(20, 0, 0).toSource(false)}'`, 'expected')
-	test.link(`a=${a.toSource()};b=${b.toSource()};c=${actual.translate(20, 0, 0).toSource(false)}`, 'actual')
-	b2equals(test, actual, expected)
-}
-
 export function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
+	return b2Equal(test, a, b, () => a.and(b), expected)
+}
+export function b2Equal(test, a: B2, b: B2, calculateActual: () => B2, expected: B2) {
 	let actual
 	try {
-		actual = a.and(b)
+		actual = calculateActual()
 	} finally {
 		if (actual) {
 			const abWidth = a.getAABB().addAABB(b.getAABB()).size().x
@@ -50,7 +54,7 @@ export function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
 			})
 			b2equals(test, actual, expected)
 		} else {
-			linkB3(test, {a, b})
+			linkB3(test, { a, b })
 		}
 	}
 }
@@ -71,10 +75,28 @@ export function registerTests(moduleName: any, o?: any) {
 	}
 }
 
-export function linkB3(assert: Assert, values, msg = 'view') {
-	linkB2(assert, makeLink(values), msg)
+
+
+export function makeLink(values: any) {
+	return Object.getOwnPropertyNames(values).map(name => {
+		const val = values[name]
+		return name + '=' + (typeof val == 'string' ? val : val.toSource())
+	}).join(';')
 }
 
+export function linkB3(assert: Assert, values, msg = 'view') {
+	const script = 'TEST_NAME = ' + assert.getTestName().toSource() + '\n' +
+		'FROM_SCRIPT = true\n' +
+		Object.getOwnPropertyNames(values).map(name => {
+			const val = values[name]
+			return name + ' = ' + (typeof val == 'string' ? val : val.toSource())
+		}).join('\n')
+	const o = sanitizeFilename(assert.getTestName() + '_' + msg) + '.html'
+	fs.writeFileSync('results/' + o, demoFile.replace('/*INSERT*/', script), 'utf8')
+	// linkB2(assert, makeLink(values), msg)
+	assert.link('http://localhost:10001/tests/results/' + o)
+}
+const demoFile = fs.readFileSync('../viewer.html', 'utf8')
 export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface | P3, curveCount: int) {
 	surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
 	surface2 instanceof P3 && (surface2 = new PlaneSurface(surface2))
@@ -83,6 +105,11 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 		isCurves = surface1.isCurvesWithSurface(surface2)
 	} finally {
 		if (isCurves) {
+			const script =
+				`var FROM_SCRIPT = true
+mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]
+edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`
+			fs.writeFileSync('results/' + sanitizeFilename(assert.getTestName()) + '.html', demoFile.replace('/*INSERT*/', script), 'utf8')
 			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
 
 			assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
@@ -152,7 +179,7 @@ export function testParametricSurface(ass: Assert, surf: ParametricSurface) {
 	linkB2(ass, `mesh=[${surf}.toMesh()]`, 'view')
 	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)]
 		.map(pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0))
-	const points = params.map(({x, y}) => surf.pST(x, y))
+	const points = params.map(({ x, y }) => surf.pST(x, y))
 	const psFlipped = surf.flipped()
 	for (let i = 0; i < points.length; i++) {
 		const p = points[i], pNormal = surf.normalP(p)
@@ -214,7 +241,7 @@ export function testParametricSurface(ass: Assert, surf: ParametricSurface) {
 
 export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isInfosWithCurve') {
 	const intersections = c1[f](c2).map(info => info.p)
-	linkB3(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections}, `view ${c1} ${c2}`)
+	linkB3(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections }, `view`)
 	assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
 	intersections.forEach((is, i) => {
 		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
@@ -239,8 +266,8 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 }
 
 export function linkB2(assert: Assert, hash: string, message = 'view') {
-	const escapedHash = encodeURIComponent(hash.replace(/(, |\n|\t)+/g, '')).replace(/\(/g, '%28').replace(/\)/g, '%29')
-	assert.link('http://localhost:3000/cs/viewer.html#' + escapedHash, message)
+	const escapedHash = encodeURIComponent(hash.replace(/, /g, ',').replace(/(\n|\t)+/g, '')).replace(/\(/g, '%28').replace(/\)/g, '%29')
+	assert.link('http://localhost:10001/viewer.html#' + escapedHash, message)
 }
 
 export function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {

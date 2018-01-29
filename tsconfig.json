@@ -6,18 +6,22 @@
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "importHelpers": true,
     "jsx": "react",
     "jsxFactory": "h",
+    "lib": [
+      "dom",
+      "es2017",
+      "es2016.array.include"
+    ],
     "module": "es6",
     "moduleResolution": "node",
+    "noEmitHelpers": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
-    "noEmitHelpers": true,
-    "importHelpers": true,
-    // "noUnusedLocals": true,
+    "noUnusedLocals": true,
     "outDir": "out",
     "rootDir": "src",
-    // "skipLibCheck": true,
     "sourceMap": true,
     "target": "es6"
   },
@@ -25,7 +29,6 @@
     "src/ignore/*"
   ],
   "include": [
-    "src/index.ts",
-    "src/demo.tsx"
+    "src/index.ts"
   ]
 }

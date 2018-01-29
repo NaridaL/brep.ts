@@ -2,7 +2,7 @@ import chroma from 'chroma-js'
 import classnames from 'classnames'
 import { Component, h, render } from 'preact'
 import { clamp, DEG, int, round10, TAU, V, V3 } from 'ts3dutils'
-import { LightGLContext, Mesh } from 'tsgl'
+import { TSGLContext, Mesh } from 'tsgl'
 
 import { B2, B2T, CustomPlane, Edge, P3 } from './index'
 import { BREPGLContext, initMeshes, initNavigationEvents, initShaders, setupCamera } from './viewer'
@@ -97,7 +97,7 @@ function setupDemo(demo: DemoDesc) {
 		gl.viewport(0, 0, canvas.width, canvas.height)
 		setupCamera(demo.eye, gl)
 	})
-	const gl = demo.gl = BREPGLContext.create(LightGLContext.create({ canvas }))
+	const gl = demo.gl = BREPGLContext.create(TSGLContext.create({ canvas }))
 	gl.clearColor(1.0, 1.0, 1.0, 0.0)
 	gl.enable(gl.BLEND)
 	gl.enable(gl.DEPTH_TEST)

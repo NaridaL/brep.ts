@@ -434,7 +434,7 @@ export namespace B2T {
 						extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false)
 	}
 
-	let defaultFont: opentype.Font
+	export let defaultFont: opentype.Font
 
 	export function loadFonts(): Promise<opentype.Font> {
 		return loadFont('fonts/FiraSansMedium.woff').then(font => defaultFont = font)

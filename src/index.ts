@@ -29,3 +29,4 @@ export * from './Face'
 export * from './B2'
 
 export * from './ClassSerializer'
+export * from './BREPGLContext'

@@ -1,3 +1,6 @@
+/// <reference path="earcut.d.ts" />
+
+import earcut from 'earcut'
 import {JavaMap as CustomMap, JavaSet as CustomSet, Pair} from 'javasetmap.ts'
 import nerdamer from 'nerdamer'
 import {
@@ -318,7 +321,7 @@ export class B2 extends Transformable {
 	}
 
 	minus(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
-		const generator = this.generator && other.generator && callsce(this.generator + '.minus', other.generator)
+		const generator = this.generator && other.generator && this.generator + '.minus(' + other.generator + ')'
 		return this.intersection(other.flipped(), true, true, generator, infoFactory)
 	}
 
@@ -392,11 +395,11 @@ export class B2 extends Transformable {
 	/**
 	 * Rightmost next segment doesn't work, as the correct next segment isn't obvious from the current corner
 	 * alone.
-	 * (at least, not without extensive pre-analysos on the face edges, which shouldn't be necessary, as the
+	 * (at least, not without extensive pre-analysis on the face edges, which shouldn't be necessary, as the
 	 * correct new faces are defined by the new edges already.) Leftmost edge should work. Holes which touch the
 	 * edge of the face will be added to the face contour.
 	 *
-	 * New segments will always be part left-er than exisiting ones, so no special check is required.
+	 * New segments will always be part left-er than existing ones, so no special check is required.
 	 *
 	 */
 	reconstituteFaces(oldFaces: Face[],
@@ -1005,15 +1008,6 @@ export function fff(info: { face: Face, edge: Edge, normalAtCanonA: V3, inside: 
 	}
 	assert(false)
 }
-
-export function makeLink(values: any) {
-	return Object.getOwnPropertyNames(values).map(name => {
-		const val = values[name]
-		return name + '=' + (typeof val == 'string' ? val : val.toSource())
-	}).join(';')
-}
-
-declare function earcut(data: FloatArray, holeIndices: number[], dim?: int): int[]
 
 export function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {
 	const absMaxDim = normal.maxAbsDim(), factor = sign(normal.e(absMaxDim))

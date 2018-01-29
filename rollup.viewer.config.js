@@ -1,7 +1,9 @@
-// import sourcemaps from 'rollup-plugin-sourcemaps'
+import sourcemaps from 'rollup-plugin-sourcemaps'
 import typescriptPlugin from 'rollup-plugin-typescript'
 import commonjs from 'rollup-plugin-commonjs';
 import nodeResolve from 'rollup-plugin-node-resolve'
+import serve from 'rollup-plugin-serve'
+import livereload from 'rollup-plugin-livereload'
 import glsl from 'rollup-plugin-glsl'
 import * as typescript from 'typescript'
 import * as fs from 'fs'
@@ -9,11 +11,14 @@ import * as fs from 'fs'
 const pkg = JSON.parse(fs.readFileSync('package.json'))
 export default {
 	input: 'src/viewer.ts',
-	output: { format: 'iife', file: 'dist/viewer.js' },
-	sourcemap: true,
-	name: 'viewer',
+	output: {
+		format: 'iife',
+		file: 'dist/viewer.js',
+		sourcemap: true,
+		name: 'viewer',
+		globals: moduleName => require(moduleName + '/package.json').umdGlobal || pkg.umdGlobals && pkg.umdGlobals[moduleName],
+	},
 	external: ['svg-pathdata'],
-	globals: moduleName => require(moduleName + '/package.json').umdGlobal || pkg.umdGlobals && pkg.umdGlobals[moduleName],
 	plugins: [
 		nodeResolve({
 			// use "module" field for ES6 module if possible
@@ -83,7 +88,7 @@ export default {
 			// option if you know what you're doing!
 			// ignore: [ 'conditional-runtime-dependency' ]
 		}),
-		// sourcemaps(),
+		sourcemaps(),
 		typescriptPlugin({
 			typescript
 		}),
@@ -97,7 +102,16 @@ export default {
 			// Source maps are on by default
 			// sourceMap: false
 		}),
-	],
+		process.env.ROLLUP_WATCH && serve(
+			// {
+				// 	contentBase: '.',
+				// 	open: true,
+				// 	host: 'localhost',
+				// 	port: 10002
+			// }
+		),
+		process.env.ROLLUP_WATCH && livereload(),
+	].filter(x => x),
 	// onwarn: function (warning) {
 	// 	// Suppress this error message... there are hundreds of them. Angular team says to ignore it.
 	// 	// https://github.com/rollup/rollup/wiki/Troubleshooting#this-is-undefined

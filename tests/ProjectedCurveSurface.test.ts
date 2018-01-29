@@ -45,4 +45,3 @@ suite('ProjectedCurveSurface', () => {
 		testISTs(assert, line, face.surface, 3)
 	})
 })
-}
