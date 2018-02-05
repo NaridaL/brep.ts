@@ -7,6 +7,7 @@ tests/results
 out
 lib
 dist
+*.pdf
 
 # WebStorm
 .idea/**/workspace.xml
