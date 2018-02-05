@@ -6,7 +6,6 @@ tests/results
 .coveralls.yml
 out
 lib
-dist
 *.pdf
 
 # WebStorm
