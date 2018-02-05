@@ -1,7 +1,7 @@
 import {Equalable} from 'javasetmap.ts'
 import {callsce, eq0, int, NLA_PRECISION, Transformable, V3,} from 'ts3dutils'
 
-import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3,} from '../index'
+import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3, CalculateAreaVisitor, ZDirVolumeVisitor} from '../index'
 
 const {ceil, floor} = Math
 
@@ -108,7 +108,7 @@ export abstract class Surface extends Transformable implements Equalable {
 
 	abstract flipped(): this
 
-	flipped2<T extends Surface>(this: T, doFlip: boolean): T {
+	flipped2(doFlip: boolean): this {
 		return doFlip ? this.flipped() : this
 	}
 
@@ -141,8 +141,23 @@ export abstract class Surface extends Transformable implements Equalable {
 	}
 
 	calculateArea(allEdges: Edge[]): number {
-		return this.visit(CalculateAreaVisitor, allEdges)
+		return this.visit(CalculateAreaVisitor as any, allEdges)
 	}
 }
 
 export enum PointVsFace {INSIDE, OUTSIDE, ON_EDGE}
+
+export abstract class ImplicitSurface extends Surface {
+    static is(obj: any): obj is ImplicitSurface {
+        return obj.implicitFunction && obj.didp
+    }
+
+    abstract implicitFunction(): (pWC: V3) => number
+
+    /**
+     * partial derivatives of this.implicitFunction in point pWC
+     * @param pWC
+     * @return
+     */
+    abstract didp(pWC: V3): V3
+}

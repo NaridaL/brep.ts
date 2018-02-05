@@ -1,12 +1,13 @@
 import {
-	assert, assertInst, assertNever, assertNumbers, assertVectors, hasConstructor, int, isCCW, M4, V3,
+	assert, assertInst, assertNumbers, assertVectors, hasConstructor, int, isCCW, M4, V3,
 } from 'ts3dutils'
 
 import {
 	Curve, Edge, L3, P3, ParametricSurface, PICurve, PlaneSurface, PointVsFace, SemiEllipsoidSurface, Surface,
+    ImplicitSurface,
 } from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {sign} = Math
 
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
@@ -116,36 +117,27 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		if (surface instanceof ProjectedCurveSurface) {
 			const dir1 = surface.dir
 			if (this.dir.isParallelTo(dir1)) {
-				const otherCurve = surface.baseCurve
-				const infos = this.baseCurve.isInfosWithCurve(otherCurve)
-				return infos.map(info => {
-					const correctDir = this.normalP(info.p).cross(surface.normalP(info.p))
-					return new L3(info.p, dir1.times(sign(correctDir.dot(dir1))))
+				const ts = surface.baseCurve.isTsWithSurface(this)
+				return ts.map(t => {
+				    const p = surface.baseCurve.at(t)
+					const correctDir = this.normalP(p).cross(surface.normalP(p))
+					return new L3(p, dir1.times(sign(correctDir.dot(dir1))))
 				})
-			}
-			if (surface instanceof ProjectedCurveSurface) {
-				const line = new L3(this.baseCurve.at(0.5), this.dir)
-				const startPoint = line.at(surface.isTsForLine(line)[0])
-				console.log(startPoint)
-				return [new PPCurve(this, surface, startPoint)]
-				// const testVector = this.dir.cross(surface.dir).unit()
-				// // look for points on surface.baseCurve where tangent DOT testVector == 0
-				// const abcd1 = surface.baseCurve.tangentCoefficients().map(c => c.dot(testVector))
-				// const ts1 = solveCubicReal2.apply(undefined, abcd1).concat(surface.sMin, surface.sMax)
-				// const abcd2 = this.baseCurve.tangentCoefficients().map(c => c.dot(testVector))
-				// const ts2 = solveCubicReal2.apply(undefined, abcd2)
-				// const tt1 = ts1.map(t => surface.baseCurve.at(t).dot(testVector))
-				// const tt2 = ts1.map(t => surface.baseCurve.at(t).dot(testVector))
-				// console.log(ts1, ts2, tt1, tt2)
-				// ts1.forEach(t => drPs.push(surface.baseCurve.at(t)))
-				// ts2.forEach(t => drPs.push(this.baseCurve.at(t)))
-				// return
-			}
+			} else if (ImplicitSurface.is(surface)) {
+                let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / surface.dir.length(), 0.05)
+                curves2 = this.clipCurves(curves2)
+                curves2 = surface.clipCurves(curves2)
+                return curves2
+            } else {
+                const line = new L3(this.baseCurve.at(0.5), this.dir)
+                const startPoint = line.at(surface.isTsForLine(line)[0])
+                return [new PPCurve(this, surface, startPoint)]
+            }
 		}
 		if (surface instanceof SemiEllipsoidSurface) {
 			return surface.isCurvesWithSurface(this)
 		}
-		assertNever()
+		return super.isCurvesWithSurface(surface)
 	}
 
 	containsPoint(pWC: V3): boolean {
@@ -199,25 +191,9 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
-
-	edgeLoopCCW(loop: Edge[]): boolean {
-		if (loop.length < 56) {
-			let totalAngle = 0
-			for (let i = 0; i < loop.length; i++) {
-				const ipp = (i + 1) % loop.length
-				const edge = loop[i], nextEdge = loop[ipp]
-				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b))
-			}
-			return totalAngle > 0
-		} else {
-			const ptpF = this.stPFunc()
-			return isCCW(loop.map(e => ptpF(e.a)), V3.Z)
-		}
-	}
-
-	transform<T extends ProjectedCurveSurface>(this: T, m4: M4): T {
+	transform(m4: M4): this {
 		const f = m4.isMirroring() ? -1 : 1
-		return new this.constructor<T>(
+		return new this.constructor<this>(
 			this.baseCurve.transform(m4),
 			m4.transformVector(this.dir).times(f),
 			this.sMin, this.sMax, 1 == f ? this.tMin : -this.tMax, 1 == f ? this.tMax : -this.tMin)
@@ -238,8 +214,8 @@ export class ProjectedCurveSurface extends ParametricSurface {
 			.map(info => info.tOther)
 	}
 
-	flipped<T extends ProjectedCurveSurface>(this: T): T {
-		return new this.constructor<T>(this.baseCurve, this.dir.negated(), this.sMin, this.sMax, -this.tMax, -this.tMin)
+	flipped(): this {
+		return new this.constructor<this>(this.baseCurve, this.dir.negated(), this.sMin, this.sMax, -this.tMax, -this.tMin)
 	}
 }
 

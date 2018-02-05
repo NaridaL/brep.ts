@@ -20,6 +20,8 @@ export * from './surface/RotationREqFOfZ'
 export * from './surface/SemiCylinderSurface'
 export * from './surface/SemiEllipsoidSurface'
 export * from './surface/PlaneSurface'
+export * from './surface/ZDirVolumeVisitor'
+export * from './surface/CalculateAreaVisitor'
 
 export * from './b2.generators'
 export * from './CustomPlane'

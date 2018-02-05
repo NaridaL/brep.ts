@@ -51,14 +51,14 @@ class __Context {
 	mesh: (Mesh & { TRIANGLES: int[], normals: V3[] }) = undefined
 }
 
-
+declare function INIT_HTML(): void
 addMissing(window, ts3dutils)
 addMissing(window, tsgl)
 addMissing(window, brepts)
 interface Window extends __Context { }
+const g = window as any as Window & __Context
 function initB2() {
 	// Object.assign(window, new __Context())
-	const g = window as any as Window & __Context
 	eye.pos = V(1, 2, 101)
 	eye.focus = V(0, 1, 0)
 	eye.up = V(0, 1, 0)
@@ -71,6 +71,7 @@ function initB2() {
 	const command = decodeURIComponent(hash)
 	console.log(command)
 	new Function(command)()
+    INIT_HTML()
 	// eval(command)
 	Object.assign(eye, g.i)
 	// let gets: any = {a, b, c, d, mesh, edges, points, vectors}
@@ -172,6 +173,14 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		gl.popMatrix()
 	}
 
+    //if (dMesh) {
+	 //   gl.shaders.multiColor.uniforms({color: COLORS.PP_STROKE.gl() }).drawBuffers({
+    //        LGL_Vertex: dMesh.vertexBuffers.curve1,
+    //        color: dMesh.vertexBuffers.curve1colors,
+    //    }, undefined, gl.LINES)
+    //}
+
+	//gl.disable(gl.CULL_FACE)
 	for (const sMesh of b2meshes) {
 		gl.pushMatrix()
 		//gl.scale(10, 10, 10)
@@ -184,13 +193,14 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		}).draw(sMesh)
 		gl.popMatrix()
 	}
+    gl.enable(gl.CULL_FACE)
 
 	if (hovering instanceof Edge) {
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
 		gl.drawEdge(hovering, GL_COLOR_BLACK, 2 / eye.zoomFactor)
 		gl.projectionMatrix.m[11] += 1 / (1 << 20)
 	}
-	//edges.forEach((e, i) => drawEdge(e, 0x0ff000, 0.01))
+	g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 0.01))
 
 	//drPs.forEach(v => drawPoint(v, undefined, 0.3))
 	drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor))
@@ -338,7 +348,6 @@ export async function viewerMain() {
 		const result = hash.match(/i=\{[^}]*\}/)
 			? hash.replace(/i=\{[^}]*\}/, iSource)
 			: hash + ';' + iSource
-		console.log(result)
 		window.history.replaceState(undefined, undefined, '#' + result)
 	})
 	// initInfoEvents(paintScreen, g l)

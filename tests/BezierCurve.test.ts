@@ -6,7 +6,7 @@ import {BezierCurve, EllipsoidSurface, L3, P3, SemiCylinderSurface, SemiEllipseC
 const {PI} = Math
 
 suite('BezierCurve', () => {
-	test('isTsWithSurface(SemiCylinderSurface)', inDifferentSystems((assert, m4) => {
+	suite('isTsWithSurface(SemiCylinderSurface)', inDifferentSystems((assert, m4) => {
 		const bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3).rotateX(15 * DEG).translate(0, 0, 100).transform(m4)
 		const cyl = new SemiCylinderSurface(SemiEllipseCurve.forAB(4, 1).rotateY(10 * DEG), V3.Z, undefined, undefined).transform(m4)
 		testISTs(assert, bez, cyl, 3)

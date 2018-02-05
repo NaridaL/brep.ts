@@ -1,9 +1,10 @@
 import sourcemaps from 'rollup-plugin-sourcemaps'
 import typescriptPlugin from 'rollup-plugin-typescript'
-import commonjs from 'rollup-plugin-commonjs';
+import commonjs from 'rollup-plugin-commonjs'
 import nodeResolve from 'rollup-plugin-node-resolve'
 import serve from 'rollup-plugin-serve'
 import livereload from 'rollup-plugin-livereload'
+import replace from 'rollup-plugin-replace'
 import glsl from 'rollup-plugin-glsl'
 import * as typescript from 'typescript'
 import * as fs from 'fs'
@@ -16,7 +17,11 @@ export default {
 		file: 'dist/viewer.js',
 		sourcemap: true,
 		name: 'viewer',
-		globals: moduleName => require(moduleName + '/package.json').umdGlobal || pkg.umdGlobals && pkg.umdGlobals[moduleName],
+		globals: moduleName => {
+			const x = require(moduleName + '/package.json').umdGlobal || pkg.umdGlobals && pkg.umdGlobals[moduleName]
+			console.log(moduleName, x)
+			return x
+		},
 	},
 	external: ['svg-pathdata'],
 	plugins: [
@@ -80,13 +85,18 @@ export default {
 
 			// explicitly specify unresolvable named exports
 			// (see below for more details)
-			// namedExports: { './module.js': ['foo', 'bar' ] },  // Default: undefined
+			namedExports: {
+				'react': ['Component']
+			},  // Default: undefined
 
 			// sometimes you have to leave require statements
 			// unconverted. Pass an array containing the IDs
 			// or a `id => boolean` function. Only use this
 			// option if you know what you're doing!
 			// ignore: [ 'conditional-runtime-dependency' ]
+		}),
+		replace({
+			'process.env.NODE_ENV': JSON.stringify('development')
 		}),
 		sourcemaps(),
 		typescriptPlugin({
@@ -104,20 +114,20 @@ export default {
 		}),
 		process.env.ROLLUP_WATCH && serve(
 			// {
-				// 	contentBase: '.',
-				// 	open: true,
-				// 	host: 'localhost',
-				// 	port: 10002
+			// 	contentBase: '.',
+			// 	open: true,
+			// 	host: 'localhost',
+			// 	port: 10002
 			// }
 		),
 		process.env.ROLLUP_WATCH && livereload(),
 	].filter(x => x),
-	// onwarn: function (warning) {
-	// 	// Suppress this error message... there are hundreds of them. Angular team says to ignore it.
-	// 	// https://github.com/rollup/rollup/wiki/Troubleshooting#this-is-undefined
-	// 	if (warning.code === 'THIS_IS_UNDEFINED') {
-	// 		return
-	// 	}
-	// 	console.error(warning.message)
-	// },
+	onwarn: function (warning, warn) {
+		// Suppress this error message... there are hundreds of them. Angular team says to ignore it.
+		// https://github.com/rollup/rollup/wiki/Troubleshooting#this-is-undefined
+		if (warning.code === 'THIS_IS_UNDEFINED') {
+			return
+		}
+		warn(warning)
+	},
 }

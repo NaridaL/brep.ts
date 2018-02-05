@@ -1,6 +1,12 @@
-class PPCurve extends Curve {
-	parametricSurface1: Surface
-	parametricSurface2: Surface
+import {ParametricSurface, ImplicitCurve} from '../index'
+import {assert, V3, Tuple3, assertVectors, NLA_PRECISION, newtonIterate, Tuple4} from 'ts3dutils'
+import {Mesh} from 'tsgl'
+
+const {ceil} = Math
+
+export class PPCurve extends ImplicitCurve {
+	parametricSurface1: ParametricSurface
+	parametricSurface2: ParametricSurface
 
 	/**
 	 *
@@ -11,15 +17,15 @@ class PPCurve extends Curve {
 	 * @property {Surface} parametricSurface1
 	 * @property {Surface} parametricSurface2
 	 */
-	constructor(parametricSurface1, parametricSurface2, startPoint) {
+	constructor(parametricSurface1: ParametricSurface, parametricSurface2: ParametricSurface, startPoint: V3) {
 		super()
-		assert(parametricSurface1.parametricFunction, 'parametricSurface1.parametricFunction')
-		assert(parametricSurface2.parametricFunction, 'parametricSurface2.parametricFunction')
+		assert(ParametricSurface.is(parametricSurface1))
+		assert(ParametricSurface.is(parametricSurface2))
 		this.parametricSurface1 = parametricSurface1
 		this.parametricSurface2 = parametricSurface2
 		if (!startPoint) {
 			var pmPoint = curvePoint(this.implicitCurve(), V(1, 1, 0))
-			this.startPoint = this.parametricSurface.parametricFunction()(pmPoint.x, pmPoint.y)
+			this.startPoint = this.parametricSurface.pSTFunc()(pmPoint.x, pmPoint.y)
 		} else {
 			this.startPoint = startPoint
 		}
@@ -76,23 +82,23 @@ class PPCurve extends Curve {
 	}
 
 	rootPoints() {
-		const pF1 = this.parametricSurface1.parametricFunction()
-		const pF2 = this.parametricSurface2.parametricFunction()
-		const pN1 = this.parametricSurface1.parametricNormal()
-		const pN2 = this.parametricSurface2.parametricNormal()
+		const pF1 = this.parametricSurface1.pSTFunc()
+		const pF2 = this.parametricSurface2.pSTFunc()
+		const pN1 = this.parametricSurface1.normalSTFunc()
+		const pN2 = this.parametricSurface2.normalSTFunc()
 
-		let rootsAprox = this.rootsAprox()
-		let results = [[], [], []]
+		const rootsAprox = this.rootsAprox()
+		const results: Tuple3<V3[]> = [[], [], []]
 		for (let dim = 0; dim < 3; dim++) {
 			for (let i = 0; i < rootsAprox[dim].length; i++) {
 				let lambda = rootsAprox[dim][i]
 				let p = this.at(lambda)
 				assert(this.parametricSurface1.containsPoint(p))
-				let pp1 = this.parametricSurface1.pointToParameterFunction()(p)
-				let {x: u, y: v} = this.parametricSurface2.pointToParameterFunction()(p)
+				let pp1 = this.parametricSurface1.stP(p)
+				let {x: u, y: v} = this.parametricSurface2.stP(p)
 				let startValues = [pp1.x, pp1.y, u, v]
 
-				function f(vals) {
+				function f(vals: Tuple4<number>) {
 					let [s, t, u, v] = vals
 					let diff = pF1(s, t).minus(pF2(u, v))
 					let n1 = pN1(s, t)
@@ -116,10 +122,10 @@ class PPCurve extends Curve {
 		if (!this.points) {
 			this.points = []
 			this.tangents = []
-			const pF1 = this.parametricSurface1.parametricFunction()
-			const pF2 = this.parametricSurface2.parametricFunction()
-			const pN1 = this.parametricSurface1.parametricNormal()
-			const pN2 = this.parametricSurface2.parametricNormal()
+			const pF1 = this.parametricSurface1.pSTFunc()
+			const pF2 = this.parametricSurface2.pSTFunc()
+			const pN1 = this.parametricSurface1.normalSTFunc()
+			const pN2 = this.parametricSurface2.normalSTFunc()
 			let Q = this.startPoint
 			let aParams = this.parametricSurface1.pointToParameterFunction()(Q)
 			let bParams = this.parametricSurface2.pointToParameterFunction()(Q)
@@ -127,16 +133,16 @@ class PPCurve extends Curve {
 			console.log('bParams.sce', bParams.sce)
 			console.log(Q.sce)
 			assert(pF1(aParams.x, aParams.y).like(Q))
-			assert(aParams.like(this.parametricSurface1.footParameters(Q, aParams.x, aParams.y)))
-			assert(bParams.like(this.parametricSurface2.footParameters(Q, bParams.x, bParams.y)))
+			assert(aParams.like(this.parametricSurface1.pointFoot(Q, aParams.x, aParams.y)))
+			assert(bParams.like(this.parametricSurface2.pointFoot(Q, bParams.x, bParams.y)))
 			assert(pF2(bParams.x, bParams.y).like(Q))
 			for (let j = 0; j < 100; j++) {
 				let i = 8
 				let a, b, aNormal, bNormal, abNormalsCross
 				do {
 					// feet of Q on this.parametricSurface1 and this.parametricSurface2 (closest points)
-					aParams = this.parametricSurface1.footParameters(Q, aParams.x, aParams.y)
-					bParams = this.parametricSurface2.footParameters(Q, bParams.x, bParams.y)
+					aParams = this.parametricSurface1.pointFoot(Q, aParams.x, aParams.y)
+					bParams = this.parametricSurface2.pointFoot(Q, bParams.x, bParams.y)
 					a = pF1(aParams.x, aParams.y)
 					b = pF2(bParams.x, bParams.y)
 					// drPs.push({p:a,text:'a'+j+' '+i})
@@ -167,18 +173,18 @@ class PPCurve extends Curve {
 		}
 	}
 
-	debugToMesh(mesh, bufferName) {
+	debugToMesh(mesh: Mesh, bufferName) {
 		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
 		this.points.forEach((p, i) => {
 			mesh[bufferName].push(p, p.plus(this.tangents[i].toLength(1)))
 		})
 	}
 
-	pointTangent(p): V3 {
+	pointTangent(p: V3): V3 {
 		assertVectors(p)
 		assert(this.containsPoint(p), 'this.containsPoint(p)' + this.containsPoint(p))
-		let n1 = this.parametricSurface1.normalAt(p)
-		let n2 = this.parametricSurface2.normalAt(p)
+		let n1 = this.parametricSurface1.normalP(p)
+		let n2 = this.parametricSurface2.normalP(p)
 		return n1.cross(n2)
 	}
 
@@ -190,26 +196,6 @@ class PPCurve extends Curve {
 		return V3.lerp(this.tangents[Math.floor(t)], this.tangents[Math.ceil(t)], t % 1)
 	}
 
-	pointT(point) {
-		assertVectors(point)
-		assert(this.containsPoint(point), 'this.containsPoint(p)')
-		var pmPoint = this.parametricSurface.pointToParameterFunction()(point)
-		var ps = this.points, pmps = this.pmPoints, t = 0, prevDistance, pmDistance = pmPoint.distanceTo(pmps[0])
-		while (pmDistance > STEP_SIZE && t < ps.length - 1) { // TODO -1?
-			//console.log(t, pmps[t].$, pmDistance)
-			t += Math.min(1, Math.round(pmDistance / STEP_SIZE / 2))
-			pmDistance = pmPoint.distanceTo(pmps[t])
-		}
-		if (t >= ps.length - 1) {
-			// point is not on this curve
-			return NaN
-		}
-		if (ps[t].like(point)) return t
-		var nextT = (t + 1) % ps.length, prevT = (t + ps.length - 1) % ps.length
-		if (ps[nextT].distanceTo(point) < ps[prevT].distanceTo(point)) {
-			return t + 0.4
-		} else {
-			return t - 0.4
-		}
+	pointT(point: V3) {
 	}
 }

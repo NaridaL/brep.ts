@@ -1,13 +1,13 @@
 declare const require: any
 try {
-	global.WebGLRenderingContext = {}
+	(global as any).WebGLRenderingContext = {}
 	//const mock = require('mock-require')
 	//mock('tsgl', {})
 } catch (e) { }
 
 export * from 'ts3dutils/tests/manager'
-import { arrayFromFunction, assert, DEG, eq, eq0, eq2, glqInSteps, int, lerp, M4, V, V3 } from 'ts3dutils'
-import { Assert } from 'ts3dutils/tests/manager'
+import { arrayFromFunction, assert, DEG, eq, eq0, eq, glqInSteps, int, lerp, M4, V, V3, NLA_PRECISION } from 'ts3dutils'
+import { Assert, test } from 'ts3dutils/tests/manager'
 
 import slug from 'slug'
 function sanitizeFilename(s: string) {
@@ -31,7 +31,7 @@ export function b2equals(assert: Assert, actual, expected, message = '') {
 
 	actual.faces.forEach(face => {
 		if (!expected.faces.some(expectedFace => expectedFace.likeFace(face))) {
-			assert.ok(false, 'Unexpected face in result:' + face.toSource())
+			assert.push(false, actual.toSource(false), expected.toSource(false), 'Unexpected face in result:' + face.toSource())
 		}
 	})
 }
@@ -105,12 +105,13 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 		isCurves = surface1.isCurvesWithSurface(surface2)
 	} finally {
 		if (isCurves) {
-			const script =
-				`var FROM_SCRIPT = true
-mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]
-edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`
-			fs.writeFileSync('results/' + sanitizeFilename(assert.getTestName()) + '.html', demoFile.replace('/*INSERT*/', script), 'utf8')
-			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
+		    linkB3(assert, {mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`, edges: isCurves.map(c => Edge.forCurveAndTs(c))})
+//			const script =
+//				`var FROM_SCRIPT = true
+//mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]
+//edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`
+//			fs.writeFileSync('results/' + sanitizeFilename(assert.getTestName()) + '.html', demoFile.replace('/*INSERT*/', script), 'utf8')
+//			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
 
 			assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
 			for (const curve of isCurves) {
@@ -134,17 +135,59 @@ edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`
 	}
 }
 
-export function testLoopCCW(assert: Assert, surface: ConicSurface, loop: Edge[]) {
+/**
+ * Tests that the passed loop is CCW on the passed surface, and that the reversed loop is CW.
+ * @param assert
+ * @param surface
+ * @param loop
+ */
+export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
 	const points = [loop[0].a, loop[0].atAvgT()]
-	linkB2(assert, `mesh=${surface.sce}.toMesh();edges=${loop.toSource()};points=${points.sce}`)
-	assert.push(surface.edgeLoopCCW(loop))
-	assert.push(!surface.edgeLoopCCW(Edge.reversePath(loop)))
+	linkB3(assert, {
+	    mesh: surface.sce + '.toMesh()',
+	    edges: loop,
+        points: points,
+    }, 'testLoopCCW')
+	assert.ok(surface.edgeLoopCCW(loop))
+	assert.ok(!surface.edgeLoopCCW(Edge.reversePath(loop)))
 }
 
-export function testZDirVolume(assert: Assert, face: Face) {
+export function testZDirVolumeAndArea(assert: Assert, face: Face) {
 	linkB2(assert, `mesh=${face.sce}.toMesh()`)
-	const actual = face.zDirVolume().volume, expected = face.toMesh().calcVolume().volume
-	assert.push(eq2(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
+	const faceMeshVol = face.toMesh().calcVolume()
+	const actual = face.zDirVolume().volume, expected = faceMeshVol.volume
+	assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
+
+	const actualArea = face.calcArea()
+	const expectedArea = faceMeshVol.area
+	assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
+}
+
+export function surfaceVolumeAndArea(face: Face) {
+    return () => {
+        const flippedFace = face.flipped()
+        const faceMeshVol = face.toMesh().calcVolume()
+
+        test('face volume', assert => {
+            linkB3(assert, {mesh: face.toSource()+'.toMesh()'})
+            const actual = face.zDirVolume().volume, expected = faceMeshVol.volume
+            assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
+        })
+        test('face.flipped() volume', assert => {
+            const actual = flippedFace.zDirVolume().volume, expected = -faceMeshVol.volume
+            assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
+        })
+        test('face area', assert => {
+            const actualArea = face.calcArea()
+            const expectedArea = faceMeshVol.area
+            assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
+        })
+        test('face.flipped() area', assert => {
+            const actualArea = flippedFace.calcArea()
+            const expectedArea = faceMeshVol.area
+            assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
+        })
+    }
 }
 
 export function testCurve(ass: Assert, curve: Curve) {
@@ -167,7 +210,7 @@ export function testCurve(ass: Assert, curve: Curve) {
 		const expected = glqInSteps(t => curve.tangentAt(t).length(), curve.tMin, curve.tMax, 4)
 		const actual = curve.arcLength(curve.tMin, curve.tMax)
 		ass.push(
-			eq2(expected, actual, 1e-6),
+			eq(expected, actual, 1e-6),
 			expected,
 			actual,
 			'curve should have same length as the numericaly calculated value',
@@ -236,7 +279,29 @@ export function testParametricSurface(ass: Assert, surf: ParametricSurface) {
 			//assert(mPSFlipped.normalP(mP).negated().like(mNormal))
 		}
 	}
+}
 
+export function testImplicitSurface(t: Assert, surface: ImplicitSurface) {
+    const EPS = 1e-8
+    const testPoints = [
+        V3.O.plus(V(0.2, 0, 0)), // V3.O fails on ellipsoidSurface
+        V3.Y,
+        V3.X,
+        V3.Z.plus(V(0.2, 0, 0)),
+        V3.XY,
+        V3.XYZ,
+        new V3(10, 10, 10),
+        new V3(5, 6, 7)
+    ]
+    for (const testPoint of testPoints) {
+        const i = surface.implicitFunction()(testPoint)
+        const didpGuess = testPoint.map((el, dim) => {
+            const i2 = surface.implicitFunction()(testPoint.plus(V3.O.withElement(dim, EPS)))
+            return (i2 - i) / EPS
+        })
+        const didp = surface.didp(testPoint)
+        t.push(didpGuess.to(didp).length() < 1e-6, didp, didpGuess, `actual: ${didp} guess: ${didpGuess} p: ${testPoint}`)
+    }
 }
 
 export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isInfosWithCurve') {
@@ -261,7 +326,7 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 		const p = curve.at(t)
 		assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
 			+ ' t: ' + t
-			+ (surface.implicitFunction ? ' dist: ' + surface.implicitFunction()(p) : ''))
+			+ (ImplicitSurface.is(surface) ? ' dist: ' + surface.implicitFunction()(p) : ''))
 	}
 }
 

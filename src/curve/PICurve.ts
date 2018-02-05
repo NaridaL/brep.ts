@@ -207,14 +207,14 @@ export class PICurve extends ImplicitCurve {
 		// // assert(eq(t, this.pointT(result)))
 		// return result
 		assert(!isNaN(t))
-		if (t % 1 == 0) return this.points[t]
+        if (0 === t % 1) return this.points[t];
 		const startParams = V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1)
 		return this.closestPointToParams(startParams)
 	}
 
 	stT(t: number): V3 {
 		assert(!isNaN(t))
-		if (t % 1 == 0) return this.points[t]
+        if (0 === t % 1) return this.points[t];
 		const startParams = V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1)
 		return curvePoint(this.implicitCurve(), startParams, this.dids, this.didt)
 	}
@@ -281,7 +281,8 @@ export class PICurve extends ImplicitCurve {
 		if (ps[t + 1].like(p)) return t + 1
 		const startT = t + V3.inverseLerp(ps[t], ps[t + 1], p)
 		if (startT)
-			return newtonIterate1d(t => this.at(t).distanceTo(p), startT, 2)
+			return newtonIterate1d(t => this.at(t).distanceTo(p), startT, 4)
+        throw new Error()
 	}
 
 	transform(m4: M4): PICurve {
@@ -294,7 +295,7 @@ export class PICurve extends ImplicitCurve {
 			this.stepSize * dirFactor,
 			m4.transformVector(this.tangents[0]),
 			m4.transformPoint(this.at(this.tMin)),
-			m4.transformPoint(this.at(this.tMax)))
+			m4.transformPoint(this.at(this.tMax))) as this
 		//return PICurve.forParametricStartEnd(
 		//	this.parametricSurface.transform(m4),
 		//	this.implicitSurface.transform(m4),

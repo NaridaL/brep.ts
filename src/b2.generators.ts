@@ -168,7 +168,7 @@ export namespace B2T {
 		}) as Face[]
 		faces.push(bottomFace, topFace)
 		gen = gen || callsce('B2T.extrudeEdges', baseFaceEdges, baseFacePlane, offset, name)
-		return new B2(faces, false, gen, vertexNames)
+		return new B2(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames)
 	}
 
 
@@ -276,6 +276,7 @@ export namespace B2T {
 			if (!eq0(radius)) {
 				return new SemiEllipseCurve(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0))
 			}
+			return undefined
 		})
 		const baseSurfaces = baseLoop.map((edge, i) => {
 			const ipp = (i + 1) % baseLoop.length
@@ -283,7 +284,7 @@ export namespace B2T {
 				const line = edge.curve
 				if (line.dir1.isParallelTo(V3.Z)) {
 					if (eq0(edge.a.x)) {
-						return
+						return undefined
 					}
 					const flipped = edge.a.z > edge.b.z
 					const [tMin, tMax] = [0, edge.b.z - edge.a.z].sort(MINUS)
@@ -329,10 +330,10 @@ export namespace B2T {
 				}
 				return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
 			} else {
-				assert(false, edge)
+			    throw new Error(edge)
 			}
 		})
-		let stepStartEdges = baseLoop, stepEndEdges
+		let stepStartEdges = baseLoop, stepEndEdges: Edge[]
 		const faces = []
 		for (let rot = 0; rot < totalRads; rot += PI) {
 			const aT = 0, bT = min(totalRads - rot, PI)
@@ -342,7 +343,7 @@ export namespace B2T {
 				const a = stepStartEdges[i].a, radius = a.lengthXY()
 				const b = stepEndEdges[i].a
 				if (!eq0(radius)) {
-					const curve = 0 == rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
+					const curve = 0 === rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
 					return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
 				}
 			})
@@ -355,7 +356,7 @@ export namespace B2T {
 						!eq0(edge.a.x) && ribs[edgeIndex],
 						stepEndEdges[edgeIndex],
 						!eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
-					const surface = 0 == rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
+					const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
 					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
 					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
 				}
@@ -548,7 +549,7 @@ export namespace B2T {
 		const open = !eq(totalRads, 2 * PI)
 		const ribCount = !open ? count : count + 1
 		const ribs = arrayFromFunction(ribCount, i => {
-			if (i == 0) return edges
+			if (0 === i) return edges
 			const matrix = M4.rotateZ(radStep * i)
 			return edges.map(edge => edge.transform(matrix))
 		})

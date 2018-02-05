@@ -331,14 +331,16 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 	implicitFunction() {
 		return (pWC: V3) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
-			return pLC.length() - 1
+			return (pLC.length() - 1) * this.normalDir
 		}
 	}
 
 	// = this.inverseMatrix.transformPoint(this.inverseMatrix.transformPoint(pWC).unit())
 	didp(pWC: V3) {
+	    // i(pWC) = this.inverseMatrix.transformPoint(pWC).length() - 1
+        // chain diff rule
 		const pLC = this.inverseMatrix.transformPoint(pWC)
-		return this.inverseMatrix.transformVector(pLC.unit())
+		return this.pLCNormalWCMatrix.transformVector(pLC.unit())//.times(this.normalDir)
 	}
 
 	mainAxes(): EllipsoidSurface {

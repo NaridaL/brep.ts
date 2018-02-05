@@ -5,7 +5,6 @@
 	<title>BREP.TS</title>
 	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/styles/default.min.css">
 	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/highlight.min.js"></script>
-	<script type="text/javascript" src="lib/toSource.js"></script>
 	<script type="text/javascript" src="node_modules/svg-pathdata/dist/SVGPathData.js"></script>
 
 	<script type="text/javascript" src="dist/demo.js"></script>
@@ -24,10 +23,10 @@
 		}
 
 		.democontainer {
-			position: relative;
-			width: 400px;
-			height: 300px;
 			border: 1px solid cornflowerblue;
+		}
+		.canvascontainer {
+			position: relative;
 		}
 
 		canvas {
@@ -70,13 +69,21 @@
 			right: 0;
 			margin: 2px;
 			font-size: x-small;
+			color: blue;
+			cursor: pointer;
+			text-decoration: underline;
 		}
 		.src {
+			position: relative;
+			display: block;
 			white-space: pre;
 			font-family: Consolas, monospace;
 			font-size: smaller;
 			padding: 8px;
 			background-color: aliceblue;
+		}
+		.hide {
+			display: none;!important;
 		}
 
 		.canvasinput {
@@ -85,5 +92,6 @@
 	</style>
 </head>
 <body>
+	<div id="react-root"></div>
 </body>
 </html>

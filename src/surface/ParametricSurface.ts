@@ -1,7 +1,7 @@
-import {assert, between, V3} from 'ts3dutils'
+import {assert, between, V3, isCCW} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, PICurve, Surface, MathFunctionR2R} from '../index'
+import {Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge} from '../index'
 
 const {ceil, min} = Math
 
@@ -85,9 +85,7 @@ export abstract class ParametricSurface extends Surface {
 		return between(s, this.sMin, this.sMax) && between(t, this.tMin, this.tMax)
 	}
 
-	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
-		throw new Error()
-	}
+	abstract pointFoot(pWC: V3, ss?: number, st?: number): V3
 
 	toMesh(): Mesh {
 		assert(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax))
@@ -100,14 +98,9 @@ export abstract class ParametricSurface extends Surface {
 	isCurvesWithImplicitSurface(is: ImplicitSurface, sStep: number, tStep: number, stepSize: number): Curve[] {
 		return ParametricSurface.isCurvesParametricImplicitSurface(this, is, sStep, tStep, stepSize)
 	}
-}
 
-export abstract class ImplicitSurface extends Surface {
-	static is(obj: any): obj is ImplicitSurface {
-		return obj.implicitFunction
-	}
-
-	abstract implicitFunction(): (pWC: V3) => number
-
-	abstract didp(pWC: V3): V3
+    edgeLoopCCW(contour: Edge[]): boolean {
+        const ptpF = this.stPFunc()
+        return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
+    }
 }

@@ -22,12 +22,12 @@ export default {
 	plugins: [
 		sourcemaps()
 	],
-	onwarn: function (warning) {
+	onwarn: function (warning, warn) {
 		// Suppress this error message... there are hundreds of them. Angular team says to ignore it.
 		// https://github.com/rollup/rollup/wiki/Troubleshooting#this-is-undefined
 		if (warning.code === 'THIS_IS_UNDEFINED') {
 			return
 		}
-		console.error(warning.message)
+		warn(warning)
 	},
 }

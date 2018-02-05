@@ -1,17 +1,25 @@
+import {linkB3, suite, test, testISCurves, testLoopContainsPoint, testParametricSurface, testImplicitSurface} from './manager'
+
 import {assertf, DEG, M4, V, V3} from 'ts3dutils'
 import {
-	B2T, BezierCurve, Edge, P3, PCurveEdge, PICurve, PlaneSurface, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve,
-	SemiEllipsoidSurface, StraightEdge,
+B2T, BezierCurve, Edge, P3, PCurveEdge, PICurve, PlaneSurface, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve,
+SemiEllipsoidSurface, StraightEdge,
 } from '..'
-import {linkB3, suite, test, testISCurves, testLoopContainsPoint, testParametricSurface} from './manager'
 
 const {PI, sin} = Math
 
 suite('SemiEllipsoidSurface', () => {
 	const ses2 = SemiEllipsoidSurface.UNIT.scale(2)
-	test('testSurface', assert => {
+	const ses3 = SemiEllipsoidSurface.UNIT.scale(2).translate(1, 2, 3).shearX(2, 3)
+	test('is a parametric surface', assert => {
 		testParametricSurface(assert, ses2)
+		testParametricSurface(assert, ses3)
 	})
+    test('is an im implicit surface', assert => {
+        testImplicitSurface(assert, ses2)
+        testImplicitSurface(assert, ses2.flipped())
+        testImplicitSurface(assert, ses3)
+    })
 	test('testSurface', assert => {
 		testISCurves(assert, SemiEllipsoidSurface.UNIT, new PlaneSurface(new P3(V(-1.249000902703301e-16, 1, 0), 0.11006944444444443)), 2)
 	})

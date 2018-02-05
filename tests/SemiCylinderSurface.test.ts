@@ -1,11 +1,12 @@
-import {V, V3} from 'ts3dutils'
+import { V, V3, DEG } from 'ts3dutils'
+import { suite, test, testISCurves, testISTs, testLoopContainsPoint, testParametricSurface, testZDirVolumeAndArea,
+    testImplicitSurface } from './manager'
 import {
 	L3, P3, PCurveEdge, PICurve, PlaneSurface, PointVsFace, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface,
-	StraightEdge,
+	StraightEdge, B2T, Edge, Face,
 } from '..'
-import {suite, test, testISCurves, testISTs, testLoopContainsPoint, testParametricSurface} from './manager'
 
-const {PI, sin} = Math
+const { PI, sin } = Math
 
 suite('SemiCylinderSurface', () => {
 	test('loopContainsPoint with PICurve', assert => {
@@ -19,11 +20,16 @@ suite('SemiCylinderSurface', () => {
 		const p = V(0.55, 0, 2)
 		testLoopContainsPoint(assert, surface, loop, p, PointVsFace.OUTSIDE)
 	})
-	test('testSurface', assert => {
+	test('is parametric surface', assert => {
 		const ps = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 		testParametricSurface(assert, ps)
 		testParametricSurface(assert, ps.rotateZ(PI))
 	})
+    test('is an implicit surface', assert => {
+        const ps = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
+        testImplicitSurface(assert, ps)
+        testImplicitSurface(assert, ps.rotateZ(PI))
+    })
 	test('is curves w/ SemiCylinderSurface', assert => {
 		const cyl = SemiCylinderSurface.UNIT.scale(5, 5, 1)
 		const ell = new SemiCylinderSurface(new SemiEllipseCurve(V(6, 1, 4), V(3, 1, 4), V(4, 0, 0)), V3.Z, undefined, undefined)
@@ -82,24 +88,36 @@ suite('SemiCylinderSurface', () => {
 		assert.ok(line.containsPoint(isPoints[0]), '' + line.distanceToPoint(isPoints[0]))
 		assert.ok(line.containsPoint(isPoints[1]), '' + line.distanceToPoint(isPoints[1]))
 	})
-	//test('zDirVolume', assert => {
-	//    const face = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.forAB(-1, 1), 0, PI),
-	// StraightEdge.throughPoints(V3.X, V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face =>
-	// face.surface instanceof SemiCylinderSurface) const face2 =
-	// B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0), StraightEdge.throughPoints(V3.X,
-	// V3.X.negated())], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof
-	// SemiCylinderSurface) const face3 = B2T.extrudeEdges([Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI,
-	// 0).rotateY(-80 * DEG), StraightEdge.throughPoints(V3.X, V3.X.negated()).rotateY(-80 * DEG)],
-	// P3.XY.flipped().rotateY(-80 * DEG), new V3(-10, -1, 0).unit(), 'cyl').faces.find(face => face.surface
-	// instanceof SemiCylinderSurface) const modface = face.rotateY(-45 * DEG).translate(1, 0, 2) const e0 =
-	// modface.contour[0].project(new P3(modface.surface.dir, 0)) const face4 = Face.create(modface.surface, [e0,
-	// StraightEdge.throughPoints(e0.b, modface.contour[2].a), modface.contour[2],
-	// StraightEdge.throughPoints(modface.contour[2].b, e0.a)])  testZDirVolume(assert, face) testZDirVolume(assert,
-	// face.rotateY(-45 * DEG).translate(1, 0, 2)) testZDirVolume(assert, face.rotateY(90 * DEG).translate(1, 0, 2))
-	// testZDirVolume(assert, face2) testZDirVolume(assert, face2.rotateY(-45 * DEG).translate(1, 0, 2))
-	// testZDirVolume(assert, face2.rotateY(90 * DEG).translate(1, 0, 2))  testZDirVolume(assert, face3)
-	// testZDirVolume(assert, face3.translate(1, 0, 2))  testZDirVolume(assert, face4) testZDirVolume(assert,
-	// face4.translate(1, 0, 2)) },
+	test('zDirVolume', assert => {
+		const face = B2T.extrudeEdges([
+			Edge.forCurveAndTs(SemiEllipseCurve.forAB(-1, 1), 0, PI),
+			StraightEdge.throughPoints(V3.X, V3.X.negated())
+		], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face =>
+			face.surface instanceof SemiCylinderSurface)
+		const face2 = B2T.extrudeEdges([
+			Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0),
+			StraightEdge.throughPoints(V3.X, V3.X.negated())
+		], P3.XY.flipped(), V3.Z, 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
+		const face3 = B2T.extrudeEdges([
+			Edge.forCurveAndTs(SemiEllipseCurve.UNIT, PI, 0).rotateY(-80 * DEG),
+			StraightEdge.throughPoints(V3.X, V3.X.negated()).rotateY(-80 * DEG)
+		], P3.XY.flipped().rotateY(-80 * DEG), new V3(-10, -1, 0).unit(), 'cyl').faces.find(face => face.surface instanceof SemiCylinderSurface)
+		const modface = face.rotateY(-45 * DEG).translate(1, 0, 2)
+		const e0 = modface.contour[0].project(new P3(modface.surface.dir, 0))
+		const face4 = Face.create(modface.surface, [e0,
+			StraightEdge.throughPoints(e0.b, modface.contour[2].a), modface.contour[2],
+			StraightEdge.throughPoints(modface.contour[2].b, e0.a)])
+		testZDirVolumeAndArea(assert, face)
+		testZDirVolumeAndArea(assert, face.rotateY(-45 * DEG).translate(1, 0, 2))
+		testZDirVolumeAndArea(assert, face.rotateY(90 * DEG).translate(1, 0, 2))
+		testZDirVolumeAndArea(assert, face2)
+		testZDirVolumeAndArea(assert, face2.rotateY(-45 * DEG).translate(1, 0, 2))
+		testZDirVolumeAndArea(assert, face2.rotateY(90 * DEG).translate(1, 0, 2))
+		testZDirVolumeAndArea(assert, face3)
+		testZDirVolumeAndArea(assert, face3.translate(1, 0, 2))
+		testZDirVolumeAndArea(assert, face4)
+		testZDirVolumeAndArea(assert, face4.translate(1, 0, 2))
+	})
 	test('loopContainsPoint', assert => {
 		const surface = new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(0, 0, -1), undefined, undefined)
 		const loop = [

@@ -7,7 +7,7 @@ import {
 
 import {BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, SemiEllipseCurve, Surface, PlaneSurface} from './index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI, sign, ceil, floor, abs} = Math
 
 
 export abstract class Edge extends Transformable {
@@ -28,8 +28,13 @@ export abstract class Edge extends Transformable {
 		assertVectors(a, b)
 		assertf(() => curve instanceof Curve, curve)
 		assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT)
-		assertf(() => curve.at(aT).like(a), +a)
-		assertf(() => curve.at(bT).like(b), '' + curve.at(bT) + b)
+        //if (curve instanceof PICurve) {
+        //    assertf(() => curve.at(aT).to(a).length() < 0.1, ''+curve.at(aT)+a)
+        //    assertf(() => curve.at(bT).to(b).length() < 0.1, '' + curve.at(bT) + b)
+        //} else {
+            assertf(() => curve.at(aT).like(a), ''+curve.at(aT)+a)
+            assertf(() => curve.at(bT).like(b), '' + curve.at(bT) + b)
+        //}
 		assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax))
 		assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax))
 		this.aT = clamp(aT, curve.tMin, curve.tMax)
@@ -125,12 +130,12 @@ export abstract class Edge extends Transformable {
 		}
 		const corners = edges.map((edge, i) => {
 			const j = (i + 1) % edges.length, nextEdge = edges[j]
-			if (!edge.b.like(nextEdge.a)) return
+			if (!edge.b.like(nextEdge.a)) return undefined
 			const angleToNext = edge.bDir.angleTo(nextEdge.aDir)
 			const c1 = edge.curve, c2 = nextEdge.curve
 			if (c1 instanceof L3 && c2 instanceof L3) {
 				const normal = c1.dir1.cross(c2.dir1)
-				if (eq0(angleToNext)) return
+				if (eq0(angleToNext)) return undefined
 
 				const l1inside = normal.cross(c1.dir1), l2inside = normal.cross(c2.dir1)
 				const l1offset = c1.transform(M4.translate(l1inside.toLength(radius)))
@@ -485,7 +490,7 @@ export class PCurveEdge extends Edge {
 		return new PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b),
 			this.aT, this.bT,
 			undefined,
-			m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc)
+			m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc) as this
 	}
 
 	isCoEdge(edge: Edge): boolean {
@@ -580,7 +585,7 @@ export class StraightEdge extends Edge {
 		return new StraightEdge(
 			this.curve.transform(m4),
 			m4.transformPoint(this.a),
-			m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, undefined, '' + this.name + desc)
+			m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, undefined, '' + this.name + desc) as this
 	}
 
 	isCoEdge(edge: Edge): boolean {

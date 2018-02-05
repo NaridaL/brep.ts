@@ -7,7 +7,7 @@ import {
 	Curve, EllipseCurve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, P3, XiEtaCurve,
 } from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI, min, max} = Math
 
 export class SemiEllipseCurve extends XiEtaCurve {
 	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)

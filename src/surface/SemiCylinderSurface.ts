@@ -2,15 +2,17 @@ import {assert, assertInst, assertVectors, eq0, hasConstructor, le, M4, pqFormul
 
 import {
 	BezierCurve, Curve, Edge, L3, P3, PlaneSurface, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface,
+    ImplicitSurface,
 } from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+const {PI, sign} = Math
 
-export class SemiCylinderSurface extends ProjectedCurveSurface {
+export class SemiCylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 	readonly matrix: M4
 	readonly inverseMatrix: M4
-	readonly normalMatrix: M4
+	readonly pLCNormalWCMatrix: M4
+	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number
 	readonly baseCurve: SemiEllipseCurve
 
@@ -26,7 +28,8 @@ export class SemiCylinderSurface extends ProjectedCurveSurface {
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.baseCurve.normal.dot(this.dir))
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
+		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
+        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
 	}
 
 	static semicylinder(radius: number): SemiCylinderSurface {
@@ -60,7 +63,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	normalP(p: V3): V3 {
-		return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit()
+		return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit()
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
@@ -121,13 +124,22 @@ export class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	implicitFunction() {
-		return (pWC) => {
+		return (pWC: V3) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
-			const radiusLC = pLC.lengthXY()
-			const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir))
-			return normalDir * (1 - radiusLC)
+            return (pLC.lengthXY() - 1) * this.normalDir
 		}
 	}
+
+    didp(pWC: V3) {
+        const pLC = this.inverseMatrix.transformPoint(pWC)
+        const pLCLengthXY = pLC.lengthXY()
+        const didpLC = new V3(
+            pLC.x / pLCLengthXY,
+            pLC.y / pLCLengthXY,
+            0,
+        )
+        return this.pLCNormalWCMatrix.transformVector(didpLC)
+    }
 
 	containsPoint(pWC: V3): boolean {
 		const pLC = this.inverseMatrix.transformPoint(pWC)
@@ -142,21 +154,21 @@ export class SemiCylinderSurface extends ProjectedCurveSurface {
 	}
 
 	isCurvesWithSurface(surface2: Surface): Curve[] {
-		if (surface2 instanceof PlaneSurface) {
-			return this.isCurvesWithPlane(surface2.plane)
-		} else if (surface2 instanceof SemiCylinderSurface) {
+        if (surface2 instanceof ProjectedCurveSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
-				const projEllipse = surface2.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir))
-				return this.baseCurve.isInfosWithEllipse(projEllipse).map(info => {
+				const projectedCurve = surface2.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir))
+				return this.baseCurve.isInfosWithCurve(projectedCurve).map(info => {
 					const lineDir = sign(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir)) || 1
 					return new L3(info.p, this.dir.times(lineDir))
 				})
-			} else if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
-				assert(false)
-			} else {
-				assert(false)
 			}
 		}
+		if (surface2 instanceof SemiCylinderSurface) {
+            if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+                throw new Error()
+            }
+        }
+		return super.isCurvesWithSurface(surface2)
 	}
 
 	getCenterLine(): L3 {

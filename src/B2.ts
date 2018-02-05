@@ -326,19 +326,19 @@ export class B2 extends Transformable {
 	}
 
 	plus(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
-		const generator = this.generator && other.generator && callsce(this.generator + '.plus', other.generator)
+        const generator = this.generator && other.generator && this.generator + '.plus(' + other.generator + ')'
 		return this.flipped().intersection(other.flipped(), true, true, generator, infoFactory).flipped()
 	}
 
 	and(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
-		const generator = this.generator && other.generator && callsce(this.generator + '.and', other.generator)
+        const generator = this.generator && other.generator && this.generator + '.and(' + other.generator + ')'
 		return this.intersection(other, true, true, generator, infoFactory)
 	}
 
 	xor(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
-		const s = this.generator && other.generator && callsce(this.generator + '.xor', other.generator)
+        const generator = this.generator && other.generator && this.generator + '.xor(' + other.generator + ')'
 		return new B2(this.minus(other).faces.concat(other.minus(this).faces),
-			this.infiniteVolume != other.infiniteVolume, s)
+			this.infiniteVolume != other.infiniteVolume, generator)
 	}
 
 	equals(obj: any): boolean {
@@ -1006,7 +1006,7 @@ export function fff(info: { face: Face, edge: Edge, normalAtCanonA: V3, inside: 
 	if (surface.isCoplanarTo(info.face.surface)) {
 		return 0 < info.normalAtCanonA.dot(surfaceNormalAtCanonA) ? COPLANAR_SAME : COPLANAR_OPPOSITE
 	}
-	assert(false)
+	throw new Error()
 }
 
 export function triangulateVertices(normal: V3, vertices: V3[], holeStarts: int[]) {

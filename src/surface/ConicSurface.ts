@@ -5,7 +5,7 @@ import {
 	SemiEllipseCurve, Surface, PlaneSurface, PointVsFace,
 } from '../index'
 
-const {PI, cos, sin, min, max, tan, ceil, floor, abs, sqrt, pow, atan2, round, sign} = Math
+const {PI, cos, sin, abs, sqrt, sign} = Math
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	/**
@@ -256,7 +256,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 			m4.transformPoint(this.center),
 			m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1),
 			m4.transformVector(this.f2),
-			m4.transformVector(this.dir))
+			m4.transformVector(this.dir)) as this
 	}
 
 	rightAngled() {
@@ -362,11 +362,6 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 			return this.normalP(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
 				? curveWC : curveWC.reversed()
 		})
-	}
-
-	edgeLoopCCW(contour: Edge[]): boolean {
-		const ptpF = this.stPFunc()
-		return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
 	}
 }
 

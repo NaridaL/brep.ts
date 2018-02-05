@@ -1,13 +1,11 @@
-import chroma, {Color} from 'chroma-js'
-import nerdamer from 'nerdamer'
-import {addOwnProperties, arrayFromFunction, assert, DEG, int, M4, TAU, V, V3} from 'ts3dutils'
+import chroma from 'chroma-js'
+import {addOwnProperties, arrayFromFunction, DEG, int, M4, TAU, V, V3} from 'ts3dutils'
 import {DRAW_MODES, GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext} from 'tsgl'
 
 import {
-	B2, B2T, BezierCurve, Curve, curvePointMF, CustomPlane, Edge, EllipseCurve, Face, followAlgorithm2d, HyperbolaCurve,
-	ImplicitCurve, L3, MathFunctionR2R, P3, ParabolaCurve, PICurve, SemiCylinderSurface, SemiEllipseCurve,
-	SemiEllipsoidSurface,
-} from './index'
+	BezierCurve, Curve, CustomPlane, Edge, EllipseCurve, HyperbolaCurve,
+	ImplicitCurve, L3, ParabolaCurve, PICurve, SemiEllipseCurve,
+	} from './index'
 import * as shaders from './shaders'
 
 const {pow, sign} = Math

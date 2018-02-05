@@ -97,11 +97,11 @@ export abstract class Curve extends Transformable implements Equalable {
 		//undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
 		//undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
 
-		const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
+		const bounds = (s: number, t: number) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
 		const deltaS = sMax - sMin, deltaT = tMax - tMin
 		const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
 		const grid = new Array(sRes * tRes).fill(0)
-		arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n')
+		const printGrid = () => console.log(arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n'))
 		const at = (i: int, j: int) => grid[j * sRes + i]
 		const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
 		const result: { points: V3[], tangents: V3[] }[] = []
@@ -116,7 +116,7 @@ export abstract class Curve extends Transformable implements Equalable {
 				for (let k = 0; k < 8; k++) {
 					const fp = implicitCurve(s, t)
 					const dfpdx = implicitCurve.x(s, t), dfpdy = implicitCurve.y(s, t)
-					if (0 == dfpdx * dfpdx + dfpdy * dfpdy) {
+					if (0 === dfpdx * dfpdx + dfpdy * dfpdy) {
 						// top of a hill, keep looking
 						continue search
 					}
@@ -141,13 +141,13 @@ export abstract class Curve extends Transformable implements Equalable {
 					continue search
 				}
 				set(li, lj)
-				// s, t are now good starting coordinates to use follow algo
+				// s, t are now good starting coordinates to use follow algorithm
 				if (bounds(s, t) && eq0(implicitCurve(s, t))) {
 					console.log(V(s, t).sce)
-					const subresult = mkcurves(implicitCurve, s, t, stepSize, implicitCurve.x, implicitCurve.y, bounds)
-					for (const curvedata of subresult) {
-						assert(curvedata.points.length > 2)
-						for (const {x, y} of curvedata.points) {
+					const subResult = mkcurves(implicitCurve, s, t, stepSize, implicitCurve.x, implicitCurve.y, bounds)
+					for (const curveData of subResult) {
+						assert(curveData.points.length > 2)
+						for (const {x, y} of curveData.points) {
 							const lif = (x - sMin) / sStep, ljf = (y - tMin) / tStep
 							set((lif - 0.5) | 0, (ljf - 0.5) | 0)
 							set((lif - 0.5) | 0, (ljf + 0.5) | 0)
@@ -155,12 +155,13 @@ export abstract class Curve extends Transformable implements Equalable {
 							set((lif + 0.5) | 0, (ljf + 0.5) | 0)
 						}
 					}
-					result.push(...subresult)
+					printGrid()
+					result.push(...subResult)
 				}
 
 			}
 		}
-		//console.table(logTable)
+		console.table(logTable)
 		for (const {points} of result) {
 			for (let i = 0; i < points.length - 1; i++) {
 				assert(!points[i].equals(points[i + 1]))
@@ -251,6 +252,10 @@ export abstract class Curve extends Transformable implements Equalable {
 		points.push(b)
 		return points
 	}
+
+	calcSegmentTs() {
+
+    }
 
 	/**
 	 *

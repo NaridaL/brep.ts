@@ -6,8 +6,6 @@ import {Mesh, pushQuad} from 'tsgl'
 
 import {Curve, ISInfo, P3} from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
-
 /**
  * 3-dimensional line
  */
