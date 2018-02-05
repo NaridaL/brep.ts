@@ -3,7 +3,7 @@ import {b2Equal, b2EqualAnd, b2equals, linkB3, suite, test, skip} from './manage
 
 import {AABB, DEG, isCCW, M4, NLA_PRECISION, TAU, V, V3} from 'ts3dutils'
 import {
-	ALONG_EDGE_OR_PLANE, B2, B2T, BezierCurve, ConicSurface, COPLANAR_OPPOSITE, COPLANAR_SAME, Edge, HyperbolaCurve,
+	ALONG_EDGE_OR_PLANE, BRep, B2T, BezierCurve, ConicSurface, COPLANAR_OPPOSITE, COPLANAR_SAME, Edge, HyperbolaCurve,
 	INSIDE, L3, OUTSIDE, P3, PCurveEdge, PICurve, PlaneFace, PlaneSurface, PointVsFace, ProjectedCurveSurface,
 	RotationFace, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface, splitsVolumeEnclosingCone,
 	splitsVolumeEnclosingCone2, splitsVolumeEnclosingFaces, splitsVolumeEnclosingFacesP, StraightEdge,
@@ -136,7 +136,7 @@ suite('BREP', () => {
 
         function test(name, loops, expected) {
             manager.test(name, (assert) => {
-                const actual = B2.assembleFacesFromLoops(loops, surface, originalFace)
+                const actual = BRep.assembleFacesFromLoops(loops, surface, originalFace)
                 expected = expected.length ? expected : [expected]
                 assert.equal(actual.length, expected.length)
                 for (let i = 0; i < expected.length; i++) {
@@ -187,7 +187,7 @@ suite('BREP', () => {
 		const a = B2T.rotateEdges(chain, TAU / 3, 'rot').flipped()
 		a.assertSanity()
 		linkB3(assert, {a})
-		const rotatedEdges = new B2([
+		const rotatedEdges = new BRep([
 			new RotationFace(new ConicSurface(V(0, 0, -2), V(-3, 0, 0), V(0, 3, 0), V(0, 0, 3)), [
 				new PCurveEdge(new SemiEllipseCurve(V3.Z, V(3, 0, 0), V(0, 3, 0), 0, 3.141592653589793), V(3, 6.123233995736766e-17, 1), V(-1.4999999999999993, 2.598076211353316, 1), 0, 2.0943951023931953, undefined, V(0, 3, 0), V(-2.598076211353316, -1.4999999999999993, 0), 'rotrib1'),
 				new StraightEdge(new L3(V(-0.9999999999999996, 1.7320508075688774, 0), V(-0.3535533905932737, 0.6123724356957946, 0.7071067811865476)), V(-1.4999999999999993, 2.598076211353316, 1), V(-0.9999999999999996, 1.7320508075688774, 0), 1.414213562373095, 0),
@@ -213,7 +213,7 @@ suite('BREP', () => {
 				new StraightEdge(new L3(V(-0.4999999999999999, 0.8660254037844386, 2), V(-0.2236067977499788, 0.3872983346207417, -0.8944271909999159)), V(-0.4999999999999999, 0.8660254037844386, 2), V(-0.9999999999999996, 1.7320508075688774, 0), 0, 2.23606797749979)], [])], true)
 		b2equals(assert, a, rotatedEdges)
 		const b = B2T.box(4, 4, 1.4).translate(0, 0, -0.2).rotateX(5 * DEG).rotateY(-10 * DEG)
-		const result = new B2([
+		const result = new BRep([
 			new RotationFace(new ConicSurface(V(0, 0, -2), V(-3, 0, 0), V(0, 3, 0), V(0, 0, 3)), [
 				new PCurveEdge(new HyperbolaCurve(V(0.36397023426620234, 0, -2.064177772475912), V(-0.06417777247591211, 0, 0.3639702342662024), V(0, -0.35826742100255826, 0), -7, 7), V(-0.1763269807084652, 2.994813649607307, 1), V(1.2246467991473532e-16, 2, 0), -2.820063517005926, -2.4206973195226458, undefined, V(0.5364720813140339, -3.016167160623902, -3.0424843614887553), V(0.35826742100255793, -2.0318355112931323, -2.031835511293132), 'genseg42'),
 				new PCurveEdge(new SemiEllipseCurve(V3.O, V(2, 0, 0), V(0, 2, 0), 0, 3.141592653589793), V(1.2246467991473532e-16, 2, 0), V(0.1513902972863614, 1.9942620133491855, 0), 1.5707963267948966, 1.4950287053498916, undefined, V(2, -1.2246467991473532e-16, 0), V(1.9942620133491855, -0.1513902972863614, 0), 'looseSegment60'),
@@ -306,7 +306,7 @@ suite('BREP', () => {
 		a.assertSanity()
 		//const a = B2T.rotateEdges(Edge.reverseLoop(chain),  TAU / 3, 'rot')
 		linkB3(assert, {a})
-		const result = new B2([
+		const result = new BRep([
 			new RotationFace(new ConicSurface(V(0, 0, -974.4525586411135), V(198.46477746372744, 0, 0), V(0, 198.46477746372744, 0), V(0, 0, 1219.3960876477324)), [
 				new StraightEdge(new L3(V(198.46477746372744, 0, 244.94352900661897), V(-0.16064282877602398, 0, -0.9870126045612776)), V(198.46477746372744, 0, 244.94352900661897), V(173.9128996557253, 0, 94.093266677553), 0, 152.83519342300417),
 				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 94.093266677553), V(173.9128996557253, 0, 0), V(0, 173.9128996557253, 0), 0, 3.141592653589793), V(173.9128996557253, 0, 94.093266677553), V(-86.95644982786261, 150.6129891476721, 94.093266677553), 0, 2.0943951023931953, undefined, V(0, 173.9128996557253, 0), V(-150.6129891476721, -86.95644982786261, 0), 'rotrib0'),
@@ -359,7 +359,7 @@ suite('BREP', () => {
 
 	test('tetrahedron', assert => {
 		const a = B2T.tetrahedron(V(5, 5, 5), V(5, 5, -5), V(9, 11, 1), V(1, 9, 0))
-		const result = new B2([
+		const result = new BRep([
 			new PlaneFace(new P3(V(0.8320502943378437, -0.5547001962252291, 0), 1.386750490563073), [
 				new StraightEdge(new L3(V(5, 5, 5), V(0, 0, -1)), V(5, 5, 5), V(5, 5, -5), 0, 10),
 				new StraightEdge(new L3(V(5, 5, -5), V(0.42640143271122083, 0.6396021490668313, 0.6396021490668313)), V(5, 5, -5), V(9, 11, 1), 0, 9.38083151964686),
@@ -504,7 +504,7 @@ suite('BREP', () => {
         test('box(5, 5, 5) - box(1, 1, 6)', assert => {
             const a = B2T.box(5, 5, 5, 'a')
             const b = B2T.box(1, 1, 6, 'b').flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(-1, 0, 0), 0), [
                     new StraightEdge(new L3(V(0, 1, 0), V(0, 0, 1)), V(0, 1, 0), V(0, 1, 5), 0, 5),
                     new StraightEdge(new L3(V(0, 0, 5), V(0, 1, 0)), V(0, 1, 5), V(0, 5, 5), 1, 5),
@@ -558,7 +558,7 @@ suite('BREP', () => {
             const v = V(-0.5773502691896257, 0.5773502691896257, 0.5773502691896257)
             // const m4 = M4.forSys(v, v.getPerpendicular
             const b = B2T.sphere(0.2).translate(0, 1.05).rotateAB(V3.Y, v).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), [
                     new PCurveEdge(new SemiEllipseCurve(V3.O, V(0, 0, -1), V3.X, 0, 3.141592653589793), V3.Z, V(0, 0, -1), 3.141592653589793, 0, undefined, V3.X, V(-1, 0, 0), NaN),
                     new PCurveEdge(new SemiEllipseCurve(V3.O, V(0, 0, -1), V(-1, 1.2246467991473532e-16, 0), 0, 3.141592653589793), V(0, 0, -1), V3.Z, 0, 3.141592653589793, undefined, V(-1, 1.2246467991473532e-16, 0), V(1, -1.2246467991473532e-16, 0), NaN)], [[
@@ -580,7 +580,7 @@ suite('BREP', () => {
                 .flipped()
                 //.scale(0.5, 0.6, 1)
                 .translate(0.4, 0.6)
-            const result = B2.EMPTY
+            const result = BRep.EMPTY
             b2EqualAnd(assert, a, b, result)
 
         })
@@ -588,7 +588,7 @@ suite('BREP', () => {
         test('box(5, 5, 5) - box(1, 1, 5)', assert => {
             const a = B2T.box(5, 5, 5)
             const b = B2T.box(1, 1, 5).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(-1, 0, 0), 0), [
                     new StraightEdge(new L3(V(0, 1, 0), V(0, 0, 1)), V(0, 1, 0), V(0, 1, 5), 0, 5),
                     new StraightEdge(new L3(V(0, 0, 5), V(0, 1, 0)), V(0, 1, 5), V(0, 5, 5), 1, 5),
@@ -640,7 +640,7 @@ suite('BREP', () => {
             const wideBox = B2T.box(10, 10, 5)
             const extrusion = B2T.extrudeVertices([V(1, 0), V(0, 3), V(-2, 5), V(5, 5)], P3.XY.flipped(), V(0, 0, 10), 'lol')
                 .translate(0, 1, 1)
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(-1, 0, 0), 0), [
                     new StraightEdge(new L3(V(0, 0, 1), V(0, -1, 0)), V(0, 4, 1), V(0, 6, 1), -4, -6),
                     new StraightEdge(new L3(V(0, 6, 0), V(0, 0, -1)), V(0, 6, 1), V(0, 6, 5), -1, -5),
@@ -717,7 +717,7 @@ suite('BREP', () => {
         test('edge/edge intersection', assert => {
             const wideBox = B2T.box(10, 10, 10)
             const t = B2T.tetrahedron(V(0, 0, 5), V(0, 0, 15), V(8, 2, 13), V(-1, 7, 12)).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0),0),V(0, -1, 0),V3.Z), [
                     new StraightEdge(new L3(V(0, -2.4879356568364615, 2.2546916890080437),V(0, 0.6715194247388594, 0.7409869514359827)),V(0, 0, 5.000000000000001),V(0, 4.53125, 10),3.704934757179914,10.452691907707782),
                     new StraightEdge(new L3(V(0, 0, 10),V3.Y),V(0, 4.53125, 10),V(0, 10, 10),4.53125,10),
@@ -765,7 +765,7 @@ suite('BREP', () => {
         test('edge/edge intersection 2', assert => {
             const box = B2T.box(10, 10, 10)
             const tetra = B2T.tetrahedron(V(0, 0, 5), V(0, 0, 15), V(8, 2, 13), V(1, 7, 12)).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0),0),V(0, -1, 0),V3.Z), [
                     new StraightEdge(new L3(V3.O,V3.Z),V(0, 0, 5),V(0, 0, 10),5,10),
                     new StraightEdge(new L3(V(0, 0, 10),V3.Y),V(0, 0, 10),V(0, 10, 10),0,10),
@@ -818,7 +818,7 @@ suite('BREP', () => {
         test('edge/point intersection', assert => {
             const wideBox = B2T.box(10, 10, 10)
             const t = B2T.tetrahedron(V(0, 0, 5), V(1, 1, 15), V(8, 2, 13), V(1, 7, 12)).flipped()
-            const result = B2.EMPTY
+            const result = BRep.EMPTY
             b2EqualAnd(assert, wideBox, t, result)
         })
 
@@ -828,7 +828,7 @@ suite('BREP', () => {
             // the expected result is the union of a and b's faces, minus the ones where they touch, which we remove with
             // an AABB test
             const testAABB = AABB.forXYZ(12, 12, 2).translate(-1, -1, 4)
-            const result = new B2(a.faces.concat(b.faces).filter(face => !testAABB.containsAABB(face.getAABB())), false)
+            const result = new BRep(a.faces.concat(b.faces).filter(face => !testAABB.containsAABB(face.getAABB())), false)
             b2Equal(assert, a, b, () => b.plus(a), result)
         })
 
@@ -836,7 +836,7 @@ suite('BREP', () => {
             const box = B2T.box(10, 10, 10)
             const box2 = B2T.box(10, 5, 5).translate(0, 0, 5)
             const box3 = B2T.box(5, 5, 5).translate(5, 5, 5).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(1, 0, 0), 10), [
                     new StraightEdge(new L3(V(10, 0, 5), V(0, -1, 0)), V(10, 10, 5), V(10, 5, 5), -10, -5),
                     new StraightEdge(new L3(V(10, 0, 5), V(0, -1, 0)), V(10, 5, 5), V(10, 0, 5), -5, 0),
@@ -906,7 +906,7 @@ suite('BREP', () => {
             const boxA = B2T.box(10, 10, 5, 'boxA').flipped(), boxB = boxA.translate(3, 3, 0)
             //const result = B2T.extrudeVertices([V3.O, V(0, 10), V(3, 10), V(3, 13), V(13, 13), V(13, 3), V(10, 3), V(10,
             // 0)], P3.XY.flipped(), V(0, 0, 5), 'result').flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(0, -1, 0), -10), [
                     new StraightEdge(new L3(V(3, 10, 0), V(0, 0, 1)), V(3, 10, 0), V(3, 10, 5), 0, 5),
                     new StraightEdge(new L3(V(0, 10, 5), V(1, 0, 0)), V(3, 10, 5), V(0, 10, 5), 3, 0),
@@ -991,7 +991,7 @@ suite('BREP', () => {
 
         test('box(10,10,5) + box(4,10,2).translate(2, 0, 3) overlapping faces result contains union of faces 2', assert => {
             const box = B2T.box(10, 10, 5), box2 = B2T.box(4, 10, 2).translate(2, 0, 3)
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(0, 1, 0), 10), [
                     new StraightEdge(new L3(V(0, 10, 3), V(-1, 0, 0)), V(2, 10, 3), V(6, 10, 3), -2, -6),
                     new StraightEdge(new L3(V(6, 10, 0), V(0, 0, -1)), V(6, 10, 3), V(6, 10, 5), -3, -5),
@@ -1055,7 +1055,7 @@ suite('BREP', () => {
 
         test('box(10,10,10) + box(10,12,12).translate(0, 0, -2) overlapping faces result contains union of faces 3', assert => {
             const box = B2T.box(10, 10, 10, 'box0'), box2 = B2T.box(10, 12, 12, 'box').translate(0, 0, -2)
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(-1, 0, 0), 0), [
                     new StraightEdge(new L3(V(0, 0, 0), V(0, 1, 0)), V(0, 10, 0), V(0, 0, 0), 10, 0),
                     new StraightEdge(new L3(V(0, 0, 0), V(0, 0, 1)), V(0, 0, 0), V(0, 0, 10), 0, 10),
@@ -1116,7 +1116,7 @@ suite('BREP', () => {
         test('box(10, 10, 10) - box().scale(8 / 3 ** 0.5).rotateAB(V3.ONES, V3.X)', assert => {
             const box = B2T.box(10, 10, 10, 'box0')
             const box2 = B2T.box(1, 1, 1).scale(8 / 3 ** 0.5).rotateAB(V3.XYZ, V3.X).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(0, -1, 0), 0), [
                     new StraightEdge(new L3(V(0, 0, 0), V(0.7071067811865476, 0, 0.7071067811865475)), V(0, 0, 0), V(3.381197846482994, 0, 3.3811978464829933), 0, 4.781735851562952),
                     new StraightEdge(new L3(V(2.791322082992153, 0, 3.813016875511774), V(0.8068982213550735, 0, -0.5906904945688721)), V(3.381197846482994, 0, 3.3811978464829933), V(8, 0, 0), 0.7310411002024879, 6.45518577084059),
@@ -1170,7 +1170,7 @@ suite('BREP', () => {
         test('box(10, 10, 10) - tetrahedron(V(5,0,10),V(5,3,10),V(7,1,9),V(7,1,11))', assert => {
             const box = B2T.box(10, 10, 10, 'box0')
             const box2 = B2T.tetrahedron(V(5, 0, 10), V(5, 3, 10), V(7, 1, 9), V(7, 1, 11)).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(0, -1, 0), 0), [
                     new StraightEdge(new L3(V(10, 0, 10), V(-1, 0, 0)), V(10, 0, 10), V(5, 0, 10), 0, 5),
                     new StraightEdge(new L3(V(10, 0, 10), V(-1, 0, 0)), V(5, 0, 10), V(0, 0, 10), 5, 10),
@@ -1223,7 +1223,7 @@ suite('BREP', () => {
 
         test('box(10, 10, 10) - box().rotateAB(V3.ONES, V3.Y).translate(5,0,10)', assert => {
             const box = B2T.box(10, 10, 10, 'box0'), box2 = B2T.box().rotateAB(V3.XYZ, V3.Y).translate(5, 0, 10).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(0, -1, 0), 0), [
                     new StraightEdge(new L3(V(10, 0, 10), V(-1, 0, 0)), V(10, 0, 10), V(5, 0, 10), 0, 5),
                     new StraightEdge(new L3(V(10, 0, 10), V(-1, 0, 0)), V(5, 0, 10), V(0, 0, 10), 5, 10),
@@ -1289,7 +1289,7 @@ suite('BREP', () => {
         test('menger(1) - box(2,2,1).rotateZ(-45*DEG)', assert => {
             const box = B2T.box(1, 1, 1, 'box0').minus(B2T.box(1 / 3, 1 / 3, 1).translate(1 / 3, 1 / 3, 0))
             const box2 = B2T.box(2, 2, 1).rotateZ(-45 * DEG).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new P3(V(0, 0, -1), 0), [
                     new StraightEdge(new L3(V(0, 0, 0), V(-0.7071067811865475, -0.7071067811865476, 0)), V(1, 1, 0), V(0.6666666666666666, 0.6666666666666666, 0), -1.414213562373095, -0.9428090415820634),
                     new StraightEdge(new L3(V(0, 0.6666666666666666, 0), V(-1, 0, 0)), V(0.6666666666666666, 0.6666666666666666, 0), V(0.3333333333333333, 0.6666666666666666, 0), -0.6666666666666666, -0.3333333333333333),
@@ -1340,7 +1340,7 @@ suite('BREP', () => {
         test('sphere(5) - box(12,2,3).translate(-6, 0,1)', assert => {
             const a = B2T.sphere(5)
             const b = B2T.box(12, 2, 3).translate(-6, 0, 1).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5)), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 2, 0), V(0, 0, 4.58257569495584), V(4.58257569495584, 0, 0), 0, 3.141592653589793), V(2.2360679774997863, 2, 4), V(4.472135954999578, 2, 1), 0.5097396788315063, 1.3508083493994372, null, V(4.000000000000001, 0, -2.236067977499787), V(1, 0, -4.47213595499958)),
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(-4.898979485566356, 0, 0), V(0, 4.898979485566356, 0), 0, 3.141592653589793), V(4.472135954999578, 2, 1), V(4.898979485566356, 0, 1.000000000000001), 2.721058318305828, 3.141592653589793, null, V(1.9999999999999998, -4.47213595499958, 0), V(5.999519546087385e-16, -4.898979485566356, 0)),
@@ -1385,7 +1385,7 @@ suite('BREP', () => {
         test('sphere(5) AND octahedron().scale(6)', assert => {
             const a = B2T.sphere(5)
             const b = B2T.octahedron().scale(6)
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5)), [
                     new PCurveEdge(new SemiEllipseCurve(V(2, 2.0000000000000018, 2), V(1.4719601443879746, -2.943920288775947, 1.4719601443879746), V(-2.5495097567963914, 0, 2.5495097567963914), 0.8238977337258584, 3.141592653589793), V(1.1291713066130307, 0, 4.87082869338697), V(0, 1.1291713066130296, 4.87082869338697), 0.8238977337258595, 1.270497368667335, null, V(-2.8121742573035204, 2.1602468994692843, 0.6519273578342348), V(-2.1602468994692874, 2.8121742573035187, -0.6519273578342336)),
                     new PCurveEdge(new SemiEllipseCurve(V(-2.0000000000000018, 2, 2), V(1.4719601443879742, 2.9439202887759484, -1.4719601443879733), V(2.549509756796391, 0, 2.5495097567963927), 0, 2.3176949198639334), V(0, 1.1291713066130296, 4.87082869338697), V(-1.1291713066130307, 1.3828360263326826e-16, 4.87082869338697), 1.8710952849224574, 2.317694919863933, null, V(-2.1602468994692847, -2.8121742573035204, 0.6519273578342343), V(-2.8121742573035196, -2.160246899469287, -0.6519273578342344)),
@@ -1510,7 +1510,7 @@ suite('BREP', () => {
         test('sphere(5) - box(12,2,3).translate(-6, 0,1) 2', assert => {
             const a = B2T.sphere(5)
             const b = B2T.box(12, 2, 2).translate(-6, -1, 1).rotateX(-10 * DEG).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5)), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0.984807753012208, -0.1736481776669303), V(0, -0.8506988600962733, -4.824552979233506), V(-4.898979485566356, 0, 0), 0, 3.141592653589793), V(-4.795831523312719, 1.1584559306791384, 0.8111595753452777), V(-3.8729833462074166, 1.505752286012999, 2.7807750813696934), 1.7763652579560707, 2.229854362621306, null, V(1.000000000000001, 0.832787404420872, 4.722972066298714), V(3.0000000000000004, 0.6725365002032875, 3.8141440266322277)),
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0.520944533000792, 2.954423259036625), V(0, 3.939231012048832, -0.6945927106677224), V(-3.9999999999999996, 0, 0), 0, 1.703430096372499), V(-3.8729833462074166, 1.505752286012999, 2.7807750813696934), V(-3.964868114183388, 4.855563045076089e-16, 3.0462798356572343), 1.3181160716528182, 1.703430096372499, null, V(-0.999999999999999, -3.814144026632229, 0.6725365002032889), V(0.5289809421253958, -3.904632858518692, 0.6884921227176649)),
@@ -1563,7 +1563,7 @@ suite('BREP', () => {
         test('sphere(5) AND tetrahedron(V3.ZERO, V3.Y, V3.Z, V(7,0,0))', assert => {
             const a = B2T.sphere(5)
             const b = B2T.tetrahedron(V3.O, V3.Y, V3.Z, V(7, 0, 0))
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5)), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(5, 0, 0), V(0, 5, 0), 0, 3.141592653589793), V(5, 0, -3.061616997868383e-16), V(4.991762566325767, 0.2868910619534618, 0), 0, 0.057409743118180596, null, V(0, 5, 0), V(-0.2868910619534618, 4.991762566325767, 0)),
                     new PCurveEdge(new SemiEllipseCurve(V(0.07070707070707062, 0.4949494949494949, 0.4949494949494949), V(-0.492519286346973, 3.5179949024783825, -3.447635004428815), V(4.900505024479568, 0, -0.7000721463542231), 0, 1.7119554405905957), V(4.991762566325767, 0.2868910619534618, 0), V(4.991762566325767, 0, 0.2868910619534626), 1.6299720553223171, 1.711955440590596, null, V(0.20183545628617083, -3.5118371007669364, 3.4830034641546264), V(-0.2018354562861731, -3.483003464154626, 3.5118371007669364)),
@@ -1593,7 +1593,7 @@ suite('BREP', () => {
         test('sphere(5) AND tetrahedron(V3.ZERO, V3.X, V3.Y, V3.Z).scale(7)', assert => {
             const a = B2T.sphere(5)
             const b = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z).scale(7)
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5)), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, 5), V(5, 0, 0), 0, 3.141592653589793), V(0, 0, 5), V(3.0000000000000058, 0, 3.9999999999999942), 0, 0.643501108793286, null, V(5, 0, 0), V(3.999999999999995, 0, -3.0000000000000067)),
                     new PCurveEdge(new SemiEllipseCurve(V(2.3333333333333326, 2.3333333333333313, 2.333333333333336), V(1.201850425154661, -2.4037008503093267, 1.2018504251546627), V(-2.081665999466134, 0, 2.081665999466131), 0.24256387409548896, 3.141592653589793), V(3.0000000000000107, 0, 3.999999999999992), V(0, 3.0000000000000053, 3.9999999999999947), 0.24256387409547972, 1.8518312282977136, null, V(-2.3094010767585003, 0.5773502691896129, 1.7320508075688847), V(-0.5773502691896154, 2.309401076758501, -1.732050807568882)),
@@ -1639,7 +1639,7 @@ suite('BREP', () => {
         test('sphere(5) AND tetrahedron(V3.ZERO, V3.X, V3.Y, V3.Z.negated()).scale(7)', assert => {
             const a = B2T.sphere(5)
             const b = B2T.tetrahedron(V(-6, 0, 0), V(6, 0, 0), V(0, -4, 0), V(0, 0, -6))
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(-5, 6.123233995736766e-16, 0), V(-6.123233995736766e-16, -5, 0), V(0, 0, 5)), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0), 0, 3.141592653589793), V(0, 0, -5), V(1.1291713066130296, 0, -4.87082869338697), 0, 0.22779933669791175, null, V(5, 0, 0), V(4.87082869338697, 0, 1.1291713066130296)),
                     new PCurveEdge(new SemiEllipseCurve(V(1.411764705882352, -2.1176470588235303, -1.4117647058823533), V(2.0917534572581817, 2.7890046096775745, -2.091753457258183), V(-2.874840149008801, 3.5206637865439285e-16, -2.874840149008799), 0.7085839061491113, 3.141592653589793), V(1.1291713066130291, 0, -4.87082869338697), V(0, -0.6994424542963525, -4.950836318555471), 0.7085839061491117, 1.0373562345961393, null, V(-3.5440484447865424, -1.8149704259460573, -0.8215928058674522), V(-3.262983117260863, -2.401508361946856, 0.3392794256594245)),
@@ -1696,7 +1696,7 @@ suite('BREP', () => {
                 new PCurveEdge(new SemiEllipseCurve(V(-333.7047164374913, 265.5319699580857, 0), V(21.599999999999966, -23.39999999999995, 0), V(23.39999999999995, 21.599999999999966, 0), 0, 3.141592653589793), V(-312.10471643749133, 242.13196995808573, 0), V(-355.30471643749127, 288.9319699580857, 0), 0, 3.141592653589793, null, V(23.399999999999945, 21.59999999999997, 0), V(-23.39999999999995, -21.599999999999966, 0)),
                 new PCurveEdge(new SemiEllipseCurve(V(-333.7047164374913, 265.5319699580857, 0), V(-21.599999999999966, 23.39999999999995, 0), V(-23.39999999999995, -21.599999999999966, 0), 0, 3.141592653589793), V(-355.30471643749127, 288.9319699580857, 0), V(-312.10471643749133, 242.13196995808573, 0), 0, 3.141592653589793, null, V(-23.39999999999995, -21.599999999999966, 0), V(23.399999999999952, 21.599999999999962, 0)),
             ], new P3(V3.Z, 0), V(0, 0, -50), 'cyl2').flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V3.Z, 0), V3.Y, V(-1, 0, 0)), [
                     new StraightEdge(new L3(V(-409.7544757659938, 183.97231686845578, 0), V(0.9961411421023264, -0.08776573939227537, 0)), V(-409.7544757659938, 183.97231686845578, 0), V(-42.014475765994064, 151.57231686845583, 0), 0, 369.16455355301895),
                     new StraightEdge(new L3(V(-42.014475765994064, 151.57231686845583, 0), V(-0.35632458233389064, 0.9343622381199803, 0)), V(-42.014475765994064, 151.57231686845583, 0), V(-114.91447576599401, 342.73231686845577, 0), 0, 204.5887474911559),
@@ -1782,7 +1782,7 @@ suite('BREP', () => {
         test('sphere() - cubelet near -V3.Y', assert => {
             const a = B2T.sphere()
             const b = B2T.box(0.2, 0.2, 0.2, '').translate(0, 0.95, 0).rotateAB(V3.Y, V(0, -0.9341723589627158, 0.35682208977308993)).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V(-1, 1.2246467991473532e-16, 0), V(-1.2246467991473532e-16, -1, 0), V3.Z), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -1), V(-1, 1.2246467991473532e-16, 0), 0, 3.141592653589793), V(0, 0, 1), V(0, 0, -1), 3.141592653589793, 0, null, V(-1, 1.2246467991473532e-16, 0), V(1, -1.2246467991473532e-16, 0)),
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(0, 0, -1), V(1, 0, 0)), V(0, 0, -1), V(0, 0, 1), 0, 3.141592653589793, null, V(1, 0, 0), V(-1, 0, 0))], [[
@@ -1821,14 +1821,14 @@ suite('BREP', () => {
             b2EqualAnd(assert, a, b, result)
         })
 
-        test('sphere() - B2 w/ PCS', assert => {
+        test('sphere() - BRep w/ PCS', assert => {
             const a = B2T.sphere()
             const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .rotateX(85 * DEG)
                 .translate(0.1, 0.1, 0.4)
                 .flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), [
                     new PCurveEdge(new SemiEllipseCurve(V3.O, V(0, 0, -1), V3.X, 0, 3.141592653589793), V3.Z, V(0, 0, -1), 3.141592653589793, 0, undefined, V3.X, V(-1, 0, 0), undefined),
                     new PCurveEdge(new SemiEllipseCurve(V3.O, V(0, 0, -1), V(-1, 1.2246467991473532e-16, 0), 0, 3.141592653589793), V(0, 0, -1), V3.Z, 0, 3.141592653589793, undefined, V(-1, 1.2246467991473532e-16, 0), V(1, -1.2246467991473532e-16, 0), NaN)], [[
@@ -1853,13 +1853,13 @@ suite('BREP', () => {
             b2EqualAnd(assert, a, b, result)
         })
 
-        test('sphere() - B2 w/ PCS 2', assert => {
+        test('sphere() - BRep w/ PCS 2', assert => {
             const a = B2T.sphere()
             const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .translate(0.1, -0.1, 1.2)
                 .flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V3.Z), [
                     new PCurveEdge(PICurve.forParametricStartEnd(new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2),V(0.30000000000000004, 0.010456949966158674, 1.2),V(0.2104569499661587, 0.1, 1.2),V(0.10000000000000002, 0.1, 1.2),0,1),V(0, 0, -2),0,1,0,1),new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V3.Z),V(-0.19844705044248784, 0.12871868194283445, 0),V(1.0013147204270783, 0.10500326852971952, 0),0.05,V(0.049995517986602345, -0.0006694634055134374, 0),10.566759296578763,24),V(0.1, 0.1, 0.9899494936611666),V(0.2732435609477568, 0, 0.961944882205103),23.973701901131395,10.56675929698456,undefined,V(0.016565564189929178, 6.596455448394482e-7, -0.0016732554612703607),V(0.007731508142452078, -0.01337007990394178, -0.0021965055077937438),"genseg876"),
                     new PCurveEdge(new SemiEllipseCurve(V3.O,V(0, 0, -1),V3.X,0,3.141592653589793),V(0.2732435609477568, 0, 0.961944882205103),V(0, 0, -1),2.8648293508136553,0,undefined,V(0.961944882205103, 0, -0.2732435609477568),V(-1, 0, 0),"looseSegment880"),
@@ -1891,14 +1891,14 @@ suite('BREP', () => {
             b2EqualAnd(assert, a, b, result)
         })
 
-        test('box() - B2 w/ PCS 2', assert => {
+        test('box() - BRep w/ PCS 2', assert => {
             const a = B2T.box()
             const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 4)
                 .translate(-0.1, 0.4, 2)
                 .rotateX(10 * DEG)
                 .flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), 0), V(0, 0, -1), V(0, -1, 0)), [
                     new StraightEdge(new L3(V(3.3306690738754696e-16, 0.21723834785181606, 2.0691582057422955), V(0, 0.17364817766693036, -0.9848077530122082)), V(0, 0.582086766878481, 0), V(0, 0.40575978617006886, 1), 2.1010783063124836, 1.0856516944267476),
                     new StraightEdge(new L3(V(0, 0, 1), V(0, 1, 0)), V(0, 0.40575978617006886, 1), V(0, 1, 1), 0.40575978617006886, 1),
@@ -1953,12 +1953,12 @@ suite('BREP', () => {
             b2EqualAnd(assert, a, b, result)
         })
 
-        test('B2 w/ PCS - sphere()', assert => {
+        test('BRep w/ PCS - sphere()', assert => {
             const a = B2T.sphere().flipped()
             const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .translate(0.1, -0.1, 1.2)
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V(0, 0, -1)), [
                     new PCurveEdge(PICurve.forParametricStartEnd(new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2),V(0.30000000000000004, 0.010456949966158674, 1.2),V(0.2104569499661587, 0.1, 1.2),V(0.10000000000000002, 0.1, 1.2),0,1),V(0, 0, 2),0,1,-1,0),new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V(0, 0, -1)),V(-0.23160239894313517, -0.12915228125996986, 0),V(1.0181542234276189, -0.10472518823699042, 0),0.05,V(0.049995921744993135, 0.0006385991454139499, 0),11.229923172886918,25),V(0.1, 0.1, 0.9899494936611666),V(0.2732435609477568, 0, 0.961944882205103),24.636865777425502,11.229923173071427,undefined,V(0.016560277557295548, 0.000005958024081923548, -0.0016717084106798042),V(0.007733269713768792, -0.013371839460495638, -0.0021969127399080707),"genseg0"),
                     new PCurveEdge(new SemiEllipseCurve(V3.O,V(0, 0, -1),V3.X,0,3.141592653589793),V(0.2732435609477568, 0, 0.961944882205103),V(0.19999999999999976, 0, 0.9797958971132713),2.8648293508136553,2.9402347327994627,undefined,V(-0.961944882205103, 0, 0.2732435609477568),V(-0.9797958971132713, 0, 0.19999999999999976),"looseSegment5"),
@@ -1985,23 +1985,23 @@ suite('BREP', () => {
             b2EqualAnd(assert, a, b, result)
         })
 
-        test('B2 w/ PCS and cylinder', assert => {
+        test('BRep w/ PCS and cylinder', assert => {
             const bezierEdge = Edge.forCurveAndTs(BezierCurve.EX2D, 0, 1)
             const a = B2T.extrudeEdges([bezierEdge, ...StraightEdge.chain([bezierEdge.b, V3.X.negated(), bezierEdge.a], false)],
                 P3.XY.flipped())
             const b = B2T.cylinder(0.2, 2).rotateY(90 * DEG).translate(0, 0, 0.5)
-            const result = B2.EMPTY
+            const result = BRep.EMPTY
             b2EqualAnd(assert, a, b, result)
         })
 
-        test('sphere() - B2 w/ PCS - sphere(0.9)', assert => {
+        test('sphere() - BRep w/ PCS - sphere(0.9)', assert => {
             const a = B2T.sphere(0.9).flipped()
             const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .translate(0.1, -0.1, 1.2).flipped()
             const c = B2T.sphere()
             const d = a.and(b)
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2),V(0.30000000000000004, 0.010456949966158674, 1.2),V(0.2104569499661587, 0.1, 1.2),V(0.10000000000000002, 0.1, 1.2),0,1),V(0, 0, -2),0,1,0,1), [
                     new PCurveEdge(PICurve.forParametricStartEnd(new ProjectedCurveSurface(new BezierCurve(V(0.30000000000000004, -0.1, 1.2),V(0.30000000000000004, 0.010456949966158674, 1.2),V(0.2104569499661587, 0.1, 1.2),V(0.10000000000000002, 0.1, 1.2),0,1),V(0, 0, -2),0,1,0,1),new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V3.Z),V(-0.19844705044248784, 0.12871868194283445, 0),V(1.0013147204270783, 0.10500326852971952, 0),0.05,V(0.049995517986602345, -0.0006694634055134374, 0),10.566759296578763,24),V(0.2732435609477568, 0, 0.961944882205103),V(0.1, 0.1, 0.9899494936611666),10.56675929698456,23.973701901131395,undefined,V(-0.007731508142452078, 0.01337007990394178, 0.0021965055077937438),V(-0.016565564189929178, -6.596455448394482e-7, 0.0016732554612703607),"genseg15"),
                     new StraightEdge(new L3(V(0.1, 0.1, 1.2),V(0, 0, -1)),V(0.1, 0.1, 0.9899494936611666),V(0.1, 0.1, 0.8888194417315591),0.21005050633883338,0.3111805582684408),
@@ -2047,7 +2047,7 @@ suite('BREP', () => {
         test('sphere() - cylinder().scale(0.5,0.1,4).translate(0.5,0,-2)', assert => {
             const a = B2T.sphere(1, undefined, PI)
             const b = B2T.cylinder().scale(0.5, 0.1, 4).translate(0.5, 0, -2).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), [
                     new PCurveEdge(PICurve.forParametricStartEnd(new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0, -2), V(0.5, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793), V(0, 0, -4), 0, 3.141592653589793, -1, 0), new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), V(1.2731963988416202e-20, -0.5, 0), V(3.188996395500053, -0.7499971537590627, 0), 0.05, V(0.005120444534810256, -0.0008960753763405105, 0), 0, 64.05192515435088), V3.Z, V(1, 0, -6.123233995736766e-17), 64.05192515435088, 0, undefined, V(2.2975365246571218e-8, 0.004999692371785629, 3.2623564744898186e-8), V(3.2596657710943364e-23, -0.0005120444534810256, -0.003584301505362042), 'genseg2'),
                     new PCurveEdge(PICurve.forParametricStartEnd(new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0, -2), V(0.5, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793), V(0, 0, -4), 0, 3.141592653589793, -1, 0), new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), V(3.187498479172125, -0.2500026670277628, 0), V(5.8696736266762844e-21, -0.5, 0), 0.05, V(-0.04999999965410212, 0.000005881308380821904, 0), 0.9181165186062885, 65), V(1, 0, -6.123233995736766e-17), V(0, 0, -1), 65, 0.9181165186062885, undefined, V(-1.0695969227928645e-23, 0.0003644485165007466, -0.0025511361298213853), V(-3.274029691737075e-8, -0.0049995302066378235, 4.649065993332993e-8), 'genseg3'),
@@ -2065,7 +2065,7 @@ suite('BREP', () => {
         test('box() - cylinder(0.2,2).translate(0.5,0.2)', assert => {
             const a = B2T.box()
             const b = B2T.cylinder(0.2, 2).translate(0.5, 0.2).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V3.X, V3.Z), [
                     new StraightEdge(new L3(V(0.5, 0, 0), V(0, 0, -1)), V(0.5, 0, 0), V(0.5, 0, 1), 0, -1),
                     new StraightEdge(new L3(V(1, 0, 1), V(-1, 0, 0)), V(0.5, 0, 1), V3.Z, 0.5, 1),
@@ -2129,13 +2129,13 @@ suite('BREP', () => {
 
         //test('cylinder() - triangle(1.5)', assert => {
         // file:///C:/Users/aval/Desktop/cs/viewer.html?a=B2T.cylinder()&b=B2T.extrudeEdges(Edge.ngon(3,1.5))&c=a.and(b).translate(3)
-        // const a = B2T.cylinder() const b = B2T.extrudeEdges(Edge.round(Edge.ngon(3,1.6),0.5)) const result = B2.EMPTY
+        // const a = B2T.cylinder() const b = B2T.extrudeEdges(Edge.round(Edge.ngon(3,1.6),0.5)) const result = BRep.EMPTY
         // b2EqualAnd(assert, a, b, result) },
         test('box - snug sphere', assert => {
             // file:///C:/Users/aval/Desktop/cs/viewer.html?a=B2T.cylinder()&b=B2T.extrudeEdges(Edge.ngon(3,1.5))&c=a.and(b).translate(3)
             const a = B2T.box(2, 2, 3)
             const b = B2T.sphere().translate(1, 1).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), 0), V(0, -1, 0), V3.Z), [
                     new StraightEdge(new L3(V3.O, V3.Y), V3.Y, V3.O, 1, 0),
                     new StraightEdge(new L3(V3.O, V3.Z), V3.O, V(0, 0, 3), 0, 3),
@@ -2200,7 +2200,7 @@ suite('BREP', () => {
             const a = B2T.extrudeEdges(edges, P3.XY.flipped(), V3.Z)
             const p = e1.curve.at(0.95).plus(V(-NLA_PRECISION * 2, 0, 0))
             const b = B2T.extrudeVertices([p, V(0, -0.2), V(0, 0.2)], P3.XY.flipped(), V3.Z).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new ProjectedCurveSurface(new BezierCurve(V3.O, V(-0.1, -1, 0), V(1.1, 1, 0), V3.X, -0.1, 1.1), V(0, 0, -1), 0, 1, -100, 100), [
                     new StraightEdge(new L3(V(0.6720378035955893, 0.15204861513358436, 0), V3.Z), V(0.6720378035955893, 0.15204861513358436, 0), V(0.6720378035955893, 0.15204861513358436, 1.0000000000000002), 0, 1.0000000000000002),
                     new PCurveEdge(new BezierCurve(V3.Z, V(-0.1, -1, 1), V(1.1, 1, 1), V(1, 0, 1), -0.1, 1.1), V(0.6720378035955893, 0.15204861513358436, 1.0000000000000002), V(0.9283999999999999, -0.39600000000000046, 1), 0.606150070371036, 1.1, undefined, V(1.5621108679697486, 1.2971789260840345, 0), V(-1.1580000000000013, -4.980000000000002, 0), 'looseSegment15'),
@@ -2236,7 +2236,7 @@ suite('BREP', () => {
         test('box() - cylinder(0.2,3).translate(0.5,0.2,-1).rotateX(10*DEG)', assert => {
             const a = B2T.box()
             const b = B2T.cylinder(0.2, 1).translate(0.5, 0.2, -0.5).rotateX(-10 * DEG).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V3.X, V3.Z), [
                     new StraightEdge(new L3(V3.X, V(-1, 0, 0)), V(0.5, 0, 0), V3.X, 0.5, 0),
                     new StraightEdge(new L3(V3.X, V3.Z), V3.X, V(1, 0, 1), 0, 1),
@@ -2296,7 +2296,7 @@ suite('BREP', () => {
         test('star - ball', assert => {
             const a = B2T.extrudeEdges(Edge.star(4, 2, 1), P3.XY, V3.Z.negated())
             const b = B2T.sphere().flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V3.Z, 0), V3.Y, V(-1, 0, 0)), [
                     new PCurveEdge(new SemiEllipseCurve(V3.O, V(-1, 0, 0), V3.Y, 0, PI), V(-1, 0, 0), V(-0.7071067811865475, 0.7071067811865476, 0), 0, 0.7853981633974483, undefined, V(0, 1, 0), V(0.7071067811865475, 0.7071067811865476, 0), 'genseg114'),
                     new StraightEdge(new L3(V(-0.7071067811865475, 0.7071067811865476, 0), V(-0.8773551979613604, -0.47984149113033353, 0)), V(-0.7071067811865475, 0.7071067811865476, 0), V(-2, 0, 0), 0, 1.4736257582079006),
@@ -2381,7 +2381,7 @@ suite('BREP', () => {
         test('cylinder - cube', assert => {
             const a = B2T.cylinder(4, 4)
             const b = B2T.extrudeEdges(Edge.ngon(4, 4), P3.XY, V(0, 0, 4)).translate(0, 0, 2)
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V3.O,V(4, 0, 0),V(0, 4, 0),0,3.141592653589793),V3.Z,0,3.141592653589793,0,4), [
                     new StraightEdge(new L3(V(2.4492935982947064e-16, 4, 0),V3.Z),V(2.4492935982947064e-16, 4, 2),V(2.4492935982947064e-16, 4, 4),2,4),
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 4),V(4, 0, 0),V(0, 4, 0),0,3.141592653589793),V(2.4492935982947064e-16, 4, 4),V(4, 0, 4),1.5707963267948966,0,undefined,V(4, -2.4492935982947064e-16, 0),V(0, -4, 0),"looseSegment16"),
@@ -2494,7 +2494,7 @@ suite('BREP', () => {
                         159.06073045098708, 0)
                 ], new P3(V3.Z, 0), V(0, 0, -100),
                 'extrude90').flipped()
-            const result = B2.EMPTY
+            const result = BRep.EMPTY
             b2EqualAnd(assert, a, b, result)
         })
 
@@ -2502,7 +2502,7 @@ suite('BREP', () => {
             const a = B2T.sphere()
             const b = B2T.text('a', 64, 64, await B2T.loadFont('../fonts/FiraSansMedium.woff'))
                 .scale(0.5 / 32).translate(-0.25, -0.25, 1.2).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V3.Z), [
                     new PCurveEdge(PICurve.forParametricStartEnd(new ProjectedCurveSurface(new BezierCurve(V(0.203, 0.11699999999999999, 1.2),V(0.203, 0.22399999999999998, 1.2),V(0.14500000000000002, 0.28900000000000003, 1.2),V(0.01100000000000001, 0.28900000000000003, 1.2),0,1),V(0, 0, -1),0,1,0,1),new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V3.Z),V(-0.2056696691423692, 0.2204278898429707, 0),V(1.0439436320496758, 0.24258309961480332, 0),0.05,V(0.04997573840380855, 0.0015574244746038783, 0),0,25),V(0.01100000000000001, 0.28900000000000003, 0.9572658982748733),V(0.203, 0.11699999999999999, 0.9721635664845705),24.121119863329767,4.116077045141477,undefined,V(0.0201005042337883, 9.197586443858332e-7, -0.00022732444134101863),V(6.91102262876807e-7, -0.016037175823935733, 0.0019283666813690102),"genseg1095"),
                     new PCurveEdge(new SemiEllipseCurve(V(0.203, 0, 0),V(0, 0, -0.9791787375142497),V(0, 0.9791787375142497, 0),0,3.141592653589793),V(0.203, 0.11699999999999999, 0.9721635664845705),V(0.20300000000000007, 0, 0.9791787375142498),3.0218185939500564,3.141592653589793,undefined,V(0, -0.9721635664845705, 0.11700000000000003),V(0, -0.9791787375142497, 1.1991481066899722e-16),"genseg1103"),
@@ -2663,7 +2663,7 @@ suite('BREP', () => {
         test('cylinder(1,2) AND cylinder(1,2).rotateZ(PI/2).translate(0,0,1)', assert => {
             const a = B2T.cylinder(1, 2)
             const b = B2T.cylinder(1, 2).rotateZ(PI / 2).translate(0, 0, 1)
-            const result = new B2([
+            const result = new BRep([
                 new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(1, 0, 0), V(0, 1, 0), 0, PI), V3.Z, undefined, undefined), [
                     new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(1, 0, 0), V(0, 1, 0), 0, PI), V(0, 1, 1), V(-1, 0, 1), 1.5707963267948966, PI, null, V(-1, 0, 0), V(0, -1, 0)),
                     new StraightEdge(new L3(V(-1, 0, 0), V(0, 0, 1)), V(-1, 0, 1), V(-1, 0, 2), 1, 2),
@@ -2702,7 +2702,7 @@ suite('BREP', () => {
         test('box - semicylinder', assert => {
             const box = B2T.box(4, 2, 2)
             const cyl = B2T.cylinder(1, 2, 180 * DEG).translate(2).flipped()
-            const result = new B2([
+            const result = new BRep([
                 new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V3.X, V3.Z), [
                     new StraightEdge(new L3(V(1, 1.2246467991473532e-16, 0), V(0, 0, -1)), V(1, 1.2246467991473532e-16, 0), V(1, 1.2246467991473532e-16, 2), 0, -2),
                     new StraightEdge(new L3(V(4, 0, 2), V(-1, 0, 0)), V(1, 0, 2), V(0, 0, 2), 3, 4),
@@ -2754,7 +2754,7 @@ suite('BREP', () => {
         //	const a = B2T.sphere(0.9).flipped()
         //	const b = B2T.text('a', await B2T.loadFont('fonts/FiraSansMedium.woff'), 64,
         // 64).scale(0.5/32).translate(-0.25,-0.25,1.2).flipped() const c = B2T.sphere() const d = a.and(b) const result =
-        // new B2([ new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0.20296874999999998, 0.11703124999999998,
+        // new BRep([ new RotationFace(new ProjectedCurveSurface(new BezierCurve(V(0.20296874999999998, 0.11703124999999998,
         // 1.2), V(0.20296874999999998, 0.2240625, 1.2), V(0.14500000000000002, 0.2890625, 1.2), V(0.010937499999999989,
         // 0.2890625, 1.2), 0, 1), V(0, 0, -1), 0, 1, -Infinity, Infinity), [ new PCurveEdge(new PICurve(new
         // ProjectedCurveSurface(new BezierCurve(V(0.20296874999999998, 0.11703124999999998, 1.2), V(0.20296874999999998,
@@ -2816,7 +2816,7 @@ suite('BREP', () => {
         //	test('fuz test', assert => {
         //		const a = B2T.box(1, 1, 1, 'box').minus(B2T.box(1 / 3, 1 / 3, 1, 'cut'))
         //		const b = B2T.box(3, 1 / 3, 1 / 3).translate(-1).flipped()
-        //		const result = new B2([
+        //		const result = new BRep([
         //			new PlaneFace(new PlaneSurface(new P3(V(-1, 0, 0), 0)), [
         //				new StraightEdge(new L3(V(0, 0.3333333333333333, 0), V(0, 0, 1)), V(0, 0.3333333333333333, 0), V(0, 0.3333333333333333, 0.3333333333333333), 0, 0.3333333333333333),
         //				new StraightEdge(new L3(V(0, 0.3333333333333333, 0), V(0, 0, 1)), V(0, 0.3333333333333333, 0.3333333333333333), V(0, 0.3333333333333333, 1), 0.3333333333333333, 1),
@@ -2884,14 +2884,14 @@ suite('BREP', () => {
 
 
 
-	//test('B2.withMergedFaces', assert => {
+	//test('BRep.withMergedFaces', assert => {
 	//    const box = B2T.box(5, 5, 5)
-	//    const boxToMerge = new B2(box.faces.filter((face:PlaneFace) => face.surface.plane.normal1.x != 1).concat(
+	//    const boxToMerge = new BRep(box.faces.filter((face:PlaneFace) => face.surface.plane.normal1.x != 1).concat(
 	//        box.translate(5, 0, 0).faces.filter((face:PlaneFace) => face.surface.plane.normal1.x != -1)
 	//    ), false)
 	//
 	//    assert.equal(boxToMerge.faces.length, 10)
 	//    const boxMerged = boxToMerge.withMergedFaces()
-	//    b2Equal(assert, boxToMerge, B2.EMPTY, boxMerged, B2T.box(10, 5, 5))
+	//    b2Equal(assert, boxToMerge, BRep.EMPTY, boxMerged, B2T.box(10, 5, 5))
 	//}
 })

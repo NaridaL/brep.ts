@@ -1,4 +1,4 @@
-import {inDifferentSystems, suite, test, testLoopContainsPoint, b2Equal, b2equals, linkB2} from './manager'
+import {inDifferentSystems, suite, test, testLoopContainsPoint, b2Equal, b2equals, linkBRep} from './manager'
 
 import {JavaSet as CustomSet} from 'javasetmap.ts'
 import {DEG, M4, P3XY, V, V3, eq} from 'ts3dutils'
@@ -32,7 +32,7 @@ suite('NLA', () => {
             StraightEdge.throughPoints(V(0, 1, 0), V(0, 1, 1)),
             Edge.forCurveAndTs(SemiEllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0)].map(edge => edge.transform(m4))
         const face = Face.create(surface, loop)
-        linkB2(assert, `mesh=${face.sce}.toMesh()`)
+        linkBRep(assert, `mesh=${face.sce}.toMesh()`)
         const area = face.calcArea()
         if (m4.isOrthogonal()) {
             assert.push(eq(area, PI / 2), area, PI / 2)
@@ -65,7 +65,7 @@ suite('NLA', () => {
 	//			StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
 	//			Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, 1), 0, PI/2),
 	//			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0)].map(edge =>
-	// edge.transform(m4)) const face = Face.create(surface, loop) linkB2(assert, `mesh=${face.sce}.scale(100, 100,
+	// edge.transform(m4)) const face = Face.create(surface, loop) linkBRep(assert, `mesh=${face.sce}.scale(100, 100,
 	// 100).toMesh()`) const area = face.calcArea() if (m4.isOrthogonal()) { assert.push(eq(area, 1), area, 1) } else {
 	// const expectedArea = face.toMesh().calcVolume().area assert.push(eq2(area, expectedArea, 0.1), area,
 	// expectedArea) } const loopReverse = Edge.reversePath(loop) const holeArea = surface.calculateArea(loopReverse)

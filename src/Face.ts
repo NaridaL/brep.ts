@@ -7,7 +7,7 @@ import {
 import {Mesh, pushQuad} from 'tsgl'
 
 import {
-	B2, ConicSurface, COPLANAR_SAME, Curve, dotCurve, dotCurve2, Edge, EllipsoidSurface, fff, getGlobalId, INSIDE,
+	BRep, ConicSurface, COPLANAR_SAME, Curve, dotCurve, dotCurve2, Edge, EllipsoidSurface, fff, getGlobalId, INSIDE,
 	IntersectionPointInfo, L3, P3, ParametricSurface, PlaneSurface, PointVsFace, SemiEllipsoidSurface,
 	splitsVolumeEnclosingCone2, splitsVolumeEnclosingFaces, splitsVolumeEnclosingFacesP, splitsVolumeEnclosingFacesP2,
 	StraightEdge, Surface, triangulateVertices, EPS,
@@ -50,7 +50,7 @@ export abstract class Face extends Transformable {
 				loopInfos.push(newLoopInfo)
 			} else {
 				const subLoopInfo = loopInfos.find(
-					loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
+					loopInfo => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
 				if (subLoopInfo) {
 					placeRecursively(newLoopInfo, subLoopInfo.subloops)
 				} else {
@@ -59,7 +59,7 @@ export abstract class Face extends Transformable {
 						const subLoopInfo = loopInfos[i]
 						//console.log('cheving subLoopInfo', surface.loopContainsPoint(newLoopInfo.edges,
 						// subLoopInfo.edges[0].a))
-						if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
+						if (BRep.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
 							newLoopInfo.subloops.push(subLoopInfo)
 							loopInfos.splice(i, 1) // remove it
 						}
@@ -93,12 +93,12 @@ export abstract class Face extends Transformable {
 	//		if (loopInfos.length == 0) {
 	//			loopInfos.push(newLoopInfo)
 	//		} else {
-	//			const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw,
+	//			const subLoopInfo = loopInfos.find(loopInfo => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw,
 	// newLoopInfo.loop, newLoopInfo.ccw, surface)) if (subLoopInfo) { placeRecursively(newLoopInfo,
 	// subLoopInfo.subloops) } else { // newLoopInfo isnt contained by any other subLoopInfo for (let i =
 	// loopInfos.length; --i >= 0;) { const subLoopInfo = loopInfos[i] //console.log('cheving subLoopInfo',
 	// surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a)) if
-	// (B2.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) { newLoopInfo.subloops.push(subLoopInfo)
+	// (BRep.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) { newLoopInfo.subloops.push(subLoopInfo)
 	// loopInfos.splice(i, 1) // remove it } } loopInfos.push(newLoopInfo) } } }  function newFacesRecursive(loopInfo:
 	// LoopInfo): void { // CW loops can be top level, if they are holes in the original face not contained in the new
 	// face if (loopInfo.ccw) { if (loopInfo.subloops.every(sl => !sl.ccw)) { const newFace = new
@@ -116,8 +116,8 @@ export abstract class Face extends Transformable {
 	}
 
 	intersectFace(face2: Face,
-				  thisBrep: B2,
-				  face2Brep: B2,
+				  thisBrep: BRep,
+				  face2Brep: BRep,
 				  faceMap: Map<Face, Edge[]>,
 				  thisEdgePoints: Map<Edge, IntersectionPointInfo[]>,
 				  otherEdgePoints: Map<Edge, IntersectionPointInfo[]>,
@@ -192,7 +192,7 @@ export abstract class Face extends Transformable {
 			function handleEdgeInFace(
 			    col1: Edge | undefined, col2: Edge | undefined,
                 face: Face, face2: Face,
-                thisBrep: B2, face2Brep: B2,
+                thisBrep: BRep, face2Brep: BRep,
                 coplanarSameIsInside: boolean,
                 has: typeof hasPair, add: typeof addPair
             ): boolean {
@@ -243,7 +243,7 @@ export abstract class Face extends Transformable {
 
 				addPair(col1.getCanon(), col2.getCanon())
                 let added = false
-				function handleColinearEdgeFaces(col1: Edge, col2: Edge, thisBrep: B2, face2Brep: B2,
+				function handleColinearEdgeFaces(col1: Edge, col2: Edge, thisBrep: BRep, face2Brep: BRep,
 					coplanarSameIsInside: boolean, thisEdgePoints: Map<Edge, IntersectionPointInfo[]>,
 					 has: typeof hasPair, add: typeof addPair) {
 					// not entirely sure for what i had the dirInsides in?
@@ -927,8 +927,8 @@ export class PlaneFace extends Face {
 	}
 
 	//intersectPlaneFace(face2: PlaneFace,
-	//                   thisBrep: B2,
-	//                   face2Brep: B2,
+	//                   thisBrep: BRep,
+	//                   face2Brep: BRep,
 	//                   faceMap: Map<Face, Edge[]>,
 	//                   thisEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
 	//                   otherEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,

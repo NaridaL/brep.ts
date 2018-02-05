@@ -4,7 +4,7 @@ import { addOwnProperties, arrayFromFunction, assert, DEG, int, M4, round10, TAU
 import { DRAW_MODES, GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext } from 'tsgl'
 
 import {
-	B2, B2T, BezierCurve, BREPGLContext, cameraChangeListeners, COLORS, Curve, curvePointMF, CustomPlane, Edge, EllipseCurve,
+	BRep, B2T, BezierCurve, BREPGLContext, cameraChangeListeners, COLORS, Curve, curvePointMF, CustomPlane, Edge, EllipseCurve,
 	Eye, Face, followAlgorithm2d, getMouseLine, HyperbolaCurve, ImplicitCurve, initNavigationEvents, L3,
 	MathFunctionR2R,
 	P3,
@@ -22,7 +22,7 @@ const { pow, sign } = Math
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 }
 const drPs: (V3 | { info: string, p: V3 })[] = []
 const drVs: any[] = []
-const b2s: B2[] = []
+const b2s: BRep[] = []
 const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
 const aMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int, count: int }>, TRIANGLES: int[], normals: V3[] })[] = []
 //bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
@@ -37,10 +37,10 @@ import * as brepts from './index'
 const addMissing = (to: any, from: any) => Object.keys(from).forEach(key => 'Buffer' != key && !to[key] && (to[key] = from[key]))
 // tslint:disable-next-line:class-name
 class __Context {
-	a: B2 = undefined
-	b: B2 = undefined
-	c: B2 = undefined
-	d: B2 = undefined
+	a: BRep = undefined
+	b: BRep = undefined
+	c: BRep = undefined
+	d: BRep = undefined
 	edges: Edge[] = []
 	wireframe: boolean = false
 	normallines: boolean = false
@@ -57,7 +57,7 @@ addMissing(window, tsgl)
 addMissing(window, brepts)
 interface Window extends __Context { }
 const g = window as any as Window & __Context
-function initB2() {
+function initBRep() {
 	// Object.assign(window, new __Context())
 	eye.pos = V(1, 2, 101)
 	eye.focus = V(0, 1, 0)
@@ -353,7 +353,7 @@ export async function viewerMain() {
 	// initInfoEvents(paintScreen, g l)
 	//initToolTips() // hide tooltip on mouseover
 	//initPointInfoEvents()
-	initB2()
+	initBRep()
 	setupCamera(eye, gl)
 	paintScreen()
 }

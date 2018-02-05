@@ -6,22 +6,22 @@ import {clamp, DEG, int, round10, TAU, V, V3} from 'ts3dutils'
 import {TSGLContext} from 'tsgl'
 import * as hljs from 'highlight.js'
 
-import {B2, B2T, CustomPlane, Edge, P3} from './index'
+import {BRep, B2T, CustomPlane, Edge, P3} from './index'
 import {BREPGLContext, initMeshes, initNavigationEvents, initShaders, setupCamera} from './BREPGLContext'
 
-const fakeB2Mesh = (false as true) && ({} as B2).toMesh()
+const fakeB2Mesh = (false as true) && ({} as BRep).toMesh()
 type B2Mesh = typeof fakeB2Mesh
 
-type DemoProps = { width: string, height: string, id: string, f: (...args: any[]) => B2 | B2[], args: DemoArg[] }
+type DemoProps = { width: string, height: string, id: string, f: (...args: any[]) => BRep | BRep[], args: DemoArg[] }
 type DemoDesc = {
     showingSource: boolean
     id: string
-    f(...args: any[]): B2 | B2[]
+    f(...args: any[]): BRep | BRep[]
     args: DemoArg[]
     canvas: HTMLCanvasElement
     gl: BREPGLContext
     eye: { pos: V3, focus: V3, up: V3, zoomFactor: 8 }
-    b2s: B2[]
+    b2s: BRep[]
     meshes: (B2Mesh & { lines?: int[] })[]
 }
 

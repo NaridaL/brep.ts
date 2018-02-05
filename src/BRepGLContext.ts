@@ -318,6 +318,6 @@ export const cameraChangeListeners: ((eye: Eye) => void)[] = []
 export const SHADERS_TYPE_VAR = (false as true) && initShaders(0 as any)
 export type SHADERS_TYPE = typeof SHADERS_TYPE_VAR
 // let shaders: typeof SHADERS_TYPE_VAR
-// declare let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
-// 	, normallines: boolean = false, b2s: B2[] = []
+// declare let a: BRep, b: BRep, c: BRep, d: BRep, edges: Edge[] = [], hovering: any,
+// 	, normallines: boolean = false, b2s: BRep[] = []
 // const

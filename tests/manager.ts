@@ -15,15 +15,15 @@ function sanitizeFilename(s: string) {
 }
 
 import {
-	B2, ConicSurface, Curve, Edge, Face, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface,
+	BRep, ConicSurface, Curve, Edge, Face, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface,
 	PointVsFace, Surface,
 } from '..'
 
 import * as fs from 'fs'
 
 export function b2equals(assert: Assert, actual, expected, message = '') {
-	if (!(actual instanceof B2)) {
-		assert.push(false, typeof actual, B2, 'actual is not a B2')
+	if (!(actual instanceof BRep)) {
+		assert.push(false, typeof actual, BRep, 'actual is not a BRep')
 		return
 	}
 
@@ -36,10 +36,10 @@ export function b2equals(assert: Assert, actual, expected, message = '') {
 	})
 }
 
-export function b2EqualAnd(test, a: B2, b: B2, expected: B2) {
+export function b2EqualAnd(test, a: BRep, b: BRep, expected: BRep) {
 	return b2Equal(test, a, b, () => a.and(b), expected)
 }
-export function b2Equal(test, a: B2, b: B2, calculateActual: () => B2, expected: B2) {
+export function b2Equal(test, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep) {
 	let actual
 	try {
 		actual = calculateActual()
@@ -93,7 +93,7 @@ export function linkB3(assert: Assert, values, msg = 'view') {
 		}).join('\n')
 	const o = sanitizeFilename(assert.getTestName() + '_' + msg) + '.html'
 	fs.writeFileSync('results/' + o, demoFile.replace('/*INSERT*/', script), 'utf8')
-	// linkB2(assert, makeLink(values), msg)
+	// linkBRep(assert, makeLink(values), msg)
 	assert.link('http://localhost:10001/tests/results/' + o)
 }
 const demoFile = fs.readFileSync('../viewer.html', 'utf8')
@@ -111,7 +111,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 //mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]
 //edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`
 //			fs.writeFileSync('results/' + sanitizeFilename(assert.getTestName()) + '.html', demoFile.replace('/*INSERT*/', script), 'utf8')
-//			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
+//			linkBRep(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()];edges=${isCurves.map(c => Edge.forCurveAndTs(c)).sce}`)
 
 			assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
 			for (const curve of isCurves) {
@@ -130,7 +130,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 				// > 0, 'pN1.cross(pN2).dot(dp) > 0')
 			}
 		} else {
-			linkB2(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
+			linkBRep(assert, `mesh=[${surface1}.toMesh(), ${surface2}.toMesh()]`)
 		}
 	}
 }
@@ -153,7 +153,7 @@ export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
 }
 
 export function testZDirVolumeAndArea(assert: Assert, face: Face) {
-	linkB2(assert, `mesh=${face.sce}.toMesh()`)
+	linkBRep(assert, `mesh=${face.sce}.toMesh()`)
 	const faceMeshVol = face.toMesh().calcVolume()
 	const actual = face.zDirVolume().volume, expected = faceMeshVol.volume
 	assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
@@ -219,7 +219,7 @@ export function testCurve(ass: Assert, curve: Curve) {
 }
 
 export function testParametricSurface(ass: Assert, surf: ParametricSurface) {
-	linkB2(ass, `mesh=[${surf}.toMesh()]`, 'view')
+	linkBRep(ass, `mesh=[${surf}.toMesh()]`, 'view')
 	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)]
 		.map(pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0))
 	const points = params.map(({ x, y }) => surf.pST(x, y))
@@ -319,7 +319,7 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 	surface instanceof P3 && (surface = new PlaneSurface(surface))
 	const ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
 	const points = ists.map(t => curve.at(t))
-	linkB2(assert, `mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
+	linkBRep(assert, `mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
 		ists.join(', ') || 'view')
 	assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
 	for (const t of ists) {
@@ -330,13 +330,13 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 	}
 }
 
-export function linkB2(assert: Assert, hash: string, message = 'view') {
+export function linkBRep(assert: Assert, hash: string, message = 'view') {
 	const escapedHash = encodeURIComponent(hash.replace(/, /g, ',').replace(/(\n|\t)+/g, '')).replace(/\(/g, '%28').replace(/\)/g, '%29')
 	assert.link('http://localhost:10001/viewer.html#' + escapedHash, message)
 }
 
 export function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
 	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
-	linkB2(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
+	linkBRep(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }

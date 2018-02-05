@@ -24,7 +24,7 @@ export class HyperbolaCurve extends XiEtaCurve {
 	}
 
 	/**
-	 * http://www.wolframalpha.com/input/?i=x%C2%B2-y%C2%B2%3D1,ax%2Bby%3Dc
+	 * http://www.wolframalpha.com/input/?i=x%C2%BRep-y%C2%BRep%3D1,ax%2Bby%3Dc
 	 * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
 	 */
 	static magic(a: number, b: number, c: number): number[] {

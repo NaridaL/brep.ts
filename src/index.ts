@@ -28,7 +28,7 @@ export * from './CustomPlane'
 export * from './Edge'
 export * from './FaceInfo'
 export * from './Face'
-export * from './B2'
+export * from './BRep'
 
 export * from './ClassSerializer'
 export * from './BREPGLContext'

@@ -1,17 +1,17 @@
 QUnit.module('B2TestMore')
 
-function doTest(test, face: PlaneFace, brep2: B2, resultEdges: Edge[], resultPoints: V3[], desc?: string) {
+function doTest(test, face: PlaneFace, brep2: BRep, resultEdges: Edge[], resultPoints: V3[], desc?: string) {
 	if (brep2 instanceof Face) {
-		brep2 = new B2([brep2])
+		brep2 = new BRep([brep2])
 	}
 	brep2.buildAdjacencies()
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-						href='brep2.html?a=${new B2([face]).toSource()}&b=${brep2.toSource()}
+						href='brep2.html?a=${new BRep([face]).toSource()}&b=${brep2.toSource()}
 						&edges=[${resultEdges.map(e => e.toSource()).join(',')}]
 						&points=[${resultPoints.map(e => e.toSource()).join(',')}]'>${desc}</a>`)
 	const faceMap = new Map(), edgeMap = new Map(), colinearEdgePairs = new CustomSet()
 	brep2.faces.forEach(face2 => {
-		face.intersectPlaneFace(face2, new B2([face]), brep2, faceMap, edgeMap, colinearEdgePairs)
+		face.intersectPlaneFace(face2, new BRep([face]), brep2, faceMap, edgeMap, colinearEdgePairs)
 	})
 	const edges = faceMap.get(face) || []
 	console.log(faceMap)
@@ -30,7 +30,7 @@ function doTest(test, face: PlaneFace, brep2: B2, resultEdges: Edge[], resultPoi
 	})
 }
 
-function doTestWithBrep(test: Assert, face: Face, faceBrep: B2, brep2: B2, resultEdges: Edge[], resultPoints: V3[], desc: string, backwards?: boolean) {
+function doTestWithBrep(test: Assert, face: Face, faceBrep: BRep, brep2: BRep, resultEdges: Edge[], resultPoints: V3[], desc: string, backwards?: boolean) {
 	faceBrep.buildAdjacencies()
 	brep2.buildAdjacencies()
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
@@ -76,39 +76,39 @@ function doTestWithBrep(test: Assert, face: Face, faceBrep: B2, brep2: B2, resul
 function doTest2(test, face, brep, resultFaces, desc) {
 	if (brep instanceof Face) {
 		console.log('blah')
-		brep = new B2([brep])
+		brep = new BRep([brep])
 	}
 	const faceMap = new Map(), edgeMap = new CustomMap()
-	const faceBrep = new B2([face])
+	const faceBrep = new BRep([face])
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
+href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new BRep(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	brep.faces.forEach(face2 => {
 		face.intersectPlaneFace(face2, faceBrep, brep, faceMap, edgeMap, new CustomMap(), new CustomSet())
 	})
 	console.log('faceMap', faceMap)
-	const edgeLooseSegments = B2.prototype.getLooseEdgeSegments(edgeMap)
+	const edgeLooseSegments = BRep.prototype.getLooseEdgeSegments(edgeMap)
 	const newFaces = []
-	B2.reconstituteFaces([face], edgeLooseSegments, faceMap, newFaces)
+	BRep.reconstituteFaces([face], edgeLooseSegments, faceMap, newFaces)
 	test.equal(newFaces.length, resultFaces.length, 'number of new faces')
 	test.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
+href='brep2.html?a=${faceBrep.toSource()}&b=${brep.toSource()}&c=${new BRep(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
 	resultFaces.forEach(face => {
 		test.ok(newFaces.some(newFace => newFace.likeFace(face)), `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`)
 	})
 }
 
 function doTest3(assert, face: Face, newEdges: Edge[], points: Map<Edge, V3[]>, resultFaces: Face[], desc: string) {
-	const faceBrep = new B2([face])
+	const faceBrep = new BRep([face])
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='brep2.html?a=${faceBrep.toSource()}&c=${new B2(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
+href='brep2.html?a=${faceBrep.toSource()}&c=${new BRep(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`)
 	const isps = Array.from(points.entries()).map(([edge, ps]) =>
 		ps.map(p => ({edge: edge, p: p, edgeT: snap(snap(edge.curve.pointT(p), edge.aT), edge.bT)})),
 	).concatenated()
-	const edgeLooseSegments = B2.prototype.getLooseEdgeSegments(new Map().set(face, isps))
+	const edgeLooseSegments = BRep.prototype.getLooseEdgeSegments(new Map().set(face, isps))
 	const newFaces = []
-	B2.reconstituteFaces([face], edgeLooseSegments, new Map().set(face, newEdges), newFaces)
+	BRep.reconstituteFaces([face], edgeLooseSegments, new Map().set(face, newEdges), newFaces)
 	assert.ok(true, `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-        href='brep2.html?a=${faceBrep.toSource()}&c=${new B2(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
+        href='brep2.html?a=${faceBrep.toSource()}&c=${new BRep(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`)
 	assert.equal(newFaces.length, resultFaces.length, 'number of new faces')
 	resultFaces.forEach(face => {
 		assert.ok(newFaces.some(newFace => newFace.likeFace(face)), `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`)
@@ -383,7 +383,7 @@ registerTests({
 
 		// from test case 3:4
 		// V-shape spine touching middle, splits volume enclosing in both directions
-		let brep = new B2([
+		let brep = new BRep([
 			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).flipped(),
 			PlaneFace.forVertices(P3.XY, [V(0, 0), V(5, 0), V(5, 10), V(0, 10)]).rotateX(PI / 4),
 		]).rotateX(-PI / 2).flipped().translate(0, 2, 0)
@@ -466,7 +466,7 @@ registerTests({
 		doTest3(assert, baseFace14, edges14, points14, result14, 'extending an existing hole')
 	},
 
-	'B2.prototype.minus remove half of a half-pie'(assert) {
+	'BRep.prototype.minus remove half of a half-pie'(assert) {
 		let pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		let boxKnife = B2T.box(11, 10, 7, 'knife').translate(-10, -1, -1)
 
@@ -487,10 +487,10 @@ registerTests({
 			b2Equal(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
 		}
 	},
-	'B2.prototype.minus cut hole through side of pie'(assert) {
+	'BRep.prototype.minus cut hole through side of pie'(assert) {
 		let pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
-		let result = new B2([
+		let result = new BRep([
 			new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V3.Z, undefined, undefined), [
 				new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 5), V(8, 0, 0), 5, 0),
 				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 0), V(-8, 0, 0), 0, 3.141592653589793, undefined, V(0, 8, 0), V(-0, -8, 0)),
@@ -546,7 +546,7 @@ registerTests({
 		console.log(pie.minus(punch).sce)
 	},
 
-	'B2.prototype.minus including ProjectedCurveSurface'(assert) {
+	'BRep.prototype.minus including ProjectedCurveSurface'(assert) {
 		let s1 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		let s2 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		let a = B2T.extrudeEdges([
@@ -555,7 +555,7 @@ registerTests({
 			P3.XY.flipped(), V(0, 0, 5), 'a/4')
 		let punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1)
 
-		let result = new B2([
+		let result = new BRep([
 			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0), V(0, 0, -1), V(1, 0, 0)), [
 				new StraightEdge(new L3(V(10, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(10, 0, 0), 10, 0),
 				new StraightEdge(new L3(V(10, 0, 0), V(0, 0, 1)), V(10, 0, 0), V(10, 0, 5), 0, 5),
@@ -618,15 +618,15 @@ registerTests({
 		 */
 
 		const b = B2T.box(10, 10, 10), a = B2T.box(2, 2, 2).translate(1, 1, 1)
-		b2Equal(assert, a, b, a.minus(b), B2.EMPTY)
-		b2Equal(assert, a, b, b.minus(a), new B2(b.faces.concat(a.flipped().faces), false))
+		b2Equal(assert, a, b, a.minus(b), BRep.EMPTY)
+		b2Equal(assert, a, b, b.minus(a), new BRep(b.faces.concat(a.flipped().faces), false))
 		b2Equal(assert, a, b, b.plus(a), b)
 		b2Equal(assert, a, b, b.and(a), a)
 
 		const c = B2T.box(2, 2, 2).translate(20)
 		b2Equal(assert, a, c, a.minus(c), a)
-		b2Equal(assert, a, c, c.plus(a), new B2(c.faces.concat(a.faces), false))
-		b2Equal(assert, a, c, c.and(a), B2.EMPTY)
+		b2Equal(assert, a, c, c.plus(a), new BRep(c.faces.concat(a.faces), false))
+		b2Equal(assert, a, c, c.and(a), BRep.EMPTY)
 
 
 	},

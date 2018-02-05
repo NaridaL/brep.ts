@@ -5,7 +5,7 @@ import {
 } from 'ts3dutils'
 
 import {
-	B2, BezierCurve, ConicSurface, Curve, Edge, EllipseCurve, Face, FaceInfoFactory, getGlobalId, L3, P3, PCurveEdge,
+	BRep, BezierCurve, ConicSurface, Curve, Edge, EllipseCurve, Face, FaceInfoFactory, getGlobalId, L3, P3, PCurveEdge,
 	PlaneFace, PlaneSurface, ProjectedCurveSurface, RotationFace, SemiCylinderSurface, SemiEllipseCurve,
 	SemiEllipsoidSurface, StraightEdge, Surface, XiEtaCurve,
 } from './index'
@@ -93,7 +93,7 @@ function rotateCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 
 export namespace B2T {
 
-	export function box(w: number = 1, h: number = 1, d: number = 1, name?: string): B2 {
+	export function box(w: number = 1, h: number = 1, d: number = 1, name?: string): BRep {
 		assertNumbers(w, h, d)
 		assertInst('string' === typeof name)
 		const baseVertices = [
@@ -106,7 +106,7 @@ export namespace B2T {
 		return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, d), name, generator)
 	}
 
-	export function puckman(radius: number, rads: raddd, height: number, name: string): B2 {
+	export function puckman(radius: number, rads: raddd, height: number, name: string): BRep {
 		assertf(() => lt(0, radius))
 		assertf(() => lt(0, rads) && le(rads, TAU))
 		assertf(() => lt(0, height))
@@ -126,7 +126,7 @@ export namespace B2T {
 								 offset: V3 = V3.Z,
 								 name: string = 'extrude' + getGlobalId(),
 								 gen?: string,
-								 infoFactory?: FaceInfoFactory<any>): B2 {
+								 infoFactory?: FaceInfoFactory<any>): BRep {
 		baseFaceEdges = fixEdges(baseFaceEdges)
 		//Array.from(combinations(baseFaceEdges.length)).forEach(({i, j}) => {
 		//	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce +
@@ -168,21 +168,21 @@ export namespace B2T {
 		}) as Face[]
 		faces.push(bottomFace, topFace)
 		gen = gen || callsce('B2T.extrudeEdges', baseFaceEdges, baseFacePlane, offset, name)
-		return new B2(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames)
+		return new BRep(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames)
 	}
 
 
-	export function cylinder(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cylinder' + getGlobalId()): B2 {
+	export function cylinder(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cylinder' + getGlobalId()): BRep {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return rotateEdges(StraightEdge.chain(vertices, true), rads, name)
 	}
 
-	export function cone(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cone' + getGlobalId()): B2 {
+	export function cone(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cone' + getGlobalId()): BRep {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return rotateEdges(StraightEdge.chain(vertices, true), rads, name)
 	}
 
-	export function sphere(radius: number = 1, name: string = 'sphere' + getGlobalId(), rot: raddd = TAU): B2 {
+	export function sphere(radius: number = 1, name: string = 'sphere' + getGlobalId(), rot: raddd = TAU): BRep {
 		const ee = PCurveEdge.create(
 			new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
 			new V3(0, 0, -radius), new V3(0, 0, radius),
@@ -193,7 +193,7 @@ export namespace B2T {
 		return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator)
 	}
 
-	export function menger(res: int = 2, name: string = 'menger' + getGlobalId()): B2 {
+	export function menger(res: int = 2, name: string = 'menger' + getGlobalId()): BRep {
 		let result = B2T.box(1, 1, 1)
 		if (0 == res) return result
 		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
@@ -216,7 +216,7 @@ export namespace B2T {
 		return result
 	}
 
-	export function menger2(res: int = 2, name: string = 'menger' + getGlobalId()): B2 {
+	export function menger2(res: int = 2, name: string = 'menger' + getGlobalId()): BRep {
 		if (0 == res) return B2T.box(1, 1, 1)
 
 		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
@@ -234,7 +234,7 @@ export namespace B2T {
 		}
 
 		recurse(res, M4.IDENTITY)
-		const stencil = new B2(stencilFaces, true)
+		const stencil = new BRep(stencilFaces, true)
 
 		return B2T.box()
 			.and(stencil)
@@ -242,7 +242,7 @@ export namespace B2T {
 			.and(stencil.transform(M4.ZXY))
 	}
 
-	export function torus(rSmall: number, rLarge: number, rads: raddd, name: string): B2 {
+	export function torus(rSmall: number, rLarge: number, rads: raddd, name: string): BRep {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		const curve = SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0))
@@ -250,7 +250,7 @@ export namespace B2T {
 		return B2T.rotateEdges(baseEdges, rads, name || 'torus' + getGlobalId())
 	}
 
-	export function torusUnsplit(rSmall: number, rLarge: number, rads: raddd, name: string): B2 {
+	export function torusUnsplit(rSmall: number, rLarge: number, rads: raddd, name: string): BRep {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		const baseEdge = PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI)
@@ -258,9 +258,9 @@ export namespace B2T {
 	}
 
 	/**
-	 * baseLoop should be CCW on XZ plane for a bounded B2
+	 * baseLoop should be CCW on XZ plane for a bounded BRep
 	 */
-	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string, infoFactory?: FaceInfoFactory<any>): B2 {
+	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string, generator?: string, infoFactory?: FaceInfoFactory<any>): BRep {
 		assert(!eq(PI, totalRads) || PI == totalRads) // URHGJ
 		assertf(() => lt(0, totalRads) && le(totalRads, TAU))
 		totalRads = snap(totalRads, TAU)
@@ -372,13 +372,13 @@ export namespace B2T {
 				new PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + 'end', infoEnd))
 		}
 		const infiniteVolume = new PlaneSurface(P3.ZX).edgeLoopCCW(baseLoop)
-		return new B2(faces, infiniteVolume, generator)
+		return new BRep(faces, infiniteVolume, generator)
 	}
 
 	/**
-	 * loop should be CCW on XZ plane for a bounded B2
+	 * loop should be CCW on XZ plane for a bounded BRep
 	 */
-	//export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): B2 {
+	//export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): BRep {
 	//	assert(Edge.isLoop(loop))
 	//	const rotationMatrix = M4.rotateZ(rads)
 	//	const open = !eq(rads, 2 * PI)
@@ -411,7 +411,7 @@ export namespace B2T {
 	// RotationFace(surface, faceEdges) } } else { assert(false, edge) } }).filter(x => x) if (open) { const
 	// endFaceEdges = endEdges.map(edge => edge.flipped()).reverse() faces.push( new PlaneFace(new
 	// PlaneSurface(P3.ZX.flipped()), loop), new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)) }
-	// return new B2(faces, undefined) }
+	// return new BRep(faces, undefined) }
 
 	export function quaffle() {
 		const baseK = B2T.sphere(1).translate(0, 1.7).flipped()
@@ -421,13 +421,13 @@ export namespace B2T {
 		// .map(vi => B2T.DODECAHEDRON_VERTICES[vi])
 		// .reduce((a,b) => a.plus(b), V3.O)
 		// .unit()))
-		const ss = new B2(TETRAHEDRON_VERTICES.flatMap(v => baseK.rotateAB(V3.Y, v).faces), false)
+		const ss = new BRep(TETRAHEDRON_VERTICES.flatMap(v => baseK.rotateAB(V3.Y, v).faces), false)
 		//return ss
 		return B2T.sphere().and(ss)
 	}
 
 	export function extrudeFace(face: PlaneFace, dir: V3) {
-		return new B2(
+		return new BRep(
 			extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(
 				face, face.translate(dir.x, dir.y, dir.z).flipped(),
 				face.holes.flatMap(
@@ -494,7 +494,7 @@ export namespace B2T {
 		})
 		const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace)
 		const generator = `B2T.text(${text.sce}, ${size}, ${depth})`
-		const hello = B2.join(faces.map(face => B2T.extrudeFace(face, V(0, 0, -depth))), generator)
+		const hello = BRep.join(faces.map(face => B2T.extrudeFace(face, V(0, 0, -depth))), generator)
 		return hello
 
 	}
@@ -508,8 +508,8 @@ export namespace B2T {
 
 	export function whatever() {
 		const iso = isocahedron()
-		const numbersB2 = B2.join(iso.faces.map((face, i) => {
-			const numberB2 = text('' + (i + 1), 0.4, -2)
+		const numbersBRep = BRep.join(iso.faces.map((face, i) => {
+			const numberBRep = text('' + (i + 1), 0.4, -2)
 			const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
 
 			const sys = M4.forSys(
@@ -517,18 +517,18 @@ export namespace B2T {
 				centroid.cross(face.contour[0].aDir),
 				centroid.unit(),
 				centroid)
-			return numberB2.transform(sys.times(M4.translate(-numberB2.getAABB().size().x / 2, -0.1, -0.04)))
+			return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)))
 		}))
 		const s = sphere(0.9)
-		//return iso.and(numbersB2)
-		return iso.and(s).and(numbersB2)
-		//return numbersB2
+		//return iso.and(numbersBRep)
+		return iso.and(s).and(numbersBRep)
+		//return numbersBRep
 	}
 
 	export function d20() {
 		const iso = isocahedron()
-		const numbersB2 = B2.join(iso.faces.map((face, i) => {
-			const numberB2 = text('' + (i + 1), 0.4, -2)
+		const numbersBRep = BRep.join(iso.faces.map((face, i) => {
+			const numberBRep = text('' + (i + 1), 0.4, -2)
 			const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
 
 			const sys = M4.forSys(
@@ -536,12 +536,12 @@ export namespace B2T {
 				centroid.cross(face.contour[0].aDir),
 				centroid.unit(),
 				centroid)
-			return numberB2.transform(sys.times(M4.translate(-numberB2.getAABB().size().x / 2, -0.1, -0.04)))
+			return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)))
 		}))
 		const s = sphere(0.9)
-		//return iso.and(numbersB2)
-		return iso.and(s).and(numbersB2)
-		//return numbersB2
+		//return iso.and(numbersBRep)
+		return iso.and(s).and(numbersBRep)
+		//return numbersBRep
 	}
 
 	export function rotStep(edges: Edge[], totalRads: raddd, count: int) {
@@ -616,7 +616,7 @@ export namespace B2T {
 			const endFace = new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(totalRads)), endFaceEdges)
 			faces.push(new PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace)
 		}
-		return new B2(faces)
+		return new BRep(faces)
 	}
 
 	export function fixEdges(edges: Edge[]): Edge[] {
@@ -685,7 +685,7 @@ export namespace B2T {
 	// Returns a tetrahedron (3 sided pyramid).
 	// Faces will face outwards.
 	// abcd can be in any order. The only constraint is that abcd cannot be on a common plane.
-	export function tetrahedron(a: V3, b: V3, c: V3, d: V3, name: string = 'tetra' + getGlobalId()): B2 {
+	export function tetrahedron(a: V3, b: V3, c: V3, d: V3, name: string = 'tetra' + getGlobalId()): BRep {
 		assertVectors(a, b, c, d)
 		const dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d)
 		if (eq0(dDistance)) {
@@ -707,7 +707,7 @@ export namespace B2T {
 			new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda'),
 		]
 		const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
-		return new B2(faces, false, gen)
+		return new BRep(faces, false, gen)
 	}
 
 	const b = 1 / GOLDEN_RATIO, c = 2 - GOLDEN_RATIO
@@ -842,10 +842,10 @@ export namespace B2T {
 			})
 			return new PlaneFace(surface, contour)
 		})
-		return new B2(faces, false, generator)
+		return new BRep(faces, false, generator)
 	}
 
-	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + getGlobalId()): B2 {
+	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + getGlobalId()): BRep {
 		assertInst(Edge, ...baseEdges)
 		assertVectors(apex)
 
@@ -860,6 +860,6 @@ export namespace B2T {
 		const bottomFace = Face.create(baseSurface, baseEdges)
 		faces.push(bottomFace)
 		const generator = callsce('B2T.pyramidEdges', baseEdges, apex, name)
-		return new B2(faces, false, generator, name)
+		return new BRep(faces, false, generator, name)
 	}
 }

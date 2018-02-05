@@ -77,7 +77,7 @@ export function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, face
 	}
 
 
-	const assembledFaces = B2.assembleFacesFromLoops(loops, surface, faceConstructor)
+	const assembledFaces = BRep.assembleFacesFromLoops(loops, surface, faceConstructor)
 	assertf(() => 1 == assembledFaces.length)
 	return assembledFaces[0]
 }
@@ -122,9 +122,9 @@ export function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], face
 	return result == Number.MAX_SAFE_INTEGER ? 0 : result
 }
 
-export class B2 extends Transformable {
-	static EMPTY = new B2([], false, 'B2.EMPTY', new Map()).buildAdjacencies()
-	static R3 = new B2([], true, 'B2.R3', new Map()).buildAdjacencies()
+export class BRep extends Transformable {
+	static EMPTY = new BRep([], false, 'BRep.EMPTY', new Map()).buildAdjacencies()
+	static R3 = new BRep([], true, 'BRep.R3', new Map()).buildAdjacencies()
 	faces: Face[]
 	infiniteVolume: boolean
 	generator: string | undefined
@@ -170,7 +170,7 @@ export class B2 extends Transformable {
 			if (loopInfos.length == 0) {
 				loopInfos.push(newLoopInfo)
 			} else {
-				const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
+				const subLoopInfo = loopInfos.find(loopInfo => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface))
 				if (subLoopInfo) {
 					placeRecursively(newLoopInfo, subLoopInfo.subloops)
 				} else {
@@ -179,7 +179,7 @@ export class B2 extends Transformable {
 						const subLoopInfo = loopInfos[i]
 						//console.log("cheving subLoopInfo", surface.loopContainsPoint(newLoopInfo.edges,
 						// subLoopInfo.edges[0].a))
-						if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
+						if (BRep.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
 							newLoopInfo.subloops.push(subLoopInfo)
 							loopInfos.splice(i, 1) // remove it
 						}
@@ -215,8 +215,8 @@ export class B2 extends Transformable {
 		return newFaces
 	}
 
-	static join(b2s: B2[], generator?: string) {
-		return new B2(b2s.flatMap(b2 => b2.faces), false, generator)
+	static join(b2s: BRep[], generator?: string) {
+		return new BRep(b2s.flatMap(b2 => b2.faces), false, generator)
 	}
 
 	containsPoint(p: V3, forceInsideOutside: boolean = false): boolean {
@@ -250,7 +250,7 @@ export class B2 extends Transformable {
 		return false
 	}
 
-	withMergedFaces(): B2 {
+	withMergedFaces(): BRep {
 		const likeSurfaceFaces = []
 		for (let i = 0; i < this.faces.length; i++) {
 			let addedToGroup = false
@@ -295,7 +295,7 @@ export class B2 extends Transformable {
 			}
 		}
 
-		return new B2(newFaces, this.infiniteVolume, this.generator && this.generator + '.withMergedFaces()', this.vertexNames)
+		return new BRep(newFaces, this.infiniteVolume, this.generator && this.generator + '.withMergedFaces()', this.vertexNames)
 	}
 
 	calculateVolume(): number {
@@ -320,33 +320,33 @@ export class B2 extends Transformable {
 		return mesh
 	}
 
-	minus(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
+	minus(other: BRep, infoFactory?: FaceInfoFactory<any>): BRep {
 		const generator = this.generator && other.generator && this.generator + '.minus(' + other.generator + ')'
 		return this.intersection(other.flipped(), true, true, generator, infoFactory)
 	}
 
-	plus(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
+	plus(other: BRep, infoFactory?: FaceInfoFactory<any>): BRep {
         const generator = this.generator && other.generator && this.generator + '.plus(' + other.generator + ')'
 		return this.flipped().intersection(other.flipped(), true, true, generator, infoFactory).flipped()
 	}
 
-	and(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
+	and(other: BRep, infoFactory?: FaceInfoFactory<any>): BRep {
         const generator = this.generator && other.generator && this.generator + '.and(' + other.generator + ')'
 		return this.intersection(other, true, true, generator, infoFactory)
 	}
 
-	xor(other: B2, infoFactory?: FaceInfoFactory<any>): B2 {
+	xor(other: BRep, infoFactory?: FaceInfoFactory<any>): BRep {
         const generator = this.generator && other.generator && this.generator + '.xor(' + other.generator + ')'
-		return new B2(this.minus(other).faces.concat(other.minus(this).faces),
+		return new BRep(this.minus(other).faces.concat(other.minus(this).faces),
 			this.infiniteVolume != other.infiniteVolume, generator)
 	}
 
 	equals(obj: any): boolean {
 		return this.faces.length == obj.faces.length &&
-			this.faces.every((face) => (obj as B2).faces.some((face2) => face.equals(face2)))
+			this.faces.every((face) => (obj as BRep).faces.some((face2) => face.equals(face2)))
 	}
 
-	like(brep: B2): boolean {
+	like(brep: BRep): boolean {
 		return this.faces.length == brep.faces.length &&
 			this.faces.every((face) => brep.faces.some((face2) => face.likeFace(face2)))
 	}
@@ -380,7 +380,7 @@ export class B2 extends Transformable {
 	// != startIndex) { loops.push(path.slice(startIndex)) } } }) }
 
 	toString(): string {
-		return `new B2([\n${this.faces.join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
+		return `new BRep([\n${this.faces.join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
 	}
 
 	getConstructorParameters() {
@@ -389,7 +389,7 @@ export class B2 extends Transformable {
 
 	toSource(useGenerator: boolean = true): string {
 		return useGenerator && this.generator ||
-			`new B2([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
+			`new BRep([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`
 	}
 
 	/**
@@ -465,7 +465,7 @@ export class B2 extends Transformable {
 						loops.push(edges)
 					}
 				}
-				const faceNewFaces = B2.assembleFacesFromLoops(loops, face.surface, face, infoFactory)
+				const faceNewFaces = BRep.assembleFacesFromLoops(loops, face.surface, face, infoFactory)
 				newFaces.push(...faceNewFaces)
 				const faceNewFacesEdges = faceNewFaces.flatMap(face => face.getAllEdges())
 				insideEdges.push(...usableOldEdges.filter(edge => faceNewFacesEdges.includes(edge)))
@@ -527,7 +527,7 @@ export class B2 extends Transformable {
 		return result
 	}
 
-	getIntersectionEdges(brep2: B2) {
+	getIntersectionEdges(brep2: BRep) {
 		const faceMap = new Map(), thisEdgePoints = new CustomMap(), otherEdgePoints = new CustomMap()
 
 		const likeSurfaceFaces: Map<Edge, IntersectionPointInfo[]> = []
@@ -589,7 +589,7 @@ export class B2 extends Transformable {
 
 	}
 
-	//intersection3(other: B2, buildThis: boolean, buildOther: boolean, name?: string): B2 {
+	//intersection3(other: BRep, buildThis: boolean, buildOther: boolean, name?: string): BRep {
 	//    this.assertSanity()
 	//    other.assertSanity()
 	//    this.buildAdjacencies()
@@ -707,7 +707,7 @@ export class B2 extends Transformable {
 	 *
 	 *
 	 */
-	intersection(other: B2, buildThis: boolean, buildOther: boolean, generator?: string, infoFactory?: FaceInfoFactory<any>): B2 {
+	intersection(other: BRep, buildThis: boolean, buildOther: boolean, generator?: string, infoFactory?: FaceInfoFactory<any>): BRep {
 		this.assertSanity()
 		other.assertSanity()
 		this.buildAdjacencies()
@@ -757,7 +757,7 @@ export class B2 extends Transformable {
 		//buildCoplanar && this.reconstituteCoplanarFaces(likeSurfaceFaces, edgeLooseSegments, faceMap, newFaces,
 		// this.infiniteVolume, other.infiniteVolume)
 
-		const result = new B2(newFaces, this.infiniteVolume && other.infiniteVolume, generator)
+		const result = new BRep(newFaces, this.infiniteVolume && other.infiniteVolume, generator)
 		//result.buildAdjacencies()
 		return result
 
@@ -770,7 +770,7 @@ export class B2 extends Transformable {
 			vertexNames = new Map()
 			this.vertexNames.forEach((name, vertex) => vertexNames.set(m4.transformPoint(vertex), name + desc))
 		}
-		return new B2(
+		return new BRep(
 			this.faces.map(f => f.transform(m4)),
 			this.infiniteVolume,
 			this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
@@ -778,8 +778,8 @@ export class B2 extends Transformable {
 		) as this
 	}
 
-	flipped(): B2 {
-		return new B2(
+	flipped(): BRep {
+		return new BRep(
 			this.faces.map(f => f.flipped()),
 			!this.infiniteVolume,
 			this.generator && this.generator + '.flipped()',
@@ -829,7 +829,7 @@ export const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE = 3, 
  *     wether that faces normal1 points in the same direction as faceNormal
  * @returns INSIDE, OUTSIDE, COPLANAR_SAME or COPLANAR_OPPOSITE
  */
-//function splitsVolumeEnclosingFaces(brep: B2, edge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
+//function splitsVolumeEnclosingFaces(brep: BRep, edge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
 //    assert(arguments.length == 4)
 //    //assert(p.equals(edge.a))
 //    const ab1 = edge.aDir.unit()
@@ -845,7 +845,7 @@ export const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE = 3, 
 // - b.angle) // assert(relFaces.length % 2 == 0, edge.toSource()) // even number of touching faces  if
 // (eq0(relFaces[0].angle)) { //assert(false) todo const coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0;
 // return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE } else { return !relFaces[0].reversed ? INSIDE : OUTSIDE } }
-export function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
+export function splitsVolumeEnclosingFaces(brep: BRep, canonEdge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
 	assert(arguments.length == 4)
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
@@ -868,7 +868,7 @@ export function splitsVolumeEnclosingFaces(brep: B2, canonEdge: Edge, dirAtEdgeA
 	}
 }
 
-export function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pInside: V3, faceNormal: V3): int {
+export function splitsVolumeEnclosingFacesP(brep: BRep, canonEdge: Edge, p: V3, pInside: V3, faceNormal: V3): int {
 	assert(arguments.length == 5)
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
@@ -892,7 +892,7 @@ export function splitsVolumeEnclosingFacesP(brep: B2, canonEdge: Edge, p: V3, pI
 	}
 }
 
-export function splitsVolumeEnclosingFacesP2(brep: B2, canonEdge: Edge, p: V3, testCurve: Curve, curveT: number, dir: -1 | 1, faceNormal: V3): int {
+export function splitsVolumeEnclosingFacesP2(brep: BRep, canonEdge: Edge, p: V3, testCurve: Curve, curveT: number, dir: -1 | 1, faceNormal: V3): int {
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
 	assertf(() => brep.edgeFaces)
@@ -940,7 +940,7 @@ export function splitsVolumeEnclosingFacesP2(brep: B2, canonEdge: Edge, p: V3, t
 	return result
 }
 
-export function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
+export function splitsVolumeEnclosingCone(brep: BRep, p: V3, dir: V3) {
 	const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular())
 	const rays = []
 	for (let k = 0; k < brep.faces.length; k++) {
@@ -977,7 +977,7 @@ export function splitsVolumeEnclosingCone(brep: B2, p: V3, dir: V3) {
 	}
 }
 
-export function splitsVolumeEnclosingCone2(brep: B2, p: V3, curve: Curve, curveT: number, fb: 1 | -1) {
+export function splitsVolumeEnclosingCone2(brep: BRep, p: V3, curve: Curve, curveT: number, fb: 1 | -1) {
 	assert(curve.containsPoint(p))
 	const dir = curve.tangentAt(curveT).times(fb)
 	const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular())
