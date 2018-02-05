@@ -1,4 +1,3 @@
-(function(l, i, v, e) { v = l.createElement(i); v.async = 1; v.src = '//' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; e = l.getElementsByTagName(i)[0]; e.parentNode.insertBefore(v, e)})(document, 'script');
 var demo = (function (exports,hljs,svgPathdata) {
 'use strict';
 
@@ -2997,6 +2996,15 @@ emptyFunction.thatReturnsArgument = function (arg) {
 
 var emptyFunction_1 = emptyFunction;
 
+/** @license React v16.2.0
+ * react.production.min.js
+ *
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 'use strict';var q="function"===typeof Symbol&&Symbol["for"]; var r$1=q?Symbol["for"]("react.element"):60103; var t=q?Symbol["for"]("react.call"):60104; var u=q?Symbol["for"]("react.return"):60105; var v=q?Symbol["for"]("react.portal"):60106; var w=q?Symbol["for"]("react.fragment"):60107; var x="function"===typeof Symbol&&Symbol.iterator;
 function y(a){for(var b=arguments.length-1,e="Minified React error #"+a+"; visit http://facebook.github.io/react/docs/error-decoder.html?invariant\x3d"+a,c=0;c<b;c++)e+="\x26args[]\x3d"+encodeURIComponent(arguments[c+1]);b=Error(e+" for the full message or use the non-minified dev environment for full errors and additional helpful warnings.");b.name="Invariant Violation";b.framesToPop=1;throw b;}
 var z={isMounted:function(){return!1},enqueueForceUpdate:function(){},enqueueReplaceState:function(){},enqueueSetState:function(){}};function A(a,b,e){this.props=a;this.context=b;this.refs=emptyObject_1;this.updater=e||z;}A.prototype.isReactComponent={};A.prototype.setState=function(a,b){"object"!==typeof a&&"function"!==typeof a&&null!=a?y("85"):void 0;this.updater.enqueueSetState(this,a,b,"setState");};A.prototype.forceUpdate=function(a){this.updater.enqueueForceUpdate(this,a,"forceUpdate");};
@@ -3065,6 +3073,14 @@ function invariant(condition, format, a, b, c, d, e, f) {
 
 var invariant_1 = invariant;
 
+/**
+ * Copyright (c) 2014-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 'use strict';
 
 
@@ -3132,6 +3148,13 @@ var warning_1 = warning;
 var ReactPropTypesSecret$1 = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
 
 var ReactPropTypesSecret_1 = ReactPropTypesSecret$1;
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 'use strict';
 
@@ -4877,6 +4900,18 @@ function focusNode(node) {
 
 var focusNode_1 = focusNode;
 
+/** @license React v16.2.0
+ * react-dom.production.min.js
+ *
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/*
+ Modernizr 3.0.0pre (Custom Build) | MIT
+*/
 'use strict';
 function E$1(a){for(var b=arguments.length-1,c="Minified React error #"+a+"; visit http://facebook.github.io/react/docs/error-decoder.html?invariant\x3d"+a,d=0;d<b;d++)c+="\x26args[]\x3d"+encodeURIComponent(arguments[d+1]);b=Error(c+" for the full message or use the non-minified dev environment for full errors and additional helpful warnings.");b.name="Invariant Violation";b.framesToPop=1;throw b;}react?void 0:E$1("227");
 var oa={children:!0,dangerouslySetInnerHTML:!0,defaultValue:!0,defaultChecked:!0,innerHTML:!0,suppressContentEditableWarning:!0,suppressHydrationWarning:!0,style:!0};function pa(a,b){return(a&b)===b}
@@ -5167,6 +5202,15 @@ function hyphenate(string) {
 
 var hyphenate_1 = hyphenate;
 
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
+
 'use strict';
 
 
@@ -5224,6 +5268,15 @@ function camelize(string) {
 }
 
 var camelize_1 = camelize;
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
 
 'use strict';
 
@@ -20949,9 +21002,6 @@ class Pair {
     }
 }
 
-
-//# sourceMappingURL=bundle.module.js.map
-
 class Vector {
     constructor(v) {
         this.v = v;
@@ -22083,7 +22133,7 @@ const ge$1 = (x, y, EPS = NLA_PRECISION) => y - x <= EPS;
 const snap = (x, to) => Math.abs(x - to) <= NLA_PRECISION ? to : x;
 const snap2 = (x, ...to) => to.reduce((x, to) => Math.abs(x - to) <= NLA_PRECISION ? to : x, x);
 const snap0 = (x, EPS = NLA_PRECISION) => Math.abs(x) <= EPS ? 0 : x;
-const eq2 = eq;
+/** @deprecated */ const eq2 = eq;
 /**
  * Decimal adjustment of a number.
  *
@@ -22262,7 +22312,6 @@ function* combinations(n) {
         }
     }
 }
-/* The arithmetic-geometric mean of two non-negative numbers */
 const DEG = .017453292519943295;
 Object.map = function (o, f, context = undefined) {
     const result = {};
@@ -22676,7 +22725,6 @@ function getRoots(f, a, b, stepSize, df) {
     }
     return results;
 }
-//addOwnProperties(Array.prototype, ARRAY_UTILITIES)
 function newtonIterate(f, x, steps = 4, EPSILON) {
     EPSILON = EPSILON || 1e-8;
     for (let i = 0; i < steps; i++) {
@@ -24934,9 +24982,6 @@ class AABB extends Transformable {
         return this.toString();
     }
 }
-
-
-//# sourceMappingURL=bundle.module.js.map
 
 var chroma$2 = createCommonjsModule(function (module, exports) {
 /**
@@ -29125,9 +29170,6 @@ class Buffer$1 {
     }
 }
 
-
-//# sourceMappingURL=bundle.module.js.map
-
 const { ceil, floor, abs: abs$1$1 } = Math;
 class Curve extends Transformable {
     constructor(tMin, tMax) {
@@ -30825,6 +30867,9 @@ class HyperbolaCurve extends XiEtaCurve {
 HyperbolaCurve.XY = new HyperbolaCurve(V3.O, V3.X, V3.Y);
 HyperbolaCurve.prototype.tIncrement = PI$5 / 16;
 
+/**
+ * 3-dimensional line
+ */
 class L3 extends Curve {
     constructor(anchor, // line anchor
     dir1, // normalized line dir
@@ -31408,6 +31453,9 @@ class PICurve$1 extends ImplicitCurve {
 }
 PICurve$1.prototype.tIncrement = 1;
 
+/**
+ * eta = xi²
+ */
 class ParabolaCurve extends XiEtaCurve {
     constructor(center, f1, f2, tMin = -10, tMax = 10) {
         super(center, f1, f2, tMin, tMax);
@@ -34558,7 +34606,6 @@ const ZDirVolumeVisitor = {
         return { volume: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: undefined };
     },
 };
-//# sourceMappingURL=ZDirVolumeVisitor.js.map
 
 const { PI: PI$14 } = Math;
 const CalculateAreaVisitor = {
@@ -34772,7 +34819,6 @@ const CalculateAreaVisitor = {
         return totalArea;
     },
 };
-//# sourceMappingURL=CalculateAreaVisitor.js.map
 
 var TINF_OK = 0;
 var TINF_DATA_ERROR = -3;
@@ -35309,6 +35355,13 @@ BoundingBox.prototype.addQuad = function(x0, y0, x1, y1, x, y) {
 
 // Geometric objects
 
+/**
+ * A bézier path containing a set of path commands similar to a SVG path.
+ * Paths can be drawn on a context using `draw`.
+ * @exports opentype.Path
+ * @class
+ * @constructor
+ */
 function Path() {
     this.commands = [];
     this.fill = 'black';
@@ -36600,6 +36653,14 @@ sizeOf.LITERAL = function(v) {
 
 // Table metadata
 
+/**
+ * @exports opentype.Table
+ * @class
+ * @param {string} tableName
+ * @param {Array} fields
+ * @param {Object} options
+ * @constructor
+ */
 function Table(tableName, fields, options) {
     for (let i = 0; i < fields.length; i += 1) {
         const field = fields[i];
@@ -36789,6 +36850,7 @@ var table = {
 
 // Parsing utility functions
 
+// Retrieve an unsigned byte from the DataView.
 function getByte(dataView, offset) {
     return dataView.getUint8(offset);
 }
@@ -37768,6 +37830,7 @@ var draw = { line: line$1 };
 // The `glyf` table describes the glyphs in TrueType outline format.
 // http://www.microsoft.com/typography/otspec/glyf.htm
 
+// Parse the coordinate data for a glyph.
 function parseGlyphCoordinate(p, flag, previousValue, shortVectorBitMask, sameBitMask) {
     let v;
     if ((flag & shortVectorBitMask) > 0) {
@@ -38445,6 +38508,7 @@ Glyph.prototype.drawMetrics = function(ctx, x, y, fontSize) {
 
 // The GlyphSet object
 
+// Define a property on the glyph that depends on the path being loaded.
 function defineDependentProperty(glyph, externalName, internalName) {
     Object.defineProperty(glyph, externalName, {
         get: function() {
@@ -38573,6 +38637,7 @@ var glyphset = { GlyphSet, glyphLoader, ttfGlyphLoader, cffGlyphLoader };
 // http://download.microsoft.com/download/8/0/1/801a191c-029d-4af3-9642-555f6fe514ee/cff.pdf
 // http://download.microsoft.com/download/8/0/1/801a191c-029d-4af3-9642-555f6fe514ee/type2.pdf
 
+// Custom equals function that can also check lists.
 function equals(a, b) {
     if (a === b) {
         return true;
@@ -39830,6 +39895,7 @@ var cff = { parse: parseCFFTable, make: makeCFFTable };
 // The `head` table contains global information about the font.
 // https://www.microsoft.com/typography/OTSPEC/head.htm
 
+// Parse the header `head` table
 function parseHeadTable(data, start) {
     const head = {};
     const p = new parse.Parser(data, start);
@@ -39889,6 +39955,7 @@ var head = { parse: parseHeadTable, make: makeHeadTable };
 // The `hhea` table contains information for horizontal layout.
 // https://www.microsoft.com/typography/OTSPEC/hhea.htm
 
+// Parse the horizontal header `hhea` table
 function parseHheaTable(data, start) {
     const hhea = {};
     const p = new parse.Parser(data, start);
@@ -39936,6 +40003,8 @@ var hhea = { parse: parseHheaTable, make: makeHheaTable };
 // The `hmtx` table contains the horizontal metrics for all glyphs.
 // https://www.microsoft.com/typography/OTSPEC/hmtx.htm
 
+// Parse the `hmtx` table, which contains the horizontal metrics for all glyphs.
+// This function augments the glyph array, adding the advanceWidth and leftSideBearing to each glyph.
 function parseHmtxTable(data, start, numMetrics, numGlyphs, glyphs) {
     let advanceWidth;
     let leftSideBearing;
@@ -40027,6 +40096,7 @@ var ltag = { make: makeLtagTable, parse: parseLtagTable };
 // We need it just to get the number of glyphs in the font.
 // https://www.microsoft.com/typography/OTSPEC/maxp.htm
 
+// Parse the maximum profile `maxp` table.
 function parseMaxpTable(data, start) {
     const maxp = {};
     const p = new parse.Parser(data, start);
@@ -40063,6 +40133,7 @@ var maxp = { parse: parseMaxpTable, make: makeMaxpTable };
 // The `name` naming table.
 // https://www.microsoft.com/typography/OTSPEC/name.htm
 
+// NameIDs for the name table.
 const nameTableNames = [
     'copyright',              // 0
     'fontFamily',             // 1
@@ -41138,6 +41209,7 @@ var os2 = { parse: parseOS2Table, make: makeOS2Table, unicodeRanges, getUnicodeR
 // The `post` table stores additional PostScript information, such as glyph names.
 // https://www.microsoft.com/typography/OTSPEC/post.htm
 
+// Parse the PostScript `post` table
 function parsePostTable(data, start) {
     const post = {};
     const p = new parse.Parser(data, start);
@@ -41454,6 +41526,8 @@ var gsub = { parse: parseGsubTable, make: makeGsubTable };
 // The `GPOS` table contains kerning pairs, among other things.
 // https://www.microsoft.com/typography/OTSPEC/gpos.htm
 
+// Parse the metadata `meta` table.
+// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6meta.html
 function parseMetaTable(data, start) {
     const p = new parse.Parser(data, start);
     const tableVersion = p.parseULong();
@@ -42105,6 +42179,13 @@ Layout.prototype = {
 // The Substitution object provides utility methods to manipulate
 // the GSUB substitution table.
 
+/**
+ * @exports opentype.Substitution
+ * @class
+ * @extends opentype.Layout
+ * @param {opentype.Font}
+ * @constructor
+ */
 function Substitution(font) {
     Layout.call(this, font, 'gsub');
 }
@@ -45471,6 +45552,42 @@ vim: set ts=4 sw=4 expandtab:
 
 // The Font object
 
+/**
+ * @typedef FontOptions
+ * @type Object
+ * @property {Boolean} empty - whether to create a new empty font
+ * @property {string} familyName
+ * @property {string} styleName
+ * @property {string=} fullName
+ * @property {string=} postScriptName
+ * @property {string=} designer
+ * @property {string=} designerURL
+ * @property {string=} manufacturer
+ * @property {string=} manufacturerURL
+ * @property {string=} license
+ * @property {string=} licenseURL
+ * @property {string=} version
+ * @property {string=} description
+ * @property {string=} copyright
+ * @property {string=} trademark
+ * @property {Number} unitsPerEm
+ * @property {Number} ascender
+ * @property {Number} descender
+ * @property {Number} createdTimestamp
+ * @property {string=} weightClass
+ * @property {string=} widthClass
+ * @property {string=} fsSelection
+ */
+
+/**
+ * A Font represents a loaded OpenType font file.
+ * It contains a set of glyphs and methods to draw text on a drawing context,
+ * or to get a path representing the text.
+ * @exports opentype.Font
+ * @class
+ * @param {FontOptions}
+ * @constructor
+ */
 function Font(options) {
     options = options || {};
 
@@ -46114,6 +46231,8 @@ var fvar = { make: makeFvarTable, parse: parseFvarTable };
 // The `GPOS` table contains kerning pairs, among other things.
 // https://www.microsoft.com/typography/OTSPEC/gpos.htm
 
+// Parse ScriptList and FeatureList tables of GPOS, GSUB, GDEF, BASE, JSTF tables.
+// These lists are unused by now, this function is just the basis for a real parsing.
 function parseTaggedListTable(data, start) {
     const p = new parse.Parser(data, start);
     const n = p.parseUShort();
@@ -46414,6 +46533,12 @@ var kern = { parse: parseKernTable };
 // The `loca` table stores the offsets to the locations of the glyphs in the font.
 // https://www.microsoft.com/typography/OTSPEC/loca.htm
 
+// Parse the `loca` table. This table stores the offsets to the locations of the glyphs in the font,
+// relative to the beginning of the glyphData table.
+// The number of glyphs stored in the `loca` table is specified in the `maxp` table (under numGlyphs)
+// The loca table has two versions: a short version where offsets are stored as uShorts, and a long
+// version where offsets are stored as uLongs. The `head` table specifies which version to use
+// (under indexToLocFormat).
 function parseLocaTable(data, start, numGlyphs, shortVersion) {
     const p = new parse.Parser(data, start);
     const parseFn = shortVersion ? p.parseUShort : p.parseULong;
@@ -46442,6 +46567,18 @@ var loca = { parse: parseLocaTable };
 
 /* global DataView, Uint8Array, XMLHttpRequest  */
 
+/**
+ * The opentype library.
+ * @namespace opentype
+ */
+
+// File loaders /////////////////////////////////////////////////////////
+/**
+ * Loads a font from a file. The callback throws an error message as the first parameter if it fails
+ * and the font as an ArrayBuffer in the second parameter if it succeeds.
+ * @param  {string} path - The path of the file
+ * @param  {Function} callback - The function to call when the font load completes
+ */
 function loadFromFile(path, callback) {
     const fs = require('fs');
     fs.readFile(path, function(err, buffer) {
@@ -46781,14 +46918,6 @@ function load(url, callback) {
         return callback(null, font);
     });
 }
-
-/**
- * Synchronously load the font from a URL or file.
- * When done, returns the font object or throws an error.
- * @alias opentype.loadSync
- * @param  {string} url - The URL of the font to load.
- * @return {opentype.Font}
- */
 
 const { PI: PI$15, min: min$8, max: max$7, ceil: ceil$8 } = Math;
 function projectCurve(curve, offset, flipped) {
@@ -47535,7 +47664,6 @@ var B2T;
     }
     B2T.pyramidEdges = pyramidEdges;
 })(B2T || (B2T = {}));
-//# sourceMappingURL=b2.generators.js.map
 
 class CustomPlane extends P3 {
     constructor(anchor, right, up, name, color = randomColor(), rightStart = -500, rightEnd = 500, upStart = -500, upEnd = 500) {
@@ -60140,8 +60268,6 @@ const fragmentShaderTextureColor = `
 	}
 `;
 
-//# sourceMappingURL=shaders.js.map
-
 const { pow: pow$3, sign: sign$12 } = Math;
 
 const COLORS = {
@@ -60398,10 +60524,6 @@ function setupCamera(_eye, _gl) {
 }
 const cameraChangeListeners = [];
 const SHADERS_TYPE_VAR = false && initShaders(0);
-// let shaders: typeof SHADERS_TYPE_VAR
-// declare let a: BRep, b: BRep, c: BRep, d: BRep, edges: Edge[] = [], hovering: any,
-// 	, normallines: boolean = false, b2s: BRep[] = []
-// const
 
 const fakeB2Mesh = false && {}.toMesh();
 class Demo extends react_1 {
@@ -60640,7 +60762,6 @@ const Body = () => react.createElement("div", null,
             { name: 'corner radius', type: 'number', fix: val => clamp(val, 0.1, 5), def: 0.5, step: 0.1 },
             { name: 'depth', type: 'number', fix: val => clamp(val, -9, 9), def: 0, step: 1 }
         ] }));
-//# sourceMappingURL=demo.js.map
 
 exports.demoMain = demoMain;
 

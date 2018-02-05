@@ -9,10 +9,18 @@ Boundary representation volume modeling in TypeScript.
 ## Installation
 NPM:  `npm install brep.ts --save`
 
-In the browser, you can include the [UMD bundle](./dist/bundle.js) in a script tag, and the module will be available under the global `brep_ts`
-
 <!--- CONTENT-START --->
-Some content
+Work in progress. Allows modelling volumes a boundary representations and intersecting them. See the [interactive demo](https://naridal.github.io/brep.ts/demo.html)
+
+## Example Usage
+```ts
+import {B2T} from 'brep.ts'
+const sphere = B2T.sphere()
+const box = B2T.box()
+const result = sphere.minus(box)
+const resultMesh = result.toMesh()
+
+```
 <!--- CONTENT-END --->
 <!--- footer generated automatically, don't edit --->
 ## License
