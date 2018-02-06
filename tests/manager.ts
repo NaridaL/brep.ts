@@ -203,6 +203,12 @@ export function testCurve(ass: Assert, curve: Curve) {
 			't eq pointT(at(t)) for ' + t,
 		)
 		ass.ok(curve.containsPoint(p), `containsPoint(at(t == ${t}) == ${p})`)
+
+        // check that tangentAt() behaves correctly
+        const eps = t != curve.tMax ? 1e-8 : -1e-8
+        const expectedTangent = curve.at(t + eps).minus(p).div(eps)
+        const actualTangent = curve.tangentAt(t)
+        ass.push(expectedTangent.to(actualTangent).length() < 1e-3, actualTangent, expectedTangent)
 	})
 
 	// test curve length
