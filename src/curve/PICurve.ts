@@ -280,8 +280,10 @@ export class PICurve extends ImplicitCurve {
 		if (ps[t].like(p)) return t
 		if (ps[t + 1].like(p)) return t + 1
 		const startT = t + V3.inverseLerp(ps[t], ps[t + 1], p)
-		if (startT)
-			return newtonIterate1d(t => this.at(t).distanceTo(p), startT, 4)
+		if (startT) {
+		    const tangent = this.tangentAt(startT)
+            return newtonIterate1d(t => this.at(t).to(p).dot(tangent), startT, 4)
+        }
         throw new Error()
 	}
 
