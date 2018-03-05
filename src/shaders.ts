@@ -19,35 +19,35 @@ export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3', camPos: '
 	}
 `
 export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC4' }> = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	uniform mat4 LGL_ModelViewMatrix;
-	attribute vec4 LGL_Vertex;
-	uniform mat3 LGL_NormalMatrix;
-	attribute vec3 LGL_Normal;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	uniform mat4 ts_ModelViewMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat3 ts_NormalMatrix;
+	attribute vec3 ts_Normal;
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
-        vPosition = LGL_ModelViewMatrix * LGL_Vertex;
-		normal = normalize(LGL_NormalMatrix * LGL_Normal);
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+        vPosition = ts_ModelViewMatrix * ts_Vertex;
+		normal = normalize(ts_NormalMatrix * ts_Normal);
 	}
 `
 export const vertexShaderWaves: ShaderType<{ color: 'FLOAT_VEC3' }> = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	uniform mat4 LGL_ModelViewMatrix;
-	attribute vec4 LGL_Vertex;
-	uniform mat3 LGL_NormalMatrix;
-	attribute vec3 LGL_Normal;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	uniform mat4 ts_ModelViewMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat3 ts_NormalMatrix;
+	attribute vec3 ts_Normal;
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
 	void main() {
-		normal = normalize(LGL_NormalMatrix * LGL_Normal);
-		float offset = mod  (((LGL_Vertex.x + LGL_Vertex.y + LGL_Vertex.z) * 31.0), 20.0) - 10.0;
-		vec4 modPos = LGL_Vertex + vec4(normal * offset, 0);
-		gl_Position = LGL_ModelViewProjectionMatrix * modPos;
-        vPosition = LGL_ModelViewMatrix * modPos;
+		normal = normalize(ts_NormalMatrix * ts_Normal);
+		float offset = mod  (((ts_Vertex.x + ts_Vertex.y + ts_Vertex.z) * 31.0), 20.0) - 10.0;
+		vec4 modPos = ts_Vertex + vec4(normal * offset, 0);
+		gl_Position = ts_ModelViewProjectionMatrix * modPos;
+        vPosition = ts_ModelViewMatrix * modPos;
 	}
 `
 export const vertexShader: ShaderType<{}> = `
@@ -90,19 +90,19 @@ export const fragmentShader: ShaderType<{ color: 'FLOAT_VEC3' }> = `
 	 */
 `
 export const vertexShaderBasic: ShaderType<{}> = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
 	}
 `
 export const vertexShaderColor: ShaderType<{}> = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	attribute vec4 color;
 	varying vec4 fragColor;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
 		fragColor = color;
 	}
 `
@@ -113,16 +113,16 @@ export const vertexShaderArc: ShaderType<{
 	radius: 'FLOAT',
 	width: 'FLOAT'
 }> = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	uniform float step, offset;
 	uniform float radius, width;
 	void main() {
 		float r = radius;
-		float t = offset + LGL_Vertex.x * step;
-		float pRadius = r - LGL_Vertex.y * width;
+		float t = offset + ts_Vertex.x * step;
+		float pRadius = r - ts_Vertex.y * width;
 		vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
-		gl_Position = LGL_ModelViewProjectionMatrix * p;
+		gl_Position = ts_ModelViewProjectionMatrix * p;
 }
 `
 export const vertexShaderConic3d: ShaderType<{
@@ -134,15 +134,15 @@ export const vertexShaderConic3d: ShaderType<{
 	f2: 'FLOAT_VEC3',
 	mode: 'INT'
 }> = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
 	uniform int mode;
 	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
 	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
 	void main() {
-		float t = startT + LGL_Vertex.x * (endT - startT);
+		float t = startT + ts_Vertex.x * (endT - startT);
 
 		vec3 normal = normalize(cross(f1, f2));
 
@@ -160,8 +160,8 @@ export const vertexShaderConic3d: ShaderType<{
 			tangent = f1 * sinh(t) + f2 * cosh(t);
 		}
 		vec3 outDir = normalize(cross(normal, tangent));
-		vec3 p2 = p + scale * (outDir * LGL_Vertex.y + normal * LGL_Vertex.z);
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
+		vec3 p2 = p + scale * (outDir * ts_Vertex.y + normal * ts_Vertex.z);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
 export const vertexShaderBezier: ShaderType<{
@@ -173,21 +173,21 @@ export const vertexShaderBezier: ShaderType<{
 	p2: 'FLOAT_VEC3',
 	p3: 'FLOAT_VEC3',
 }> = `
-    // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	uniform float width, startT, endT;
 	uniform vec3 p0, p1, p2, p3;
 	void main() {
-		// LGL_Vertex.y is in [0, 1]
-		float t = startT + LGL_Vertex.x * (endT - startT), s = 1.0 - t;
+		// ts_Vertex.y is in [0, 1]
+		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
 		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
-		vec4 p = vec4(pPos - LGL_Vertex.y * width * pNormal, 1);
-		gl_Position = LGL_ModelViewProjectionMatrix * p;
+		vec4 p = vec4(pPos - ts_Vertex.y * width * pNormal, 1);
+		gl_Position = ts_ModelViewProjectionMatrix * p;
 	}
 `
 export const vertexShaderBezier3d: ShaderType<{
@@ -200,36 +200,36 @@ export const vertexShaderBezier3d: ShaderType<{
 	p3: 'FLOAT_VEC3',
 	normal: 'FLOAT_VEC3',
 }> = `
-    // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
+    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
 	uniform vec3 ps[4];
 	uniform vec3 p0, p1, p2, p3, normal;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	void main() {
-		// LGL_Vertex.y is in [0, 1]
+		// ts_Vertex.y is in [0, 1]
 		vec3 p5 = ps[0];
-		float t = startT + LGL_Vertex.x * (endT - startT), s = 1.0 - t;
+		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 p = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
 		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 outDir = normalize(cross(normal, pTangent));
 		vec3 correctNormal = normalize(cross(pTangent, outDir));
-		vec3 p2 = p + scale * (outDir * LGL_Vertex.y + correctNormal * LGL_Vertex.z);
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
+		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
 export const vertexShaderGeneric: ShaderType<{ scale: 'FLOAT' }> = `
 	uniform float scale;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
-	uniform mat3 LGL_NormalMatrix;
-	attribute vec3 LGL_Normal;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat3 ts_NormalMatrix;
+	attribute vec3 ts_Normal;
 	void main() {
-		vec3 normal = normalize(LGL_NormalMatrix * LGL_Normal);
-		vec4 vertexPos = LGL_Vertex + vec4(normal * scale, 0);
-		gl_Position = LGL_ModelViewProjectionMatrix * vertexPos;
+		vec3 normal = normalize(ts_NormalMatrix * ts_Normal);
+		vec4 vertexPos = ts_Vertex + vec4(normal * scale, 0);
+		gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
 	}
 `
 export const vertexShaderRing: ShaderType<{ step: 'FLOAT', innerRadius: 'FLOAT', outerRadius: 'FLOAT' }> = `
@@ -237,13 +237,13 @@ export const vertexShaderRing: ShaderType<{ step: 'FLOAT', innerRadius: 'FLOAT',
 	uniform float step;
 	uniform float innerRadius, outerRadius;
 	attribute float index;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(index, index, index, 1);
-		float id = atan(LGL_Vertex.x, LGL_Vertex.y) / M_PI  * 32.0;
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(index, index, index, 1);
+		float id = atan(ts_Vertex.x, ts_Vertex.y) / M_PI  * 32.0;
 		float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
 	}
 `
 export const fragmentShaderColor: ShaderType<{ color: 'FLOAT_VEC4' }> = `
@@ -275,11 +275,11 @@ export const fragmentShaderColorHighlight: ShaderType<{}> = `
 `
 export const vertexShaderTexture: ShaderType<{}> = `
 	varying vec2 texturePos;
-	attribute vec4 LGL_Vertex;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
 	void main() {
-		texturePos = LGL_Vertex.xy;
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		texturePos = ts_Vertex.xy;
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
 	}
 `
 export const fragmentShaderTextureColor: ShaderType<{}> = `

@@ -5,7 +5,7 @@ import {
     SemiCylinderSurface,
 } from '../index';
 
-const {PI, abs} = Math;
+import {PI, abs} from '../math';
 
 export class CylinderSurface extends ProjectedCurveSurface {
 	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z);

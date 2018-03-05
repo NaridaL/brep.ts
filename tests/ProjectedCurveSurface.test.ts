@@ -1,13 +1,12 @@
 import {
     inDifferentSystems,
     suite,
-    skip,
     test,
     testISTs,
     testParametricSurface,
-    testZDirVolumeAndAreaAndArea,
-    testCalculateArea,
-    testZDirVolumeAndArea, surfaceVolumeAndArea, linkB3, testISCurves, testLoopCCW
+    surfaceVolumeAndArea,
+    testISCurves,
+    testLoopCCW
 } from './manager'
 
 import {DEG, M4, V, V3} from 'ts3dutils'
@@ -26,8 +25,8 @@ import {
     PICurve,
     SemiEllipseCurve,
     Face,
+    SemiCylinderSurface
 } from '..'
-import {SemiCylinderSurface} from '../src/surface/SemiCylinderSurface'
 
 suite('ProjectedCurveSurface', () => {
     suite('ProjectedCurveSurface', inDifferentSystems((assert, m4) => {
@@ -85,9 +84,11 @@ suite('ProjectedCurveSurface', () => {
             a.faces.find(f => f.surface instanceof ProjectedCurveSurface).surface,
             b.faces.find(f => f.surface instanceof SemiCylinderSurface).surface,
             2)
-        const c = a.and(b)
-        linkB3(assert, {a, b, c: c.translate(10)})
-        console.log(c.toSource())
+    })
+    test('isCurvesWithSurface w/ PCS', assert => {
+        const pcs = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, -1.1, 2.1, 0, 4)
+        const pcs2 = pcs.mirrorY().rotateX(80 * DEG)
+        testISCurves(assert, pcs, pcs2, 2)
     })
 
     suite('area and volume with PICurves', surfaceVolumeAndArea(piCurveFace))

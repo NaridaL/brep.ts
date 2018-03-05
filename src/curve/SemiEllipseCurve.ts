@@ -7,7 +7,7 @@ import {
 	Curve, EllipseCurve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, P3, XiEtaCurve,
 } from '../index'
 
-const {PI, min, max} = Math
+import {PI, min, max} from '../math'
 
 export class SemiEllipseCurve extends XiEtaCurve {
 	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
@@ -33,7 +33,6 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	static magic(a: number, b: number, c: number): number[] {
 		const isLC = intersectionUnitCircleLine2(a, b, c)
 		const result = []
-		let t
 		for (const [xi, eta] of isLC) {
 			le(0, eta) && result.push(SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0)))
 		}
@@ -211,6 +210,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 				if (ellipse.containsPoint(p)) {
 					return {tThis: t, tOther: ellipse.pointT(p), p}
 				}
+				return undefined
 			})
 		}
 	}

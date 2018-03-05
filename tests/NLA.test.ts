@@ -9,7 +9,7 @@ BezierCurve, ClassSerializer, Edge, intersectionCircleLine, intersectionUnitCirc
 PlaneSurface, PointVsFace, SemiEllipseCurve, StraightEdge, B2T, SemiCylinderSurface, Face,
 } from '..'
 
-const {sqrt, cos, sin, PI} = Math
+import {sqrt, cos, sin, PI} from '../src/math'
 
 suite('NLA', () => {
 	suite('isPointsWithBezier()', inDifferentSystems((assert, m4) => {
@@ -179,11 +179,9 @@ suite('NLA', () => {
 		assert.ok(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).equals(V3.X))
 	})
 	test('V3.areDisjoint2', assert => {
-		console.log(~~2147483657)
 		const s = new CustomSet()
 		const a = V(0, 2.7499999999999996, -5), b = V(0, 2.749999999999999, -5)
 		s.canonicalizeLike(a)
-		console.log(s._map, a.like(b), a.hashCodes(), b.hashCodes(), a.hashCode(), b.hashCode())
 		assert.ok(s.canonicalizeLike(b) == a)
 	})
 	test('intersectionUnitCircleLine', assert => {
@@ -193,24 +191,6 @@ suite('NLA', () => {
 	test('intersectionCircleLine', assert => {
 		// y = -x + 2 => x + y = 2
 		assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), {x1: 2, x2: 0, y1: 0, y2: 2})
-	})
-	test('PlaneSurface.loopContainsPoint', assert => {
-		const loop = StraightEdge.chain([V(0, 0), V(10, 0), V(10, 10), V(0, 10)], true)
-		assert.equal(new PlaneSurface(P3.XY).loopContainsPoint(loop, V(8, 10)), PointVsFace.ON_EDGE)
-	})
-	test('PlaneSurface.loopContainsPoint 2', assert => {
-		const loop = [
-			new StraightEdge(new L3(V(2, 10, 0), V3.Z), V(2, 10, 3), V(2, 10, 5), 3, 5),
-			new StraightEdge(new L3(V(0, 10, 5), V3.X), V(2, 10, 5), V(0, 10, 5), 2, 0),
-			new StraightEdge(new L3(V(0, 10, 0), V3.Z), V(0, 10, 5), V(0, 10, 0), 5, 0),
-			new StraightEdge(new L3(V(0, 10, 0), V3.X), V(0, 10, 0), V(10, 10, 0), 0, 10),
-			new StraightEdge(new L3(V(10, 10, 0), V3.Z), V(10, 10, 0), V(10, 10, 5), 0, 5),
-			new StraightEdge(new L3(V(0, 10, 5), V3.X), V(10, 10, 5), V(6, 10, 5), 10, 6),
-			new StraightEdge(new L3(V(6, 10, 0), V(0, 0, -1)), V(6, 10, 5), V(6, 10, 3), -5, -3),
-			new StraightEdge(new L3(V(0, 10, 3), V(-1, 0, 0)), V(6, 10, 3), V(2, 10, 3), -6, -2),
-		]
-		const p = V(6, 10, 3)
-		testLoopContainsPoint(assert, new PlaneSurface(new P3(V(0, -1, 0), -10)), loop, p, PointVsFace.ON_EDGE)
 	})
 	//test('EllipsoidSurface.splitOnPlaneLoop', assert => {
 	//    //const es = SemiEllipsoidSurface.UNIT

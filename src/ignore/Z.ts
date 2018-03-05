@@ -1,46 +1,26 @@
 class Complex {
-	constructor(readonly re: number, readonly im: number) {}
+	constructor(readonly re: number, readonly im: number) { }
 
-	cbrt(): Complex {
-		const r = Math.hypot(this.re, this.im)
-		const phi3 = Math.atan2(this.im, this.re) / 3
-		const rRoot = Math.cbrt(r)
-		return Z(rRoot * Math.cos(phi3), rRoot * Math.sin(phi3))
+    plus(zOrR: Complex | number): Complex {
+        const z = 'number' === typeof zOrR ? Z(zOrR, 0) : zOrR
+        return Z(this.re + z.re, this.im + z.im)
+    }
+
+	minus(zOrR: Complex | number): Complex {
+        const z = 'number' === typeof zOrR ? Z(zOrR, 0) : zOrR
+		return Z(this.re + z.re, this.im - z.re)
 	}
 
-	plusR(real: number): Complex {
-		return Z(this.re + real, this.im)
-	}
+    times(zOrR: Complex | number): Complex {
+        return 'number' === typeof zOrR
+            ? Z(this.re * zOrR, this.im * zOrR)
+            : Z(this.re * zOrR.re - this.im * zOrR.im, this.im * zOrR.re + this.re * zOrR.im)
+    }
 
-	minusR(real: number): Complex {
-		return Z(this.re + real, this.im)
-	}
-
-	timesR(real: number): Complex {
-		return Z(this.re * real, this.im * real)
-	}
-
-	divR(real: number): Complex {
-		return Z(this.re / real, this.im / real)
-	}
-
-	div(z: Complex): Complex {
+	div(zOrR: Complex | number): Complex {
+        const z = 'number' === typeof zOrR ? Z(zOrR, 0) : zOrR
 		const divisor = z.re * z.re + z.im * z.im
 		return Z((this.re * z.re + this.im * z.im) / divisor, (this.im * z.re - this.re * z.im) / divisor)
-	}
-
-	times(z: Complex | number): Complex {
-		return 'number' == typeof z
-			? Z(this.re * z, this.im)
-			: Z(this.re * z.re - this.im * z.im, this.im * z.re + this.re * z.im)
-	}
-
-	plus(z: Complex | number): Complex {
-		return Z(this.re + z.re, this.im + z.im)
-	}
-
-	sqrt() {
-		return Z()
 	}
 
 	conjugated() {
@@ -59,6 +39,21 @@ class Complex {
 	sqr(): Complex {
 		return Z(this.re * this.re - this.im * this.im, 2 * this.im * this.re)
 	}
+
+    sqrt() {
+	    const f = Math.sqrt(2) / 2
+        const r = Math.hypot(this.re, this.im)
+        return Z(
+            f * Math.sqrt(r + this.re),
+            f * Math.sqrt(r - this.re) * Math.sign(this.im))
+    }
+
+    cbrt(): Complex {
+        const r = Math.hypot(this.re, this.im)
+        const phi3 = Math.atan2(this.im, this.re) / 3
+        const rCbrt = Math.cbrt(r)
+        return Z(rCbrt * Math.cos(phi3), rCbrt * Math.sin(phi3))
+    }
 }
 
 

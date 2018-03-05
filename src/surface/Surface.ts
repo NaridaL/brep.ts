@@ -3,7 +3,7 @@ import {callsce, eq0, int, NLA_PRECISION, Transformable, V3,} from 'ts3dutils'
 
 import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3, CalculateAreaVisitor, ZDirVolumeVisitor} from '../index'
 
-const {ceil, floor} = Math
+import {ceil, floor} from '../math'
 
 export abstract class Surface extends Transformable implements Equalable {
 	static loopContainsPointGeneral(loop: Edge[], p: V3, testLine: L3, lineOut: V3): PointVsFace {

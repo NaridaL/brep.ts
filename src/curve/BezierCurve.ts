@@ -11,7 +11,7 @@ import {
 	SemiCylinderSurface, SemiEllipsoidSurface, Surface,
 } from '../index'
 
-const {PI, abs, sin, cos} = Math
+import {PI, abs, sin, cos} from '../math'
 
 export class BezierCurve extends Curve {
 	/**
@@ -304,8 +304,8 @@ export class BezierCurve extends Curve {
 		return [V3.O, a, b, c]
 	}
 
-	pointT(p: V3): number {
-		return this.closestTToPoint(p)
+	pointT(p: V3, tMin = this.tMin, tMax = this.tMax): number {
+		return this.closestTToPoint(p, undefined, tMin, tMax)
 	}
 
 	pointT3(p: V3) {
@@ -332,7 +332,7 @@ export class BezierCurve extends Curve {
 		const results = solveCubicReal2(a.e(maxDim), b.e(maxDim), c.e(maxDim), d.e(maxDim)).filter(t => this.at(t).like(p))
 		if (0 == results.length) return NaN
 		if (1 == results.length) return results[0]
-		assert(false, 'multiple intersection ' + this.toString() + p.sce)
+		throw new Error('multiple intersection ' + this.toString() + p.sce)
 	}
 
 	pointT2(p: V3) {
@@ -376,7 +376,7 @@ export class BezierCurve extends Curve {
 				}
 			}
 		}
-		assert(false, 'multiple intersection ' + results + this.toString() + p.sce)
+		throw new Error('multiple intersection ' + results + this.toString() + p.sce)
 	}
 
 	transform(m4: M4) {
@@ -524,8 +524,6 @@ export class BezierCurve extends Curve {
 		const startT = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
 
 		return newtonIterate1d(f, startT, 8)
-
-
 	}
 
 	/**

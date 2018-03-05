@@ -1,13 +1,13 @@
 import {
-	assert, assertInst, assertNumbers, assertVectors, hasConstructor, int, isCCW, M4, V3,
+	assert, assertInst, assertNumbers, assertVectors, hasConstructor, int, M4, V3,
 } from 'ts3dutils'
 
 import {
-	Curve, Edge, L3, P3, ParametricSurface, PICurve, PlaneSurface, PointVsFace, SemiEllipsoidSurface, Surface,
+	Curve, Edge, L3, P3, ParametricSurface, ImplicitCurve, PlaneSurface, PointVsFace, SemiEllipsoidSurface, Surface,
     ImplicitSurface,
 } from '../index'
 
-const {sign} = Math
+import {sign} from '../math'
 
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
@@ -69,11 +69,11 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		return this.baseCurve.at(s).plus(this.dir.times(t))
 	}
 
-	pointFoot(pWC: V3, ss: number, st: number): V3 {
+	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
 		const basePlane = new P3(this.dir, 0)
 		const projCurve = this.baseCurve.project(basePlane)
 		const projPoint = basePlane.projectedPoint(pWC)
-		const t = projCurve.closestTToPoint(projPoint, ss)
+		const t = projCurve.closestTToPoint(projPoint, ss, this.sMin, this.sMax)
 		const z = pWC.minus(this.baseCurve.at(t)).dot(this.dir)
 		return new V3(t, z, 0)
 	}
@@ -83,7 +83,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		const projBaseCurve = this.baseCurve.project(projPlane)
 		return (pWC) => {
 			const projPoint = projPlane.projectedPoint(pWC)
-			const t = projBaseCurve.pointT(projPoint)
+			const t = projBaseCurve.pointT(projPoint, this.sMin, this.sMax)
 			const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
 			return new V3(t, z, 0)
 		}
@@ -123,15 +123,13 @@ export class ProjectedCurveSurface extends ParametricSurface {
 					const correctDir = this.normalP(p).cross(surface.normalP(p))
 					return new L3(p, dir1.times(sign(correctDir.dot(dir1))))
 				})
-			} else if (ImplicitSurface.is(surface)) {
-                let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / surface.dir.length(), 0.05)
+			} else {
+                let curves2 = ImplicitSurface.is(surface)
+                    ? ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / surface.dir.length(), 0.05)
+                    : ParametricSurface.isCurvesParametricParametricSurface(this, surface, 0.05, 0.1 / surface.dir.length(), 0.05)
                 curves2 = this.clipCurves(curves2)
                 curves2 = surface.clipCurves(curves2)
                 return curves2
-            } else {
-                const line = new L3(this.baseCurve.at(0.5), this.dir)
-                const startPoint = line.at(surface.isTsForLine(line)[0])
-                return [new PPCurve(this, surface, startPoint)]
             }
 		}
 		if (surface instanceof SemiEllipsoidSurface) {
@@ -149,7 +147,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		if (curve instanceof L3) {
 			return this.dir.isParallelTo(curve.dir1) && this.containsPoint(curve.anchor)
 		}
-		if (curve instanceof PICurve) {
+		if (curve instanceof ImplicitCurve) {
 			return super.containsCurve(curve)
 		}
 		// project baseCurve and test curve onto a common plane and check if the curves are alike

@@ -7,7 +7,7 @@ import {
 
 import {BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, SemiEllipseCurve, Surface, PlaneSurface} from './index'
 
-const {PI, sign, ceil, floor, abs} = Math
+import {PI, sign, ceil, floor, abs} from './math'
 
 
 export abstract class Edge extends Transformable {

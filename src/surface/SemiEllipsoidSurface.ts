@@ -10,7 +10,7 @@ import {
 	ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve, Surface, PlaneSurface,
 } from '../index'
 
-const {PI, min, max, sign, abs, sqrt} = Math
+import {PI, min, max, sign, abs, sqrt} from '../math'
 
 
 export class SemiEllipsoidSurface extends EllipsoidSurface {

@@ -1,20 +1,19 @@
-/// <reference path="earcut.d.ts" />
-
 import earcut from 'earcut'
 import {JavaMap as CustomMap, JavaSet as CustomSet, Pair} from 'javasetmap.ts'
 import nerdamer from 'nerdamer'
 import {
-	AABB, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, callsce, combinations, eq, eq0, gt,
-	int, lt, M4, mapPush, newtonIterate1d, newtonIterate2d, NLA_DEBUG, NLA_PRECISION, SCE, snap, snap0, TAU,
+	AABB, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, combinations, eq, eq0, gt,
+	int, lt, M4, mapPush, newtonIterate2d, NLA_DEBUG, NLA_PRECISION, SCE, snap, snap0, TAU,
 	Transformable, V, V3,
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
 import {
 	Curve, curvePoint, curvePointMF, Edge, Face, FaceInfoFactory, L3, P3, PlaneFace, PointVsFace, R2_R, Surface,
+    ParametricSurface, stInAABB2
 } from './index'
 
-const {PI, sign, abs, sqrt} = Math
+import {PI, sign, abs, sqrt} from './math'
 
 
 export const EPS = 1e-5
@@ -304,7 +303,7 @@ export class BRep extends Transformable {
 
 	toMesh(): Mesh & { faceIndexes: Map<Face, { start: int, count: int }>, TRIANGLES: int[], LINES: int[], normals: V3[] } {
 		const mesh = new Mesh()
-			.addVertexBuffer('normals', 'LGL_Normal')
+			.addVertexBuffer('normals', 'ts_Normal')
 			.addIndexBuffer('TRIANGLES')
 			.addIndexBuffer('LINES') as any
 		mesh.faceIndexes = new Map()
@@ -764,7 +763,6 @@ export class BRep extends Transformable {
 	}
 
 	transform(m4: M4, desc?: string) {
-
 		let vertexNames: Map<V3, string>
 		if (this.vertexNames) {
 			vertexNames = new Map()
@@ -1121,7 +1119,115 @@ export function intersectionUnitHyperbolaLine(a: number, b: number, c: number): 
 	}
 }
 
+export function curvePointPP(ps1: ParametricSurface, ps2: ParametricSurface, startPoint: V3, dontCheck?: boolean) {
+    const EPS = NLA_PRECISION / 4
+    //if (!dontCheck) {
+    //    const p = curvePointPP(ps1, ps2, startPoint, true).p
+    //    if (!ps1.containsPoint(p)) {
+    //        console.log("foo, startPoint was " + startPoint.sce)
+    //        ps1.containsPoint(p)
+    //    }
+    //}
+    let Q = startPoint
+    let st1 = ps1.pointFoot(Q)
+    let st2 = ps2.pointFoot(Q)
+    let a, b, aNormal, bNormal, abNormalsCross
+    //console.log("curvePointPP, startPoint was " + startPoint.sce)
+    //console.log(Q.sce+ ',')
+    let i = 16
+    do {
+        a = ps1.pST(st1.x, st1.y)
+        b = ps2.pST(st2.x, st2.y)
+        if (eq0(a.distanceTo(b), EPS)) break
+        // drPs.push({p:a,text:'a'+j+' '+i})
+        // drPs.push({p:b,text:'b'+j+' '+i})
+        aNormal = ps1.normalST(st1.x, st1.y)
+        bNormal = ps2.normalST(st2.x, st2.y)
+        // next Q is the intersection of the planes
+        // (x - a) * aNormal,
+        // (x - b) * bNormal and
+        // (x - Q) * (aNormal X bNormal)
+        abNormalsCross = aNormal.cross(bNormal)
+        // drVs.push({anchor: Q, dir: aNormal})
+        // drVs.push({anchor: Q, dir: bNormal})
+        Q = V3.add(
+            bNormal.cross(abNormalsCross).times(a.dot(aNormal)),
+            abNormalsCross.cross(aNormal).times(b.dot(bNormal)),
+            abNormalsCross.times(abNormalsCross.dot(Q))).div(abNormalsCross.squared())
+        //console.log(Q.sce+ ',')
+        // feet of Q on ps1 and ps2 (closest points)
+        st1 = ps1.pointFoot(Q, st1.x, st1.y)
+        st2 = ps2.pointFoot(Q, st2.x, st2.y)
+    } while (--i)
+    //assert(ps1.containsPoint(Q), Q, ps1)
+    //assert(ps2.containsPoint(Q))
+    if (!eq0(a.distanceTo(b), EPS)) {
+        return undefined
+    }
+    return {p: Q, st1: st1, st2: st2}
+}
 
+/**
+ * Follow the intersection curve of two parametric surfaces starting from a given point.
+ * @param {ParametricSurface} ps1
+ * @param {ParametricSurface} ps2
+ * @param {number} s1Step
+ * @param {number} t1Step
+ * @param {number} s2Step
+ * @param {number} t2Step
+ * @param {number} curveStepSize
+ * @return {Curve[]}
+ */
+export function followAlgorithmPP(
+    ps1: ParametricSurface,
+    ps2: ParametricSurface,
+    startPoint: V3,
+    curveStepSize: number,
+    bounds1: (s: number, t: number) => boolean = stInAABB2.bind(undefined, ps1),
+    bounds2: (s: number, t: number) => boolean = stInAABB2.bind(undefined, ps2),
+): { points: V3[], tangents: V3[], st1s: V3[], st2s: V3[] } {
+    const points: V3[] = []
+    const tangents: V3[] = []
+    const st1s: V3[] = []
+    const st2s: V3[] = []
+    let Q = startPoint
+    let st1 = ps1.stP(Q)
+    let st2 = ps2.stP(Q)
+    assert(ps1.pST(st1.x, st1.y).like(Q))
+    assert(st1.like(ps1.pointFoot(Q, st1.x, st1.y)))
+    assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)))
+    assert(ps2.pST(st2.x, st2.y).like(Q))
+    for (let i = 0; i < 1000; i++) {
+        {({p: Q, st1, st2} = curvePointPP(ps1, ps2, Q))}
+        assert(ps1.containsPoint(Q), Q, ps1)
+        assert(ps2.containsPoint(Q))
+        const aNormal = ps1.normalST(st1.x, st1.y)
+        const bNormal = ps2.normalST(st2.x, st2.y)
+        const tangent = aNormal.cross(bNormal).toLength(curveStepSize)
+        tangents.push(tangent)
+        points.push(Q)
+        st1s.push(st1)
+        st2s.push(st2)
+        if (i > 4) {
+            if (!bounds1(st1.x, st1.y) || !bounds2(st2.x, st2.y)) {
+                break;
+            }
+        }
+        Q = Q.plus(tangent)
+    }
+    return {points, tangents, st1s, st2s}
+}
+
+/**
+ * Iteratively calculate points on an implicit 2D curve.
+ * @param ic The curve in question.
+ * @param startP The point at which to start.
+ * @param stepLength The step the algorithm takes. Will be the approximate distance between points.
+ * @param bounds Bounds function.
+ * @param endP End point. If undefined, algorithm will continue until out of bounds or back at start point.
+ * @param startTangent TODO Ignore this.
+ * @returns Calculated points and tangents. points[0] and tangents[0] will be startP and startTangent.
+ */
 export function followAlgorithm2d(ic: MathFunctionR2R,
 								  startP: V3,
 								  stepLength: number = 0.5,
@@ -1279,19 +1385,11 @@ export function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
 	return iss
 }
 
-//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number, searchStep: number, implicitSurface) {
-//	assertNumbers(searchStart, searchEnd, searchStep)
-//	const iss = []
-//	let val = implicitSurface(parametricCurve(searchStart)), lastVal
-//	for (let t = searchStart + searchStep; t <= searchEnd; t += searchStep) {
-//		lastVal = val
-//		val = implicitSurface(parametricCurve(t))
-//		if (val * lastVal <= 0) {
-//			iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t))
-//		}
-//	}
-//	return iss
-//}
+//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number,
+// searchStep: number, implicitSurface) { assertNumbers(searchStart, searchEnd, searchStep) const iss = [] let val =
+// implicitSurface(parametricCurve(searchStart)), lastVal for (let t = searchStart + searchStep; t <= searchEnd; t +=
+// searchStep) { lastVal = val val = implicitSurface(parametricCurve(t)) if (val * lastVal <= 0) {
+// iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t)) } } return iss }
 
 export function intersectionICurvePSurface(f0, f1, parametricSurface) {
 
@@ -1357,3 +1455,7 @@ export namespace MathFunctionR2R {
 }
 export const cas2 = cassini(0.9, 1.02)
 
+export function arrayLerp<T>(lerp: (a: T, b: T, t: number) => T, arr: T[], t: number): T {
+    if (0 === t % 1) return arr[t]
+    return lerp(arr[Math.floor(t)], arr[Math.ceil(t)], t % 1)
+}

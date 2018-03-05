@@ -6,7 +6,7 @@ B2T, BezierCurve, Edge, P3, PCurveEdge, PICurve, PlaneSurface, PointVsFace, Proj
 SemiEllipsoidSurface, StraightEdge,
 } from '..'
 
-const {PI, sin} = Math
+import {PI, sin} from '../src/math'
 
 suite('SemiEllipsoidSurface', () => {
 	const ses2 = SemiEllipsoidSurface.UNIT.scale(2)

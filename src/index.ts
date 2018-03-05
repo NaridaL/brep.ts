@@ -6,6 +6,7 @@ export * from './curve/EllipseCurve'
 export * from './curve/HyperbolaCurve'
 export * from './curve/Line3'
 export * from './curve/PICurve'
+export * from './curve/PPCurve'
 export * from './curve/ParabolaCurve'
 export * from './curve/SemiEllipseCurve'
 

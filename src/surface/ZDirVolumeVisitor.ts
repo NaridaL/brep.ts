@@ -3,7 +3,7 @@ import { V3, assertNever, TAU, NLA_PRECISION, M4, gaussLegendreQuadrature24, glq
 import { ConicSurface, Edge, PlaneSurface, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface, HyperbolaCurve, ParabolaCurve, CylinderSurface, EllipseCurve, EllipsoidSurface, L3, ProjectedCurveSurface,
     ImplicitCurve } from '../index'
 
-const { PI } = Math
+import { PI } from '../math'
 
 export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volume: number, centroid: any } } = {
 	/**

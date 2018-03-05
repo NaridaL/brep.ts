@@ -3,10 +3,11 @@ import {
 	B2T, ConicSurface, Edge, HyperbolaCurve, L3, P3, PCurveEdge, PointVsFace, SemiEllipseCurve, SemiEllipsoidSurface,
 	StraightEdge,
 	ParabolaCurve,
+	EllipseCurve,
 } from '..'
 import {linkBRep, suite, test, testISCurves, testLoopCCW, testLoopContainsPoint, testParametricSurface} from './manager'
 
-const {PI} = Math
+import {PI} from '../src/math'
 
 suite('ConicSurface', () => {
 	const UCS = ConicSurface.UNIT
@@ -31,26 +32,33 @@ suite('ConicSurface', () => {
 		testLoopCCW(assert, surface, Edge.reversePath(loop))
 		testLoopCCW(assert, surface.flipped(), loop)
 	})
-	test('isCoplanarTo', assert => {
-		assert.ok(UCS.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
-		assert.v3like(UCS.pSTFunc()(0, 3), V(3, 0, 3))
-		const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
-		const planeAtZ3 = P3.XY.translate(0, 0, 3)
+    test('isCoplanarTo', assert => {
+        const unitCone = ConicSurface.UNIT
+        assert.ok(unitCone.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
+        assert.v3like(unitCone.pSTFunc()(0, 3), V(3, 0, 3))
+        const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
+        const planeAtZ3 = P3.XY.translate(0, 0, 3)
+        const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3)
+        assert.equal(issAtZ3.length, 1)
+        assert.ok(ellipseAtZ3.isColinearTo(issAtZ3[0]))
+        assert.ok(unitCone.containsEllipse(ellipseAtZ3))
 
 
-		const CS2 = ConicSurface.UNIT.scale(2, 2, 1)
-		assert.notOk(CS2.isCoplanarTo(UCS))
-		assert.notOk(UCS.isCoplanarTo(CS2))
-		const ell1 = UCS.isCurvesWithPlane(new P3(V(2, 3, 10).unit(), 10))[0]
-		assert.ok(UCS.containsEllipse(ell1), 'UCS.containsEllipse(ell1)')
-		const ell2 = UCS.isCurvesWithPlane(new P3(V(1, 1, 2).unit(), 4))[0]
-		const ell1Cone = ConicSurface.atApexThroughEllipse(V3.O, ell1, 1)
-		const ell2Cone = ConicSurface.atApexThroughEllipse(V3.O, ell2, 1)
-		assert.ok(UCS.isCoplanarTo(ell1Cone))
-		assert.ok(UCS.isCoplanarTo(ell2Cone))
-		assert.ok(ell1Cone.isCoplanarTo(ell2Cone))
-		assert.ok(ell2Cone.isCoplanarTo(ell1Cone))
-	})
+        const scaledUnit = ConicSurface.UNIT.scale(2, 2, 1)
+        assert.notOk(scaledUnit.isCoplanarTo(unitCone))
+        assert.notOk(unitCone.isCoplanarTo(scaledUnit))
+        const ell1 = unitCone.isCurvesWithPlane(new P3(V(2, 3, 10).unit(), 10))[0] as SemiEllipseCurve
+        assert.ok(unitCone.containsEllipse(ell1), 'UCS.containsEllipse(ell1)')
+        const ell2 = unitCone.isCurvesWithPlane(new P3(V(1, 1, 2).unit(), 4))[0] as SemiEllipseCurve
+        const ell1Cone = ConicSurface.atApexThroughEllipse(V3.O, ell1)
+        const ell2Cone = ConicSurface.atApexThroughEllipse(V3.O, ell2)
+        console.log(ell1Cone)
+        assert.ok(unitCone.isCoplanarTo(ell1Cone))
+        assert.ok(unitCone.isCoplanarTo(ell2Cone))
+        assert.ok(ell1Cone.isCoplanarTo(ell2Cone))
+        assert.ok(ell2Cone.isCoplanarTo(ell1Cone))
+        assert.ok(ell1Cone.foo().isCoplanarTo(ell2Cone.foo()))
+    })
 	test('isCurvesWithPlane', assert => {
 		testISCurves(assert, UCS, new P3(V(1, 1, 2).unit(), 4), 2)
 		testISCurves(assert, UCS, P3.XY.translate(0, 0, 3), 1)

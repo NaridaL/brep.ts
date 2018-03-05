@@ -5,7 +5,7 @@ import {
     ImplicitSurface,
 } from '../index'
 
-const {PI, sign} = Math
+import {PI, sign} from '../math'
 
 export class SemiCylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)

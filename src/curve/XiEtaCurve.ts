@@ -2,20 +2,20 @@ import {
 	arrayFromFunction, assertf, assertInst, assertNumbers, assertVectors, eq0, hasConstructor, int, M4, NLA_PRECISION,
 	TAU, V, V3,
 } from 'ts3dutils'
-import {Mesh, pushQuad} from 'tsgl'
+import { Mesh, pushQuad } from 'tsgl'
 
 import {
 	BezierCurve, ConicSurface, Curve, EllipseCurve, EllipsoidSurface, ISInfo, L3, P3, PlaneSurface,
 	ProjectedCurveSurface, SemiEllipsoidSurface, Surface,
 } from '../index'
 
-const {PI} = Math
+import {PI} from '../math'
 
 export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3
 	readonly matrix: M4
 	readonly inverseMatrix: M4
-	'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
+	readonly 'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
 
 	constructor(readonly center: V3,
 				readonly f1: V3,
@@ -46,11 +46,11 @@ export abstract class XiEtaCurve extends Curve {
 
 	/**
 	 * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
-	 * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
+	 * with semi-major/minor axes parallel t the X and Y axes.
 	 *
-	 * @param a length of the axis parallel to X axis
-	 * @param b length of the axis parallel to Y axis
-	 * @param center Defaults to V3.O
+	 * @param a length of the axis parallel to X axis.
+	 * @param b length of the axis parallel to Y axis.
+	 * @param center center of the ellipse.
 	 */
 	static forAB(a: number, b: number, center: V3 = V3.O): XiEtaCurve {
 		return new (this as any)(center, V(a, 0, 0), V(0, b, 0))
@@ -109,6 +109,7 @@ export abstract class XiEtaCurve extends Curve {
 					if (curve.containsPoint(p)) {
 						return {tThis, tOther: curve.pointT(p), p}
 					}
+					return undefined
 				})
 			}
 		}
@@ -123,13 +124,14 @@ export abstract class XiEtaCurve extends Curve {
 			this.tMin, this.tMax) as this
 	}
 
-	equals(obj: any): boolean {
+	equals(obj: any): obj is this {
 		return this == obj ||
-			obj.constructor == this.constructor
-			&& this.center.equals(obj.center)
-			&& this.f1.equals(obj.f1)
-			&& this.f2.equals(obj.f2)
-	}
+            undefined != obj
+            && this.constructor == obj.constructor
+            && this.center.equals(obj.center)
+            && this.f1.equals(obj.f1)
+            && this.f2.equals(obj.f2)
+    }
 
 	hashCode(): int {
 		let hashCode = 0
@@ -251,6 +253,7 @@ export abstract class XiEtaCurve extends Curve {
 				if (this.constructor.XYLCValid(pLC)) {
 					return {tOther: tOther, p: bezierWC.at(tOther), tThis: this.constructor.XYLCPointT(pLC)}
 				}
+				return undefined
 			})
 			return infos
 		}
@@ -274,7 +277,7 @@ export abstract class XiEtaCurve extends Curve {
 		return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
 	}
 
-	debugToMesh(mesh: Mesh, bufferName: string) {
+	debugToMesh<T extends Record<string, V3[]>>(mesh: Mesh & T, bufferName: keyof T) {
 		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
 		for (let t = 0; t < Math.PI; t += 0.1) {
 			const p = this.at(t)

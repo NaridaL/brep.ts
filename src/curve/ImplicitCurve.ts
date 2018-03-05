@@ -3,11 +3,11 @@ import {Mesh, pushQuad} from 'tsgl'
 
 import {Curve, PICurve,} from '../index'
 
-const {ceil, floor} = Math
+import {ceil, floor} from '../math'
 
 export abstract class ImplicitCurve extends Curve {
-    constructor(readonly points: V3[],
-                readonly tangents: V3[],
+    constructor(readonly points: ReadonlyArray<V3>,
+                readonly tangents: ReadonlyArray<V3>,
                 readonly dir: number = 1,
                 readonly generator?: string,
                 tMin: number = (1 == dir ? 0 : -(points.length - 1)),

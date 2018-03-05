@@ -6,7 +6,7 @@ import {
 	StraightEdge, B2T, Edge, Face,
 } from '..'
 
-const { PI, sin } = Math
+import { PI, sin } from '../src/math'
 
 suite('SemiCylinderSurface', () => {
 	test('loopContainsPoint with PICurve', assert => {

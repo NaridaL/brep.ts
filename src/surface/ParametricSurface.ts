@@ -1,9 +1,10 @@
 import {assert, between, V3, isCCW} from 'ts3dutils'
+import {V, NLA_PRECISION} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
-import {Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge} from '../index'
+import {Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge, breakDownPPCurves} from '../index'
 
-const {ceil, min} = Math
+import {ceil, min} from '../math'
 
 
 export abstract class ParametricSurface extends Surface {
@@ -14,24 +15,32 @@ export abstract class ParametricSurface extends Surface {
 	uStep: number
 	vStep: number
 
-	static isCurvesParametricImplicitSurface(ps: ParametricSurface,
-											 is: ImplicitSurface,
-											 sStep: number,
-											 tStep: number = sStep,
-											 curveStepSize: number): Curve[] {
-		const pf = ps.pSTFunc(), icc = is.implicitFunction()
-		const dpds = ps.dpds()
-		const dpdt = ps.dpdt()
-		const didp = is.didp.bind(is)
-		const ist = (x: number, y: number) => icc(pf(x, y))
-		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
-		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
-		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
-		const curves
-			= Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, dids, didt)
-			.map(({points, tangents}, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize))
-		return curves
-	}
+    static isCurvesParametricImplicitSurface(ps: ParametricSurface,
+                                             is: ImplicitSurface,
+                                             sStep: number,
+                                             tStep: number = sStep,
+                                             curveStepSize: number): Curve[] {
+        const pf = ps.pSTFunc(), icc = is.implicitFunction()
+        const dpds = ps.dpds()
+        const dpdt = ps.dpdt()
+        const didp = is.didp.bind(is)
+        const ist = (x: number, y: number) => icc(pf(x, y))
+        const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
+        const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
+        const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
+        const curves
+            = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize)
+            .map(({points, tangents}, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize))
+        return curves
+    }
+
+    static isCurvesParametricParametricSurface(ps1: ParametricSurface,
+                                               ps2: ParametricSurface,
+                                               s1Step: number,
+                                               t1Step: number = s1Step,
+                                               curveStepSize: number): Curve[] {
+        return breakDownPPCurves(ps1, ps2, s1Step, t1Step, curveStepSize)
+    }
 
 	static is(obj: any): obj is ParametricSurface {
 		return obj.pSTFunc

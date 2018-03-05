@@ -6,10 +6,10 @@ import {Mesh} from 'tsgl'
 
 import {
 	Curve, CylinderSurface, Edge, EllipseCurve, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface, PointVsFace,
-	ProjectedCurveSurface, Surface, dotCurve,
+	ProjectedCurveSurface, Surface, dotCurve, R2_R,
 } from '../index'
 
-const {PI, cos, sin, abs, sign} = Math
+import {PI, cos, sin, abs, sign} from '../math'
 
 export class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
@@ -259,8 +259,8 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		// normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
 		// normal1 == cos b * (f2 X f3 * cos b * cos a + f3 X f1 * cos b * sin a + f1 X f2 * sin b)
 		return (a, b) => {
-			let {f1, f2, f3} = this
-			let normal = f2.cross(f3).times(Math.cos(b) * Math.cos(a))
+			const {f1, f2, f3} = this
+			const normal = f2.cross(f3).times(Math.cos(b) * Math.cos(a))
 				.plus(f3.cross(f1).times(Math.cos(b) * Math.sin(a)))
 				.plus(f1.cross(f2).times(Math.sin(b)))
 				//.times(Math.cos(b))
@@ -393,7 +393,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		return eq0(this.implicitFunction()(p))
 	}
 
-	boundsFunction() {
+	boundsFunction(): (a: number, b: number) => boolean {
 		return (a, b) => between(b, -PI, PI)
 	}
 

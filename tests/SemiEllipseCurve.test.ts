@@ -2,7 +2,7 @@ import {V, V3} from 'ts3dutils'
 import {BezierCurve, P3, PlaneSurface, SemiEllipseCurve, SemiEllipsoidSurface, EllipseCurve,} from '..'
 import {suite, test, testCurve, testISTs, testCurveISInfos} from './manager'
 
-const {PI, sin} = Math
+import {PI, sin} from '../src/math'
 
 
 suite('SemiEllipseCurve', () => {

@@ -2,7 +2,7 @@ import {arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, snap0, V3
 
 import {Curve, XiEtaCurve, intersectionUnitHyperbolaLine} from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+import {PI, sign, abs, } from '../math'
 
 /**
  * x² - y² = 1
@@ -52,8 +52,6 @@ export class HyperbolaCurve extends XiEtaCurve {
 			const xi2 = (a * c + Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
 			const eta1 = (b ** 2 * c - a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
 			const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
-			const foo: number = 20
-			const bar = foo > 0 && foo
 			return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x: any) => x !== false)
 		}
 
@@ -64,6 +62,10 @@ export class HyperbolaCurve extends XiEtaCurve {
 		// = center + f1 cosh t + f2 sinh t
 		return this.center.plus(this.f1.times(Math.cosh(t))).plus(this.f2.times(Math.sinh(t)))
 	}
+
+	toString() {
+	    return `${this.center} + ${this.f1} * cosh(t) + ${this.f2} * sinh(t)`
+    }
 
 	tangentAt(t: number): V3 {
 		assertNumbers(t)

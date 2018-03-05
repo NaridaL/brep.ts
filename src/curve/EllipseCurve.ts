@@ -1,11 +1,11 @@
 import {
-	arrayFromFunction, arrayRange, assert, assertf, assertNumbers, checkDerivate, eq, eq0, glqInSteps, hasConstructor,
+	arrayFromFunction, assert, assertf, assertNumbers, checkDerivate, eq, eq0, glqInSteps, hasConstructor,
 	int, le, lt, M4, newtonIterate1d, newtonIterateSmart, NLA_PRECISION, pqFormula, TAU, V3,
 } from 'ts3dutils'
 
 import {Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, XiEtaCurve} from '../index'
 
-const {PI, cos, sin, min, max, tan, sign, ceil, floor, abs, sqrt, pow, atan2, round} = Math
+import {PI, min, max} from '.././math'
 
 export class EllipseCurve extends XiEtaCurve {
 	static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)
@@ -16,7 +16,7 @@ export class EllipseCurve extends XiEtaCurve {
 		assert(EllipseCurve.isValidT(tMax))
 	}
 
-	static isValidT(t) {
+	static isValidT(t: number) {
 		return -Math.PI <= t && t <= Math.PI
 	}
 
@@ -71,10 +71,6 @@ export class EllipseCurve extends XiEtaCurve {
 
 	// TODO: there'S alsoa commented out test
 	getVolZAnd(dir1: V3, tStart: number, tEnd: number): { volume: number, centroid: V3 } {
-		// let p = at(t)
-		// integrate area [p -> plane.projectPoint(p)] to x axis...
-		// INTEGRATE[tStart, tEnd] fp(this.at(t)) dt
-		const ft = t => this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
 		// f(t) = c + f1 cos + f2 sin
 		// p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
 		function fp(p: V3) {
@@ -99,10 +95,6 @@ export class EllipseCurve extends XiEtaCurve {
 		const normTStart = tStart - rightLC.angleXY()
 		const normTEnd = tEnd - rightLC.angleXY()
 		const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit())
-		//console.log(upLC.str, rightLC.str, normTStart, normTEnd, 'upLC.length()', upLC.length())
-		//console.log('transformedOriginY', transformedOriginY)
-		//assertf(() => upLC.hasLength(1), upLC.length())
-		const fPi = Math.PI / 4
 		// integral of sqrt(1 - x²) from 0 to cos(t)
 		// Basically, we want
 		// INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
@@ -250,7 +242,6 @@ export class EllipseCurve extends XiEtaCurve {
 			const df = (t: number) => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
 			checkDerivate(f, df, -PI, PI, 1)
 			const ts: number[] = []
-			const tsvs = arrayRange(-4 / 5 * PI, PI, PI / 4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))])
 			for (let startT = -4 / 5 * PI; startT < PI; startT += PI / 4) {
 				let t = newtonIterateSmart(f, startT, 16, df, 1e-4)
 				le(t, -PI) && (t += TAU)

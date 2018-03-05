@@ -2,15 +2,15 @@
   <configuration default="false" name="mocha_tests" type="mocha-javascript-test-runner" factoryName="Mocha" singleton="false">
     <node-interpreter>project</node-interpreter>
     <node-options />
-    <working-directory>$PROJECT_DIR$/tests</working-directory>
+    <working-directory>$PROJECT_DIR$</working-directory>
     <pass-parent-env>true</pass-parent-env>
     <envs>
-      <env name="TS_NODE_DISABLE_WARNINGS" value="true" />
+      <env name="TS_NODE_PROJECT" value="tests/tsconfig.json" />
     </envs>
     <ui>tdd</ui>
     <extra-mocha-options>--require ts-node/register</extra-mocha-options>
     <test-kind>PATTERN</test-kind>
-    <test-pattern>**/*.test.ts</test-pattern>
+    <test-pattern>tests/**/*.test.ts</test-pattern>
     <method />
   </configuration>
 </component>

@@ -1,14 +1,14 @@
 import chroma from 'chroma-js'
 import {addOwnProperties, arrayFromFunction, DEG, int, M4, TAU, V, V3} from 'ts3dutils'
-import {DRAW_MODES, GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext} from 'tsgl'
+import { GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext} from 'tsgl'
 
 import {
 	BezierCurve, Curve, CustomPlane, Edge, EllipseCurve, HyperbolaCurve,
-	ImplicitCurve, L3, ParabolaCurve, PICurve, SemiEllipseCurve,
+	ImplicitCurve, L3, ParabolaCurve, PICurve, SemiEllipseCurve, PPCurve,
 	} from './index'
 import * as shaders from './shaders'
 
-const {pow, sign} = Math
+import {pow, sign} from './math'
 
 export function parseGetParams(str: string) {
 	const result: { [key: string]: string } = {}
@@ -94,7 +94,7 @@ export class BREPGLContext {
 		this.scale(customPlane.sMax - customPlane.sMin, customPlane.tMax - customPlane.tMin, 1)
 
 		const mesh = dotted ? this.meshes.xyDottedLinePlane : this.meshes.xyLinePlane
-		this.shaders.singleColor.uniforms({color: color}).draw(mesh, DRAW_MODES.LINES)
+		this.shaders.singleColor.uniforms({color: color}).draw(mesh, this.LINES)
 
 		this.popMatrix()
 	}
@@ -123,7 +123,7 @@ export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContex
 		if (!mesh) {
 			mesh = new Mesh()
 				.addIndexBuffer('TRIANGLES')
-				.addVertexBuffer('normals', 'LGL_Normal')
+				.addVertexBuffer('normals', 'ts_Normal')
 			curve.addToMesh(mesh)
 			mesh.compile()
 			//mesh=Mesh.sphere(2)
@@ -165,6 +165,7 @@ export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContex
 	},
 }
 CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
+CURVE_PAINTERS[PPCurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 
 export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BREPGLContext) {

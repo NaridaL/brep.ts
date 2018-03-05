@@ -16,19 +16,6 @@ MERCHANTABLITY OR NON-INFRINGEMENT.
 See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
-/* global Reflect, Promise */
-
-
-
-
-
-
-
-
-
-
-
-
 
 function __awaiter(thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -40,10 +27,6 @@ function __awaiter(thisArg, _arguments, P, generator) {
 }
 
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-
-
-
-
 
 function createCommonjsModule(fn, module) {
 	return module = { exports: {} }, fn(module, module.exports), module.exports;
@@ -1523,7 +1506,6 @@ var chroma = createCommonjsModule(function (module, exports) {
         this._rgb = hex2rgb(w3cx11[n]);
       }
       this._rgb[3] = 1;
-      this;
     }
     h = this.hex();
     for (k in w3cx11) {
@@ -2115,7 +2097,7 @@ var chroma = createCommonjsModule(function (module, exports) {
   };
 
   chroma.scale = function(colors, positions) {
-    var _classes, _colorCache, _colors, _correctLightness, _domain, _fixed, _gamma, _max, _min, _mode, _nacol, _out, _padding, _pos, _spread, _useCache, classifyValue, f, getClass, getColor, resetCache, setColors, tmap;
+    var _classes, _colorCache, _colors, _correctLightness, _domain, _gamma, _max, _min, _mode, _nacol, _out, _padding, _pos, _spread, _useCache, f, getClass, getColor, resetCache, setColors, tmap;
     _mode = 'rgb';
     _nacol = chroma('#ccc');
     _spread = 0;
@@ -2359,7 +2341,7 @@ var chroma = createCommonjsModule(function (module, exports) {
       }
     };
     f.colors = function(numColors, out) {
-      var dd, dm, i, o, ref, result, results, samples, w;
+      var dd, dm, i, ref, result, results, samples, w;
       if (arguments.length < 2) {
         out = 'hex';
       }
@@ -2499,6 +2481,7 @@ var chroma = createCommonjsModule(function (module, exports) {
     }
     min = data.min;
     max = data.max;
+    sum = data.sum;
     values = data.values.sort(function(a, b) {
       return a - b;
     });
@@ -2803,7 +2786,6 @@ var nerdamer_core = createCommonjsModule(function (module) {
 /* global trig, trigh */
 
 var nerdamer = (function(imports) { 
-    "use strict";
 
     var version = '0.7.16',
 
@@ -3560,27 +3542,6 @@ var nerdamer = (function(imports) {
             return coeffs;
         },
         
-        /**
-         * Using a regex to get between brackets can be a bit tricky. This functions makes it more abstract 
-         * to fetch between brackets within a string from any given index. If the starting index is a bracket 
-         * then it will fail. returns [matched_string, first_bracket_index, end_bracket_index]
-         * @param {Char} ob - open bracket
-         * @param {Char} cb - close bracket
-         * @param {String} str - The string being read
-         * @param {Integer} start - Where in the string to start
-         * @returns {Array}
-         */
-        betweenBrackets = function(ob, cb, str, start) {
-            
-        },
-        
-        /**
-         * A helper function to make substitutions
-         * @param {Object} subs
-         */
-        format_subs = function(subs) {
-            
-        },
         generatePrimes = Utils.generatePrimes = function(upto) {
             //get the last prime in the array
             var last_prime = PRIMES[PRIMES.length-1] || 2; 
@@ -3660,7 +3621,8 @@ var nerdamer = (function(imports) {
                     12.507343278686905, 
                     -0.13857109526572012, 
                     9.9843695780195716e-6, 
-                    1.5056327351493116e-7];
+                    1.5056327351493116e-7]
+                ;
 
                 if (z < 0.5) 
                     return Math.PI / (Math.sin(Math.PI * z) * Math2.gamma(1 - z));
@@ -3742,8 +3704,7 @@ var nerdamer = (function(imports) {
                             break;
                         }
                         b %= a;
-                        if (b === 0) break;
-                    }
+                        if (b === 0) break;                    }
                 }
                 return a;
             },
@@ -4387,13 +4348,13 @@ var nerdamer = (function(imports) {
     }
     
     Utils.text = text;
-    /* END GLOBAL FUNCTIONS */
     
-    /**** CLASSES *****/
-    /**
-     * The Collector is used to find unique values within objects
-     * @param {Function} extra_conditions - A function which performs a check on the values and returns a boolean
-     * @returns {Collector}
+    /** 
+     * This is what nerdamer returns. It's sort of a wrapper around the symbol class and 
+     * provides the user with some useful functions. If you want to provide the user with extra
+     * library functions then add them to this class's prototype.
+     * @param {Symbol} symbol
+     * @returns {Expression} wraps around the Symbol class
      */
     function Expression(symbol) {
         //we don't want arrays wrapped
@@ -4564,8 +4525,7 @@ var nerdamer = (function(imports) {
             }
             catch(e){
                 return false;
-            }    
-        },
+            }        },
         lt: function(value) {
             if(!isSymbol(value))
                 value = _.parse(value);
@@ -4575,8 +4535,7 @@ var nerdamer = (function(imports) {
             }
             catch(e){
                 return false;
-            }   
-        },
+            }        },
         gt: function(value) {
             if(!isSymbol(value))
                 value = _.parse(value);
@@ -4586,8 +4545,7 @@ var nerdamer = (function(imports) {
             }
             catch(e){
                 return false;
-            } 
-        },
+            }        },
         gte: function(value) {
             return this.gt(value) || this.eq(value);
         },
@@ -4856,8 +4814,7 @@ var nerdamer = (function(imports) {
         //this enables the class to be instantiated without the new operator
         if(!(this instanceof Symbol)) { 
             return new Symbol(obj); 
-        }
-        //define numeric symbols
+        }        //define numeric symbols
         if(!isNaN(obj) && !isInfinity && isFinite(obj)) { 
             
             this.group = N;
@@ -6016,8 +5973,7 @@ var nerdamer = (function(imports) {
             i++;
         }
         return factors.sort(function(a, b){return a-b;});
-    }
- 
+    } 
     
     /**
      * This class defines the operators in nerdamer. The thinking is that with using these parameters
@@ -7559,7 +7515,7 @@ var nerdamer = (function(imports) {
 
             return output[0];
         };
-        
+
         var chunkAtCommas = function(arr){
             var j, k = 0, chunks = [[]];
             for (var j = 0, l=arr.length; j<l; j++){
@@ -7759,8 +7715,7 @@ var nerdamer = (function(imports) {
             else if(symbol.equals(1/2))
                 return _.parse('sqrt(pi)/2');
             return _.symfunction(FACTORIAL, [symbol]);
-        }
-        /**
+        }        /**
          * The mod function
          * @param {Symbol} symbol1
          * @param {Symbol} symbol2
@@ -8305,8 +8260,7 @@ var nerdamer = (function(imports) {
             var symbol = new Symbol(0);
             symbol.multiplier = n;
             return symbol;
-        }
-        
+        }        
         function clean(symbol) {
             // handle functions with numeric values
             // handle denominator within denominator
@@ -8433,8 +8387,7 @@ var nerdamer = (function(imports) {
                                     b = _.expand(b);
                                 t = _.add(t, b);
                             }
-                        }
-                        result = t;
+                        }                        result = t;
                     }
                         
                     //put back the multiplier
@@ -8488,8 +8441,7 @@ var nerdamer = (function(imports) {
                         if(x.group === EX)
                             continue;
                         if(x.isComposite()) {
-                            var p = x.power, isDenom = false;
-                            if(isInt(p)) {
+                            var p = x.power, isDenom = false;                            if(isInt(p)) {
                                 if(p < 0) {
                                     x.power.negate();
                                     isDenom = true;
@@ -9024,8 +8976,7 @@ var nerdamer = (function(imports) {
                     a = a.args[0].clone();
                     a.setPower(new Frac(0.5).multiply(a_pow));
                     g1 = a.group;
-                }
-                
+                }                
                 var v1 = a.value,
                     v2 = b.value,
                     sign = new Frac(a.multiplier.lessThan(0) ? -1 : 1),
@@ -9687,8 +9638,7 @@ var nerdamer = (function(imports) {
         this.dfactsub = function(a, b) {
             return _.subtract(this.symfunction(DOUBLEFACTORIAL, [a]), b);
         };
-    }
-    
+    }    
     /* "STATIC" */
     //converts a number to a fraction. 
     var Fraction = {
@@ -11284,15 +11234,13 @@ var nerdamer = (function(imports) {
 })({
     //https://github.com/peterolson/BigInteger.js
     bigInt: (function(){
-        var bigInt = function(undefined){"use strict";var BASE=1e7,LOG_BASE=7,MAX_INT=9007199254740992,MAX_INT_ARR=smallToArray(MAX_INT),LOG_MAX_INT=Math.log(MAX_INT);function Integer(v,radix){if(typeof v==="undefined")return Integer[0];if(typeof radix!=="undefined")return+radix===10?parseValue(v):parseBase(v,radix);return parseValue(v)}function BigInteger(value,sign){this.value=value;this.sign=sign;this.isSmall=false;}BigInteger.prototype=Object.create(Integer.prototype);function SmallInteger(value){this.value=value;this.sign=value<0;this.isSmall=true;}SmallInteger.prototype=Object.create(Integer.prototype);function isPrecise(n){return-MAX_INT<n&&n<MAX_INT}function smallToArray(n){if(n<1e7)return[n];if(n<1e14)return[n%1e7,Math.floor(n/1e7)];return[n%1e7,Math.floor(n/1e7)%1e7,Math.floor(n/1e14)]}function arrayToSmall(arr){trim(arr);var length=arr.length;if(length<4&&compareAbs(arr,MAX_INT_ARR)<0){switch(length){case 0:return 0;case 1:return arr[0];case 2:return arr[0]+arr[1]*BASE;default:return arr[0]+(arr[1]+arr[2]*BASE)*BASE}}return arr}function trim(v){var i=v.length;while(v[--i]===0);v.length=i+1;}function createArray(length){var x=new Array(length);var i=-1;while(++i<length){x[i]=0;}return x}function truncate(n){if(n>0)return Math.floor(n);return Math.ceil(n)}function add(a,b){var l_a=a.length,l_b=b.length,r=new Array(l_a),carry=0,base=BASE,sum,i;for(i=0;i<l_b;i++){sum=a[i]+b[i]+carry;carry=sum>=base?1:0;r[i]=sum-carry*base;}while(i<l_a){sum=a[i]+carry;carry=sum===base?1:0;r[i++]=sum-carry*base;}if(carry>0)r.push(carry);return r}function addAny(a,b){if(a.length>=b.length)return add(a,b);return add(b,a)}function addSmall(a,carry){var l=a.length,r=new Array(l),base=BASE,sum,i;for(i=0;i<l;i++){sum=a[i]-base+carry;carry=Math.floor(sum/base);r[i]=sum-carry*base;carry+=1;}while(carry>0){r[i++]=carry%base;carry=Math.floor(carry/base);}return r}BigInteger.prototype.add=function(v){var n=parseValue(v);if(this.sign!==n.sign){return this.subtract(n.negate())}var a=this.value,b=n.value;if(n.isSmall){return new BigInteger(addSmall(a,Math.abs(b)),this.sign)}return new BigInteger(addAny(a,b),this.sign)};BigInteger.prototype.plus=BigInteger.prototype.add;SmallInteger.prototype.add=function(v){var n=parseValue(v);var a=this.value;if(a<0!==n.sign){return this.subtract(n.negate())}var b=n.value;if(n.isSmall){if(isPrecise(a+b))return new SmallInteger(a+b);b=smallToArray(Math.abs(b));}return new BigInteger(addSmall(b,Math.abs(a)),a<0)};SmallInteger.prototype.plus=SmallInteger.prototype.add;function subtract(a,b){var a_l=a.length,b_l=b.length,r=new Array(a_l),borrow=0,base=BASE,i,difference;for(i=0;i<b_l;i++){difference=a[i]-borrow-b[i];if(difference<0){difference+=base;borrow=1;}else borrow=0;r[i]=difference;}for(i=b_l;i<a_l;i++){difference=a[i]-borrow;if(difference<0)difference+=base;else{r[i++]=difference;break}r[i]=difference;}for(;i<a_l;i++){r[i]=a[i];}trim(r);return r}function subtractAny(a,b,sign){var value;if(compareAbs(a,b)>=0){value=subtract(a,b);}else{value=subtract(b,a);sign=!sign;}value=arrayToSmall(value);if(typeof value==="number"){if(sign)value=-value;return new SmallInteger(value)}return new BigInteger(value,sign)}function subtractSmall(a,b,sign){var l=a.length,r=new Array(l),carry=-b,base=BASE,i,difference;for(i=0;i<l;i++){difference=a[i]+carry;carry=Math.floor(difference/base);difference%=base;r[i]=difference<0?difference+base:difference;}r=arrayToSmall(r);if(typeof r==="number"){if(sign)r=-r;return new SmallInteger(r)}return new BigInteger(r,sign)}BigInteger.prototype.subtract=function(v){var n=parseValue(v);if(this.sign!==n.sign){return this.add(n.negate())}var a=this.value,b=n.value;if(n.isSmall)return subtractSmall(a,Math.abs(b),this.sign);return subtractAny(a,b,this.sign)};BigInteger.prototype.minus=BigInteger.prototype.subtract;SmallInteger.prototype.subtract=function(v){var n=parseValue(v);var a=this.value;if(a<0!==n.sign){return this.add(n.negate())}var b=n.value;if(n.isSmall){return new SmallInteger(a-b)}return subtractSmall(b,Math.abs(a),a>=0)};SmallInteger.prototype.minus=SmallInteger.prototype.subtract;BigInteger.prototype.negate=function(){return new BigInteger(this.value,!this.sign)};SmallInteger.prototype.negate=function(){var sign=this.sign;var small=new SmallInteger(-this.value);small.sign=!sign;return small};BigInteger.prototype.abs=function(){return new BigInteger(this.value,false)};SmallInteger.prototype.abs=function(){return new SmallInteger(Math.abs(this.value))};function multiplyLong(a,b){var a_l=a.length,b_l=b.length,l=a_l+b_l,r=createArray(l),base=BASE,product,carry,i,a_i,b_j;for(i=0;i<a_l;++i){a_i=a[i];for(var j=0;j<b_l;++j){b_j=b[j];product=a_i*b_j+r[i+j];carry=Math.floor(product/base);r[i+j]=product-carry*base;r[i+j+1]+=carry;}}trim(r);return r}function multiplySmall(a,b){var l=a.length,r=new Array(l),base=BASE,carry=0,product,i;for(i=0;i<l;i++){product=a[i]*b+carry;carry=Math.floor(product/base);r[i]=product-carry*base;}while(carry>0){r[i++]=carry%base;carry=Math.floor(carry/base);}return r}function shiftLeft(x,n){var r=[];while(n-- >0)r.push(0);return r.concat(x)}function multiplyKaratsuba(x,y){var n=Math.max(x.length,y.length);if(n<=30)return multiplyLong(x,y);n=Math.ceil(n/2);var b=x.slice(n),a=x.slice(0,n),d=y.slice(n),c=y.slice(0,n);var ac=multiplyKaratsuba(a,c),bd=multiplyKaratsuba(b,d),abcd=multiplyKaratsuba(addAny(a,b),addAny(c,d));var product=addAny(addAny(ac,shiftLeft(subtract(subtract(abcd,ac),bd),n)),shiftLeft(bd,2*n));trim(product);return product}function useKaratsuba(l1,l2){return-.012*l1-.012*l2+15e-6*l1*l2>0}BigInteger.prototype.multiply=function(v){var n=parseValue(v),a=this.value,b=n.value,sign=this.sign!==n.sign,abs;if(n.isSmall){if(b===0)return Integer[0];if(b===1)return this;if(b===-1)return this.negate();abs=Math.abs(b);if(abs<BASE){return new BigInteger(multiplySmall(a,abs),sign)}b=smallToArray(abs);}if(useKaratsuba(a.length,b.length))return new BigInteger(multiplyKaratsuba(a,b),sign);return new BigInteger(multiplyLong(a,b),sign)};BigInteger.prototype.times=BigInteger.prototype.multiply;function multiplySmallAndArray(a,b,sign){if(a<BASE){return new BigInteger(multiplySmall(b,a),sign)}return new BigInteger(multiplyLong(b,smallToArray(a)),sign)}SmallInteger.prototype._multiplyBySmall=function(a){if(isPrecise(a.value*this.value)){return new SmallInteger(a.value*this.value)}return multiplySmallAndArray(Math.abs(a.value),smallToArray(Math.abs(this.value)),this.sign!==a.sign)};BigInteger.prototype._multiplyBySmall=function(a){if(a.value===0)return Integer[0];if(a.value===1)return this;if(a.value===-1)return this.negate();return multiplySmallAndArray(Math.abs(a.value),this.value,this.sign!==a.sign)};SmallInteger.prototype.multiply=function(v){return parseValue(v)._multiplyBySmall(this)};SmallInteger.prototype.times=SmallInteger.prototype.multiply;function square(a){var l=a.length,r=createArray(l+l),base=BASE,product,carry,i,a_i,a_j;for(i=0;i<l;i++){a_i=a[i];for(var j=0;j<l;j++){a_j=a[j];product=a_i*a_j+r[i+j];carry=Math.floor(product/base);r[i+j]=product-carry*base;r[i+j+1]+=carry;}}trim(r);return r}BigInteger.prototype.square=function(){return new BigInteger(square(this.value),false)};SmallInteger.prototype.square=function(){var value=this.value*this.value;if(isPrecise(value))return new SmallInteger(value);return new BigInteger(square(smallToArray(Math.abs(this.value))),false)};function divMod1(a,b){var a_l=a.length,b_l=b.length,base=BASE,result=createArray(b.length),divisorMostSignificantDigit=b[b_l-1],lambda=Math.ceil(base/(2*divisorMostSignificantDigit)),remainder=multiplySmall(a,lambda),divisor=multiplySmall(b,lambda),quotientDigit,shift,carry,borrow,i,l,q;if(remainder.length<=a_l)remainder.push(0);divisor.push(0);divisorMostSignificantDigit=divisor[b_l-1];for(shift=a_l-b_l;shift>=0;shift--){quotientDigit=base-1;if(remainder[shift+b_l]!==divisorMostSignificantDigit){quotientDigit=Math.floor((remainder[shift+b_l]*base+remainder[shift+b_l-1])/divisorMostSignificantDigit);}carry=0;borrow=0;l=divisor.length;for(i=0;i<l;i++){carry+=quotientDigit*divisor[i];q=Math.floor(carry/base);borrow+=remainder[shift+i]-(carry-q*base);carry=q;if(borrow<0){remainder[shift+i]=borrow+base;borrow=-1;}else{remainder[shift+i]=borrow;borrow=0;}}while(borrow!==0){quotientDigit-=1;carry=0;for(i=0;i<l;i++){carry+=remainder[shift+i]-base+divisor[i];if(carry<0){remainder[shift+i]=carry+base;carry=0;}else{remainder[shift+i]=carry;carry=1;}}borrow+=carry;}result[shift]=quotientDigit;}remainder=divModSmall(remainder,lambda)[0];return[arrayToSmall(result),arrayToSmall(remainder)]}function divMod2(a,b){var a_l=a.length,b_l=b.length,result=[],part=[],base=BASE,guess,xlen,highx,highy,check;while(a_l){part.unshift(a[--a_l]);trim(part);if(compareAbs(part,b)<0){result.push(0);continue}xlen=part.length;highx=part[xlen-1]*base+part[xlen-2];highy=b[b_l-1]*base+b[b_l-2];if(xlen>b_l){highx=(highx+1)*base;}guess=Math.ceil(highx/highy);do{check=multiplySmall(b,guess);if(compareAbs(check,part)<=0)break;guess--;}while(guess);result.push(guess);part=subtract(part,check);}result.reverse();return[arrayToSmall(result),arrayToSmall(part)]}function divModSmall(value,lambda){var length=value.length,quotient=createArray(length),base=BASE,i,q,remainder,divisor;remainder=0;for(i=length-1;i>=0;--i){divisor=remainder*base+value[i];q=truncate(divisor/lambda);remainder=divisor-q*lambda;quotient[i]=q|0;}return[quotient,remainder|0]}function divModAny(self,v){var value,n=parseValue(v);var a=self.value,b=n.value;var quotient;if(b===0)throw new Error("Cannot divide by zero");if(self.isSmall){if(n.isSmall){return[new SmallInteger(truncate(a/b)),new SmallInteger(a%b)]}return[Integer[0],self]}if(n.isSmall){if(b===1)return[self,Integer[0]];if(b==-1)return[self.negate(),Integer[0]];var abs=Math.abs(b);if(abs<BASE){value=divModSmall(a,abs);quotient=arrayToSmall(value[0]);var remainder=value[1];if(self.sign)remainder=-remainder;if(typeof quotient==="number"){if(self.sign!==n.sign)quotient=-quotient;return[new SmallInteger(quotient),new SmallInteger(remainder)]}return[new BigInteger(quotient,self.sign!==n.sign),new SmallInteger(remainder)]}b=smallToArray(abs);}var comparison=compareAbs(a,b);if(comparison===-1)return[Integer[0],self];if(comparison===0)return[Integer[self.sign===n.sign?1:-1],Integer[0]];if(a.length+b.length<=200)value=divMod1(a,b);else value=divMod2(a,b);quotient=value[0];var qSign=self.sign!==n.sign,mod=value[1],mSign=self.sign;if(typeof quotient==="number"){if(qSign)quotient=-quotient;quotient=new SmallInteger(quotient);}else quotient=new BigInteger(quotient,qSign);if(typeof mod==="number"){if(mSign)mod=-mod;mod=new SmallInteger(mod);}else mod=new BigInteger(mod,mSign);return[quotient,mod]}BigInteger.prototype.divmod=function(v){var result=divModAny(this,v);return{quotient:result[0],remainder:result[1]}};SmallInteger.prototype.divmod=BigInteger.prototype.divmod;BigInteger.prototype.divide=function(v){return divModAny(this,v)[0]};SmallInteger.prototype.over=SmallInteger.prototype.divide=BigInteger.prototype.over=BigInteger.prototype.divide;BigInteger.prototype.mod=function(v){return divModAny(this,v)[1]};SmallInteger.prototype.remainder=SmallInteger.prototype.mod=BigInteger.prototype.remainder=BigInteger.prototype.mod;BigInteger.prototype.pow=function(v){var n=parseValue(v),a=this.value,b=n.value,value,x,y;if(b===0)return Integer[1];if(a===0)return Integer[0];if(a===1)return Integer[1];if(a===-1)return n.isEven()?Integer[1]:Integer[-1];if(n.sign){return Integer[0]}if(!n.isSmall)throw new Error("The exponent "+n.toString()+" is too large.");if(this.isSmall){if(isPrecise(value=Math.pow(a,b)))return new SmallInteger(truncate(value))}x=this;y=Integer[1];while(true){if(b&1===1){y=y.times(x);--b;}if(b===0)break;b/=2;x=x.square();}return y};SmallInteger.prototype.pow=BigInteger.prototype.pow;BigInteger.prototype.modPow=function(exp,mod){exp=parseValue(exp);mod=parseValue(mod);if(mod.isZero())throw new Error("Cannot take modPow with modulus 0");var r=Integer[1],base=this.mod(mod);while(exp.isPositive()){if(base.isZero())return Integer[0];if(exp.isOdd())r=r.multiply(base).mod(mod);exp=exp.divide(2);base=base.square().mod(mod);}return r};SmallInteger.prototype.modPow=BigInteger.prototype.modPow;function compareAbs(a,b){if(a.length!==b.length){return a.length>b.length?1:-1}for(var i=a.length-1;i>=0;i--){if(a[i]!==b[i])return a[i]>b[i]?1:-1}return 0}BigInteger.prototype.compareAbs=function(v){var n=parseValue(v),a=this.value,b=n.value;if(n.isSmall)return 1;return compareAbs(a,b)};SmallInteger.prototype.compareAbs=function(v){var n=parseValue(v),a=Math.abs(this.value),b=n.value;if(n.isSmall){b=Math.abs(b);return a===b?0:a>b?1:-1}return-1};BigInteger.prototype.compare=function(v){if(v===Infinity){return-1}if(v===-Infinity){return 1}var n=parseValue(v),a=this.value,b=n.value;if(this.sign!==n.sign){return n.sign?1:-1}if(n.isSmall){return this.sign?-1:1}return compareAbs(a,b)*(this.sign?-1:1)};BigInteger.prototype.compareTo=BigInteger.prototype.compare;SmallInteger.prototype.compare=function(v){if(v===Infinity){return-1}if(v===-Infinity){return 1}var n=parseValue(v),a=this.value,b=n.value;if(n.isSmall){return a==b?0:a>b?1:-1}if(a<0!==n.sign){return a<0?-1:1}return a<0?1:-1};SmallInteger.prototype.compareTo=SmallInteger.prototype.compare;BigInteger.prototype.equals=function(v){return this.compare(v)===0};SmallInteger.prototype.eq=SmallInteger.prototype.equals=BigInteger.prototype.eq=BigInteger.prototype.equals;BigInteger.prototype.notEquals=function(v){return this.compare(v)!==0};SmallInteger.prototype.neq=SmallInteger.prototype.notEquals=BigInteger.prototype.neq=BigInteger.prototype.notEquals;BigInteger.prototype.greater=function(v){return this.compare(v)>0};SmallInteger.prototype.gt=SmallInteger.prototype.greater=BigInteger.prototype.gt=BigInteger.prototype.greater;BigInteger.prototype.lesser=function(v){return this.compare(v)<0};SmallInteger.prototype.lt=SmallInteger.prototype.lesser=BigInteger.prototype.lt=BigInteger.prototype.lesser;BigInteger.prototype.greaterOrEquals=function(v){return this.compare(v)>=0};SmallInteger.prototype.geq=SmallInteger.prototype.greaterOrEquals=BigInteger.prototype.geq=BigInteger.prototype.greaterOrEquals;BigInteger.prototype.lesserOrEquals=function(v){return this.compare(v)<=0};SmallInteger.prototype.leq=SmallInteger.prototype.lesserOrEquals=BigInteger.prototype.leq=BigInteger.prototype.lesserOrEquals;BigInteger.prototype.isEven=function(){return(this.value[0]&1)===0};SmallInteger.prototype.isEven=function(){return(this.value&1)===0};BigInteger.prototype.isOdd=function(){return(this.value[0]&1)===1};SmallInteger.prototype.isOdd=function(){return(this.value&1)===1};BigInteger.prototype.isPositive=function(){return!this.sign};SmallInteger.prototype.isPositive=function(){return this.value>0};BigInteger.prototype.isNegative=function(){return this.sign};SmallInteger.prototype.isNegative=function(){return this.value<0};BigInteger.prototype.isUnit=function(){return false};SmallInteger.prototype.isUnit=function(){return Math.abs(this.value)===1};BigInteger.prototype.isZero=function(){return false};SmallInteger.prototype.isZero=function(){return this.value===0};BigInteger.prototype.isDivisibleBy=function(v){var n=parseValue(v);var value=n.value;if(value===0)return false;if(value===1)return true;if(value===2)return this.isEven();return this.mod(n).equals(Integer[0])};SmallInteger.prototype.isDivisibleBy=BigInteger.prototype.isDivisibleBy;function isBasicPrime(v){var n=v.abs();if(n.isUnit())return false;if(n.equals(2)||n.equals(3)||n.equals(5))return true;if(n.isEven()||n.isDivisibleBy(3)||n.isDivisibleBy(5))return false;if(n.lesser(25))return true}BigInteger.prototype.isPrime=function(){var isPrime=isBasicPrime(this);if(isPrime!==undefined)return isPrime;var n=this.abs(),nPrev=n.prev();var a=[2,3,5,7,11,13,17,19],b=nPrev,d,t,i,x;while(b.isEven())b=b.divide(2);for(i=0;i<a.length;i++){x=bigInt(a[i]).modPow(b,n);if(x.equals(Integer[1])||x.equals(nPrev))continue;for(t=true,d=b;t&&d.lesser(nPrev);d=d.multiply(2)){x=x.square().mod(n);if(x.equals(nPrev))t=false;}if(t)return false}return true};SmallInteger.prototype.isPrime=BigInteger.prototype.isPrime;BigInteger.prototype.isProbablePrime=function(iterations){var isPrime=isBasicPrime(this);if(isPrime!==undefined)return isPrime;var n=this.abs();var t=iterations===undefined?5:iterations;for(var i=0;i<t;i++){var a=bigInt.randBetween(2,n.minus(2));if(!a.modPow(n.prev(),n).isUnit())return false}return true};SmallInteger.prototype.isProbablePrime=BigInteger.prototype.isProbablePrime;BigInteger.prototype.modInv=function(n){var t=bigInt.zero,newT=bigInt.one,r=parseValue(n),newR=this.abs(),q,lastT,lastR;while(!newR.equals(bigInt.zero)){q=r.divide(newR);lastT=t;lastR=r;t=newT;r=newR;newT=lastT.subtract(q.multiply(newT));newR=lastR.subtract(q.multiply(newR));}if(!r.equals(1))throw new Error(this.toString()+" and "+n.toString()+" are not co-prime");if(t.compare(0)===-1){t=t.add(n);}if(this.isNegative()){return t.negate()}return t};SmallInteger.prototype.modInv=BigInteger.prototype.modInv;BigInteger.prototype.next=function(){var value=this.value;if(this.sign){return subtractSmall(value,1,this.sign)}return new BigInteger(addSmall(value,1),this.sign)};SmallInteger.prototype.next=function(){var value=this.value;if(value+1<MAX_INT)return new SmallInteger(value+1);return new BigInteger(MAX_INT_ARR,false)};BigInteger.prototype.prev=function(){var value=this.value;if(this.sign){return new BigInteger(addSmall(value,1),true)}return subtractSmall(value,1,this.sign)};SmallInteger.prototype.prev=function(){var value=this.value;if(value-1>-MAX_INT)return new SmallInteger(value-1);return new BigInteger(MAX_INT_ARR,true)};var powersOfTwo=[1];while(powersOfTwo[powersOfTwo.length-1]<=BASE)powersOfTwo.push(2*powersOfTwo[powersOfTwo.length-1]);var powers2Length=powersOfTwo.length,highestPower2=powersOfTwo[powers2Length-1];function shift_isSmall(n){return(typeof n==="number"||typeof n==="string")&&+Math.abs(n)<=BASE||n instanceof BigInteger&&n.value.length<=1}BigInteger.prototype.shiftLeft=function(n){if(!shift_isSmall(n)){throw new Error(String(n)+" is too large for shifting.")}n=+n;if(n<0)return this.shiftRight(-n);var result=this;while(n>=powers2Length){result=result.multiply(highestPower2);n-=powers2Length-1;}return result.multiply(powersOfTwo[n])};SmallInteger.prototype.shiftLeft=BigInteger.prototype.shiftLeft;BigInteger.prototype.shiftRight=function(n){var remQuo;if(!shift_isSmall(n)){throw new Error(String(n)+" is too large for shifting.")}n=+n;if(n<0)return this.shiftLeft(-n);var result=this;while(n>=powers2Length){if(result.isZero())return result;remQuo=divModAny(result,highestPower2);result=remQuo[1].isNegative()?remQuo[0].prev():remQuo[0];n-=powers2Length-1;}remQuo=divModAny(result,powersOfTwo[n]);return remQuo[1].isNegative()?remQuo[0].prev():remQuo[0]};SmallInteger.prototype.shiftRight=BigInteger.prototype.shiftRight;function bitwise(x,y,fn){y=parseValue(y);var xSign=x.isNegative(),ySign=y.isNegative();var xRem=xSign?x.not():x,yRem=ySign?y.not():y;var xBits=[],yBits=[];var xStop=false,yStop=false;while(!xStop||!yStop){if(xRem.isZero()){xStop=true;xBits.push(xSign?1:0);}else if(xSign)xBits.push(xRem.isEven()?1:0);else xBits.push(xRem.isEven()?0:1);if(yRem.isZero()){yStop=true;yBits.push(ySign?1:0);}else if(ySign)yBits.push(yRem.isEven()?1:0);else yBits.push(yRem.isEven()?0:1);xRem=xRem.over(2);yRem=yRem.over(2);}var result=[];for(var i=0;i<xBits.length;i++)result.push(fn(xBits[i],yBits[i]));var sum=bigInt(result.pop()).negate().times(bigInt(2).pow(result.length));while(result.length){sum=sum.add(bigInt(result.pop()).times(bigInt(2).pow(result.length)));}return sum}BigInteger.prototype.not=function(){return this.negate().prev()};SmallInteger.prototype.not=BigInteger.prototype.not;BigInteger.prototype.and=function(n){return bitwise(this,n,function(a,b){return a&b})};SmallInteger.prototype.and=BigInteger.prototype.and;BigInteger.prototype.or=function(n){return bitwise(this,n,function(a,b){return a|b})};SmallInteger.prototype.or=BigInteger.prototype.or;BigInteger.prototype.xor=function(n){return bitwise(this,n,function(a,b){return a^b})};SmallInteger.prototype.xor=BigInteger.prototype.xor;var LOBMASK_I=1<<30,LOBMASK_BI=(BASE&-BASE)*(BASE&-BASE)|LOBMASK_I;function roughLOB(n){var v=n.value,x=typeof v==="number"?v|LOBMASK_I:v[0]+v[1]*BASE|LOBMASK_BI;return x&-x}function max(a,b){a=parseValue(a);b=parseValue(b);return a.greater(b)?a:b}function min(a,b){a=parseValue(a);b=parseValue(b);return a.lesser(b)?a:b}function gcd(a,b){a=parseValue(a).abs();b=parseValue(b).abs();if(a.equals(b))return a;if(a.isZero())return b;if(b.isZero())return a;var c=Integer[1],d,t;while(a.isEven()&&b.isEven()){d=Math.min(roughLOB(a),roughLOB(b));a=a.divide(d);b=b.divide(d);c=c.multiply(d);}while(a.isEven()){a=a.divide(roughLOB(a));}do{while(b.isEven()){b=b.divide(roughLOB(b));}if(a.greater(b)){t=b;b=a;a=t;}b=b.subtract(a);}while(!b.isZero());return c.isUnit()?a:a.multiply(c)}function lcm(a,b){a=parseValue(a).abs();b=parseValue(b).abs();return a.divide(gcd(a,b)).multiply(b)}function randBetween(a,b){a=parseValue(a);b=parseValue(b);var low=min(a,b),high=max(a,b);var range=high.subtract(low);if(range.isSmall)return low.add(Math.round(Math.random()*range));var length=range.value.length-1;var result=[],restricted=true;for(var i=length;i>=0;i--){var top=restricted?range.value[i]:BASE;var digit=truncate(Math.random()*top);result.unshift(digit);if(digit<top)restricted=false;}result=arrayToSmall(result);return low.add(typeof result==="number"?new SmallInteger(result):new BigInteger(result,false))}var parseBase=function(text,base){var length=text.length;var i;var absBase=Math.abs(base);for(var i=0;i<length;i++){var c=text[i].toLowerCase();if(c==="-")continue;if(/[a-z0-9]/.test(c)){if(/[0-9]/.test(c)&&+c>=absBase){if(c==="1"&&absBase===1)continue;throw new Error(c+" is not a valid digit in base "+base+".")}else if(c.charCodeAt(0)-87>=absBase){throw new Error(c+" is not a valid digit in base "+base+".")}}}if(2<=base&&base<=36){if(length<=LOG_MAX_INT/Math.log(base)){var result=parseInt(text,base);if(isNaN(result)){throw new Error(c+" is not a valid digit in base "+base+".")}return new SmallInteger(parseInt(text,base))}}base=parseValue(base);var digits=[];var isNegative=text[0]==="-";for(i=isNegative?1:0;i<text.length;i++){var c=text[i].toLowerCase(),charCode=c.charCodeAt(0);if(48<=charCode&&charCode<=57)digits.push(parseValue(c));else if(97<=charCode&&charCode<=122)digits.push(parseValue(c.charCodeAt(0)-87));else if(c==="<"){var start=i;do{i++;}while(text[i]!==">");digits.push(parseValue(text.slice(start+1,i)));}else throw new Error(c+" is not a valid character")}return parseBaseFromArray(digits,base,isNegative)};function parseBaseFromArray(digits,base,isNegative){var val=Integer[0],pow=Integer[1],i;for(i=digits.length-1;i>=0;i--){val=val.add(digits[i].times(pow));pow=pow.times(base);}return isNegative?val.negate():val}function stringify(digit){var v=digit.value;if(typeof v==="number")v=[v];if(v.length===1&&v[0]<=35){return"0123456789abcdefghijklmnopqrstuvwxyz".charAt(v[0])}return"<"+v+">"}function toBase(n,base){base=bigInt(base);if(base.isZero()){if(n.isZero())return"0";throw new Error("Cannot convert nonzero numbers to base 0.")}if(base.equals(-1)){if(n.isZero())return"0";if(n.isNegative())return new Array(1-n).join("10");return"1"+new Array(+n).join("01")}var minusSign="";if(n.isNegative()&&base.isPositive()){minusSign="-";n=n.abs();}if(base.equals(1)){if(n.isZero())return"0";return minusSign+new Array(+n+1).join(1)}var out=[];var left=n,divmod;while(left.isNegative()||left.compareAbs(base)>=0){divmod=left.divmod(base);left=divmod.quotient;var digit=divmod.remainder;if(digit.isNegative()){digit=base.minus(digit).abs();left=left.next();}out.push(stringify(digit));}out.push(stringify(left));return minusSign+out.reverse().join("")}BigInteger.prototype.toString=function(radix){if(radix===undefined)radix=10;if(radix!==10)return toBase(this,radix);var v=this.value,l=v.length,str=String(v[--l]),zeros="0000000",digit;while(--l>=0){digit=String(v[l]);str+=zeros.slice(digit.length)+digit;}var sign=this.sign?"-":"";return sign+str};SmallInteger.prototype.toString=function(radix){if(radix===undefined)radix=10;if(radix!=10)return toBase(this,radix);return String(this.value)};BigInteger.prototype.toJSON=SmallInteger.prototype.toJSON=function(){return this.toString()};BigInteger.prototype.valueOf=function(){return+this.toString()};BigInteger.prototype.toJSNumber=BigInteger.prototype.valueOf;SmallInteger.prototype.valueOf=function(){return this.value};SmallInteger.prototype.toJSNumber=SmallInteger.prototype.valueOf;function parseStringValue(v){if(isPrecise(+v)){var x=+v;if(x===truncate(x))return new SmallInteger(x);throw"Invalid integer: "+v}var sign=v[0]==="-";if(sign)v=v.slice(1);var split=v.split(/e/i);if(split.length>2)throw new Error("Invalid integer: "+split.join("e"));if(split.length===2){var exp=split[1];if(exp[0]==="+")exp=exp.slice(1);exp=+exp;if(exp!==truncate(exp)||!isPrecise(exp))throw new Error("Invalid integer: "+exp+" is not a valid exponent.");var text=split[0];var decimalPlace=text.indexOf(".");if(decimalPlace>=0){exp-=text.length-decimalPlace-1;text=text.slice(0,decimalPlace)+text.slice(decimalPlace+1);}if(exp<0)throw new Error("Cannot include negative exponent part for integers");text+=new Array(exp+1).join("0");v=text;}var isValid=/^([0-9][0-9]*)$/.test(v);if(!isValid)throw new Error("Invalid integer: "+v);var r=[],max=v.length,l=LOG_BASE,min=max-l;while(max>0){r.push(+v.slice(min,max));min-=l;if(min<0)min=0;max-=l;}trim(r);return new BigInteger(r,sign)}function parseNumberValue(v){if(isPrecise(v)){if(v!==truncate(v))throw new Error(v+" is not an integer.");return new SmallInteger(v)}return parseStringValue(v.toString())}function parseValue(v){if(typeof v==="number"){return parseNumberValue(v)}if(typeof v==="string"){return parseStringValue(v)}return v}for(var i=0;i<1e3;i++){Integer[i]=new SmallInteger(i);if(i>0)Integer[-i]=new SmallInteger(-i);}Integer.one=Integer[1];Integer.zero=Integer[0];Integer.minusOne=Integer[-1];Integer.max=max;Integer.min=min;Integer.gcd=gcd;Integer.lcm=lcm;Integer.isInstance=function(x){return x instanceof BigInteger||x instanceof SmallInteger};Integer.randBetween=randBetween;Integer.fromArray=function(digits,base,isNegative){return parseBaseFromArray(digits.map(parseValue),parseValue(base||10),isNegative)};return Integer}();if('object'!=="undefined"&&module.hasOwnProperty("exports")){module.exports=bigInt;}if(typeof undefined==="function"&&undefined.amd){undefined("big-integer",[],function(){return bigInt});}
-        return bigInt;
+        var bigInt = function(undefined){var BASE=1e7,LOG_BASE=7,MAX_INT=9007199254740992,MAX_INT_ARR=smallToArray(MAX_INT),LOG_MAX_INT=Math.log(MAX_INT);function Integer(v,radix){if(typeof v==="undefined")return Integer[0];if(typeof radix!=="undefined")return+radix===10?parseValue(v):parseBase(v,radix);return parseValue(v)}function BigInteger(value,sign){this.value=value;this.sign=sign;this.isSmall=false;}BigInteger.prototype=Object.create(Integer.prototype);function SmallInteger(value){this.value=value;this.sign=value<0;this.isSmall=true;}SmallInteger.prototype=Object.create(Integer.prototype);function isPrecise(n){return-MAX_INT<n&&n<MAX_INT}function smallToArray(n){if(n<1e7)return[n];if(n<1e14)return[n%1e7,Math.floor(n/1e7)];return[n%1e7,Math.floor(n/1e7)%1e7,Math.floor(n/1e14)]}function arrayToSmall(arr){trim(arr);var length=arr.length;if(length<4&&compareAbs(arr,MAX_INT_ARR)<0){switch(length){case 0:return 0;case 1:return arr[0];case 2:return arr[0]+arr[1]*BASE;default:return arr[0]+(arr[1]+arr[2]*BASE)*BASE}}return arr}function trim(v){var i=v.length;while(v[--i]===0);v.length=i+1;}function createArray(length){var x=new Array(length);var i=-1;while(++i<length){x[i]=0;}return x}function truncate(n){if(n>0)return Math.floor(n);return Math.ceil(n)}function add(a,b){var l_a=a.length,l_b=b.length,r=new Array(l_a),carry=0,base=BASE,sum,i;for(i=0;i<l_b;i++){sum=a[i]+b[i]+carry;carry=sum>=base?1:0;r[i]=sum-carry*base;}while(i<l_a){sum=a[i]+carry;carry=sum===base?1:0;r[i++]=sum-carry*base;}if(carry>0)r.push(carry);return r}function addAny(a,b){if(a.length>=b.length)return add(a,b);return add(b,a)}function addSmall(a,carry){var l=a.length,r=new Array(l),base=BASE,sum,i;for(i=0;i<l;i++){sum=a[i]-base+carry;carry=Math.floor(sum/base);r[i]=sum-carry*base;carry+=1;}while(carry>0){r[i++]=carry%base;carry=Math.floor(carry/base);}return r}BigInteger.prototype.add=function(v){var n=parseValue(v);if(this.sign!==n.sign){return this.subtract(n.negate())}var a=this.value,b=n.value;if(n.isSmall){return new BigInteger(addSmall(a,Math.abs(b)),this.sign)}return new BigInteger(addAny(a,b),this.sign)};BigInteger.prototype.plus=BigInteger.prototype.add;SmallInteger.prototype.add=function(v){var n=parseValue(v);var a=this.value;if(a<0!==n.sign){return this.subtract(n.negate())}var b=n.value;if(n.isSmall){if(isPrecise(a+b))return new SmallInteger(a+b);b=smallToArray(Math.abs(b));}return new BigInteger(addSmall(b,Math.abs(a)),a<0)};SmallInteger.prototype.plus=SmallInteger.prototype.add;function subtract(a,b){var a_l=a.length,b_l=b.length,r=new Array(a_l),borrow=0,base=BASE,i,difference;for(i=0;i<b_l;i++){difference=a[i]-borrow-b[i];if(difference<0){difference+=base;borrow=1;}else borrow=0;r[i]=difference;}for(i=b_l;i<a_l;i++){difference=a[i]-borrow;if(difference<0)difference+=base;else{r[i++]=difference;break}r[i]=difference;}for(;i<a_l;i++){r[i]=a[i];}trim(r);return r}function subtractAny(a,b,sign){var value;if(compareAbs(a,b)>=0){value=subtract(a,b);}else{value=subtract(b,a);sign=!sign;}value=arrayToSmall(value);if(typeof value==="number"){if(sign)value=-value;return new SmallInteger(value)}return new BigInteger(value,sign)}function subtractSmall(a,b,sign){var l=a.length,r=new Array(l),carry=-b,base=BASE,i,difference;for(i=0;i<l;i++){difference=a[i]+carry;carry=Math.floor(difference/base);difference%=base;r[i]=difference<0?difference+base:difference;}r=arrayToSmall(r);if(typeof r==="number"){if(sign)r=-r;return new SmallInteger(r)}return new BigInteger(r,sign)}BigInteger.prototype.subtract=function(v){var n=parseValue(v);if(this.sign!==n.sign){return this.add(n.negate())}var a=this.value,b=n.value;if(n.isSmall)return subtractSmall(a,Math.abs(b),this.sign);return subtractAny(a,b,this.sign)};BigInteger.prototype.minus=BigInteger.prototype.subtract;SmallInteger.prototype.subtract=function(v){var n=parseValue(v);var a=this.value;if(a<0!==n.sign){return this.add(n.negate())}var b=n.value;if(n.isSmall){return new SmallInteger(a-b)}return subtractSmall(b,Math.abs(a),a>=0)};SmallInteger.prototype.minus=SmallInteger.prototype.subtract;BigInteger.prototype.negate=function(){return new BigInteger(this.value,!this.sign)};SmallInteger.prototype.negate=function(){var sign=this.sign;var small=new SmallInteger(-this.value);small.sign=!sign;return small};BigInteger.prototype.abs=function(){return new BigInteger(this.value,false)};SmallInteger.prototype.abs=function(){return new SmallInteger(Math.abs(this.value))};function multiplyLong(a,b){var a_l=a.length,b_l=b.length,l=a_l+b_l,r=createArray(l),base=BASE,product,carry,i,a_i,b_j;for(i=0;i<a_l;++i){a_i=a[i];for(var j=0;j<b_l;++j){b_j=b[j];product=a_i*b_j+r[i+j];carry=Math.floor(product/base);r[i+j]=product-carry*base;r[i+j+1]+=carry;}}trim(r);return r}function multiplySmall(a,b){var l=a.length,r=new Array(l),base=BASE,carry=0,product,i;for(i=0;i<l;i++){product=a[i]*b+carry;carry=Math.floor(product/base);r[i]=product-carry*base;}while(carry>0){r[i++]=carry%base;carry=Math.floor(carry/base);}return r}function shiftLeft(x,n){var r=[];while(n-- >0)r.push(0);return r.concat(x)}function multiplyKaratsuba(x,y){var n=Math.max(x.length,y.length);if(n<=30)return multiplyLong(x,y);n=Math.ceil(n/2);var b=x.slice(n),a=x.slice(0,n),d=y.slice(n),c=y.slice(0,n);var ac=multiplyKaratsuba(a,c),bd=multiplyKaratsuba(b,d),abcd=multiplyKaratsuba(addAny(a,b),addAny(c,d));var product=addAny(addAny(ac,shiftLeft(subtract(subtract(abcd,ac),bd),n)),shiftLeft(bd,2*n));trim(product);return product}function useKaratsuba(l1,l2){return-.012*l1-.012*l2+15e-6*l1*l2>0}BigInteger.prototype.multiply=function(v){var n=parseValue(v),a=this.value,b=n.value,sign=this.sign!==n.sign,abs;if(n.isSmall){if(b===0)return Integer[0];if(b===1)return this;if(b===-1)return this.negate();abs=Math.abs(b);if(abs<BASE){return new BigInteger(multiplySmall(a,abs),sign)}b=smallToArray(abs);}if(useKaratsuba(a.length,b.length))return new BigInteger(multiplyKaratsuba(a,b),sign);return new BigInteger(multiplyLong(a,b),sign)};BigInteger.prototype.times=BigInteger.prototype.multiply;function multiplySmallAndArray(a,b,sign){if(a<BASE){return new BigInteger(multiplySmall(b,a),sign)}return new BigInteger(multiplyLong(b,smallToArray(a)),sign)}SmallInteger.prototype._multiplyBySmall=function(a){if(isPrecise(a.value*this.value)){return new SmallInteger(a.value*this.value)}return multiplySmallAndArray(Math.abs(a.value),smallToArray(Math.abs(this.value)),this.sign!==a.sign)};BigInteger.prototype._multiplyBySmall=function(a){if(a.value===0)return Integer[0];if(a.value===1)return this;if(a.value===-1)return this.negate();return multiplySmallAndArray(Math.abs(a.value),this.value,this.sign!==a.sign)};SmallInteger.prototype.multiply=function(v){return parseValue(v)._multiplyBySmall(this)};SmallInteger.prototype.times=SmallInteger.prototype.multiply;function square(a){var l=a.length,r=createArray(l+l),base=BASE,product,carry,i,a_i,a_j;for(i=0;i<l;i++){a_i=a[i];for(var j=0;j<l;j++){a_j=a[j];product=a_i*a_j+r[i+j];carry=Math.floor(product/base);r[i+j]=product-carry*base;r[i+j+1]+=carry;}}trim(r);return r}BigInteger.prototype.square=function(){return new BigInteger(square(this.value),false)};SmallInteger.prototype.square=function(){var value=this.value*this.value;if(isPrecise(value))return new SmallInteger(value);return new BigInteger(square(smallToArray(Math.abs(this.value))),false)};function divMod1(a,b){var a_l=a.length,b_l=b.length,base=BASE,result=createArray(b.length),divisorMostSignificantDigit=b[b_l-1],lambda=Math.ceil(base/(2*divisorMostSignificantDigit)),remainder=multiplySmall(a,lambda),divisor=multiplySmall(b,lambda),quotientDigit,shift,carry,borrow,i,l,q;if(remainder.length<=a_l)remainder.push(0);divisor.push(0);divisorMostSignificantDigit=divisor[b_l-1];for(shift=a_l-b_l;shift>=0;shift--){quotientDigit=base-1;if(remainder[shift+b_l]!==divisorMostSignificantDigit){quotientDigit=Math.floor((remainder[shift+b_l]*base+remainder[shift+b_l-1])/divisorMostSignificantDigit);}carry=0;borrow=0;l=divisor.length;for(i=0;i<l;i++){carry+=quotientDigit*divisor[i];q=Math.floor(carry/base);borrow+=remainder[shift+i]-(carry-q*base);carry=q;if(borrow<0){remainder[shift+i]=borrow+base;borrow=-1;}else{remainder[shift+i]=borrow;borrow=0;}}while(borrow!==0){quotientDigit-=1;carry=0;for(i=0;i<l;i++){carry+=remainder[shift+i]-base+divisor[i];if(carry<0){remainder[shift+i]=carry+base;carry=0;}else{remainder[shift+i]=carry;carry=1;}}borrow+=carry;}result[shift]=quotientDigit;}remainder=divModSmall(remainder,lambda)[0];return[arrayToSmall(result),arrayToSmall(remainder)]}function divMod2(a,b){var a_l=a.length,b_l=b.length,result=[],part=[],base=BASE,guess,xlen,highx,highy,check;while(a_l){part.unshift(a[--a_l]);trim(part);if(compareAbs(part,b)<0){result.push(0);continue}xlen=part.length;highx=part[xlen-1]*base+part[xlen-2];highy=b[b_l-1]*base+b[b_l-2];if(xlen>b_l){highx=(highx+1)*base;}guess=Math.ceil(highx/highy);do{check=multiplySmall(b,guess);if(compareAbs(check,part)<=0)break;guess--;}while(guess);result.push(guess);part=subtract(part,check);}result.reverse();return[arrayToSmall(result),arrayToSmall(part)]}function divModSmall(value,lambda){var length=value.length,quotient=createArray(length),base=BASE,i,q,remainder,divisor;remainder=0;for(i=length-1;i>=0;--i){divisor=remainder*base+value[i];q=truncate(divisor/lambda);remainder=divisor-q*lambda;quotient[i]=q|0;}return[quotient,remainder|0]}function divModAny(self,v){var value,n=parseValue(v);var a=self.value,b=n.value;var quotient;if(b===0)throw new Error("Cannot divide by zero");if(self.isSmall){if(n.isSmall){return[new SmallInteger(truncate(a/b)),new SmallInteger(a%b)]}return[Integer[0],self]}if(n.isSmall){if(b===1)return[self,Integer[0]];if(b==-1)return[self.negate(),Integer[0]];var abs=Math.abs(b);if(abs<BASE){value=divModSmall(a,abs);quotient=arrayToSmall(value[0]);var remainder=value[1];if(self.sign)remainder=-remainder;if(typeof quotient==="number"){if(self.sign!==n.sign)quotient=-quotient;return[new SmallInteger(quotient),new SmallInteger(remainder)]}return[new BigInteger(quotient,self.sign!==n.sign),new SmallInteger(remainder)]}b=smallToArray(abs);}var comparison=compareAbs(a,b);if(comparison===-1)return[Integer[0],self];if(comparison===0)return[Integer[self.sign===n.sign?1:-1],Integer[0]];if(a.length+b.length<=200)value=divMod1(a,b);else value=divMod2(a,b);quotient=value[0];var qSign=self.sign!==n.sign,mod=value[1],mSign=self.sign;if(typeof quotient==="number"){if(qSign)quotient=-quotient;quotient=new SmallInteger(quotient);}else quotient=new BigInteger(quotient,qSign);if(typeof mod==="number"){if(mSign)mod=-mod;mod=new SmallInteger(mod);}else mod=new BigInteger(mod,mSign);return[quotient,mod]}BigInteger.prototype.divmod=function(v){var result=divModAny(this,v);return{quotient:result[0],remainder:result[1]}};SmallInteger.prototype.divmod=BigInteger.prototype.divmod;BigInteger.prototype.divide=function(v){return divModAny(this,v)[0]};SmallInteger.prototype.over=SmallInteger.prototype.divide=BigInteger.prototype.over=BigInteger.prototype.divide;BigInteger.prototype.mod=function(v){return divModAny(this,v)[1]};SmallInteger.prototype.remainder=SmallInteger.prototype.mod=BigInteger.prototype.remainder=BigInteger.prototype.mod;BigInteger.prototype.pow=function(v){var n=parseValue(v),a=this.value,b=n.value,value,x,y;if(b===0)return Integer[1];if(a===0)return Integer[0];if(a===1)return Integer[1];if(a===-1)return n.isEven()?Integer[1]:Integer[-1];if(n.sign){return Integer[0]}if(!n.isSmall)throw new Error("The exponent "+n.toString()+" is too large.");if(this.isSmall){if(isPrecise(value=Math.pow(a,b)))return new SmallInteger(truncate(value))}x=this;y=Integer[1];while(true){if(b&1===1){y=y.times(x);--b;}if(b===0)break;b/=2;x=x.square();}return y};SmallInteger.prototype.pow=BigInteger.prototype.pow;BigInteger.prototype.modPow=function(exp,mod){exp=parseValue(exp);mod=parseValue(mod);if(mod.isZero())throw new Error("Cannot take modPow with modulus 0");var r=Integer[1],base=this.mod(mod);while(exp.isPositive()){if(base.isZero())return Integer[0];if(exp.isOdd())r=r.multiply(base).mod(mod);exp=exp.divide(2);base=base.square().mod(mod);}return r};SmallInteger.prototype.modPow=BigInteger.prototype.modPow;function compareAbs(a,b){if(a.length!==b.length){return a.length>b.length?1:-1}for(var i=a.length-1;i>=0;i--){if(a[i]!==b[i])return a[i]>b[i]?1:-1}return 0}BigInteger.prototype.compareAbs=function(v){var n=parseValue(v),a=this.value,b=n.value;if(n.isSmall)return 1;return compareAbs(a,b)};SmallInteger.prototype.compareAbs=function(v){var n=parseValue(v),a=Math.abs(this.value),b=n.value;if(n.isSmall){b=Math.abs(b);return a===b?0:a>b?1:-1}return-1};BigInteger.prototype.compare=function(v){if(v===Infinity){return-1}if(v===-Infinity){return 1}var n=parseValue(v),a=this.value,b=n.value;if(this.sign!==n.sign){return n.sign?1:-1}if(n.isSmall){return this.sign?-1:1}return compareAbs(a,b)*(this.sign?-1:1)};BigInteger.prototype.compareTo=BigInteger.prototype.compare;SmallInteger.prototype.compare=function(v){if(v===Infinity){return-1}if(v===-Infinity){return 1}var n=parseValue(v),a=this.value,b=n.value;if(n.isSmall){return a==b?0:a>b?1:-1}if(a<0!==n.sign){return a<0?-1:1}return a<0?1:-1};SmallInteger.prototype.compareTo=SmallInteger.prototype.compare;BigInteger.prototype.equals=function(v){return this.compare(v)===0};SmallInteger.prototype.eq=SmallInteger.prototype.equals=BigInteger.prototype.eq=BigInteger.prototype.equals;BigInteger.prototype.notEquals=function(v){return this.compare(v)!==0};SmallInteger.prototype.neq=SmallInteger.prototype.notEquals=BigInteger.prototype.neq=BigInteger.prototype.notEquals;BigInteger.prototype.greater=function(v){return this.compare(v)>0};SmallInteger.prototype.gt=SmallInteger.prototype.greater=BigInteger.prototype.gt=BigInteger.prototype.greater;BigInteger.prototype.lesser=function(v){return this.compare(v)<0};SmallInteger.prototype.lt=SmallInteger.prototype.lesser=BigInteger.prototype.lt=BigInteger.prototype.lesser;BigInteger.prototype.greaterOrEquals=function(v){return this.compare(v)>=0};SmallInteger.prototype.geq=SmallInteger.prototype.greaterOrEquals=BigInteger.prototype.geq=BigInteger.prototype.greaterOrEquals;BigInteger.prototype.lesserOrEquals=function(v){return this.compare(v)<=0};SmallInteger.prototype.leq=SmallInteger.prototype.lesserOrEquals=BigInteger.prototype.leq=BigInteger.prototype.lesserOrEquals;BigInteger.prototype.isEven=function(){return(this.value[0]&1)===0};SmallInteger.prototype.isEven=function(){return(this.value&1)===0};BigInteger.prototype.isOdd=function(){return(this.value[0]&1)===1};SmallInteger.prototype.isOdd=function(){return(this.value&1)===1};BigInteger.prototype.isPositive=function(){return!this.sign};SmallInteger.prototype.isPositive=function(){return this.value>0};BigInteger.prototype.isNegative=function(){return this.sign};SmallInteger.prototype.isNegative=function(){return this.value<0};BigInteger.prototype.isUnit=function(){return false};SmallInteger.prototype.isUnit=function(){return Math.abs(this.value)===1};BigInteger.prototype.isZero=function(){return false};SmallInteger.prototype.isZero=function(){return this.value===0};BigInteger.prototype.isDivisibleBy=function(v){var n=parseValue(v);var value=n.value;if(value===0)return false;if(value===1)return true;if(value===2)return this.isEven();return this.mod(n).equals(Integer[0])};SmallInteger.prototype.isDivisibleBy=BigInteger.prototype.isDivisibleBy;function isBasicPrime(v){var n=v.abs();if(n.isUnit())return false;if(n.equals(2)||n.equals(3)||n.equals(5))return true;if(n.isEven()||n.isDivisibleBy(3)||n.isDivisibleBy(5))return false;if(n.lesser(25))return true}BigInteger.prototype.isPrime=function(){var isPrime=isBasicPrime(this);if(isPrime!==undefined)return isPrime;var n=this.abs(),nPrev=n.prev();var a=[2,3,5,7,11,13,17,19],b=nPrev,d,t,i,x;while(b.isEven())b=b.divide(2);for(i=0;i<a.length;i++){x=bigInt(a[i]).modPow(b,n);if(x.equals(Integer[1])||x.equals(nPrev))continue;for(t=true, d=b;t&&d.lesser(nPrev);d=d.multiply(2)){x=x.square().mod(n);if(x.equals(nPrev))t=false;}if(t)return false}return true};SmallInteger.prototype.isPrime=BigInteger.prototype.isPrime;BigInteger.prototype.isProbablePrime=function(iterations){var isPrime=isBasicPrime(this);if(isPrime!==undefined)return isPrime;var n=this.abs();var t=iterations===undefined?5:iterations;for(var i=0;i<t;i++){var a=bigInt.randBetween(2,n.minus(2));if(!a.modPow(n.prev(),n).isUnit())return false}return true};SmallInteger.prototype.isProbablePrime=BigInteger.prototype.isProbablePrime;BigInteger.prototype.modInv=function(n){var t=bigInt.zero,newT=bigInt.one,r=parseValue(n),newR=this.abs(),q,lastT,lastR;while(!newR.equals(bigInt.zero)){q=r.divide(newR);lastT=t;lastR=r;t=newT;r=newR;newT=lastT.subtract(q.multiply(newT));newR=lastR.subtract(q.multiply(newR));}if(!r.equals(1))throw new Error(this.toString()+" and "+n.toString()+" are not co-prime");if(t.compare(0)===-1){t=t.add(n);}if(this.isNegative()){return t.negate()}return t};SmallInteger.prototype.modInv=BigInteger.prototype.modInv;BigInteger.prototype.next=function(){var value=this.value;if(this.sign){return subtractSmall(value,1,this.sign)}return new BigInteger(addSmall(value,1),this.sign)};SmallInteger.prototype.next=function(){var value=this.value;if(value+1<MAX_INT)return new SmallInteger(value+1);return new BigInteger(MAX_INT_ARR,false)};BigInteger.prototype.prev=function(){var value=this.value;if(this.sign){return new BigInteger(addSmall(value,1),true)}return subtractSmall(value,1,this.sign)};SmallInteger.prototype.prev=function(){var value=this.value;if(value-1>-MAX_INT)return new SmallInteger(value-1);return new BigInteger(MAX_INT_ARR,true)};var powersOfTwo=[1];while(powersOfTwo[powersOfTwo.length-1]<=BASE)powersOfTwo.push(2*powersOfTwo[powersOfTwo.length-1]);var powers2Length=powersOfTwo.length,highestPower2=powersOfTwo[powers2Length-1];function shift_isSmall(n){return(typeof n==="number"||typeof n==="string")&&+Math.abs(n)<=BASE||n instanceof BigInteger&&n.value.length<=1}BigInteger.prototype.shiftLeft=function(n){if(!shift_isSmall(n)){throw new Error(String(n)+" is too large for shifting.")}n=+n;if(n<0)return this.shiftRight(-n);var result=this;while(n>=powers2Length){result=result.multiply(highestPower2);n-=powers2Length-1;}return result.multiply(powersOfTwo[n])};SmallInteger.prototype.shiftLeft=BigInteger.prototype.shiftLeft;BigInteger.prototype.shiftRight=function(n){var remQuo;if(!shift_isSmall(n)){throw new Error(String(n)+" is too large for shifting.")}n=+n;if(n<0)return this.shiftLeft(-n);var result=this;while(n>=powers2Length){if(result.isZero())return result;remQuo=divModAny(result,highestPower2);result=remQuo[1].isNegative()?remQuo[0].prev():remQuo[0];n-=powers2Length-1;}remQuo=divModAny(result,powersOfTwo[n]);return remQuo[1].isNegative()?remQuo[0].prev():remQuo[0]};SmallInteger.prototype.shiftRight=BigInteger.prototype.shiftRight;function bitwise(x,y,fn){y=parseValue(y);var xSign=x.isNegative(),ySign=y.isNegative();var xRem=xSign?x.not():x,yRem=ySign?y.not():y;var xBits=[],yBits=[];var xStop=false,yStop=false;while(!xStop||!yStop){if(xRem.isZero()){xStop=true;xBits.push(xSign?1:0);}else if(xSign)xBits.push(xRem.isEven()?1:0);else xBits.push(xRem.isEven()?0:1);if(yRem.isZero()){yStop=true;yBits.push(ySign?1:0);}else if(ySign)yBits.push(yRem.isEven()?1:0);else yBits.push(yRem.isEven()?0:1);xRem=xRem.over(2);yRem=yRem.over(2);}var result=[];for(var i=0;i<xBits.length;i++)result.push(fn(xBits[i],yBits[i]));var sum=bigInt(result.pop()).negate().times(bigInt(2).pow(result.length));while(result.length){sum=sum.add(bigInt(result.pop()).times(bigInt(2).pow(result.length)));}return sum}BigInteger.prototype.not=function(){return this.negate().prev()};SmallInteger.prototype.not=BigInteger.prototype.not;BigInteger.prototype.and=function(n){return bitwise(this,n,function(a,b){return a&b})};SmallInteger.prototype.and=BigInteger.prototype.and;BigInteger.prototype.or=function(n){return bitwise(this,n,function(a,b){return a|b})};SmallInteger.prototype.or=BigInteger.prototype.or;BigInteger.prototype.xor=function(n){return bitwise(this,n,function(a,b){return a^b})};SmallInteger.prototype.xor=BigInteger.prototype.xor;var LOBMASK_I=1<<30,LOBMASK_BI=(BASE&-BASE)*(BASE&-BASE)|LOBMASK_I;function roughLOB(n){var v=n.value,x=typeof v==="number"?v|LOBMASK_I:v[0]+v[1]*BASE|LOBMASK_BI;return x&-x}function max(a,b){a=parseValue(a);b=parseValue(b);return a.greater(b)?a:b}function min(a,b){a=parseValue(a);b=parseValue(b);return a.lesser(b)?a:b}function gcd(a,b){a=parseValue(a).abs();b=parseValue(b).abs();if(a.equals(b))return a;if(a.isZero())return b;if(b.isZero())return a;var c=Integer[1],d,t;while(a.isEven()&&b.isEven()){d=Math.min(roughLOB(a),roughLOB(b));a=a.divide(d);b=b.divide(d);c=c.multiply(d);}while(a.isEven()){a=a.divide(roughLOB(a));}do{while(b.isEven()){b=b.divide(roughLOB(b));}if(a.greater(b)){t=b;b=a;a=t;}b=b.subtract(a);}while(!b.isZero());return c.isUnit()?a:a.multiply(c)}function lcm(a,b){a=parseValue(a).abs();b=parseValue(b).abs();return a.divide(gcd(a,b)).multiply(b)}function randBetween(a,b){a=parseValue(a);b=parseValue(b);var low=min(a,b),high=max(a,b);var range=high.subtract(low);if(range.isSmall)return low.add(Math.round(Math.random()*range));var length=range.value.length-1;var result=[],restricted=true;for(var i=length;i>=0;i--){var top=restricted?range.value[i]:BASE;var digit=truncate(Math.random()*top);result.unshift(digit);if(digit<top)restricted=false;}result=arrayToSmall(result);return low.add(typeof result==="number"?new SmallInteger(result):new BigInteger(result,false))}var parseBase=function(text,base){var length=text.length;var i;var absBase=Math.abs(base);for(var i=0;i<length;i++){var c=text[i].toLowerCase();if(c==="-")continue;if(/[a-z0-9]/.test(c)){if(/[0-9]/.test(c)&&+c>=absBase){if(c==="1"&&absBase===1)continue;throw new Error(c+" is not a valid digit in base "+base+".")}else if(c.charCodeAt(0)-87>=absBase){throw new Error(c+" is not a valid digit in base "+base+".")}}}if(2<=base&&base<=36){if(length<=LOG_MAX_INT/Math.log(base)){var result=parseInt(text,base);if(isNaN(result)){throw new Error(c+" is not a valid digit in base "+base+".")}return new SmallInteger(parseInt(text,base))}}base=parseValue(base);var digits=[];var isNegative=text[0]==="-";for(i=isNegative?1:0;i<text.length;i++){var c=text[i].toLowerCase(),charCode=c.charCodeAt(0);if(48<=charCode&&charCode<=57)digits.push(parseValue(c));else if(97<=charCode&&charCode<=122)digits.push(parseValue(c.charCodeAt(0)-87));else if(c==="<"){var start=i;do{i++;}while(text[i]!==">");digits.push(parseValue(text.slice(start+1,i)));}else throw new Error(c+" is not a valid character")}return parseBaseFromArray(digits,base,isNegative)};function parseBaseFromArray(digits,base,isNegative){var val=Integer[0],pow=Integer[1],i;for(i=digits.length-1;i>=0;i--){val=val.add(digits[i].times(pow));pow=pow.times(base);}return isNegative?val.negate():val}function stringify(digit){var v=digit.value;if(typeof v==="number")v=[v];if(v.length===1&&v[0]<=35){return"0123456789abcdefghijklmnopqrstuvwxyz".charAt(v[0])}return"<"+v+">"}function toBase(n,base){base=bigInt(base);if(base.isZero()){if(n.isZero())return"0";throw new Error("Cannot convert nonzero numbers to base 0.")}if(base.equals(-1)){if(n.isZero())return"0";if(n.isNegative())return new Array(1-n).join("10");return"1"+new Array(+n).join("01")}var minusSign="";if(n.isNegative()&&base.isPositive()){minusSign="-";n=n.abs();}if(base.equals(1)){if(n.isZero())return"0";return minusSign+new Array(+n+1).join(1)}var out=[];var left=n,divmod;while(left.isNegative()||left.compareAbs(base)>=0){divmod=left.divmod(base);left=divmod.quotient;var digit=divmod.remainder;if(digit.isNegative()){digit=base.minus(digit).abs();left=left.next();}out.push(stringify(digit));}out.push(stringify(left));return minusSign+out.reverse().join("")}BigInteger.prototype.toString=function(radix){if(radix===undefined)radix=10;if(radix!==10)return toBase(this,radix);var v=this.value,l=v.length,str=String(v[--l]),zeros="0000000",digit;while(--l>=0){digit=String(v[l]);str+=zeros.slice(digit.length)+digit;}var sign=this.sign?"-":"";return sign+str};SmallInteger.prototype.toString=function(radix){if(radix===undefined)radix=10;if(radix!=10)return toBase(this,radix);return String(this.value)};BigInteger.prototype.toJSON=SmallInteger.prototype.toJSON=function(){return this.toString()};BigInteger.prototype.valueOf=function(){return+this.toString()};BigInteger.prototype.toJSNumber=BigInteger.prototype.valueOf;SmallInteger.prototype.valueOf=function(){return this.value};SmallInteger.prototype.toJSNumber=SmallInteger.prototype.valueOf;function parseStringValue(v){if(isPrecise(+v)){var x=+v;if(x===truncate(x))return new SmallInteger(x);throw"Invalid integer: "+v}var sign=v[0]==="-";if(sign)v=v.slice(1);var split=v.split(/e/i);if(split.length>2)throw new Error("Invalid integer: "+split.join("e"));if(split.length===2){var exp=split[1];if(exp[0]==="+")exp=exp.slice(1);exp=+exp;if(exp!==truncate(exp)||!isPrecise(exp))throw new Error("Invalid integer: "+exp+" is not a valid exponent.");var text=split[0];var decimalPlace=text.indexOf(".");if(decimalPlace>=0){exp-=text.length-decimalPlace-1;text=text.slice(0,decimalPlace)+text.slice(decimalPlace+1);}if(exp<0)throw new Error("Cannot include negative exponent part for integers");text+=new Array(exp+1).join("0");v=text;}var isValid=/^([0-9][0-9]*)$/.test(v);if(!isValid)throw new Error("Invalid integer: "+v);var r=[],max=v.length,l=LOG_BASE,min=max-l;while(max>0){r.push(+v.slice(min,max));min-=l;if(min<0)min=0;max-=l;}trim(r);return new BigInteger(r,sign)}function parseNumberValue(v){if(isPrecise(v)){if(v!==truncate(v))throw new Error(v+" is not an integer.");return new SmallInteger(v)}return parseStringValue(v.toString())}function parseValue(v){if(typeof v==="number"){return parseNumberValue(v)}if(typeof v==="string"){return parseStringValue(v)}return v}for(var i=0;i<1e3;i++){Integer[i]=new SmallInteger(i);if(i>0)Integer[-i]=new SmallInteger(-i);}Integer.one=Integer[1];Integer.zero=Integer[0];Integer.minusOne=Integer[-1];Integer.max=max;Integer.min=min;Integer.gcd=gcd;Integer.lcm=lcm;Integer.isInstance=function(x){return x instanceof BigInteger||x instanceof SmallInteger};Integer.randBetween=randBetween;Integer.fromArray=function(digits,base,isNegative){return parseBaseFromArray(digits.map(parseValue),parseValue(base||10),isNegative)};return Integer}();if('object'!=="undefined"&&module.hasOwnProperty("exports")){module.exports=bigInt;}if(typeof undefined==="function"&&undefined.amd){undefined("big-integer",[],function(){return bigInt});}        return bigInt;
     })()
 });
 
 {
     module.exports = nerdamer;
-}
-});
+}});
 
 /**
  * Java style map.
@@ -11587,8 +11535,6 @@ class Pair {
         return 'new Pair(' + this.left.toSource() + ', ' + this.right.toSource() + ')';
     }
 }
-
-
 //# sourceMappingURL=bundle.module.js.map
 
 class Vector {
@@ -12627,7 +12573,7 @@ class Matrix {
     }
 }
 
-const { abs, PI, sign: sign$1 } = Math;
+const { abs, PI, sign } = Math;
 const TAU = 2 * PI;
 /** @define {boolean} */
 const NLA_DEBUG = true;
@@ -12758,21 +12704,21 @@ const round10 = decimalAdjust.bind(undefined, Math.round);
 const floor10 = decimalAdjust.bind(undefined, Math.floor);
 const ceil10 = decimalAdjust.bind(undefined, Math.ceil);
 const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2;
-function repeatString(count, str) {
-    if (count == 0) {
-        return '';
-    }
-    count *= str.length;
-    const halfCharLength = count / 2;
-    let result = str;
-    // double the input until it is long enough.
-    while (result.length <= halfCharLength) {
-        result += result;
-    }
-    // use substring to hit the precise length target without
-    // using extra memory
-    return result + result.substring(0, count - result.length);
-}
+// export function repeatString(count: int, str: string) {
+// 	if (count == 0) {
+// 		return ''
+// 	}
+// 	count *= str.length
+// 	const halfCharLength = count / 2
+// 	let result = str
+// 	// double the input until it is long enough.
+// 	while (result.length <= halfCharLength) {
+// 		result += result
+// 	}
+// 	// use substring to hit the precise length target without
+// 	// using extra memory
+// 	return result + result.substring(0, count - result.length)
+// }
 function mod(a, b) {
     return ((a % b) + b) % b;
 }
@@ -13406,14 +13352,13 @@ function getRoots(f, a, b, stepSize, df) {
     }
     return results;
 }
-//addOwnProperties(Array.prototype, ARRAY_UTILITIES)
 function bisect(f, a, b, steps) {
     assert$1(a < b);
     let fA = f(a), fB = f(b);
     while (steps--) {
         const c = (b + a) / 2;
         const fC = f(c);
-        if (sign$1(fA) == sign$1(fC)) {
+        if (sign(fA) == sign(fC)) {
             a = c;
             fA = fC;
         }
@@ -13424,7 +13369,7 @@ function bisect(f, a, b, steps) {
     }
     assert$1(a <= (b + a) / 2);
     assert$1(b >= (b + a) / 2);
-    return (b - a) / 2;
+    return lerp(a, b, 0.5);
 }
 function newtonIterate(f, x, steps = 4, EPSILON) {
     EPSILON = EPSILON || 1e-8;
@@ -13440,15 +13385,20 @@ function newtonIterate(f, x, steps = 4, EPSILON) {
     }
     return x;
 }
-function newtonIterate1d(f, xStart, steps = 8, EPSILON = 1e-8) {
-    let x = xStart;
-    for (let i = 0; i < steps; i++) {
-        const fx = f(x);
-        const dfdx = (f(x + EPSILON) - fx) / EPSILON;
-        //console.log('fx / dfdx', fx / dfdx)
-        x = x - fx / dfdx;
+function newtonIterate1d(f, xStart, steps = 8, epsOrDf = 1e-8) {
+    if ('number' === typeof epsOrDf) {
+        let x = xStart;
+        for (let i = 0; i < steps; i++) {
+            const fx = f(x);
+            const dfdx = (f(x + epsOrDf) - fx) / epsOrDf;
+            //console.log('fx / dfdx', fx / dfdx)
+            x = x - fx / dfdx;
+        }
+        return x;
     }
-    return x;
+    else {
+        return newtonIterateWithDerivative(f, xStart, steps, epsOrDf);
+    }
 }
 function newtonIterateWithDerivative(f, xStart, steps = 4, df) {
     let x = xStart;
@@ -13613,6 +13563,10 @@ function gaussLegendreQuadrature24(f, startT, endT) {
     //return result // 2 * (endT - startT)
     return glq24_11(t => f(startT + (t + 1) / 2 * (endT - startT))) / 2 * (endT - startT);
 }
+/**
+ * Calculate the integral of f in the interval [-1;1].
+ * @param f
+ */
 function glq24_11(f) {
     return arrayFromFunction(24, i => gaussLegendre24Weights[i] * f(gaussLegendre24Xs[i])).sumInPlaceTree();
 }
@@ -15378,9 +15332,18 @@ class M4 extends Matrix {
         const colWidths = [0, 1, 2, 3].map((colIndex) => rounded.sliceStep(colIndex, 0, 4).map((x) => x.length).max());
         return [0, 1, 2, 3].map((rowIndex) => rounded
             .slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
-            .map((x, colIndex) => repeatString(colWidths[colIndex] - x.length, ' ') + x) // pad numbers with
+            .map((x, colIndex) => ' '.repeat(colWidths[colIndex] - x.length) + x) // pad numbers with
             .join(' ')).join('\n'); // join rows
     }
+    /**
+     * Wether this matrix is a translation matrix, i.e. of the form
+     * ```
+     *	1, 0, 0, x,
+     *	0, 1, 0, y,
+     *	0, 0, 1, z,
+     *	0, 0, 0, 1
+     * ```
+     */
     isTranslation() {
         // 2: any value, otherwise same value
         const mask = [
@@ -15391,6 +15354,15 @@ class M4 extends Matrix {
         ];
         return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
     }
+    /**
+     * Wether this matrix is a translation matrix, i.e. of the form
+     * ```
+     *	s, 0, 0, 0,
+     *	0, t, 0, 0,
+     *	0, 0, v, 0,
+     *	0, 0, 0, 1
+     * ```
+     */
     isScaling() {
         const mask = [
             2, 0, 0, 0,
@@ -15687,8 +15659,6 @@ class AABB extends Transformable {
         return this.toString();
     }
 }
-
-
 //# sourceMappingURL=bundle.module.js.map
 
 
@@ -15736,7 +15706,6 @@ var ts3dutils = Object.freeze({
 	floor10: floor10,
 	ceil10: ceil10,
 	GOLDEN_RATIO: GOLDEN_RATIO,
-	repeatString: repeatString,
 	mod: mod,
 	arraySwap: arraySwap,
 	arrayCopy: arrayCopy,
@@ -15789,7 +15758,31 @@ var ts3dutils = Object.freeze({
 	AABB: AABB
 });
 
-var chroma$2 = createCommonjsModule(function (module, exports) {
+/*! *****************************************************************************
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+
+function __awaiter$1(thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+}
+
+var chroma$1 = createCommonjsModule(function (module, exports) {
 /**
  * @license
  *
@@ -15940,7 +15933,7 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
     root.chroma = chroma;
   }
 
-  chroma.version = '1.3.4';
+  chroma.version = '1.3.5';
 
   _input = {};
 
@@ -17263,7 +17256,6 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
         this._rgb = hex2rgb(w3cx11[n]);
       }
       this._rgb[3] = 1;
-      this;
     }
     h = this.hex();
     for (k in w3cx11) {
@@ -17855,7 +17847,7 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
   };
 
   chroma.scale = function(colors, positions) {
-    var _classes, _colorCache, _colors, _correctLightness, _domain, _fixed, _max, _min, _mode, _nacol, _out, _padding, _pos, _spread, _useCache, classifyValue, f, getClass, getColor, resetCache, setColors, tmap;
+    var _classes, _colorCache, _colors, _correctLightness, _domain, _gamma, _max, _min, _mode, _nacol, _out, _padding, _pos, _spread, _useCache, f, getClass, getColor, resetCache, setColors, tmap;
     _mode = 'rgb';
     _nacol = chroma('#ccc');
     _spread = 0;
@@ -17870,6 +17862,7 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
     _correctLightness = false;
     _colorCache = {};
     _useCache = true;
+    _gamma = 1;
     setColors = function(colors) {
       var c, col, o, ref, ref1, w;
       if (colors == null) {
@@ -17921,11 +17914,8 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
         if (_classes && _classes.length > 2) {
           c = getClass(val);
           t = c / (_classes.length - 2);
-          t = _padding[0] + (t * (1 - _padding[0] - _padding[1]));
         } else if (_max !== _min) {
           t = (val - _min) / (_max - _min);
-          t = _padding[0] + (t * (1 - _padding[0] - _padding[1]));
-          t = Math.min(1, Math.max(0, t));
         } else {
           t = 1;
         }
@@ -17935,6 +17925,11 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
       if (!bypassMap) {
         t = tmap(t);
       }
+      if (_gamma !== 1) {
+        t = pow(t, _gamma);
+      }
+      t = _padding[0] + (t * (1 - _padding[0] - _padding[1]));
+      t = Math.min(1, Math.max(0, t));
       k = Math.floor(t * 10000);
       if (_useCache && _colorCache[k]) {
         col = _colorCache[k];
@@ -18096,7 +18091,7 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
       }
     };
     f.colors = function(numColors, out) {
-      var dd, dm, i, o, ref, result, results, samples, w;
+      var dd, dm, i, ref, result, results, samples, w;
       if (arguments.length < 2) {
         out = 'hex';
       }
@@ -18138,9 +18133,18 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
     };
     f.cache = function(c) {
       if (c != null) {
-        return _useCache = c;
+        _useCache = c;
+        return f;
       } else {
         return _useCache;
+      }
+    };
+    f.gamma = function(g) {
+      if (g != null) {
+        _gamma = g;
+        return f;
+      } else {
+        return _gamma;
       }
     };
     return f;
@@ -18227,6 +18231,7 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
     }
     min = data.min;
     max = data.max;
+    sum = data.sum;
     values = data.values.sort(function(a, b) {
       return a - b;
     });
@@ -18520,21 +18525,105 @@ var chroma$2 = createCommonjsModule(function (module, exports) {
 }).call(commonjsGlobal);
 });
 
-var __awaiter$1 = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-const { cos, sin, PI: PI$1$1, min, max } = Math;
 const WGL = WebGLRenderingContext;
+class Buffer$1 {
+    /**
+     * Provides a simple method of uploading data to a GPU buffer. Example usage:
+     *
+     *     const vertices = new Buffer(WGL.ARRAY_BUFFER, Float32Array)
+     *     vertices.data = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]]
+     *     vertices.compile()
+     *
+     *     const indices = new Buffer(WGL.ELEMENT_ARRAY_BUFFER, Uint16Array)
+     *     indices.data = [[0, 1, 2], [2, 1, 3]]
+     *     indices.compile()
+     *
+     * Specifies the target to which the buffer object is bound.
+     * The symbolic constant must be GL_ARRAY_BUFFER or GL_ELEMENT_ARRAY_BUFFER.
+     */
+    constructor(target, type) {
+        this.target = target;
+        this.type = type;
+        assert$1(target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER, 'target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER');
+        assert$1(type == Float32Array || type == Uint16Array, 'type == Float32Array || type == Uint16Array');
+        this.buffer = undefined;
+        this.type = type;
+        this.data = [];
+        this.count = 0;
+        this.spacing = 1;
+        this.hasBeenCompiled = false;
+    }
+    /**
+     * Upload the contents of `data` to the GPU in preparation for rendering. The data must be a list of lists
+     * where each inner list has the same length. For example, each element of data for vertex normals would be a
+     * list of length three. This will remember the data length and element length for later use by shaders.
+     *
+     * This could have used `[].concat.apply([], this.data)` to flatten the array but Google
+     * Chrome has a maximum number of arguments so the concatenations are chunked to avoid that limit.
+     *
+     * @param usage Either `WGL.STATIC_DRAW` or `WGL.DYNAMIC_DRAW`. Defaults to `WGL.STATIC_DRAW`
+     */
+    compile(usage = WGL.STATIC_DRAW, gl = currentGL()) {
+        assert$1(WGL.STATIC_DRAW == usage || WGL.DYNAMIC_DRAW == usage, 'WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type');
+        this.buffer = this.buffer || gl.createBuffer();
+        let buffer;
+        if (this.data.length == 0) {
+            console.warn('empty buffer ' + this.name);
+            //console.trace()
+        }
+        if (this.data.length == 0 || this.data[0] instanceof V3) {
+            assert$1(!(this.data[0] instanceof V3) || this.type == Float32Array);
+            V3.pack(this.data, buffer = new this.type(this.data.length * 3)); // asserts that all
+            // elements are V3s
+            this.spacing = 3;
+            this.count = this.data.length;
+            this.maxValue = 0;
+        }
+        else {
+            //assert(Array != this.data[0].constructor, this.name + this.data[0])
+            if (Array.isArray(this.data[0])) {
+                const bufferLength = this.data.length * this.data[0].length;
+                buffer = new this.type(bufferLength);
+                let i = this.data.length, destPtr = bufferLength;
+                while (i--) {
+                    const subArray = this.data[i];
+                    let j = subArray.length;
+                    while (j--) {
+                        buffer[--destPtr] = subArray[j];
+                    }
+                }
+                assert$1(0 == destPtr);
+            }
+            else {
+                buffer = new this.type(this.data);
+            }
+            const spacing = this.data.length ? buffer.length / this.data.length : 0;
+            assert$1(spacing % 1 == 0, `buffer ${this.name} elements not of consistent size, average size is ` + spacing);
+            if (NLA_DEBUG) {
+                if (10000 <= buffer.length) {
+                    this.maxValue = 0;
+                }
+                else {
+                    this.maxValue = Math.max.apply(undefined, buffer);
+                }
+            }
+            assert$1([1, 2, 3, 4].includes(spacing));
+            this.spacing = spacing;
+            this.count = this.data.length;
+        }
+        gl.bindBuffer(this.target, this.buffer);
+        gl.bufferData(this.target, buffer, usage);
+        this.hasBeenCompiled = true;
+    }
+}
+
+const { cos, sin, PI: PI$2, min, max } = Math;
+const WGL$1 = WebGLRenderingContext;
 /**
  * @example new Mesh()
  *        .addIndexBuffer('TRIANGLES')
  *        .addIndexBuffer('LINES')
- *        .addVertexBuffer('normals', 'LGL_Normal')
+ *        .addVertexBuffer('normals', 'ts_Normal')
  */
 class Mesh extends Transformable {
     constructor() {
@@ -18542,10 +18631,7 @@ class Mesh extends Transformable {
         this.hasBeenCompiled = false;
         this.vertexBuffers = {};
         this.indexBuffers = {};
-        this.addVertexBuffer('vertices', 'LGL_Vertex');
-        //if (options.coords) this.addVertexBuffer('coords', 'LGL_TexCoord')
-        //if (options.normals) this.addVertexBuffer('normals', 'LGL_Normal')
-        //if (options.colors) this.addVertexBuffer('colors', 'LGL_Color')
+        this.addVertexBuffer('vertices', 'ts_Vertex');
     }
     calcVolume() {
         let totalVolume = 0, totalCentroid = V3.O, totalAreaX2 = 0;
@@ -18570,7 +18656,7 @@ class Mesh extends Transformable {
     /**
      * Add a new vertex buffer with a list as a property called `name` on this object and map it to
      * the attribute called `attribute` in all shaders that draw this mesh.
-     * @example new Mesh().addVertexBuffer('coords', 'LGL_TexCoord')
+     * @example new Mesh().addVertexBuffer('coords', 'ts_TexCoord')
      */
     addVertexBuffer(name, attribute) {
         assert$1(!this.vertexBuffers[attribute], 'Buffer ' + attribute + ' already exists.');
@@ -18578,7 +18664,7 @@ class Mesh extends Transformable {
         this.hasBeenCompiled = false;
         assert$1('string' == typeof name);
         assert$1('string' == typeof attribute);
-        const buffer = this.vertexBuffers[attribute] = new Buffer$1(WGL.ARRAY_BUFFER, Float32Array);
+        const buffer = this.vertexBuffers[attribute] = new Buffer$1(WGL$1.ARRAY_BUFFER, Float32Array);
         buffer.name = name;
         this[name] = [];
         return this;
@@ -18590,7 +18676,7 @@ class Mesh extends Transformable {
      */
     addIndexBuffer(name) {
         this.hasBeenCompiled = false;
-        const buffer = this.indexBuffers[name] = new Buffer$1(WGL.ELEMENT_ARRAY_BUFFER, Uint16Array);
+        const buffer = this.indexBuffers[name] = new Buffer$1(WGL$1.ELEMENT_ARRAY_BUFFER, Uint16Array);
         buffer.name = name;
         this[name] = [];
         return this;
@@ -18623,11 +18709,15 @@ class Mesh extends Transformable {
      */
     compile(gl = currentGL()) {
         // figure out shortest vertex buffer to make sure indexBuffers are in bounds
+        let minVertexBufferLength = Infinity; // TODO, _minBufferName
         Object.getOwnPropertyNames(this.vertexBuffers).forEach(attribute => {
             const buffer = this.vertexBuffers[attribute];
             buffer.data = this[buffer.name];
             buffer.compile(undefined, gl);
-            
+            if (this[buffer.name].length < minVertexBufferLength) {
+                // _minBufferName = attribute
+                minVertexBufferLength = this[buffer.name].length;
+            }
         });
         for (const name in this.indexBuffers) {
             const buffer = this.indexBuffers[name];
@@ -18645,7 +18735,7 @@ class Mesh extends Transformable {
         return __awaiter$1(this, void 0, void 0, function* () {
             return new Promise((resolve, reject) => {
                 const mesh = new Mesh()
-                    .addVertexBuffer('normals', 'LGL_Normal');
+                    .addVertexBuffer('normals', 'ts_Normal');
                 const fileReader = new FileReader();
                 fileReader.onerror = reject;
                 fileReader.onload = function (_progressEvent) {
@@ -18719,7 +18809,7 @@ class Mesh extends Transformable {
         const mesh = new Mesh();
         mesh.vertices = m4.transformedPoints(this.vertices);
         if (this.normals) {
-            mesh.addVertexBuffer('normals', 'LGL_Normal');
+            mesh.addVertexBuffer('normals', 'ts_Normal');
             const invTrans = m4.as3x3().inversed().transposed().normalized();
             mesh.normals = this.normals.map(n => invTrans.transformVector(n).unit());
             // mesh.normals.forEach(n => assert(n.hasLength(1)))
@@ -18729,7 +18819,7 @@ class Mesh extends Transformable {
             mesh[name] = this[name];
         }
         for (const attribute in this.vertexBuffers) {
-            if ('LGL_Vertex' !== attribute && 'LGL_Normal' !== attribute) {
+            if ('ts_Vertex' !== attribute && 'ts_Normal' !== attribute) {
                 const name = this.vertexBuffers[attribute].name;
                 mesh.addVertexBuffer(name, attribute);
                 mesh[name] = this[name];
@@ -18744,9 +18834,9 @@ class Mesh extends Transformable {
      */
     computeNormalsFromFlatTriangles() {
         if (!this.normals)
-            this.addVertexBuffer('normals', 'LGL_Normal');
+            this.addVertexBuffer('normals', 'ts_Normal');
         // tslint:disable:no-string-literal
-        //this.vertexBuffers['LGL_Normal'].data = arrayFromFunction(this.vertices.length, i => V3.O)
+        //this.vertexBuffers['ts_Normal'].data = arrayFromFunction(this.vertices.length, i => V3.O)
         const TRIANGLES = this.TRIANGLES, vertices = this.vertices, normals = this.normals;
         normals.length = vertices.length;
         for (let i = 0; i < TRIANGLES.length; i += 3) {
@@ -18871,8 +18961,8 @@ class Mesh extends Transformable {
         const mesh = new Mesh()
             .addIndexBuffer('LINES')
             .addIndexBuffer('TRIANGLES')
-            .addVertexBuffer('normals', 'LGL_Normal')
-            .addVertexBuffer('coords', 'LGL_TexCoord');
+            .addVertexBuffer('normals', 'ts_Normal')
+            .addVertexBuffer('coords', 'ts_TexCoord');
         for (let j = 0; j <= detailY; j++) {
             const t = j / detailY;
             for (let i = 0; i <= detailX; i++) {
@@ -18904,7 +18994,7 @@ class Mesh extends Transformable {
      */
     static cube() {
         const mesh = new Mesh()
-            .addVertexBuffer('normals', 'LGL_Normal')
+            .addVertexBuffer('normals', 'ts_Normal')
             .addIndexBuffer('TRIANGLES')
             .addIndexBuffer('LINES');
         // basically indexes for faces of the cube. vertices each need to be added 3 times,
@@ -18946,10 +19036,10 @@ class Mesh extends Transformable {
     }
     static sphere2(las, longs) {
         const baseVertices = arrayFromFunction(las, i => {
-            const angle = i / (las - 1) * PI$1$1 - PI$1$1 / 2;
+            const angle = i / (las - 1) * PI$2 - PI$2 / 2;
             return new V3(0, cos(angle), sin(angle));
         });
-        return Mesh.rotation(baseVertices, { anchor: V3.O, dir1: V3.Z }, 2 * PI$1$1, longs, true, baseVertices);
+        return Mesh.rotation(baseVertices, { anchor: V3.O, dir1: V3.Z }, 2 * PI$2, longs, true, baseVertices);
     }
     /**
      * Returns a sphere mesh with radius 1 created by subdividing the faces of a isocahedron (20-sided) recursively
@@ -19034,7 +19124,7 @@ class Mesh extends Transformable {
             }
         }
         const mesh = new Mesh()
-            .addVertexBuffer('normals', 'LGL_Normal')
+            .addVertexBuffer('normals', 'ts_Normal')
             .addIndexBuffer('TRIANGLES')
             .addIndexBuffer('LINES');
         mesh.vertices.push(...vertices);
@@ -19060,8 +19150,8 @@ class Mesh extends Transformable {
         assertVectors(offset);
         const mesh = new Mesh()
             .addIndexBuffer('TRIANGLES')
-            .addVertexBuffer('coords', 'LGL_TexCoord');
-        normals && mesh.addVertexBuffer('normals', 'LGL_Normal');
+            .addVertexBuffer('coords', 'ts_TexCoord');
+        normals && mesh.addVertexBuffer('normals', 'ts_Normal');
         mesh.vertices = vertices.concat(vertices.map(v => v.plus(offset)));
         const vl = vertices.length;
         mesh.coords = arrayFromFunction(vl * 2, (i) => [(i % vl) / vl, (i / vl) | 0]);
@@ -19085,7 +19175,7 @@ class Mesh extends Transformable {
     // @example const precious = Mesh.rotation([V(10, 0, -2), V(10, 0, 2), V(11, 0, 2), V(11, 0, -2)], , L3.Z, 512)
     static rotation(vertices, lineAxis, totalRads, steps, close = true, normals) {
         const mesh = new Mesh().addIndexBuffer('TRIANGLES');
-        normals && mesh.addVertexBuffer('normals', 'LGL_Normal');
+        normals && mesh.addVertexBuffer('normals', 'ts_Normal');
         const vc = vertices.length, vTotal = vc * steps;
         const rotMat = new M4();
         const triangles = mesh.TRIANGLES;
@@ -19106,7 +19196,7 @@ class Mesh extends Transformable {
     }
     static parametric(pF, pN, sMin, sMax, tMin, tMax, sRes, tRes) {
         const mesh = new Mesh()
-            .addVertexBuffer('normals', 'LGL_Normal')
+            .addVertexBuffer('normals', 'ts_Normal')
             .addIndexBuffer('TRIANGLES');
         for (let si = 0; si <= sRes; si++) {
             const s = lerp(sMin, sMax, si / sRes);
@@ -19136,7 +19226,7 @@ class Mesh extends Transformable {
             mesh.TRIANGLES = json.triangles;
         }
         if (json.normals) {
-            mesh.addVertexBuffer('normals', 'LGL_Normal');
+            mesh.addVertexBuffer('normals', 'ts_Normal');
             mesh.normals = json.normals;
         }
         mesh.compile();
@@ -19156,30 +19246,29 @@ Mesh.UNIT_CUBE_CORNERS = [
 ];
 
 /* tslint:disable:no-string-literal */
-const WGL$1 = WebGLRenderingContext;
+const WGL$2 = WebGLRenderingContext;
 /**
  * These are all the draw modes usable in OpenGL ES
  */
-var DRAW_MODES;
-(function (DRAW_MODES) {
-    DRAW_MODES[DRAW_MODES["POINTS"] = WGL$1.POINTS] = "POINTS";
-    DRAW_MODES[DRAW_MODES["LINES"] = WGL$1.LINES] = "LINES";
-    DRAW_MODES[DRAW_MODES["LINE_STRIP"] = WGL$1.LINE_STRIP] = "LINE_STRIP";
-    DRAW_MODES[DRAW_MODES["LINE_LOOP"] = WGL$1.LINE_LOOP] = "LINE_LOOP";
-    DRAW_MODES[DRAW_MODES["TRIANGLES"] = WGL$1.TRIANGLES] = "TRIANGLES";
-    DRAW_MODES[DRAW_MODES["TRIANGLE_STRIP"] = WGL$1.TRIANGLE_STRIP] = "TRIANGLE_STRIP";
-    DRAW_MODES[DRAW_MODES["TRIANGLE_FAN"] = WGL$1.TRIANGLE_FAN] = "TRIANGLE_FAN";
-})(DRAW_MODES || (DRAW_MODES = {}));
-const SHADER_VAR_TYPES = ['FLOAT', 'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4', 'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4', 'UNSIGNED_INT'];
-const DRAW_MODE_CHECKS = {
-    [DRAW_MODES.POINTS]: _ => true,
-    [DRAW_MODES.LINES]: x => 0 == x % 2,
-    [DRAW_MODES.LINE_STRIP]: x => x > 2,
-    [DRAW_MODES.LINE_LOOP]: x => x > 2,
-    [DRAW_MODES.TRIANGLES]: x => 0 == x % 3,
-    [DRAW_MODES.TRIANGLE_STRIP]: x => x > 3,
-    [DRAW_MODES.TRIANGLE_FAN]: x => x > 3,
+const DRAW_MODE_NAMES = {
+    [WGL$2.POINTS]: 'POINTS',
+    [WGL$2.LINES]: 'LINES',
+    [WGL$2.LINE_STRIP]: 'LINE_STRIP',
+    [WGL$2.LINE_LOOP]: 'LINE_LOOP',
+    [WGL$2.TRIANGLES]: 'TRIANGLES',
+    [WGL$2.TRIANGLE_STRIP]: 'TRIANGLE_STRIP',
+    [WGL$2.TRIANGLE_FAN]: 'TRIANGLE_FAN',
 };
+const DRAW_MODE_CHECKS = {
+    [WGL$2.POINTS]: _ => true,
+    [WGL$2.LINES]: x => 0 == x % 2,
+    [WGL$2.LINE_STRIP]: x => x > 2,
+    [WGL$2.LINE_LOOP]: x => x > 2,
+    [WGL$2.TRIANGLES]: x => 0 == x % 3,
+    [WGL$2.TRIANGLE_STRIP]: x => x > 3,
+    [WGL$2.TRIANGLE_FAN]: x => x > 3,
+};
+const SHADER_VAR_TYPES = ['FLOAT', 'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4', 'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4', 'UNSIGNED_INT'];
 function isArray(obj) {
     return Array == obj.constructor || Float32Array == obj.constructor || Float64Array == obj.constructor;
 }
@@ -19195,7 +19284,7 @@ function isIntArray(x) {
     return (x instanceof Float32Array || x instanceof Float64Array || Array.isArray(x)) &&
         x.every(x => Number.isInteger(x));
 }
-//const x:keyof UniformTypesMap = undefined as 'FLOAT_VEC4' | 'FLOAT_VEC3'
+//const x:UniformTypes = undefined as 'FLOAT_VEC4' | 'FLOAT_VEC3'
 class Shader {
     /**
      * Provides a convenient wrapper for WebGL shaders. A few uniforms and attributes,
@@ -19205,19 +19294,19 @@ class Shader {
      * are also automatically passed to the shader when drawing.
      *
      * For vertex and fragment shaders:
-     uniform mat3 LGL_NormalMatrix;
-     uniform mat4 LGL_ModelViewMatrix;
-     uniform mat4 LGL_ProjectionMatrix;
-     uniform mat4 LGL_ModelViewProjectionMatrix;
-     uniform mat4 LGL_ModelViewMatrixInverse;
-     uniform mat4 LGL_ProjectionMatrixInverse;
-     uniform mat4 LGL_ModelViewProjectionMatrixInverse;
+     uniform mat3 ts_NormalMatrix;
+     uniform mat4 ts_ModelViewMatrix;
+     uniform mat4 ts_ProjectionMatrix;
+     uniform mat4 ts_ModelViewProjectionMatrix;
+     uniform mat4 ts_ModelViewMatrixInverse;
+     uniform mat4 ts_ProjectionMatrixInverse;
+     uniform mat4 ts_ModelViewProjectionMatrixInverse;
      *
      *
      * Example usage:
      *
      *  const shader = new GL.Shader(
-     *      `void main() { gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex; }`,
+     *      `void main() { gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex; }`,
      *      `uniform vec4 color; void main() { gl_FragColor = color; }`)
      *
      *  shader.uniforms({ color: [1, 0, 0, 1] }).draw(mesh)
@@ -19230,39 +19319,36 @@ class Shader {
         // const versionRegex = /^(?:\s+|\/\/[\s\S]*?[\r\n]+|\/\*[\s\S]*?\*\/)+(#version\s+(\d+)\s+es)/
         // Headers are prepended to the sources to provide some automatic functionality.
         const header = `
-		uniform mat3 LGL_NormalMatrix;
-		uniform mat4 LGL_ModelViewMatrix;
-		uniform mat4 LGL_ProjectionMatrix;
-		uniform mat4 LGL_ModelViewProjectionMatrix;
-		uniform mat4 LGL_ModelViewMatrixInverse;
-		uniform mat4 LGL_ProjectionMatrixInverse;
-		uniform mat4 LGL_ModelViewProjectionMatrixInverse;
+		uniform mat3 ts_NormalMatrix;
+		uniform mat4 ts_ModelViewMatrix;
+		uniform mat4 ts_ProjectionMatrix;
+		uniform mat4 ts_ModelViewProjectionMatrix;
+		uniform mat4 ts_ModelViewMatrixInverse;
+		uniform mat4 ts_ProjectionMatrixInverse;
+		uniform mat4 ts_ModelViewProjectionMatrixInverse;
 	`;
-        const matrixNames = header.match(/\bLGL_\w+/g);
+        const matrixNames = header.match(/\bts_\w+/g);
         // Compile and link errors are thrown as strings.
         function compileSource(type, source) {
             const shader = gl.createShader(type);
             gl.shaderSource(shader, source);
             gl.compileShader(shader);
-            if (!gl.getShaderParameter(shader, WGL$1.COMPILE_STATUS)) {
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
                 throw new Error('compile error: ' + gl.getShaderInfoLog(shader));
             }
             return shader;
         }
         this.gl = gl;
-        const program = gl.createProgram();
-        if (!program) {
-            gl.handleError();
-        }
-        this.program = program;
-        gl.attachShader(this.program, compileSource(WGL$1.VERTEX_SHADER, vertexSource));
-        gl.attachShader(this.program, compileSource(WGL$1.FRAGMENT_SHADER, fragmentSource));
+        this.program = gl.createProgram();
+        gl.attachShader(this.program, compileSource(gl.VERTEX_SHADER, vertexSource));
+        gl.attachShader(this.program, compileSource(gl.FRAGMENT_SHADER, fragmentSource));
         gl.linkProgram(this.program);
-        if (!gl.getProgramParameter(this.program, WGL$1.LINK_STATUS)) {
+        if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
             throw new Error('link error: ' + gl.getProgramInfoLog(this.program));
         }
-        this.attributes = {};
+        this.attributeLocations = {};
         this.uniformLocations = {};
+        this.constantAttributes = {};
         // Check for the use of built-in matrices that require expensive matrix
         // multiplications to compute, and record these in `activeMatrices`.
         this.activeMatrices = {};
@@ -19272,14 +19358,13 @@ class Shader {
             }
         });
         this.uniformInfos = {};
-        for (let i = gl.getProgramParameter(this.program, WGL$1.ACTIVE_UNIFORMS); i-- > 0;) {
+        for (let i = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS); i-- > 0;) {
             // see https://www.khronos.org/registry/OpenGL-Refpages/es2.0/xhtml/glGetActiveUniform.xml
             // this.program has already been checked
             // i is in bounds
             const info = gl.getActiveUniform(this.program, i);
             this.uniformInfos[info.name] = info;
         }
-        gl.handleError();
     }
     static create(vertexSource, fragmentSource, gl) {
         return new Shader(vertexSource, fragmentSource, gl);
@@ -19291,7 +19376,6 @@ class Shader {
     uniforms(uniforms) {
         const gl = this.gl;
         gl.useProgram(this.program);
-        gl.handleError();
         for (const name in uniforms) {
             const location = this.uniformLocations[name] || gl.getUniformLocation(this.program, name);
             // !location && console.warn(name + ' uniform is not used in shader')
@@ -19407,13 +19491,52 @@ class Shader {
             else {
                 throw new Error('attempted to set uniform "' + name + '" to invalid value ' + value);
             }
-            gl.handleError();
+        }
+        return this;
+    }
+    attributes(attributes) {
+        const gl = this.gl;
+        gl.useProgram(this.program);
+        for (const name in attributes) {
+            const location = this.attributeLocations[name] || gl.getAttribLocation(this.program, name);
+            if (location == -1) {
+                if (!name.startsWith('ts_')) {
+                    console.warn(`Vertex buffer ${name} was not bound because the attribute is not active.`);
+                }
+                continue;
+            }
+            this.attributeLocations[name] = location;
+            gl.disableVertexAttribArray(location);
+            let value = attributes[name];
+            if (value instanceof V3) {
+                value = value.toArray();
+            }
+            if ('number' === typeof value) {
+                gl.vertexAttrib1f(location, value);
+            }
+            else {
+                gl.vertexAttrib4fv(location, value);
+                // switch ((value as number[]).length) {
+                // 	case 1:
+                // 		gl.vertexAttrib1fv(location, value as number[])
+                // 		break
+                // 	case 2:
+                // 		gl.vertexAttrib2fv(location, value as number[])
+                // 		break
+                // 	case 3:
+                // 		gl.vertexAttrib3fv(location, value as number[])
+                // 		break
+                // 	case 4:
+                // 		break
+                // }
+            }
+            this.constantAttributes[name] = true;
         }
         return this;
     }
     /**
      * Sets all uniform matrix attributes, binds all relevant buffers, and draws the mesh geometry as indexed
-     * triangles or indexed LINES. Set `mode` to `WGL.LINES` (and either add indices to `LINES` or call
+     * triangles or indexed LINES. Set `mode` to `gl.LINES` (and either add indices to `LINES` or call
      * `computeWireframe()`) to draw the mesh in wireframe.
      *
      * @param mesh
@@ -19422,12 +19545,12 @@ class Shader {
      * @param start int
      * @param count int
      */
-    draw(mesh, mode = DRAW_MODES.TRIANGLES, start, count) {
+    draw(mesh, mode = WGL$2.TRIANGLES, start, count) {
         assert$1(mesh.hasBeenCompiled, 'mesh.hasBeenCompiled');
-        assert$1(undefined != DRAW_MODES[mode]);
-        const modeStr = DRAW_MODES[mode];
+        assert$1(undefined != DRAW_MODE_NAMES[mode]);
+        const modeName = DRAW_MODE_NAMES[mode];
         // assert(mesh.indexBuffers[modeStr], `mesh.indexBuffers[${modeStr}] undefined`)
-        return this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[modeStr], mode, start, count);
+        return this.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers[modeName], mode, start, count);
     }
     /**
      * Sets all uniform matrix attributes, binds all relevant buffers, and draws the
@@ -19437,39 +19560,38 @@ class Shader {
      * like `WGL.TRIANGLES` or `WGL.LINES`. This method automatically creates and caches
      * vertex attribute pointers for attributes as needed.
      */
-    drawBuffers(vertexBuffers, indexBuffer, mode = DRAW_MODES.TRIANGLES, start = 0, count) {
+    drawBuffers(vertexBuffers, indexBuffer, mode = WGL$2.TRIANGLES, start = 0, count) {
         const gl = this.gl;
-        gl.handleError();
-        assert$1(undefined != DRAW_MODES[mode]);
+        assert$1(undefined != DRAW_MODE_NAMES[mode]);
         assertf(() => 1 <= Object.keys(vertexBuffers).length);
         Object.keys(vertexBuffers).forEach(key => assertInst(Buffer$1, vertexBuffers[key]));
         // Only varruct up the built-in matrices that are active in the shader
         const on = this.activeMatrices;
-        const modelViewMatrixInverse = (on['LGL_ModelViewMatrixInverse'] || on['LGL_NormalMatrix'])
+        const modelViewMatrixInverse = (on['ts_ModelViewMatrixInverse'] || on['ts_NormalMatrix'])
             //&& this.modelViewMatrixVersion != gl.modelViewMatrixVersion
             && gl.modelViewMatrix.inversed();
-        const projectionMatrixInverse = on['LGL_ProjectionMatrixInverse']
+        const projectionMatrixInverse = on['ts_ProjectionMatrixInverse']
             //&& this.projectionMatrixVersion != gl.projectionMatrixVersion
             && gl.projectionMatrix.inversed();
-        const modelViewProjectionMatrix = (on['LGL_ModelViewProjectionMatrix'] || on['LGL_ModelViewProjectionMatrixInverse'])
+        const modelViewProjectionMatrix = (on['ts_ModelViewProjectionMatrix'] || on['ts_ModelViewProjectionMatrixInverse'])
             //&& (this.projectionMatrixVersion != gl.projectionMatrixVersion || this.modelViewMatrixVersion !=
             // gl.modelViewMatrixVersion)
             && gl.projectionMatrix.times(gl.modelViewMatrix);
         const uni = {}; // Uniform Matrices
-        on['LGL_ModelViewMatrix']
+        on['ts_ModelViewMatrix']
             && this.modelViewMatrixVersion != gl.modelViewMatrixVersion
-            && (uni['LGL_ModelViewMatrix'] = gl.modelViewMatrix);
-        on['LGL_ModelViewMatrixInverse'] && (uni['LGL_ModelViewMatrixInverse'] = modelViewMatrixInverse);
-        on['LGL_ProjectionMatrix']
+            && (uni['ts_ModelViewMatrix'] = gl.modelViewMatrix);
+        on['ts_ModelViewMatrixInverse'] && (uni['ts_ModelViewMatrixInverse'] = modelViewMatrixInverse);
+        on['ts_ProjectionMatrix']
             && this.projectionMatrixVersion != gl.projectionMatrixVersion
-            && (uni['LGL_ProjectionMatrix'] = gl.projectionMatrix);
-        projectionMatrixInverse && (uni['LGL_ProjectionMatrixInverse'] = projectionMatrixInverse);
-        modelViewProjectionMatrix && (uni['LGL_ModelViewProjectionMatrix'] = modelViewProjectionMatrix);
-        modelViewProjectionMatrix && on['LGL_ModelViewProjectionMatrixInverse']
-            && (uni['LGL_ModelViewProjectionMatrixInverse'] = modelViewProjectionMatrix.inversed());
-        on['LGL_NormalMatrix']
+            && (uni['ts_ProjectionMatrix'] = gl.projectionMatrix);
+        projectionMatrixInverse && (uni['ts_ProjectionMatrixInverse'] = projectionMatrixInverse);
+        modelViewProjectionMatrix && (uni['ts_ModelViewProjectionMatrix'] = modelViewProjectionMatrix);
+        modelViewProjectionMatrix && on['ts_ModelViewProjectionMatrixInverse']
+            && (uni['ts_ModelViewProjectionMatrixInverse'] = modelViewProjectionMatrix.inversed());
+        on['ts_NormalMatrix']
             && this.modelViewMatrixVersion != gl.modelViewMatrixVersion
-            && (uni['LGL_NormalMatrix'] = modelViewMatrixInverse.transposed());
+            && (uni['ts_NormalMatrix'] = modelViewMatrixInverse.transposed());
         this.uniforms(uni);
         this.projectionMatrixVersion = gl.projectionMatrixVersion;
         this.modelViewMatrixVersion = gl.modelViewMatrixVersion;
@@ -19478,28 +19600,23 @@ class Shader {
         for (const attribute in vertexBuffers) {
             const buffer = vertexBuffers[attribute];
             assert$1(buffer.hasBeenCompiled);
-            const location = this.attributes[attribute] || gl.getAttribLocation(this.program, attribute);
-            gl.handleError();
+            const location = this.attributeLocations[attribute] || gl.getAttribLocation(this.program, attribute);
             if (location == -1 || !buffer.buffer) {
-                if (!attribute.startsWith('LGL_')) {
+                if (!attribute.startsWith('ts_')) {
                     console.warn(`Vertex buffer ${attribute} was not bound because the attribute is not active.`);
                 }
                 continue;
             }
-            this.attributes[attribute] = location;
-            gl.bindBuffer(WGL$1.ARRAY_BUFFER, buffer.buffer);
-            gl.handleError();
+            this.attributeLocations[attribute] = location;
+            gl.bindBuffer(WGL$2.ARRAY_BUFFER, buffer.buffer);
             gl.enableVertexAttribArray(location);
-            gl.handleError();
-            gl.vertexAttribPointer(location, buffer.spacing, WGL$1.FLOAT, false, 0, 0);
-            gl.handleError();
+            gl.vertexAttribPointer(location, buffer.spacing, WGL$2.FLOAT, false, 0, 0);
             minVertexBufferLength = Math.min(minVertexBufferLength, buffer.count);
         }
         // Disable unused attribute pointers.
-        for (const attribute in this.attributes) {
+        for (const attribute in this.attributeLocations) {
             if (!(attribute in vertexBuffers)) {
-                gl.disableVertexAttribArray(this.attributes[attribute]);
-                gl.handleError();
+                gl.disableVertexAttribArray(this.attributeLocations[attribute]);
             }
         }
         if (NLA_DEBUG) {
@@ -19508,7 +19625,9 @@ class Shader {
                 const buffer = gl.getVertexAttrib(i, gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING);
                 if (!buffer) {
                     const info = gl.getActiveAttrib(this.program, i);
-                    throw new Error('No buffer is bound to attribute ' + info.name);
+                    if (!this.constantAttributes[info.name]) {
+                        console.warn('No buffer is bound to attribute ' + info.name + ' and it was not set with .attributes()');
+                    }
                 }
                 // console.log('name:', info.name, 'type:', info.type, 'size:', info.size)
             }
@@ -19517,7 +19636,7 @@ class Shader {
         if (minVertexBufferLength) {
             count = count || (indexBuffer ? indexBuffer.count : minVertexBufferLength);
             assert$1(DRAW_MODE_CHECKS[mode](count), 'count ' + count + ' doesn\'t fulfill requirement '
-                + DRAW_MODE_CHECKS[mode].toString() + ' for mode ' + DRAW_MODES[mode]);
+                + DRAW_MODE_CHECKS[mode].toString() + ' for mode ' + DRAW_MODE_NAMES[mode]);
             if (indexBuffer) {
                 assert$1(indexBuffer.hasBeenCompiled);
                 assert$1(minVertexBufferLength > indexBuffer.maxValue);
@@ -19526,22 +19645,1158 @@ class Shader {
                 if (start + count > indexBuffer.count) {
                     throw new Error('Buffer not long enough for passed parameters start/length/buffer length' + ' ' + start + ' ' + count + ' ' + indexBuffer.count);
                 }
-                gl.bindBuffer(WGL$1.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
-                gl.handleError();
+                gl.bindBuffer(WGL$2.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
                 // start parameter has to be multiple of sizeof(WGL.UNSIGNED_SHORT)
-                gl.drawElements(mode, count, WGL$1.UNSIGNED_SHORT, 2 * start);
-                gl.handleError();
+                gl.drawElements(mode, count, WGL$2.UNSIGNED_SHORT, 2 * start);
             }
             else {
                 if (start + count > minVertexBufferLength) {
                     throw new Error('invalid');
                 }
                 gl.drawArrays(mode, start, count);
-                gl.handleError();
             }
             gl.drawCallCount++;
         }
         return this;
+    }
+}
+
+class Texture {
+    /**
+     * Provides a simple wrapper around WebGL textures that supports render-to-texture.
+     *
+     * The arguments `width` and `height` give the size of the texture in texels.
+     * WebGL texture dimensions must be powers of two unless `filter` is set to
+     * either `WGL.NEAREST` or `WGL.LINEAR` and `wrap` is set to `WGL.CLAMP_TO_EDGE`
+     * (which they are by default).
+     *
+     * Texture parameters can be passed in via the `options` argument.
+     * Example usage:
+     *
+     *      let tex = new GL.Texture(256, 256, {
+         *       magFilter: WGL.NEAREST,
+         *       minFilter: WGL.LINEAR,
+         *
+         *       wrapS: WGL.REPEAT,
+         *       wrapT: WGL.REPEAT,
+         *
+         *       format: WGL.RGB, // Defaults to WGL.RGBA
+         *       type: WGL.FLOAT // Defaults to WGL.UNSIGNED_BYTE
+         *     })
+     *
+     */
+    constructor(width, height, options = {}, gl = currentGL()) {
+        this.gl = gl;
+        this.width = width;
+        this.height = height;
+        this.format = options.format || gl.RGBA;
+        this.internalFormat = options.internalFormat || gl.RGBA;
+        this.type = options.type || gl.UNSIGNED_BYTE;
+        const magFilter = options.filter || options.magFilter || gl.LINEAR;
+        const minFilter = options.filter || options.minFilter || gl.LINEAR;
+        if (this.type === gl.FLOAT) {
+            if (gl.version != 2 && !gl.getExtension('OES_texture_float')) {
+                throw new Error('OES_texture_float is required but not supported');
+            }
+            if ((minFilter !== gl.NEAREST || magFilter !== gl.NEAREST) && !gl.getExtension('OES_texture_float_linear')) {
+                throw new Error('OES_texture_float_linear is required but not supported');
+            }
+        }
+        else if (this.type === gl.HALF_FLOAT_OES) {
+            if (!gl.getExtension('OES_texture_half_float')) {
+                throw new Error('OES_texture_half_float is required but not supported');
+            }
+            if ((minFilter !== gl.NEAREST || magFilter !== gl.NEAREST) && !gl.getExtension('OES_texture_half_float_linear')) {
+                throw new Error('OES_texture_half_float_linear is required but not supported');
+            }
+        }
+        this.texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, options.wrap || options.wrapS || gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, options.wrap || options.wrapT || gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, width, height, 0, this.format, this.type, options.data);
+    }
+    setData(data) {
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, data);
+    }
+    bind(unit) {
+        this.gl.activeTexture((this.gl.TEXTURE0 + unit));
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+    }
+    unbind(unit) {
+        this.gl.activeTexture((this.gl.TEXTURE0 + unit));
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+    }
+    drawTo(render) {
+        const gl = this.gl;
+        const prevFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+        if (!this.framebuffer) {
+            // create a renderbuffer for the depth component
+            const prevRenderbuffer = gl.getParameter(gl.RENDERBUFFER_BINDING);
+            const depthRenderbuffer = gl.createRenderbuffer();
+            gl.bindRenderbuffer(gl.RENDERBUFFER, depthRenderbuffer);
+            // DEPTH_COMPONENT16 is the only depth format
+            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.width, this.height);
+            gl.bindRenderbuffer(gl.RENDERBUFFER, prevRenderbuffer);
+            // create a framebuffer to render to
+            this.framebuffer = gl.createFramebuffer();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
+            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthRenderbuffer);
+            if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+                throw new Error('Rendering to this texture is not supported (incomplete this.framebuffer)');
+            }
+        }
+        else if (prevFramebuffer !== this.framebuffer) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
+        }
+        const prevViewport = gl.getParameter(gl.VIEWPORT);
+        gl.viewport(0, 0, this.width, this.height);
+        render(gl);
+        // restore previous state
+        prevFramebuffer !== this.framebuffer && gl.bindFramebuffer(gl.FRAMEBUFFER, prevFramebuffer);
+        gl.viewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+    }
+    swapWith(other) {
+        assert$1(this.gl == other.gl);
+        let temp;
+        temp = other.texture;
+        other.texture = this.texture;
+        this.texture = temp;
+        temp = other.width;
+        other.width = this.width;
+        this.width = temp;
+        temp = other.height;
+        other.height = this.height;
+        this.height = temp;
+    }
+    /**
+     * Return a new texture created from `imgElement`, an `<img>` tag.
+     */
+    static fromImage(imgElement, options = {}, gl = currentGL()) {
+        const texture = new Texture(imgElement.width, imgElement.height, options, gl);
+        try {
+            gl.texImage2D(gl.TEXTURE_2D, 0, texture.format, texture.format, texture.type, imgElement);
+        }
+        catch (e) {
+            if (location.protocol == 'file:') {
+                throw new Error('imgElement not loaded for security reasons (serve this page over "http://" instead)');
+            }
+            else {
+                throw new Error('imgElement not loaded for security reasons (imgElement must originate from the same ' +
+                    'domain as this page or use Cross-Origin Resource Sharing)');
+            }
+        }
+        if (options.minFilter && options.minFilter != gl.NEAREST && options.minFilter != gl.LINEAR) {
+            gl.generateMipmap(gl.TEXTURE_2D);
+        }
+        return texture;
+    }
+    /**
+     * Returns a checkerboard texture that will switch to the correct texture when it loads.
+     */
+    static fromURLSwitch(url, options, gl = currentGL()) {
+        Texture.checkerBoardCanvas = Texture.checkerBoardCanvas || (function () {
+            const c = document.createElement('canvas').getContext('2d');
+            if (!c)
+                throw new Error('Could not create 2d canvas.');
+            c.canvas.width = c.canvas.height = 128;
+            for (let y = 0; y < c.canvas.height; y += 16) {
+                for (let x = 0; x < c.canvas.width; x += 16) {
+                    //noinspection JSBitwiseOperatorUsage
+                    c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD';
+                    c.fillRect(x, y, 16, 16);
+                }
+            }
+            return c.canvas;
+        })();
+        const texture = Texture.fromImage(Texture.checkerBoardCanvas, options);
+        const image = new Image();
+        image.onload = () => Texture.fromImage(image, options, gl).swapWith(texture);
+        // error event doesn't return a reason. Most likely a 404.
+        image.onerror = () => { throw new Error('Could not load image ' + image.src + '. 404?'); };
+        image.src = url;
+        return texture;
+    }
+    static fromURL(url, options, gl = currentGL()) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(Texture.fromImage(image, options, gl));
+            image.onerror = () => reject('Could not load image ' + image.src + '. 404?');
+            image.src = url;
+        });
+    }
+}
+
+/*
+** Copyright (c) 2012 The Khronos Group Inc.
+**
+** Permission is hereby granted, free of charge, to any person obtaining a
+** copy of this software and/or associated documentation files (the
+** 'Materials'), to deal in the Materials without restriction, including
+** without limitation the rights to use, copy, modify, merge, publish,
+** distribute, sublicense, and/or sell copies of the Materials, and to
+** permit persons to whom the Materials are furnished to do so, subject to
+** the following conditions:
+**
+** The above copyright notice and this permission notice shall be included
+** in all copies or substantial portions of the Materials.
+**
+** THE MATERIALS ARE PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+*/
+// Various functions for helping debug WebGL apps.
+/**
+ * Wrapped logging function.
+ * @param msg Message to log.
+ */
+function log(msg) {
+    if (window.console && window.console.log) {
+        window.console.log(msg);
+    }
+}
+/**
+ * Wrapped error logging function.
+ * @param msg Message to log.
+ */
+function error(msg) {
+    if (window.console && window.console.error) {
+        window.console.error(msg);
+    }
+    else {
+        log(msg);
+    }
+}
+/**
+ * Which arguments are enums based on the number of arguments to the function.
+ * So
+ *    'texImage2D': {
+ *       9: { 0:true, 2:true, 6:true, 7:true },
+ *       6: { 0:true, 2:true, 3:true, 4:true },
+ *    },
+ *
+ * means if there are 9 arguments then 6 and 7 are enums, if there are 6
+ * arguments 3 and 4 are enums
+ *
+ * @type {!Object.<number, !Object.<number, string>}
+ */
+const glValidEnumContexts = {
+    // Generic setters and getters
+    'enable': { 1: { 0: true } },
+    'disable': { 1: { 0: true } },
+    'getParameter': { 1: { 0: true } },
+    // Rendering
+    'drawArrays': { 3: { 0: true } },
+    'drawElements': { 4: { 0: true, 2: true } },
+    // Shaders
+    'createShader': { 1: { 0: true } },
+    'getShaderParameter': { 2: { 1: true } },
+    'getProgramParameter': { 2: { 1: true } },
+    'getShaderPrecisionFormat': { 2: { 0: true, 1: true } },
+    // Vertex attributes
+    'getVertexAttrib': { 2: { 1: true } },
+    'vertexAttribPointer': { 6: { 2: true } },
+    // Textures
+    'bindTexture': { 2: { 0: true } },
+    'activeTexture': { 1: { 0: true } },
+    'getTexParameter': { 2: { 0: true, 1: true } },
+    'texParameterf': { 3: { 0: true, 1: true } },
+    'texParameteri': { 3: { 0: true, 1: true, 2: true } },
+    // texImage2D and texSubImage2D are defined below with WebGL 2 entrypoints
+    'copyTexImage2D': { 8: { 0: true, 2: true } },
+    'copyTexSubImage2D': { 8: { 0: true } },
+    'generateMipmap': { 1: { 0: true } },
+    // compressedTexImage2D and compressedTexSubImage2D are defined below with WebGL 2 entrypoints
+    // Buffer objects
+    'bindBuffer': { 2: { 0: true } },
+    // bufferData and bufferSubData are defined below with WebGL 2 entrypoints
+    'getBufferParameter': { 2: { 0: true, 1: true } },
+    // Renderbuffers and framebuffers
+    'pixelStorei': { 2: { 0: true, 1: true } },
+    // readPixels is defined below with WebGL 2 entrypoints
+    'bindRenderbuffer': { 2: { 0: true } },
+    'bindFramebuffer': { 2: { 0: true } },
+    'checkFramebufferStatus': { 1: { 0: true } },
+    'framebufferRenderbuffer': { 4: { 0: true, 1: true, 2: true } },
+    'framebufferTexture2D': { 5: { 0: true, 1: true, 2: true } },
+    'getFramebufferAttachmentParameter': { 3: { 0: true, 1: true, 2: true } },
+    'getRenderbufferParameter': { 2: { 0: true, 1: true } },
+    'renderbufferStorage': { 4: { 0: true, 1: true } },
+    // Frame buffer operations (clear, blend, depth test, stencil)
+    'clear': { 1: { 0: { 'enumBitwiseOr': ['COLOR_BUFFER_BIT', 'DEPTH_BUFFER_BIT', 'STENCIL_BUFFER_BIT'] } } },
+    'depthFunc': { 1: { 0: true } },
+    'blendFunc': { 2: { 0: true, 1: true } },
+    'blendFuncSeparate': { 4: { 0: true, 1: true, 2: true, 3: true } },
+    'blendEquation': { 1: { 0: true } },
+    'blendEquationSeparate': { 2: { 0: true, 1: true } },
+    'stencilFunc': { 3: { 0: true } },
+    'stencilFuncSeparate': { 4: { 0: true, 1: true } },
+    'stencilMaskSeparate': { 2: { 0: true } },
+    'stencilOp': { 3: { 0: true, 1: true, 2: true } },
+    'stencilOpSeparate': { 4: { 0: true, 1: true, 2: true, 3: true } },
+    // Culling
+    'cullFace': { 1: { 0: true } },
+    'frontFace': { 1: { 0: true } },
+    // ANGLE_instanced_arrays extension
+    'drawArraysInstancedANGLE': { 4: { 0: true } },
+    'drawElementsInstancedANGLE': { 5: { 0: true, 2: true } },
+    // EXT_blend_minmax extension
+    'blendEquationEXT': { 1: { 0: true } },
+    // WebGL 2 Buffer objects
+    'bufferData': {
+        3: { 0: true, 2: true },
+        4: { 0: true, 2: true },
+        5: { 0: true, 2: true } // WebGL 2
+    },
+    'bufferSubData': {
+        3: { 0: true },
+        4: { 0: true },
+        5: { 0: true } // WebGL 2
+    },
+    'copyBufferSubData': { 5: { 0: true, 1: true } },
+    'getBufferSubData': { 3: { 0: true }, 4: { 0: true }, 5: { 0: true } },
+    // WebGL 2 Framebuffer objects
+    'blitFramebuffer': { 10: { 8: { 'enumBitwiseOr': ['COLOR_BUFFER_BIT', 'DEPTH_BUFFER_BIT', 'STENCIL_BUFFER_BIT'] }, 9: true } },
+    'framebufferTextureLayer': { 5: { 0: true, 1: true } },
+    'invalidateFramebuffer': { 2: { 0: true } },
+    'invalidateSubFramebuffer': { 6: { 0: true } },
+    'readBuffer': { 1: { 0: true } },
+    // WebGL 2 Renderbuffer objects
+    'getInternalformatParameter': { 3: { 0: true, 1: true, 2: true } },
+    'renderbufferStorageMultisample': { 5: { 0: true, 2: true } },
+    // WebGL 2 Texture objects
+    'texStorage2D': { 5: { 0: true, 2: true } },
+    'texStorage3D': { 6: { 0: true, 2: true } },
+    'texImage2D': {
+        9: { 0: true, 2: true, 6: true, 7: true },
+        6: { 0: true, 2: true, 3: true, 4: true },
+        10: { 0: true, 2: true, 6: true, 7: true } // WebGL 2
+    },
+    'texImage3D': {
+        10: { 0: true, 2: true, 7: true, 8: true },
+        11: { 0: true, 2: true, 7: true, 8: true }
+    },
+    'texSubImage2D': {
+        9: { 0: true, 6: true, 7: true },
+        7: { 0: true, 4: true, 5: true },
+        10: { 0: true, 6: true, 7: true } // WebGL 2
+    },
+    'texSubImage3D': {
+        11: { 0: true, 8: true, 9: true },
+        12: { 0: true, 8: true, 9: true }
+    },
+    'copyTexSubImage3D': { 9: { 0: true } },
+    'compressedTexImage2D': {
+        7: { 0: true, 2: true },
+        8: { 0: true, 2: true },
+        9: { 0: true, 2: true } // WebGL 2
+    },
+    'compressedTexImage3D': {
+        8: { 0: true, 2: true },
+        9: { 0: true, 2: true },
+        10: { 0: true, 2: true }
+    },
+    'compressedTexSubImage2D': {
+        8: { 0: true, 6: true },
+        9: { 0: true, 6: true },
+        10: { 0: true, 6: true } // WebGL 2
+    },
+    'compressedTexSubImage3D': {
+        10: { 0: true, 8: true },
+        11: { 0: true, 8: true },
+        12: { 0: true, 8: true }
+    },
+    // WebGL 2 Vertex attribs
+    'vertexAttribIPointer': { 5: { 2: true } },
+    // WebGL 2 Writing to the drawing buffer
+    'drawArraysInstanced': { 4: { 0: true } },
+    'drawElementsInstanced': { 5: { 0: true, 2: true } },
+    'drawRangeElements': { 6: { 0: true, 4: true } },
+    // WebGL 2 Reading back pixels
+    'readPixels': {
+        7: { 4: true, 5: true },
+        8: { 4: true, 5: true } // WebGL 2
+    },
+    // WebGL 2 Multiple Render Targets
+    'clearBufferfv': { 3: { 0: true }, 4: { 0: true } },
+    'clearBufferiv': { 3: { 0: true }, 4: { 0: true } },
+    'clearBufferuiv': { 3: { 0: true }, 4: { 0: true } },
+    'clearBufferfi': { 4: { 0: true } },
+    // WebGL 2 Query objects
+    'beginQuery': { 2: { 0: true } },
+    'endQuery': { 1: { 0: true } },
+    'getQuery': { 2: { 0: true, 1: true } },
+    'getQueryParameter': { 2: { 1: true } },
+    // WebGL 2 Sampler objects
+    'samplerParameteri': { 3: { 1: true, 2: true } },
+    'samplerParameterf': { 3: { 1: true } },
+    'getSamplerParameter': { 2: { 1: true } },
+    // WebGL 2 Sync objects
+    'fenceSync': { 2: { 0: true, 1: { 'enumBitwiseOr': [] } } },
+    'clientWaitSync': { 3: { 1: { 'enumBitwiseOr': ['SYNC_FLUSH_COMMANDS_BIT'] } } },
+    'waitSync': { 3: { 1: { 'enumBitwiseOr': [] } } },
+    'getSyncParameter': { 2: { 1: true } },
+    // WebGL 2 Transform Feedback
+    'bindTransformFeedback': { 2: { 0: true } },
+    'beginTransformFeedback': { 1: { 0: true } },
+    'transformFeedbackVaryings': { 3: { 2: true } },
+    // WebGL2 Uniform Buffer Objects and Transform Feedback Buffers
+    'bindBufferBase': { 3: { 0: true } },
+    'bindBufferRange': { 5: { 0: true } },
+    'getIndexedParameter': { 2: { 0: true } },
+    'getActiveUniforms': { 3: { 2: true } },
+    'getActiveUniformBlockParameter': { 3: { 2: true } }
+};
+/**
+ * Map of numbers to names.
+ * @type {Object}
+ */
+let glEnums = null;
+/**
+ * Map of names to numbers.
+ * @type {Object}
+ */
+let enumStringToValue = null;
+/**
+ * Initializes this module. Safe to call more than once.
+ * @param ctx A WebGL context. If
+ *    you have more than one context it doesn't matter which one
+ *    you pass in, it is only used to pull out constants.
+ */
+function init() {
+    if (null === glEnums) {
+        glEnums = {};
+        enumStringToValue = {};
+        const c = window.WebGL2RenderingContext || window.WebGLRenderingContext;
+        if (!c)
+            throw new Error('Neither WebGL2RenderingContext nor WebGLRenderingContext exists on window.');
+        for (const propertyName in c) {
+            const prop = c[propertyName];
+            if ('number' === typeof prop) {
+                glEnums[prop] = propertyName;
+                enumStringToValue[propertyName] = prop;
+            }
+        }
+    }
+}
+/**
+ * Returns true or false if value matches any WebGL enum
+ * @param value Value to check if it might be an enum.
+ * @return True if value matches one of the WebGL defined enums
+ */
+function mightBeEnum(value) {
+    init();
+    return (glEnums[value] !== undefined);
+}
+/**
+ * Gets an string version of an WebGL enum.
+ *
+ * Example:
+ *   var str = WebGLDebugUtil.glEnumToString(ctx.getError())
+ *
+ * @param value Value to return an enum for
+ * @return The string version of the enum.
+ */
+function glEnumToString(value) {
+    init();
+    var name = glEnums[value];
+    return (name !== undefined) ? ('gl.' + name) :
+        ('/*UNKNOWN WebGL ENUM*/ 0x' + value.toString(16) + '');
+}
+/**
+ * Converts the argument of a WebGL function to a string.
+ * Attempts to convert enum arguments to strings.
+ *
+ * Example:
+ *   WebGLDebugUtil.init(ctx)
+ *   var str = WebGLDebugUtil.glFunctionArgToString('bindTexture', 2, 0, gl.TEXTURE_2D)
+ *
+ * would return 'TEXTURE_2D'
+ *
+ * @param functionName the name of the WebGL function.
+ * @param numArgs the number of arguments passed to the function.
+ * @param argumentIndex the index of the argument.
+ * @param value The value of the argument.
+ * @return The value as a string.
+ */
+function glFunctionArgToString(functionName, numArgs, argumentIndex, value) {
+    const funcInfo = glValidEnumContexts[functionName];
+    if (funcInfo !== undefined) {
+        const funcOverloadInfo = funcInfo[numArgs];
+        if (funcOverloadInfo !== undefined) {
+            const argInfo = funcOverloadInfo[argumentIndex];
+            if (argInfo) {
+                if (typeof argInfo === 'object') {
+                    const enums = argInfo.enumBitwiseOr;
+                    const orEnums = [];
+                    let orResult = 0;
+                    for (let i = 0; i < enums.length; ++i) {
+                        const enumValue = enumStringToValue[enums[i]];
+                        if ((value & enumValue) !== 0) {
+                            orResult |= enumValue;
+                            orEnums.push(glEnumToString(enumValue));
+                        }
+                    }
+                    if (orResult === value) {
+                        return orEnums.join(' | ');
+                    }
+                    else {
+                        return glEnumToString(value);
+                    }
+                }
+                else {
+                    return glEnumToString(value);
+                }
+            }
+        }
+    }
+    if (value === null) {
+        return 'null';
+    }
+    else if (value === undefined) {
+        return 'undefined';
+    }
+    else {
+        return value.toString();
+    }
+}
+/**
+ * Converts the arguments of a WebGL function to a string.
+ * Attempts to convert enum arguments to strings.
+ *
+ * @param functionName the name of the WebGL function.
+ * @param args The arguments.
+ * @return The arguments as a string.
+ */
+function glFunctionArgsToString(functionName, args) {
+    // apparently we can't do args.join(',')
+    var argStr = '';
+    var numArgs = args.length;
+    for (var ii = 0; ii < numArgs; ++ii) {
+        argStr += ((ii == 0) ? '' : ', ') +
+            glFunctionArgToString(functionName, numArgs, ii, args[ii]);
+    }
+    return argStr;
+}
+function makePropertyWrapper(wrapper, original, propertyName) {
+    //log('wrap prop: ' + propertyName)
+    wrapper.__defineGetter__(propertyName, function () {
+        return original[propertyName];
+    });
+    // TODO(gmane): this needs to handle properties that take more than
+    // one value?
+    wrapper.__defineSetter__(propertyName, function (value) {
+        //log('set: ' + propertyName)
+        original[propertyName] = value;
+    });
+}
+/**
+ * Given a WebGL context returns a wrapped context that calls
+ * gl.getError after every command and calls a function if the
+ * result is not NO_ERROR.
+ *
+ * You can supply your own function if you want. For example, if you'd like
+ * an exception thrown on any GL error you could do this
+ *
+ *    function throwOnGLError(err, funcName, args) {
+ *      throw new Error(WebGLDebugUtils.glEnumToString(err) +
+ *            ' was caused by call to ' + funcName)
+ *    }
+ *
+ *    ctx = WebGLDebugUtils.makeDebugContext(
+ *        canvas.getContext('webgl'), throwOnGLError)
+ *
+ * @param ctx The webgl context to wrap.
+ * @param opt_onErrorFunc The function
+ *     to call when gl.getError returns an error. If not specified the default
+ *     function calls console.log with a message.
+ * @param opt_onFunc The
+ *     function to call when each webgl function is called. You
+ *     can use this to log all calls for example.
+ * @param opt_err_ctx The webgl context
+ *        to call getError on if different than ctx.
+ */
+function makeDebugContext(ctx, opt_onErrorFunc, opt_onFunc, opt_err_ctx = ctx) {
+    init();
+    opt_onErrorFunc = opt_onErrorFunc || function (err, functionName, args) {
+        // apparently we can't do args.join(',')
+        var argStr = '';
+        var numArgs = args.length;
+        for (let i = 0; i < numArgs; ++i) {
+            argStr += ((i == 0) ? '' : ', ') +
+                glFunctionArgToString(functionName, numArgs, i, args[i]);
+        }
+        error('WebGL error ' + glEnumToString(err) + ' in ' + functionName +
+            '(' + argStr + ')');
+    };
+    // Holds booleans for each GL error so after we get the error ourselves
+    // we can still return it to the client app.
+    const glErrorShadow = {};
+    // Makes a function that calls a WebGL function and then calls getError.
+    function makeErrorWrapper(ctx, functionName) {
+        return function (...args) {
+            if (opt_onFunc) {
+                opt_onFunc(functionName, args);
+            }
+            const result = ctx[functionName].apply(ctx, args);
+            const err = opt_err_ctx.getError();
+            if (err != 0) {
+                glErrorShadow[err] = true;
+                opt_onErrorFunc(err, functionName, args);
+            }
+            return result;
+        };
+    }
+    // Make a an object that has a copy of every property of the WebGL context
+    // but wraps all functions.
+    const wrapper = {};
+    for (let propertyName in ctx) {
+        const prop = ctx[propertyName];
+        if ('function' === typeof prop) {
+            if (propertyName != 'getExtension') {
+                wrapper[propertyName] = makeErrorWrapper(ctx, propertyName);
+            }
+            else {
+                let wrapped = makeErrorWrapper(ctx, propertyName);
+                wrapper[propertyName] = function () {
+                    const result = wrapped.apply(ctx, arguments);
+                    if (!result) {
+                        return null;
+                    }
+                    return makeDebugContext(result, opt_onErrorFunc, opt_onFunc, opt_err_ctx);
+                };
+            }
+        }
+        else {
+            makePropertyWrapper(wrapper, ctx, propertyName);
+        }
+    }
+    // Override the getError function with one that returns our saved results.
+    wrapper.getError = function () {
+        for (const err in glErrorShadow) {
+            if (glErrorShadow.hasOwnProperty(err)) {
+                if (glErrorShadow[err]) {
+                    glErrorShadow[err] = false;
+                    return parseInt(err);
+                }
+            }
+        }
+        return ctx.NO_ERROR;
+    };
+    return wrapper;
+}
+function isWebGL2RenderingContext(o) {
+    return !!o.createTransformFeedback;
+}
+/**
+ * Resets a context to the initial state.
+ * @param ctx The webgl context to
+ *     reset.
+ */
+function resetToInitialState(ctx2) {
+    if (isWebGL2RenderingContext(ctx2)) {
+        ctx2.bindVertexArray(null);
+    }
+    const numAttribs = ctx2.getParameter(ctx2.MAX_VERTEX_ATTRIBS);
+    const tmp = ctx2.createBuffer();
+    ctx2.bindBuffer(ctx2.ARRAY_BUFFER, tmp);
+    for (let ii = 0; ii < numAttribs; ++ii) {
+        ctx2.disableVertexAttribArray(ii);
+        ctx2.vertexAttribPointer(ii, 4, ctx2.FLOAT, false, 0, 0);
+        ctx2.vertexAttrib1f(ii, 0);
+        if (isWebGL2RenderingContext(ctx2)) {
+            ctx2.vertexAttribDivisor(ii, 0);
+        }
+    }
+    ctx2.deleteBuffer(tmp);
+    const numTextureUnits = ctx2.getParameter(ctx2.MAX_TEXTURE_IMAGE_UNITS);
+    for (let ii = 0; ii < numTextureUnits; ++ii) {
+        ctx2.activeTexture((ctx2.TEXTURE0 + ii));
+        ctx2.bindTexture(ctx2.TEXTURE_CUBE_MAP, null);
+        ctx2.bindTexture(ctx2.TEXTURE_2D, null);
+        if (isWebGL2RenderingContext(ctx2)) {
+            ctx2.bindTexture(ctx2.TEXTURE_2D_ARRAY, null);
+            ctx2.bindTexture(ctx2.TEXTURE_3D, null);
+            ctx2.bindSampler(ii, null);
+        }
+    }
+    ctx2.activeTexture(ctx2.TEXTURE0);
+    ctx2.useProgram(null);
+    ctx2.bindBuffer(ctx2.ARRAY_BUFFER, null);
+    ctx2.bindBuffer(ctx2.ELEMENT_ARRAY_BUFFER, null);
+    ctx2.bindFramebuffer(ctx2.FRAMEBUFFER, null);
+    ctx2.bindRenderbuffer(ctx2.RENDERBUFFER, null);
+    ctx2.disable(ctx2.BLEND);
+    ctx2.disable(ctx2.CULL_FACE);
+    ctx2.disable(ctx2.DEPTH_TEST);
+    ctx2.disable(ctx2.DITHER);
+    ctx2.disable(ctx2.SCISSOR_TEST);
+    ctx2.blendColor(0, 0, 0, 0);
+    ctx2.blendEquation(ctx2.FUNC_ADD);
+    ctx2.blendFunc(ctx2.ONE, ctx2.ZERO);
+    ctx2.clearColor(0, 0, 0, 0);
+    ctx2.clearDepth(1);
+    ctx2.clearStencil(-1);
+    ctx2.colorMask(true, true, true, true);
+    ctx2.cullFace(ctx2.BACK);
+    ctx2.depthFunc(ctx2.LESS);
+    ctx2.depthMask(true);
+    ctx2.depthRange(0, 1);
+    ctx2.frontFace(ctx2.CCW);
+    ctx2.hint(ctx2.GENERATE_MIPMAP_HINT, ctx2.DONT_CARE);
+    ctx2.lineWidth(1);
+    ctx2.pixelStorei(ctx2.PACK_ALIGNMENT, 4);
+    ctx2.pixelStorei(ctx2.UNPACK_ALIGNMENT, 4);
+    ctx2.pixelStorei(ctx2.UNPACK_FLIP_Y_WEBGL, false);
+    ctx2.pixelStorei(ctx2.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    ctx2.pixelStorei(ctx2.UNPACK_COLORSPACE_CONVERSION_WEBGL, ctx2.BROWSER_DEFAULT_WEBGL);
+    ctx2.polygonOffset(0, 0);
+    ctx2.sampleCoverage(1, false);
+    ctx2.scissor(0, 0, ctx2.canvas.width, ctx2.canvas.height);
+    ctx2.stencilFunc(ctx2.ALWAYS, 0, 0xFFFFFFFF);
+    ctx2.stencilMask(0xFFFFFFFF);
+    ctx2.stencilOp(ctx2.KEEP, ctx2.KEEP, ctx2.KEEP);
+    ctx2.viewport(0, 0, ctx2.canvas.width, ctx2.canvas.height);
+    ctx2.clear(ctx2.COLOR_BUFFER_BIT | ctx2.DEPTH_BUFFER_BIT | ctx2.STENCIL_BUFFER_BIT);
+    if (isWebGL2RenderingContext(ctx2)) {
+        ctx2.drawBuffers([ctx2.BACK]);
+        ctx2.readBuffer(ctx2.BACK);
+        ctx2.bindBuffer(ctx2.COPY_READ_BUFFER, null);
+        ctx2.bindBuffer(ctx2.COPY_WRITE_BUFFER, null);
+        ctx2.bindBuffer(ctx2.PIXEL_PACK_BUFFER, null);
+        ctx2.bindBuffer(ctx2.PIXEL_UNPACK_BUFFER, null);
+        const numTransformFeedbacks = ctx2.getParameter(ctx2.MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS);
+        for (let ii = 0; ii < numTransformFeedbacks; ++ii) {
+            ctx2.bindBufferBase(ctx2.TRANSFORM_FEEDBACK_BUFFER, ii, null);
+        }
+        const numUBOs = ctx2.getParameter(ctx2.MAX_UNIFORM_BUFFER_BINDINGS);
+        for (let ii = 0; ii < numUBOs; ++ii) {
+            ctx2.bindBufferBase(ctx2.UNIFORM_BUFFER, ii, null);
+        }
+        ctx2.disable(ctx2.RASTERIZER_DISCARD);
+        ctx2.pixelStorei(ctx2.UNPACK_IMAGE_HEIGHT, 0);
+        ctx2.pixelStorei(ctx2.UNPACK_SKIP_IMAGES, 0);
+        ctx2.pixelStorei(ctx2.UNPACK_ROW_LENGTH, 0);
+        ctx2.pixelStorei(ctx2.UNPACK_SKIP_ROWS, 0);
+        ctx2.pixelStorei(ctx2.UNPACK_SKIP_PIXELS, 0);
+        ctx2.pixelStorei(ctx2.PACK_ROW_LENGTH, 0);
+        ctx2.pixelStorei(ctx2.PACK_SKIP_ROWS, 0);
+        ctx2.pixelStorei(ctx2.PACK_SKIP_PIXELS, 0);
+        ctx2.hint(ctx2.FRAGMENT_SHADER_DERIVATIVE_HINT, ctx2.DONT_CARE);
+    }
+    // TODO: This should NOT be needed but Firefox fails with 'hint'
+    while (ctx2.getError()) { }
+}
+/**
+ * Given a canvas element returns a wrapped canvas element that will
+ * simulate lost context. The canvas returned adds the following functions.
+ *
+ * loseContext:
+ *   simulates a lost context event.
+ *
+ * restoreContext:
+ *   simulates the context being restored.
+ *
+ * lostContextInNCalls:
+ *   loses the context after N gl calls.
+ *
+ * getNumCalls:
+ *   tells you how many gl calls there have been so far.
+ *
+ * setRestoreTimeout:
+ *   sets the number of milliseconds until the context is restored
+ *   after it has been lost. Defaults to 0. Pass -1 to prevent
+ *   automatic restoring.
+ *
+ * @param canvas The canvas element to wrap.
+ */
+function makeLostContextSimulatingCanvas(canvas) {
+    const canvas2 = canvas;
+    let unwrappedContext_;
+    const onLost_ = [];
+    const onRestored_ = [];
+    let wrappedContext_ = {};
+    let contextId_ = 1;
+    let contextLost_ = false;
+    // const resourceId_ = 0
+    const resourceDb_ = [];
+    let numCallsToLoseContext_ = 0;
+    let numCalls_ = 0;
+    let canRestore_ = false;
+    let restoreTimeout_ = 0;
+    // Holds booleans for each GL error so can simulate errors.
+    const glErrorShadow_ = {};
+    canvas2.getContext = function (f) {
+        return function () {
+            const ctx = f.apply(canvas2, arguments);
+            // Did we get a context and is it a WebGL context?
+            // @ts-ignore
+            if ((ctx instanceof WebGLRenderingContext) || (window.WebGL2RenderingContext && (ctx instanceof WebGL2RenderingContext))) {
+                if (ctx != unwrappedContext_) {
+                    if (unwrappedContext_) {
+                        throw new Error('got different context');
+                    }
+                    unwrappedContext_ = ctx;
+                    wrappedContext_ = makeLostContextSimulatingContext(unwrappedContext_);
+                }
+                return wrappedContext_;
+            }
+            return ctx;
+        };
+    }(canvas2.getContext);
+    function wrapEvent(listener) {
+        if (typeof (listener) == 'function') {
+            return listener;
+        }
+        else {
+            return function (e) {
+                listener.handleEvent(e);
+            };
+        }
+    }
+    function addOnContextLostListener(listener) {
+        onLost_.push(wrapEvent(listener));
+    }
+    function addOnContextRestoredListener(listener) {
+        onRestored_.push(wrapEvent(listener));
+    }
+    function wrapAddEventListener(canvas) {
+        const f = canvas.addEventListener;
+        canvas.addEventListener = function (type, listener) {
+            switch (type) {
+                case 'webglcontextlost':
+                    addOnContextLostListener(listener);
+                    break;
+                case 'webglcontextrestored':
+                    addOnContextRestoredListener(listener);
+                    break;
+                default:
+                    f.apply(canvas, arguments);
+            }
+        };
+    }
+    wrapAddEventListener(canvas2);
+    canvas2.loseContext = function () {
+        if (!contextLost_) {
+            contextLost_ = true;
+            numCallsToLoseContext_ = 0;
+            ++contextId_;
+            while (unwrappedContext_.getError())
+                clearErrors();
+            glErrorShadow_[unwrappedContext_.CONTEXT_LOST_WEBGL] = true;
+            const event = makeWebGLContextEvent('context lost');
+            const callbacks = onLost_.slice();
+            setTimeout(function () {
+                //log('numCallbacks:' + callbacks.length)
+                for (let ii = 0; ii < callbacks.length; ++ii) {
+                    //log('calling callback:' + ii)
+                    callbacks[ii](event);
+                }
+                if (restoreTimeout_ >= 0) {
+                    setTimeout(function () {
+                        canvas2.restoreContext();
+                    }, restoreTimeout_);
+                }
+            }, 0);
+        }
+    };
+    canvas2.restoreContext = function () {
+        if (contextLost_) {
+            if (onRestored_.length) {
+                setTimeout(function () {
+                    if (!canRestore_) {
+                        throw new Error('can not restore. webglcontestlost listener did not call event.preventDefault');
+                    }
+                    freeResources();
+                    resetToInitialState(unwrappedContext_);
+                    contextLost_ = false;
+                    numCalls_ = 0;
+                    canRestore_ = false;
+                    const callbacks = onRestored_.slice();
+                    const event = makeWebGLContextEvent('context restored');
+                    for (let ii = 0; ii < callbacks.length; ++ii) {
+                        callbacks[ii](event);
+                    }
+                }, 0);
+            }
+        }
+    };
+    canvas2.loseContextInNCalls = function (numCalls) {
+        if (contextLost_) {
+            throw new Error('You can not ask a lost context to be lost');
+        }
+        numCallsToLoseContext_ = numCalls_ + numCalls;
+    };
+    canvas2.getNumCalls = function () {
+        return numCalls_;
+    };
+    canvas2.setRestoreTimeout = function (timeout) {
+        restoreTimeout_ = timeout;
+    };
+    function clearErrors() {
+        const k = Object.keys(glErrorShadow_);
+        for (let i = 0; i < k.length; ++i) {
+            delete glErrorShadow_[k[i]];
+        }
+    }
+    function loseContextIfTime() {
+        ++numCalls_;
+        if (!contextLost_) {
+            if (numCallsToLoseContext_ == numCalls_) {
+                canvas2.loseContext();
+            }
+        }
+    }
+    // Makes a function that simulates WebGL when out of context.
+    function makeLostContextFunctionWrapper(ctx, functionName) {
+        const f = ctx[functionName];
+        return function () {
+            // log('calling:' + functionName)
+            // Only call the functions if the context is not lost.
+            loseContextIfTime();
+            if (!contextLost_) {
+                //if (!checkResources(arguments)) {
+                //  glErrorShadow_[wrappedContext_.INVALID_OPERATION] = true
+                //  return
+                //}
+                const result = f.apply(ctx, arguments);
+                return result;
+            }
+        };
+    }
+    function freeResources() {
+        for (let ii = 0; ii < resourceDb_.length; ++ii) {
+            const resource = resourceDb_[ii];
+            if (resource instanceof WebGLBuffer) {
+                unwrappedContext_.deleteBuffer(resource);
+            }
+            else if (resource instanceof WebGLFramebuffer) {
+                unwrappedContext_.deleteFramebuffer(resource);
+            }
+            else if (resource instanceof WebGLProgram) {
+                unwrappedContext_.deleteProgram(resource);
+            }
+            else if (resource instanceof WebGLRenderbuffer) {
+                unwrappedContext_.deleteRenderbuffer(resource);
+            }
+            else if (resource instanceof WebGLShader) {
+                unwrappedContext_.deleteShader(resource);
+            }
+            else if (resource instanceof WebGLTexture) {
+                unwrappedContext_.deleteTexture(resource);
+            }
+            else if (isWebGL2RenderingContext) {
+                // @ts-ignore
+                if (resource instanceof WebGLQuery) {
+                    unwrappedContext_.deleteQuery(resource);
+                    // @ts-ignore
+                }
+                else if (resource instanceof WebGLSampler) {
+                    unwrappedContext_.deleteSampler(resource);
+                    // @ts-ignore
+                }
+                else if (resource instanceof WebGLSync) {
+                    unwrappedContext_.deleteSync(resource);
+                    // @ts-ignore
+                }
+                else if (resource instanceof WebGLTransformFeedback) {
+                    unwrappedContext_.deleteTransformFeedback(resource);
+                    // @ts-ignore
+                }
+                else if (resource instanceof WebGLVertexArrayObject) {
+                    unwrappedContext_.deleteVertexArray(resource);
+                }
+            }
+        }
+    }
+    function makeWebGLContextEvent(statusMessage) {
+        return {
+            statusMessage: statusMessage,
+            preventDefault: function () {
+                canRestore_ = true;
+            }
+        };
+    }
+    return canvas2;
+    function makeLostContextSimulatingContext(ctx) {
+        // copy all functions and properties to wrapper
+        for (const propertyName in ctx) {
+            if (typeof ctx[propertyName] == 'function') {
+                wrappedContext_[propertyName] = makeLostContextFunctionWrapper(ctx, propertyName);
+            }
+            else {
+                makePropertyWrapper(wrappedContext_, ctx, propertyName);
+            }
+        }
+        // Wrap a few functions specially.
+        wrappedContext_.getError = function () {
+            loseContextIfTime();
+            if (!contextLost_) {
+                let err;
+                while (err = unwrappedContext_.getError()) {
+                    glErrorShadow_[err] = true;
+                }
+            }
+            for (const err in glErrorShadow_) {
+                if (glErrorShadow_[err]) {
+                    delete glErrorShadow_[err];
+                    return err;
+                }
+            }
+            return wrappedContext_.NO_ERROR;
+        };
+        const creationFunctions = [
+            'createBuffer',
+            'createFramebuffer',
+            'createProgram',
+            'createRenderbuffer',
+            'createShader',
+            'createTexture'
+        ];
+        if (isWebGL2RenderingContext) {
+            creationFunctions.push('createQuery', 'createSampler', 'fenceSync', 'createTransformFeedback', 'createVertexArray');
+        }
+        for (let i = 0; i < creationFunctions.length; ++i) {
+            const functionName = creationFunctions[i];
+            wrappedContext_[functionName] = function (f) {
+                return function () {
+                    loseContextIfTime();
+                    if (contextLost_) {
+                        return null;
+                    }
+                    const obj = f.apply(ctx, arguments);
+                    obj.__webglDebugContextLostId__ = contextId_;
+                    resourceDb_.push(obj);
+                    return obj;
+                };
+            }(ctx[functionName]);
+        }
+        const functionsThatShouldReturnNull = [
+            'getActiveAttrib',
+            'getActiveUniform',
+            'getBufferParameter',
+            'getContextAttributes',
+            'getAttachedShaders',
+            'getFramebufferAttachmentParameter',
+            'getParameter',
+            'getProgramParameter',
+            'getProgramInfoLog',
+            'getRenderbufferParameter',
+            'getShaderParameter',
+            'getShaderInfoLog',
+            'getShaderSource',
+            'getTexParameter',
+            'getUniform',
+            'getUniformLocation',
+            'getVertexAttrib'
+        ];
+        if (isWebGL2RenderingContext) {
+            functionsThatShouldReturnNull.push('getInternalformatParameter', 'getQuery', 'getQueryParameter', 'getSamplerParameter', 'getSyncParameter', 'getTransformFeedbackVarying', 'getIndexedParameter', 'getUniformIndices', 'getActiveUniforms', 'getActiveUniformBlockParameter', 'getActiveUniformBlockName');
+        }
+        for (let ii = 0; ii < functionsThatShouldReturnNull.length; ++ii) {
+            const functionName = functionsThatShouldReturnNull[ii];
+            wrappedContext_[functionName] = function (f) {
+                return function () {
+                    loseContextIfTime();
+                    if (contextLost_) {
+                        return null;
+                    }
+                    return f.apply(ctx, arguments);
+                };
+            }(wrappedContext_[functionName]);
+        }
+        const isFunctions = [
+            'isBuffer',
+            'isEnabled',
+            'isFramebuffer',
+            'isProgram',
+            'isRenderbuffer',
+            'isShader',
+            'isTexture'
+        ];
+        if (isWebGL2RenderingContext) {
+            isFunctions.push('isQuery', 'isSampler', 'isSync', 'isTransformFeedback', 'isVertexArray');
+        }
+        for (let ii = 0; ii < isFunctions.length; ++ii) {
+            const functionName = isFunctions[ii];
+            wrappedContext_[functionName] = function (f) {
+                return function () {
+                    loseContextIfTime();
+                    if (contextLost_) {
+                        return false;
+                    }
+                    return f.apply(ctx, arguments);
+                };
+            }(wrappedContext_[functionName]);
+        }
+        wrappedContext_.checkFramebufferStatus = function (f) {
+            return function () {
+                loseContextIfTime();
+                if (contextLost_) {
+                    return wrappedContext_.FRAMEBUFFER_UNSUPPORTED;
+                }
+                return f.apply(ctx, arguments);
+            };
+        }(wrappedContext_.checkFramebufferStatus);
+        wrappedContext_.getAttribLocation = function (f) {
+            return function () {
+                loseContextIfTime();
+                if (contextLost_) {
+                    return -1;
+                }
+                return f.apply(ctx, arguments);
+            };
+        }(wrappedContext_.getAttribLocation);
+        wrappedContext_.getVertexAttribOffset = function (f) {
+            return function () {
+                loseContextIfTime();
+                if (contextLost_) {
+                    return 0;
+                }
+                return f.apply(ctx, arguments);
+            };
+        }(wrappedContext_.getVertexAttribOffset);
+        wrappedContext_.isContextLost = function () {
+            return contextLost_;
+        };
+        if (isWebGL2RenderingContext) {
+            wrappedContext_.getFragDataLocation = function (f) {
+                return function () {
+                    loseContextIfTime();
+                    if (contextLost_) {
+                        return -1;
+                    }
+                    return f.apply(ctx, arguments);
+                };
+            }(wrappedContext_.getFragDataLocation);
+            wrappedContext_.clientWaitSync = function (f) {
+                return function () {
+                    loseContextIfTime();
+                    if (contextLost_) {
+                        return wrappedContext_.WAIT_FAILED;
+                    }
+                    return f.apply(ctx, arguments);
+                };
+            }(wrappedContext_.clientWaitSync);
+            wrappedContext_.getUniformBlockIndex = function (f) {
+                return function () {
+                    loseContextIfTime();
+                    if (contextLost_) {
+                        return wrappedContext_.INVALID_INDEX;
+                    }
+                    return f.apply(ctx, arguments);
+                };
+            }(wrappedContext_.getUniformBlockIndex);
+        }
+        return wrappedContext_;
     }
 }
 
@@ -19550,34 +20805,33 @@ class Shader {
  */
 const GL_COLOR_BLACK = [0, 0, 0, 1];
 function currentGL() {
-    return TSGLContext.gl;
+    return TSGLContextBase.gl;
 }
-const WGL$2 = WebGLRenderingContext;
 function isNumber(obj) {
     const str = Object.prototype.toString.call(obj);
     return str == '[object Number]' || str == '[object Boolean]';
 }
-class TSGLContext {
+class TSGLContextBase {
     constructor(gl, immediate = {
-            mesh: new Mesh()
-                .addVertexBuffer('coords', 'LGL_TexCoord')
-                .addVertexBuffer('colors', 'LGL_Color'),
-            mode: -1,
-            coord: [0, 0],
-            color: [1, 1, 1, 1],
-            pointSize: 1,
-            shader: Shader.create(`
-			attribute vec4 LGL_Color;
-			attribute vec4 LGL_Vertex;
-			uniform mat4 LGL_ModelViewProjectionMatrix;
-			attribute vec2 LGL_TexCoord;
+        mesh: new Mesh()
+            .addVertexBuffer('coords', 'ts_TexCoord')
+            .addVertexBuffer('colors', 'ts_Color'),
+        mode: -1,
+        coord: [0, 0],
+        color: [1, 1, 1, 1],
+        pointSize: 1,
+        shader: Shader.create(`
+			attribute vec4 ts_Color;
+			attribute vec4 ts_Vertex;
+			uniform mat4 ts_ModelViewProjectionMatrix;
+			attribute vec2 ts_TexCoord;
             uniform float pointSize;
             varying vec4 color;
             varying vec2 coord;
             void main() {
-                color = LGL_Color;
-                coord = LGL_TexCoord;
-                gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+                color = ts_Color;
+                coord = ts_TexCoord;
+                gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
                 gl_PointSize = pointSize;
             }
 		`, `
@@ -19592,7 +20846,7 @@ class TSGLContext {
                 // if (useTexture) gl_FragColor *= texture2D(texture, coord.xy);
             }
         `, gl),
-        }) {
+    }) {
         this.immediate = immediate;
         this.modelViewMatrix = M4.identity();
         this.projectionMatrix = M4.identity();
@@ -19603,7 +20857,7 @@ class TSGLContext {
         this.drawCallCount = 0;
         this.projectionMatrixVersion = 0;
         this.modelViewMatrixVersion = 0;
-        this.matrixMode(TSGLContext.MODELVIEW);
+        this.matrixMode(TSGLContextBase.MODELVIEW);
     }
     /// Implement the OpenGL modelview and projection matrix stacks, along with some other useful GLU matrix functions.
     matrixMode(mode) {
@@ -19718,7 +20972,7 @@ class TSGLContext {
                 : (1 == args.length && 'number' == typeof args[0])
                     ? hexIntToGLColor(args[0])
                     : (1 == args.length && 'string' == typeof args[0])
-                        ? chroma$2(args[0]).gl()
+                        ? chroma$1(args[0]).gl()
                         : [args[0], args[1], args[2], args[3] || 0];
     }
     texCoord(...args) {
@@ -19734,12 +20988,12 @@ class TSGLContext {
             throw new Error('mismatched viewerGL.begin() and viewerGL.end() calls');
         this.immediate.mesh.compile();
         this.immediate.shader.uniforms({
-            useTexture: !!TSGLContext.gl.getParameter(WGL$2.TEXTURE_BINDING_2D),
+            useTexture: !!TSGLContextBase.gl.getParameter(this.TEXTURE_BINDING_2D),
         }).drawBuffers(this.immediate.mesh.vertexBuffers, undefined, this.immediate.mode);
         this.immediate.mode = -1;
     }
     makeCurrent() {
-        TSGLContext.gl = this;
+        TSGLContextBase.gl = this;
     }
     /**
      * Starts an animation loop.
@@ -19801,10 +21055,10 @@ class TSGLContext {
             gl.canvas.height = (window.innerHeight - top - bottom) * window.devicePixelRatio;
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
             if (options.camera) {
-                gl.matrixMode(TSGLContext.PROJECTION);
+                gl.matrixMode(TSGLContextBase.PROJECTION);
                 gl.loadIdentity();
                 gl.perspective(options.fov || 45, gl.canvas.width / gl.canvas.height, options.near || 0.1, options.far || 1000);
-                gl.matrixMode(TSGLContext.MODELVIEW);
+                gl.matrixMode(TSGLContextBase.MODELVIEW);
             }
         }
         window.addEventListener('resize', windowOnResize);
@@ -19814,16 +21068,6 @@ class TSGLContext {
     viewportFill() {
         this.viewport(0, 0, this.canvas.width, this.canvas.height);
     }
-    handleError() {
-        // const errorCode = this.getError()
-        // if (0 !== errorCode) {
-        //     throw new Error('' + errorCode + WGL_ERROR[errorCode])
-        // }
-    }
-    /**
-     * `create()` creates a new WebGL context and augments it with more methods. The alpha channel is disabled
-     * by default because it usually causes unintended transparencies in the canvas.
-     */
     static create(options = {}) {
         const canvas = options.canvas || document.createElement('canvas');
         if (!options.canvas) {
@@ -19847,16 +21091,29 @@ class TSGLContext {
         }
         if (!newGL)
             throw new Error('WebGL not supported');
-        TSGLContext.gl = newGL;
-        addOwnProperties(newGL, TSGLContext.prototype);
-        addOwnProperties(newGL, new TSGLContext(newGL));
+        if (options.throwOnError) {
+            newGL = makeDebugContext(newGL, (err, funcName) => {
+                throw new Error(glEnumToString(err) + ' was caused by ' + funcName);
+            });
+        }
+        TSGLContextBase.gl = newGL;
+        addOwnProperties(newGL, TSGLContextBase.prototype);
+        addOwnProperties(newGL, new TSGLContextBase(newGL));
         //addEventListeners(newGL)
         return newGL;
     }
 }
-TSGLContext.MODELVIEW = 0;
-TSGLContext.PROJECTION = 1;
-TSGLContext.HALF_FLOAT_OES = 0x8D61;
+TSGLContextBase.MODELVIEW = 0;
+TSGLContextBase.PROJECTION = 1;
+TSGLContextBase.HALF_FLOAT_OES = 0x8D61;
+var TSGLContext;
+(function (TSGLContext) {
+    /**
+     * `create()` creates a new WebGL context and augments it with more methods. The alpha channel is disabled
+     * by default because it usually causes unintended transparencies in the canvas.
+     */
+    TSGLContext.create = TSGLContextBase.create;
+})(TSGLContext || (TSGLContext = {}));
 // enum WGL_ERROR {
 // 	NO_ERROR = WGL.NO_ERROR,
 // 	INVALID_ENUM = WGL.INVALID_ENUM,
@@ -19866,9 +21123,9 @@ TSGLContext.HALF_FLOAT_OES = 0x8D61;
 // 	OUT_OF_MEMORY = WGL.OUT_OF_MEMORY,
 // 	CONTEXT_LOST_WEBGL = WGL.CONTEXT_LOST_WEBGL,
 // }
-TSGLContext.prototype.MODELVIEW = TSGLContext.MODELVIEW;
-TSGLContext.prototype.PROJECTION = TSGLContext.PROJECTION;
-TSGLContext.prototype.HALF_FLOAT_OES = TSGLContext.HALF_FLOAT_OES;
+TSGLContextBase.prototype.MODELVIEW = TSGLContextBase.MODELVIEW;
+TSGLContextBase.prototype.PROJECTION = TSGLContextBase.PROJECTION;
+TSGLContextBase.prototype.HALF_FLOAT_OES = TSGLContextBase.HALF_FLOAT_OES;
 /**
  *
  * Push two triangles:
@@ -19887,276 +21144,12 @@ function pushQuad(triangles, flipped, a, b, c, d) {
 function hexIntToGLColor(color) {
     return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
 }
-
-const WGL$3 = WebGLRenderingContext;
-class Buffer$1 {
-    /**
-     * Provides a simple method of uploading data to a GPU buffer. Example usage:
-     *
-     *     const vertices = new Buffer(WGL.ARRAY_BUFFER, Float32Array)
-     *     vertices.data = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0]]
-     *     vertices.compile()
-     *
-     *     const indices = new Buffer(WGL.ELEMENT_ARRAY_BUFFER, Uint16Array)
-     *     indices.data = [[0, 1, 2], [2, 1, 3]]
-     *     indices.compile()
-     *
-     * Specifies the target to which the buffer object is bound.
-     * The symbolic constant must be GL_ARRAY_BUFFER or GL_ELEMENT_ARRAY_BUFFER.
-     */
-    constructor(target, type) {
-        this.target = target;
-        this.type = type;
-        assert$1(target == WGL$3.ARRAY_BUFFER || target == WGL$3.ELEMENT_ARRAY_BUFFER, 'target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER');
-        assert$1(type == Float32Array || type == Uint16Array, 'type == Float32Array || type == Uint16Array');
-        this.buffer = undefined;
-        this.type = type;
-        this.data = [];
-        this.count = 0;
-        this.spacing = 0;
-        this.hasBeenCompiled = false;
-    }
-    /**
-     * Upload the contents of `data` to the GPU in preparation for rendering. The data must be a list of lists
-     * where each inner list has the same length. For example, each element of data for vertex normals would be a
-     * list of length three. This will remember the data length and element length for later use by shaders.
-     *
-     * This could have used `[].concat.apply([], this.data)` to flatten the array but Google
-     * Chrome has a maximum number of arguments so the concatenations are chunked to avoid that limit.
-     *
-     * @param type Either `WGL.STATIC_DRAW` or `WGL.DYNAMIC_DRAW`. Defaults to `WGL.STATIC_DRAW`
-     */
-    compile(type = WGL$3.STATIC_DRAW, gl = currentGL()) {
-        assert$1(WGL$3.STATIC_DRAW == type || WGL$3.DYNAMIC_DRAW == type, 'WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type');
-        gl.handleError();
-        this.buffer = this.buffer || gl.createBuffer();
-        gl.handleError();
-        let buffer;
-        if (this.data.length == 0) {
-            console.warn('empty buffer ' + this.name);
-            //console.trace()
-        }
-        if (this.data.length == 0 || this.data[0] instanceof V3) {
-            assert$1(!(this.data[0] instanceof V3) || this.type == Float32Array);
-            V3.pack(this.data, buffer = new this.type(this.data.length * 3)); // asserts that all
-            // elements are V3s
-            this.spacing = 3;
-            this.count = this.data.length;
-            this.maxValue = 0;
-        }
-        else {
-            //assert(Array != this.data[0].constructor, this.name + this.data[0])
-            if (Array.isArray(this.data[0])) {
-                const bufferLength = this.data.length * this.data[0].length;
-                buffer = new this.type(bufferLength);
-                let i = this.data.length, destPtr = bufferLength;
-                while (i--) {
-                    const subArray = this.data[i];
-                    let j = subArray.length;
-                    while (j--) {
-                        buffer[--destPtr] = subArray[j];
-                    }
-                }
-                assert$1(0 == destPtr);
-            }
-            else {
-                buffer = new this.type(this.data);
-            }
-            const spacing = this.data.length ? buffer.length / this.data.length : 0;
-            assert$1(spacing % 1 == 0, `buffer ${this.name} elements not of consistent size, average size is ` + spacing);
-            if (NLA_DEBUG) {
-                if (10000 <= buffer.length) {
-                    this.maxValue = 0;
-                }
-                else {
-                    this.maxValue = Math.max.apply(undefined, buffer);
-                }
-            }
-            assert$1(spacing !== 0);
-            this.spacing = spacing;
-            this.count = this.data.length;
-        }
-        gl.bindBuffer(this.target, this.buffer);
-        gl.handleError();
-        gl.bufferData(this.target, buffer, type);
-        gl.handleError();
-        this.hasBeenCompiled = true;
-    }
-}
-
-class Texture {
-    /**
-     * Provides a simple wrapper around WebGL textures that supports render-to-texture.
-     *
-     * The arguments `width` and `height` give the size of the texture in texels.
-     * WebGL texture dimensions must be powers of two unless `filter` is set to
-     * either `WGL.NEAREST` or `WGL.LINEAR` and `wrap` is set to `WGL.CLAMP_TO_EDGE`
-     * (which they are by default).
-     *
-     * Texture parameters can be passed in via the `options` argument.
-     * Example usage:
-     *
-     *      let tex = new GL.Texture(256, 256, {
-         *       magFilter: WGL.NEAREST,
-         *       minFilter: WGL.LINEAR,
-         *
-         *       wrapS: WGL.REPEAT,
-         *       wrapT: WGL.REPEAT,
-         *
-         *       format: WGL.RGB, // Defaults to WGL.RGBA
-         *       type: WGL.FLOAT // Defaults to WGL.UNSIGNED_BYTE
-         *     })
-     *
-     */
-    constructor(width, height, options = {}, gl = currentGL()) {
-        this.gl = gl;
-        this.texture = gl.createTexture();
-        gl.handleError(); // in case createTexture returns null & fails
-        this.width = width;
-        this.height = height;
-        this.format = options.format || gl.RGBA;
-        this.internalFormat = options.internalFormat || gl.RGBA;
-        this.type = options.type || gl.UNSIGNED_BYTE;
-        const magFilter = options.filter || options.magFilter || gl.LINEAR;
-        const minFilter = options.filter || options.minFilter || gl.LINEAR;
-        if (this.type === gl.FLOAT) {
-            if (gl.version != 2 && !gl.getExtension('OES_texture_float')) {
-                throw new Error('OES_texture_float is required but not supported');
-            }
-            if ((minFilter !== gl.NEAREST || magFilter !== gl.NEAREST) && !gl.getExtension('OES_texture_float_linear')) {
-                throw new Error('OES_texture_float_linear is required but not supported');
-            }
-        }
-        else if (this.type === TSGLContext.HALF_FLOAT_OES) {
-            if (!gl.getExtension('OES_texture_half_float')) {
-                throw new Error('OES_texture_half_float is required but not supported');
-            }
-            if ((minFilter !== gl.NEAREST || magFilter !== gl.NEAREST) && !gl.getExtension('OES_texture_half_float_linear')) {
-                throw new Error('OES_texture_half_float_linear is required but not supported');
-            }
-        }
-        gl.bindTexture(gl.TEXTURE_2D, this.texture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, options.wrap || options.wrapS || gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, options.wrap || options.wrapT || gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, width, height, 0, this.format, this.type, options.data);
-    }
-    setData(data) {
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, data);
-    }
-    bind(unit) {
-        this.gl.activeTexture(this.gl.TEXTURE0 + unit);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-    }
-    unbind(unit) {
-        this.gl.activeTexture(this.gl.TEXTURE0 + unit);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
-    }
-    canDrawTo() {
-        const gl = this.gl;
-        this.framebuffer = this.framebuffer || gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
-        const result = gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        return result;
-    }
-    drawTo(callback) {
-        const gl = this.gl;
-        this.framebuffer = this.framebuffer || gl.createFramebuffer();
-        this.renderbuffer = this.renderbuffer || gl.createRenderbuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
-        gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
-        if (this.width != this.renderbuffer.width || this.height != this.renderbuffer.height) {
-            this.renderbuffer.width = this.width;
-            this.renderbuffer.height = this.height;
-            gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, this.width, this.height);
-        }
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.renderbuffer);
-        // if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
-        // 	throw new Error('Rendering to this texture is not supported (incomplete this.framebuffer)')
-        // }
-        const viewport = gl.getParameter(gl.VIEWPORT);
-        gl.viewport(0, 0, this.width, this.height);
-        callback(gl);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-        gl.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    }
-    swapWith(other) {
-        assert$1(this.gl == other.gl);
-        let temp;
-        temp = other.texture;
-        other.texture = this.texture;
-        this.texture = temp;
-        temp = other.width;
-        other.width = this.width;
-        this.width = temp;
-        temp = other.height;
-        other.height = this.height;
-        this.height = temp;
-    }
-    /**
-     * Return a new texture created from `imgElement`, an `<img>` tag.
-     */
-    static fromImage(imgElement, options, gl = currentGL()) {
-        options = options || {};
-        const texture = new Texture(imgElement.width, imgElement.height, options, gl);
-        try {
-            gl.texImage2D(gl.TEXTURE_2D, 0, texture.format, texture.format, texture.type, imgElement);
-        }
-        catch (e) {
-            if (location.protocol == 'file:') {
-                throw new Error('imgElement not loaded for security reasons (serve this page over "http://" instead)');
-            }
-            else {
-                throw new Error('imgElement not loaded for security reasons (imgElement must originate from the same ' +
-                    'domain as this page or use Cross-Origin Resource Sharing)');
-            }
-        }
-        if (options.minFilter && options.minFilter != gl.NEAREST && options.minFilter != gl.LINEAR) {
-            gl.generateMipmap(gl.TEXTURE_2D);
-        }
-        return texture;
-    }
-    /**
-     * Returns a checkerboard texture that will switch to the correct texture when it loads.
-     */
-    static fromURL(url, options = {}, gl = currentGL()) {
-        Texture.checkerBoardCanvas = Texture.checkerBoardCanvas || (function () {
-            const c = document.createElement('canvas').getContext('2d');
-            if (!c)
-                throw new Error('Could not create 2d canvas.');
-            c.canvas.width = c.canvas.height = 128;
-            for (let y = 0; y < c.canvas.height; y += 16) {
-                for (let x = 0; x < c.canvas.width; x += 16) {
-                    //noinspection JSBitwiseOperatorUsage
-                    c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD';
-                    c.fillRect(x, y, 16, 16);
-                }
-            }
-            return c.canvas;
-        })();
-        const texture = Texture.fromImage(Texture.checkerBoardCanvas, options);
-        const image = new Image();
-        image.onload = () => Texture.fromImage(image, options, gl).swapWith(texture);
-        image.src = url;
-        return texture;
-    }
-}
-
-
 //# sourceMappingURL=bundle.module.js.map
 
 
 var tsgl = Object.freeze({
 	Buffer: Buffer$1,
 	Mesh: Mesh,
-	get DRAW_MODES () { return DRAW_MODES; },
 	SHADER_VAR_TYPES: SHADER_VAR_TYPES,
 	isArray: isArray,
 	Shader: Shader,
@@ -20164,12 +21157,23 @@ var tsgl = Object.freeze({
 	GL_COLOR_BLACK: GL_COLOR_BLACK,
 	currentGL: currentGL,
 	isNumber: isNumber,
-	TSGLContext: TSGLContext,
-	pushQuad: pushQuad
+	TSGLContextBase: TSGLContextBase,
+	get TSGLContext () { return TSGLContext; },
+	pushQuad: pushQuad,
+	init: init,
+	mightBeEnum: mightBeEnum,
+	glEnumToString: glEnumToString,
+	glFunctionArgToString: glFunctionArgToString,
+	glFunctionArgsToString: glFunctionArgsToString,
+	makeDebugContext: makeDebugContext,
+	isWebGL2RenderingContext: isWebGL2RenderingContext,
+	resetToInitialState: resetToInitialState,
+	makeLostContextSimulatingCanvas: makeLostContextSimulatingCanvas
 });
 
-const { ceil, floor, abs: abs$1$1 } = Math;
-class Curve extends Transformable {
+const { abs: abs$2, acos, acosh, asin, asinh, atan, atanh, atan2, ceil, cbrt, expm1, clz32, cos: cos$1, cosh, exp, floor, fround, hypot, imul, log: log$1, log1p, log2, log10, max: max$1, min: min$1, pow, random, round, sign: sign$1, sin: sin$1, sinh, sqrt, tan, tanh, trunc, E, LN10, LN2, LOG10E, LOG2E, PI: PI$3, SQRT1_2, SQRT2 } = Math;
+
+class Curve$$1 extends Transformable {
     constructor(tMin, tMax) {
         super();
         this.tMin = tMin;
@@ -20211,11 +21215,11 @@ class Curve extends Transformable {
         }
         // returns whether an intersection was immediately found (i.e. without further recursion)
         function findRecursive(tMin, tMax, sMin, sMax, curve1AABB, curve2AABB, depth = 0) {
-            const EPS = NLA_PRECISION;
+            const EPS$$1 = NLA_PRECISION;
             if (curve1AABB.fuzzyTouchesAABB(curve2AABB)) {
                 const tMid = (tMin + tMax) / 2;
                 const sMid = (sMin + sMax) / 2;
-                if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
+                if (Math.abs(tMax - tMin) < EPS$$1 || Math.abs(sMax - sMin) < EPS$$1) {
                     handleStartTS(tMid, sMid);
                     return true;
                 }
@@ -20237,12 +21241,25 @@ class Curve extends Transformable {
         findRecursive(tMin, tMax, sMin, sMax, curve1.getAABB(tMin, tMax), curve2.getAABB(sMin, sMax));
         return fuzzyUniquesF(result, info => info.tThis);
     }
-    static breakDownIC(implicitCurve, { sMin, sMax, tMin, tMax }, sStep, tStep, stepSize, dids, didt) {
+    /**
+     * Searches a 2d area for (an) implicit curve(s).
+     * @param implicitCurve
+     * @param sMin Defines area to search.
+     * @param sMax Defines area to search.
+     * @param tMin Defines area to search.
+     * @param tMax Defines area to search.
+     * @param sStep Granularity of search in s-direction.
+     * @param tStep Granularity of search in t-direction.
+     * @param stepSize step size to take along the curve
+     * @return
+     */
+    static breakDownIC(implicitCurve, { sMin, sMax, tMin, tMax }, sStep, tStep, stepSize) {
+        //undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
+        //undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
         const bounds = (s, t) => sMin <= s && s <= sMax && tMin <= t && t <= tMax;
         const deltaS = sMax - sMin, deltaT = tMax - tMin;
         const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep);
         const grid = new Array(sRes * tRes).fill(0);
-        const printGrid = () => console.log(arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n'));
         const at = (i, j) => grid[j * sRes + i];
         const set = (i, j) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1);
         const result = [];
@@ -20297,7 +21314,7 @@ class Curve extends Transformable {
                             set((lif + 0.5) | 0, (ljf + 0.5) | 0);
                         }
                     }
-                    printGrid();
+                    //printGrid()
                     result.push(...subResult);
                 }
             }
@@ -20334,7 +21351,7 @@ class Curve extends Transformable {
     diff(t, eps) {
         return this.at(t).to(this.at(t + eps));
     }
-    closestTToPoint(p, tStart) {
+    closestTToPoint(p, tStart, tMin = this.tMin, tMax = this.tMax) {
         // this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
         // the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
         // f = (this.at(t) - p) . (this.tangentAt(t)
@@ -20343,11 +21360,11 @@ class Curve extends Transformable {
         const f = (t) => this.at(t).minus(p).dot(this.tangentAt(t)); // 5th degree polynomial
         const df = (t) => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)));
         const STEPS = 32;
-        const startT = undefined !== tStart
-            ? tStart
-            : arrayFromFunction(STEPS, i => this.tMin + (this.tMax - this.tMin) * i / STEPS)
+        if (undefined === tStart) {
+            tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
                 .withMax(t => -this.at(t).distanceTo(p));
-        return newtonIterateWithDerivative(f, startT, 16, df);
+        }
+        return newtonIterateWithDerivative(f, tStart, 16, df);
     }
     /**
      * So different edges on the same curve do not have different vertices, they are always generated
@@ -20357,28 +21374,50 @@ class Curve extends Transformable {
     calcSegmentPoints(aT, bT, a, b, reversed, includeFirst) {
         assert$1(this.tIncrement, 'tIncrement not defined on ' + this);
         const inc = this.tIncrement;
-        const points = [];
+        const result = [];
         if (includeFirst)
-            points.push(a);
+            result.push(a);
         assert$1(reversed != aT < bT);
         if (aT < bT) {
             const start = Math.ceil((aT + NLA_PRECISION) / inc);
             const end = Math.floor((bT - NLA_PRECISION) / inc);
             for (let i = start; i <= end; i++) {
-                points.push(this.at(i * inc));
+                result.push(this.at(i * inc));
             }
         }
         else {
             const start = Math.floor((aT - NLA_PRECISION) / inc);
             const end = Math.ceil((bT + NLA_PRECISION) / inc);
             for (let i = start; i >= end; i--) {
-                points.push(this.at(i * inc));
+                result.push(this.at(i * inc));
             }
         }
-        points.push(b);
-        return points;
+        result.push(b);
+        return result;
     }
-    calcSegmentTs() {
+    calcSegmentTs(aT, bT, reversed, includeFirst) {
+        assert$1(this.tIncrement, 'tIncrement not defined on ' + this);
+        const inc = this.tIncrement;
+        const result = [];
+        if (includeFirst)
+            result.push(aT);
+        assert$1(reversed != aT < bT);
+        if (aT < bT) {
+            const start = Math.ceil((aT + NLA_PRECISION) / inc);
+            const end = Math.floor((bT - NLA_PRECISION) / inc);
+            for (let i = start; i <= end; i++) {
+                result.push(i * inc);
+            }
+        }
+        else {
+            const start = Math.floor((aT - NLA_PRECISION) / inc);
+            const end = Math.ceil((bT + NLA_PRECISION) / inc);
+            for (let i = start; i >= end; i--) {
+                result.push(i * inc);
+            }
+        }
+        result.push(bT);
+        return result;
     }
     /**
      *
@@ -20400,7 +21439,7 @@ class Curve extends Transformable {
      * Behavior when curves are colinear: self intersections
      */
     isInfosWithCurve(curve) {
-        return Curve.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax);
+        return Curve$$1.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax);
     }
     arcLength(startT, endT, steps = 1) {
         assert$1(startT < endT, 'startT < endT');
@@ -20436,12 +21475,12 @@ class Curve extends Transformable {
         });
     }
 }
-Curve.hlol = 0;
+Curve$$1.hlol = 0;
 function mkcurves(implicitCurve, sStart, tStart, stepSize, dids, didt, bounds) {
     const start = V(sStart, tStart);
     // checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
     // checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
-    const { points, tangents } = followAlgorithm2d(implicitCurve, start, stepSize, bounds);
+    const { points, tangents } = followAlgorithm2d$$1(implicitCurve, start, stepSize, bounds);
     if (points[0].distanceTo(points.last) < stepSize && points.length > 2) {
         // this is a loop: split it
         for (let i = 0; i < points.length - 1; i++) {
@@ -20462,40 +21501,146 @@ function mkcurves(implicitCurve, sStart, tStart, stepSize, dids, didt, bounds) {
     }
     else {
         // not a loop: check in the other direction
-        const { points: reversePoints, tangents: reverseTangents } = followAlgorithm2d(implicitCurve, start, -stepSize, bounds);
-        const result = followAlgorithm2d(implicitCurve, reversePoints.last, stepSize, bounds, undefined, reverseTangents.last.negated());
+        const { points: reversePoints, tangents: reverseTangents } = followAlgorithm2d$$1(implicitCurve, start, -stepSize, bounds);
+        const result = followAlgorithm2d$$1(implicitCurve, reversePoints.last, stepSize, bounds, undefined, reverseTangents.last.negated());
         assert$1(result.points.length > 2);
         return [result];
     }
 }
-function curvePoint(implicitCurve, startPoint, dids, didt) {
+function breakDownPPCurves$$1(ps1, ps2, sStep, tStep, stepSize) {
+    const { sMin, sMax, tMin, tMax } = ps1;
+    const bounds = stInAABB2$$1.bind(undefined, ps1);
+    const bounds2 = stInAABB2$$1.bind(undefined, ps2);
+    const deltaS = sMax - sMin, deltaT = tMax - tMin;
+    const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep);
+    const grid = new Array(sRes * tRes).fill(0);
+    const at = (i, j) => grid[j * sRes + i];
+    const set = (i, j) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1);
+    const result = [];
+    const logTable = [];
+    for (let i = 0; i < sRes; i++) {
+        search: for (let j = 0; j < tRes; j++) {
+            if (at(i, j))
+                continue;
+            set(i, j);
+            const startS = sMin + (i + 0.5) * sStep, startT = tMin + (j + 0.5) * tStep;
+            // assume point is valid, currently (TODO)
+            const curvePointPPResult = curvePointPP$$1(ps1, ps2, ps1.pST(startS, startT));
+            if (undefined === curvePointPPResult) {
+                continue search;
+            }
+            const { p: startP, st1: { x: s, y: t }, st2: { x: s2, y: t2 } } = curvePointPPResult;
+            const li = floor((s - sMin) / sStep), lj = floor((t - tMin) / tStep);
+            logTable.push({
+                i,
+                j,
+                li,
+                lj,
+                startS,
+                startT,
+                s,
+                t,
+                'bounds(s, t)': bounds(s, t),
+            });
+            if (!(i == li && j == lj) && at(li, lj)) {
+                continue search;
+            }
+            set(li, lj);
+            // s, t are now good starting coordinates to use follow algorithm
+            if (bounds(s, t) && bounds2(s2, t2)) {
+                console.log(V(s, t).sce);
+                const subResult = mkPPCurves(ps1, ps2, startP, stepSize, bounds, bounds2);
+                for (const curveData of subResult) {
+                    assert$1(curveData.st1s.length > 2);
+                    for (const { x, y } of curveData.st1s) {
+                        const lif = (x - sMin) / sStep, ljf = (y - tMin) / tStep;
+                        set((lif - 0.5) | 0, (ljf - 0.5) | 0);
+                        set((lif - 0.5) | 0, (ljf + 0.5) | 0);
+                        set((lif + 0.5) | 0, (ljf - 0.5) | 0);
+                        set((lif + 0.5) | 0, (ljf + 0.5) | 0);
+                    }
+                }
+                //printGrid()
+                result.push(...subResult);
+            }
+        }
+    }
+    console.table(logTable);
+    for (const { points } of result) {
+        for (let i = 0; i < points.length - 1; i++) {
+            assert$1(!points[i].equals(points[i + 1]));
+        }
+    }
+    return result.map(({ points, tangents, st1s }) => {
+        return new PPCurve$$1(points, tangents, ps1, ps2, st1s, undefined, stepSize, 1);
+    });
+}
+function mkPPCurves(ps1, ps2, startPoint, stepSize, bounds1, bounds2) {
+    // checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
+    // checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
+    const { points, tangents, st1s } = followAlgorithmPP$$1(ps1, ps2, startPoint, stepSize, bounds1, bounds2);
+    if (points[0].distanceTo(points.last) < stepSize && points.length > 2) {
+        // this is a loop: split it
+        for (let i = 0; i < points.length - 1; i++) {
+            assert$1(!points[i].equals(points[i + 1]));
+        }
+        const half = floor(points.length / 2);
+        const points1 = points.slice(0, half), points2 = points.slice(half - 1, points.length);
+        const tangents1 = tangents.slice(0, half), tangents2 = tangents.slice(half - 1, tangents.length);
+        const st1s1 = st1s.slice(0, half), st1s2 = st1s.slice(half - 1, tangents.length);
+        tangents2[tangents2.length - 1] = tangents1[0];
+        points2[tangents2.length - 1] = points1[0];
+        st1s2[tangents2.length - 1] = st1s1[0];
+        for (let i = 0; i < points1.length - 1; i++) {
+            assert$1(!points1[i].equals(points1[i + 1]));
+        }
+        for (let i = 0; i < points2.length - 1; i++) {
+            assert$1(!points2[i].equals(points2[i + 1]));
+        }
+        return [
+            { points: points1, tangents: tangents1, st1s: st1s1 },
+            { points: points2, tangents: tangents2, st1s: st1s2 }
+        ];
+    }
+    else {
+        // not a loop: check in the other direction
+        const { points: reversePoints } = followAlgorithmPP$$1(ps1, ps2, startPoint, -stepSize, bounds1, bounds2);
+        const result = followAlgorithmPP$$1(ps1, ps2, reversePoints.last, stepSize, bounds1, bounds2);
+        assert$1(result.points.length > 2);
+        return [result];
+    }
+}
+function AABB2$$1(sMin, sMax, tMin, tMax) {
+    return { sMin, sMax, tMin, tMax };
+}
+function stInAABB2$$1(aabb2, s, t) {
+    return aabb2.sMin <= s && s <= aabb2.sMax && aabb2.tMin <= t && t <= aabb2.tMax;
+}
+function curvePoint$$1(implicitCurve, startPoint, dids, didt) {
     let p = startPoint;
     for (let i = 0; i < 8; i++) {
         const fp = implicitCurve(p.x, p.y);
         const dfpdx = dids(p.x, p.y), dfpdy = didt(p.x, p.y);
         const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy);
-        //console.log(p.$)
         p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0));
     }
     return p;
 }
-function curvePointMF(mf, startPoint, steps = 8, eps = 1 / (1 << 30)) {
+function curvePointMF$$1(mf, startPoint, steps = 8, eps = 1 / (1 << 30)) {
     let p = startPoint;
     for (let i = 0; i < steps; i++) {
         const fp = mf(p.x, p.y);
         const dfpdx = mf.x(p.x, p.y), dfpdy = mf.y(p.x, p.y);
         const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy);
-        //console.log(p.$)
         p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0));
-        if (abs$1$1(fp) <= eps)
+        if (abs$2(fp) <= eps)
             break;
     }
     return p;
 }
 
-const { PI: PI$2 } = Math;
-class XiEtaCurve extends Curve {
-    constructor(center, f1, f2, tMin = -PI$2, tMax = PI$2) {
+class XiEtaCurve$$1 extends Curve$$1 {
+    constructor(center, f1, f2, tMin = -PI$3, tMax = PI$3) {
         super(tMin, tMax);
         this.center = center;
         this.f1 = f1;
@@ -20520,11 +21665,11 @@ class XiEtaCurve extends Curve {
     }
     /**
      * Returns a new EllipseCurve representing an ellipse parallel to the XY-plane
-     * with semi-major/minor axes parallel t the X and Y axes and of length a and b.
+     * with semi-major/minor axes parallel t the X and Y axes.
      *
-     * @param a length of the axis parallel to X axis
-     * @param b length of the axis parallel to Y axis
-     * @param center Defaults to V3.O
+     * @param a length of the axis parallel to X axis.
+     * @param b length of the axis parallel to Y axis.
+     * @param center center of the ellipse.
      */
     static forAB(a, b, center = V3.O) {
         return new this(center, V(a, 0, 0), V(0, b, 0));
@@ -20562,19 +21707,20 @@ class XiEtaCurve extends Curve {
         return [this.center, this.f1, this.f2, this.tMin, this.tMax];
     }
     isInfosWithCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof L3$$1) {
             return this.isInfosWithLine(curve.anchor, curve.dir1, this.tMin, this.tMax, curve.tMin, curve.tMax);
         }
-        if (curve instanceof BezierCurve) {
+        if (curve instanceof BezierCurve$$1) {
             return this.isInfosWithBezier(curve);
         }
-        if (curve instanceof XiEtaCurve) {
+        if (curve instanceof XiEtaCurve$$1) {
             if (!this.normal.isParallelTo(curve.normal)) {
                 return this.isTsWithPlane(curve.getPlane()).mapFilter(tThis => {
                     const p = this.at(tThis);
                     if (curve.containsPoint(p)) {
                         return { tThis, tOther: curve.pointT(p), p };
                     }
+                    return undefined;
                 });
             }
         }
@@ -20585,7 +21731,8 @@ class XiEtaCurve extends Curve {
     }
     equals(obj) {
         return this == obj ||
-            obj.constructor == this.constructor
+            undefined != obj
+                && this.constructor == obj.constructor
                 && this.center.equals(obj.center)
                 && this.f1.equals(obj.f1)
                 && this.f2.equals(obj.f2);
@@ -20607,10 +21754,10 @@ class XiEtaCurve extends Curve {
         return this.tangentAt(t).cross(this.normal);
     }
     getPlane() {
-        return P3.normalOnAnchor(this.normal, this.center);
+        return P3$$1.normalOnAnchor(this.normal, this.center);
     }
     isTsWithPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         /*
          this: x = center + f1 * cos t + f2 * sin t  (1)
          plane:
@@ -20672,19 +21819,19 @@ class XiEtaCurve extends Curve {
         return [];
     }
     isTsWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isTsWithPlane(surface.plane);
         }
-        else if (surface instanceof SemiEllipsoidSurface) {
-            const isEllipse = surface.asEllipsoidSurface().isCurvesWithSurface(new PlaneSurface(this.getPlane()));
+        else if (surface instanceof SemiEllipsoidSurface$$1) {
+            const isEllipse = surface.asEllipsoidSurface().isCurvesWithSurface(new PlaneSurface$$1(this.getPlane()));
             if (isEllipse.length < 1)
                 return [];
             const possibleInfos = this.isInfosWithCurve(isEllipse[0]);
             return possibleInfos.filter(info => surface.containsPoint(info.p)).map(info => info.tThis);
         }
-        else if (surface instanceof ProjectedCurveSurface ||
-            surface instanceof EllipsoidSurface ||
-            surface instanceof ConicSurface) {
+        else if (surface instanceof ProjectedCurveSurface$$1 ||
+            surface instanceof EllipsoidSurface$$1 ||
+            surface instanceof ConicSurface$$1) {
             return surface.isCurvesWithPlane(this.getPlane())
                 .flatMap(curve => this.isInfosWithCurve(curve))
                 .map(info => info.tThis);
@@ -20695,15 +21842,16 @@ class XiEtaCurve extends Curve {
     }
     isInfosWithBezier(bezierWC) {
         const bezierLC = bezierWC.transform(this.inverseMatrix);
-        if (new PlaneSurface(P3.XY).containsCurve(bezierLC)) {
+        if (new PlaneSurface$$1(P3$$1.XY).containsCurve(bezierLC)) {
             return this.isInfosWithBezier2D(bezierWC);
         }
         else {
-            const infos = bezierLC.isTsWithPlane(P3.XY).mapFilter(tOther => {
+            const infos = bezierLC.isTsWithPlane(P3$$1.XY).mapFilter(tOther => {
                 const pLC = bezierLC.at(tOther);
                 if (this.constructor.XYLCValid(pLC)) {
                     return { tOther: tOther, p: bezierWC.at(tOther), tThis: this.constructor.XYLCPointT(pLC) };
                 }
+                return undefined;
             });
             return infos;
         }
@@ -20713,7 +21861,7 @@ class XiEtaCurve extends Curve {
         sMax = isFinite(sMax) ? sMax : bezierWC.tMax;
         assertf(() => 0 < Math.PI);
         assertf(() => sMin < sMax);
-        return Curve.ispsRecursive(this, this.tMin, this.tMax, bezierWC, sMin, sMax);
+        return Curve$$1.ispsRecursive(this, this.tMin, this.tMax, bezierWC, sMin, sMax);
     }
     isOrthogonal() {
         return this.f1.isPerpendicularTo(this.f2);
@@ -20736,8 +21884,7 @@ class XiEtaCurve extends Curve {
     }
 }
 
-const { ceil: ceil$1, floor: floor$1 } = Math;
-class ImplicitCurve extends Curve {
+class ImplicitCurve$$1 extends Curve$$1 {
     constructor(points, tangents, dir = 1, generator, tMin = (1 == dir ? 0 : -(points.length - 1)), tMax = (1 == dir ? points.length - 1 : 0)) {
         super(tMin, tMax);
         this.points = points;
@@ -20760,7 +21907,7 @@ class ImplicitCurve extends Curve {
     }
     equals(obj) {
         return this == obj ||
-            Object.getPrototypeOf(obj) == PICurve$1.prototype
+            Object.getPrototypeOf(obj) == PICurve$$1.prototype
                 && this.points[0].equals(obj.points[0])
                 && this.tangents[0].equals(obj.tangents[0]);
     }
@@ -20775,11 +21922,11 @@ class ImplicitCurve extends Curve {
     }
     tangentAt(t) {
         t = clamp(t, this.tMin, this.tMax);
-        return V3.lerp(this.tangents[floor$1(t)], this.tangents[ceil$1(t)], t % 1);
+        return V3.lerp(this.tangents[floor(t)], this.tangents[ceil(t)], t % 1);
     }
     at(t) {
         assert$1(isFinite(t));
-        return V3.lerp(this.points[floor$1(t)], this.points[ceil$1(t)], t % 1);
+        return V3.lerp(this.points[floor(t)], this.points[ceil(t)], t % 1);
     }
     getConstructorParameters() {
         return [];
@@ -20792,9 +21939,9 @@ class ImplicitCurve extends Curve {
         const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res));
         const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res));
         let prevTangent = V3.Z, prevMatrix = M4.IDENTITY;
-        for (let i = ceil$1(this.tMin); i < floor$1(this.tMax); i += pointStep) {
+        for (let i = ceil(this.tMin); i < floor(this.tMax); i += pointStep) {
             const start = mesh.vertices.length;
-            if (ceil$1(this.tMin) !== i) {
+            if (ceil(this.tMin) !== i) {
                 for (let j = 0; j < res; j++) {
                     pushQuad(mesh.TRIANGLES, true, start - res + j, start + j, start - res + (j + 1) % res, start + (j + 1) % res);
                 }
@@ -20809,10 +21956,9 @@ class ImplicitCurve extends Curve {
         }
     }
 }
-ImplicitCurve.prototype.tIncrement = 1;
+ImplicitCurve$$1.prototype.tIncrement = 1;
 
-const { PI: PI$3, abs: abs$2, sin: sin$1, cos: cos$1 } = Math;
-class BezierCurve extends Curve {
+class BezierCurve$$1 extends Curve$$1 {
     constructor(p0, p1, p2, p3, tMin = -0.1, tMax = 1.1) {
         super(tMin, tMax);
         assertVectors(p0, p1, p2, p3);
@@ -20838,17 +21984,17 @@ class BezierCurve extends Curve {
         const p1y = c / 3 + p0y;
         const p2y = b / 3 - p0y + 2 * p1y;
         const p3y = a + p0y - 3 * p1y + 3 * p2y;
-        return new BezierCurve(V(0, p0y), V(1 / 3, p1y), V(2 / 3, p2y), V(1, p3y), tMin, tMax);
+        return new BezierCurve$$1(V(0, p0y), V(1 / 3, p1y), V(2 / 3, p2y), V(1, p3y), tMin, tMax);
     }
     static quadratic(a, b, c, tMin = 0, tMax = 1) {
-        const line = L3.throughPoints(a, c);
+        const line = L3$$1.throughPoints(a, c);
         if (line.containsPoint(b)) {
             return line;
         }
         else {
             // p1 = 1/3 a + 2/3 b
             // p2 = 1/3 c + 2/3 b
-            return new BezierCurve(a, b.times(2).plus(a).div(3), b.times(2).plus(c).div(3), c, tMin, tMax);
+            return new BezierCurve$$1(a, b.times(2).plus(a).div(3), b.times(2).plus(c).div(3), c, tMin, tMax);
         }
     }
     /**
@@ -20859,13 +22005,13 @@ class BezierCurve extends Curve {
      */
     static approximateUnitArc(phi) {
         const f = 4 / 3 * Math.tan(phi / 4);
-        return new BezierCurve(V3.X, new V3(1, f, 0), new V3(cos$1(phi) + f * sin$1(phi), sin$1(phi) - f * cos$1(phi), 0), V3.sphere(phi, 0), 0, 1);
+        return new BezierCurve$$1(V3.X, new V3(1, f, 0), new V3(cos$1(phi) + f * sin$1(phi), sin$1(phi) - f * cos$1(phi), 0), V3.sphere(phi, 0), 0, 1);
     }
     static testEdges() {
-        const curve2 = BezierCurve.graphXY(2, -3, -3, 2, 0.6, 2);
-        const items = curve2.magic().map(c => Edge.forCurveAndTs(c).translate(3));
+        const curve2 = BezierCurve$$1.graphXY(2, -3, -3, 2, 0.6, 2);
+        const items = curve2.magic().map(c => Edge$$1.forCurveAndTs(c).translate(3));
         console.log(items.length);
-        return [Edge.forCurveAndTs(curve2)].concat(items);
+        return [Edge$$1.forCurveAndTs(curve2)].concat(items);
     }
     getConstructorParameters() {
         return [this.p0, this.p1, this.p2, this.p3, this.tMin, this.tMax];
@@ -20905,7 +22051,7 @@ class BezierCurve extends Curve {
         return rot.cross(tangent);
     }
     isTsWithPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         /*
          We are solving for t:
          n := plane.normal1
@@ -20923,26 +22069,27 @@ class BezierCurve extends Curve {
             .filter(t => between(t, this.tMin, this.tMax));
     }
     isTsWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isTsWithPlane(surface.plane);
         }
-        if (surface instanceof SemiCylinderSurface) {
-            const projPlane = new P3(surface.dir.unit(), 0);
+        if (surface instanceof SemiCylinderSurface$$1) {
+            const projPlane = new P3$$1(surface.dir.unit(), 0);
             const projThis = this.project(projPlane);
             const projEllipse = surface.baseCurve.project(projPlane);
             return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther);
         }
-        if (surface instanceof ProjectedCurveSurface) {
-            const projPlane = new P3(surface.dir.unit(), 0);
+        if (surface instanceof ProjectedCurveSurface$$1) {
+            const projPlane = new P3$$1(surface.dir.unit(), 0);
             const projThis = this.project(projPlane);
             const projEllipse = surface.baseCurve.project(projPlane);
             return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther);
         }
-        if (surface instanceof EllipsoidSurface) {
+        if (surface instanceof EllipsoidSurface$$1) {
             const thisOC = this.transform(surface.inverseMatrix);
             const f = (t) => thisOC.at(t).length() - 1;
             const df = (t) => thisOC.at(t).unit().dot(thisOC.tangentAt(t));
             const stepSize = 1 / (1 << 11);
+            const STEPS = (this.tMax - this.tMin) / stepSize;
             const result = [];
             for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
                 const dt = stepSize * thisOC.tangentAt(startT).length();
@@ -20964,14 +22111,14 @@ class BezierCurve extends Curve {
             }
             return result;
         }
-        if (surface instanceof SemiEllipsoidSurface) {
+        if (surface instanceof SemiEllipsoidSurface$$1) {
             return this.isTsWithSurface(surface.asEllipsoidSurface()).filter(t => surface.containsPoint(this.at(t)));
         }
         throw new Error();
     }
     likeCurve(curve) {
         return this == curve ||
-            hasConstructor(curve, BezierCurve)
+            hasConstructor(curve, BezierCurve$$1)
                 && this.p0.like(curve.p0)
                 && this.p1.like(curve.p1)
                 && this.p2.like(curve.p2)
@@ -20979,7 +22126,7 @@ class BezierCurve extends Curve {
     }
     equals(obj) {
         return this == obj ||
-            hasConstructor(obj, BezierCurve)
+            hasConstructor(obj, BezierCurve$$1)
                 && this.p0.equals(obj.p0)
                 && this.p1.equals(obj.p1)
                 && this.p2.equals(obj.p2)
@@ -21000,7 +22147,7 @@ class BezierCurve extends Curve {
     isColinearTo(curve) {
         if (this === curve || this.likeCurve(curve))
             return true;
-        if (!(curve instanceof BezierCurve))
+        if (!(curve instanceof BezierCurve$$1))
             return false;
         // first, find out where/if curve.p0 and curve.p3 are on this
         // then split this at curve.p0 --> curve.p3 to compare points p1 and p2
@@ -21029,7 +22176,7 @@ class BezierCurve extends Curve {
         return curve.likeCurve(thisSplit);
     }
     reversed() {
-        return new BezierCurve(this.p3, this.p2, this.p1, this.p0, 1 - this.tMax, 1 - this.tMin);
+        return new BezierCurve$$1(this.p3, this.p2, this.p1, this.p0, 1 - this.tMax, 1 - this.tMin);
     }
     getCoefficients() {
         const { p0, p1, p2, p3 } = this;
@@ -21054,8 +22201,8 @@ class BezierCurve extends Curve {
         const c = p01.times(3);
         return [V3.O, a, b, c];
     }
-    pointT(p) {
-        return this.closestTToPoint(p);
+    pointT(p, tMin = this.tMin, tMax = this.tMax) {
+        return this.closestTToPoint(p, undefined, tMin, tMax);
     }
     pointT3(p) {
         const { p0, p1, p2, p3 } = this;
@@ -21080,7 +22227,7 @@ class BezierCurve extends Curve {
             return NaN;
         if (1 == results.length)
             return results[0];
-        assert$1(false, 'multiple intersection ' + this.toString() + p.sce);
+        throw new Error('multiple intersection ' + this.toString() + p.sce);
     }
     pointT2(p) {
         const { p0, p1, p2, p3 } = this;
@@ -21128,10 +22275,10 @@ class BezierCurve extends Curve {
                 }
             }
         }
-        assert$1(false, 'multiple intersection ' + results + this.toString() + p.sce);
+        throw new Error('multiple intersection ' + results + this.toString() + p.sce);
     }
     transform(m4) {
-        return new BezierCurve(m4.transformPoint(this.p0), m4.transformPoint(this.p1), m4.transformPoint(this.p2), m4.transformPoint(this.p3), this.tMin, this.tMax);
+        return new BezierCurve$$1(m4.transformPoint(this.p0), m4.transformPoint(this.p1), m4.transformPoint(this.p2), m4.transformPoint(this.p3), this.tMin, this.tMax);
     }
     isClosed() {
         return this.p0.like(this.p3);
@@ -21168,7 +22315,7 @@ class BezierCurve extends Curve {
         const b01 = p0.times(s).plus(p1.times(t)), b11 = p1.times(s).plus(p2.times(t)), b21 = p2.times(s).plus(p3.times(t));
         const b02 = b01.times(s).plus(b11.times(t)), b12 = b11.times(s).plus(b21.times(t));
         const b03 = b02.times(s).plus(b12.times(t));
-        return [new BezierCurve(p0, b01, b02, b03), new BezierCurve(b03, b12, b21, p3)];
+        return [new BezierCurve$$1(p0, b01, b02, b03), new BezierCurve$$1(b03, b12, b21, p3)];
     }
     containsPoint(p) {
         return isFinite(this.pointT(p));
@@ -21189,7 +22336,7 @@ class BezierCurve extends Curve {
     isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin = -100000, lineMax = 100000) {
         const dirLength = dirWC.length();
         // TODO: no:
-        let result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchorWC, dirWC.unit()), lineMin, lineMax);
+        let result = Curve$$1.ispsRecursive(this, this.tMin, this.tMax, new L3$$1(anchorWC, dirWC.unit()), lineMin, lineMax);
         result = fuzzyUniquesF(result, info => info.tOther);
         result.forEach(info => (info.tOther /= dirLength));
         return result;
@@ -21292,8 +22439,8 @@ class BezierCurve extends Curve {
             if (thisAABB && otherAABB && thisAABB.intersectsAABB2d(otherAABB)) {
                 const tMid = (tMin + tMax) / 2;
                 const sMid = (sMin + sMax) / 2;
-                const EPS = 0.00001;
-                if (tMax - tMin < EPS || sMax - sMin < EPS) {
+                const EPS$$1 = 0.00001;
+                if (tMax - tMin < EPS$$1 || sMax - sMin < EPS$$1) {
                     console.log(tMin, tMax, sMin, sMax);
                     console.log(thisAABB.sce);
                     console.log(otherAABB.sce);
@@ -21332,12 +22479,12 @@ class BezierCurve extends Curve {
                 if (Math.abs(i - j) > 2) {
                     // console.log(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
                     //findRecursive(splits[i], splits[i + 1], splits[j], splits[j + 1], aabbs[i], aabbs[j])
-                    result.push(...Curve.ispsRecursive(this, splits[i], splits[i + 1], bezier, splits[j], splits[j + 1]));
+                    result.push(...Curve$$1.ispsRecursive(this, splits[i], splits[i + 1], bezier, splits[j], splits[j + 1]));
                 }
             });
         }
         else {
-            return Curve.ispsRecursive(this, tMin, tMax, bezier, sMin, sMax);
+            return Curve$$1.ispsRecursive(this, tMin, tMax, bezier, sMin, sMax);
         }
         return result;
     }
@@ -21345,10 +22492,10 @@ class BezierCurve extends Curve {
         return this.isInfosWithBezier(this);
     }
     isInfosWithCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof L3$$1) {
             return this.isInfosWithLine(curve.anchor, curve.dir1, curve.tMin, curve.tMax);
         }
-        if (curve instanceof BezierCurve) {
+        if (curve instanceof BezierCurve$$1) {
             return this.isInfosWithBezier(curve);
         }
         return curve.isInfosWithCurve(this).map(({ tThis, tOther, p }) => ({ tThis: tOther, tOther: tThis, p }));
@@ -21382,7 +22529,7 @@ class BezierCurve extends Curve {
         const ps = ts.map(t => this.at(t));
         const ns = ts.map(t => this.normalP(t).unit());
         const f = (ns) => {
-            const ls = ts.map((t, i) => new L3(ps[i], ns[i].unit()));
+            const ls = ts.map((t, i) => new L3$$1(ps[i], ns[i].unit()));
             const isInfos = arrayFromFunction(splits - 1, i => {
                 const j = i + 1;
                 const li = ls[i], lj = ls[j];
@@ -21421,12 +22568,12 @@ class BezierCurve extends Curve {
             x = x.minus(xDiff);
         }
         const ns2 = V3.unpackXY(x.v);
-        const ls2 = arrayFromFunction(splits, i => new L3(ps[i], ns2[i].unit()));
+        const ls2 = arrayFromFunction(splits, i => new L3$$1(ps[i], ns2[i].unit()));
         const curves = arrayFromFunction(splits - 1, i => {
             const j = i + 1;
             const li = ls2[i], lj = ls2[j];
             const isInfo = li.infoClosestToLine(lj);
-            return EllipseCurve.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s);
+            return EllipseCurve$$1.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s);
         });
         return curves;
     }
@@ -21434,7 +22581,7 @@ class BezierCurve extends Curve {
         const max3d = 0.01, eps = 0.01;
         const a = this.at(t0), b = this.at(t1);
         const aN = this.normalP(t0).unit(), bN = this.normalP(t1).unit();
-        const aL = new L3(a, aN), bL = new L3(b, bN);
+        const aL = new L3$$1(a, aN), bL = new L3$$1(b, bN);
         const isInfo = aL.infoClosestToLine(bL);
         if (isInfo.s < 0 || isInfo.t < 0
             || isInfo.distance > max3d
@@ -21446,7 +22593,7 @@ class BezierCurve extends Curve {
             const testT2 = lerp(t0, t1, 2 / 3), testP2 = this.at(testT2);
             const radius = (isInfo.s + isInfo.t) / 2;
             if (eq(centerPoint.distanceTo(testP1), radius, eps)) {
-                const newCurve = EllipseCurve.circleForCenter2P(centerPoint, a, b, radius);
+                const newCurve = EllipseCurve$$1.circleForCenter2P(centerPoint, a, b, radius);
                 result.push(newCurve);
                 return result;
             }
@@ -21460,18 +22607,17 @@ class BezierCurve extends Curve {
 /**
  * https://en.wikipedia.org/wiki/Cubic_function#/media/File:Graph_of_cubic_polynomial.svg
  */
-BezierCurve.EX2D = BezierCurve.graphXY(2, -3, -3, 2);
-BezierCurve.EX3D = new BezierCurve(V3.O, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X);
-BezierCurve.QUARTER_CIRCLE = BezierCurve.approximateUnitArc(PI$3 / 2);
-BezierCurve.prototype.hlol = Curve.hlol++;
-BezierCurve.prototype.tIncrement = 1 / 80;
+BezierCurve$$1.EX2D = BezierCurve$$1.graphXY(2, -3, -3, 2);
+BezierCurve$$1.EX3D = new BezierCurve$$1(V3.O, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X);
+BezierCurve$$1.QUARTER_CIRCLE = BezierCurve$$1.approximateUnitArc(PI$3 / 2);
+BezierCurve$$1.prototype.hlol = Curve$$1.hlol++;
+BezierCurve$$1.prototype.tIncrement = 1 / 80;
 
-const { PI: PI$4, cos: cos$2, sin: sin$2, min: min$1, max: max$1, tan, sign: sign$2, ceil: ceil$2, floor: floor$2, abs: abs$3, sqrt, pow: pow$1, atan2, round } = Math;
-class EllipseCurve extends XiEtaCurve {
-    constructor(center, f1, f2, tMin = -PI$4, tMax = PI$4) {
+class EllipseCurve$$1 extends XiEtaCurve$$1 {
+    constructor(center, f1, f2, tMin = -PI$3, tMax = PI$3) {
         super(center, f1, f2, tMin, tMax);
-        assert$1(EllipseCurve.isValidT(tMin));
-        assert$1(EllipseCurve.isValidT(tMax));
+        assert$1(EllipseCurve$$1.isValidT(tMin));
+        assert$1(EllipseCurve$$1.isValidT(tMax));
     }
     static isValidT(t) {
         return -Math.PI <= t && t <= Math.PI;
@@ -21491,7 +22637,7 @@ class EllipseCurve extends XiEtaCurve {
         return angle;
     }
     static magic(a, b, c) {
-        const isLC = intersectionUnitCircleLine2(a, b, c);
+        const isLC = intersectionUnitCircleLine2$$1(a, b, c);
         return isLC.map(([xi, eta]) => Math.atan2(eta, xi));
     }
     static unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC) {
@@ -21503,27 +22649,26 @@ class EllipseCurve extends XiEtaCurve {
         return lineTs.map(tOther => ({
             tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
             tOther: tOther,
-            p: L3.at(anchorWC, dirWC, tOther),
+            p: L3$$1.at(anchorWC, dirWC, tOther),
         }));
     }
     /**
      * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
      */
     static circle(radius, center = V3.O) {
-        return new EllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0));
+        return new EllipseCurve$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0));
     }
     static circleForCenter2P(center, a, b, radius) {
         const f1 = center.to(a);
         const normal = f1.cross(center.to(b));
         const f2 = normal.cross(f1).toLength(f1.length());
         const tMax = f1.angleTo(center.to(b));
-        return new EllipseCurve(center, f1, f2, 0, tMax);
+        return new EllipseCurve$$1(center, f1, f2, 0, tMax);
     }
     // TODO: there'S alsoa commented out test
     getVolZAnd(dir1, tStart, tEnd) {
-        // let p = at(t)
-        // integrate area [p -> plane.projectPoint(p)] to x axis...
-        // INTEGRATE[tStart, tEnd] fp(this.at(t)) dt
+        // f(t) = c + f1 cos + f2 sin
+        // p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
         function fp(p) {
             const p0ToP = dir1.times(dir1.dot(p));
             const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2);
@@ -21543,9 +22688,15 @@ class EllipseCurve extends XiEtaCurve {
         const normTStart = tStart - rightLC.angleXY();
         const normTEnd = tEnd - rightLC.angleXY();
         const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit());
-        //console.log(upLC.str, rightLC.str, normTStart, normTEnd, 'upLC.length()', upLC.length())
-        //console.log('transformedOriginY', transformedOriginY)
-        //assertf(() => upLC.hasLength(1), upLC.length())
+        // integral of sqrt(1 - x²) from 0 to cos(t)
+        // Basically, we want
+        // INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
+        // INTEGRAL[PI/2: cos(t)] -sqrt(1 - x²) dx
+        // = INTEGRAL[cos(0); cos(t)] -sqrt(1 - x²) dx
+        // = INTEGRAL[0; t] -sqrt(1 - cos²(t)) * -sin(t) dt
+        // = INTEGRAL[0; t] -sin(t) * -sin(t) dt
+        // = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
+        // = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
         function fArea(t) { return (t - Math.sin(t) * Math.cos(t)) / 2; }
         // for the centroid, we want
         // cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
@@ -21595,7 +22746,7 @@ class EllipseCurve extends XiEtaCurve {
         return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin);
     }
     isColinearTo(curve) {
-        if (!hasConstructor(curve, EllipseCurve))
+        if (!hasConstructor(curve, EllipseCurve$$1))
             return false;
         if (!this.center.like(curve.center)) {
             return false;
@@ -21647,8 +22798,8 @@ class EllipseCurve extends XiEtaCurve {
             return this;
         }
         const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a);
-        const { x1: xi, y1: eta } = intersectionUnitCircleLine(g1, g2, 0);
-        return new EllipseCurve(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(-eta).plus(f2.times(xi)));
+        const { x1: xi, y1: eta } = intersectionUnitCircleLine$$1(g1, g2, 0);
+        return new EllipseCurve$$1(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(-eta).plus(f2.times(xi)));
     }
     isInfosWithEllipse(ellipse) {
         if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
@@ -21665,12 +22816,11 @@ class EllipseCurve extends XiEtaCurve {
             }
             const f = (t) => ellipseLCRA.at(t).lengthXY() - 1;
             const df = (t) => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY();
-            checkDerivate(f, df, -PI$4, PI$4, 1);
+            checkDerivate(f, df, -PI$3, PI$3, 1);
             const ts = [];
-            const tsvs = arrayRange(-4 / 5 * PI$4, PI$4, PI$4 / 4).map(startT => [startT, df(startT), newtonIterateSmart(f, startT, 16, df, 1e-4), f(newtonIterateSmart(f, startT, 16, df, 1e-4))]);
-            for (let startT = -4 / 5 * PI$4; startT < PI$4; startT += PI$4 / 4) {
+            for (let startT = -4 / 5 * PI$3; startT < PI$3; startT += PI$3 / 4) {
                 let t = newtonIterateSmart(f, startT, 16, df, 1e-4);
-                le(t, -PI$4) && (t += TAU);
+                le(t, -PI$3) && (t += TAU);
                 assert$1(!isNaN(t));
                 if (ellipseLCRA.isValidT(t) && eq0(f(t)) && !ts.some(r => eq(t, r))) {
                     ts.push(t);
@@ -21678,7 +22828,7 @@ class EllipseCurve extends XiEtaCurve {
             }
             return ts.map(raT => {
                 const p = this.matrix.transformPoint(ellipseLCRA.at(raT));
-                return { tThis: this.pointT(p), tOther: ellipse.pointT(p, PI$4), p };
+                return { tThis: this.pointT(p), tOther: ellipse.pointT(p, PI$3), p };
             });
             //const angle = ellipseLCRA.f1.angleXY()
             //const aSqr = ellipseLCRA.f1.squared(), bSqr = ellipseLCRA.f2.squared()
@@ -21710,7 +22860,7 @@ class EllipseCurve extends XiEtaCurve {
         }
     }
     isInfosWithCurve(curve) {
-        if (curve instanceof EllipseCurve) {
+        if (curve instanceof EllipseCurve$$1) {
             return this.isInfosWithEllipse(curve);
         }
         return super.isInfosWithCurve(curve);
@@ -21721,7 +22871,7 @@ class EllipseCurve extends XiEtaCurve {
         // tangent(eta, xi) = f2 eta - f1 xi
         return arrayFromFunction(3, dim => {
             const a = this.f2.e(dim), b = -this.f1.e(dim);
-            const { x1, y1, x2, y2 } = intersectionUnitCircleLine(a, b, 0);
+            const { x1, y1, x2, y2 } = intersectionUnitCircleLine$$1(a, b, 0);
             return [Math.atan2(y1, x1), Math.atan2(y2, x2)];
         });
     }
@@ -21748,16 +22898,15 @@ class EllipseCurve extends XiEtaCurve {
         return dirLC.angleXY();
     }
 }
-EllipseCurve.XY = new EllipseCurve(V3.O, V3.X, V3.Y);
-EllipseCurve.prototype.hlol = Curve.hlol++;
-EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 800);
+EllipseCurve$$1.XY = new EllipseCurve$$1(V3.O, V3.X, V3.Y);
+EllipseCurve$$1.prototype.hlol = Curve$$1.hlol++;
+EllipseCurve$$1.prototype.tIncrement = 2 * Math.PI / (4 * 800);
 
-const { PI: PI$5, cos: cos$3, sin: sin$3, min: min$2, max: max$2, tan: tan$1, sign: sign$3, ceil: ceil$3, floor: floor$3, abs: abs$4, sqrt: sqrt$1, pow: pow$2, atan2: atan2$1, round: round$1 } = Math;
 /**
  * x² - y² = 1
  *
  */
-class HyperbolaCurve extends XiEtaCurve {
+class HyperbolaCurve$$1 extends XiEtaCurve$$1 {
     constructor(center, f1, f2, tMin = -7, tMax = 7) {
         super(center, f1, f2, tMin, tMax);
     }
@@ -21768,7 +22917,7 @@ class HyperbolaCurve extends XiEtaCurve {
         return Math.asinh(pLC.y);
     }
     /**
-     * http://www.wolframalpha.com/input/?i=x%C2%B2-y%C2%B2%3D1,ax%2Bby%3Dc
+     * http://www.wolframalpha.com/input/?i=x%C2%BRep-y%C2%BRep%3D1,ax%2Bby%3Dc
      * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
      */
     static magic(a, b, c) {
@@ -21783,11 +22932,11 @@ class HyperbolaCurve extends XiEtaCurve {
             const eta1 = Math.sqrt(sqrtVal);
             return [-Math.asinh(eta1), Math.asinh(eta1)];
         }
-        else if (eq(abs$4(a), abs$4(b))) {
+        else if (eq(abs$2(a), abs$2(b))) {
             if (le(c * a, 0)) {
                 return [];
             }
-            const eta = sign$3(a * b) * (Math.pow(c, 2) - Math.pow(a, 2)) / 2 / a / c;
+            const eta = sign$1(a * b) * (Math.pow(c, 2) - Math.pow(a, 2)) / 2 / a / c;
             return [Math.asinh(eta)];
         }
         else {
@@ -21807,6 +22956,9 @@ class HyperbolaCurve extends XiEtaCurve {
         // = center + f1 cosh t + f2 sinh t
         return this.center.plus(this.f1.times(Math.cosh(t))).plus(this.f2.times(Math.sinh(t)));
     }
+    toString() {
+        return `${this.center} + ${this.f1} * cosh(t) + ${this.f2} * sinh(t)`;
+    }
     tangentAt(t) {
         assertNumbers(t);
         // = f1 sinh t + f2 cosh t
@@ -21822,7 +22974,7 @@ class HyperbolaCurve extends XiEtaCurve {
         return this.f1.times(Math.cosh(t)).plus(this.f2.times(Math.sinh(t)));
     }
     isColinearTo(curve) {
-        if (!hasConstructor(curve, HyperbolaCurve))
+        if (!hasConstructor(curve, HyperbolaCurve$$1))
             return false;
         if (!curve.center || !this.center.like(curve.center)) {
             return false;
@@ -21835,7 +22987,7 @@ class HyperbolaCurve extends XiEtaCurve {
             && eq(f2.squared(), Math.abs(f2.dot(c2)));
     }
     reversed() {
-        return new HyperbolaCurve(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin);
+        return new HyperbolaCurve$$1(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin);
     }
     rightAngled() {
         const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() + f1.squared();
@@ -21843,8 +22995,8 @@ class HyperbolaCurve extends XiEtaCurve {
             return this;
         }
         const g1 = 2 * a, g2 = b + Math.sqrt(b * b - 4 * a * a);
-        const { x1: xi, y1: eta } = intersectionUnitHyperbolaLine(g1, g2, 0);
-        return new HyperbolaCurve(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(eta).plus(f2.times(xi)));
+        const { x1: xi, y1: eta } = intersectionUnitHyperbolaLine$$1(g1, g2, 0);
+        return new HyperbolaCurve$$1(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(eta).plus(f2.times(xi)));
     }
     eccentricity() {
         const mainAxes = this.rightAngled();
@@ -21858,14 +23010,17 @@ class HyperbolaCurve extends XiEtaCurve {
         // xi² - eta² = 1 (by def for hyperbola)
         return arrayFromFunction(3, dim => {
             const a = this.f2.e(dim), b = this.f1.e(dim);
-            return HyperbolaCurve.magic(a, b, 0);
+            return HyperbolaCurve$$1.magic(a, b, 0);
         });
     }
 }
-HyperbolaCurve.XY = new HyperbolaCurve(V3.O, V3.X, V3.Y);
-HyperbolaCurve.prototype.tIncrement = PI$5 / 16;
+HyperbolaCurve$$1.XY = new HyperbolaCurve$$1(V3.O, V3.X, V3.Y);
+HyperbolaCurve$$1.prototype.tIncrement = PI$3 / 16;
 
-class L3 extends Curve {
+/**
+ * 3-dimensional line
+ */
+class L3$$1 extends Curve$$1 {
     constructor(anchor, // line anchor
     dir1, // normalized line dir
     tMin = -4096, tMax = 4096) {
@@ -21877,7 +23032,7 @@ class L3 extends Curve {
         assertf(() => !Number.isNaN(anchor.x));
     }
     static throughPoints(anchor, b, tMin, tMax) {
-        return new L3(anchor, b.minus(anchor).unit(), tMin, tMax);
+        return new L3$$1(anchor, b.minus(anchor).unit(), tMin, tMax);
     }
     static pointT(anchor, dir, x) {
         assertVectors(anchor, dir, x);
@@ -21887,7 +23042,7 @@ class L3 extends Curve {
         return anchor.plus(dir.times(t));
     }
     static fromPlanes(p1, p2) {
-        assertInst(P3, p1, p2);
+        assertInst(P3$$1, p1, p2);
         const dir = p1.normal1.cross(p2.normal1);
         const length = dir.length();
         if (length < 1e-10) {
@@ -21896,13 +23051,16 @@ class L3 extends Curve {
         return p1.intersectionWithPlane(p2);
     }
     static containsPoint(anchor, dir, p) {
-        const closestT = L3.pointT(anchor, dir, p);
-        const distance = L3.at(anchor, dir, closestT).distanceTo(p);
+        const closestT = L3$$1.pointT(anchor, dir, p);
+        const distance = L3$$1.at(anchor, dir, closestT).distanceTo(p);
         return eq0(distance);
     }
     addToMesh(mesh, res = 4, radius = 0, pointStep = 1, tMin = this.tMin, tMax = this.tMax) {
         const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res));
         const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res));
+        const inc = this.tIncrement;
+        const start = Math.ceil((this.tMin + NLA_PRECISION) / inc);
+        const end = Math.floor((this.tMax - NLA_PRECISION) / inc);
         for (let i = 0; i <= 1; i += 1) {
             const start = mesh.vertices.length;
             if (0 !== i) {
@@ -21928,23 +23086,23 @@ class L3 extends Curve {
     }
     likeCurve(curve) {
         return this == curve ||
-            hasConstructor(curve, L3)
+            hasConstructor(curve, L3$$1)
                 && this.anchor.like(curve.anchor)
                 && this.dir1.like(curve.dir1);
     }
     equals(obj) {
         return this == obj ||
-            Object.getPrototypeOf(obj) == L3.prototype
+            Object.getPrototypeOf(obj) == L3$$1.prototype
                 && this.anchor.equals(obj.anchor)
                 && this.dir1.equals(obj.dir1);
     }
     isColinearTo(obj) {
-        return obj instanceof L3
+        return obj instanceof L3$$1
             && this.containsPoint(obj.anchor)
             && eq(1, Math.abs(this.dir1.dot(obj.dir1)));
     }
     distanceToLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         if (this.isParallelToLine(line)) {
             return this.distanceToPoint(line.anchor);
         }
@@ -21965,7 +23123,7 @@ class L3 extends Curve {
         return this.at(t).minus(x).length();
     }
     asSegmentDistanceToLine(line, sStart, sEnd) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         const dirCross = this.dir1.cross(line.dir1);
         const div = dirCross.squared();
         if (eq0(div)) {
@@ -22004,13 +23162,13 @@ class L3 extends Curve {
      * Returns true if the line is parallel (this.dir = line.dir || this.dir = -line.dir) to the argument.
      */
     isParallelToLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         // we know that 1 == this.dir1.length() == line.dir1.length(), we can check for parallelity simpler than
         // isParallelTo()
         return eq(1, Math.abs(this.dir1.dot(line.dir1)));
     }
     angleToLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         return this.dir1.angleTo(line.dir1);
     }
     /**
@@ -22022,7 +23180,7 @@ class L3 extends Curve {
         return eq0(this.distanceToLine(line));
     }
     isInfosWithCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof L3$$1) {
             const dirCross = this.dir1.cross(curve.dir1);
             const div = dirCross.squared();
             if (eq0(div)) {
@@ -22042,7 +23200,7 @@ class L3 extends Curve {
     }
     isInfoWithLine(line) {
         // todo infos?
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         const dirCross = this.dir1.cross(line.dir1);
         const div = dirCross.squared();
         if (eq0(div)) {
@@ -22064,7 +23222,7 @@ class L3 extends Curve {
         // connecting
         // TODO Where does this come from?
         // TODO: return value when no IS?
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         const dirCross = this.dir1.cross(line.dir1);
         const div = dirCross.squared();
         const anchorDiff = line.anchor.minus(this.anchor);
@@ -22147,31 +23305,30 @@ class L3 extends Curve {
         return lambda;
     }
     reversed() {
-        return new L3(this.anchor, this.dir1.negated(), -this.tMax, -this.tMin);
+        return new L3$$1(this.anchor, this.dir1.negated(), -this.tMax, -this.tMin);
     }
     isTsWithPlane(plane) {
         return [this.isTWithPlane(plane)];
     }
     flipped() {
-        return new L3(this.anchor, this.dir1.negated());
+        return new L3$$1(this.anchor, this.dir1.negated());
     }
     transform(m4) {
         const newAnchor = m4.transformPoint(this.anchor);
         const newDir = m4.transformVector(this.dir1);
-        return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length());
+        return new L3$$1(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length());
     }
     hashCode() {
         return this.anchor.hashCode() * 31 + this.dir1.hashCode();
     }
 }
-L3.anchorDirection = (anchor, dir) => new L3(anchor, dir.unit());
-L3.X = new L3(V3.O, V3.X);
-L3.Y = new L3(V3.O, V3.Y);
-L3.Z = new L3(V3.O, V3.Z);
-L3.prototype.hlol = Curve.hlol++;
+L3$$1.anchorDirection = (anchor, dir) => new L3$$1(anchor, dir.unit());
+L3$$1.X = new L3$$1(V3.O, V3.X);
+L3$$1.Y = new L3$$1(V3.O, V3.Y);
+L3$$1.Z = new L3$$1(V3.O, V3.Z);
+L3$$1.prototype.hlol = Curve$$1.hlol++;
 
-const { floor: floor$4, abs: abs$5, ceil: ceil$4, min: min$3, max: max$3 } = Math;
-class PICurve$1 extends ImplicitCurve {
+class PICurve$$1 extends ImplicitCurve$$1 {
     constructor(points, tangents, parametricSurface, implicitSurface, pmPoints, pmTangents, stepSize, dir = 1, generator, tMin, tMax) {
         super(points, tangents, dir, generator, tMin, tMax);
         this.parametricSurface = parametricSurface;
@@ -22198,41 +23355,16 @@ class PICurve$1 extends ImplicitCurve {
         const dpds = ps.dpds();
         const dpdt = ps.dpdt();
         const didp = is.didp.bind(is);
-        const mf = MathFunctionR2R.forFFxFy((x, y) => iFunc(pFunc(x, y)), (s, t) => didp(pFunc(s, t)).dot(dpds(s, t)), (s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)));
-        const { points, tangents } = followAlgorithm2d(mf, pmStart, stepSize, ps.bounds.bind(ps), pmEnd, startPMTangent);
-        return PICurve$1.forParametricPointsTangents(ps, is, points, tangents, stepSize, 1, tMin, tMax);
+        const mf = MathFunctionR2R$$1.forFFxFy((x, y) => iFunc(pFunc(x, y)), (s, t) => didp(pFunc(s, t)).dot(dpds(s, t)), (s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)));
+        const { points, tangents } = followAlgorithm2d$$1(mf, pmStart, stepSize, ps.bounds.bind(ps), pmEnd, startPMTangent);
+        return PICurve$$1.forParametricPointsTangents(ps, is, points, tangents, stepSize, 1, tMin, tMax);
     }
-    //	assert(!startPoint.like(endPoint))
-    //	assert(ParametricSurface.is(parametricSurface))
-    //	assert(ImplicitSurface.is(implicitSurface))
-    //	this.parametricSurface = parametricSurface
-    //	this.implicitSurface = implicitSurface
-    //	if (!startPoint) {
-    //	const pmPoint = curvePoint(this.implicitCurve(), V(1, 1, 0))
-    //	this.startPoint = this.parametricSurface.pSTFunc()(pmPoint.x, pmPoint.y)
-    //} else {
-    //	this.startPoint = startPoint
-    //}
-    //this.endPoint = endPoint
-    //this.dir = dir
-    //this.isLoop = false
-    //try {
-    //	this.calcPoints(startPoint, endPoint)
-    //	this.startPoint = startPoint
-    //	this.endPoint = endPoint
-    //} catch (e) {
-    //	this.calcPoints(this.endPoint, this.startPoint)
-    //	this.startPoint = endPoint
-    //	this.endPoint = startPoint
-    //}
-    //this.tMin = 0
-    //this.tMax = this.points.length - 1
     static forStartEnd(ps, is, start, end, stepSize = 0.02, startTangent, min, max) {
         const startPM = ps.stP(start);
         const dpds = ps.dpds()(startPM.x, startPM.y), dpdt = ps.dpdt()(startPM.x, startPM.y);
         const startPMTangent = startTangent && M4.forSys(dpds, dpdt).inversed().transformVector(startTangent);
         // assert(dpds.times(startPMTangent.x).plus(dpdt.times(startPMTangent.y)).like(startTangent))
-        const curve = PICurve$1.forParametricStartEnd(ps, is, startPM, ps.stP(end), stepSize, startPMTangent);
+        const curve = PICurve$$1.forParametricStartEnd(ps, is, startPM, ps.stP(end), stepSize, startPMTangent);
         return curve.withBounds(min && curve.pointT(min), max && curve.pointT(max));
     }
     static forParametricPointsTangents(ps, is, pmPoints, pmTangents, stepSize, dir = 1, tMin, tMax) {
@@ -22248,7 +23380,7 @@ class PICurve$1 extends ImplicitCurve {
             //return cs.normalP(p).cross(ses.normalP(p))
             //	.toLength(ds.times(pmTangents[i].x).plus(dt.times(pmTangents[i].y)).length())
         });
-        return new PICurve$1(points, tangents, ps, is, pmPoints, pmTangents, stepSize, dir, undefined, tMin, tMax);
+        return new PICurve$$1(points, tangents, ps, is, pmPoints, pmTangents, stepSize, dir, undefined, tMin, tMax);
     }
     getConstructorParameters() {
         return [this.points, this.tangents,
@@ -22257,56 +23389,32 @@ class PICurve$1 extends ImplicitCurve {
             this.stepSize, this.dir,
             this.generator, this.tMin, this.tMax];
     }
-    reversed() {
-        assertNever();
-        return new PICurve$1(this.parametricSurface, this.implicitSurface, this.endPoint, this.startPoint, -this.dir);
-    }
     implicitCurve() {
         const pF = this.parametricSurface.pSTFunc();
         const iF = this.implicitSurface.implicitFunction();
-        return function (s, t) {
-            return iF(pF(s, t));
-        };
+        return (s, t) => iF(pF(s, t));
     }
     isColinearTo(curve) {
-        if (curve instanceof PICurve$1) {
+        if (curve instanceof PICurve$$1) {
             if (this.equals(curve)) {
                 return true;
             }
             if (this.parametricSurface.isCoplanarTo(curve.parametricSurface) && this.implicitSurface.isCoplanarTo(curve.implicitSurface)) {
+                // TODO
             }
             return false;
-            assertNever();
         }
         else {
             return false;
         }
     }
-    //getVerticesNo0() {
-    //
-    //	// TODO
-    //	let start, end, arr
-    //	if (!this.canon) {
-    //		start = Math.floor(this.aT + 1)
-    //		end = ceil(this.bT)
-    //		arr = sliceCyclic(this.curve.points, start, end)
-    //	} else {
-    //		start = Math.floor(this.bT + 1)
-    //		end = ceil(this.aT)
-    //		arr = sliceCyclic(this.curve.points, start, end)
-    //		console.log("this.canon", !!this.canon, arr.length, start, end, this.aT)
-    //		arr.reverse()
-    //	}
-    //	arr.push(this.b)
-    //	return arr
-    //}
     containsPoint(p) {
         assertVectors(p);
         const t = this.pointT(p);
         return !isNaN(t) && this.isValidT(t);
     }
     equals(obj) {
-        return Object.getPrototypeOf(obj) == PICurve$1.prototype
+        return Object.getPrototypeOf(obj) == PICurve$$1.prototype
             && this.parametricSurface.equals(obj.parametricSurface)
             && this.implicitSurface.equals(obj.implicitSurface)
             && this.points[0].equals(obj.points[0])
@@ -22323,46 +23431,48 @@ class PICurve$1 extends ImplicitCurve {
     }
     tangentP(point) {
         assertVectors(point);
-        assert$1(this.containsPoint(point), 'this.containsPoint(point)' + this.containsPoint(point));
+        assert$1(this.containsPoint(point), 'this.containsPoint(point)');
         const t = this.pointT(point);
         return this.tangentAt(t);
     }
     tangentAt(t) {
-        return V3.lerp(this.tangents[floor$4(t)], this.tangents[ceil$4(t)], t % 1);
+        assert$1(!isNaN(t));
+        if (0 === t % 1)
+            return this.tangents[t];
+        const st = this.stT(t);
+        const stTangent = new V3(-this.didt(st.x, st.y), this.dids(st.x, st.y), 0).toLength(this.stepSize);
+        const ds = this.parametricSurface.dpds()(st.x, st.y);
+        const dt = this.parametricSurface.dpdt()(st.x, st.y);
+        return ds.times(stTangent.x).plus(dt.times(stTangent.y));
     }
     at(t) {
-        // assert(!isNaN(t))
-        // const pointParams = this.stT(t)
-        // const result = this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y)
-        // // assert(eq(t, this.pointT(result)))
-        // return result
         assert$1(!isNaN(t));
         if (0 === t % 1)
             return this.points[t];
-        const startParams = V3.lerp(this.pmPoints[floor$4(t)], this.pmPoints[ceil$4(t)], t % 1);
+        const startParams = V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1);
         return this.closestPointToParams(startParams);
     }
     stT(t) {
         assert$1(!isNaN(t));
         if (0 === t % 1)
-            return this.points[t];
-        const startParams = V3.lerp(this.pmPoints[floor$4(t)], this.pmPoints[ceil$4(t)], t % 1);
-        return curvePoint(this.implicitCurve(), startParams, this.dids, this.didt);
+            return this.pmPoints[t];
+        const startParams = V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1);
+        return curvePoint$$1(this.implicitCurve(), startParams, this.dids, this.didt);
     }
     closestTToPoint(p, tStart) {
         return 0;
     }
     closestPointToParams(startParams) {
-        const pointParams = curvePoint(this.implicitCurve(), startParams, this.dids, this.didt);
+        const pointParams = curvePoint$$1(this.implicitCurve(), startParams, this.dids, this.didt);
         return this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y);
     }
     isTsWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isTsWithPlane(surface.plane);
         }
-        else if (surface instanceof EllipsoidSurface || surface instanceof SemiEllipsoidSurface) {
+        else if (surface instanceof EllipsoidSurface$$1 || surface instanceof SemiEllipsoidSurface$$1) {
             const ps = this.parametricSurface, is = this.implicitSurface;
-            if (ps instanceof ProjectedCurveSurface && is instanceof SemiEllipsoidSurface) {
+            if (ps instanceof ProjectedCurveSurface$$1 && is instanceof SemiEllipsoidSurface$$1) {
                 const iscs = is.isCurvesWithSurface(surface);
                 const points = iscs.flatMap(isc => isc.isTsWithSurface(ps).map(t => isc.at(t)));
                 const ts = fuzzyUniques(points.map(p => this.pointT(p)));
@@ -22372,7 +23482,7 @@ class PICurve$1 extends ImplicitCurve {
         throw new Error();
     }
     isTsWithPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         const ps = this.parametricSurface, is = this.implicitSurface;
         const pscs = ps.isCurvesWithPlane(plane);
         const iscs = is.isCurvesWithPlane(plane);
@@ -22387,16 +23497,16 @@ class PICurve$1 extends ImplicitCurve {
         }
         const pmPoint = this.parametricSurface.stPFunc()(p);
         const ps = this.points, pmps = this.pmPoints;
-        let t = 0, prevDistance, pmDistance = pmPoint.distanceTo(pmps[0]);
-        while (pmDistance > abs$5(this.stepSize) && t < ps.length - 1) {
+        let t = 0, pmDistance = pmPoint.distanceTo(pmps[0]);
+        while (pmDistance > abs$2(this.stepSize) && t < ps.length - 1) {
             //console.log(t, pmps[t].$, pmDistance)
-            t = min$3(pmps.length - 1, t + max$3(1, Math.round(pmDistance / abs$5(this.stepSize) / 2 / 2)));
+            t = min$1(pmps.length - 1, t + max$1(1, Math.round(pmDistance / abs$2(this.stepSize) / 2 / 2)));
             pmDistance = pmPoint.distanceTo(pmps[t]);
         }
         // if (t < this.pmPoints.length - 1 && pmDistance > pmPoint.distanceTo(pmps[t + 1])) {
         //     t++
         // }
-        if (pmDistance > abs$5(this.stepSize) * 1.1) {
+        if (pmDistance > abs$2(this.stepSize) * 1.1) {
             // p is not on this curve
             return NaN;
         }
@@ -22407,14 +23517,33 @@ class PICurve$1 extends ImplicitCurve {
             return t;
         if (ps[t + 1].like(p))
             return t + 1;
-        const startT = t + V3.inverseLerp(ps[t], ps[t + 1], p);
-        if (startT)
-            return newtonIterate1d(t => this.at(t).distanceTo(p), startT, 4);
-        throw new Error();
+        const startT = arrayRange(floor(this.tMin), ceil(this.tMax), 1).withMax(t => -pmPoint.distanceTo(pmps[t]));
+        if (undefined === startT)
+            throw new Error();
+        if (ps[startT].like(p))
+            return startT;
+        //const [a, b] = 0 === startT
+        //    ? [0, 1]
+        //    : this.points.length - 1 === startT
+        //        ? [startT - 1, startT]
+        //        : pmPoint.distanceTo(pmps[startT - 1]) < pmPoint.distanceTo(pmps[startT + 1])
+        //            ? [startT - 1, startT]
+        //            : [startT, startT + 1]
+        const a = max$1(0, startT - 1), b = min$1(this.points.length - 1, startT + 1);
+        const tangent = this.tangentAt(startT);
+        const f = (t) => this.at(clamp(t, 0, this.points.length - 1)).to(p).dot(tangent);
+        // const df = (t: number) => -this.tangentAt(clamp(t, 0, this.points.length - 1)).dot(tangent)
+        //checkDerivate(f, df, 0, this.points.length - 2, 3)
+        // 8 steps necessary because df can currently be way off
+        t = bisect(f, a, b, 32);
+        if (!isFinite(t) || this.at(t).distanceTo(p) > abs$2(this.stepSize)) {
+            return NaN;
+        }
+        return t;
     }
     transform(m4) {
         const dirFactor = m4.isMirroring() ? -1 : 1;
-        return PICurve$1.forStartEnd(this.parametricSurface.transform(m4), this.implicitSurface.transform(m4), m4.transformPoint(this.points[0]), m4.transformPoint(this.points.last), this.stepSize * dirFactor, m4.transformVector(this.tangents[0]), m4.transformPoint(this.at(this.tMin)), m4.transformPoint(this.at(this.tMax)));
+        return PICurve$$1.forStartEnd(this.parametricSurface.transform(m4), this.implicitSurface.transform(m4), m4.transformPoint(this.points[0]), m4.transformPoint(this.points.last), this.stepSize * dirFactor, m4.transformVector(this.tangents[0]), m4.transformPoint(this.at(this.tMin)), m4.transformPoint(this.at(this.tMax)));
         //return PICurve.forParametricStartEnd(
         //	this.parametricSurface.transform(m4),
         //	this.implicitSurface.transform(m4),
@@ -22446,9 +23575,126 @@ class PICurve$1 extends ImplicitCurve {
         return result;
     }
 }
-PICurve$1.prototype.tIncrement = 1;
+PICurve$$1.prototype.tIncrement = 1;
 
-class ParabolaCurve extends XiEtaCurve {
+class PPCurve$$1 extends ImplicitCurve$$1 {
+    constructor(points, tangents, parametricSurface1, parametricSurface2, st1s, pmTangents, stepSize, dir = 1, generator, tMin, tMax) {
+        super(points, tangents, dir, generator, tMin, tMax);
+        this.parametricSurface1 = parametricSurface1;
+        this.parametricSurface2 = parametricSurface2;
+        this.st1s = st1s;
+        this.pmTangents = pmTangents;
+        this.stepSize = stepSize;
+        assert$1(ParametricSurface$$1.is(parametricSurface1));
+        assert$1(ParametricSurface$$1.is(parametricSurface2));
+        assert$1(Array.isArray(st1s));
+        assert$1(dir == 1);
+        assert$1(stepSize <= 1);
+    }
+    at(t) {
+        assert$1(!isNaN(t));
+        if (0 === t % 1)
+            return this.points[t];
+        const startPoint = V3.lerp(this.points[floor(t)], this.points[ceil(t)], t % 1);
+        return curvePointPP$$1(this.parametricSurface1, this.parametricSurface2, startPoint).p;
+    }
+    isColinearTo(curve) {
+        if (curve instanceof PPCurve$$1) {
+            if (this.equals(curve)) {
+                return true;
+            }
+            if (this.parametricSurface1.isCoplanarTo(curve.parametricSurface1) && this.parametricSurface1.isCoplanarTo(curve.parametricSurface2)) {
+                // TODO
+            }
+            return false;
+            assertNever();
+        }
+        else {
+            return false;
+        }
+    }
+    containsPoint(p) {
+        assertVectors(p);
+        // TODO: wrong, as there could be another curve
+        return this.parametricSurface1.containsPoint(p) && this.parametricSurface2.containsPoint(p) && !isNaN(this.pointT(p));
+    }
+    rootsAprox() {
+        const roots = [[], [], []];
+        const ps = this.points;
+        let lastDiff = ps[1].minus(ps[0]);
+        for (let i = 2; i < ps.length; i++) {
+            let diff = ps[i].minus(ps[i - 1]);
+            for (let dim = 0; dim < 3; dim++) {
+                if (Math.sign(lastDiff.e(dim)) != Math.sign(diff.e(dim))) {
+                    roots[dim].push(i);
+                }
+            }
+            lastDiff = diff;
+        }
+        return roots;
+    }
+    rootPoints() {
+        const pF1 = this.parametricSurface1.pSTFunc();
+        const pF2 = this.parametricSurface2.pSTFunc();
+        const pN1 = this.parametricSurface1.normalSTFunc();
+        const pN2 = this.parametricSurface2.normalSTFunc();
+        const rootsAprox = this.rootsAprox();
+        const results = [[], [], []];
+        for (let dim = 0; dim < 3; dim++) {
+            for (let i = 0; i < rootsAprox[dim].length; i++) {
+                let lambda = rootsAprox[dim][i];
+                let p = this.at(lambda);
+                assert$1(this.parametricSurface1.containsPoint(p));
+                let pp1 = this.parametricSurface1.stP(p);
+                let { x: u, y: v } = this.parametricSurface2.stP(p);
+                let startValues = [pp1.x, pp1.y, u, v];
+                function f(vals) {
+                    let [s, t, u, v] = vals;
+                    let diff = pF1(s, t).minus(pF2(u, v));
+                    let n1 = pN1(s, t);
+                    let n2 = pN2(u, v);
+                    let tangent = n1.cross(n2);
+                    return [diff.x, diff.y, diff.z, tangent.e(dim)];
+                }
+                let pps = newtonIterate(f, startValues, 8);
+                // assert(pF1(pps[0], pps[1]).like(pF2(pps[2], pps[3])),
+                // 	pF1(pps[0], pps[1]).sce + pF2(pps[2], pps[3]).sce)
+                let result = pF1(pps[0], pps[1]);
+                results[dim].push(result);
+            }
+        }
+        return results;
+    }
+    roots() {
+        return this.rootPoints().map(ps => ps.map(p => this.pointT(p)));
+    }
+    pointTangent(pWC) {
+        assertVectors(pWC);
+        assert$1(this.containsPoint(pWC), 'this.containsPoint(pWC)');
+        let n1 = this.parametricSurface1.normalP(pWC);
+        let n2 = this.parametricSurface2.normalP(pWC);
+        return n1.cross(n2);
+    }
+    pointT(point) {
+    }
+    transform(m4, desc) {
+        const dirFactor = m4.isMirroring() ? -1 : 1;
+        return new PPCurve$$1(m4.transformedPoints(this.points), m4.transformedVectors(this.tangents), this.parametricSurface1.transform(m4), this.parametricSurface2.transform(m4), this.st1s, undefined, this.stepSize, this.dir, undefined);
+    }
+    toSource(rounder = x => x) {
+        const result = callsce('PPCurve.forStartEnd', this.parametricSurface1, this.parametricSurface2, this.points[0], this.points.last, this.stepSize);
+        return result;
+    }
+    static forStartEnd(ps1, ps2, startPoint, end, stepSize = 0.02) {
+        const { points, tangents, st1s } = followAlgorithmPP$$1(ps1, ps2, startPoint, stepSize);
+        return new PPCurve$$1(points, tangents, ps1, ps2, st1s, undefined, stepSize, 1);
+    }
+}
+
+/**
+ * eta = xi²
+ */
+class ParabolaCurve$$1 extends XiEtaCurve$$1 {
     constructor(center, f1, f2, tMin = -10, tMax = 10) {
         super(center, f1, f2, tMin, tMax);
     }
@@ -22467,7 +23713,7 @@ class ParabolaCurve extends XiEtaCurve {
             .map(tOther => ({
             tThis: dirLC.x * tOther + anchorLC.x,
             tOther: tOther,
-            p: L3.at(anchorWC, dirWC, tOther),
+            p: L3$$1.at(anchorWC, dirWC, tOther),
         }));
     }
     static magic(a, b, c) {
@@ -22494,7 +23740,7 @@ class ParabolaCurve extends XiEtaCurve {
         const f2 = a.plus(c).minus(b.times(2));
         const f1 = b.minus(a).times(2);
         const center = a;
-        return new ParabolaCurve(center, f1, f2, 0, 1);
+        return new ParabolaCurve$$1(center, f1, f2, 0, 1);
     }
     at(t) {
         // center + f1 t + f2 t²
@@ -22525,7 +23771,7 @@ class ParabolaCurve extends XiEtaCurve {
         return arrayFromFunction(3, dimRoots);
     }
     isColinearTo(curve) {
-        if (!hasConstructor(curve, ParabolaCurve))
+        if (!hasConstructor(curve, ParabolaCurve$$1))
             return false;
         const thisRA = this.rightAngled(), curveRA = curve.rightAngled();
         return thisRA.center.like(curveRA.center)
@@ -22550,7 +23796,7 @@ class ParabolaCurve extends XiEtaCurve {
         const raCenter = this.at(t0);
         const raF1 = this.tangentAt(t0), raF1Length = raF1.length(), raF11 = raF1.unit();
         const repos = (t) => this.at(t).minus(raCenter).dot(raF11);
-        return new ParabolaCurve(raCenter, raF11, f2.div(Math.pow(raF1Length, 2)), repos(this.tMin), repos(this.tMax));
+        return new ParabolaCurve$$1(raCenter, raF11, f2.div(Math.pow(raF1Length, 2)), repos(this.tMin), repos(this.tMax));
     }
     arcLength(startT, endT) {
         let f1 = this.f1;
@@ -22569,20 +23815,19 @@ class ParabolaCurve extends XiEtaCurve {
         return f1Length * (F(endT - t0) - F(startT - t0));
     }
     asBezier() {
-        return BezierCurve.quadratic(this.at(-1), new L3(this.at(-1), this.tangentAt(-1).unit()).isInfoWithLine(new L3(this.at(1), this.tangentAt(1).unit())), this.at(1));
+        return BezierCurve$$1.quadratic(this.at(-1), new L3$$1(this.at(-1), this.tangentAt(-1).unit()).isInfoWithLine(new L3$$1(this.at(1), this.tangentAt(1).unit())), this.at(1));
     }
 }
-ParabolaCurve.XY = new ParabolaCurve(V3.O, V3.X, V3.Y);
-ParabolaCurve.YZ = new ParabolaCurve(V3.O, V3.Y, V3.Z);
-ParabolaCurve.ZX = new ParabolaCurve(V3.O, V3.Z, V3.X);
-ParabolaCurve.prototype.tIncrement = 1 / 32;
+ParabolaCurve$$1.XY = new ParabolaCurve$$1(V3.O, V3.X, V3.Y);
+ParabolaCurve$$1.YZ = new ParabolaCurve$$1(V3.O, V3.Y, V3.Z);
+ParabolaCurve$$1.ZX = new ParabolaCurve$$1(V3.O, V3.Z, V3.X);
+ParabolaCurve$$1.prototype.tIncrement = 1 / 32;
 
-const { PI: PI$6, min: min$4, max: max$4 } = Math;
-class SemiEllipseCurve extends XiEtaCurve {
-    constructor(center, f1, f2, tMin = 0, tMax = PI$6) {
+class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
+    constructor(center, f1, f2, tMin = 0, tMax = PI$3) {
         super(center, f1, f2, tMin, tMax);
-        assert$1(0 <= this.tMin && this.tMin < PI$6);
-        assert$1(0 < this.tMax && this.tMax <= PI$6);
+        assert$1(0 <= this.tMin && this.tMin < PI$3);
+        assert$1(0 < this.tMax && this.tMax <= PI$3);
     }
     static XYLCValid(pLC) {
         const { x, y } = pLC;
@@ -22591,14 +23836,14 @@ class SemiEllipseCurve extends XiEtaCurve {
     static XYLCPointT(pLC) {
         // assert(le(0, pLC.y))
         const angle = Math.atan2(pLC.y, pLC.x);
-        return angle < -PI$6 / 2 ? angle + TAU : angle; // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) :
+        return angle < -PI$3 / 2 ? angle + TAU : angle; // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) :
         // angle
     }
     static magic(a, b, c) {
-        const isLC = intersectionUnitCircleLine2(a, b, c);
+        const isLC = intersectionUnitCircleLine2$$1(a, b, c);
         const result = [];
         for (const [xi, eta] of isLC) {
-            le(0, eta) && result.push(SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0)));
+            le(0, eta) && result.push(SemiEllipseCurve$$1.XYLCPointT(new V3(xi, eta, 0)));
         }
         return result;
     }
@@ -22610,25 +23855,25 @@ class SemiEllipseCurve extends XiEtaCurve {
         const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv);
         return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y))
             .map(tOther => ({
-            tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
+            tThis: SemiEllipseCurve$$1.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
             tOther: tOther,
-            p: L3.at(anchorWC, dirWC, tOther),
+            p: L3$$1.at(anchorWC, dirWC, tOther),
         }));
     }
     /**
      * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
      */
     static semicircle(radius, center = V3.O) {
-        return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0));
+        return new SemiEllipseCurve$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0));
     }
     static fromEllipse(curve, tMin, tMax) {
         return [
-            tMin < 0 && new SemiEllipseCurve(curve.center, curve.f1.negated(), curve.f2.negated(), tMin + PI$6, min$4(0, tMax) + PI$6),
-            tMax > 0 && new SemiEllipseCurve(curve.center, curve.f1, curve.f2, max$4(0, tMin), tMax),
+            tMin < 0 && new SemiEllipseCurve$$1(curve.center, curve.f1.negated(), curve.f2.negated(), tMin + PI$3, min$1(0, tMax) + PI$3),
+            tMax > 0 && new SemiEllipseCurve$$1(curve.center, curve.f1, curve.f2, max$1(0, tMin), tMax),
         ].filter(x => x);
     }
     getAreaInDir(right, up, tStart, tEnd) {
-        return EllipseCurve.prototype.getAreaInDir.call(this, right, up, tStart, tEnd);
+        return EllipseCurve$$1.prototype.getAreaInDir.call(this, right, up, tStart, tEnd);
     }
     at(t) {
         assertNumbers(t);
@@ -22654,7 +23899,7 @@ class SemiEllipseCurve extends XiEtaCurve {
         if (!((x) => x.constructor == this.constructor)(curve)) {
             return false;
         }
-        if (!hasConstructor(curve, SemiEllipseCurve))
+        if (!hasConstructor(curve, SemiEllipseCurve$$1))
             return false;
         if (!this.center.like(curve.center)) {
             return false;
@@ -22678,18 +23923,18 @@ class SemiEllipseCurve extends XiEtaCurve {
         }
     }
     isValidT(t) {
-        return le(0, t) && le(t, PI$6);
+        return le(0, t) && le(t, PI$3);
     }
     pointT(p) {
         assertVectors(p);
         assert$1(this.containsPoint(p));
         const pLC = this.inverseMatrix.transformPoint(p);
-        const t = SemiEllipseCurve.XYLCPointT(pLC);
+        const t = SemiEllipseCurve$$1.XYLCPointT(pLC);
         assert$1(this.isValidT(t));
         return t;
     }
     reversed() {
-        return new SemiEllipseCurve(this.center, this.f1.negated(), this.f2, PI$6 - this.tMax, PI$6 - this.tMin);
+        return new SemiEllipseCurve$$1(this.center, this.f1.negated(), this.f2, PI$3 - this.tMax, PI$3 - this.tMin);
     }
     eccentricity() {
         const mainAxes = this.rightAngled();
@@ -22743,30 +23988,31 @@ class SemiEllipseCurve extends XiEtaCurve {
             return this;
         }
         const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a);
-        const { x1: xi, y1: eta } = intersectionUnitCircleLine(g1, g2, 0);
+        const { x1: xi, y1: eta } = intersectionUnitCircleLine$$1(g1, g2, 0);
         const f1RA = f1.times(xi).plus(f2.times(eta));
         const f2RA = f1.times(-eta).plus(f2.times(xi));
-        return new SemiEllipseCurve(this.center, f1RA, f2RA);
+        return new SemiEllipseCurve$$1(this.center, f1RA, f2RA);
     }
     asEllipse() {
-        return new EllipseCurve(this.center, this.f1, this.f2, this.tMin, this.tMax);
+        return new EllipseCurve$$1(this.center, this.f1, this.f2, this.tMin, this.tMax);
     }
     isInfosWithEllipse(ellipse) {
         if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
-            ellipse instanceof SemiEllipseCurve && (ellipse = ellipse.asEllipse());
+            ellipse instanceof SemiEllipseCurve$$1 && (ellipse = ellipse.asEllipse());
             return this.asEllipse().isInfosWithCurve(ellipse).filter(info => this.isValidT(info.tThis) && ellipse.isValidT(info.tOther));
         }
         else {
-            return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter(t => {
+            return this.isTsWithPlane(P3$$1.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter(t => {
                 const p = this.at(t);
                 if (ellipse.containsPoint(p)) {
                     return { tThis: t, tOther: ellipse.pointT(p), p };
                 }
+                return undefined;
             });
         }
     }
     isInfosWithCurve(curve) {
-        if (curve instanceof SemiEllipseCurve || curve instanceof EllipseCurve) {
+        if (curve instanceof SemiEllipseCurve$$1 || curve instanceof EllipseCurve$$1) {
             return this.isInfosWithEllipse(curve);
         }
         return super.isInfosWithCurve(curve);
@@ -22777,7 +24023,7 @@ class SemiEllipseCurve extends XiEtaCurve {
         // tangent(eta, xi) = f2 eta - f1 xi
         return arrayFromFunction(3, dim => {
             const a = this.f2.e(dim), b = -this.f1.e(dim);
-            const { x1, y1, x2, y2 } = intersectionUnitCircleLine(a, b, 0);
+            const { x1, y1, x2, y2 } = intersectionUnitCircleLine$$1(a, b, 0);
             return [Math.atan2(y1, x1), Math.atan2(y2, x2)];
         });
     }
@@ -22804,11 +24050,11 @@ class SemiEllipseCurve extends XiEtaCurve {
         return localDir.angleXY();
     }
 }
-SemiEllipseCurve.UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y);
-SemiEllipseCurve.prototype.hlol = Curve.hlol++;
-SemiEllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 32);
+SemiEllipseCurve$$1.UNIT = new SemiEllipseCurve$$1(V3.O, V3.X, V3.Y);
+SemiEllipseCurve$$1.prototype.hlol = Curve$$1.hlol++;
+SemiEllipseCurve$$1.prototype.tIncrement = 2 * Math.PI / (4 * 32);
 
-class P3 extends Transformable {
+class P3$$1 extends Transformable {
     /**
      * Oriented plane, i.e. splits R^3 in half, with one half being "in front" of the plane.
      * Leads to multiple comparisons: isCoplanarToPlane returns if the plane occupies the same space,
@@ -22833,12 +24079,12 @@ class P3 extends Transformable {
     static throughPoints(a, b, c) {
         assertVectors(a, b, c);
         const n1 = b.minus(a).cross(c.minus(a)).unit();
-        return new P3(n1, n1.dot(a));
+        return new P3$$1(n1, n1.dot(a));
     }
     static normalOnAnchor(normal, anchor) {
         assertVectors(normal, anchor);
         const n1 = normal.unit();
-        return new P3(n1, n1.dot(anchor));
+        return new P3$$1(n1, n1.dot(anchor));
     }
     /**
      * x/x0 + y/y0 + y/y0 = 1
@@ -22847,26 +24093,26 @@ class P3 extends Transformable {
     static forAxisIntercepts(x0, y0, z0) {
         assertNumbers(x0, y0, z0);
         const normal = new V3(1 / x0, 1 / y0, 1 / z0);
-        return new P3(normal.unit(), normal.length());
+        return new P3$$1(normal.unit(), normal.length());
     }
     static forAnchorAndPlaneVectors(anchor, v0, v1) {
         assertVectors(anchor, v0, v1);
-        return P3.normalOnAnchor(v0.cross(v1), anchor);
+        return P3$$1.normalOnAnchor(v0.cross(v1), anchor);
     }
     axisIntercepts() {
         const w = this.w, n = this.normal1;
         return new V3(w / n.x, w / n.y, w / n.z);
     }
     isCoplanarToPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         return this.like(plane) || this.likeFlipped(plane);
     }
     like(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         return eq(this.w, plane.w) && this.normal1.like(plane.normal1);
     }
     likeFlipped(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         return eq(this.w, -plane.w) && this.normal1.like(plane.normal1.negated());
     }
     /**
@@ -22874,27 +24120,27 @@ class P3 extends Transformable {
      *
      */
     isParallelToPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         return eq(1, Math.abs(this.normal1.dot(plane.normal1)));
     }
     isParallelToLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         return eq0(this.normal1.dot(line.dir1));
     }
     isPerpendicularToLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         // this.normal1 || line.dir1
         return eq(1, Math.abs(this.normal1.dot(line.dir1)));
     }
     isPerpendicularToPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         return eq0(this.normal1.dot(plane.normal1));
     }
     toSource(rounder) {
         return callsce('new P3', this.normal1, this.w);
     }
     translated(offset) {
-        return new P3(this.normal1, this.w + offset.dot(this.normal1));
+        return new P3$$1(this.normal1, this.w + offset.dot(this.normal1));
     }
     transform(m4) {
         const mirror = m4.isMirroring();
@@ -22904,10 +24150,10 @@ class P3 extends Transformable {
         // get 3 points in the plane:
         const p1 = m4.transformPoint(this.anchor), p2 = m4.transformPoint(this.anchor.plus(v)), p3 = m4.transformPoint(this.anchor.plus(u));
         // and create a new plane from the transformed points:
-        return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2);
+        return P3$$1.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2);
     }
     distanceToLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         if (!this.isParallelToLine(line)) {
             return this.distanceToPoint(line.anchor);
         }
@@ -22920,7 +24166,7 @@ class P3 extends Transformable {
         return eq(this.w, this.normal1.dot(x));
     }
     containsLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         return this.containsPoint(line.anchor) && this.isParallelToLine(line);
     }
     distanceToPointSigned(point) {
@@ -22943,7 +24189,7 @@ class P3 extends Transformable {
          n2 := n0 X x1
          n2 * x = 0
          */
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         assert$1(!this.isParallelToPlane(plane), '!this.isParallelToPlane(plane)');
         /*
          var n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit(), m = M4.forSys(n0, n1, n2)
@@ -22955,7 +24201,7 @@ class P3 extends Transformable {
          */
         const n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit();
         const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0));
-        return new L3(p, n2);
+        return new L3$$1(p, n2);
     }
     /**
      * Returns the point in the plane closest to the given point
@@ -22971,19 +24217,19 @@ class P3 extends Transformable {
         return x.minus(this.normal1.times(x.dot(this.normal1)));
     }
     flipped() {
-        return new P3(this.normal1.negated(), -this.w);
+        return new P3$$1(this.normal1.negated(), -this.w);
     }
     containsCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof L3$$1) {
             return this.containsLine(curve);
         }
-        else if (curve instanceof SemiEllipseCurve ||
-            curve instanceof EllipseCurve ||
-            curve instanceof HyperbolaCurve ||
-            curve instanceof ParabolaCurve) {
+        else if (curve instanceof SemiEllipseCurve$$1 ||
+            curve instanceof EllipseCurve$$1 ||
+            curve instanceof HyperbolaCurve$$1 ||
+            curve instanceof ParabolaCurve$$1) {
             return this.containsPoint(curve.center) && this.normal1.isParallelTo(curve.normal);
         }
-        else if (curve instanceof BezierCurve) {
+        else if (curve instanceof BezierCurve$$1) {
             return curve.points.every(p => this.containsPoint(p));
         }
         else {
@@ -22994,14 +24240,13 @@ class P3 extends Transformable {
         return this.normal1.hashCode() * 31 | 0 + floatHashCode(this.w);
     }
 }
-P3.YZ = new P3(V3.X, 0);
-P3.ZX = new P3(V3.Y, 0);
-P3.XY = new P3(V3.Z, 0);
+P3$$1.YZ = new P3$$1(V3.X, 0);
+P3$$1.ZX = new P3$$1(V3.Y, 0);
+P3$$1.XY = new P3$$1(V3.Z, 0);
 
-const { ceil: ceil$5, floor: floor$5 } = Math;
-class Surface extends Transformable {
+class Surface$$1 extends Transformable {
     static loopContainsPointGeneral(loop, p, testLine, lineOut) {
-        const testPlane = P3.normalOnAnchor(lineOut, p);
+        const testPlane = P3$$1.normalOnAnchor(lineOut, p);
         // edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
         const colinearEdges = loop.map((edge) => edge.colinearToLine(testLine));
         let inside = false;
@@ -23021,13 +24266,13 @@ class Surface extends Transformable {
             if (colinearEdges[edgeIndex]) {
                 const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b);
                 if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
-                    return PointVsFace.ON_EDGE;
+                    return PointVsFace$$1.ON_EDGE;
                 }
                 // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
                 if (!nextInside) {
                     if (logIS(edge.b))
-                        return PointVsFace.ON_EDGE;
+                        return PointVsFace$$1.ON_EDGE;
                 }
             }
             else {
@@ -23038,13 +24283,13 @@ class Surface extends Transformable {
                         // endpoint lies on intersection line
                         if (edge.b.like(p)) {
                             // TODO: refactor, dont check for different sides, just logIs everything
-                            return PointVsFace.ON_EDGE;
+                            return PointVsFace$$1.ON_EDGE;
                         }
-                        const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) > 0;
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                        const edgeInside = dotCurve$$1(lineOut, edge.bDir, edge.bDDT) > 0;
+                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
                         if (edgeInside != nextInside) {
                             if (logIS(edge.b))
-                                return PointVsFace.ON_EDGE;
+                                return PointVsFace$$1.ON_EDGE;
                         }
                     }
                     else if (edgeT != edge.aT) {
@@ -23053,13 +24298,13 @@ class Surface extends Transformable {
                             continue;
                         // edge crosses line, neither starts nor ends on it
                         if (logIS(p))
-                            return PointVsFace.ON_EDGE;
+                            return PointVsFace$$1.ON_EDGE;
                         // TODO: tangents?
                     }
                 }
             }
         }
-        return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE;
+        return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
     }
     toString() {
         return this.toSource();
@@ -23071,8 +24316,8 @@ class Surface extends Transformable {
         return surface.isCurvesWithSurface(this).map(curve => curve.reversed());
     }
     containsCurve(curve) {
-        if (curve instanceof ImplicitCurve) {
-            for (let i = ceil$5(curve.tMin); i <= floor$5(curve.tMax); i++) {
+        if (curve instanceof ImplicitCurve$$1) {
+            for (let i = ceil(curve.tMin); i <= floor(curve.tMax); i++) {
                 if (!this.containsPoint(curve.points[i])) {
                     return false;
                 }
@@ -23093,26 +24338,25 @@ class Surface extends Transformable {
         return this.getConstructorParameters().hashCode();
     }
     zDirVolume(allEdges) {
-        return this.visit(ZDirVolumeVisitor, allEdges);
+        return this.visit(ZDirVolumeVisitor$$1, allEdges);
     }
     calculateArea(allEdges) {
-        return this.visit(CalculateAreaVisitor, allEdges);
+        return this.visit(CalculateAreaVisitor$$1, allEdges);
     }
 }
-var PointVsFace;
-(function (PointVsFace) {
-    PointVsFace[PointVsFace["INSIDE"] = 0] = "INSIDE";
-    PointVsFace[PointVsFace["OUTSIDE"] = 1] = "OUTSIDE";
-    PointVsFace[PointVsFace["ON_EDGE"] = 2] = "ON_EDGE";
-})(PointVsFace || (PointVsFace = {}));
-class ImplicitSurface extends Surface {
+var PointVsFace$$1;
+(function (PointVsFace$$1) {
+    PointVsFace$$1[PointVsFace$$1["INSIDE"] = 0] = "INSIDE";
+    PointVsFace$$1[PointVsFace$$1["OUTSIDE"] = 1] = "OUTSIDE";
+    PointVsFace$$1[PointVsFace$$1["ON_EDGE"] = 2] = "ON_EDGE";
+})(PointVsFace$$1 || (PointVsFace$$1 = {}));
+class ImplicitSurface$$1 extends Surface$$1 {
     static is(obj) {
         return obj.implicitFunction && obj.didp;
     }
 }
 
-const { ceil: ceil$6, min: min$5 } = Math;
-class ParametricSurface extends Surface {
+class ParametricSurface$$1 extends Surface$$1 {
     static isCurvesParametricImplicitSurface(ps, is, sStep, tStep = sStep, curveStepSize) {
         const pf = ps.pSTFunc(), icc = is.implicitFunction();
         const dpds = ps.dpds();
@@ -23121,9 +24365,66 @@ class ParametricSurface extends Surface {
         const ist = (x, y) => icc(pf(x, y));
         const dids = (s, t) => didp(pf(s, t)).dot(dpds(s, t));
         const didt = (s, t) => didp(pf(s, t)).dot(dpdt(s, t));
-        const mf = MathFunctionR2R.forFFxFy(ist, dids, didt);
-        const curves = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, dids, didt)
-            .map(({ points, tangents }, i) => PICurve$1.forParametricPointsTangents(ps, is, points, tangents, curveStepSize));
+        const mf = MathFunctionR2R$$1.forFFxFy(ist, dids, didt);
+        const curves = Curve$$1.breakDownIC(mf, ps, sStep, tStep, curveStepSize)
+            .map(({ points, tangents }, i) => PICurve$$1.forParametricPointsTangents(ps, is, points, tangents, curveStepSize));
+        return curves;
+    }
+    static isCurvesParametricParametricSurface(ps1, ps2, s1Step, t1Step = s1Step, curveStepSize) {
+        return breakDownPPCurves$$1(ps1, ps2, s1Step, t1Step, curveStepSize);
+        const pF1 = ps1.pSTFunc();
+        const pF2 = ps2.pSTFunc();
+        const pN1 = ps1.normalSTFunc();
+        const pN2 = ps2.normalSTFunc();
+        let Q = this.startPoint;
+        let aParams = ps1.stP(Q);
+        let bParams = ps2.stP(Q);
+        console.log('aParams.sce', aParams.sce, pF1(bParams.x, bParams.y).sce);
+        console.log('bParams.sce', bParams.sce);
+        console.log(Q.sce);
+        assert$1(pF1(aParams.x, aParams.y).like(Q));
+        assert$1(aParams.like(ps1.pointFoot(Q, aParams.x, aParams.y)));
+        assert$1(bParams.like(ps2.pointFoot(Q, bParams.x, bParams.y)));
+        assert$1(pF2(bParams.x, bParams.y).like(Q));
+        for (let j = 0; j < 100; j++) {
+            let i = 8;
+            let a, b, aNormal, bNormal, abNormalsCross;
+            do {
+                // feet of Q on ps1 and ps2 (closest points)
+                aParams = ps1.pointFoot(Q, aParams.x, aParams.y);
+                bParams = ps2.pointFoot(Q, bParams.x, bParams.y);
+                a = pF1(aParams.x, aParams.y);
+                b = pF2(bParams.x, bParams.y);
+                // drPs.push({p:a,text:'a'+j+' '+i})
+                // drPs.push({p:b,text:'b'+j+' '+i})
+                aNormal = pN1(aParams.x, aParams.y);
+                bNormal = pN2(bParams.x, bParams.y);
+                // next Q is the intersection of the planes
+                // (x - a) * aNormal,
+                // (x - b) * bNormal and
+                // (x - Q) * (aNormal X bNormal)
+                abNormalsCross = aNormal.cross(bNormal);
+                // drVs.push({anchor: Q, dir: aNormal})
+                // drVs.push({anchor: Q, dir: bNormal})
+                Q = V3.add(bNormal.cross(abNormalsCross).times(a.dot(aNormal)), abNormalsCross.cross(aNormal).times(b.dot(bNormal)), abNormalsCross.times(abNormalsCross.dot(Q))).div(abNormalsCross.squared());
+            } while (--i && a.minus(b).length() > NLA_PRECISION);
+            // console.log("ended on" + i)
+            assert$1(ps1.containsPoint(Q));
+            assert$1(ps2.containsPoint(Q));
+            this.tangents.push(abNormalsCross);
+            this.points.push(Q);
+            Q = Q.plus(abNormalsCross.toLength(STEP_SIZE));
+        }
+        const pf = ps.pSTFunc(), icc = is.implicitFunction();
+        const dpds = ps.dpds();
+        const dpdt = ps.dpdt();
+        const didp = is.didp.bind(is);
+        const ist = (x, y) => icc(pf(x, y));
+        const dids = (s, t) => didp(pf(s, t)).dot(dpds(s, t));
+        const didt = (s, t) => didp(pf(s, t)).dot(dpdt(s, t));
+        const mf = MathFunctionR2R$$1.forFFxFy(ist, dids, didt);
+        const curves = Curve$$1.breakDownIC(mf, ps, sStep, tStep, curveStepSize, dids, didt)
+            .map(({ points, tangents }, i) => PICurve$$1.forParametricPointsTangents(ps, is, points, tangents, curveStepSize));
         return curves;
     }
     static is(obj) {
@@ -23148,7 +24449,7 @@ class ParametricSurface extends Surface {
      * Positive values are inside bounds.
      */
     boundsSigned(s, t) {
-        return min$5(s - this.sMin, this.sMax - s, t - this.tMin, this.tMax - t);
+        return min$1(s - this.sMin, this.sMax - s, t - this.tMin, this.tMax - t);
     }
     normalP(p) {
         const pmPoint = this.stPFunc()(p);
@@ -23165,10 +24466,10 @@ class ParametricSurface extends Surface {
     }
     toMesh() {
         assert$1(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax));
-        return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(), this.sMin, this.sMax, this.tMin, this.tMax, ceil$6((this.sMax - this.sMin) / this.uStep), ceil$6((this.tMax - this.tMin) / this.vStep));
+        return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(), this.sMin, this.sMax, this.tMin, this.tMax, ceil((this.sMax - this.sMin) / this.uStep), ceil((this.tMax - this.tMin) / this.vStep));
     }
     isCurvesWithImplicitSurface(is, sStep, tStep, stepSize) {
-        return ParametricSurface.isCurvesParametricImplicitSurface(this, is, sStep, tStep, stepSize);
+        return ParametricSurface$$1.isCurvesParametricImplicitSurface(this, is, sStep, tStep, stepSize);
     }
     edgeLoopCCW(contour) {
         const ptpF = this.stPFunc();
@@ -23176,8 +24477,7 @@ class ParametricSurface extends Surface {
     }
 }
 
-const { PI: PI$7, cos: cos$4, sin: sin$4, abs: abs$6, sqrt: sqrt$2, sign: sign$4 } = Math;
-class ConicSurface extends ParametricSurface {
+class ConicSurface$$1 extends ParametricSurface$$1 {
     /**
      * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
      * @param f1
@@ -23193,7 +24493,7 @@ class ConicSurface extends ParametricSurface {
         assertVectors(center, f1, f2, dir);
         this.matrix = M4.forSys(f1, f2, dir, center);
         this.inverseMatrix = this.matrix.inversed();
-        this.normalDir = sign$4(this.f1.cross(this.f2).dot(this.dir));
+        this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.dir));
         this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir);
     }
     get apex() {
@@ -23201,8 +24501,8 @@ class ConicSurface extends ParametricSurface {
     }
     static atApexThroughEllipse(apex, ellipse) {
         assertVectors(apex);
-        assertInst(SemiEllipseCurve, ellipse);
-        return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center));
+        assertInst(SemiEllipseCurve$$1, ellipse);
+        return new ConicSurface$$1(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center));
     }
     static unitISLineTs(anchor, dir) {
         const { x: ax, y: ay, z: az } = anchor;
@@ -23226,15 +24526,15 @@ class ConicSurface extends ParametricSurface {
             if (eq0(d)) {
                 // d = 0 => z² - y² = 0 => z² = y² => z = y
                 // plane goes through origin/V3.O
-                return [new L3(V3.O, new V3(0, -sqrt$2(2) / 2, -sqrt$2(2) / 2), undefined, 0),
-                    new L3(V3.O, new V3(0, -sqrt$2(2) / 2, sqrt$2(2) / 2), 0)];
+                return [new L3$$1(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
+                    new L3$$1(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0)];
             }
             else {
                 // hyperbola
                 const center = new V3(d / a, 0, 0);
-                const f1 = new V3(0, 0, abs$6(d / a)); // abs, because we always want the hyperbola to be pointing up
+                const f1 = new V3(0, 0, abs$2(d / a)); // abs, because we always want the hyperbola to be pointing up
                 const f2 = new V3(0, d / a, 0);
-                return [new HyperbolaCurve(center, f1, f2)];
+                return [new HyperbolaCurve$$1(center, f1, f2)];
             }
         }
         else {
@@ -23245,14 +24545,14 @@ class ConicSurface extends ParametricSurface {
                 // x² + y² = z²
                 // => d² - 2cdz/a + c²z²/a² + y² = z²
                 if (eq(aa, cc)) {
-                    return [new L3(V3.O, new V3(c, 0, -a).unit())];
+                    return [new L3$$1(V3.O, new V3(c, 0, -a).unit())];
                 }
                 else if (aa < cc) {
                     assert$1(false, 'intersection is single point V3.O');
                 }
                 else if (aa > cc) {
-                    return [new L3(V3.O, new V3(c, sqrt$2(aa - cc), -a).unit()),
-                        new L3(V3.O, new V3(c, -sqrt$2(aa - cc), -a).unit())];
+                    return [new L3$$1(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
+                        new L3$$1(V3.O, new V3(c, -sqrt(aa - cc), -a).unit())];
                 }
             }
             else {
@@ -23262,7 +24562,7 @@ class ConicSurface extends ParametricSurface {
                     const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c);
                     const p2 = new V3(0, 0, d / c);
                     const f2 = p2.minus(parabolaVertex);
-                    return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0
+                    return [new ParabolaCurve$$1(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0
                             ? f2.negated()
                             : f2)];
                 }
@@ -23273,16 +24573,16 @@ class ConicSurface extends ParametricSurface {
                         return [];
                     }
                     const p1 = new V3(d / (a - c), 0, -d / (a - c));
-                    const p2 = new V3(-a * d / (cc - aa), d / sqrt$2(cc - aa), d * c / (cc - aa));
-                    return [new EllipseCurve(center, center.to(p1), center.to(p2))];
+                    const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa));
+                    return [new EllipseCurve$$1(center, center.to(p1), center.to(p2))];
                 }
                 else if (aa > cc) {
                     // hyperbola
                     const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa));
                     const p1 = new V3(d / (a - c), 0, -d / (a - c));
-                    const p2 = new V3(-a * d / (cc - aa), d / sqrt$2(aa - cc), d * c / (cc - aa));
+                    const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa));
                     const f1 = center.to(p1);
-                    return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), center.to(p2))];
+                    return [new HyperbolaCurve$$1(center, f1.z > 0 ? f1 : f1.negated(), center.to(p2))];
                 }
             }
         }
@@ -23307,15 +24607,15 @@ class ConicSurface extends ParametricSurface {
             { anchor: this.center.plus(this.dir), dir1: this.f2 }];
     }
     getSeamPlane() {
-        return P3.forAnchorAndPlaneVectors(this.center, this.f1, this.dir);
+        return P3$$1.forAnchorAndPlaneVectors(this.center, this.f1, this.dir);
     }
     loopContainsPoint(contour, p) {
         assertVectors(p);
         const line = this.center.like(p)
-            ? new L3(p, this.matrix.transformVector(new V3(0, 1, 1)).unit())
-            : L3.throughPoints(p, this.apex);
+            ? new L3$$1(p, this.matrix.transformVector(new V3(0, 1, 1)).unit())
+            : L3$$1.throughPoints(p, this.apex);
         const lineOut = line.dir1.cross(this.dir);
-        return Surface.loopContainsPointGeneral(contour, p, line, lineOut);
+        return Surface$$1.loopContainsPointGeneral(contour, p, line, lineOut);
     }
     getConstructorParameters() {
         return [this.center, this.f1, this.f2, this.dir];
@@ -23325,7 +24625,7 @@ class ConicSurface extends ParametricSurface {
         // meaning that calculated values t for lineLC are directly transferable to line
         const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
         const dirLC = this.inverseMatrix.transformVector(line.dir1);
-        return ConicSurface.unitISLineTs(anchorLC, dirLC);
+        return ConicSurface$$1.unitISLineTs(anchorLC, dirLC);
     }
     /**
      * Interestingly, two cones don't need to have parallel dirs to be coplanar.
@@ -23333,10 +24633,10 @@ class ConicSurface extends ParametricSurface {
     isCoplanarTo(surface) {
         if (this === surface)
             return true;
-        if (!(surface instanceof ConicSurface) || !this.apex.like(surface.apex))
+        if (!(surface instanceof ConicSurface$$1) || !this.apex.like(surface.apex))
             return false;
         // at this point apexes are equal
-        return this.containsEllipse(new SemiEllipseCurve(surface.center.plus(surface.dir), surface.f1, surface.f2));
+        return this.containsEllipse(new SemiEllipseCurve$$1(surface.center.plus(surface.dir), surface.f1, surface.f2));
     }
     containsEllipse(ellipse) {
         const ellipseLC = ellipse.transform(this.inverseMatrix);
@@ -23357,7 +24657,7 @@ class ConicSurface extends ParametricSurface {
         return lineLC.containsPoint(V3.O) && eq(d.x * d.x + d.y * d.y, d.z * d.z);
     }
     containsParabola(curve) {
-        assertInst(ParabolaCurve, curve);
+        assertInst(ParabolaCurve$$1, curve);
         const curveLC = curve.transform(this.inverseMatrix);
         if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
             return false;
@@ -23371,7 +24671,7 @@ class ConicSurface extends ParametricSurface {
             && eq(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z);
     }
     containsHyperbola(curve) {
-        assertInst(HyperbolaCurve, curve);
+        assertInst(HyperbolaCurve$$1, curve);
         return true;
         const curveLC = curve.transform(this.inverseMatrix);
         if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
@@ -23385,16 +24685,16 @@ class ConicSurface extends ParametricSurface {
             && eq0(f1.z);
     }
     containsCurve(curve) {
-        if (curve instanceof SemiEllipseCurve) {
+        if (curve instanceof SemiEllipseCurve$$1) {
             return this.containsEllipse(curve);
         }
-        else if (curve instanceof L3) {
+        else if (curve instanceof L3$$1) {
             return this.containsLine(curve);
         }
-        else if (curve instanceof HyperbolaCurve) {
+        else if (curve instanceof HyperbolaCurve$$1) {
             return this.containsHyperbola(curve);
         }
-        else if (curve instanceof ParabolaCurve) {
+        else if (curve instanceof ParabolaCurve$$1) {
             return this.containsParabola(curve);
         }
         else {
@@ -23402,13 +24702,13 @@ class ConicSurface extends ParametricSurface {
         }
     }
     transform(m4) {
-        return new ConicSurface(m4.transformPoint(this.center), m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1), m4.transformVector(this.f2), m4.transformVector(this.dir));
+        return new ConicSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1), m4.transformVector(this.f2), m4.transformVector(this.dir));
     }
     rightAngled() {
         // TODO
     }
     flipped() {
-        return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir);
+        return new ConicSurface$$1(this.center, this.f1.negated(), this.f2, this.dir);
     }
     normalSTFunc() {
         const { f1, f2 } = this, f3 = this.dir;
@@ -23424,18 +24724,18 @@ class ConicSurface extends ParametricSurface {
     pSTFunc() {
         return (s, t) => {
             // center + f1 t cos s + f2 t sin s + t dir
-            return this.matrix.transformPoint(new V3(t * cos$4(s), t * sin$4(s), t));
+            return this.matrix.transformPoint(new V3(t * cos$1(s), t * sin$1(s), t));
         };
     }
     dpds() {
         return (s, t) => {
-            const resultLC = new V3(t * -sin$4(s), t * cos$4(s), 0);
+            const resultLC = new V3(t * -sin$1(s), t * cos$1(s), 0);
             return this.matrix.transformVector(resultLC);
         };
     }
     dpdt() {
         return (s, t) => {
-            const resultLC = new V3(cos$4(s), sin$4(s), 1);
+            const resultLC = new V3(cos$1(s), sin$1(s), 1);
             return this.matrix.transformVector(resultLC);
         };
     }
@@ -23455,22 +24755,22 @@ class ConicSurface extends ParametricSurface {
     stP(pWC) {
         const pLC = this.inverseMatrix.transformPoint(pWC);
         const angle = pLC.angleXY();
-        return new V3(angle < -PI$7 / 2 ? angle + TAU : angle, pLC.z, 0);
+        return new V3(angle < -PI$3 / 2 ? angle + TAU : angle, pLC.z, 0);
     }
     isCurvesWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isCurvesWithPlane(surface.plane);
         }
-        else if (ImplicitSurface.is(surface)) {
-            return ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / this.dir.length(), 0.02);
+        else if (ImplicitSurface$$1.is(surface)) {
+            return ParametricSurface$$1.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / this.dir.length(), 0.02);
         }
         return super.isCurvesWithSurface(surface);
     }
     getCenterLine() {
-        return new L3(this.center, this.dir);
+        return new L3$$1(this.center, this.dir);
     }
     isCurvesWithPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         const planeLC = plane.transform(this.inverseMatrix);
         const planeNormal = planeLC.normal1;
         const c = planeNormal.z;
@@ -23483,13 +24783,13 @@ class ConicSurface extends ParametricSurface {
         const wcMatrix = eq0(planeNormal.lengthXY())
             ? this.matrix
             : this.matrix.times(rotationMatrix);
-        return ConicSurface.unitISPlane(a, c, d).flatMap(curve => {
+        return ConicSurface$$1.unitISPlane(a, c, d).flatMap(curve => {
             const curveWC = curve.transform(wcMatrix);
-            if (curve instanceof EllipseCurve) {
+            if (curve instanceof EllipseCurve$$1) {
                 const curveLC = curve.transform(rotationMatrix);
-                const ts = curveLC.isTsWithPlane(P3.ZX);
-                const intervals = getIntervals(ts, -PI$7, PI$7).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0);
-                return intervals.flatMap(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC, a, b));
+                const ts = curveLC.isTsWithPlane(P3$$1.ZX);
+                const intervals = getIntervals(ts, -PI$3, PI$3).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0);
+                return intervals.flatMap(([a, b]) => SemiEllipseCurve$$1.fromEllipse(curveWC, a, b));
             }
             const p = curveWC.at(0.2);
             return this.normalP(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
@@ -23500,16 +24800,15 @@ class ConicSurface extends ParametricSurface {
 /**
  * Unit cone. x² + y² = z², 0 <= z
  */
-ConicSurface.UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z);
-ConicSurface.prototype.uStep = PI$7 / 16;
-ConicSurface.prototype.vStep = 256;
-ConicSurface.prototype.sMin = 0;
-ConicSurface.prototype.sMax = PI$7;
-ConicSurface.prototype.tMin = 0;
-ConicSurface.prototype.tMax = 16;
+ConicSurface$$1.UNIT = new ConicSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
+ConicSurface$$1.prototype.uStep = PI$3 / 16;
+ConicSurface$$1.prototype.vStep = 256;
+ConicSurface$$1.prototype.sMin = 0;
+ConicSurface$$1.prototype.sMax = PI$3;
+ConicSurface$$1.prototype.tMin = 0;
+ConicSurface$$1.prototype.tMax = 16;
 
-const { PI: PI$8, cos: cos$5, sin: sin$5, abs: abs$7, sign: sign$5 } = Math;
-class EllipsoidSurface extends ParametricSurface {
+class EllipsoidSurface$$1 extends ParametricSurface$$1 {
     constructor(center, f1, f2, f3) {
         super();
         this.center = center;
@@ -23519,7 +24818,7 @@ class EllipsoidSurface extends ParametricSurface {
         assertVectors(center, f1, f2, f3);
         this.matrix = M4.forSys(f1, f2, f3, center);
         this.inverseMatrix = this.matrix.inversed();
-        this.normalDir = sign$5(this.f1.cross(this.f2).dot(this.f3));
+        this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.f3));
         this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir);
         this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix);
     }
@@ -23542,7 +24841,7 @@ class EllipsoidSurface extends ParametricSurface {
      * plane: normal1 DOT p = w
      */
     static unitISCurvesWithPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         let distPlaneCenter = Math.abs(plane.w);
         if (lt(distPlaneCenter, 1)) {
             // result is a circle
@@ -23550,9 +24849,10 @@ class EllipsoidSurface extends ParametricSurface {
             // intersection circle) pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 -
             // distPlaneCenter²)
             const isCircleRadius = Math.sqrt(1 - distPlaneCenter * distPlaneCenter);
+            const center = plane.anchor;
             const f1 = plane.normal1.getPerpendicular().toLength(isCircleRadius);
             const f2 = plane.normal1.cross(f1);
-            return [new EllipseCurve(plane.anchor, f1, f2)];
+            return [new EllipseCurve$$1(plane.anchor, f1, f2)];
         }
         else {
             return [];
@@ -23561,13 +24861,13 @@ class EllipsoidSurface extends ParametricSurface {
     static sphere(radius, center) {
         assertNumbers(radius);
         center && assertVectors(center);
-        return new EllipsoidSurface(center || V3.O, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius));
+        return new EllipsoidSurface$$1(center || V3.O, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius));
     }
     /**
      * x²/a² + y²/b² + z²/c² = 1
      */
     static forABC(a, b, c, center) {
-        return new EllipsoidSurface(center || V3.O, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c));
+        return new EllipsoidSurface$$1(center || V3.O, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c));
     }
     static calculateAreaSpheroid(a, b, c, edges) {
         assertf(() => a.isPerpendicularTo(b));
@@ -23580,7 +24880,7 @@ class EllipsoidSurface extends ParametricSurface {
         const circleRadius = a.length();
         const c1 = c.unit();
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof EllipseCurve) {
+            if (edge.curve instanceof EllipseCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
                     const localAt = inverseMatrix.transformPoint(at);
@@ -23617,16 +24917,16 @@ class EllipsoidSurface extends ParametricSurface {
     }
     isCurvesWithPlane(plane) {
         const planeLC = plane.transform(this.inverseMatrix);
-        return EllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix));
+        return EllipsoidSurface$$1.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix));
     }
     isCurvesWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isCurvesWithPlane(surface.plane);
         }
-        else if (surface instanceof CylinderSurface) {
+        else if (surface instanceof CylinderSurface$$1) {
             if (surface.dir.isParallelTo(this.dir1)) {
                 const ellipseProjected = surface.baseCurve.transform(M4.project(this.baseEllipse.getPlane(), this.dir1));
-                return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3(info.p, this.dir1));
+                return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3$$1(info.p, this.dir1));
             }
             else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
                 assert$1(false);
@@ -23635,21 +24935,21 @@ class EllipsoidSurface extends ParametricSurface {
                 assert$1(false);
             }
         }
-        else if (surface instanceof ProjectedCurveSurface) {
+        else if (surface instanceof ProjectedCurveSurface$$1) {
             const surfaceLC = surface.transform(this.inverseMatrix);
-            const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir, 0));
-            const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT);
-            const insideIntervals = iii(ists, EllipsoidSurface.UNIT, baseCurveLC);
+            const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
+            const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface$$1.UNIT);
+            const insideIntervals = iii(ists, EllipsoidSurface$$1.UNIT, baseCurveLC);
             const curves = insideIntervals.flatMap(ii => {
-                const aLine = new L3(baseCurveLC.at(ii[0]), surfaceLC.dir);
-                const a = EllipsoidSurface.UNIT.isTsForLine(aLine).map(t => aLine.at(t));
-                const bLine = new L3(baseCurveLC.at(ii[1]), surfaceLC.dir);
-                const b = EllipsoidSurface.UNIT.isTsForLine(bLine).map(t => bLine.at(t));
+                const aLine = new L3$$1(baseCurveLC.at(ii[0]), surfaceLC.dir);
+                const a = EllipsoidSurface$$1.UNIT.isTsForLine(aLine).map(t => aLine.at(t));
+                const bLine = new L3$$1(baseCurveLC.at(ii[1]), surfaceLC.dir);
+                const b = EllipsoidSurface$$1.UNIT.isTsForLine(bLine).map(t => bLine.at(t));
                 return [0, 1].map(i => {
                     let aP = a[i] || a[0], bP = b[i] || b[0];
                     0 !== i && ([aP, bP] = [bP, aP]);
-                    assert$1(EllipsoidSurface.UNIT.containsPoint(aP));
-                    assert$1(EllipsoidSurface.UNIT.containsPoint(bP));
+                    assert$1(EllipsoidSurface$$1.UNIT.containsPoint(aP));
+                    assert$1(EllipsoidSurface$$1.UNIT.containsPoint(bP));
                     return PICurve.forStartEnd(surface, this.asEllipsoidSurface(), aP, bP);
                 });
             });
@@ -23657,17 +24957,17 @@ class EllipsoidSurface extends ParametricSurface {
         }
     }
     isTsForLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
         const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
         const dirLC = this.inverseMatrix.transformVector(line.dir1);
-        return EllipsoidSurface.unitISTsWithLine(anchorLC, dirLC);
+        return EllipsoidSurface$$1.unitISTsWithLine(anchorLC, dirLC);
     }
     isCoplanarTo(surface) {
         if (this === surface)
             return true;
-        if (surface.constructor !== EllipsoidSurface)
+        if (surface.constructor !== EllipsoidSurface$$1)
             return false;
         if (!this.center.like(surface.center))
             return false;
@@ -23684,7 +24984,7 @@ class EllipsoidSurface extends ParametricSurface {
         return lt(distLocalEllipseCenter, 1) && localEllipse.isCircular() && localEllipse.f1.hasLength(correctRadius);
     }
     containsCurve(curve) {
-        if (curve instanceof EllipseCurve) {
+        if (curve instanceof EllipseCurve$$1) {
             return this.containsEllipse(curve);
         }
         else {
@@ -23692,13 +24992,13 @@ class EllipsoidSurface extends ParametricSurface {
         }
     }
     transform(m4) {
-        return new EllipsoidSurface(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2), m4.transformVector(this.f3));
+        return new EllipsoidSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2), m4.transformVector(this.f3));
     }
     isInsideOut() {
         return this.f1.cross(this.f2).dot(this.f3) < 0;
     }
     flipped() {
-        return new EllipsoidSurface(this.center, this.f1, this.f2, this.f3.negated());
+        return new EllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3.negated());
     }
     toMesh(subdivisions = 3) {
         return Mesh.sphere(subdivisions).transform(this.matrix);
@@ -23745,17 +25045,17 @@ class EllipsoidSurface extends ParametricSurface {
     // = d/dp (this.inverseMatrix.transformPoint(p).length() - 1)
     // = d/dp (this.inverseMatrix.transformPoint(p) * this.inverseMatrix.transformPoint(pWC).unit()
     dpds() {
-        return (s, t) => this.matrix.transformVector(new V3(sin$5(s) * -cos$5(t), cos$5(s) * cos$5(t), 0));
+        return (s, t) => this.matrix.transformVector(new V3(sin$1(s) * -cos$1(t), cos$1(s) * cos$1(t), 0));
     }
     dpdt() {
-        return (s, t) => this.matrix.transformVector(new V3(sin$5(t) * -cos$5(s), -sin$5(s) * sin$5(t), cos$5(t)));
+        return (s, t) => this.matrix.transformVector(new V3(sin$1(t) * -cos$1(s), -sin$1(s) * sin$1(t), cos$1(t)));
     }
     stPFunc() {
         return (pWC, hint) => {
             const pLC = this.inverseMatrix.transformPoint(pWC);
             let alpha = pLC.angleXY();
-            if (abs$7(alpha) > Math.PI - NLA_PRECISION) {
-                assert$1(hint == -PI$8 || hint == PI$8);
+            if (abs$2(alpha) > Math.PI - NLA_PRECISION) {
+                assert$1(hint == -PI$3 || hint == PI$3);
                 alpha = hint;
             }
             let beta = Math.asin(pLC.z);
@@ -23828,13 +25128,13 @@ class EllipsoidSurface extends ParametricSurface {
         const U_SIGMA = U.times(SIGMA);
         // column vectors of U_SIGMA
         const [mainF1, mainF2, mainF3] = arrayFromFunction(3, i => new V3(U_SIGMA.m[i], U_SIGMA.m[i + 4], U_SIGMA.m[i + 8]));
-        return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3);
+        return new EllipsoidSurface$$1(this.center, mainF1, mainF2, mainF3);
     }
     containsPoint(p) {
         return eq0(this.implicitFunction()(p));
     }
     boundsFunction() {
-        return (a, b) => between(b, -PI$8, PI$8);
+        return (a, b) => between(b, -PI$3, PI$3);
     }
     volume() {
         return 4 / 3 * Math.PI * this.f1.dot(this.f2.cross(this.f3));
@@ -23902,10 +25202,10 @@ class EllipsoidSurface extends ParametricSurface {
     //}
     loopContainsPoint(loop, p) {
         assertVectors(p);
-        const testLine = new EllipseCurve(this.center, this.matrix.transformVector(this.inverseMatrix.transformPoint(p).withElement('z', 0).unit()), this.f3);
+        const testLine = new EllipseCurve$$1(this.center, this.matrix.transformVector(this.inverseMatrix.transformPoint(p).withElement('z', 0).unit()), this.f3);
         const pT = testLine.pointT(p);
         const lineOut = testLine.normal;
-        const testPlane = P3.normalOnAnchor(testLine.normal, p);
+        const testPlane = P3$$1.normalOnAnchor(testLine.normal, p);
         const colinearEdges = loop.map((edge) => edge.curve.isColinearTo(testLine));
         let inside = false;
         function logIS(isP) {
@@ -23913,7 +25213,7 @@ class EllipsoidSurface extends ParametricSurface {
             if (eq(pT, isT)) {
                 return true;
             }
-            else if (pT < isT && le(isT, PI$8)) {
+            else if (pT < isT && le(isT, PI$3)) {
                 inside = !inside;
             }
         }
@@ -23924,13 +25224,13 @@ class EllipsoidSurface extends ParametricSurface {
             if (colinearEdges[edgeIndex]) {
                 const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b);
                 if (le(Math.min(lineAT, lineBT), pT) && ge(pT, Math.max(lineAT, lineBT))) {
-                    return PointVsFace.ON_EDGE;
+                    return PointVsFace$$1.ON_EDGE;
                 }
                 // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
                 if (nextInside) {
                     if (logIS(edge.b))
-                        return PointVsFace.ON_EDGE;
+                        return PointVsFace$$1.ON_EDGE;
                 }
             }
             else {
@@ -23939,11 +25239,11 @@ class EllipsoidSurface extends ParametricSurface {
                         if (!testLine.containsPoint(edge.b))
                             continue;
                         // endpoint lies on intersection testLine
-                        const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) < 0;
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                        const edgeInside = dotCurve$$1(lineOut, edge.bDir, edge.bDDT) < 0;
+                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
                         if (edgeInside != nextInside) {
                             if (logIS(edge.b))
-                                return PointVsFace.ON_EDGE;
+                                return PointVsFace$$1.ON_EDGE;
                         }
                     }
                     else if (edgeT != edge.aT) {
@@ -23952,19 +25252,19 @@ class EllipsoidSurface extends ParametricSurface {
                             continue;
                         // edge crosses testLine, neither starts nor ends on it
                         if (logIS(p))
-                            return PointVsFace.ON_EDGE;
+                            return PointVsFace$$1.ON_EDGE;
                         // TODO: tangents?
                     }
                 }
             }
         }
-        return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE;
+        return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
     }
     surfaceAreaApprox() {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
         const mainAxes = this.mainAxes(), a = mainAxes.f1.length(), b = mainAxes.f2.length(), c = mainAxes.f3.length();
         const p = 1.6075;
-        return 4 * PI$8 * Math.pow((Math.pow(a * b, p) + Math.pow(b * c, p) + Math.pow(c * a, p)) / 3, 1 / p);
+        return 4 * PI$3 * Math.pow((Math.pow(a * b, p) + Math.pow(b * c, p) + Math.pow(c * a, p)) / 3, 1 / p);
     }
     surfaceArea() {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
@@ -23974,11 +25274,11 @@ class EllipsoidSurface extends ParametricSurface {
             if (c < a) {
                 const eccentricity2 = 1 - Math.pow(c, 2) / Math.pow(a, 2);
                 const eccentricity = Math.sqrt(eccentricity2);
-                return 2 * PI$8 * Math.pow(a, 2) * (1 + (1 - eccentricity2) / Math.sqrt(eccentricity) * Math.atanh(eccentricity));
+                return 2 * PI$3 * Math.pow(a, 2) * (1 + (1 - eccentricity2) / Math.sqrt(eccentricity) * Math.atanh(eccentricity));
             }
             else {
                 const eccentricity = Math.sqrt(1 - Math.pow(a, 2) / Math.pow(c, 2));
-                return 2 * PI$8 * Math.pow(a, 2) * (1 + c / a / eccentricity * Math.asin(eccentricity));
+                return 2 * PI$3 * Math.pow(a, 2) * (1 + c / a / eccentricity * Math.asin(eccentricity));
             }
         }
         if (eq(a, b)) {
@@ -23994,22 +25294,21 @@ class EllipsoidSurface extends ParametricSurface {
         const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
         const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
         const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
-        return 2 * PI$8 * Math.pow(c, 2) + 2 * PI$8 * a * b / Math.sin(phi) * (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2));
+        return 2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi) * (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2));
     }
     getSeamPlane() {
-        return P3.forAnchorAndPlaneVectors(this.center, this.f1, this.f3);
+        return P3$$1.forAnchorAndPlaneVectors(this.center, this.f1, this.f3);
     }
 }
-EllipsoidSurface.UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z);
-EllipsoidSurface.prototype.uStep = PI$8 / 32;
-EllipsoidSurface.prototype.vStep = PI$8 / 32;
+EllipsoidSurface$$1.UNIT = new EllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
+EllipsoidSurface$$1.prototype.uStep = PI$3 / 32;
+EllipsoidSurface$$1.prototype.vStep = PI$3 / 32;
 
-const { sign: sign$6 } = Math;
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
  * Choose dir appropriately to select surface orientation.
  */
-class ProjectedCurveSurface extends ParametricSurface {
+class ProjectedCurveSurface$$1 extends ParametricSurface$$1 {
     constructor(baseCurve, dir, sMin = baseCurve.tMin, sMax = baseCurve.tMax, tMin = -100, tMax = 100) {
         super();
         this.baseCurve = baseCurve;
@@ -24018,7 +25317,7 @@ class ProjectedCurveSurface extends ParametricSurface {
         this.sMax = sMax;
         this.tMin = tMin;
         this.tMax = tMax;
-        assertInst(Curve, baseCurve);
+        assertInst(Curve$$1, baseCurve);
         assertInst(V3, dir);
         assertNumbers(sMin, sMax, tMin, tMax);
         assert$1(sMin < sMax);
@@ -24052,32 +25351,32 @@ class ProjectedCurveSurface extends ParametricSurface {
         return this.baseCurve.at(s).plus(this.dir.times(t));
     }
     pointFoot(pWC, ss, st) {
-        const basePlane = new P3(this.dir, 0);
+        const basePlane = new P3$$1(this.dir, 0);
         const projCurve = this.baseCurve.project(basePlane);
         const projPoint = basePlane.projectedPoint(pWC);
-        const t = projCurve.closestTToPoint(projPoint, ss);
+        const t = projCurve.closestTToPoint(projPoint, ss, this.sMin, this.sMax);
         const z = pWC.minus(this.baseCurve.at(t)).dot(this.dir);
         return new V3(t, z, 0);
     }
     stPFunc() {
-        const projPlane = new P3(this.dir.unit(), 0);
+        const projPlane = new P3$$1(this.dir.unit(), 0);
         const projBaseCurve = this.baseCurve.project(projPlane);
         return (pWC) => {
             const projPoint = projPlane.projectedPoint(pWC);
-            const t = projBaseCurve.pointT(projPoint);
-            const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC);
+            const t = projBaseCurve.pointT(projPoint, this.sMin, this.sMax);
+            const z = L3$$1.pointT(this.baseCurve.at(t), this.dir, pWC);
             return new V3(t, z, 0);
         };
     }
     isCurvesWithPlane(plane) {
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         if (this.dir.isPerpendicularTo(plane.normal1)) {
             const ts = this.baseCurve.isTsWithPlane(plane);
             return ts.map(t => {
                 const l3dir = 0 < this.baseCurve.tangentAt(t).dot(plane.normal1)
                     ? this.dir
                     : this.dir.negated();
-                return new L3(this.baseCurve.at(t), l3dir.unit());
+                return new L3$$1(this.baseCurve.at(t), l3dir.unit());
             });
         }
         else {
@@ -24090,32 +25389,29 @@ class ProjectedCurveSurface extends ParametricSurface {
         }
     }
     isCurvesWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isCurvesWithPlane(surface.plane);
         }
-        if (surface instanceof ProjectedCurveSurface) {
+        if (surface instanceof ProjectedCurveSurface$$1) {
             const dir1 = surface.dir;
             if (this.dir.isParallelTo(dir1)) {
                 const ts = surface.baseCurve.isTsWithSurface(this);
                 return ts.map(t => {
                     const p = surface.baseCurve.at(t);
                     const correctDir = this.normalP(p).cross(surface.normalP(p));
-                    return new L3(p, dir1.times(sign$6(correctDir.dot(dir1))));
+                    return new L3$$1(p, dir1.times(sign$1(correctDir.dot(dir1))));
                 });
             }
-            else if (ImplicitSurface.is(surface)) {
-                let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / surface.dir.length(), 0.05);
+            else {
+                let curves2 = ImplicitSurface$$1.is(surface)
+                    ? ParametricSurface$$1.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / surface.dir.length(), 0.05)
+                    : ParametricSurface$$1.isCurvesParametricParametricSurface(this, surface, 0.05, 0.1 / surface.dir.length(), 0.05);
                 curves2 = this.clipCurves(curves2);
                 curves2 = surface.clipCurves(curves2);
                 return curves2;
             }
-            else {
-                const line = new L3(this.baseCurve.at(0.5), this.dir);
-                const startPoint = line.at(surface.isTsForLine(line)[0]);
-                return [new PPCurve(this, surface, startPoint)];
-            }
         }
-        if (surface instanceof SemiEllipsoidSurface) {
+        if (surface instanceof SemiEllipsoidSurface$$1) {
             return surface.isCurvesWithSurface(this);
         }
         return super.isCurvesWithSurface(surface);
@@ -24125,21 +25421,21 @@ class ProjectedCurveSurface extends ParametricSurface {
         return this.pSTFunc()(uv.x, uv.y).like(pWC);
     }
     containsCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof L3$$1) {
             return this.dir.isParallelTo(curve.dir1) && this.containsPoint(curve.anchor);
         }
-        if (curve instanceof PICurve$1) {
+        if (curve instanceof ImplicitCurve$$1) {
             return super.containsCurve(curve);
         }
         // project baseCurve and test curve onto a common plane and check if the curves are alike
-        const projPlane = new P3(this.dir.unit(), 0);
+        const projPlane = new P3$$1(this.dir.unit(), 0);
         const projBaseCurve = this.baseCurve.project(projPlane);
         const projCurve = curve.project(projPlane);
         return projBaseCurve.isColinearTo(projCurve);
     }
     isCoplanarTo(surface) {
         return this == surface ||
-            hasConstructor(surface, ProjectedCurveSurface)
+            hasConstructor(surface, ProjectedCurveSurface$$1)
                 && this.dir.isParallelTo(surface.dir)
                 && this.containsCurve(surface.baseCurve);
     }
@@ -24155,7 +25451,7 @@ class ProjectedCurveSurface extends ParametricSurface {
     loopContainsPoint(loop, p) {
         assertVectors(p);
         assert$1(isFinite(p.x), p.y, p.z);
-        const line = new L3(p, this.dir.unit());
+        const line = new L3$$1(p, this.dir.unit());
         const ptpf = this.stPFunc();
         const pp = ptpf(p);
         if (isNaN(pp.x)) {
@@ -24163,15 +25459,15 @@ class ProjectedCurveSurface extends ParametricSurface {
             assert$1(false);
         }
         const lineOut = this.baseCurve.tangentAt(pp.x).rejectedFrom(this.dir);
-        return Surface.loopContainsPointGeneral(loop, p, line, lineOut);
+        return Surface$$1.loopContainsPointGeneral(loop, p, line, lineOut);
     }
     transform(m4) {
         const f = m4.isMirroring() ? -1 : 1;
         return new this.constructor(this.baseCurve.transform(m4), m4.transformVector(this.dir).times(f), this.sMin, this.sMax, 1 == f ? this.tMin : -this.tMax, 1 == f ? this.tMax : -this.tMin);
     }
     isTsForLine(line) {
-        assertInst(L3, line);
-        const projPlane = new P3(this.dir.unit(), 0);
+        assertInst(L3$$1, line);
+        const projPlane = new P3$$1(this.dir.unit(), 0);
         const projDir = projPlane.projectedVector(line.dir1);
         if (projDir.likeO()) {
             // line is parallel to this.dir
@@ -24187,23 +25483,22 @@ class ProjectedCurveSurface extends ParametricSurface {
         return new this.constructor(this.baseCurve, this.dir.negated(), this.sMin, this.sMax, -this.tMax, -this.tMin);
     }
 }
-ProjectedCurveSurface.prototype.uStep = 1 / 40;
-ProjectedCurveSurface.prototype.vStep = 256;
+ProjectedCurveSurface$$1.prototype.uStep = 1 / 40;
+ProjectedCurveSurface$$1.prototype.vStep = 256;
 
-const { PI: PI$9, abs: abs$8 } = Math;
-class CylinderSurface extends ProjectedCurveSurface {
+class CylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     constructor(baseEllipse, dir1, zMin = -Infinity, zMax = Infinity) {
         super(baseEllipse, dir1, undefined, undefined, zMin, zMax);
         assert$1(2 == arguments.length);
         assertVectors(dir1);
-        assertInst(EllipseCurve, baseEllipse);
+        assertInst(EllipseCurve$$1, baseEllipse);
         //assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
         assert$1(dir1.hasLength(1));
         this.matrix = M4.forSys(baseEllipse.f1, baseEllipse.f2, dir1, baseEllipse.center);
         this.inverseMatrix = this.matrix.inversed();
     }
     static cylinder(radius) {
-        return new CylinderSurface(new EllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z);
+        return new CylinderSurface$$1(new EllipseCurve$$1(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z);
     }
     /**
      *
@@ -24231,13 +25526,13 @@ class CylinderSurface extends ProjectedCurveSurface {
     loopContainsPoint(loop, p) {
         assertVectors(p);
         // create plane that goes through cylinder seam
-        const line = new L3(p, this.dir);
-        const seamBase = this.baseCurve.at(PI$9);
+        const line = new L3$$1(p, this.dir);
+        const seamBase = this.baseCurve.at(PI$3);
         const lineOut = this.dir.cross(this.normalP(p));
-        return Surface.loopContainsPointGeneral(loop, p, line, lineOut);
+        return Surface$$1.loopContainsPointGeneral(loop, p, line, lineOut);
     }
     isTsForLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
         const localDir = this.inverseMatrix.transformVector(line.dir1);
@@ -24246,12 +25541,12 @@ class CylinderSurface extends ProjectedCurveSurface {
             return [];
         }
         const localAnchor = this.inverseMatrix.transformPoint(line.anchor);
-        assert$1(!CylinderSurface.unitISLineTs(localAnchor, localDir).length || !isNaN(CylinderSurface.unitISLineTs(localAnchor, localDir)[0]), 'sad ' + localDir);
-        return CylinderSurface.unitISLineTs(localAnchor, localDir);
+        assert$1(!CylinderSurface$$1.unitISLineTs(localAnchor, localDir).length || !isNaN(CylinderSurface$$1.unitISLineTs(localAnchor, localDir)[0]), 'sad ' + localDir);
+        return CylinderSurface$$1.unitISLineTs(localAnchor, localDir);
     }
     isCoplanarTo(surface) {
         return this == surface ||
-            surface instanceof CylinderSurface
+            surface instanceof CylinderSurface$$1
                 && this.dir.isParallelTo(surface.dir)
                 && this.containsEllipse(surface.baseCurve);
     }
@@ -24268,13 +25563,13 @@ class CylinderSurface extends ProjectedCurveSurface {
         return this.baseCurve == ellipse || this.baseCurve.isColinearTo(ellipseProjected);
     }
     containsCurve(curve) {
-        if (curve instanceof EllipseCurve) {
+        if (curve instanceof EllipseCurve$$1) {
             return this.containsEllipse(curve);
         }
-        else if (curve instanceof L3) {
+        else if (curve instanceof L3$$1) {
             return this.containsLine(curve);
         }
-        else if (curve instanceof SemiEllipseCurve) {
+        else if (curve instanceof SemiEllipseCurve$$1) {
             return this.containsEllipse(curve);
         }
         else {
@@ -24300,18 +25595,18 @@ class CylinderSurface extends ProjectedCurveSurface {
         return (pWC, hint) => {
             const pLC = this.inverseMatrix.transformPoint(pWC);
             let angle = pLC.angleXY();
-            if (abs$8(angle) > Math.PI - NLA_PRECISION) {
-                assert$1(hint == -PI$9 || hint == PI$9);
+            if (abs$2(angle) > Math.PI - NLA_PRECISION) {
+                assert$1(hint == -PI$3 || hint == PI$3);
                 angle = hint;
             }
             return new V3(angle, pLC.z, 0);
         };
     }
     isCurvesWithSurface(surface) {
-        return SemiCylinderSurface.prototype.isCurvesWithSurface.apply(this, surface);
+        return SemiCylinderSurface$$1.prototype.isCurvesWithSurface.apply(this, surface);
     }
     getCenterLine() {
-        return new L3(this.baseCurve.center, this.dir);
+        return new L3$$1(this.baseCurve.center, this.dir);
     }
     edgeLoopCCW(loop) {
         if (loop.length < 56) {
@@ -24332,20 +25627,19 @@ class CylinderSurface extends ProjectedCurveSurface {
         return this.baseCurve.normal.dot(this.dir) > 0;
     }
     getSeamPlane() {
-        return P3.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir);
+        return P3$$1.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir);
     }
 }
-CylinderSurface.UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z);
-CylinderSurface.prototype.uStep = TAU / 128;
-CylinderSurface.prototype.vStep = 256;
+CylinderSurface$$1.UNIT = new CylinderSurface$$1(EllipseCurve$$1.XY, V3.Z);
+CylinderSurface$$1.prototype.uStep = TAU / 128;
+CylinderSurface$$1.prototype.vStep = 256;
 
-const { PI: PI$10, cos: cos$6, sin: sin$6, min: min$6, max: max$5, sign: sign$7, tan: tan$2, ceil: ceil$7, floor: floor$6, abs: abs$9, sqrt: sqrt$3, pow: pow$3, atan2: atan2$2, round: round$2 } = Math;
 /**
  * Rotation surface with r = f(z)
  */
-class RotationREqFOfZ extends ParametricSurface {
+class RotationREqFOfZ$$1 extends ParametricSurface$$1 {
     constructor(matrix, rt, // r(z)
-    tMin, tMax, normalDir, drdz = z => (rt(z + EPS) - rt(z)) / EPS) {
+    tMin, tMax, normalDir, drdz = z => (rt(z + EPS$$1) - rt(z)) / EPS$$1) {
         super();
         this.matrix = matrix;
         this.rt = rt;
@@ -24362,10 +25656,10 @@ class RotationREqFOfZ extends ParametricSurface {
         return [this.matrix, this.rt, this.tMin, this.tMax, this.normalDir, this.drdz];
     }
     flipped() {
-        return new RotationREqFOfZ(this.matrix, this.rt, this.tMin, this.tMax, -this.normalDir, this.drdz);
+        return new RotationREqFOfZ$$1(this.matrix, this.rt, this.tMin, this.tMax, -this.normalDir, this.drdz);
     }
     transform(m4) {
-        return new RotationREqFOfZ(m4.times(this.matrix), this.rt, this.tMin, this.tMax, this.normalDir, this.drdz);
+        return new RotationREqFOfZ$$1(m4.times(this.matrix), this.rt, this.tMin, this.tMax, this.normalDir, this.drdz);
     }
     containsPoint(p) {
         return eq0(this.implicitFunction()(p));
@@ -24379,7 +25673,7 @@ class RotationREqFOfZ extends ParametricSurface {
     dpds() {
         return (s, t) => {
             const radius = this.rt(t);
-            return this.matrix.transformVector(new V3(radius * -sin$6(s), radius * cos$6(s), 0));
+            return this.matrix.transformVector(new V3(radius * -sin$1(s), radius * cos$1(s), 0));
         };
     }
     /**
@@ -24388,7 +25682,7 @@ class RotationREqFOfZ extends ParametricSurface {
     dpdt() {
         return (s, t) => {
             const drdt = this.drdz(t);
-            return this.matrix.transformVector(new V3(drdt * cos$6(s), drdt * sin$6(s), 1));
+            return this.matrix.transformVector(new V3(drdt * cos$1(s), drdt * sin$1(s), 1));
         };
     }
     normalSTFunc() {
@@ -24416,28 +25710,27 @@ class RotationREqFOfZ extends ParametricSurface {
     stPFunc() {
         return (pWC) => {
             const pLC = this.matrixInverse.transformPoint(pWC);
-            return new V3(atan2$2(pLC.y, pLC.x), pLC.z, 0);
+            return new V3(atan2(pLC.y, pLC.x), pLC.z, 0);
         };
     }
 }
-Object.assign(RotationREqFOfZ.prototype, ImplicitSurface.prototype);
-RotationREqFOfZ.prototype.sMin = 0;
-RotationREqFOfZ.prototype.sMax = PI$10;
+Object.assign(RotationREqFOfZ$$1.prototype, ImplicitSurface$$1.prototype);
+RotationREqFOfZ$$1.prototype.sMin = 0;
+RotationREqFOfZ$$1.prototype.sMax = PI$3;
 
-const { PI: PI$11, sign: sign$8 } = Math;
-class SemiCylinderSurface extends ProjectedCurveSurface {
+class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     constructor(baseCurve, dir1, sMin, sMax, zMin = -Infinity, zMax = Infinity) {
         super(baseCurve, dir1, sMin, sMax, zMin, zMax);
-        assertInst(SemiEllipseCurve, baseCurve);
+        assertInst(SemiEllipseCurve$$1, baseCurve);
         //assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
         this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center);
         this.inverseMatrix = this.matrix.inversed();
-        this.normalDir = sign$8(this.baseCurve.normal.dot(this.dir));
+        this.normalDir = sign$1(this.baseCurve.normal.dot(this.dir));
         this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir);
         this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix);
     }
     static semicylinder(radius) {
-        return new SemiCylinderSurface(new SemiEllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, undefined, undefined);
+        return new SemiCylinderSurface$$1(new SemiEllipseCurve$$1(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, undefined, undefined);
     }
     /**
      *
@@ -24457,7 +25750,7 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
         const a = Math.pow(dx, 2) + Math.pow(dy, 2);
         const b = 2 * (ax * dx + ay * dy);
         const c = Math.pow(ax, 2) + Math.pow(ay, 2) - 1;
-        return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)));
+        return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve$$1.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)));
     }
     getConstructorParameters() {
         return [this.baseCurve, this.dir, this.sMin, this.sMax, this.tMin, this.tMax];
@@ -24470,13 +25763,13 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
         if (!this.containsPoint(p))
             return OUTSIDE;
         // create plane that goes through cylinder seam
-        const line = new L3(p, this.dir.unit());
-        const seamBase = this.baseCurve.at(PI$11);
+        const line = new L3$$1(p, this.dir.unit());
+        const seamBase = this.baseCurve.at(PI$3);
         const lineOut = this.dir.cross(this.normalP(p));
-        return Surface.loopContainsPointGeneral(loop, p, line, lineOut);
+        return Surface$$1.loopContainsPointGeneral(loop, p, line, lineOut);
     }
     isTsForLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
         const dirLC = this.inverseMatrix.transformVector(line.dir1);
@@ -24485,12 +25778,12 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
             return [];
         }
         const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
-        assert$1(!SemiCylinderSurface.unitISLineTs(anchorLC, dirLC).length || !isNaN(SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)[0]), 'sad ' + dirLC);
-        return SemiCylinderSurface.unitISLineTs(anchorLC, dirLC);
+        assert$1(!SemiCylinderSurface$$1.unitISLineTs(anchorLC, dirLC).length || !isNaN(SemiCylinderSurface$$1.unitISLineTs(anchorLC, dirLC)[0]), 'sad ' + dirLC);
+        return SemiCylinderSurface$$1.unitISLineTs(anchorLC, dirLC);
     }
     isCoplanarTo(surface) {
         return this == surface ||
-            hasConstructor(surface, SemiCylinderSurface)
+            hasConstructor(surface, SemiCylinderSurface$$1)
                 && this.dir.isParallelTo(surface.dir)
                 && this.containsSemiEllipse(surface.baseCurve, false);
     }
@@ -24508,13 +25801,13 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
             (!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y));
     }
     containsCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof L3$$1) {
             return this.containsLine(curve);
         }
-        else if (curve instanceof SemiEllipseCurve) {
+        else if (curve instanceof SemiEllipseCurve$$1) {
             return this.containsSemiEllipse(curve);
         }
-        else if (curve instanceof BezierCurve) {
+        else if (curve instanceof BezierCurve$$1) {
             return false;
         }
         else {
@@ -24535,25 +25828,25 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
     }
     containsPoint(pWC) {
         const pLC = this.inverseMatrix.transformPoint(pWC);
-        return SemiEllipseCurve.XYLCValid(pLC);
+        return SemiEllipseCurve$$1.XYLCValid(pLC);
     }
     stP(pWC) {
         assert$1(arguments.length == 1);
         const pLC = this.inverseMatrix.transformPoint(pWC);
-        const u = SemiEllipseCurve.XYLCPointT(pLC);
+        const u = SemiEllipseCurve$$1.XYLCPointT(pLC);
         return new V3(u, pLC.z, 0);
     }
     isCurvesWithSurface(surface2) {
-        if (surface2 instanceof ProjectedCurveSurface) {
+        if (surface2 instanceof ProjectedCurveSurface$$1) {
             if (surface2.dir.isParallelTo(this.dir)) {
                 const projectedCurve = surface2.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir));
                 return this.baseCurve.isInfosWithCurve(projectedCurve).map(info => {
-                    const lineDir = sign$8(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir)) || 1;
-                    return new L3(info.p, this.dir.times(lineDir));
+                    const lineDir = sign$1(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir)) || 1;
+                    return new L3$$1(info.p, this.dir.times(lineDir));
                 });
             }
         }
-        if (surface2 instanceof SemiCylinderSurface) {
+        if (surface2 instanceof SemiCylinderSurface$$1) {
             if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
                 throw new Error();
             }
@@ -24561,26 +25854,25 @@ class SemiCylinderSurface extends ProjectedCurveSurface {
         return super.isCurvesWithSurface(surface2);
     }
     getCenterLine() {
-        return new L3(this.baseCurve.center, this.dir);
+        return new L3$$1(this.baseCurve.center, this.dir);
     }
     facesOutwards() {
         return this.baseCurve.normal.dot(this.dir) > 0;
     }
     getSeamPlane() {
         let normal = this.baseCurve.f1.cross(this.dir);
-        normal = normal.times(-sign$8(normal.dot(this.baseCurve.f2)));
-        return P3.normalOnAnchor(normal, this.baseCurve.center);
+        normal = normal.times(-sign$1(normal.dot(this.baseCurve.f2)));
+        return P3$$1.normalOnAnchor(normal, this.baseCurve.center);
     }
     clipCurves(curves) {
         return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()));
     }
 }
-SemiCylinderSurface.UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1);
-SemiCylinderSurface.prototype.uStep = TAU / 32;
-SemiCylinderSurface.prototype.vStep = 256;
+SemiCylinderSurface$$1.UNIT = new SemiCylinderSurface$$1(SemiEllipseCurve$$1.UNIT, V3.Z, undefined, undefined, 0, 1);
+SemiCylinderSurface$$1.prototype.uStep = TAU / 32;
+SemiCylinderSurface$$1.prototype.vStep = 256;
 
-const { PI: PI$12, min: min$7, max: max$6, sign: sign$9, abs: abs$10, sqrt: sqrt$4 } = Math;
-class SemiEllipsoidSurface extends EllipsoidSurface {
+class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
     constructor(center, f1, f2, f3) {
         super(center, f1, f2, f3);
         this.center = center;
@@ -24590,25 +25882,25 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         assertVectors(center, f1, f2, f3);
         this.matrix = M4.forSys(f1, f2, f3, center);
         this.inverseMatrix = this.matrix.inversed();
-        this.normalDir = sign$9(this.f1.cross(this.f2).dot(this.f3));
+        this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.f3));
         this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir);
         this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix);
     }
     static unitArea(contour) {
         const totalArea = contour.map(edge => {
-            if (edge.curve instanceof PICurve$1) {
+            if (edge.curve instanceof PICurve$$1) {
                 const points = edge.curve.calcSegmentPoints(edge.aT, edge.bT, edge.a, edge.b, edge.aT > edge.bT, true);
                 let sum = 0;
                 for (let i = 0; i < points.length - 1; i++) {
                     const p = points[i], ppp = points[i + 1];
-                    sum += (abs$10(p.angleXY()) + abs$10(ppp.angleXY())) / 2 * (ppp.z - p.z);
+                    sum += (abs$2(p.angleXY()) + abs$2(ppp.angleXY())) / 2 * (ppp.z - p.z);
                 }
                 return sum;
             }
-            else if (edge.curve instanceof SemiEllipseCurve) {
+            else if (edge.curve instanceof SemiEllipseCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
-                    const angleXY = abs$10(at.angleXY());
+                    const angleXY = abs$2(at.angleXY());
                     //const arcLength = angleXY * Math.sqrt(1 - at.z ** 2) ( == at.lengthXY())
                     //const scaling = tangent.z / at.lengthXY()
                     return angleXY * tangent.z;
@@ -24649,24 +25941,24 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             // distPlaneCenter²)
             const isCircleRadius = Math.sqrt(1 - Math.pow(distPlaneCenter, 2));
             const anchorY = plane.normal1.y * plane.w;
-            const d = abs$10(distPlaneCenter * isCircleRadius);
+            const d = abs$2(distPlaneCenter * isCircleRadius);
             if (le(anchorY, -d) && !eq0(distPlaneCenter)) {
                 return [];
             }
             else if (le(anchorY, 0) && !plane.normal1.isParallelTo(V3.Y)) {
                 let f1 = plane.normal1.isParallelTo(V3.Y) ? V3.Z : plane.normal1.cross(V3.Y).toLength(isCircleRadius);
                 const f2 = f1.cross(plane.normal1);
-                const minEta = -anchorY / f2.y, minT = max$6(0, Math.asin(minEta));
-                return [new SemiEllipseCurve(plane.anchor, f1, f2, minT, PI$12 - minT)];
+                const minEta = -anchorY / f2.y, minT = max$1(0, Math.asin(minEta));
+                return [new SemiEllipseCurve$$1(plane.anchor, f1, f2, minT, PI$3 - minT)];
             }
             else {
                 const f2 = (plane.normal1.isParallelTo(V3.Y)
                     ? V3.X
                     : plane.normal1.cross(V3.Y)).toLength(isCircleRadius);
                 const f1 = f2.cross(plane.normal1);
-                const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max$6(-1, minXi - NLA_PRECISION));
-                return [new SemiEllipseCurve(plane.anchor, f1.negated(), f2, PI$12 - maxT, PI$12),
-                    new SemiEllipseCurve(plane.anchor, f1, f2.negated(), 0, maxT)];
+                const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max$1(-1, minXi - NLA_PRECISION));
+                return [new SemiEllipseCurve$$1(plane.anchor, f1.negated(), f2, PI$3 - maxT, PI$3),
+                    new SemiEllipseCurve$$1(plane.anchor, f1, f2.negated(), 0, maxT)];
             }
         }
         else {
@@ -24686,41 +25978,41 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
                 // the distance from the origin to the lot point is the distance to the intersection plane
                 function heron(a, b, c) {
                     const p = (a + b + c) / 2;
-                    return sqrt$4(p * (p - a) * (p - b) * (p - c));
+                    return sqrt(p * (p - a) * (p - b) * (p - c));
                 }
                 const triangleArea = heron(1, surfaceRadius, surfaceCenterDist);
                 const radius = triangleArea * 2 / surfaceCenterDist;
-                const isCurvesCenterDist = sign$9(1 + Math.pow(surfaceCenterDist, 2) - Math.pow(surfaceRadius, 2)) * sqrt$4(1 - Math.pow(radius, 2));
-                const plane = new P3(surface.center.unit(), isCurvesCenterDist);
-                return SemiEllipsoidSurface.unitISCurvesWithPlane(plane.flipped());
+                const isCurvesCenterDist = sign$1(1 + Math.pow(surfaceCenterDist, 2) - Math.pow(surfaceRadius, 2)) * sqrt(1 - Math.pow(radius, 2));
+                const plane = new P3$$1(surface.center.unit(), isCurvesCenterDist);
+                return SemiEllipsoidSurface$$1.unitISCurvesWithPlane(plane.flipped());
             }
         }
         assertNever();
     }
     static unitISCurvesWithSemiCylinderSurface(surface) {
-        if (new L3(surface.baseCurve.center, surface.dir).containsPoint(V3.O)) {
-            const projEllipse = surface.baseCurve.transform(M4.project(new P3(surface.dir, 0)));
+        if (new L3$$1(surface.baseCurve.center, surface.dir).containsPoint(V3.O)) {
+            const projEllipse = surface.baseCurve.transform(M4.project(new P3$$1(surface.dir, 0)));
             const f1Length = projEllipse.f1.length(), f2Length = projEllipse.f2.length();
-            if (lt(1, min$7(f1Length, f2Length)))
+            if (lt(1, min$1(f1Length, f2Length)))
                 return [];
             if (projEllipse.isCircular()) {
-                const distISCurveCenter = Math.sqrt(1 - Math.pow(min$7(1, f1Length), 2));
+                const distISCurveCenter = Math.sqrt(1 - Math.pow(min$1(1, f1Length), 2));
                 const isCurveCenter = (surface.dir.y < 0 ? surface.dir.negated() : surface.dir).times(distISCurveCenter);
                 // isCurve.at(t).y = isCurveCenter.y + projEllipse.f1.y * cos(t) + projEllipse.f2.y * sin(t) = 0
-                return [new SemiEllipseCurve(isCurveCenter, projEllipse.f1, projEllipse.f2)];
+                return [new SemiEllipseCurve$$1(isCurveCenter, projEllipse.f1, projEllipse.f2)];
             }
         }
         assert$1(false);
     }
     static sphere(radius, center = V3.O) {
         assertNumbers(radius);
-        return new SemiEllipsoidSurface(center, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius));
+        return new SemiEllipsoidSurface$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius));
     }
     /**
      * x²/a² + y²/b² + z²/c² = 1
      */
     static forABC(a, b, c, center = V3.O) {
-        return new SemiEllipsoidSurface(center, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c));
+        return new SemiEllipsoidSurface$$1(center, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c));
     }
     static calculateAreaSpheroid(a, b, c, edges) {
         assertf(() => a.isPerpendicularTo(b));
@@ -24733,7 +26025,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         const circleRadius = a.length();
         const c1 = c.unit();
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve) {
+            if (edge.curve instanceof SemiEllipseCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
                     const localAt = inverseMatrix.transformPoint(at);
@@ -24757,7 +26049,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
                 && this.matrix.equals(obj.matrix);
     }
     edgeLoopCCW(loop) {
-        return SemiEllipsoidSurface.unitArea(loop.map(edge => edge.transform(this.inverseMatrix))) > 0;
+        return SemiEllipsoidSurface$$1.unitArea(loop.map(edge => edge.transform(this.inverseMatrix))) > 0;
         //let totalAngle = 0
         //for (let i = 0; i < contour.length; i++) {
         //    const ipp = (i + 1) % contour.length
@@ -24775,7 +26067,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
     rootPoints() {
     }
     toMesh() {
-        return ParametricSurface.prototype.toMesh.call(this);
+        return ParametricSurface$$1.prototype.toMesh.call(this);
     }
     getConstructorParameters() {
         return [this.center, this.f1, this.f2, this.f3];
@@ -24784,24 +26076,25 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()));
     }
     isCurvesWithPCS(surface) {
-        let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.05);
+        let curves2 = ParametricSurface$$1.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.05);
         curves2 = this.clipCurves(curves2);
         curves2 = surface.clipCurves(curves2);
         return curves2;
+        //return []
         const surfaceLC = surface.transform(this.inverseMatrix);
         //const lcMinZ0RelO =
-        const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir, 0));
-        const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT);
+        const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
+        const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface$$1.UNIT);
         const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax)
             .filter(([a, b]) => baseCurveLC.at((a + b) / 2).length() < 1);
         const projectedCurves = [0, 1].map(id => {
             return (t) => {
                 const atSqr = snap(baseCurveLC.at(t).squared(), 1);
-                const lineISTs = sqrt$4(1 - atSqr);
+                const lineISTs = sqrt(1 - atSqr);
                 //assert(!isNaN(lineISTs))
                 return eq0(lineISTs)
                     ? baseCurveLC.at(t)
-                    : baseCurveLC.at(t).plus(surfaceLC.dir.times(sign$9(id - 0.5) * lineISTs));
+                    : baseCurveLC.at(t).plus(surfaceLC.dir.times(sign$1(id - 0.5) * lineISTs));
             };
         });
         const dProjectedCurves = [0, 1].map(id => {
@@ -24809,9 +26102,9 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
                 // d/dt sqrt(1 - baseCurveLC.at(t).squared())
                 // = -1/2 * 1/sqrt(1 - baseCurveLC.at(t).squared()) * -2*baseCurveLC.at(t) * baseCurveLC.tangentAt(t)
                 const atSqr = snap(baseCurveLC.at(t).squared(), 1);
-                const lineISTs = baseCurveLC.at(t).times(-1 / sqrt$4(1 - atSqr)).dot(baseCurveLC.tangentAt(t));
+                const lineISTs = baseCurveLC.at(t).times(-1 / sqrt(1 - atSqr)).dot(baseCurveLC.tangentAt(t));
                 //assert(!isNaN(lineISTs))
-                return baseCurveLC.tangentAt(t).plus(surfaceLC.dir.times(sign$9(id - 0.5) * lineISTs));
+                return baseCurveLC.tangentAt(t).plus(surfaceLC.dir.times(sign$1(id - 0.5) * lineISTs));
             };
         });
         //const f2 = t => sqrt(1 - baseCurveLC.at(t).squared())
@@ -24832,32 +26125,32 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
                 for (const [aT2, bT2] of ii2) {
                     let aP = projectedCurves[i](aT2), bP = projectedCurves[i](bT2);
                     0 === i && ([aP, bP] = [bP, aP]);
-                    assert$1(EllipsoidSurface.UNIT.containsPoint(aP));
-                    assert$1(EllipsoidSurface.UNIT.containsPoint(bP));
-                    curves.push(PICurve$1.forStartEnd(surface, this, this.matrix.transformPoint(bP), this.matrix.transformPoint(aP), undefined, 1));
+                    assert$1(EllipsoidSurface$$1.UNIT.containsPoint(aP));
+                    assert$1(EllipsoidSurface$$1.UNIT.containsPoint(bP));
+                    curves.push(PICurve$$1.forStartEnd(surface, this, this.matrix.transformPoint(bP), this.matrix.transformPoint(aP), undefined, 1));
                 }
             }
         }
         return surface.clipCurves(curves);
     }
     isCurvesWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.isCurvesWithPlane(surface.plane);
         }
-        else if (surface instanceof SemiCylinderSurface) {
+        else if (surface instanceof SemiCylinderSurface$$1) {
             return this.isCurvesWithSemiCylinderSurface(surface);
         }
-        else if (surface instanceof SemiEllipsoidSurface) {
+        else if (surface instanceof SemiEllipsoidSurface$$1) {
             const surfaceLC = surface.transform(this.inverseMatrix);
-            const curves = SemiEllipsoidSurface.unitISCurvesWithEllipsoidSurface(surfaceLC)
+            const curves = SemiEllipsoidSurface$$1.unitISCurvesWithEllipsoidSurface(surfaceLC)
                 .map(c => c.transform(this.matrix));
             return surface.clipCurves(curves);
         }
-        else if (surface instanceof ProjectedCurveSurface) {
+        else if (surface instanceof ProjectedCurveSurface$$1) {
             return this.isCurvesWithPCS(surface);
         }
-        else if (surface instanceof ParametricSurface) {
-            let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1, 0.05);
+        else if (surface instanceof ParametricSurface$$1) {
+            let curves2 = ParametricSurface$$1.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1, 0.05);
             curves2 = this.clipCurves(curves2);
             curves2 = surface.clipCurves(curves2);
             return curves2;
@@ -24868,38 +26161,32 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
     }
     isCurvesWithPlane(plane) {
         const planeLC = plane.transform(this.inverseMatrix);
-        return SemiEllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix));
+        return SemiEllipsoidSurface$$1.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix));
     }
     isCurvesWithSemiCylinderSurface(surface) {
-        if (L3.containsPoint(surface.baseCurve.center, surface.dir, this.center)) {
+        if (L3$$1.containsPoint(surface.baseCurve.center, surface.dir, this.center)) {
             assert$1(this.isSphere());
             const ellipseProjected = surface.baseCurve.transform(M4.project(surface.baseCurve.getPlane(), surface.dir));
             if (ellipseProjected.isCircular()) {
                 const thisRadius = this.f1.length();
                 const surfaceRadius = ellipseProjected.f1.length();
-                // sphereRadius² = distanceISFromCenter² + isRadius²
-                if (eq(thisRadius, surfaceRadius)) {
-                    // return
-                }
-                else if (surfaceRadius < thisRadius) {
-                }
                 assert$1(false);
             }
         }
         return this.isCurvesWithPCS(surface);
     }
     isTsForLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
         const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
         const dirLC = this.inverseMatrix.transformVector(line.dir1);
-        return SemiEllipsoidSurface.unitISTsWithLine(anchorLC, dirLC);
+        return SemiEllipsoidSurface$$1.unitISTsWithLine(anchorLC, dirLC);
     }
     isCoplanarTo(surface) {
         if (this === surface)
             return true;
-        if (!hasConstructor(surface, SemiEllipsoidSurface))
+        if (!hasConstructor(surface, SemiEllipsoidSurface$$1))
             return false;
         if (!this.center.like(surface.center))
             return false;
@@ -24919,7 +26206,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         //&& le(0, ellipseLC.getAABB().min.y)
     }
     containsCurve(curve) {
-        if (curve instanceof SemiEllipseCurve) {
+        if (curve instanceof SemiEllipseCurve$$1) {
             return this.containsEllipse(curve);
         }
         else {
@@ -24927,7 +26214,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         }
     }
     transform(m4) {
-        return new SemiEllipsoidSurface(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2), m4.transformVector(this.f3).times(m4.isMirroring() ? -1 : 1));
+        return new SemiEllipsoidSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2), m4.transformVector(this.f3).times(m4.isMirroring() ? -1 : 1));
     }
     isInsideOut() {
         return this.f1.cross(this.f2).dot(this.f3) < 0;
@@ -24948,7 +26235,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
     //    return this.inverseMatrix.transformVector(didpLC)
     //}
     flipped() {
-        return new SemiEllipsoidSurface(this.center, this.f1, this.f2, this.f3.negated());
+        return new SemiEllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3.negated());
     }
     normalSTFunc() {
         // ugh
@@ -24973,7 +26260,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
     stPFunc() {
         return (pWC) => {
             const pLC = this.inverseMatrix.transformPoint(pWC);
-            const alpha = abs$10(pLC.angleXY());
+            const alpha = abs$2(pLC.angleXY());
             const beta = Math.asin(clamp(pLC.z, -1, 1));
             assert$1(isFinite(alpha));
             assert$1(isFinite(beta));
@@ -25039,32 +26326,32 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         const U_SIGMA = U.times(SIGMA);
         // column vectors of U_SIGMA
         const [mainF1, mainF2, mainF3] = arrayFromFunction(3, i => new V3(U_SIGMA.m[i], U_SIGMA.m[i + 4], U_SIGMA.m[i + 8]));
-        return new SemiEllipsoidSurface(this.center, mainF1, mainF2, mainF3);
+        return new SemiEllipsoidSurface$$1(this.center, mainF1, mainF2, mainF3);
     }
     containsPoint(p) {
         return eq0(this.implicitFunction()(p));
     }
     boundsFunction() {
-        return (a, b) => between(a, 0, PI$12) && between(b, -PI$12, PI$12);
+        return (a, b) => between(a, 0, PI$3) && between(b, -PI$3, PI$3);
     }
     volume() {
         return 4 / 3 * Math.PI * this.f1.dot(this.f2.cross(this.f3));
     }
     loopContainsPoint(loop, p) {
         if (!this.containsPoint(p))
-            return PointVsFace.OUTSIDE;
+            return PointVsFace$$1.OUTSIDE;
         assertVectors(p);
         const pLCXY = this.inverseMatrix.transformPoint(p).withElement('z', 0);
-        const testLine = new SemiEllipseCurve(this.center, this.f3, pLCXY.likeO() ? this.f2 : this.matrix.transformVector(pLCXY.unit()));
+        const testLine = new SemiEllipseCurve$$1(this.center, this.f3, pLCXY.likeO() ? this.f2 : this.matrix.transformVector(pLCXY.unit()));
         const pT = testLine.pointT(p);
-        if (P3.normalOnAnchor(this.f2.unit(), this.center).containsPoint(p)) {
+        if (P3$$1.normalOnAnchor(this.f2.unit(), this.center).containsPoint(p)) {
             let edgeT;
             return loop.some(edge => edge.curve.containsPoint(p) && le(edge.minT, edgeT = edge.curve.pointT(p)) && le(edgeT, edge.maxT))
-                ? PointVsFace.ON_EDGE
-                : PointVsFace.OUTSIDE;
+                ? PointVsFace$$1.ON_EDGE
+                : PointVsFace$$1.OUTSIDE;
         }
         const lineOut = testLine.normal;
-        const testPlane = P3.normalOnAnchor(testLine.normal, p);
+        const testPlane = P3$$1.normalOnAnchor(testLine.normal, p);
         const colinearEdges = loop.map((edge) => testLine.isColinearTo(edge.curve));
         let inside = false;
         function logIS(isP) {
@@ -25072,7 +26359,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             if (eq(pT, isT)) {
                 return true;
             }
-            else if (pT < isT && le(isT, PI$12)) {
+            else if (pT < isT && le(isT, PI$3)) {
                 inside = !inside;
             }
         }
@@ -25083,13 +26370,13 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             if (colinearEdges[edgeIndex]) {
                 let edgeT;
                 if (edge.curve.containsPoint(p) && le(edge.minT, edgeT = edge.curve.pointT(p)) && le(edgeT, edge.maxT)) {
-                    return PointVsFace.ON_EDGE;
+                    return PointVsFace$$1.ON_EDGE;
                 }
                 // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
                 if (!nextInside && testLine.containsPoint(edge.b)) {
                     if (logIS(edge.b))
-                        return PointVsFace.ON_EDGE;
+                        return PointVsFace$$1.ON_EDGE;
                 }
             }
             else {
@@ -25098,13 +26385,13 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
                         if (!testLine.containsPoint(edge.b))
                             continue;
                         // endpoint lies on intersection testLine
-                        const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign$9(edge.deltaT())) < 0; // TODO:
+                        const edgeInside = dotCurve2$$1(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0; // TODO:
                         // bDDT
                         // negated?
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
                         if (edgeInside != nextInside) {
                             if (logIS(edge.b))
-                                return PointVsFace.ON_EDGE;
+                                return PointVsFace$$1.ON_EDGE;
                         }
                     }
                     else if (edgeT != edge.aT) {
@@ -25113,18 +26400,18 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
                             continue;
                         // edge crosses testLine, neither starts nor ends on it
                         if (logIS(p))
-                            return PointVsFace.ON_EDGE;
+                            return PointVsFace$$1.ON_EDGE;
                         // TODO: tangents?
                     }
                 }
             }
         }
-        return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE;
+        return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
     }
     zDirVolumeForLoop2(loop) {
         const angles = this.inverseMatrix.getZ().toAngles();
         const T = M4.rotateY(-angles.theta).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix);
-        const rot90x = M4.rotateX(PI$12 / 2);
+        const rot90x = M4.rotateX(PI$3 / 2);
         let totalVolume = 0;
         assert$1(V3.X.isParallelTo(T.transformVector(V3.Z)));
         //const zDistanceFactor = toT.transformVector(V3.Z).length()
@@ -25137,11 +26424,11 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             }
             //if (edge.)
             if (edge.b.like(V3.X)) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$12) % (2 * PI$12);
+                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
                 totalVolume += 2 / 3 * angleDiff;
             }
             if (edge.b.like(V3.X.negated())) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$12) % (2 * PI$12);
+                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
                 totalVolume += 2 / 3 * angleDiff;
             }
             const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT);
@@ -25153,7 +26440,7 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
         const mainAxes = this.mainAxes(), a = mainAxes.f1.length(), b = mainAxes.f2.length(), c = mainAxes.f3.length();
         const p = 1.6075;
-        return 4 * PI$12 * Math.pow((Math.pow(a * b, p) + Math.pow(b * c, p) + Math.pow(c * a, p)) / 3, 1 / p);
+        return 4 * PI$3 * Math.pow((Math.pow(a * b, p) + Math.pow(b * c, p) + Math.pow(c * a, p)) / 3, 1 / p);
     }
     surfaceArea() {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
@@ -25163,11 +26450,11 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             if (c < a) {
                 const eccentricity2 = 1 - Math.pow(c, 2) / Math.pow(a, 2);
                 const eccentricity = Math.sqrt(eccentricity2);
-                return 2 * PI$12 * Math.pow(a, 2) * (1 + (1 - eccentricity2) / Math.sqrt(eccentricity) * Math.atanh(eccentricity));
+                return 2 * PI$3 * Math.pow(a, 2) * (1 + (1 - eccentricity2) / Math.sqrt(eccentricity) * Math.atanh(eccentricity));
             }
             else {
                 const eccentricity = Math.sqrt(1 - Math.pow(a, 2) / Math.pow(c, 2));
-                return 2 * PI$12 * Math.pow(a, 2) * (1 + c / a / eccentricity * Math.asin(eccentricity));
+                return 2 * PI$3 * Math.pow(a, 2) * (1 + c / a / eccentricity * Math.asin(eccentricity));
             }
         }
         if (eq(a, b)) {
@@ -25183,14 +26470,14 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
         const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
         const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
         const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
-        return 2 * PI$12 * Math.pow(c, 2) + 2 * PI$12 * a * b / Math.sin(phi) * (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2));
+        return 2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi) * (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2));
     }
     getSeamPlane() {
-        const plane = P3.forAnchorAndPlaneVectors(this.center, this.f1, this.f3);
+        const plane = P3$$1.forAnchorAndPlaneVectors(this.center, this.f1, this.f3);
         return plane.normal1.dot(this.f2) < 0 ? plane : plane.flipped();
     }
     asEllipsoidSurface() {
-        return new EllipsoidSurface(this.center, this.f1, this.f2, this.f3);
+        return new EllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3);
     }
     getExtremePoints() {
         assert$1(this.isSphere());
@@ -25202,15 +26489,15 @@ class SemiEllipsoidSurface extends EllipsoidSurface {
             .map(p => p.times(thisRadius).plus(this.center));
     }
 }
-SemiEllipsoidSurface.UNIT = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z);
-SemiEllipsoidSurface.prototype.uStep = PI$12 / 16;
-SemiEllipsoidSurface.prototype.vStep = PI$12 / 16;
-SemiEllipsoidSurface.prototype.sMin = 0;
-SemiEllipsoidSurface.prototype.sMax = PI$12;
-SemiEllipsoidSurface.prototype.tMin = -PI$12 / 2;
-SemiEllipsoidSurface.prototype.tMax = PI$12 / 2;
+SemiEllipsoidSurface$$1.UNIT = new SemiEllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
+SemiEllipsoidSurface$$1.prototype.uStep = PI$3 / 16;
+SemiEllipsoidSurface$$1.prototype.vStep = PI$3 / 16;
+SemiEllipsoidSurface$$1.prototype.sMin = 0;
+SemiEllipsoidSurface$$1.prototype.sMax = PI$3;
+SemiEllipsoidSurface$$1.prototype.tMin = -PI$3 / 2;
+SemiEllipsoidSurface$$1.prototype.tMax = PI$3 / 2;
 
-class PlaneSurface extends ParametricSurface {
+class PlaneSurface$$1 extends ParametricSurface$$1 {
     constructor(plane, right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right).unit(), sMin = -100, sMax = 100, tMin = -100, tMax = 100) {
         super();
         this.plane = plane;
@@ -25220,7 +26507,7 @@ class PlaneSurface extends ParametricSurface {
         this.sMax = sMax;
         this.tMin = tMin;
         this.tMax = tMax;
-        assertInst(P3, plane);
+        assertInst(P3$$1, plane);
         assert$1(this.right.cross(this.up).like(this.plane.normal1));
         this.matrix = M4.forSys(right, up, plane.normal1, plane.anchor);
     }
@@ -25228,16 +26515,16 @@ class PlaneSurface extends ParametricSurface {
         return callsce.call(undefined, 'new PlaneSurface', ...this.getConstructorParameters());
     }
     static throughPoints(a, b, c) {
-        return new PlaneSurface(P3.throughPoints(a, b, c));
+        return new PlaneSurface$$1(P3$$1.throughPoints(a, b, c));
     }
     isCoplanarTo(surface) {
-        return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane);
+        return surface instanceof PlaneSurface$$1 && this.plane.isCoplanarToPlane(surface.plane);
     }
     isTsForLine(line) {
         return line.isTsWithPlane(this.plane);
     }
     like(surface) {
-        return surface instanceof PlaneSurface && this.plane.like(surface.plane);
+        return surface instanceof PlaneSurface$$1 && this.plane.like(surface.plane);
     }
     pST(s, t) {
         return this.matrix.transformPoint(new V3(s, t, 0));
@@ -25246,7 +26533,7 @@ class PlaneSurface extends ParametricSurface {
         return p => this.plane.distanceToPointSigned(p);
     }
     isCurvesWithSurface(surface2) {
-        if (surface2 instanceof PlaneSurface) {
+        if (surface2 instanceof PlaneSurface$$1) {
             return this.isCurvesWithPlane(surface2.plane);
         }
         return super.isCurvesWithSurface(surface2);
@@ -25277,9 +26564,9 @@ class PlaneSurface extends ParametricSurface {
     }
     loopContainsPoint(loop, p) {
         const dir = this.right.plus(this.up.times(0.123)).unit();
-        const line = new L3(p, dir);
+        const line = new L3$$1(p, dir);
         const lineOut = dir.cross(this.plane.normal1);
-        return Surface.loopContainsPointGeneral(loop, p, line, lineOut);
+        return Surface$$1.loopContainsPointGeneral(loop, p, line, lineOut);
     }
     stPFunc() {
         const matrixInverse = this.matrix.inversed();
@@ -25300,10 +26587,10 @@ class PlaneSurface extends ParametricSurface {
         return this.plane.containsCurve(curve);
     }
     transform(m4) {
-        return new PlaneSurface(this.plane.transform(m4));
+        return new PlaneSurface$$1(this.plane.transform(m4));
     }
     flipped() {
-        return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated());
+        return new PlaneSurface$$1(this.plane.flipped(), this.right, this.up.negated());
     }
     getConstructorParameters() {
         return [this.plane, this.right, this.up];
@@ -25311,7 +26598,7 @@ class PlaneSurface extends ParametricSurface {
     toMesh(xMin = -10, xMax = 10, yMin = -10, yMax = 10) {
         const mesh = new Mesh()
             .addIndexBuffer('TRIANGLES')
-            .addVertexBuffer('normals', 'LGL_Normal');
+            .addVertexBuffer('normals', 'ts_Normal');
         const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor);
         mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p));
         mesh.normals = arrayFromFunction(4, i => this.plane.normal1);
@@ -25333,8 +26620,7 @@ class PlaneSurface extends ParametricSurface {
     }
 }
 
-const { PI: PI$13 } = Math;
-const ZDirVolumeVisitor = {
+const ZDirVolumeVisitor$$1 = {
     /**
      * at(t)
      * |\                                    ^
@@ -25349,10 +26635,10 @@ const ZDirVolumeVisitor = {
      * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
      * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
      */
-    [ConicSurface.name](edges) {
+    [ConicSurface$$1.name](edges) {
         // INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z
         const totalVolume = edges.map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
+            if (edge.curve instanceof SemiEllipseCurve$$1 || edge.curve instanceof HyperbolaCurve$$1 || edge.curve instanceof ParabolaCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
                     return (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).lengthXY() *
@@ -25360,13 +26646,13 @@ const ZDirVolumeVisitor = {
                 };
                 // ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive
                 // area
-                const sign = edge.curve instanceof SemiEllipseCurve
+                const sign = edge.curve instanceof SemiEllipseCurve$$1
                     ? -Math.sign(edge.curve.normal.dot(this.dir))
                     : -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir));
                 const val = glqInSteps(f, edge.aT, edge.bT, 1);
                 return val * sign;
             }
-            else if (edge.curve instanceof L3) {
+            else if (edge.curve instanceof L3$$1) {
                 return 0;
             }
             else {
@@ -25375,7 +26661,7 @@ const ZDirVolumeVisitor = {
         }).sum();
         return { volume: totalVolume * Math.sign(this.normal.dot(this.dir)) };
     },
-    [PlaneSurface.name](edges) {
+    [PlaneSurface$$1.name](edges) {
         const { centroid, area } = this.calculateArea();
         return {
             volume: this.surface.plane.normal1.z * centroid.z * area,
@@ -25396,7 +26682,7 @@ const ZDirVolumeVisitor = {
      * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
      * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
      */
-    [SemiCylinderSurface.name](edges) {
+    [SemiCylinderSurface$$1.name](edges) {
         if (V3.Z.cross(this.dir).likeO())
             return { volume: 0 };
         // the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
@@ -25405,7 +26691,7 @@ const ZDirVolumeVisitor = {
         const baseVector = this.dir.rejectedFrom(V3.Z).unit();
         // INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve) {
+            if (edge.curve instanceof SemiEllipseCurve$$1) {
                 const f = (t) => {
                     // use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
                     const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
@@ -25425,7 +26711,7 @@ const ZDirVolumeVisitor = {
                 const val = glqInSteps(f, edge.aT, edge.bT, 1);
                 return val * sign;
             }
-            else if (edge.curve instanceof L3) {
+            else if (edge.curve instanceof L3$$1) {
                 return 0;
             }
             else {
@@ -25448,7 +26734,7 @@ const ZDirVolumeVisitor = {
      * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
      * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
      */
-    [ProjectedCurveSurface.name](edges) {
+    [ProjectedCurveSurface$$1.name](edges) {
         if (V3.Z.cross(this.dir).likeO())
             return { volume: 0, centroid: V3.O };
         // NB: the surface normal doesn't influence the resulting area:
@@ -25459,10 +26745,10 @@ const ZDirVolumeVisitor = {
         const baseVector = upDir1.rejectedFrom(V3.Z).unit();
         // INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
         const totalVolume = edges.map(edge => {
-            if (edge.curve instanceof L3) {
+            if (edge.curve instanceof L3$$1) {
                 return 0;
             }
-            else if (edge.curve instanceof ImplicitCurve) {
+            else if (edge.curve instanceof ImplicitCurve$$1) {
                 const { points, tangents } = edge.curve;
                 const minT = edge.minT, maxT = edge.maxT;
                 let sum = 0;
@@ -25504,7 +26790,7 @@ const ZDirVolumeVisitor = {
     // now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
     // we need to split the transformed loop along the local seam plane
     // and then sum the zDir volumes of the resulting loops
-    [EllipsoidSurface.name](loop) {
+    [EllipsoidSurface$$1.name](loop) {
         const angles = this.inverseMatrix.transformVector(V3.Z).toAngles();
         const T = M4.rotateAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix);
         function calc(loop) {
@@ -25512,6 +26798,7 @@ const ZDirVolumeVisitor = {
             assert(V3.Z.isParallelTo(T.transformVector(V3.Z)));
             //const zDistanceFactor = toT.transformVector(V3.Z).length()
             loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
+                const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex];
                 function f(t) {
                     const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
                     const r = at.lengthXY();
@@ -25528,14 +26815,14 @@ const ZDirVolumeVisitor = {
             });
             return totalVolume;
         }
-        const [front, back] = EllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw);
-        const localVolume = calc(front, PI$13) + calc(back, -PI$13);
+        const [front, back] = EllipsoidSurface$$1.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw);
+        const localVolume = calc(front, PI$3) + calc(back, -PI$3);
         return { area: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: undefined };
     },
     zDirVolumeForLoop2(loop) {
         const angles = this.inverseMatrix.getZ().toAngles();
         const T = M4.rotateY(-angles.theta).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix);
-        const rot90x = M4.rotateX(PI$13 / 2);
+        const rot90x = M4.rotateX(PI$3 / 2);
         let totalVolume = 0;
         assert(V3.X.isParallelTo(T.transformVector(V3.Z)));
         //const zDistanceFactor = toT.transformVector(V3.Z).length()
@@ -25549,12 +26836,12 @@ const ZDirVolumeVisitor = {
             }
             //if (edge.)
             if (edge.b.like(V3.X)) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$13) % (2 * PI$13);
+                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
                 totalVolume += 2 / 3 * angleDiff;
                 console.log('xaa');
             }
             if (edge.b.like(V3.X.negated())) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$13) % (2 * PI$13);
+                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
                 totalVolume += 2 / 3 * angleDiff;
                 console.log('xbb');
             }
@@ -25570,7 +26857,7 @@ const ZDirVolumeVisitor = {
     // now we have a problem because edges which originally  did not cross the seam plane can now be anywhere
     // we need to split the transformed loop along the local seam plane
     // and then sum the zDir volumes of the resulting loops
-    [SemiEllipsoidSurface.name](loop) {
+    [SemiEllipsoidSurface$$1.name](loop) {
         const angles = this.inverseMatrix.transformVector(V3.Z).toAngles();
         const T = M4.rotateAB(this.inverseMatrix.transformVector(V3.Z), V3.Z).times(M4.rotateZ(-angles.phi)).times(this.inverseMatrix);
         function calc(loop) {
@@ -25578,6 +26865,7 @@ const ZDirVolumeVisitor = {
             assert(V3.Z.isParallelTo(T.transformVector(V3.Z)));
             //const zDistanceFactor = toT.transformVector(V3.Z).length()
             loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
+                const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex];
                 function f(t) {
                     const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
                     const r = at.lengthXY();
@@ -25593,31 +26881,29 @@ const ZDirVolumeVisitor = {
             });
             return totalVolume;
         }
-        const [front, back] = SemiEllipsoidSurface.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw);
-        const localVolume = calc(front, PI$13) + calc(back, -PI$13);
+        const [front, back] = SemiEllipsoidSurface$$1.splitOnPlaneLoop(loop.map(edge => edge.transform(T)), ccw);
+        const localVolume = calc(front, PI$3) + calc(back, -PI$3);
         return { volume: localVolume * this.f1.dot(this.f2.cross(this.f3)), centroid: undefined };
     },
 };
-//# sourceMappingURL=ZDirVolumeVisitor.js.map
 
-const { PI: PI$14 } = Math;
-const CalculateAreaVisitor = {
-    [ConicSurface.name](edges) {
+const CalculateAreaVisitor$$1 = {
+    [ConicSurface$$1.name](edges) {
         // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve || edge.curve instanceof HyperbolaCurve || edge.curve instanceof ParabolaCurve) {
+            if (edge.curve instanceof SemiEllipseCurve$$1 || edge.curve instanceof HyperbolaCurve$$1 || edge.curve instanceof ParabolaCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
                     return at.minus(this.center).cross(tangent.rejectedFrom(this.dir)).length() / 2;
                 };
                 // ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
                 // positive area hyperbola normal1 can be perpendicular to
-                const sign = edge.curve instanceof SemiEllipseCurve
+                const sign = edge.curve instanceof SemiEllipseCurve$$1
                     ? -Math.sign(edge.curve.normal.dot(this.dir))
                     : -Math.sign(this.center.to(edge.curve.center).cross(edge.curve.f1).dot(this.dir));
                 return glqInSteps(f, edge.aT, edge.bT, 4) * sign;
             }
-            else if (edge.curve instanceof L3) {
+            else if (edge.curve instanceof L3$$1) {
                 return 0;
             }
             else {
@@ -25628,12 +26914,12 @@ const CalculateAreaVisitor = {
         // Math.abs is not an option as "holes" may also be passed
         return totalArea * Math.sign(this.normal.dot(this.dir));
     },
-    [PlaneSurface.name](edges) {
+    [PlaneSurface$$1.name](edges) {
         let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0;
         let r1 = this.surface.right, u1 = this.surface.up;
         for (const edge of edges) {
             let edgeCentroid, edgeArea, centroidS, centroidT;
-            if (edge instanceof StraightEdge) {
+            if (edge instanceof StraightEdge$$1) {
                 const midPoint = edge.a.lerp(edge.b, 0.5);
                 edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2);
                 centroidS = midPoint.dot(r1) / 2;
@@ -25644,14 +26930,14 @@ const CalculateAreaVisitor = {
             }
             else {
                 const curve = edge.curve;
-                if (curve instanceof SemiEllipseCurve) {
+                if (curve instanceof SemiEllipseCurve$$1) {
                     const info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT);
                     edgeArea = info.area;
                     const parametricCentroid = this.surface.stPFunc()(info.centroid);
                     centroidS = parametricCentroid.x;
                     centroidT = parametricCentroid.y;
                 }
-                else if (curve instanceof BezierCurve) {
+                else if (curve instanceof BezierCurve$$1) {
                     edgeArea = curve.getAreaInDirSurface(u1, this.surface, edge.aT, edge.bT).area;
                 }
                 else {
@@ -25670,10 +26956,10 @@ const CalculateAreaVisitor = {
      * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse
      * ==> Elliptic integrals/numeric calculation is necessary
      */
-    [CylinderSurface.name](edges) {
+    [CylinderSurface$$1.name](edges) {
         // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof EllipseCurve) {
+            if (edge.curve instanceof EllipseCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
                     return at.dot(this.dir) * tangent.rejected1Length(this.dir);
@@ -25685,7 +26971,7 @@ const CalculateAreaVisitor = {
                 console.log('edge', edge, val);
                 return val * sign;
             }
-            else if (edge.curve instanceof L3) {
+            else if (edge.curve instanceof L3$$1) {
                 return 0;
             }
             else {
@@ -25696,24 +26982,24 @@ const CalculateAreaVisitor = {
         // Math.abs is not an option as "holes" may also be passed
         return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir));
     },
-    [EllipsoidSurface.name](edges, canApproximate = true) {
+    [EllipsoidSurface$$1.name](edges, canApproximate = true) {
         assert$1(this.isVerticalSpheroid());
         const { f1, f2, f3 } = this;
         // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
         const circleRadius = f1.length();
         const f31 = f3.unit();
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof EllipseCurve) {
+            if (edge.curve instanceof EllipseCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
                     const localAt = this.inverseMatrix.transformPoint(at);
                     let angleXY = localAt.angleXY();
-                    if (eq(Math.abs(angleXY), PI$14)) {
+                    if (eq(Math.abs(angleXY), PI$3)) {
                         if (edge.curve.normal.isParallelTo(this.f2)) {
-                            angleXY = PI$14 * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2));
+                            angleXY = PI$3 * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2));
                         }
                         else {
-                            angleXY = PI$14 * dotCurve(this.f2, tangent, edge.curve.ddt(t));
+                            angleXY = PI$3 * dotCurve$$1(this.f2, tangent, edge.curve.ddt(t));
                         }
                         console.log(angleXY);
                     }
@@ -25763,24 +27049,24 @@ const CalculateAreaVisitor = {
     //
     //	return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
     //},
-    [ProjectedCurveSurface.name](edges) {
+    [ProjectedCurveSurface$$1.name](edges) {
         // calculation cannot be done in local coordinate system, as the area doesn't scale proportionally
         const thisDir1 = this.dir.unit();
         const totalArea = edges.map(edge => {
-            if (edge.curve instanceof L3) {
+            if (edge.curve instanceof L3$$1) {
                 return 0;
             }
-            else if (edge.curve instanceof ImplicitCurve) {
+            else if (edge.curve instanceof ImplicitCurve$$1) {
                 const { points, tangents } = edge.curve;
                 const minT = edge.minT, maxT = edge.maxT;
                 let sum = 0;
                 const start = Math.ceil(minT + NLA_PRECISION);
                 const end = Math.floor(maxT - NLA_PRECISION);
                 for (let i = start; i <= end; i++) {
-                    const at = points[i], tangent = tangents[i];
-                    // thisDir1 and surface normals are perpendicular, so we don't need to .unit()
-                    // the result of .cross()
+                    const at = points[i], tangent = tangents[i].toLength(edge.curve.stepSize);
+                    console.log("at", at.sce, "tangent", tangent.sce, 'tangent.length()', tangent.length(), this.normalP(at).cross(thisDir1).unit().sce);
                     const scaling = this.normalP(at).cross(thisDir1).unit().dot(tangent);
+                    console.log('partsum', at.dot(thisDir1) * scaling);
                     sum += at.dot(thisDir1) * scaling;
                 }
                 const f = (t) => {
@@ -25812,7 +27098,6 @@ const CalculateAreaVisitor = {
         return totalArea;
     },
 };
-//# sourceMappingURL=CalculateAreaVisitor.js.map
 
 var TINF_OK = 0;
 var TINF_DATA_ERROR = -3;
@@ -26349,6 +27634,13 @@ BoundingBox.prototype.addQuad = function(x0, y0, x1, y1, x, y) {
 
 // Geometric objects
 
+/**
+ * A bézier path containing a set of path commands similar to a SVG path.
+ * Paths can be drawn on a context using `draw`.
+ * @exports opentype.Path
+ * @class
+ * @constructor
+ */
 function Path() {
     this.commands = [];
     this.fill = 'black';
@@ -26669,11 +27961,9 @@ function argument(predicate, message) {
         fail(message);
     }
 }
-
 var check = { fail, argument, assert: argument };
 
 // Data types used in the OpenType font file.
-// All OpenType fonts use Motorola-style byte ordering (Big Endian)
 
 const LIMIT16 = 32768; // The limit at which a 16-bit number switches signs == 2^15
 const LIMIT32 = 2147483648; // The limit at which a 32-bit number switches signs == 2 ^ 31
@@ -27640,6 +28930,14 @@ sizeOf.LITERAL = function(v) {
 
 // Table metadata
 
+/**
+ * @exports opentype.Table
+ * @class
+ * @param {string} tableName
+ * @param {Array} fields
+ * @param {Object} options
+ * @constructor
+ */
 function Table(tableName, fields, options) {
     for (let i = 0; i < fields.length; i += 1) {
         const field = fields[i];
@@ -27829,6 +29127,7 @@ var table = {
 
 // Parsing utility functions
 
+// Retrieve an unsigned byte from the DataView.
 function getByte(dataView, offset) {
     return dataView.getUint8(offset);
 }
@@ -28310,7 +29609,6 @@ var parse = {
 };
 
 // The `cmap` table stores the mappings from characters to glyphs.
-// https://www.microsoft.com/typography/OTSPEC/cmap.htm
 
 function parseCmapTableFormat12(cmap, p) {
     //Skip reserved.
@@ -28806,8 +30104,8 @@ function line$1(ctx, x1, y1, x2, y2) {
 var draw = { line: line$1 };
 
 // The `glyf` table describes the glyphs in TrueType outline format.
-// http://www.microsoft.com/typography/otspec/glyf.htm
 
+// Parse the coordinate data for a glyph.
 function parseGlyphCoordinate(p, flag, previousValue, shortVectorBitMask, sameBitMask) {
     let v;
     if ((flag & shortVectorBitMask) > 0) {
@@ -29485,6 +30783,7 @@ Glyph.prototype.drawMetrics = function(ctx, x, y, fontSize) {
 
 // The GlyphSet object
 
+// Define a property on the glyph that depends on the path being loaded.
 function defineDependentProperty(glyph, externalName, internalName) {
     Object.defineProperty(glyph, externalName, {
         get: function() {
@@ -29609,10 +30908,8 @@ function cffGlyphLoader(font, index, parseCFFCharstring, charstring) {
 var glyphset = { GlyphSet, glyphLoader, ttfGlyphLoader, cffGlyphLoader };
 
 // The `CFF` table contains the glyph outlines in PostScript format.
-// https://www.microsoft.com/typography/OTSPEC/cff.htm
-// http://download.microsoft.com/download/8/0/1/801a191c-029d-4af3-9642-555f6fe514ee/cff.pdf
-// http://download.microsoft.com/download/8/0/1/801a191c-029d-4af3-9642-555f6fe514ee/type2.pdf
 
+// Custom equals function that can also check lists.
 function equals(a, b) {
     if (a === b) {
         return true;
@@ -30868,8 +32165,8 @@ function makeCFFTable(glyphs, options) {
 var cff = { parse: parseCFFTable, make: makeCFFTable };
 
 // The `head` table contains global information about the font.
-// https://www.microsoft.com/typography/OTSPEC/head.htm
 
+// Parse the header `head` table
 function parseHeadTable(data, start) {
     const head = {};
     const p = new parse.Parser(data, start);
@@ -30927,8 +32224,8 @@ function makeHeadTable(options) {
 var head = { parse: parseHeadTable, make: makeHeadTable };
 
 // The `hhea` table contains information for horizontal layout.
-// https://www.microsoft.com/typography/OTSPEC/hhea.htm
 
+// Parse the horizontal header `hhea` table
 function parseHheaTable(data, start) {
     const hhea = {};
     const p = new parse.Parser(data, start);
@@ -30974,8 +32271,9 @@ function makeHheaTable(options) {
 var hhea = { parse: parseHheaTable, make: makeHheaTable };
 
 // The `hmtx` table contains the horizontal metrics for all glyphs.
-// https://www.microsoft.com/typography/OTSPEC/hmtx.htm
 
+// Parse the `hmtx` table, which contains the horizontal metrics for all glyphs.
+// This function augments the glyph array, adding the advanceWidth and leftSideBearing to each glyph.
 function parseHmtxTable(data, start, numMetrics, numGlyphs, glyphs) {
     let advanceWidth;
     let leftSideBearing;
@@ -31009,10 +32307,6 @@ function makeHmtxTable(glyphs) {
 var hmtx = { parse: parseHmtxTable, make: makeHmtxTable };
 
 // The `ltag` table stores IETF BCP-47 language tags. It allows supporting
-// languages for which TrueType does not assign a numeric code.
-// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6ltag.html
-// http://www.w3.org/International/articles/language-tags/
-// http://www.iana.org/assignments/language-subtag-registry/language-subtag-registry
 
 function makeLtagTable(tags) {
     const result = new table.Table('ltag', [
@@ -31064,9 +32358,8 @@ function parseLtagTable(data, start) {
 var ltag = { make: makeLtagTable, parse: parseLtagTable };
 
 // The `maxp` table establishes the memory requirements for the font.
-// We need it just to get the number of glyphs in the font.
-// https://www.microsoft.com/typography/OTSPEC/maxp.htm
 
+// Parse the maximum profile `maxp` table.
 function parseMaxpTable(data, start) {
     const maxp = {};
     const p = new parse.Parser(data, start);
@@ -31101,8 +32394,8 @@ function makeMaxpTable(numGlyphs) {
 var maxp = { parse: parseMaxpTable, make: makeMaxpTable };
 
 // The `name` naming table.
-// https://www.microsoft.com/typography/OTSPEC/name.htm
 
+// NameIDs for the name table.
 const nameTableNames = [
     'copyright',              // 0
     'fontFamily',             // 1
@@ -31929,7 +33222,6 @@ function makeNameTable(names, ltag) {
 var _name = { parse: parseNameTable, make: makeNameTable };
 
 // The `OS/2` table contains metrics required in OpenType fonts.
-// https://www.microsoft.com/typography/OTSPEC/os2.htm
 
 const unicodeRanges = [
     {begin: 0x0000, end: 0x007F}, // Basic Latin
@@ -32176,8 +33468,8 @@ function makeOS2Table(options) {
 var os2 = { parse: parseOS2Table, make: makeOS2Table, unicodeRanges, getUnicodeRange };
 
 // The `post` table stores additional PostScript information, such as glyph names.
-// https://www.microsoft.com/typography/OTSPEC/post.htm
 
+// Parse the PostScript `post` table
 function parsePostTable(data, start) {
     const post = {};
     const p = new parse.Parser(data, start);
@@ -32239,7 +33531,6 @@ function makePostTable() {
 var post = { parse: parsePostTable, make: makePostTable };
 
 // The `GSUB` table contains ligatures, among other things.
-// https://www.microsoft.com/typography/OTSPEC/gsub.htm
 
 const subtableParsers = new Array(9);         // subtableParsers[0] is unused
 
@@ -32492,8 +33783,9 @@ function makeGsubTable(gsub) {
 var gsub = { parse: parseGsubTable, make: makeGsubTable };
 
 // The `GPOS` table contains kerning pairs, among other things.
-// https://www.microsoft.com/typography/OTSPEC/gpos.htm
 
+// Parse the metadata `meta` table.
+// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6meta.html
 function parseMetaTable(data, start) {
     const p = new parse.Parser(data, start);
     const tableVersion = p.parseULong();
@@ -32543,12 +33835,8 @@ function makeMetaTable(tags) {
 var meta = { parse: parseMetaTable, make: makeMetaTable };
 
 // The `sfnt` wrapper provides organization for the tables in the font.
-// It is the top-level data structure in a font.
-// https://www.microsoft.com/typography/OTSPEC/otff.htm
-// Recommendations for creating OpenType Fonts:
-// http://www.microsoft.com/typography/otspec140/recom.htm
 
-function log2(v) {
+function log2$1(v) {
     return Math.log(v) / Math.log(2) | 0;
 }
 
@@ -32588,9 +33876,9 @@ function makeSfntTable(tables) {
     ]);
     sfnt.tables = tables;
     sfnt.numTables = tables.length;
-    const highestPowerOf2 = Math.pow(2, log2(sfnt.numTables));
+    const highestPowerOf2 = Math.pow(2, log2$1(sfnt.numTables));
     sfnt.searchRange = 16 * highestPowerOf2;
-    sfnt.entrySelector = log2(highestPowerOf2);
+    sfnt.entrySelector = log2$1(highestPowerOf2);
     sfnt.rangeShift = sfnt.numTables * 16 - sfnt.searchRange;
 
     const recordFields = [];
@@ -32866,7 +34154,6 @@ function fontToSfntTable(font) {
 var sfnt = { make: makeSfntTable, fontToTable: fontToSfntTable, computeCheckSum };
 
 // The Layout object is the prototype of Substitution objects, and provides
-// utility methods to manipulate common layout tables (GPOS, GSUB, GDEF...)
 
 function searchTag(arr, tag) {
     /* jshint bitwise: false */
@@ -33143,8 +34430,14 @@ Layout.prototype = {
 };
 
 // The Substitution object provides utility methods to manipulate
-// the GSUB substitution table.
 
+/**
+ * @exports opentype.Substitution
+ * @class
+ * @extends opentype.Layout
+ * @param {opentype.Font}
+ * @constructor
+ */
 function Substitution(font) {
     Layout.call(this, font, 'gsub');
 }
@@ -33490,7 +34783,6 @@ function checkArgument(expression, message) {
 *
 * The exports.DEBUG statements are removed on the minified distribution file.
 */
-'use strict';
 
 let instructionTable;
 let exec;
@@ -36274,8 +37566,6 @@ instructionTable = [
     /* 0xFF */ MDRP_MIRP.bind(undefined, 1, 1, 1, 1, 3)
 ];
 
-
-
 /*****************************
   Mathematical Considerations
 ******************************
@@ -36511,6 +37801,42 @@ vim: set ts=4 sw=4 expandtab:
 
 // The Font object
 
+/**
+ * @typedef FontOptions
+ * @type Object
+ * @property {Boolean} empty - whether to create a new empty font
+ * @property {string} familyName
+ * @property {string} styleName
+ * @property {string=} fullName
+ * @property {string=} postScriptName
+ * @property {string=} designer
+ * @property {string=} designerURL
+ * @property {string=} manufacturer
+ * @property {string=} manufacturerURL
+ * @property {string=} license
+ * @property {string=} licenseURL
+ * @property {string=} version
+ * @property {string=} description
+ * @property {string=} copyright
+ * @property {string=} trademark
+ * @property {Number} unitsPerEm
+ * @property {Number} ascender
+ * @property {Number} descender
+ * @property {Number} createdTimestamp
+ * @property {string=} weightClass
+ * @property {string=} widthClass
+ * @property {string=} fsSelection
+ */
+
+/**
+ * A Font represents a loaded OpenType font file.
+ * It contains a set of glyphs and methods to draw text on a drawing context,
+ * or to get a path representing the text.
+ * @exports opentype.Font
+ * @class
+ * @param {FontOptions}
+ * @constructor
+ */
 function Font(options) {
     options = options || {};
 
@@ -36881,13 +38207,9 @@ Font.prototype.getEnglishName = function(name) {
  * Validate
  */
 Font.prototype.validate = function() {
-    const warnings = [];
     const _this = this;
 
     function assert(predicate, message) {
-        if (!predicate) {
-            warnings.push(message);
-        }
     }
 
     function assertNamePresent(name) {
@@ -37019,7 +38341,6 @@ Font.prototype.usWeightClasses = {
 };
 
 // The `fvar` table stores font variation axes and instances.
-// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6fvar.html
 
 function addName(name, names) {
     const nameString = JSON.stringify(name);
@@ -37152,8 +38473,9 @@ function parseFvarTable(data, start, names) {
 var fvar = { make: makeFvarTable, parse: parseFvarTable };
 
 // The `GPOS` table contains kerning pairs, among other things.
-// https://www.microsoft.com/typography/OTSPEC/gpos.htm
 
+// Parse ScriptList and FeatureList tables of GPOS, GSUB, GDEF, BASE, JSTF tables.
+// These lists are unused by now, this function is just the basis for a real parsing.
 function parseTaggedListTable(data, start) {
     const p = new parse.Parser(data, start);
     const n = p.parseUShort();
@@ -37385,8 +38707,6 @@ function parseGposTable(data, start, font) {
 var gpos = { parse: parseGposTable };
 
 // The `kern` table contains kerning pairs.
-// Note that some fonts use the GPOS OpenType layout table to specify kerning.
-// https://www.microsoft.com/typography/OTSPEC/kern.htm
 
 function parseWindowsKernTable(p) {
     const pairs = {};
@@ -37452,8 +38772,13 @@ function parseKernTable(data, start) {
 var kern = { parse: parseKernTable };
 
 // The `loca` table stores the offsets to the locations of the glyphs in the font.
-// https://www.microsoft.com/typography/OTSPEC/loca.htm
 
+// Parse the `loca` table. This table stores the offsets to the locations of the glyphs in the font,
+// relative to the beginning of the glyphData table.
+// The number of glyphs stored in the `loca` table is specified in the `maxp` table (under numGlyphs)
+// The loca table has two versions: a short version where offsets are stored as uShorts, and a long
+// version where offsets are stored as uLongs. The `head` table specifies which version to use
+// (under indexToLocFormat).
 function parseLocaTable(data, start, numGlyphs, shortVersion) {
     const p = new parse.Parser(data, start);
     const parseFn = shortVersion ? p.parseUShort : p.parseULong;
@@ -37476,12 +38801,19 @@ function parseLocaTable(data, start, numGlyphs, shortVersion) {
 var loca = { parse: parseLocaTable };
 
 // opentype.js
-// https://github.com/nodebox/opentype.js
-// (c) 2015 Frederik De Bleser
-// opentype.js may be freely distributed under the MIT license.
 
-/* global DataView, Uint8Array, XMLHttpRequest  */
+/**
+ * The opentype library.
+ * @namespace opentype
+ */
 
+// File loaders /////////////////////////////////////////////////////////
+/**
+ * Loads a font from a file. The callback throws an error message as the first parameter if it fails
+ * and the font as an ArrayBuffer in the second parameter if it succeeds.
+ * @param  {string} path - The path of the file
+ * @param  {Function} callback - The function to call when the font load completes
+ */
 function loadFromFile(path, callback) {
     const fs = require('fs');
     fs.readFile(path, function(err, buffer) {
@@ -37822,32 +39154,23 @@ function load(url, callback) {
     });
 }
 
-/**
- * Synchronously load the font from a URL or file.
- * When done, returns the font object or throws an error.
- * @alias opentype.loadSync
- * @param  {string} url - The URL of the font to load.
- * @return {opentype.Font}
- */
-
-const { PI: PI$15, min: min$8, max: max$7, ceil: ceil$8 } = Math;
 function projectCurve(curve, offset, flipped) {
-    if (curve instanceof L3) {
+    if (curve instanceof L3$$1) {
         const surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1);
-        return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor));
+        return new PlaneSurface$$1(P3$$1.normalOnAnchor(surfaceNormal, curve.anchor));
     }
-    if (curve instanceof SemiEllipseCurve) {
+    if (curve instanceof SemiEllipseCurve$$1) {
         const curveDir = flipped ? offset : offset.negated();
-        return new SemiCylinderSurface(curve, curveDir.unit(), undefined, undefined);
+        return new SemiCylinderSurface$$1(curve, curveDir.unit(), undefined, undefined);
     }
-    if (curve instanceof BezierCurve || curve instanceof XiEtaCurve) {
+    if (curve instanceof BezierCurve$$1 || curve instanceof XiEtaCurve$$1) {
         const curveDir = offset.times(flipped ? 1 : -1);
-        return new ProjectedCurveSurface(curve, curveDir, 0, 1, flipped ? 0 : -1, flipped ? 1 : 0);
+        return new ProjectedCurveSurface$$1(curve, curveDir, undefined, undefined, flipped ? 0 : -1, flipped ? 1 : 0);
     }
     throw new Error();
 }
-var B2T;
-(function (B2T) {
+var B2T$$1;
+(function (B2T$$1) {
     function box(w = 1, h = 1, d = 1, name) {
         assertNumbers(w, h, d);
         assertInst('string' === typeof name);
@@ -37858,83 +39181,83 @@ var B2T;
             new V3(w, 0, 0),
         ];
         const generator = callsce('B2T.box', w, h, d, name);
-        return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, d), name, generator);
+        return B2T$$1.extrudeVertices(baseVertices, P3$$1.XY.flipped(), new V3(0, 0, d), name, generator);
     }
-    B2T.box = box;
+    B2T$$1.box = box;
     function puckman(radius, rads, height, name) {
         assertf(() => lt(0, radius));
         assertf(() => lt(0, rads) && le(rads, TAU));
         assertf(() => lt(0, height));
-        const edges = StraightEdge.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true);
-        return B2T.rotateEdges(edges, rads, name || 'puckman' + getGlobalId());
+        const edges = StraightEdge$$1.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true);
+        return B2T$$1.rotateEdges(edges, rads, name || 'puckman' + getGlobalId$$1());
     }
-    B2T.puckman = puckman;
+    B2T$$1.puckman = puckman;
     function registerVertexName(map, name, p) {
         // TODO
         if (!Array.from(map.keys()).some(p2 => p2.like(p))) {
             map.set(p, name);
         }
     }
-    B2T.registerVertexName = registerVertexName;
-    function extrudeEdges(baseFaceEdges, baseFacePlane = P3.XY, offset = V3.Z, name = 'extrude' + getGlobalId(), gen, infoFactory) {
+    B2T$$1.registerVertexName = registerVertexName;
+    function extrudeEdges(baseFaceEdges, baseFacePlane = P3$$1.XY, offset = V3.Z, name = 'extrude' + getGlobalId$$1(), gen, infoFactory) {
         baseFaceEdges = fixEdges(baseFaceEdges);
         //Array.from(combinations(baseFaceEdges.length)).forEach(({i, j}) => {
         //	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce +
         // baseFaceEdges[j].sce) })
-        assertf(() => Edge.isLoop(baseFaceEdges));
+        assertf(() => Edge$$1.isLoop(baseFaceEdges));
         // TODO checks..
         //if (offset.dot(baseFacePlane.normal1) > 0) {
         //	baseFacePlane = baseFacePlane.flipped()
         //}
         const vertexNames = new Map();
-        const basePlaneSurface = new PlaneSurface(baseFacePlane);
+        const basePlaneSurface = new PlaneSurface$$1(baseFacePlane);
         //assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), 'edges not CCW on baseFacePlane')
         const translationMatrix = M4.translate(offset);
         const topEdges = baseFaceEdges.map(edge => edge.transform(translationMatrix, 'top'));
         const edgeCount = baseFaceEdges.length;
         const bottomInfo = infoFactory && infoFactory.extrudeBottom(basePlaneSurface, baseFaceEdges);
-        const bottomFace = new PlaneFace(basePlaneSurface, baseFaceEdges, [], name + 'Bottom', bottomInfo);
+        const bottomFace = new PlaneFace$$1(basePlaneSurface, baseFaceEdges, [], name + 'Bottom', bottomInfo);
         const topFaceEdges = topEdges.map(edge => edge.flipped()).reverse();
-        const topSurface = new PlaneSurface(baseFacePlane.flipped().translated(offset));
+        const topSurface = new PlaneSurface$$1(baseFacePlane.flipped().translated(offset));
         const topInfo = infoFactory && infoFactory.extrudeBottom(topSurface, topFaceEdges);
-        const topFace = new PlaneFace(topSurface, topFaceEdges, [], name + 'Top', topInfo);
-        baseFaceEdges.forEach(edge => B2T.registerVertexName(vertexNames, edge.name + 'A', edge.a));
-        topFaceEdges.forEach(edge => B2T.registerVertexName(vertexNames, edge.name + 'A', edge.a));
-        const ribs = arrayFromFunction(edgeCount, i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i));
+        const topFace = new PlaneFace$$1(topSurface, topFaceEdges, [], name + 'Top', topInfo);
+        baseFaceEdges.forEach(edge => B2T$$1.registerVertexName(vertexNames, edge.name + 'A', edge.a));
+        topFaceEdges.forEach(edge => B2T$$1.registerVertexName(vertexNames, edge.name + 'A', edge.a));
+        const ribs = arrayFromFunction(edgeCount, i => StraightEdge$$1.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i));
         const faces = baseFaceEdges.map((edge, i) => {
             const faceName = name + 'Wall' + i;
             const j = (i + 1) % edgeCount;
             const faceEdges = [baseFaceEdges[i].flipped(), ribs[i], topEdges[i], ribs[j].flipped()];
             const surface = projectCurve(edge.curve, offset, edge.reversed);
             const info = infoFactory && infoFactory.extrudeWall(i, surface, faceEdges);
-            return Face.create(surface, faceEdges, undefined, faceName, info);
+            return Face$$1.create(surface, faceEdges, undefined, faceName, info);
         });
         faces.push(bottomFace, topFace);
         gen = gen || callsce('B2T.extrudeEdges', baseFaceEdges, baseFacePlane, offset, name);
-        return new B2(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames);
+        return new BRep$$1(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames);
     }
-    B2T.extrudeEdges = extrudeEdges;
-    function cylinder(radius = 1, height = 1, rads = TAU, name = 'cylinder' + getGlobalId()) {
+    B2T$$1.extrudeEdges = extrudeEdges;
+    function cylinder(radius = 1, height = 1, rads = TAU, name = 'cylinder' + getGlobalId$$1()) {
         const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)];
-        return rotateEdges(StraightEdge.chain(vertices, true), rads, name);
+        return rotateEdges(StraightEdge$$1.chain(vertices, true), rads, name);
     }
-    B2T.cylinder = cylinder;
-    function cone(radius = 1, height = 1, rads = TAU, name = 'cone' + getGlobalId()) {
+    B2T$$1.cylinder = cylinder;
+    function cone(radius = 1, height = 1, rads = TAU, name = 'cone' + getGlobalId$$1()) {
         const vertices = [new V3(0, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)];
-        return rotateEdges(StraightEdge.chain(vertices, true), rads, name);
+        return rotateEdges(StraightEdge$$1.chain(vertices, true), rads, name);
     }
-    B2T.cone = cone;
-    function sphere(radius = 1, name = 'sphere' + getGlobalId(), rot = TAU) {
-        const ee = PCurveEdge.create(new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)), new V3(0, 0, -radius), new V3(0, 0, radius), 0, PI$15, undefined, new V3(radius, 0, 0), new V3(-radius, 0, 0));
+    B2T$$1.cone = cone;
+    function sphere(radius = 1, name = 'sphere' + getGlobalId$$1(), rot = TAU) {
+        const ee = PCurveEdge$$1.create(new SemiEllipseCurve$$1(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)), new V3(0, 0, -radius), new V3(0, 0, radius), 0, PI$3, undefined, new V3(radius, 0, 0), new V3(-radius, 0, 0));
         const generator = callsce('B2T.sphere', radius, name, rot);
-        return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator);
+        return rotateEdges([StraightEdge$$1.throughPoints(ee.b, ee.a), ee], rot, name, generator);
     }
-    B2T.sphere = sphere;
-    function menger(res = 2, name = 'menger' + getGlobalId()) {
-        let result = B2T.box(1, 1, 1);
+    B2T$$1.sphere = sphere;
+    function menger(res = 2, name = 'menger' + getGlobalId$$1()) {
+        let result = B2T$$1.box(1, 1, 1);
         if (0 == res)
             return result;
-        const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped();
+        const punch = B2T$$1.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped();
         function recurse(steps, m4) {
             result = result.and(punch.transform(m4));
             a = result;
@@ -37952,11 +39275,11 @@ var B2T;
         recurse(res, M4.ZXY);
         return result;
     }
-    B2T.menger = menger;
-    function menger2(res = 2, name = 'menger' + getGlobalId()) {
+    B2T$$1.menger = menger;
+    function menger2(res = 2, name = 'menger' + getGlobalId$$1()) {
         if (0 == res)
-            return B2T.box(1, 1, 1);
-        const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped();
+            return B2T$$1.box(1, 1, 1);
+        const punch = B2T$$1.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped();
         const stencilFaces = [];
         function recurse(steps, m4) {
             stencilFaces.push(...punch.transform(m4).faces);
@@ -37970,51 +39293,51 @@ var B2T;
             }
         }
         recurse(res, M4.IDENTITY);
-        const stencil = new B2(stencilFaces, true);
-        return B2T.box()
+        const stencil = new BRep$$1(stencilFaces, true);
+        return B2T$$1.box()
             .and(stencil)
             .and(stencil.transform(M4.YZX))
             .and(stencil.transform(M4.ZXY));
     }
-    B2T.menger2 = menger2;
+    B2T$$1.menger2 = menger2;
     function torus(rSmall, rLarge, rads, name) {
         assertNumbers(rSmall, rLarge, rads);
         assertf(() => rLarge > rSmall);
-        const curve = SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0));
-        const baseEdges = [PCurveEdge.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge.forCurveAndTs(curve, 0, Math.PI)];
-        return B2T.rotateEdges(baseEdges, rads, name || 'torus' + getGlobalId());
+        const curve = SemiEllipseCurve$$1.semicircle(rSmall, new V3(rLarge, 0, 0));
+        const baseEdges = [PCurveEdge$$1.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge$$1.forCurveAndTs(curve, 0, Math.PI)];
+        return B2T$$1.rotateEdges(baseEdges, rads, name || 'torus' + getGlobalId$$1());
     }
-    B2T.torus = torus;
+    B2T$$1.torus = torus;
     function torusUnsplit(rSmall, rLarge, rads, name) {
         assertNumbers(rSmall, rLarge, rads);
         assertf(() => rLarge > rSmall);
-        const baseEdge = PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI);
-        return B2T.rotateEdges([baseEdge], rads, name || 'torus' + getGlobalId());
+        const baseEdge = PCurveEdge$$1.forCurveAndTs(SemiEllipseCurve$$1.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI);
+        return B2T$$1.rotateEdges([baseEdge], rads, name || 'torus' + getGlobalId$$1());
     }
-    B2T.torusUnsplit = torusUnsplit;
+    B2T$$1.torusUnsplit = torusUnsplit;
     /**
-     * baseLoop should be CCW on XZ plane for a bounded B2
+     * baseLoop should be CCW on XZ plane for a bounded BRep
      */
     function rotateEdges(baseLoop, totalRads, name, generator, infoFactory) {
-        assert$1(!eq(PI$15, totalRads) || PI$15 == totalRads); // URHGJ
+        assert$1(!eq(PI$3, totalRads) || PI$3 == totalRads); // URHGJ
         assertf(() => lt(0, totalRads) && le(totalRads, TAU));
         totalRads = snap(totalRads, TAU);
-        const basePlane = new PlaneSurface(P3.ZX.flipped()).edgeLoopCCW(baseLoop)
-            ? new PlaneSurface(P3.ZX.flipped())
-            : new PlaneSurface(P3.ZX);
-        assertf(() => Edge.isLoop(baseLoop));
-        const rotationSteps = ceil$8((totalRads - NLA_PRECISION) / PI$15);
-        const open = !eq(totalRads, 2 * PI$15);
+        const basePlane = new PlaneSurface$$1(P3$$1.ZX.flipped()).edgeLoopCCW(baseLoop)
+            ? new PlaneSurface$$1(P3$$1.ZX.flipped())
+            : new PlaneSurface$$1(P3$$1.ZX);
+        assertf(() => Edge$$1.isLoop(baseLoop));
+        const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI$3);
+        const open = !eq(totalRads, 2 * PI$3);
         const baseRibCurves = baseLoop.map(edge => {
             const a = edge.a, radius = a.lengthXY();
             if (!eq0(radius)) {
-                return new SemiEllipseCurve(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0));
+                return new SemiEllipseCurve$$1(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0));
             }
             return undefined;
         });
         const baseSurfaces = baseLoop.map((edge, i) => {
             const ipp = (i + 1) % baseLoop.length;
-            if (edge instanceof StraightEdge) {
+            if (edge instanceof StraightEdge$$1) {
                 const line = edge.curve;
                 if (line.dir1.isParallelTo(V3.Z)) {
                     if (eq0(edge.a.x)) {
@@ -38022,11 +39345,11 @@ var B2T;
                     }
                     const flipped = edge.a.z > edge.b.z;
                     const [tMin, tMax] = [0, edge.b.z - edge.a.z].sort(MINUS);
-                    return new SemiCylinderSurface(baseRibCurves[i], !flipped ? V3.Z : V3.Z.negated(), undefined, undefined, tMin, tMax);
+                    return new SemiCylinderSurface$$1(baseRibCurves[i], !flipped ? V3.Z : V3.Z.negated(), undefined, undefined, tMin, tMax);
                 }
                 else if (line.dir1.isPerpendicularTo(V3.Z)) {
                     const flipped = edge.a.x > edge.b.x;
-                    let surface = new PlaneSurface(new P3(V3.Z, edge.a.z));
+                    let surface = new PlaneSurface$$1(new P3$$1(V3.Z, edge.a.z));
                     if (!flipped)
                         surface = surface.flipped();
                     return surface;
@@ -38038,7 +39361,7 @@ var B2T;
                     const apex = new V3(0, 0, apexZ);
                     const flipped = edge.a.z > edge.b.z;
                     const base = baseRibCurves[a.x > b.x ? i : ipp];
-                    const surface = ConicSurface.atApexThroughEllipse(apex, base);
+                    const surface = ConicSurface$$1.atApexThroughEllipse(apex, base);
                     return flipped != (-1 == surface.normalDir) ? surface.flipped() : surface;
                 }
             }
@@ -38051,11 +39374,11 @@ var B2T;
                 at2(t).x = sqrt((a² + b²) cos² t + (a c + b d) cos t sin t + (c² + d²)sin²t)
                 (x cos t + y sin t)² = x² cos² t + x y cos t sin t + y² sin² t
              */
-            if (edge.curve instanceof SemiEllipseCurve) {
+            if (edge.curve instanceof SemiEllipseCurve$$1) {
                 const flipped = edge.a.z > edge.b.z;
                 const ell = edge.curve.rightAngled();
                 assert$1(ell.normal.isPerpendicularTo(V3.Z));
-                assert$1(L3.Z.containsPoint(ell.center));
+                assert$1(L3$$1.Z.containsPoint(ell.center));
                 let width = ell.f1.length(), height = ell.f2.length();
                 if (!ell.isCircular()) {
                     assert$1(ell.f1.isParallelTo(V3.Z) && ell.f2.isParallelTo(V3.X)
@@ -38064,16 +39387,16 @@ var B2T;
                         [width, height] = [height, width];
                     }
                 }
-                return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center);
+                return SemiEllipsoidSurface$$1.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center);
             }
             else {
-                throw new Error(edge);
+                throw new Error(edge.toString());
             }
         });
         let stepStartEdges = baseLoop, stepEndEdges;
         const faces = [];
-        for (let rot = 0; rot < totalRads; rot += PI$15) {
-            const aT = 0, bT = min$8(totalRads - rot, PI$15);
+        for (let rot = 0; rot < totalRads; rot += PI$3) {
+            const aT = 0, bT = min$1(totalRads - rot, PI$3);
             const rotation = M4.rotateZ(rot + bT), rotrot = M4.rotateZ(rot);
             stepEndEdges = rot + bT == TAU ? baseLoop : baseLoop.map(edge => edge.transform(rotation));
             const ribs = arrayFromFunction(baseLoop.length, i => {
@@ -38081,8 +39404,9 @@ var B2T;
                 const b = stepEndEdges[i].a;
                 if (!eq0(radius)) {
                     const curve = 0 === rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot);
-                    return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i);
+                    return new PCurveEdge$$1(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i);
                 }
+                return undefined;
             });
             for (let edgeIndex = 0; edgeIndex < baseLoop.length; edgeIndex++) {
                 if (baseSurfaces[edgeIndex]) {
@@ -38096,25 +39420,25 @@ var B2T;
                     ].filter(x => x);
                     const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot);
                     const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined);
-                    faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info));
+                    faces.push(Face$$1.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info));
                 }
             }
             stepStartEdges = stepEndEdges;
         }
         if (open) {
-            const endFaceEdges = Edge.reversePath(stepEndEdges);
+            const endFaceEdges = Edge$$1.reversePath(stepEndEdges);
             const infoStart = infoFactory && infoFactory.rotationStart(basePlane, baseLoop, undefined);
             const infoEnd = infoFactory && infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined);
-            faces.push(new PlaneFace(basePlane, baseLoop, undefined, name + 'start', infoStart), new PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + 'end', infoEnd));
+            faces.push(new PlaneFace$$1(basePlane, baseLoop, undefined, name + 'start', infoStart), new PlaneFace$$1(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + 'end', infoEnd));
         }
-        const infiniteVolume = new PlaneSurface(P3.ZX).edgeLoopCCW(baseLoop);
-        return new B2(faces, infiniteVolume, generator);
+        const infiniteVolume = new PlaneSurface$$1(P3$$1.ZX).edgeLoopCCW(baseLoop);
+        return new BRep$$1(faces, infiniteVolume, generator);
     }
-    B2T.rotateEdges = rotateEdges;
+    B2T$$1.rotateEdges = rotateEdges;
     /**
-     * loop should be CCW on XZ plane for a bounded B2
+     * loop should be CCW on XZ plane for a bounded BRep
      */
-    //export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): B2 {
+    //export function rotateEdgesUnsplit(loop: Edge[], rads: raddd, name: string): BRep {
     //	assert(Edge.isLoop(loop))
     //	const rotationMatrix = M4.rotateZ(rads)
     //	const open = !eq(rads, 2 * PI)
@@ -38147,34 +39471,34 @@ var B2T;
     // RotationFace(surface, faceEdges) } } else { assert(false, edge) } }).filter(x => x) if (open) { const
     // endFaceEdges = endEdges.map(edge => edge.flipped()).reverse() faces.push( new PlaneFace(new
     // PlaneSurface(P3.ZX.flipped()), loop), new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)) }
-    // return new B2(faces, undefined) }
+    // return new BRep(faces, undefined) }
     function quaffle() {
-        const baseK = B2T.sphere(1).translate(0, 1.7).flipped();
+        const baseK = B2T$$1.sphere(1).translate(0, 1.7).flipped();
         //const baseK = B2T.box().scale(0.2).translate(0, 0.95).flipped()
         // const vs = B2T.DODECAHEDRON_VERTICES.concat(
         // B2T.DODECAHEDRON_FACE_VERTICES.map(fis => fis
         // .map(vi => B2T.DODECAHEDRON_VERTICES[vi])
         // .reduce((a,b) => a.plus(b), V3.O)
         // .unit()))
-        const ss = new B2(B2T.TETRAHEDRON_VERTICES.flatMap(v => baseK.rotateAB(V3.Y, v).faces), false);
+        const ss = new BRep$$1(B2T$$1.TETRAHEDRON_VERTICES.flatMap(v => baseK.rotateAB(V3.Y, v).faces), false);
         //return ss
-        return B2T.sphere().and(ss);
+        return B2T$$1.sphere().and(ss);
     }
-    B2T.quaffle = quaffle;
+    B2T$$1.quaffle = quaffle;
     function extrudeFace(face, dir) {
-        return new B2(extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(face, face.translate(dir.x, dir.y, dir.z).flipped(), face.holes.flatMap(hole => extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false);
+        return new BRep$$1(extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(face, face.translate(dir.x, dir.y, dir.z).flipped(), face.holes.flatMap(hole => extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false);
     }
-    B2T.extrudeFace = extrudeFace;
+    B2T$$1.extrudeFace = extrudeFace;
     function loadFonts() {
-        return loadFont('fonts/FiraSansMedium.woff').then(font => B2T.defaultFont = font);
+        return loadFont('fonts/FiraSansMedium.woff').then(font => B2T$$1.defaultFont = font);
     }
-    B2T.loadFonts = loadFonts;
+    B2T$$1.loadFonts = loadFonts;
     const loadedFonts = new Map();
     function loadFont(fontPath) {
-        return new Promise(function (executor, reject) {
+        return new Promise(function (resolve, reject) {
             const font = loadedFonts.get(fontPath);
             if (font) {
-                executor(font);
+                resolve(font);
             }
             else {
                 load(fontPath, function (err, f) {
@@ -38183,15 +39507,15 @@ var B2T;
                     }
                     else {
                         loadedFonts.set(fontPath, f);
-                        executor(f);
+                        resolve(f);
                     }
                 });
             }
         });
     }
-    B2T.loadFont = loadFont;
+    B2T$$1.loadFont = loadFont;
     function loadFontsAsync(callback) {
-        if (B2T.defaultFont) {
+        if (B2T$$1.defaultFont) {
             callback();
         }
         else {
@@ -38200,14 +39524,14 @@ var B2T;
                     throw new Error('Could not load font: ' + err);
                 }
                 else {
-                    B2T.defaultFont = font;
+                    B2T$$1.defaultFont = font;
                     callback();
                 }
             });
         }
     }
-    B2T.loadFontsAsync = loadFontsAsync;
-    function text(text, size, depth = 1, font = B2T.defaultFont) {
+    B2T$$1.loadFontsAsync = loadFontsAsync;
+    function text(text, size, depth = 1, font = B2T$$1.defaultFont) {
         const path = font.getPath(text, 0, 0, size);
         const subpaths = [];
         path.commands.forEach(c => {
@@ -38219,54 +39543,54 @@ var B2T;
         const loops = subpaths.map(sp => {
             const path = new Path();
             path.commands = sp;
-            const loop = Edge.reversePath(Edge.pathFromSVG(path.toPathData(13))).map(e => e.mirrorY());
-            assert$1(Edge.isLoop(loop));
+            const loop = Edge$$1.reversePath(Edge$$1.pathFromSVG(path.toPathData(13))).map(e => e.mirrorY());
+            assert$1(Edge$$1.isLoop(loop));
             return loop;
         });
-        const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace);
+        const faces = Face$$1.assembleFacesFromLoops(loops, new PlaneSurface$$1(P3$$1.XY), PlaneFace$$1);
         const generator = `B2T.text(${text.sce}, ${size}, ${depth})`;
-        const hello = B2.join(faces.map(face => B2T.extrudeFace(face, V(0, 0, -depth))), generator);
+        const hello = BRep$$1.join(faces.map(face => B2T$$1.extrudeFace(face, V(0, 0, -depth))), generator);
         return hello;
     }
-    B2T.text = text;
+    B2T$$1.text = text;
     function minorityReport() {
-        const a = B2T.sphere();
-        const b = B2T.text('LEO CROW', 64, 128).scale(0.1 / 32).translate(-0.5, -0.05, 1.2).flipped();
-        const c = B2T.sphere(0.98);
+        const a = B2T$$1.sphere();
+        const b = B2T$$1.text('LEO CROW', 64, 128).scale(0.1 / 32).translate(-0.5, -0.05, 1.2).flipped();
+        const c = B2T$$1.sphere(0.98);
         return a.and(b).plus(c);
     }
-    B2T.minorityReport = minorityReport;
+    B2T$$1.minorityReport = minorityReport;
     function whatever() {
         const iso = isocahedron();
-        const numbersB2 = B2.join(iso.faces.map((face, i) => {
-            const numberB2 = text('' + (i + 1), 0.4, -2);
+        const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
+            const numberBRep = text('' + (i + 1), 0.4, -2);
             const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3);
             const sys = M4.forSys(face.contour[0].aDir, centroid.cross(face.contour[0].aDir), centroid.unit(), centroid);
-            return numberB2.transform(sys.times(M4.translate(-numberB2.getAABB().size().x / 2, -0.1, -0.04)));
+            return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)));
         }));
         const s = sphere(0.9);
-        //return iso.and(numbersB2)
-        return iso.and(s).and(numbersB2);
-        //return numbersB2
+        //return iso.and(numbersBRep)
+        return iso.and(s).and(numbersBRep);
+        //return numbersBRep
     }
-    B2T.whatever = whatever;
+    B2T$$1.whatever = whatever;
     function d20() {
         const iso = isocahedron();
-        const numbersB2 = B2.join(iso.faces.map((face, i) => {
-            const numberB2 = text('' + (i + 1), 0.4, -2);
+        const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
+            const numberBRep = text('' + (i + 1), 0.4, -2);
             const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3);
             const sys = M4.forSys(face.contour[0].aDir, centroid.cross(face.contour[0].aDir), centroid.unit(), centroid);
-            return numberB2.transform(sys.times(M4.translate(-numberB2.getAABB().size().x / 2, -0.1, -0.04)));
+            return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)));
         }));
         const s = sphere(0.9);
-        //return iso.and(numbersB2)
-        return iso.and(s).and(numbersB2);
-        //return numbersB2
+        //return iso.and(numbersBRep)
+        return iso.and(s).and(numbersBRep);
+        //return numbersBRep
     }
-    B2T.d20 = d20;
+    B2T$$1.d20 = d20;
     function rotStep(edges, totalRads, count) {
         const radStep = totalRads / count;
-        const open = !eq(totalRads, 2 * PI$15);
+        const open = !eq(totalRads, 2 * PI$3);
         const ribCount = !open ? count : count + 1;
         const ribs = arrayFromFunction(ribCount, i => {
             if (0 === i)
@@ -38278,19 +39602,19 @@ var B2T;
             const ipp = (i + 1) % ribCount;
             return arrayFromFunction(edges.length, j => {
                 if (!eq0(edges[j].a.lengthXY())) {
-                    return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a);
+                    return StraightEdge$$1.throughPoints(ribs[i][j].a, ribs[ipp][j].a);
                 }
             });
         });
         const faces = [];
-        let surface, face;
+        let face;
         edges.forEach((edge, i) => {
             const ipp = (i + 1) % edges.length;
             const projDir = V3.O;
             const surface = projectCurve(ribs[r][i], projDir, ribs[r][i].deltaT() < 0);
-            if (edge instanceof StraightEdge && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
+            if (edge instanceof StraightEdge$$1 && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
                 const flipped = edge.a.x > edge.b.x;
-                surface = new PlaneSurface(flipped ? new P3(V3.Z, edge.a.z) : new P3(V3.Z.negated(), -edge.a.z));
+                surface = new PlaneSurface$$1(flipped ? new P3$$1(V3.Z, edge.a.z) : new P3$$1(V3.Z.negated(), -edge.a.z));
                 if (open) {
                     const newEdges = [];
                     if (!eq0(edge.a.x)) {
@@ -38301,7 +39625,7 @@ var B2T;
                         newEdges.push(...arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp].flipped()));
                     }
                     newEdges.push(edge.flipped());
-                    face = new PlaneFace(surface, newEdges);
+                    face = new PlaneFace$$1(surface, newEdges);
                 }
                 else {
                     const contour = flipped
@@ -38314,12 +39638,12 @@ var B2T;
                     else if (!flipped && !eq0(edge.a.x)) {
                         hole = arrayFromFunction(count, j => horizontalEdges[j][i]);
                     }
-                    face = new PlaneFace(surface, contour, hole ? [hole] : []);
+                    face = new PlaneFace$$1(surface, contour, hole ? [hole] : []);
                 }
                 faces.push(face);
                 return;
             }
-            else if (edge instanceof StraightEdge) {
+            else if (edge instanceof StraightEdge$$1) {
                 if (eq0(edge.a.lengthXY()) && eq0(edge.b.lengthXY())) {
                     return;
                 }
@@ -38327,9 +39651,9 @@ var B2T;
             for (let r = 0; r < count; r++) {
                 const rpp = (r + 1) % ribCount;
                 const faceEdges = [ribs[r][i].flipped(), horizontalEdges[r][i], ribs[rpp][i], horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped()].filter(x => x);
-                if (edge instanceof StraightEdge) {
-                    const surface = new PlaneSurface(P3.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a));
-                    faces.push(new PlaneFace(surface, faceEdges));
+                if (edge instanceof StraightEdge$$1) {
+                    const surface = new PlaneSurface$$1(P3$$1.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a));
+                    faces.push(new PlaneFace$$1(surface, faceEdges));
                 }
                 else {
                     assert$1(false, edge.toString());
@@ -38338,30 +39662,30 @@ var B2T;
         });
         if (open) {
             const endFaceEdges = ribs[count].map(edge => edge.flipped()).reverse();
-            const endFace = new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(totalRads)), endFaceEdges);
-            faces.push(new PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace);
+            const endFace = new PlaneFace$$1(new PlaneSurface$$1(P3$$1.ZX.rotateZ(totalRads)), endFaceEdges);
+            faces.push(new PlaneFace$$1(new PlaneSurface$$1(P3$$1.ZX.flipped()), edges), endFace);
         }
-        return new B2(faces);
+        return new BRep$$1(faces);
     }
-    B2T.rotStep = rotStep;
+    B2T$$1.rotStep = rotStep;
     function fixEdges(edges) {
         return edges.flatMap(edge => {
             const c = edge.curve;
-            if (c instanceof EllipseCurve) {
+            if (c instanceof EllipseCurve$$1) {
                 const splitEdges = (edge.minT < 0 && edge.maxT > 0)
                     ? edge.split(0)
                     : [edge];
                 return splitEdges.map(edge => {
                     if (edge.minT >= 0) {
-                        return Edge.create(new SemiEllipseCurve(c.center, c.f1, c.f2, max$7(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
+                        return Edge$$1.create(new SemiEllipseCurve$$1(c.center, c.f1, c.f2, max$1(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
                     }
                     else {
                         // "rotate" the curve
-                        return Edge.create(new SemiEllipseCurve(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI$15, min$8(PI$15, c.tMax + PI$15)), edge.a, edge.b, edge.aT + PI$15, edge.bT + PI$15, undefined, edge.aDir, edge.bDir, edge.name);
+                        return Edge$$1.create(new SemiEllipseCurve$$1(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI$3, min$1(PI$3, c.tMax + PI$3)), edge.a, edge.b, edge.aT + PI$3, edge.bT + PI$3, undefined, edge.aDir, edge.bDir, edge.name);
                     }
                 });
             }
-            if (c instanceof BezierCurve) {
+            if (c instanceof BezierCurve$$1) {
                 if (edge.a.like(edge.b)) {
                     return edge.split(lerp(edge.aT, edge.bT, 0.5));
                 }
@@ -38369,10 +39693,10 @@ var B2T;
             return edge;
         });
     }
-    B2T.fixEdges = fixEdges;
+    B2T$$1.fixEdges = fixEdges;
     function extrudeVertices(baseVertices, baseFacePlane, offset, name, generator) {
         assert$1(baseVertices.every(v => v instanceof V3), 'baseVertices.every(v => v instanceof V3)');
-        assertInst(P3, baseFacePlane);
+        assertInst(P3$$1, baseFacePlane);
         assertVectors(offset);
         if (baseFacePlane.normal1.dot(offset) > 0)
             baseFacePlane = baseFacePlane.flipped();
@@ -38394,47 +39718,47 @@ var B2T;
         //			PlaneSurface.throughPoints(baseVertices[j], baseVertices[i], topVertices[m - j - 1]),
         //			[bottom.contour[i].flipped(), ribs[i], top.contour[m - j - 1].flipped(), ribs[j].flipped()], [],
         // name + 'wall' + i)) }
-        const edges = StraightEdge.chain(baseVertices, true);
+        const edges = StraightEdge$$1.chain(baseVertices, true);
         generator = generator || callsce('B2T.extrudeVertices', baseVertices, baseFacePlane, offset, name);
-        return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator);
+        return B2T$$1.extrudeEdges(edges, baseFacePlane, offset, name, generator);
     }
-    B2T.extrudeVertices = extrudeVertices;
+    B2T$$1.extrudeVertices = extrudeVertices;
     // Returns a tetrahedron (3 sided pyramid).
     // Faces will face outwards.
     // abcd can be in any order. The only constraint is that abcd cannot be on a common plane.
-    function tetrahedron(a, b, c, d, name = 'tetra' + getGlobalId()) {
+    function tetrahedron(a, b, c, d, name = 'tetra' + getGlobalId$$1()) {
         assertVectors(a, b, c, d);
-        const dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d);
+        const dDistance = P3$$1.throughPoints(a, b, c).distanceToPointSigned(d);
         if (eq0(dDistance)) {
             throw new Error('four points are coplanar');
         }
         if (dDistance > 0) {
             [c, d] = [d, c];
         }
-        const ab = StraightEdge.throughPoints(a, b);
-        const ac = StraightEdge.throughPoints(a, c);
-        const ad = StraightEdge.throughPoints(a, d);
-        const bc = StraightEdge.throughPoints(b, c);
-        const bd = StraightEdge.throughPoints(b, d);
-        const cd = StraightEdge.throughPoints(c, d);
+        const ab = StraightEdge$$1.throughPoints(a, b);
+        const ac = StraightEdge$$1.throughPoints(a, c);
+        const ad = StraightEdge$$1.throughPoints(a, d);
+        const bc = StraightEdge$$1.throughPoints(b, c);
+        const bd = StraightEdge$$1.throughPoints(b, d);
+        const cd = StraightEdge$$1.throughPoints(c, d);
         const faces = [
-            new PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()], [], name + 'abc'),
-            new PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()], [], name + 'adb'),
-            new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + 'bdc'),
-            new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda'),
+            new PlaneFace$$1(PlaneSurface$$1.throughPoints(a, b, c), [ab, bc, ac.flipped()], [], name + 'abc'),
+            new PlaneFace$$1(PlaneSurface$$1.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()], [], name + 'adb'),
+            new PlaneFace$$1(PlaneSurface$$1.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + 'bdc'),
+            new PlaneFace$$1(PlaneSurface$$1.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda'),
         ];
         const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`;
-        return new B2(faces, false, gen);
+        return new BRep$$1(faces, false, gen);
     }
-    B2T.tetrahedron = tetrahedron;
+    B2T$$1.tetrahedron = tetrahedron;
     const b = 1 / GOLDEN_RATIO, c = 2 - GOLDEN_RATIO;
-    B2T.TETRAHEDRON_VERTICES = [
+    B2T$$1.TETRAHEDRON_VERTICES = [
         new V3(1, 0, -1 / Math.sqrt(2)),
         new V3(-1, 0, -1 / Math.sqrt(2)),
         new V3(0, -1, 1 / Math.sqrt(2)),
         new V3(0, 1, 1 / Math.sqrt(2)),
     ].map(v => v.unit());
-    B2T.DODECAHEDRON_VERTICES = [
+    B2T$$1.DODECAHEDRON_VERTICES = [
         new V3(c, 0, 1),
         new V3(-c, 0, 1),
         new V3(-b, b, b),
@@ -38456,7 +39780,7 @@ var B2T;
         new V3(-1, -c, 0),
         new V3(1, -c, 0),
     ].map(v => v.unit());
-    B2T.DODECAHEDRON_FACE_VERTICES = [
+    B2T$$1.DODECAHEDRON_FACE_VERTICES = [
         [4, 3, 2, 1, 0],
         [7, 6, 5, 0, 1],
         [12, 11, 10, 9, 8],
@@ -38470,7 +39794,7 @@ var B2T;
         [15, 9, 10, 18, 17],
         [7, 1, 2, 17, 18]
     ];
-    B2T.OCTAHEDRON_VERTICES = [
+    B2T$$1.OCTAHEDRON_VERTICES = [
         new V3(1, 0, 0),
         new V3(-1, 0, 0),
         new V3(0, 1, 0),
@@ -38478,7 +39802,7 @@ var B2T;
         new V3(0, 0, 1),
         new V3(0, 0, -1)
     ];
-    B2T.OCTAHEDRON_FACE_VERTICES = [
+    B2T$$1.OCTAHEDRON_FACE_VERTICES = [
         [0, 2, 4],
         [2, 1, 4],
         [1, 3, 4],
@@ -38489,7 +39813,7 @@ var B2T;
         [0, 3, 5]
     ];
     const { x: s, y: t } = new V3(1, GOLDEN_RATIO, 0).unit();
-    B2T.ISOCAHEDRON_VERTICES = [
+    B2T$$1.ISOCAHEDRON_VERTICES = [
         new V3(-s, t, 0),
         new V3(s, t, 0),
         new V3(-s, -t, 0),
@@ -38503,7 +39827,7 @@ var B2T;
         new V3(-t, 0, -s),
         new V3(-t, 0, s)
     ];
-    B2T.ISOCAHEDRON_FACE_VERTICES = [
+    B2T$$1.ISOCAHEDRON_FACE_VERTICES = [
         // 5 faces around point 0
         [0, 11, 5],
         [0, 5, 1],
@@ -38530,56 +39854,55 @@ var B2T;
         [9, 8, 1]
     ];
     function dodecahedron() {
-        return makePlatonic(B2T.DODECAHEDRON_VERTICES, B2T.DODECAHEDRON_FACE_VERTICES, 'B2T.dodecahedron()');
+        return makePlatonic(B2T$$1.DODECAHEDRON_VERTICES, B2T$$1.DODECAHEDRON_FACE_VERTICES, 'B2T.dodecahedron()');
     }
-    B2T.dodecahedron = dodecahedron;
+    B2T$$1.dodecahedron = dodecahedron;
     function octahedron() {
-        return makePlatonic(B2T.OCTAHEDRON_VERTICES, B2T.OCTAHEDRON_FACE_VERTICES, 'B2T.octahedron()');
+        return makePlatonic(B2T$$1.OCTAHEDRON_VERTICES, B2T$$1.OCTAHEDRON_FACE_VERTICES, 'B2T.octahedron()');
     }
-    B2T.octahedron = octahedron;
+    B2T$$1.octahedron = octahedron;
     function isocahedron() {
-        return makePlatonic(B2T.ISOCAHEDRON_VERTICES, B2T.ISOCAHEDRON_FACE_VERTICES, 'B2T.octahedron()');
+        return makePlatonic(B2T$$1.ISOCAHEDRON_VERTICES, B2T$$1.ISOCAHEDRON_FACE_VERTICES, 'B2T.octahedron()');
     }
-    B2T.isocahedron = isocahedron;
+    B2T$$1.isocahedron = isocahedron;
     function makePlatonic(VS, FVIS, generator) {
         const edgeMap = new Map();
         const faces = FVIS.map(faceIndexes => {
-            const surface = PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]]);
+            const surface = PlaneSurface$$1.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]]);
             const contour = arrayFromFunction(faceIndexes.length, i => {
                 const ipp = (i + 1) % faceIndexes.length;
                 const iA = faceIndexes[i], iB = faceIndexes[ipp];
-                const iMin = min$8(iA, iB), iMax = max$7(iA, iB), edgeID = iMin * VS.length + iMax;
+                const iMin = min$1(iA, iB), iMax = max$1(iA, iB), edgeID = iMin * VS.length + iMax;
                 let edge = edgeMap.get(edgeID);
-                !edge && edgeMap.set(edgeID, edge = StraightEdge.throughPoints(VS[iMin], VS[iMax]));
+                !edge && edgeMap.set(edgeID, edge = StraightEdge$$1.throughPoints(VS[iMin], VS[iMax]));
                 return iA < iB ? edge : edge.flipped();
             });
-            return new PlaneFace(surface, contour);
+            return new PlaneFace$$1(surface, contour);
         });
-        return new B2(faces, false, generator);
+        return new BRep$$1(faces, false, generator);
     }
-    function pyramidEdges(baseEdges, apex, name = 'pyramid' + getGlobalId()) {
-        assertInst(Edge, ...baseEdges);
+    function pyramidEdges(baseEdges, apex, name = 'pyramid' + getGlobalId$$1()) {
+        assertInst(Edge$$1, ...baseEdges);
         assertVectors(apex);
-        const ribs = baseEdges.map(baseEdge => StraightEdge.throughPoints(apex, baseEdge.a));
+        const ribs = baseEdges.map(baseEdge => StraightEdge$$1.throughPoints(apex, baseEdge.a));
         const faces = baseEdges.map((baseEdge, i) => {
             const faceName = name + 'Wall' + i;
             const ipp = (i + 1) % baseEdges.length;
             const faceEdges = [ribs[i], baseEdge, ribs[ipp].flipped()];
             const surface = undefined; // TODO
-            return Face.create(surface, faceEdges, undefined, faceName);
+            return Face$$1.create(surface, faceEdges, undefined, faceName);
         });
-        const bottomFace = Face.create(baseSurface, baseEdges);
+        const bottomFace = Face$$1.create(baseSurface, baseEdges);
         faces.push(bottomFace);
         const generator = callsce('B2T.pyramidEdges', baseEdges, apex, name);
-        return new B2(faces, false, generator, name);
+        return new BRep$$1(faces, false, generator, name);
     }
-    B2T.pyramidEdges = pyramidEdges;
-})(B2T || (B2T = {}));
-//# sourceMappingURL=b2.generators.js.map
+    B2T$$1.pyramidEdges = pyramidEdges;
+})(B2T$$1 || (B2T$$1 = {}));
 
-class CustomPlane extends P3 {
+class CustomPlane$$1 extends P3$$1 {
     constructor(anchor, right, up, name, color = randomColor(), rightStart = -500, rightEnd = 500, upStart = -500, upEnd = 500) {
-        const { normal1, w } = P3.forAnchorAndPlaneVectors(anchor, right, up);
+        const { normal1, w } = P3$$1.forAnchorAndPlaneVectors(anchor, right, up);
         super(normal1, w);
         this.up = up;
         this.right = right;
@@ -38592,22 +39915,22 @@ class CustomPlane extends P3 {
     }
     get plane() { return this; }
     toPlaneSurface() {
-        return new PlaneSurface(this, this.right, this.up);
+        return new PlaneSurface$$1(this, this.right, this.up);
     }
     static forPlane(plane, color, name) {
         //assert(!name)
         const up = plane.normal1.getPerpendicular().unit(), right = up.cross(plane.normal1);
-        return new CustomPlane(plane.anchor, right, up, name, color);
+        return new CustomPlane$$1(plane.anchor, right, up, name, color);
     }
     static fromPlaneSurface(surface) {
-        return new CustomPlane(surface.plane.anchor, surface.right, surface.up, 'genCustomPlane' + getGlobalId());
+        return new CustomPlane$$1(surface.plane.anchor, surface.right, surface.up, 'genCustomPlane' + getGlobalId$$1());
     }
     distanceTo(line, mindist) {
         return [
-            new L3(this.anchor.plus(this.right.times(this.sMin)), this.up),
-            new L3(this.anchor.plus(this.right.times(this.sMax)), this.up),
-            new L3(this.anchor.plus(this.up.times(this.tMin)), this.right),
-            new L3(this.anchor.plus(this.up.times(this.tMax)), this.right)
+            new L3$$1(this.anchor.plus(this.right.times(this.sMin)), this.up),
+            new L3$$1(this.anchor.plus(this.right.times(this.sMax)), this.up),
+            new L3$$1(this.anchor.plus(this.up.times(this.tMin)), this.right),
+            new L3$$1(this.anchor.plus(this.up.times(this.tMax)), this.right)
         ].map((line2, line2Index) => {
             const info = line2.infoClosestToLine(line);
             if ((isNaN(info.t) // parallel LINES
@@ -38623,10 +39946,10 @@ class CustomPlane extends P3 {
     }
     distanceTo2(line, mindist) {
         return [
-            new L3(this.anchor.plus(this.right.times(this.sMin)), this.up),
-            new L3(this.anchor.plus(this.right.times(this.sMax)), this.up),
-            new L3(this.anchor.plus(this.up.times(this.tMin)), this.right),
-            new L3(this.anchor.plus(this.up.times(this.tMax)), this.right)
+            new L3$$1(this.anchor.plus(this.right.times(this.sMin)), this.up),
+            new L3$$1(this.anchor.plus(this.right.times(this.sMax)), this.up),
+            new L3$$1(this.anchor.plus(this.up.times(this.tMin)), this.right),
+            new L3$$1(this.anchor.plus(this.up.times(this.tMax)), this.right)
         ].map((line2, line2Index) => {
             const info = line2.infoClosestToLine(line);
             if ((isNaN(info.t) // parallel LINES
@@ -38642,8 +39965,7 @@ class CustomPlane extends P3 {
     }
 }
 
-const { PI: PI$16, sign: sign$10, ceil: ceil$9, floor: floor$7, abs: abs$11 } = Math;
-class Edge extends Transformable {
+class Edge$$1 extends Transformable {
     constructor(curve, a, b, aT, bT, flippedOf, name) {
         super();
         this.curve = curve;
@@ -38656,7 +39978,7 @@ class Edge extends Transformable {
         assertNumbers(aT, bT);
         assert$1(!eq(aT, bT));
         assertVectors(a, b);
-        assertf(() => curve instanceof Curve, curve);
+        assertf(() => curve instanceof Curve$$1, curve);
         assertf(() => !curve.isValidT || curve.isValidT(aT) && curve.isValidT(bT), aT + ' ' + bT);
         //if (curve instanceof PICurve) {
         //    assertf(() => curve.at(aT).to(a).length() < 0.1, ''+curve.at(aT)+a)
@@ -38674,14 +39996,14 @@ class Edge extends Transformable {
     get minT() { return Math.min(this.aT, this.bT); }
     get maxT() { return Math.max(this.aT, this.bT); }
     static forCurveAndTs(curve, aT = curve.tMin, bT = curve.tMax) {
-        return Edge.create(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated());
+        return Edge$$1.create(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated());
     }
     static create(curve, a, b, aT, bT, flippedOf, aDir, bDir, name) {
-        if (curve instanceof L3) {
-            return new StraightEdge(curve, a, b, aT, bT, flippedOf, name);
+        if (curve instanceof L3$$1) {
+            return new StraightEdge$$1(curve, a, b, aT, bT, flippedOf, name);
         }
         else {
-            return new PCurveEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name);
+            return new PCurveEdge$$1(curve, a, b, aT, bT, flippedOf, aDir, bDir, name);
         }
     }
     static isLoop(loop) {
@@ -38690,7 +40012,7 @@ class Edge extends Transformable {
     static edgesIntersect(e1, e2) {
         // TODO: still getting some NaNs here..
         assertNumbers(e1.curve.hlol, e2.curve.hlol);
-        assertInst(Edge, e1, e2);
+        assertInst(Edge$$1, e1, e2);
         if (e1.curve.hlol < e2.curve.hlol) {
             [e2, e1] = [e1, e2];
         }
@@ -38713,31 +40035,31 @@ class Edge extends Transformable {
         });
     }
     static ngon(n = 3, radius = 1) {
-        return StraightEdge.chain(arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)));
+        return StraightEdge$$1.chain(arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)));
     }
     static star(pointCount = 5, r0 = 1, r1 = 0.5) {
         const vertices = arrayFromFunction(pointCount * 2, i => V3.polar(0 == i % 2
             ? r0
             : r1, TAU * i / pointCount / 2));
-        return StraightEdge.chain(vertices);
+        return StraightEdge$$1.chain(vertices);
     }
     static reversePath(path, doReverse = true) {
         return doReverse ? arrayFromFunction(path.length, i => path[path.length - 1 - i].flipped()) : path;
     }
     static rect(width = 1, height = width) {
         const vertices = [new V3(0, 0, 0), new V3(width, 0, 0), new V3(width, height, 0), new V3(0, height, 0)];
-        return StraightEdge.chain(vertices);
+        return StraightEdge$$1.chain(vertices);
     }
     static reuleaux(n = 3, radius = 1) {
         assert$1(3 <= n);
         assert$1(1 == n % 2);
         const corners = arrayFromFunction(n, i => V3.polar(radius, TAU * i / n));
         return arrayFromFunction(n, i => {
-            const aI = (i + floor$7(n / 2)) % n, bI = (i + ceil$9(n / 2)) % n;
+            const aI = (i + floor(n / 2)) % n, bI = (i + ceil(n / 2)) % n;
             const a = corners[aI], b = corners[bI];
             const center = corners[i];
-            const f1 = center.to(a), curve = new SemiEllipseCurve(center, f1, V3.Z.cross(f1));
-            return Edge.create(curve, a, b, 0, curve.pointT(b), undefined, V3.Z.cross(f1), V3.Z.cross(center.to(b)));
+            const f1 = center.to(a), curve = new SemiEllipseCurve$$1(center, f1, V3.Z.cross(f1));
+            return Edge$$1.create(curve, a, b, 0, curve.pointT(b), undefined, V3.Z.cross(f1), V3.Z.cross(center.to(b)));
         });
     }
     static round(edges, radius) {
@@ -38750,7 +40072,7 @@ class Edge extends Transformable {
                 return undefined;
             const angleToNext = edge.bDir.angleTo(nextEdge.aDir);
             const c1 = edge.curve, c2 = nextEdge.curve;
-            if (c1 instanceof L3 && c2 instanceof L3) {
+            if (c1 instanceof L3$$1 && c2 instanceof L3$$1) {
                 const normal = c1.dir1.cross(c2.dir1);
                 if (eq0(angleToNext))
                     return undefined;
@@ -38763,16 +40085,16 @@ class Edge extends Transformable {
                 const cornerA = center.plus(l1inside.toLength(-radius));
                 const cornerB = center.plus(l2inside.toLength(-radius));
                 const f1 = l1inside.toLength(-radius);
-                const curve = new SemiEllipseCurve(center, f1, normal.cross(f1).toLength(radius));
-                const cornerEdge = Edge.create(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.dir1, c2.dir1);
+                const curve = new SemiEllipseCurve$$1(center, f1, normal.cross(f1).toLength(radius));
+                const cornerEdge = Edge$$1.create(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.dir1, c2.dir1);
                 return cornerEdge;
             }
             else {
-                return Edge.arbitraryCorner(edge, nextEdge, radius);
+                return Edge$$1.arbitraryCorner(edge, nextEdge, radius);
             }
         });
         const result = edges.flatMap((edge, i) => {
-            const h = (i + edges.length - 1) % edges.length;
+            const h = (i + edges.length - 1) % edges.length, j = (i + 1) % edges.length;
             const prevCorner = corners[h], nextCorner = corners[i];
             if (!prevCorner && !nextCorner) {
                 return edge;
@@ -38783,7 +40105,7 @@ class Edge extends Transformable {
             const [bT, b, bDir] = !nextCorner
                 ? [edge.bT, edge.b, edge.bDir]
                 : [edge.curve.pointT(nextCorner.a), nextCorner.a, nextCorner.aDir];
-            const newEdge = Edge.create(edge.curve, a, b, aT, bT, undefined, aDir, bDir);
+            const newEdge = Edge$$1.create(edge.curve, a, b, aT, bT, undefined, aDir, bDir);
             return !nextCorner ? newEdge : [newEdge, nextCorner];
         });
         return result;
@@ -38804,17 +40126,17 @@ class Edge extends Transformable {
             if (!eq0(p1p2.dot(virtualPlaneNormal))) {
                 assert$1(false);
             }
-            const l1 = new L3(p1, normal1), l2 = new L3(p2, normal2);
+            const l1 = new L3$$1(p1, normal1), l2 = new L3$$1(p2, normal2);
             const uh = l1.infoClosestToLine(l2), uh2 = l1.isInfoWithLine(l2);
             const dist1 = p1p2.cross(normal2).dot(dirCross) / dirCross.squared();
             const dist2 = p1p2.cross(normal1).dot(dirCross) / dirCross.squared();
             const g1 = p1.plus(normal1.times(dist1));
             const g2 = p2.plus(normal2.times(dist2));
             assert$1(g1.like(g2));
-            return [abs$11(dist1) - radius, abs$11(dist2) - radius];
+            return [abs$2(dist1) - radius, abs$2(dist2) - radius];
         }
-        const startT1 = e1.bT - radius * sign$10(e1.deltaT()) / e1.bDir.length();
-        const startT2 = e2.aT + radius * sign$10(e2.deltaT()) / e2.aDir.length();
+        const startT1 = e1.bT - radius * sign$1(e1.deltaT()) / e1.bDir.length();
+        const startT2 = e2.aT + radius * sign$1(e2.deltaT()) / e2.aDir.length();
         const [t1, t2] = newtonIterate(f, [startT1, startT2]);
         const cornerA = e1.curve.at(t1);
         const cornerB = e2.curve.at(t2);
@@ -38824,8 +40146,8 @@ class Edge extends Transformable {
         const normal1 = virtualPlaneNormal.cross(dp1).unit(), normal2 = virtualPlaneNormal.cross(dp2).unit();
         const f1 = normal1.toLength(-radius);
         const center = cornerA.minus(f1);
-        const curve = new SemiEllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius));
-        const cornerEdge = Edge.create(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.tangentAt(t1), c2.tangentAt(t2));
+        const curve = new SemiEllipseCurve$$1(center, f1, virtualPlaneNormal.cross(f1).toLength(radius));
+        const cornerEdge = Edge$$1.create(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.tangentAt(t1), c2.tangentAt(t2));
         return cornerEdge;
     }
     static pathFromSVG(pathString) {
@@ -38837,26 +40159,26 @@ class Edge extends Transformable {
             const endPos = new V3(c.x, c.y, 0);
             switch (c.type) {
                 case svgPathdata.SVGPathData.LINE_TO:
-                    path.push(StraightEdge.throughPoints(currentPos, endPos));
+                    path.push(StraightEdge$$1.throughPoints(currentPos, endPos));
                     break;
                 case svgPathdata.SVGPathData.CURVE_TO: {
                     const c1 = new V3(c.x1, c.y1, 0);
                     const c2 = new V3(c.x2, c.y2, 0);
-                    const curve = new BezierCurve(currentPos, c1, c2, endPos, 0, 1);
-                    const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1));
+                    const curve = new BezierCurve$$1(currentPos, c1, c2, endPos, 0, 1);
+                    const edge = new PCurveEdge$$1(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1));
                     path.push(edge);
                     break;
                 }
                 case svgPathdata.SVGPathData.QUAD_TO: {
                     const c1 = new V3(c.x1, c.y1, 0);
-                    const curve = ParabolaCurve.quadratic(currentPos, c1, endPos).rightAngled();
-                    const edge = new PCurveEdge(curve, currentPos, endPos, curve.tMin, curve.tMax, undefined, curve.tangentAt(curve.tMin), curve.tangentAt(curve.tMax));
+                    const curve = ParabolaCurve$$1.quadratic(currentPos, c1, endPos).rightAngled();
+                    const edge = new PCurveEdge$$1(curve, currentPos, endPos, curve.tMin, curve.tMax, undefined, curve.tangentAt(curve.tMin), curve.tangentAt(curve.tMax));
                     path.push(edge);
                     break;
                 }
                 case svgPathdata.SVGPathData.ARC: {
                     const phi1 = c.phi1 * DEG, phi2 = c.phi2 * DEG, [phiMin, phiMax] = [phi1, phi2].sort(MINUS);
-                    const stops = arrayRange(-3, 4, 1).map(n => n * PI$16).filter(stop => phiMin <= stop && stop <= phiMax);
+                    const stops = arrayRange(-3, 4, 1).map(n => n * PI$3).filter(stop => phiMin <= stop && stop <= phiMax);
                     const center = V(c.cX, c.cY);
                     const f1 = V3.polar(c.rX, c.xRot * DEG);
                     const f2 = V3.polar(c.rY, c.xRot * DEG + Math.PI / 2);
@@ -38865,15 +40187,15 @@ class Edge extends Transformable {
                         const t1_ = mod(t1, TAU);
                         const t2_ = t1_ + deltaT;
                         assert$1(t1_ >= 0 == t2_ >= 0);
-                        const gtPI = t1_ > PI$16 || t2_ > PI$16;
-                        const aT = gtPI ? t1_ - PI$16 : t1_;
-                        const bT = gtPI ? t2_ - PI$16 : t2_;
-                        const curve = new SemiEllipseCurve(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2);
+                        const gtPI = t1_ > PI$3 || t2_ > PI$3;
+                        const aT = gtPI ? t1_ - PI$3 : t1_;
+                        const bT = gtPI ? t2_ - PI$3 : t2_;
+                        const curve = new SemiEllipseCurve$$1(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2);
                         const a = phi1 == t1 ? currentPos : phi2 == t1 ? endPos : curve.at(aT);
                         const b = phi1 == t2 ? currentPos : phi2 == t2 ? endPos : curve.at(bT);
-                        return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT));
+                        return new PCurveEdge$$1(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT));
                     });
-                    path.push(...c.phiDelta > 0 ? edges : Edge.reversePath(edges));
+                    path.push(...c.phiDelta > 0 ? edges : Edge$$1.reversePath(edges));
                     break;
                 }
             }
@@ -38888,12 +40210,12 @@ class Edge extends Transformable {
         const p = this.curve.at(t);
         const pDir = this.tangentAt(t);
         return [
-            Edge.create(this.curve, this.a, p, this.aT, t, undefined, this.aDir, pDir, this.name + 'left'),
-            Edge.create(this.curve, p, this.b, t, this.bT, undefined, pDir, this.bDir, this.name + 'left')
+            Edge$$1.create(this.curve, this.a, p, this.aT, t, undefined, this.aDir, pDir, this.name + 'left'),
+            Edge$$1.create(this.curve, p, this.b, t, this.bT, undefined, pDir, this.bDir, this.name + 'left')
         ];
     }
     colinearToLine(line) {
-        return this.curve instanceof L3 && this.curve.isColinearTo(line);
+        return this.curve instanceof L3$$1 && this.curve.isColinearTo(line);
     }
     tValueInside(t) {
         return this.aT < this.bT
@@ -38934,7 +40256,7 @@ class Edge extends Transformable {
         // TODO this breaks on colinear edges,
         // TODO: what, where?
         return this === edge ||
-            edge instanceof Edge &&
+            edge instanceof Edge$$1 &&
                 this.curve.isColinearTo(edge.curve)
                 && this.a.like(edge.a)
                 && this.b.like(edge.b);
@@ -38982,7 +40304,7 @@ class Edge extends Transformable {
         return this.curve.at((this.minT + this.maxT) / 2);
     }
 }
-class PCurveEdge extends Edge {
+class PCurveEdge$$1 extends Edge$$1 {
     constructor(curve, a, b, aT, bT, flippedOf, aDir, bDir, name) {
         super(curve, a, b, aT, bT, flippedOf, name);
         this.flippedOf = flippedOf;
@@ -38991,7 +40313,7 @@ class PCurveEdge extends Edge {
         assertVectors(aDir, bDir);
         assertf(() => !aDir.likeO(), curve);
         assertf(() => !bDir.likeO(), curve);
-        if (!(curve instanceof PICurve$1)) {
+        if (!(curve instanceof PICurve$$1)) {
             // TODO
             assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce);
             assertf(() => curve.tangentAt(bT).likeOrReversed(bDir));
@@ -39000,7 +40322,7 @@ class PCurveEdge extends Edge {
         assert$1(this.reversed === this.bDir.dot(curve.tangentAt(bT)) < 0, aT + ' ' + bT + ' ' + curve.constructor.name + ' ' + this.aDir.sce + ' ' + this.bDir.sce + ' ' + curve.tangentAt(aT));
     }
     static forCurveAndTs(curve, aT, bT, name) {
-        return new PCurveEdge(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated(), name);
+        return new PCurveEdge$$1(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated(), name);
     }
     toSource() {
         return callsce('new PCurveEdge', this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir, this.name);
@@ -39042,10 +40364,10 @@ class PCurveEdge extends Edge {
         return !this.reversed ? this.curve.tangentAt(t) : this.curve.tangentAt(t).negated();
     }
     flipped() {
-        return this.flippedOf || (this.flippedOf = new PCurveEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.bDir.negated(), this.aDir.negated(), this.name));
+        return this.flippedOf || (this.flippedOf = new PCurveEdge$$1(this.curve, this.b, this.a, this.bT, this.aT, this, this.bDir.negated(), this.aDir.negated(), this.name));
     }
     transform(m4, desc) {
-        return new PCurveEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT, this.bT, undefined, m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc);
+        return new PCurveEdge$$1(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT, this.bT, undefined, m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc);
     }
     isCoEdge(edge) {
         return this === edge || this === edge.flippedOf ||
@@ -39053,13 +40375,13 @@ class PCurveEdge extends Edge {
                 || this.a.like(edge.b) && this.b.like(edge.a));
     }
 }
-class StraightEdge extends Edge {
+class StraightEdge$$1 extends Edge$$1 {
     // flippedOf: StraightEdge
     constructor(line, a, b, aT, bT, flippedOf, name) {
         super(line, a, b, aT, bT, flippedOf, name);
         this.flippedOf = flippedOf;
-        assertInst(L3, line);
-        !flippedOf || assertInst(StraightEdge, flippedOf);
+        assertInst(L3$$1, line);
+        !flippedOf || assertInst(StraightEdge$$1, flippedOf);
         !name || assertf(() => 'string' === typeof name, name);
         assert$1(!a.like(b), '!a.like(b)' + a + b); // don't put in super as it will break full ellipse
         this.tangent = this.aT < this.bT ? this.curve.dir1 : this.curve.dir1.negated();
@@ -39071,7 +40393,7 @@ class StraightEdge extends Edge {
         return this.tangent;
     }
     static throughPoints(a, b, name) {
-        return new StraightEdge(L3.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), undefined, name);
+        return new StraightEdge$$1(L3$$1.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), undefined, name);
     }
     /**
      * Create a list of StraightEdges from a list of vertices.
@@ -39081,7 +40403,7 @@ class StraightEdge extends Edge {
      */
     static chain(vertices, closed = true) {
         const vc = vertices.length;
-        return arrayFromFunction(closed ? vc : vc - 1, i => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]));
+        return arrayFromFunction(closed ? vc : vc - 1, i => StraightEdge$$1.throughPoints(vertices[i], vertices[(i + 1) % vc]));
     }
     toSource() {
         return callsce('new StraightEdge', this.curve, this.a, this.b, this.aT, this.bT);
@@ -39100,7 +40422,7 @@ class StraightEdge extends Edge {
         return (this.minT <= edgeT && edgeT <= this.maxT) ? [edgeT] : [];
     }
     edgeISTsWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof PlaneSurface$$1) {
             return this.edgeISTsWithPlane(surface.plane);
         }
         else {
@@ -39113,14 +40435,14 @@ class StraightEdge extends Edge {
         return this.tangent;
     }
     flipped() {
-        return this.flippedOf || (this.flippedOf = new StraightEdge(this.curve, this.b, this.a, this.bT, this.aT, this, this.name));
+        return this.flippedOf || (this.flippedOf = new StraightEdge$$1(this.curve, this.b, this.a, this.bT, this.aT, this, this.name));
     }
     transform(m4, desc) {
         const lineDir1TransLength = m4.transformVector(this.curve.dir1).length();
-        return new StraightEdge(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, undefined, '' + this.name + desc);
+        return new StraightEdge$$1(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, undefined, '' + this.name + desc);
     }
     isCoEdge(edge) {
-        return this === edge || this === edge.flippedOf || edge.constructor === StraightEdge && (this.a.like(edge.a) && this.b.like(edge.b)
+        return this === edge || this === edge.flippedOf || edge.constructor === StraightEdge$$1 && (this.a.like(edge.a) && this.b.like(edge.b)
             || this.a.like(edge.b) && this.b.like(edge.a));
     }
     getEdgeT(p) {
@@ -39177,8 +40499,7 @@ class FaceInfoFactory {
     }
 }
 
-const { PI: PI$17, min: min$9, max: max$8, sign: sign$11, ceil: ceil$10, floor: floor$8, abs: abs$12 } = Math;
-class Face extends Transformable {
+class Face$$1 extends Transformable {
     constructor(surface, contour, holes = [], name, info) {
         super();
         this.surface = surface;
@@ -39187,15 +40508,15 @@ class Face extends Transformable {
         this.name = name;
         this.info = info;
         //assert(name)
-        Edge.assertLoop(contour);
-        assert$1(contour.every(f => f instanceof Edge), () => 'contour.every(f => f instanceof Edge)' + contour);
+        Edge$$1.assertLoop(contour);
+        assert$1(contour.every(f => f instanceof Edge$$1), () => 'contour.every(f => f instanceof Edge)' + contour);
         // contour.forEach(e => !surface.containsCurve(e.curve) &&
         // console.log('FAIL:'+surface.distanceToPoint(e.curve.anchor)))
         contour.forEach(e => {
             assert$1(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface);
         });
         assert$1(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'));
-        holes && holes.forEach(hole => Edge.assertLoop(hole));
+        holes && holes.forEach(hole => Edge$$1.assertLoop(hole));
         holes && holes.forEach(hole => assert$1(!surface.edgeLoopCCW(hole)));
         assert$1(!holes || holes.constructor == Array, holes && holes.toString());
         this.allEdges = Array.prototype.concat.apply(this.contour, this.holes);
@@ -39206,7 +40527,7 @@ class Face extends Transformable {
                 loopInfos.push(newLoopInfo);
             }
             else {
-                const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface));
+                const subLoopInfo = loopInfos.find(loopInfo => BRep$$1.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface));
                 if (subLoopInfo) {
                     placeRecursively(newLoopInfo, subLoopInfo.subloops);
                 }
@@ -39216,7 +40537,7 @@ class Face extends Transformable {
                         const subLoopInfo = loopInfos[i];
                         //console.log('cheving subLoopInfo', surface.loopContainsPoint(newLoopInfo.edges,
                         // subLoopInfo.edges[0].a))
-                        if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
+                        if (BRep$$1.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                             newLoopInfo.subloops.push(subLoopInfo);
                             loopInfos.splice(i, 1); // remove it
                         }
@@ -39226,7 +40547,7 @@ class Face extends Transformable {
             }
         }
         function newFacesRecursive(loopInfo) {
-            newFaces.push(new faceConstructor(surface, loopInfo.ccw ? loopInfo.loop : Edge.reversePath(loopInfo.loop), loopInfo.subloops.map(sl => sl.ccw ? Edge.reversePath(sl.loop) : sl.loop)));
+            newFaces.push(new faceConstructor(surface, loopInfo.ccw ? loopInfo.loop : Edge$$1.reversePath(loopInfo.loop), loopInfo.subloops.map(sl => sl.ccw ? Edge$$1.reversePath(sl.loop) : sl.loop)));
             loopInfo.subloops.forEach(sl => sl.subloops.forEach(sl2 => newFacesRecursive(sl2)));
         }
         const newFaces = [];
@@ -39245,12 +40566,12 @@ class Face extends Transformable {
     //		if (loopInfos.length == 0) {
     //			loopInfos.push(newLoopInfo)
     //		} else {
-    //			const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw,
+    //			const subLoopInfo = loopInfos.find(loopInfo => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw,
     // newLoopInfo.loop, newLoopInfo.ccw, surface)) if (subLoopInfo) { placeRecursively(newLoopInfo,
     // subLoopInfo.subloops) } else { // newLoopInfo isnt contained by any other subLoopInfo for (let i =
     // loopInfos.length; --i >= 0;) { const subLoopInfo = loopInfos[i] //console.log('cheving subLoopInfo',
     // surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a)) if
-    // (B2.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) { newLoopInfo.subloops.push(subLoopInfo)
+    // (BRep.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) { newLoopInfo.subloops.push(subLoopInfo)
     // loopInfos.splice(i, 1) // remove it } } loopInfos.push(newLoopInfo) } } }  function newFacesRecursive(loopInfo:
     // LoopInfo): void { // CW loops can be top level, if they are holes in the original face not contained in the new
     // face if (loopInfo.ccw) { if (loopInfo.subloops.every(sl => !sl.ccw)) { const newFace = new
@@ -39261,9 +40582,9 @@ class Face extends Transformable {
     // surface.edgeLoopCCW(loop), subloops: []}, topLevelLoops)) topLevelLoops.forEach(tll => newFacesRecursive(tll))
     // return newFaces }
     static create(surface, faceEdges, holes, faceName, info) {
-        return surface instanceof PlaneSurface
-            ? new PlaneFace(surface, faceEdges, holes, faceName, info)
-            : new RotationFace(surface, faceEdges, holes, faceName, info);
+        return surface instanceof PlaneSurface$$1
+            ? new PlaneFace$$1(surface, faceEdges, holes, faceName, info)
+            : new RotationFace$$1(surface, faceEdges, holes, faceName, info);
     }
     intersectFace(face2, thisBrep, face2Brep, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs) {
         //thisEdgePoints = {
@@ -39303,22 +40624,22 @@ class Face extends Transformable {
                 }
                 else {
                     const p = newEdge.a;
-                    const plane = P3.normalOnAnchor(newEdge.aDir, p);
+                    const plane = P3$$1.normalOnAnchor(newEdge.aDir, p);
                     const up = face.surface.normalP(p);
                     const sameDir = up.dot(face2.surface.normalP(p)) > 0;
                     const canonDir = plane.normal1.cross(up);
-                    const curve = face.surface.isCurvesWithPlane(plane)[0], curveT = curve.pointT(p), curveDir = sign$11(canonDir.dot(curve.tangentAt(curveT)));
-                    const curve2 = face2.surface.isCurvesWithPlane(plane)[0], curve2T = curve2.pointT(p), curve2Dir = sign$11(canonDir.dot(curve.tangentAt(curve2T)));
-                    const foo = curve.diff(curveT, EPS * curveDir).dot(up);
-                    const foo2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up);
+                    const curve = face.surface.isCurvesWithPlane(plane)[0], curveT = curve.pointT(p), curveDir = sign$1(canonDir.dot(curve.tangentAt(curveT)));
+                    const curve2 = face2.surface.isCurvesWithPlane(plane)[0], curve2T = curve2.pointT(p), curve2Dir = sign$1(canonDir.dot(curve.tangentAt(curve2T)));
+                    const foo = curve.diff(curveT, EPS$$1 * curveDir).dot(up);
+                    const foo2 = curve2.diff(curve2T, EPS$$1 * curve2Dir).dot(up);
                     if (foo2 < foo) {
                         mapPush(faceMap, face2, sameDir ? newEdge.flipped() : newEdge);
                     }
                     if (up.dot(face2.surface.normalP(p)) < 0 == foo2 < foo) {
                         mapPush(faceMap, face, newEdge.flipped());
                     }
-                    const bar = curve.diff(curveT, EPS * curveDir).dot(up);
-                    const bar2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up);
+                    const bar = curve.diff(curveT, EPS$$1 * curveDir).dot(up);
+                    const bar2 = curve2.diff(curve2T, EPS$$1 * curve2Dir).dot(up);
                     if (bar2 < bar) {
                         mapPush(faceMap, face2, sameDir ? newEdge : newEdge.flipped());
                     }
@@ -39340,8 +40661,8 @@ class Face extends Transformable {
                     thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => {
                         //const dot = snap0(surface2.normal1.dot(faceInfo.inside))
                         //if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
-                        const pointsInsideFace = fff(faceInfo, face2.surface);
-                        const edgeInside = pointsInsideFace == INSIDE || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME;
+                        const pointsInsideFace = fff$$1(faceInfo, face2.surface);
+                        const edgeInside = pointsInsideFace == INSIDE$$1 || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME$$1;
                         const pushEdge = faceInfo.edge.tangentAt(faceInfo.edge.curve.pointT(newEdge.a)).like(newEdge.aDir)
                             ? newEdge
                             : newEdge.flipped();
@@ -39350,16 +40671,16 @@ class Face extends Transformable {
                     });
                     const surface2NormalAtNewEdgeA = surface2.normalP(newEdge.a);
                     const newEdgeInside = surface2NormalAtNewEdgeA.cross(newEdge.aDir);
-                    const sVEF1 = splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside, surface2NormalAtNewEdgeA);
+                    const sVEF1 = splitsVolumeEnclosingFacesP$$1(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside, surface2NormalAtNewEdgeA);
                     let addNewEdge, addNewEdgeFlipped;
-                    if (addNewEdge = sVEF1 == INSIDE || coplanarSameIsInside && sVEF1 == COPLANAR_SAME) {
+                    if (addNewEdge = sVEF1 == INSIDE$$1 || coplanarSameIsInside && sVEF1 == COPLANAR_SAME$$1) {
                         mapPush(faceMap, face2, newEdge);
                     }
-                    const sVEF2 = splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside.negated(), surface2NormalAtNewEdgeA);
-                    if (addNewEdgeFlipped = sVEF2 == INSIDE || coplanarSameIsInside && sVEF2 == COPLANAR_SAME) {
+                    const sVEF2 = splitsVolumeEnclosingFacesP$$1(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside.negated(), surface2NormalAtNewEdgeA);
+                    if (addNewEdgeFlipped = sVEF2 == INSIDE$$1 || coplanarSameIsInside && sVEF2 == COPLANAR_SAME$$1) {
                         mapPush(faceMap, face2, newEdge.flipped());
                     }
-                    if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE || sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE) {
+                    if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME$$1 && sVEF2 == INSIDE$$1 || sVEF2 == COPLANAR_SAME$$1 && sVEF1 == INSIDE$$1) {
                         return true;
                     }
                 }
@@ -39379,15 +40700,15 @@ class Face extends Transformable {
                     // bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
                     // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
                     for (const faceInfo of thisBrep.edgeFaces.get(col1.getCanon())) {
-                        const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA);
-                        const edgeInside = sVEF == INSIDE || coplanarSameIsInside && sVEF == COPLANAR_SAME;
+                        const sVEF = splitsVolumeEnclosingFaces$$1(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA);
+                        const edgeInside = sVEF == INSIDE$$1 || coplanarSameIsInside && sVEF == COPLANAR_SAME$$1;
                         const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped();
                         if (edgeInside) {
                             mapPush(faceMap, faceInfo.face, pushEdge);
                             const aT = col1.getCanon().curve.pointT(newEdge.a);
                             if (!eq(aT, col1.aT) && !eq(aT, col1.bT)) {
                                 // newEdge.a is in center of col1
-                                if (splitsVolumeEnclosingCone2(face2Brep, newEdge.a, newEdge.curve, newEdge.aT, -Math.sign(newEdge.deltaT())) == INSIDE) {
+                                if (splitsVolumeEnclosingCone2$$1(face2Brep, newEdge.a, newEdge.curve, newEdge.aT, -Math.sign(newEdge.deltaT())) == INSIDE$$1) {
                                     mapPush(thisEdgePoints, col1.getCanon(), {
                                         p: newEdge.a,
                                         edgeT: aT
@@ -39396,14 +40717,13 @@ class Face extends Transformable {
                             }
                             const bT = col1.getCanon().curve.pointT(newEdge.b);
                             if (!eq(bT, col1.aT) && !eq(bT, col1.bT)) {
-                                if (splitsVolumeEnclosingCone2(face2Brep, newEdge.b, newEdge.curve, newEdge.bT, Math.sign(newEdge.deltaT())) == INSIDE) {
+                                if (splitsVolumeEnclosingCone2$$1(face2Brep, newEdge.b, newEdge.curve, newEdge.bT, Math.sign(newEdge.deltaT())) == INSIDE$$1) {
                                     mapPush(thisEdgePoints, col1.getCanon(), {
                                         p: newEdge.b,
                                         edgeT: bT
                                     });
                                 }
                             }
-                            
                         }
                     }
                 }
@@ -39447,10 +40767,10 @@ class Face extends Transformable {
                         if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) {
                             const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b;
                             // face2brep corner on edge
-                            const sVEC1 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, 1);
-                            const sVEC2 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, -1);
+                            const sVEC1 = splitsVolumeEnclosingCone2$$1(face2Brep, corner, a.edge.curve, a.edgeT, 1);
+                            const sVEC2 = splitsVolumeEnclosingCone2$$1(face2Brep, corner, a.edge.curve, a.edgeT, -1);
                             // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge
-                            if (INSIDE == sVEC1 || INSIDE == sVEC2) {
+                            if (INSIDE$$1 == sVEC1 || INSIDE$$1 == sVEC2) {
                                 mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                 assert$1(a.edge.isValidT(a.edgeT));
                             }
@@ -39461,9 +40781,9 @@ class Face extends Transformable {
                             // const testVector =
                             // a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
                             // assert(!testVector.likeO())
-                            const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
-                            const sVEF2 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p));
-                            if (INSIDE == sVEF1 || INSIDE == sVEF2) {
+                            const sVEF1 = splitsVolumeEnclosingFacesP2$$1(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
+                            const sVEF2 = splitsVolumeEnclosingFacesP2$$1(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p));
+                            if (INSIDE$$1 == sVEF1 || INSIDE$$1 == sVEF2) {
                                 mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                 assert$1(a.edge.isValidT(a.edgeT));
                             }
@@ -39475,7 +40795,7 @@ class Face extends Transformable {
                 foo(b, a, face2, face, surface2, surface, face2Brep, thisBrep, false, otherEdgePoints);
             }
         }
-        assertInst(Face, face2);
+        assertInst(Face$$1, face2);
         const face = this;
         const surface = face.surface, surface2 = face2.surface;
         if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
@@ -39513,7 +40833,7 @@ class Face extends Transformable {
             assertf(() => (0 == ps2.length) || !eq0(ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t))), () => ps2[0].insideDir.dot(isCurve.tangentAt(ps2[0].t)));
             function startsInside(ps, face) {
                 if (0 == ps.length) {
-                    return isFinite(isCurve.tMin) && face.containsPoint2(isCurve.at(isCurve.tMin)) == PointVsFace.INSIDE;
+                    return isFinite(isCurve.tMin) && face.containsPoint2(isCurve.at(isCurve.tMin)) == PointVsFace$$1.INSIDE;
                 }
                 else {
                     return ps[0].insideDir.dot(isCurve.tangentAt(ps[0].t)) < 0;
@@ -39573,7 +40893,7 @@ class Face extends Transformable {
                     startT > last.t && (startDir = startDir.negated());
                     let endDir = isCurve.tangentAt(last.t);
                     startT > last.t && (endDir = endDir.negated());
-                    const newEdge = Edge.create(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, 'genseg' + getGlobalId());
+                    const newEdge = Edge$$1.create(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, 'genseg' + getGlobalId$$1());
                     startP = undefined;
                     if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
                         handleEndPoint(startA || col1, startB || col2, newEdge);
@@ -39595,7 +40915,7 @@ class Face extends Transformable {
                 startT > endT && (startDir = startDir.negated());
                 let endDir = isCurve.tangentAt(endT);
                 startT > endT && (endDir = endDir.negated());
-                const newEdge = Edge.create(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, 'genseg' + getGlobalId());
+                const newEdge = Edge$$1.create(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, 'genseg' + getGlobalId$$1());
                 if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
                     handleEndPoint(startA || col1, startB || col2, newEdge);
                 }
@@ -39626,7 +40946,7 @@ class Face extends Transformable {
                         const prevEdgeIndex = (edgeIndex - 1 + loop.length) % loop.length, prevEdge = loop[prevEdgeIndex];
                         const curveAT = isCurve.pointT(edge.a);
                         const colinearOutA = edge.aDir.cross(surface.normalP(edge.a));
-                        if (!colinearEdges[prevEdgeIndex] && dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -sign$11(prevEdge.deltaT())) > 0) {
+                        if (!colinearEdges[prevEdgeIndex] && dotCurve2$$1(prevEdge.curve, prevEdge.bT, colinearOutA, -sign$1(prevEdge.deltaT())) > 0) {
                             ps.push({
                                 p: prevEdge.b,
                                 insideDir: edge.aDir.negated(),
@@ -39648,7 +40968,7 @@ class Face extends Transformable {
                     if (isCurve.containsPoint(edge.b)) {
                         const curveBT = isCurve.pointT(edge.b);
                         const colinearOutB = edge.bDir.cross(surface.normalP(edge.b));
-                        if (!colinearEdges[nextEdgeIndex] && dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, sign$11(nextEdge.deltaT())) > 0) {
+                        if (!colinearEdges[nextEdgeIndex] && dotCurve2$$1(nextEdge.curve, nextEdge.aT, colinearOutB, sign$1(nextEdge.deltaT())) > 0) {
                             ps.push({
                                 p: edge.b,
                                 insideDir: edge.bDir,
@@ -39678,7 +40998,7 @@ class Face extends Transformable {
                         assert$1(!isNaN(curveT));
                         const insideDir = edge.tangentAt(edgeT).cross(surface.normalP(p)).negated();
                         const isTangent = isCurve.tangentAt(curveT);
-                        const dirFactor = sign$11(isTangent.dot(edge.curve.tangentAt(edgeT)));
+                        const dirFactor = sign$1(isTangent.dot(edge.curve.tangentAt(edgeT)));
                         const normVector = surface2.normalP(p);
                         //if(!eq0(insideDir.dot(isTangent))) {
                         // Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
@@ -39687,8 +41007,8 @@ class Face extends Transformable {
                             if (!colinearEdges[nextEdgeIndex]) {
                                 if (!eq(curveT, isCurve.tMax)) {
                                     const pointsToInside = this.pointsToInside3(edge.b, isCurve, curveT, 1);
-                                    assert$1(pointsToInside != PointVsFace.ON_EDGE);
-                                    if (PointVsFace.INSIDE == pointsToInside) {
+                                    assert$1(pointsToInside != PointVsFace$$1.ON_EDGE);
+                                    if (PointVsFace$$1.INSIDE == pointsToInside) {
                                         ps.push({
                                             p: edge.b,
                                             insideDir: isTangent,
@@ -39701,8 +41021,8 @@ class Face extends Transformable {
                                 }
                                 if (!eq(curveT, isCurve.tMin)) {
                                     const pointsToInside = this.pointsToInside3(edge.b, isCurve, curveT, -1);
-                                    assert$1(pointsToInside != PointVsFace.ON_EDGE);
-                                    if (PointVsFace.INSIDE == pointsToInside) {
+                                    assert$1(pointsToInside != PointVsFace$$1.ON_EDGE);
+                                    if (PointVsFace$$1.INSIDE == pointsToInside) {
                                         ps.push({
                                             p: edge.b,
                                             insideDir: isTangent.negated(),
@@ -39734,7 +41054,7 @@ class Face extends Transformable {
                         else if (edgeT != edge.aT) {
                             // edge crosses/touches an intersection curve, neither starts nor ends on it
                             if (eq0(insideDir.dot(isTangent))) {
-                                const dirFactor = sign$11(isTangent.dot(edge.curve.tangentAt(edgeT)));
+                                const dirFactor = sign$1(isTangent.dot(edge.curve.tangentAt(edgeT)));
                                 const eps = 1e-4;
                                 for (const dir of [-1, 1]) {
                                     if (-1 == dir * dirFactor && edgeT == edge.minT ||
@@ -39793,8 +41113,8 @@ class Face extends Transformable {
     }
     transform(m4) {
         const mirroring = m4.isMirroring();
-        const newEdges = Edge.reversePath(this.contour.map(e => e.transform(m4)), mirroring);
-        const newHoles = this.holes.map(hole => Edge.reversePath(hole.map(e => e.transform(m4)), mirroring));
+        const newEdges = Edge$$1.reversePath(this.contour.map(e => e.transform(m4)), mirroring);
+        const newHoles = this.holes.map(hole => Edge$$1.reversePath(hole.map(e => e.transform(m4)), mirroring));
         return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info);
     }
     flipped() {
@@ -39842,7 +41162,7 @@ class Face extends Transformable {
                 arrayRange(0, a.length, 1)
                     .some(offset => a.every((edge, i) => edge.like(b[(offset + i) % a.length])));
         }
-        assertInst(Face, face2);
+        assertInst(Face$$1, face2);
         return this.surface.like(face2.surface)
             && this.holes.length == face2.holes.length
             && loopsLike(this.contour, face2.contour)
@@ -39861,21 +41181,21 @@ class Face extends Transformable {
     }
     containsPoint(p) {
         assertVectors(p);
-        return this.surface.loopContainsPoint(this.contour, p) != PointVsFace.OUTSIDE
-            && !this.holes.some(hole => this.surface.loopContainsPoint(hole, p) != PointVsFace.OUTSIDE);
+        return this.surface.loopContainsPoint(this.contour, p) != PointVsFace$$1.OUTSIDE
+            && !this.holes.some(hole => this.surface.loopContainsPoint(hole, p) != PointVsFace$$1.OUTSIDE);
     }
     containsPoint2(p) {
         assertVectors(p);
         const contourContainsPoint = this.surface.loopContainsPoint(this.contour, p);
-        if (contourContainsPoint != PointVsFace.INSIDE)
+        if (contourContainsPoint != PointVsFace$$1.INSIDE)
             return contourContainsPoint;
         for (const hole of this.holes) {
             const loopContainsPoint = this.surface.loopContainsPoint(hole, p);
-            if (loopContainsPoint != PointVsFace.OUTSIDE) {
-                return loopContainsPoint == PointVsFace.ON_EDGE ? PointVsFace.ON_EDGE : PointVsFace.OUTSIDE;
+            if (loopContainsPoint != PointVsFace$$1.OUTSIDE) {
+                return loopContainsPoint == PointVsFace$$1.ON_EDGE ? PointVsFace$$1.ON_EDGE : PointVsFace$$1.OUTSIDE;
             }
         }
-        return PointVsFace.INSIDE;
+        return PointVsFace$$1.INSIDE;
     }
     /**
      *
@@ -39883,7 +41203,7 @@ class Face extends Transformable {
      * @returns t param of the line if there is an intersection, NaN otherwise
      */
     intersectsLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         if (!this.getAABB().intersectsLine(line))
             return NaN;
         const containedIntersectionsTs = this.surface.isTsForLine(line).filter(t => this.containsPoint(line.at(t)));
@@ -39894,7 +41214,7 @@ class Face extends Transformable {
         const mesh = new Mesh()
             .addIndexBuffer('TRIANGLES')
             .addIndexBuffer('LINES')
-            .addVertexBuffer('normals', 'LGL_Normal');
+            .addVertexBuffer('normals', 'ts_Normal');
         this.addToMesh(mesh);
         //mesh.compile()
         return mesh;
@@ -39928,24 +41248,24 @@ class Face extends Transformable {
             const angle = curveTangent.angleRelativeNormal(edgeTangent, normal);
             if (eq0(angle)) {
                 if (curve.isColinearTo(edge.curve)) {
-                    return PointVsFace.ON_EDGE;
+                    return PointVsFace$$1.ON_EDGE;
                 }
                 const edgeT = aEqP ? edge.aT : edge.bT;
-                const edgeDir = (aEqP ? 1 : -1) * sign$11(edge.deltaT());
+                const edgeDir = (aEqP ? 1 : -1) * sign$1(edge.deltaT());
                 const iscd = edge.curve.diff(edgeT, edgeDir * eps).dot(up);
                 //const iscd = edge.curve.at(edgeT).to(curve.at(edgeT + edgeDir * eps)).dot(up)
                 const diff = iscd - ecd;
                 if (diff > 0 && (!advanced || diff < minValue)) {
                     advanced = true;
                     minValue = diff;
-                    result = aEqP ? PointVsFace.OUTSIDE : PointVsFace.INSIDE;
+                    result = aEqP ? PointVsFace$$1.OUTSIDE : PointVsFace$$1.INSIDE;
                 }
             }
             else if (!advanced) {
                 const angle2 = (angle + TAU) % TAU;
                 if (angle2 < minValue) {
                     minValue = angle2;
-                    result = aEqP ? PointVsFace.OUTSIDE : PointVsFace.INSIDE;
+                    result = aEqP ? PointVsFace$$1.OUTSIDE : PointVsFace$$1.INSIDE;
                 }
             }
         }
@@ -39954,7 +41274,7 @@ class Face extends Transformable {
         return result;
     }
     pointsToInside2(p, dir) {
-        return this.pointsToInside3(p, L3.anchorDirection(p, dir), 0, 1);
+        return this.pointsToInside3(p, L3$$1.anchorDirection(p, dir), 0, 1);
         //const normal = this.surface.normalP(p)
         //let minAngle = Infinity, inOut = false
         //function test(v, b) {
@@ -39976,18 +41296,18 @@ class Face extends Transformable {
         //return inOut ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
     }
 }
-class PlaneFace extends Face {
+class PlaneFace$$1 extends Face$$1 {
     constructor(p, contour, holes, name, info) {
-        assert$1(p instanceof P3 || p instanceof PlaneSurface);
-        super(p instanceof P3 ? new PlaneSurface(p) : p, contour, holes, name, info);
+        assert$1(p instanceof P3$$1 || p instanceof PlaneSurface$$1);
+        super(p instanceof P3$$1 ? new PlaneSurface$$1(p) : p, contour, holes, name, info);
     }
     static forVertices(planeSurface, vs, ...holeVss) {
-        const _planeSurface = planeSurface instanceof P3 ? new PlaneSurface(planeSurface) : planeSurface;
+        const _planeSurface = planeSurface instanceof P3$$1 ? new PlaneSurface$$1(planeSurface) : planeSurface;
         assert$1(isCCW(vs, _planeSurface.plane.normal1), 'isCCW(vs, planeSurface.plane.normal1)');
-        const edges = StraightEdge.chain(vs);
+        const edges = StraightEdge$$1.chain(vs);
         holeVss.forEach(vs => assert$1(doubleSignedArea(vs, _planeSurface.plane.normal1) >= 0, 'doubleSignedArea(vs, planeSurface.plane.normal1) >= 0'));
-        const holes = holeVss.map(hvs => StraightEdge.chain(hvs));
-        return new PlaneFace(planeSurface, edges, holes);
+        const holes = holeVss.map(hvs => StraightEdge$$1.chain(hvs));
+        return new PlaneFace$$1(planeSurface, edges, holes);
     }
     addToMesh(mesh) {
         const mvl = mesh.vertices.length;
@@ -40001,13 +41321,13 @@ class PlaneFace extends Face {
             holeStarts.push(vertices.length);
             vertices.push(...hole.flatMap(edge => edge.getVerticesNo0()));
         });
-        const triangles = triangulateVertices(normal, vertices, holeStarts).map(index => index + mvl);
+        const triangles = triangulateVertices$$1(normal, vertices, holeStarts).map(index => index + mvl);
         Array.prototype.push.apply(mesh.vertices, vertices);
         Array.prototype.push.apply(mesh.TRIANGLES, triangles);
         Array.prototype.push.apply(mesh.normals, arrayFromFunction(vertices.length, () => normal));
     }
     intersectsLine(line) {
-        assertInst(L3, line);
+        assertInst(L3$$1, line);
         const lambda = line.isTWithPlane(this.surface.plane);
         if (!Number.isFinite(lambda)) {
             return NaN;
@@ -40016,8 +41336,8 @@ class PlaneFace extends Face {
         return inside ? lambda : NaN;
     }
     //intersectPlaneFace(face2: PlaneFace,
-    //                   thisBrep: B2,
-    //                   face2Brep: B2,
+    //                   thisBrep: BRep,
+    //                   face2Brep: BRep,
     //                   faceMap: Map<Face, Edge[]>,
     //                   thisEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
     //                   otherEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
@@ -40121,7 +41441,7 @@ class PlaneFace extends Face {
     // a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used)
     // && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
     withHole(holeEdges) {
-        return new PlaneFace(this.surface, this.contour, [holeEdges]);
+        return new PlaneFace$$1(this.surface, this.contour, [holeEdges]);
     }
     pointsToInside(p, dir) {
         return this.containsPoint2(p.plus(dir.times(NLA_PRECISION * 8)));
@@ -40134,7 +41454,7 @@ class PlaneFace extends Face {
         const ps = [];
         const loops = [face.contour].concat(face.holes);
         loops.forEach(loop => {
-            const colinearEdges = loop.map((edge) => edge.colinearToLine(isLine) && -sign$11(edge.aDir.dot(isLine.dir1)));
+            const colinearEdges = loop.map((edge) => edge.colinearToLine(isLine) && -sign$1(edge.aDir.dot(isLine.dir1)));
             const isLineOut = isLine.dir1.cross(plane.normal1);
             loop.forEach((edge, edgeIndex, edges) => {
                 const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex];
@@ -40152,7 +41472,7 @@ class PlaneFace extends Face {
                         colinear: true,
                     });
                     // open next interval if necessary
-                    const nextSide = colinearEdges[nextEdgeIndex] || dotCurve(isLineOut, nextEdge.aDir, nextEdge.aDDT);
+                    const nextSide = colinearEdges[nextEdgeIndex] || dotCurve$$1(isLineOut, nextEdge.aDir, nextEdge.aDDT);
                     if (colinearEdges[edgeIndex] * nextSide < 0) {
                         // side changes
                         ps.push({
@@ -40172,8 +41492,8 @@ class PlaneFace extends Face {
                     for (const edgeT of edgeTs) {
                         if (edgeT == edge.bT) {
                             // endpoint lies on intersection line
-                            const side = -dotCurve(isLineOut, edge.bDir, edge.bDDT);
-                            const nextSide = colinearEdges[nextEdgeIndex] || dotCurve(isLineOut, nextEdge.aDir, nextEdge.aDDT);
+                            const side = -dotCurve$$1(isLineOut, edge.bDir, edge.bDDT);
+                            const nextSide = colinearEdges[nextEdgeIndex] || dotCurve$$1(isLineOut, nextEdge.aDir, nextEdge.aDDT);
                             if (side * nextSide < 0) {
                                 // next segment is not colinear and ends on different side
                                 ps.push({
@@ -40211,7 +41531,7 @@ class PlaneFace extends Face {
         return ps;
     }
 }
-class RotationFace extends Face {
+class RotationFace$$1 extends Face$$1 {
     constructor(rot, contour, holes, name, info) {
         super(rot, contour, holes, name, info);
     }
@@ -40229,7 +41549,7 @@ class RotationFace extends Face {
         for (const edge of loop) {
             const ts = edge.edgeISTsWithPlane(seamPlane);
             if (ts.length == 0) {
-                if (!(edge.curve instanceof L3) && checkSide(seamPlane.distanceToPointSigned(edge.a)))
+                if (!(edge.curve instanceof L3$$1) && checkSide(seamPlane.distanceToPointSigned(edge.a)))
                     return false;
             }
             else {
@@ -40237,11 +41557,11 @@ class RotationFace extends Face {
                     // TODO: this part probably should be in a separate function
                     // check 'backwards' only if if aT != t
                     if (edge.aT != t) {
-                        if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, -sign$11(edge.bT - edge.aT))))
+                        if (checkSide(dotCurve2$$1(edge.curve, t, seamPlane.normal1, -sign$1(edge.bT - edge.aT))))
                             return false;
                     }
                     if (edge.bT != t) {
-                        if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, sign$11(edge.bT - edge.aT))))
+                        if (checkSide(dotCurve2$$1(edge.curve, t, seamPlane.normal1, sign$1(edge.bT - edge.aT))))
                             return false;
                     }
                 }
@@ -40252,7 +41572,7 @@ class RotationFace extends Face {
     getAABB() {
         if (this.aabb)
             return this.aabb;
-        if (this.surface instanceof SemiEllipsoidSurface || this.surface instanceof EllipsoidSurface) {
+        if (this.surface instanceof SemiEllipsoidSurface$$1 || this.surface instanceof EllipsoidSurface$$1) {
             this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()));
             this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)));
             return this.aabb;
@@ -40265,21 +41585,21 @@ class RotationFace extends Face {
         const stPFunc = this.surface.stPFunc();
         for (const edge of this.contour) {
             // check edge.a
-            let u = stPFunc(edge.a, PI$17).x;
+            let u = stPFunc(edge.a, PI$3).x;
             // if u is not PI, or ~0, return its sign
-            if (u != PI$17 && !eq0(u)) {
-                return sign$11(u) * PI$17;
+            if (u != PI$3 && !eq0(u)) {
+                return sign$1(u) * PI$3;
             }
             // check midpoint between edge.a and edge.b
-            u = stPFunc(edge.curve.at((edge.aT + edge.bT) / 2), PI$17).x;
-            if (u != PI$17 && !eq0(u)) {
-                return sign$11(u) * PI$17;
+            u = stPFunc(edge.curve.at((edge.aT + edge.bT) / 2), PI$3).x;
+            if (u != PI$3 && !eq0(u)) {
+                return sign$1(u) * PI$3;
             }
         }
         const localEdge = this.contour[0].transform(this.surface.inverseMatrix);
-        if (P3.ZX.containsCurve(localEdge.curve)) {
+        if (P3$$1.ZX.containsCurve(localEdge.curve)) {
             const insideVector = localEdge.a.cross(localEdge.aDir);
-            return sign$11(insideVector.dot(V3.Y)) * PI$17;
+            return sign$1(insideVector.dot(V3.Y)) * PI$3;
         }
         assert$1(false, 'Couldn\'t find canon seam u');
     }
@@ -40306,7 +41626,7 @@ class RotationFace extends Face {
         }
         edgeLoop.forEach((edge, e) => {
             let hint = edge.bDir;
-            if (edge instanceof StraightEdge && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
+            if (edge instanceof StraightEdge$$1 && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
                 hint = this.surface.normalP(edge.b).cross(edge.bDir);
             }
             edge.getVerticesNo0().forEach(p => {
@@ -40327,7 +41647,7 @@ class RotationFace extends Face {
         const verticesST = [], vertices = [], loopStarts = [];
         const ellipsoid = this.surface;
         const ptpf = ellipsoid.stPFunc();
-        const testDegeneratePoint = ellipsoid instanceof SemiEllipsoidSurface
+        const testDegeneratePoint = ellipsoid instanceof SemiEllipsoidSurface$$1
             ? (nextStart) => nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) || nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
             : (nextStart) => nextStart.like(this.surface.center);
         for (const edgeLoop of edgeLoops) {
@@ -40344,13 +41664,13 @@ class RotationFace extends Face {
                 if (testDegeneratePoint(nextStart)) {
                     const bDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[ipp].aDir);
                     let inAngle = Math.atan2(-bDirLC.y, -bDirLC.x);
-                    if (abs$12(inAngle) > Math.PI - NLA_PRECISION) {
-                        assert$1(hint == -PI$17 || hint == PI$17);
+                    if (abs$2(inAngle) > Math.PI - NLA_PRECISION) {
+                        assert$1(hint == -PI$3 || hint == PI$3);
                         inAngle = hint;
                     }
                     let outAngle = Math.atan2(aDirLC.y, aDirLC.x);
-                    if (abs$12(outAngle) > Math.PI - NLA_PRECISION) {
-                        assert$1(hint == -PI$17 || hint == PI$17);
+                    if (abs$2(outAngle) > Math.PI - NLA_PRECISION) {
+                        assert$1(hint == -PI$3 || hint == PI$3);
                         outAngle = hint;
                     }
                     const stLast = verticesST.pop();
@@ -40364,7 +41684,7 @@ class RotationFace extends Face {
             }
         }
         let normals;
-        if (this.surface instanceof EllipsoidSurface) {
+        if (this.surface instanceof EllipsoidSurface$$1) {
             normals = vertices.map(v => ellipsoid.normalP(v));
         }
         else {
@@ -40430,7 +41750,7 @@ class RotationFace extends Face {
         const pIJFunc = (i, j) => this.surface.pSTFunc()(i * uStep, j * vStep);
         const normalIJFunc = (i, j) => this.surface.normalSTFunc()(i * uStep, j * vStep);
         const loops = [this.contour].concat(this.holes);
-        const { vertices, verticesUV, normals, loopStarts } = this.surface instanceof SemiEllipsoidSurface || this.surface instanceof ConicSurface
+        const { vertices, verticesUV, normals, loopStarts } = this.surface instanceof SemiEllipsoidSurface$$1 || this.surface instanceof ConicSurface$$1
             ? this.unrollEllipsoidLoops(loops, uStep, vStep)
             : this.unrollCylinderLoops(loops, uStep, vStep);
         loopStarts.push(vertices.length);
@@ -40451,21 +41771,21 @@ class RotationFace extends Face {
         verticesUV.forEach(({ x: u, y: v }) => {
             assert$1(isFinite(u));
             assert$1(isFinite(v));
-            minU = min$9(minU, u);
-            maxU = max$8(maxU, u);
-            minV = min$9(minV, v);
-            maxV = max$8(maxV, v);
+            minU = min$1(minU, u);
+            maxU = max$1(maxU, u);
+            minV = min$1(minV, v);
+            maxV = max$1(maxV, v);
         });
-        if (ParametricSurface.is(this.surface)) {
+        if (ParametricSurface$$1.is(this.surface)) {
             assert$1(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION);
             assert$1(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION);
         }
-        const uOffset = floor$8(minU + NLA_PRECISION), vOffset = floor$8(minV + NLA_PRECISION);
-        const uRes = ceil$10(maxU - NLA_PRECISION) - uOffset, vRes = ceil$10(maxV - NLA_PRECISION) - vOffset;
+        const uOffset = floor(minU + NLA_PRECISION), vOffset = floor(minV + NLA_PRECISION);
+        const uRes = ceil(maxU - NLA_PRECISION) - uOffset, vRes = ceil(maxV - NLA_PRECISION) - vOffset;
         console.log(uStep, vStep, uRes, vRes);
         if (uRes == 1 && vRes == 1) {
             // triangulate this face as if it were a plane
-            const polyTriangles = triangulateVertices(V3.Z, verticesUV, loopStarts.slice(1, 1 + this.holes.length));
+            const polyTriangles = triangulateVertices$$1(V3.Z, verticesUV, loopStarts.slice(1, 1 + this.holes.length));
             triangles.push(...polyTriangles);
         }
         else {
@@ -40507,15 +41827,15 @@ class RotationFace extends Face {
                         // points which are on a grid line are assigned to the cell into which they are going (+
                         // NLA_PRECISION * sign(di)) if they are parallel to the gridline (eq0(di)), they belong the
                         // the cell for which they are a CCW boundary
-                        const baseU = floor$8(vxu + (!eq0(di) ? sign$11(di) : -sign$11(dj)) * NLA_PRECISION) - uOffset;
-                        const baseV = floor$8(vxv + (!eq0(dj) ? sign$11(dj) : sign$11(di)) * NLA_PRECISION) - vOffset;
+                        const baseU = floor(vxu + (!eq0(di) ? sign$1(di) : -sign$1(dj)) * NLA_PRECISION) - uOffset;
+                        const baseV = floor(vxv + (!eq0(dj) ? sign$1(dj) : sign$1(di)) * NLA_PRECISION) - vOffset;
                         assert$1(baseU < uRes && baseV < vRes, `${baseU}, ${baseV}, ${uRes}, ${vRes}`);
                         // figure out the next intersection with a gridline:
                         // iNext is the positive horizontal distance to the next vertical gridline
-                        const iNext = ceil$10(sign$11(di) * vxu + NLA_PRECISION) - sign$11(di) * vxu;
-                        const jNext = ceil$10(sign$11(dj) * vxv + NLA_PRECISION) - sign$11(dj) * vxv;
-                        const iNextT = currentT + iNext / abs$12(di);
-                        const jNextT = currentT + jNext / abs$12(dj);
+                        const iNext = ceil(sign$1(di) * vxu + NLA_PRECISION) - sign$1(di) * vxu;
+                        const jNext = ceil(sign$1(dj) * vxv + NLA_PRECISION) - sign$1(dj) * vxv;
+                        const iNextT = currentT + iNext / abs$2(di);
+                        const jNextT = currentT + jNext / abs$2(dj);
                         //console.log(vxIndex, vx.str, 'vij', vxu, vxv, 'd', di, dj, 'ijNext', iNext, jNext, 'nextT',
                         // iNextT, jNextT)
                         if (lastBaseU != baseU || lastBaseV != baseV) {
@@ -40534,7 +41854,7 @@ class RotationFace extends Face {
                         }
                         lastBaseU = baseU;
                         lastBaseV = baseV;
-                        currentT = min$9(iNextT, jNextT);
+                        currentT = min$1(iNextT, jNextT);
                         if (ge(currentT, 1)) {
                             //console.log('breaking ', vx1index)
                             part.push(vx1index);
@@ -40610,7 +41930,7 @@ class RotationFace extends Face {
                                 const nextPartStartOpos = opos(nextPart[0]) > currentOpos
                                     ? opos(nextPart[0])
                                     : opos(nextPart[0]) + 4;
-                                let nextOpos = ceil$10(currentOpos + NLA_PRECISION);
+                                let nextOpos = ceil(currentOpos + NLA_PRECISION);
                                 let flipping = eq0((currentOpos + NLA_PRECISION) % 1 - NLA_PRECISION);
                                 //inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2 < 1)
                                 while (lt(nextOpos, nextPartStartOpos)) {
@@ -40644,7 +41964,7 @@ class RotationFace extends Face {
                                 triangles.push(...outline);
                             }
                             else {
-                                const polyTriangles = triangulateVertices(V3.Z, outline.map(i => verticesUV[i]), []).map(i => outline[i]);
+                                const polyTriangles = triangulateVertices$$1(V3.Z, outline.map(i => verticesUV[i]), []).map(i => outline[i]);
                                 triangles.push(...polyTriangles);
                             }
                             //console.log('outline', col, row, outline)
@@ -40664,7 +41984,7 @@ class RotationFace extends Face {
     }
     addToMesh2(mesh) {
         const closed = false;
-        const hSplit = 12800, zSplit = 8;
+        const zSplit = 8;
         const ribs = [];
         let minZ = Infinity, maxZ = -Infinity;
         //let cmp = (a, b) => a.value - b.value
@@ -40677,8 +41997,8 @@ class RotationFace extends Face {
                 if (index0 < 0) {
                     ribs.splice(-index0 - 1, 0, { value: d, left: [], right: [] });
                 }
-                minZ = min$9(minZ, z);
-                maxZ = max$8(maxZ, z);
+                minZ = min$1(minZ, z);
+                maxZ = max$1(maxZ, z);
             });
         });
         console.log('zzzs', minZ, maxZ, vertexLoops[0].toSource().replace(/\), /g, ',\n'));
@@ -40784,8 +42104,6 @@ class RotationFace extends Face {
         //this.addEdgeLines(mesh)
     }
 }
-
-'use strict';
 
 var earcut_1 = earcut;
 var default_1 = earcut;
@@ -41435,17 +42753,14 @@ earcut.flatten = function (data) {
     }
     return result;
 };
-
 earcut_1.default = default_1;
 
-/// <reference path="earcut.d.ts" />
-const { PI: PI$18, sign: sign$12, abs: abs$13, sqrt: sqrt$5 } = Math;
-const EPS = 1e-5;
+const EPS$$1 = 1e-5;
 let globalId = 0;
-function getGlobalId() {
+function getGlobalId$$1() {
     return globalId++;
 }
-function addLikeSurfaceFaces(likeSurfaceFaces, face1, face2) {
+function addLikeSurfaceFaces$$1(likeSurfaceFaces, face1, face2) {
     // There cannot be two subgroups which will later be connected, as the "graph" of like surface faces is fully
     // connected
     for (let i = 0; i < likeSurfaceFaces.length; i++) {
@@ -41472,7 +42787,7 @@ function addLikeSurfaceFaces(likeSurfaceFaces, face1, face2) {
     // nothing found, add a new group
     likeSurfaceFaces.push([face1, face2]);
 }
-function assembleFaceFromLooseEdges(edges, surface, faceConstructor) {
+function assembleFaceFromLooseEdges$$1(edges, surface, faceConstructor) {
     const visited = new Set();
     function nextStart() { return edges.find(edge => !visited.has(edge)); }
     const loops = [];
@@ -41492,7 +42807,7 @@ function assembleFaceFromLooseEdges(edges, surface, faceConstructor) {
         assert$1(total != 201);
         loops.push(loop);
     }
-    const assembledFaces = B2.assembleFacesFromLoops(loops, surface, faceConstructor);
+    const assembledFaces = BRep$$1.assembleFacesFromLoops(loops, surface, faceConstructor);
     assertf(() => 1 == assembledFaces.length);
     return assembledFaces[0];
 }
@@ -41502,11 +42817,11 @@ function assembleFaceFromLooseEdges(edges, surface, faceConstructor) {
  * {@link ../screenshots/Capture.PNG}
  * find the next edge with the MAXIMUM angle
  */
-function calcNextEdgeIndex(currentEdge, possibleEdges, faceNormalAtCurrentB) {
+function calcNextEdgeIndex$$1(currentEdge, possibleEdges, faceNormalAtCurrentB) {
     let maxValue = -20, advanced = false, result = Number.MAX_SAFE_INTEGER;
     const normVector = currentEdge.bDir.cross(faceNormalAtCurrentB);
     const eps = 1e-4;
-    const dir = sign$12(currentEdge.deltaT());
+    const dir = sign$1(currentEdge.deltaT());
     const ecd = currentEdge.curve.diff(currentEdge.bT, -dir * eps).dot(normVector);
     for (let i = possibleEdges.length; i--;) {
         const edge = possibleEdges[i];
@@ -41517,7 +42832,7 @@ function calcNextEdgeIndex(currentEdge, possibleEdges, faceNormalAtCurrentB) {
             if (currentEdge.curve.isColinearTo(edge.curve)) {
                 continue;
             }
-            const edgeDir = sign$12(edge.deltaT());
+            const edgeDir = sign$1(edge.deltaT());
             const iscd = edge.curve.diff(edge.aT, edgeDir * eps).dot(normVector);
             const diff = (iscd - ecd);
             // if diff > 0, the angle is actually ~= 0
@@ -41536,11 +42851,11 @@ function calcNextEdgeIndex(currentEdge, possibleEdges, faceNormalAtCurrentB) {
     }
     return result == Number.MAX_SAFE_INTEGER ? 0 : result;
 }
-class B2 extends Transformable {
+class BRep$$1 extends Transformable {
     constructor(faces, infiniteVolume, generator, vertexNames) {
         super();
         this.faces = faces;
-        assertInst(Face, ...faces);
+        assertInst(Face$$1, ...faces);
         this.infiniteVolume = infiniteVolume;
         assert$1(false === this.infiniteVolume || true === this.infiniteVolume);
         this.generator = generator;
@@ -41551,14 +42866,14 @@ class B2 extends Transformable {
     static loop1ContainsLoop2(loop1, ccw1, loop2, ccw2, surface) {
         for (const edge of loop2) {
             const loop1ContainsPoint = surface.loopContainsPoint(loop1, edge.a);
-            if (PointVsFace.ON_EDGE != loop1ContainsPoint)
-                return PointVsFace.INSIDE == loop1ContainsPoint;
+            if (PointVsFace$$1.ON_EDGE != loop1ContainsPoint)
+                return PointVsFace$$1.INSIDE == loop1ContainsPoint;
         }
         for (const edge of loop2) {
             const edgePoint = edge.curve.at(edge.aT * 0.2 + edge.bT * 0.8);
             const loop1ContainsPoint = surface.loopContainsPoint(loop1, edgePoint);
-            if (PointVsFace.ON_EDGE != loop1ContainsPoint)
-                return PointVsFace.INSIDE == loop1ContainsPoint;
+            if (PointVsFace$$1.ON_EDGE != loop1ContainsPoint)
+                return PointVsFace$$1.INSIDE == loop1ContainsPoint;
         }
         if (ccw1 != ccw2) {
             return ccw2;
@@ -41571,7 +42886,7 @@ class B2 extends Transformable {
                 loopInfos.push(newLoopInfo);
             }
             else {
-                const subLoopInfo = loopInfos.find(loopInfo => B2.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface));
+                const subLoopInfo = loopInfos.find(loopInfo => BRep$$1.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface));
                 if (subLoopInfo) {
                     placeRecursively(newLoopInfo, subLoopInfo.subloops);
                 }
@@ -41581,7 +42896,7 @@ class B2 extends Transformable {
                         const subLoopInfo = loopInfos[i];
                         //console.log("cheving subLoopInfo", surface.loopContainsPoint(newLoopInfo.edges,
                         // subLoopInfo.edges[0].a))
-                        if (B2.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
+                        if (BRep$$1.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                             newLoopInfo.subloops.push(subLoopInfo);
                             loopInfos.splice(i, 1); // remove it
                         }
@@ -41596,7 +42911,7 @@ class B2 extends Transformable {
                 if (loopInfo.subloops.every(sl => !sl.ccw)) {
                     const holes = loopInfo.subloops.map(sl => sl.loop);
                     const info = infoFactory && infoFactory.newSubFace(originalFace, surface, loopInfo.loop, holes);
-                    const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface' + getGlobalId(), info);
+                    const newFace = new originalFace.constructor(surface, loopInfo.loop, holes, 'genface' + getGlobalId$$1(), info);
                     newFaces.push(newFace);
                     loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl)));
                 }
@@ -41616,12 +42931,12 @@ class B2 extends Transformable {
         return newFaces;
     }
     static join(b2s, generator) {
-        return new B2(b2s.flatMap(b2 => b2.faces), false, generator);
+        return new BRep$$1(b2s.flatMap(b2 => b2.faces), false, generator);
     }
     containsPoint(p, forceInsideOutside = false) {
         const dirs = [V(-0.3920414696448526, -0.12936136783391444, -0.9108068525164064), V(0.6520650903544943, -0.07151288645511984, -0.7547827667692488), V(0.9433494201061395, -0.2402757256238473, -0.22882186797013926), V(0.13678704228501923, -0.04480387361087783, 0.9895867410047372), V(0.0662057922721913, -0.5865836917435423, 0.8071780259955845), V(-0.7322576567870621, -0.12953393611526787, 0.6685953061989045), V(0.6579719127258273, -0.012300218400456116, 0.7529420075219719), V(-0.5576497966736425, 0.8006695748324647, 0.2189861552871446)];
         dirLoop: for (const dir of dirs) {
-            const testLine = new L3(p, dir);
+            const testLine = new L3$$1(p, dir);
             let inside = this.infiniteVolume;
             for (const face of this.faces) {
                 assert$1(!face.surface.containsCurve(testLine));
@@ -41632,12 +42947,11 @@ class B2 extends Transformable {
                     //assert(pvf != PointVsFace.ON_EDGE)
                     !forceInsideOutside && assert$1(!eq0(t));
                     if (t > 0) {
-                        if (pvf == PointVsFace.ON_EDGE) {
+                        if (pvf == PointVsFace$$1.ON_EDGE) {
                             continue dirLoop;
                         }
-                        if (pvf == PointVsFace.INSIDE) {
+                        if (pvf == PointVsFace$$1.INSIDE) {
                             inside = !inside;
-                            
                         }
                     }
                 }
@@ -41686,18 +43000,18 @@ class B2 extends Transformable {
                         }
                     }
                 }
-                const newFace = assembleFaceFromLooseEdges(allEdges, faceGroup[0].surface, faceGroup[0].constructor);
+                const newFace = assembleFaceFromLooseEdges$$1(allEdges, faceGroup[0].surface, faceGroup[0].constructor);
                 newFaces.push(newFace);
             }
         }
-        return new B2(newFaces, this.infiniteVolume, this.generator && this.generator + '.withMergedFaces()', this.vertexNames);
+        return new BRep$$1(newFaces, this.infiniteVolume, this.generator && this.generator + '.withMergedFaces()', this.vertexNames);
     }
     calculateVolume() {
         return this.faces.map(face => face.zDirVolume().volume).sum();
     }
     toMesh() {
         const mesh = new Mesh()
-            .addVertexBuffer('normals', 'LGL_Normal')
+            .addVertexBuffer('normals', 'ts_Normal')
             .addIndexBuffer('TRIANGLES')
             .addIndexBuffer('LINES');
         mesh.faceIndexes = new Map();
@@ -41726,7 +43040,7 @@ class B2 extends Transformable {
     }
     xor(other, infoFactory) {
         const generator = this.generator && other.generator && this.generator + '.xor(' + other.generator + ')';
-        return new B2(this.minus(other).faces.concat(other.minus(this).faces), this.infiniteVolume != other.infiniteVolume, generator);
+        return new BRep$$1(this.minus(other).faces.concat(other.minus(this).faces), this.infiniteVolume != other.infiniteVolume, generator);
     }
     equals(obj) {
         return this.faces.length == obj.faces.length &&
@@ -41764,14 +43078,14 @@ class B2 extends Transformable {
     // possibleNextEdges[nextEdgeIndex] } while (!currentEdge.visited) let startIndex = path.find(currentEdge) if (-1
     // != startIndex) { loops.push(path.slice(startIndex)) } } }) }
     toString() {
-        return `new B2([\n${this.faces.join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`;
+        return `new BRep([\n${this.faces.join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`;
     }
     getConstructorParameters() {
         return [this.faces, this.infiniteVolume];
     }
     toSource(useGenerator = true) {
         return useGenerator && this.generator ||
-            `new B2([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`;
+            `new BRep([\n${this.faces.map(SCE).join(',\n').replace(/^/gm, '\t')}], ${this.infiniteVolume})`;
     }
     /**
      * Rightmost next segment doesn't work, as the correct next segment isn't obvious from the current corner
@@ -41822,8 +43136,8 @@ class B2 extends Transformable {
                             break;
                         assert$1(0 < possibleEdges.length, () => face.sce);
                         const faceNormalAtCurrentB = face.surface.normalP(currentEdge.b);
-                        const correct = possibleEdges.indexWithMax((edge, index) => (currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) + NLA_PRECISION + PI$18) % TAU);
-                        const nextEdgeIndex = calcNextEdgeIndex(currentEdge, possibleEdges, faceNormalAtCurrentB);
+                        const correct = possibleEdges.indexWithMax((edge, index) => (currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) + NLA_PRECISION + PI$3) % TAU);
+                        const nextEdgeIndex = calcNextEdgeIndex$$1(currentEdge, possibleEdges, faceNormalAtCurrentB);
                         currentEdge = possibleEdges[nextEdgeIndex];
                         if (visitedEdges.has(currentEdge)) {
                             break;
@@ -41839,7 +43153,7 @@ class B2 extends Transformable {
                         loops.push(edges);
                     }
                 }
-                const faceNewFaces = B2.assembleFacesFromLoops(loops, face.surface, face, infoFactory);
+                const faceNewFaces = BRep$$1.assembleFacesFromLoops(loops, face.surface, face, infoFactory);
                 newFaces.push(...faceNewFaces);
                 const faceNewFacesEdges = faceNewFaces.flatMap(face => face.getAllEdges());
                 insideEdges.push(...usableOldEdges.filter(edge => faceNewFacesEdges.includes(edge)));
@@ -41870,6 +43184,7 @@ class B2 extends Transformable {
             function addNewEdge(startInfo, endInfo, newEdge) {
                 for (let i = 0; i < allFaces.length; i++) {
                     const faceInfo = allFaces[i];
+                    const startYes = !startInfo || !startInfo.faces || startInfo.faces[i];
                     const endYes = !endInfo || !endInfo.faces;
                     endYes && mapPush(result, !faceInfo.reversed ? canonEdge : canonEdge.flipped(), !faceInfo.reversed ? newEdge : newEdge.flipped());
                 }
@@ -41878,7 +43193,7 @@ class B2 extends Transformable {
                 const info = pointInfos[i];
                 const pDir = canonEdge.tangentAt(info.edgeT);
                 if (!eq(info.edgeT, startT)) {
-                    const newEdge = Edge.create(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, 'looseSegment' + getGlobalId());
+                    const newEdge = Edge$$1.create(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, 'looseSegment' + getGlobalId$$1());
                     addNewEdge(startInfo, info, newEdge);
                 }
                 startP = info.p;
@@ -41887,7 +43202,7 @@ class B2 extends Transformable {
                 startDir = pDir;
             }
             if (startInfo && !eq(startT, canonEdge.bT)) {
-                const newEdge = Edge.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, 'looseSegment' + getGlobalId());
+                const newEdge = Edge$$1.create(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, 'looseSegment' + getGlobalId$$1());
                 addNewEdge(startInfo, undefined, newEdge);
             }
         }
@@ -41932,7 +43247,7 @@ class B2 extends Transformable {
             return;
         const allFaceEdges = this.faces.flatMap(face => face.getAllEdges());
         for (const { i, j } of combinations(allFaceEdges.length)) {
-            
+            const a = allFaceEdges[i], b = allFaceEdges[j];
             //assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
             //assert(i == j
             //	|| !a.curve.isColinearTo(b.curve)
@@ -41945,7 +43260,7 @@ class B2 extends Transformable {
             assert$1(edgeFaceInfos.length % 2 == 0, () => canonEdge + edgeFaceInfos.sce);
         }
     }
-    //intersection3(other: B2, buildThis: boolean, buildOther: boolean, name?: string): B2 {
+    //intersection3(other: BRep, buildThis: boolean, buildOther: boolean, name?: string): BRep {
     //    this.assertSanity()
     //    other.assertSanity()
     //    this.buildAdjacencies()
@@ -42104,7 +43419,7 @@ class B2 extends Transformable {
         }
         //buildCoplanar && this.reconstituteCoplanarFaces(likeSurfaceFaces, edgeLooseSegments, faceMap, newFaces,
         // this.infiniteVolume, other.infiniteVolume)
-        const result = new B2(newFaces, this.infiniteVolume && other.infiniteVolume, generator);
+        const result = new BRep$$1(newFaces, this.infiniteVolume && other.infiniteVolume, generator);
         //result.buildAdjacencies()
         return result;
     }
@@ -42114,16 +43429,16 @@ class B2 extends Transformable {
             vertexNames = new Map();
             this.vertexNames.forEach((name, vertex) => vertexNames.set(m4.transformPoint(vertex), name + desc));
         }
-        return new B2(this.faces.map(f => f.transform(m4)), this.infiniteVolume, this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
+        return new BRep$$1(this.faces.map(f => f.transform(m4)), this.infiniteVolume, this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
         vertexNames);
     }
     flipped() {
-        return new B2(this.faces.map(f => f.flipped()), !this.infiniteVolume, this.generator && this.generator + '.flipped()', this.vertexNames);
+        return new BRep$$1(this.faces.map(f => f.flipped()), !this.infiniteVolume, this.generator && this.generator + '.flipped()', this.vertexNames);
     }
 }
-B2.EMPTY = new B2([], false, 'B2.EMPTY', new Map()).buildAdjacencies();
-B2.R3 = new B2([], true, 'B2.R3', new Map()).buildAdjacencies();
-function dotCurve(v, cDir, cDDT) {
+BRep$$1.EMPTY = new BRep$$1([], false, 'BRep.EMPTY', new Map()).buildAdjacencies();
+BRep$$1.R3 = new BRep$$1([], true, 'BRep.R3', new Map()).buildAdjacencies();
+function dotCurve$$1(v, cDir, cDDT) {
     let dot = v.dot(cDir);
     if (eq0(dot)) {
         dot = v.dot(cDDT);
@@ -42131,7 +43446,7 @@ function dotCurve(v, cDir, cDDT) {
     assert$1(!eq0(dot));
     return dot;
 }
-function dotCurve2(curve, t, normal, sign) {
+function dotCurve2$$1(curve, t, normal, sign) {
     assert$1(sign == 1 || sign == -1, sign);
     const tangentDot = curve.tangentAt(t).dot(normal);
     // if tangentDot != 0 the curve simply crosses the plane
@@ -42145,14 +43460,10 @@ function dotCurve2(curve, t, normal, sign) {
         return ddtDot;
     }
     const numericDot = curve.at(t).to(curve.at(t + sign * 4 * NLA_PRECISION)).dot(normal);
-    assert$1(!(curve instanceof L3));
+    assert$1(!(curve instanceof L3$$1));
     return numericDot;
 }
-const INSIDE = 0;
-const OUTSIDE$1 = 1;
-const COPLANAR_SAME = 2;
-const COPLANAR_OPPOSITE = 3;
-const ALONG_EDGE_OR_PLANE = 4;
+const INSIDE$$1 = 0, OUTSIDE$$1 = 1, COPLANAR_SAME$$1 = 2, COPLANAR_OPPOSITE$$1 = 3, ALONG_EDGE_OR_PLANE$$1 = 4;
 /**
  *
  * @param brep BREP to check
@@ -42162,7 +43473,7 @@ const ALONG_EDGE_OR_PLANE = 4;
  *     wether that faces normal1 points in the same direction as faceNormal
  * @returns INSIDE, OUTSIDE, COPLANAR_SAME or COPLANAR_OPPOSITE
  */
-//function splitsVolumeEnclosingFaces(brep: B2, edge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
+//function splitsVolumeEnclosingFaces(brep: BRep, edge: Edge, dirAtEdgeA: V3, faceNormal: V3): int {
 //    assert(arguments.length == 4)
 //    //assert(p.equals(edge.a))
 //    const ab1 = edge.aDir.unit()
@@ -42178,7 +43489,7 @@ const ALONG_EDGE_OR_PLANE = 4;
 // - b.angle) // assert(relFaces.length % 2 == 0, edge.toSource()) // even number of touching faces  if
 // (eq0(relFaces[0].angle)) { //assert(false) todo const coplanarSame = relFaces[0].normalAtEdgeA.dot(faceNormal) > 0;
 // return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE } else { return !relFaces[0].reversed ? INSIDE : OUTSIDE } }
-function splitsVolumeEnclosingFaces(brep, canonEdge, dirAtEdgeA, faceNormal) {
+function splitsVolumeEnclosingFaces$$1(brep, canonEdge, dirAtEdgeA, faceNormal) {
     assert$1(arguments.length == 4);
     assert$1(canonEdge == canonEdge.getCanon());
     //assert(p.equals(canonEdge.a))
@@ -42195,13 +43506,13 @@ function splitsVolumeEnclosingFaces(brep, canonEdge, dirAtEdgeA, faceNormal) {
     if (eq(nearestFaceInfo.angle, angleToCanon)) {
         //assert(false) todo
         const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0;
-        return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE;
+        return coplanarSame ? COPLANAR_SAME$$1 : COPLANAR_OPPOSITE$$1;
     }
     else {
-        return nearestFaceInfo.reversed ? INSIDE : OUTSIDE$1;
+        return nearestFaceInfo.reversed ? INSIDE$$1 : OUTSIDE$$1;
     }
 }
-function splitsVolumeEnclosingFacesP(brep, canonEdge, p, pInside, faceNormal) {
+function splitsVolumeEnclosingFacesP$$1(brep, canonEdge, p, pInside, faceNormal) {
     assert$1(arguments.length == 5);
     assert$1(canonEdge == canonEdge.getCanon());
     //assert(p.equals(canonEdge.a))
@@ -42219,13 +43530,13 @@ function splitsVolumeEnclosingFacesP(brep, canonEdge, p, pInside, faceNormal) {
     if (eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
         //assert(false) todo
         const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0;
-        return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE;
+        return coplanarSame ? COPLANAR_SAME$$1 : COPLANAR_OPPOSITE$$1;
     }
     else {
-        return nearestFaceInfo.reversed ? OUTSIDE$1 : INSIDE;
+        return nearestFaceInfo.reversed ? OUTSIDE$$1 : INSIDE$$1;
     }
 }
-function splitsVolumeEnclosingFacesP2(brep, canonEdge, p, testCurve, curveT, dir, faceNormal) {
+function splitsVolumeEnclosingFacesP2$$1(brep, canonEdge, p, testCurve, curveT, dir, faceNormal) {
     assert$1(canonEdge == canonEdge.getCanon());
     //assert(p.equals(canonEdge.a))
     assertf(() => brep.edgeFaces);
@@ -42237,7 +43548,7 @@ function splitsVolumeEnclosingFacesP2(brep, canonEdge, p, testCurve, curveT, dir
         pInside = testCurve.diff(curveT, 1e-4 * dir / testCurve.tangentAt(curveT).length()).rejectedFrom(pDir1);
         pInside = pInside.div(pInside.length());
     }
-    let minValue = 20, advanced = false, result = OUTSIDE$1;
+    let minValue = 20, advanced = false, result = OUTSIDE$$1;
     for (const faceInfo of edgeFaceInfos) {
         const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated();
         const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir);
@@ -42248,12 +43559,12 @@ function splitsVolumeEnclosingFacesP2(brep, canonEdge, p, testCurve, curveT, dir
             const normVector = faceInfo.face.surface.normalP(p);
             if (faceInfo.face.surface.containsCurve(testCurve)) {
                 const coplanarSame = normVector.dot(faceNormal) > 0;
-                return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE;
+                return coplanarSame ? COPLANAR_SAME$$1 : COPLANAR_OPPOSITE$$1;
             }
-            const testPlane = P3.normalOnAnchor(pDir1, p);
+            const testPlane = P3$$1.normalOnAnchor(pDir1, p);
             const isCurve = faceInfo.face.surface.isCurvesWithPlane(testPlane)[0];
             const isCurvePT = isCurve.pointT(p);
-            const dirFactor = sign$12(isCurve.tangentAt(isCurvePT).dot(pInside));
+            const dirFactor = sign$1(isCurve.tangentAt(isCurvePT).dot(pInside));
             const eps = 1e-4;
             const iscd = isCurve.at(isCurvePT).to(isCurve.at(isCurvePT + dir * dirFactor * eps)).dot(normVector);
             const ecd = testCurve.at(curveT).to(testCurve.at(curveT + dir * eps)).dot(normVector);
@@ -42261,32 +43572,32 @@ function splitsVolumeEnclosingFacesP2(brep, canonEdge, p, testCurve, curveT, dir
             if (diff > 0 && (!advanced || diff < minValue)) {
                 advanced = true;
                 minValue = diff;
-                result = faceInfo.reversed ? OUTSIDE$1 : INSIDE;
+                result = faceInfo.reversed ? OUTSIDE$$1 : INSIDE$$1;
             }
         }
         else if (!advanced) {
             if (angle < minValue) {
                 minValue = angle;
-                result = faceInfo.reversed ? OUTSIDE$1 : INSIDE;
+                result = faceInfo.reversed ? OUTSIDE$$1 : INSIDE$$1;
             }
         }
     }
     return result;
 }
-function splitsVolumeEnclosingCone(brep, p, dir) {
-    const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
+function splitsVolumeEnclosingCone$$1(brep, p, dir) {
+    const testPlane = P3$$1.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
     const rays = [];
     for (let k = 0; k < brep.faces.length; k++) {
         const planeFace = brep.faces[k];
-        assertf(() => planeFace instanceof PlaneFace);
+        assertf(() => planeFace instanceof PlaneFace$$1);
         if (planeFace.getAllEdges().some(edge => edge.a.like(p))) {
             if (testPlane.isParallelToPlane(planeFace.surface.plane)) {
-                if (planeFace.pointsToInside(p, dir) != PointVsFace.OUTSIDE) {
-                    return ALONG_EDGE_OR_PLANE;
+                if (planeFace.pointsToInside(p, dir) != PointVsFace$$1.OUTSIDE) {
+                    return ALONG_EDGE_OR_PLANE$$1;
                 }
             }
             else {
-                const isLine = L3.fromPlanes(testPlane, planeFace.surface.plane);
+                const isLine = L3$$1.fromPlanes(testPlane, planeFace.surface.plane);
                 const ps = planeFace.edgeISPsWithPlane(isLine, testPlane);
                 let i = 0;
                 while (i < ps.length) {
@@ -42304,43 +43615,43 @@ function splitsVolumeEnclosingCone(brep, p, dir) {
     rays.sort((a, b) => a.angle - b.angle);
     //console.log("testPlane", testPlane.toSource(), "rays", rays.toSource())
     if (eq0(rays[0].angle)) {
-        return ALONG_EDGE_OR_PLANE;
+        return ALONG_EDGE_OR_PLANE$$1;
     }
     else {
-        return rays[0].out ? OUTSIDE$1 : INSIDE;
+        return rays[0].out ? OUTSIDE$$1 : INSIDE$$1;
     }
 }
-function splitsVolumeEnclosingCone2(brep, p, curve, curveT, fb) {
+function splitsVolumeEnclosingCone2$$1(brep, p, curve, curveT, fb) {
     assert$1(curve.containsPoint(p));
     const dir = curve.tangentAt(curveT).times(fb);
-    const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
+    const testPlane = P3$$1.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
     const pFaces = brep.faces.filter(face => face.getAllEdges().some(edge => edge.a.like(p)));
     for (let k = 0; k < pFaces.length; k++) {
         const face = pFaces[k];
         if (face.surface.containsCurve(curve)) {
             //assert(false)
-            if (face.pointsToInside3(p, curve, curveT, fb) != PointVsFace.OUTSIDE) {
-                return ALONG_EDGE_OR_PLANE;
+            if (face.pointsToInside3(p, curve, curveT, fb) != PointVsFace$$1.OUTSIDE) {
+                return ALONG_EDGE_OR_PLANE$$1;
             }
         }
     }
-    const EPS = 1e-6;
-    return brep.containsPoint(curve.at(curveT + fb * EPS), true) ? INSIDE : OUTSIDE$1;
+    const EPS$$1 = 1e-6;
+    return brep.containsPoint(curve.at(curveT + fb * EPS$$1), true) ? INSIDE$$1 : OUTSIDE$$1;
 }
-function fff(info, surface) {
+function fff$$1(info, surface) {
     const canonA = info.edge.reversed ? info.edge.b : info.edge.a;
     const surfaceNormalAtCanonA = surface.normalP(canonA);
     const dot = snap0(info.inside.dot(surfaceNormalAtCanonA));
     if (0 !== dot) {
-        return 0 < dot ? OUTSIDE$1 : INSIDE;
+        return 0 < dot ? OUTSIDE$$1 : INSIDE$$1;
     }
     if (surface.isCoplanarTo(info.face.surface)) {
-        return 0 < info.normalAtCanonA.dot(surfaceNormalAtCanonA) ? COPLANAR_SAME : COPLANAR_OPPOSITE;
+        return 0 < info.normalAtCanonA.dot(surfaceNormalAtCanonA) ? COPLANAR_SAME$$1 : COPLANAR_OPPOSITE$$1;
     }
     throw new Error();
 }
-function triangulateVertices(normal, vertices, holeStarts) {
-    const absMaxDim = normal.maxAbsDim(), factor = sign$12(normal.e(absMaxDim));
+function triangulateVertices$$1(normal, vertices, holeStarts) {
+    const absMaxDim = normal.maxAbsDim(), factor = sign$1(normal.e(absMaxDim));
     const contour = new Float64Array(vertices.length * 2);
     let i = vertices.length;
     /*
@@ -42382,10 +43693,10 @@ function triangulateVertices(normal, vertices, holeStarts) {
  *
  * a * b + (b -c) * (b + c)
  */
-function intersectionUnitCircleLine(a, b, c) {
+function intersectionUnitCircleLine$$1(a, b, c) {
     assertNumbers(a, b, c);
     // TODO: disambiguate on a < b
-    const term = sqrt$5(a * a + b * b - c * c);
+    const term = sqrt(a * a + b * b - c * c);
     return {
         x1: (a * c + b * term) / (a * a + b * b),
         x2: (a * c - b * term) / (a * a + b * b),
@@ -42393,7 +43704,7 @@ function intersectionUnitCircleLine(a, b, c) {
         y2: (b * c + a * term) / (a * a + b * b),
     };
 }
-function intersectionUnitCircleLine2(a, b, c) {
+function intersectionUnitCircleLine2$$1(a, b, c) {
     assertNumbers(a, b, c);
     // TODO: disambiguate on a < b
     // cf. pqFormula
@@ -42406,16 +43717,16 @@ function intersectionUnitCircleLine2(a, b, c) {
                 (b * c) / (a * a + b * b)]];
     }
     else {
-        const term = sqrt$5(termSqr);
+        const term = sqrt(termSqr);
         return [[(a * c + b * term) / (a * a + b * b),
                 (b * c - a * term) / (a * a + b * b)],
             [(a * c - b * term) / (a * a + b * b),
                 (b * c + a * term) / (a * a + b * b)]];
     }
 }
-function intersectionCircleLine(a, b, c, r) {
+function intersectionCircleLine$$1(a, b, c, r) {
     assertNumbers(a, b, c, r);
-    const term = sqrt$5(r * r * (a * a + b * b) - c * c);
+    const term = sqrt(r * r * (a * a + b * b) - c * c);
     return {
         x1: (a * c + b * term) / (a * a + b * b),
         x2: (a * c - b * term) / (a * a + b * b),
@@ -42432,13 +43743,13 @@ function intersectionCircleLine(a, b, c, r) {
  * @returns with x1 >= x2 and y1 <= y2
  * a * b + (b -c) * (b + c)
  */
-function intersectionUnitHyperbolaLine(a, b, c) {
+function intersectionUnitHyperbolaLine$$1(a, b, c) {
     assertNumbers(a, b, c);
     const aa = a * a, bb = b * b, cc = c * c;
     // TODO: disambiguate on a < b
     //var xTerm = sqrt(4*cc*aa-4*(bb-aa)*(-cc-bb))
-    const xTerm = 2 * sqrt$5(bb * cc + bb * bb - aa * bb);
-    const yTerm = sqrt$5(4 * cc * bb - 4 * (bb - aa) * (cc - aa));
+    const xTerm = 2 * sqrt(bb * cc + bb * bb - aa * bb);
+    const yTerm = sqrt(4 * cc * bb - 4 * (bb - aa) * (cc - aa));
     return {
         x1: (-2 * a * c + xTerm) / 2 / (bb - aa),
         x2: (-2 * a * c - xTerm) / 2 / (bb - aa),
@@ -42446,7 +43757,107 @@ function intersectionUnitHyperbolaLine(a, b, c) {
         y2: (2 * b * c + yTerm) / 2 / (bb - aa),
     };
 }
-function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, endP = startP, startTangent) {
+function curvePointPP$$1(ps1, ps2, startPoint, dontCheck) {
+    const EPS$$1 = NLA_PRECISION / 4;
+    //if (!dontCheck) {
+    //    const p = curvePointPP(ps1, ps2, startPoint, true).p
+    //    if (!ps1.containsPoint(p)) {
+    //        console.log("foo, startPoint was " + startPoint.sce)
+    //        ps1.containsPoint(p)
+    //    }
+    //}
+    let Q = startPoint;
+    let st1 = ps1.pointFoot(Q);
+    let st2 = ps2.pointFoot(Q);
+    let a, b, aNormal, bNormal, abNormalsCross;
+    //console.log("curvePointPP, startPoint was " + startPoint.sce)
+    //console.log(Q.sce+ ',')
+    let i = 16;
+    do {
+        a = ps1.pST(st1.x, st1.y);
+        b = ps2.pST(st2.x, st2.y);
+        if (eq0(a.distanceTo(b), EPS$$1))
+            break;
+        // drPs.push({p:a,text:'a'+j+' '+i})
+        // drPs.push({p:b,text:'b'+j+' '+i})
+        aNormal = ps1.normalST(st1.x, st1.y);
+        bNormal = ps2.normalST(st2.x, st2.y);
+        // next Q is the intersection of the planes
+        // (x - a) * aNormal,
+        // (x - b) * bNormal and
+        // (x - Q) * (aNormal X bNormal)
+        abNormalsCross = aNormal.cross(bNormal);
+        // drVs.push({anchor: Q, dir: aNormal})
+        // drVs.push({anchor: Q, dir: bNormal})
+        Q = V3.add(bNormal.cross(abNormalsCross).times(a.dot(aNormal)), abNormalsCross.cross(aNormal).times(b.dot(bNormal)), abNormalsCross.times(abNormalsCross.dot(Q))).div(abNormalsCross.squared());
+        //console.log(Q.sce+ ',')
+        // feet of Q on ps1 and ps2 (closest points)
+        st1 = ps1.pointFoot(Q, st1.x, st1.y);
+        st2 = ps2.pointFoot(Q, st2.x, st2.y);
+    } while (--i);
+    //assert(ps1.containsPoint(Q), Q, ps1)
+    //assert(ps2.containsPoint(Q))
+    if (!eq0(a.distanceTo(b), EPS$$1)) {
+        return undefined;
+    }
+    return { p: Q, st1: st1, st2: st2 };
+}
+/**
+ * Follow the intersection curve of two parametric surfaces starting from a given point.
+ * @param {ParametricSurface} ps1
+ * @param {ParametricSurface} ps2
+ * @param {number} s1Step
+ * @param {number} t1Step
+ * @param {number} s2Step
+ * @param {number} t2Step
+ * @param {number} curveStepSize
+ * @return {Curve[]}
+ */
+function followAlgorithmPP$$1(ps1, ps2, startPoint, curveStepSize, bounds1 = stInAABB2$$1.bind(undefined, ps1), bounds2 = stInAABB2$$1.bind(undefined, ps2)) {
+    const points = [];
+    const tangents = [];
+    const st1s = [];
+    const st2s = [];
+    let Q = startPoint;
+    let st1 = ps1.stP(Q);
+    let st2 = ps2.stP(Q);
+    assert$1(ps1.pST(st1.x, st1.y).like(Q));
+    assert$1(st1.like(ps1.pointFoot(Q, st1.x, st1.y)));
+    assert$1(st2.like(ps2.pointFoot(Q, st2.x, st2.y)));
+    assert$1(ps2.pST(st2.x, st2.y).like(Q));
+    for (let i = 0; i < 1000; i++) {
+        {
+            ({ p: Q, st1, st2 } = curvePointPP$$1(ps1, ps2, Q));
+        }
+        assert$1(ps1.containsPoint(Q), Q, ps1);
+        assert$1(ps2.containsPoint(Q));
+        const aNormal = ps1.normalST(st1.x, st1.y);
+        const bNormal = ps2.normalST(st2.x, st2.y);
+        const tangent = aNormal.cross(bNormal).toLength(curveStepSize);
+        tangents.push(tangent);
+        points.push(Q);
+        st1s.push(st1);
+        st2s.push(st2);
+        if (i > 4) {
+            if (!bounds1(st1.x, st1.y) || !bounds2(st2.x, st2.y)) {
+                break;
+            }
+        }
+        Q = Q.plus(tangent);
+    }
+    return { points, tangents, st1s, st2s };
+}
+/**
+ * Iteratively calculate points on an implicit 2D curve.
+ * @param ic The curve in question.
+ * @param startP The point at which to start.
+ * @param stepLength The step the algorithm takes. Will be the approximate distance between points.
+ * @param bounds Bounds function.
+ * @param endP End point. If undefined, algorithm will continue until out of bounds or back at start point.
+ * @param startTangent TODO Ignore this.
+ * @returns Calculated points and tangents. points[0] and tangents[0] will be startP and startTangent.
+ */
+function followAlgorithm2d$$1(ic, startP, stepLength = 0.5, bounds, endP = startP, startTangent) {
     assertNumbers(stepLength, ic(0, 0));
     assertVectors(startP);
     if (!startTangent) {
@@ -42462,7 +43873,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, endP = startP, 
         tangents.push(tangent);
         const searchStart = p.plus(tangent);
         assert$1(searchStart);
-        const newP = curvePointMF(ic, searchStart);
+        const newP = curvePointMF$$1(ic, searchStart);
         const dfpdx = ic.x(newP.x, newP.y), dfpdy = ic.y(newP.x, newP.y);
         const newTangent = new V3(-dfpdy, dfpdx, 0).toLength(stepLength);
         //const reversedDir = p.minus(prevp).dot(tangent) < 0
@@ -42472,7 +43883,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, endP = startP, 
         // check if we passed a singularity
         if (tangent.dot(newTangent) < 0) {
             const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y);
-            if (eq0(ic(singularity.x, singularity.y)) && singularity.distanceTo(p) < abs$13(stepLength)) {
+            if (eq0(ic(singularity.x, singularity.y)) && singularity.distanceTo(p) < abs$2(stepLength)) {
                 // end on this point
                 points.push(singularity);
                 tangents.push(p.to(singularity));
@@ -42502,7 +43913,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, endP = startP, 
     //assert(points.length > 6)
     return { points, tangents };
 }
-function followAlgorithm2dAdjustable(ic, start, stepLength = 0.5, bounds, endp = start) {
+function followAlgorithm2dAdjustable$$1(ic, start, stepLength = 0.5, bounds, endp = start) {
     assertNumbers(stepLength, ic(0, 0));
     assertVectors(start);
     //assert (!startDir || startDir instanceof V3)
@@ -42514,7 +43925,7 @@ function followAlgorithm2dAdjustable(ic, start, stepLength = 0.5, bounds, endp =
     do {
         const dfpdx = ic.x(p.x, p.y), dfpdy = ic.y(p.x, p.y);
         const dfpdxx = ic.xx(p.x, p.y), dfpdyy = ic.yy(p.x, p.y), dfpdxy = ic.xy(p.x, p.y);
-        const c2factor = abs$13((Math.pow(dfpdy, 2) * dfpdxx - 2 * dfpdx * dfpdy * dfpdxy + Math.pow(dfpdx, 2) * dfpdyy) /
+        const c2factor = abs$2((Math.pow(dfpdy, 2) * dfpdxx - 2 * dfpdx * dfpdy * dfpdxy + Math.pow(dfpdx, 2) * dfpdyy) /
             Math.pow((Math.pow(dfpdx, 2) + Math.pow(dfpdy, 2)), 2));
         const c2 = new V3(dfpdx, dfpdy, 0).times(c2factor);
         const s = 1 / 16 / c2.length();
@@ -42524,7 +43935,7 @@ function followAlgorithm2dAdjustable(ic, start, stepLength = 0.5, bounds, endp =
         points.push(p);
         tangents.push(tangent);
         prevp = p;
-        const newP = curvePointMF(ic, newPStart);
+        const newP = curvePointMF$$1(ic, newPStart);
         if (newP.equals(p)) {
             assertNever();
         }
@@ -42543,7 +43954,7 @@ function followAlgorithm2dAdjustable(ic, start, stepLength = 0.5, bounds, endp =
     return { points, tangents };
 }
 // both curves must be in the same s-t coordinates for this to make sense
-function intersectionICurveICurve(iCurve1, startParams1, endParams1, startDir, stepLength, iCurve2) {
+function intersectionICurveICurve$$1(iCurve1, startParams1, endParams1, startDir, stepLength, iCurve2) {
     assertNumbers(stepLength, iCurve1(0, 0), iCurve2(0, 0));
     assertVectors(startParams1, endParams1);
     assert$1(!startDir || startDir instanceof V3);
@@ -42560,13 +43971,13 @@ function intersectionICurveICurve(iCurve1, startParams1, endParams1, startDir, s
         if (p.minus(prevp).dot(tangent) < 0)
             tangent = tangent.negated();
         prevp = p;
-        p = curvePoint(iCurve1, p.plus(tangent));
+        p = curvePoint$$1(iCurve1, p.plus(tangent));
         vertices.push(p);
     }
     // TODO gleichmäßige Verteilung der Punkte
     return vertices;
 }
-function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
+function intersectionICurveICurve2$$1(iCurve1, loopPoints1, iCurve2) {
     let p = loopPoints1[0], val = iCurve2(p.x, p.y), lastVal;
     const iss = [];
     for (let i = 0; i < loopPoints1.length; i++) {
@@ -42579,20 +43990,12 @@ function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
     }
     return iss;
 }
-//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number, searchStep: number, implicitSurface) {
-//	assertNumbers(searchStart, searchEnd, searchStep)
-//	const iss = []
-//	let val = implicitSurface(parametricCurve(searchStart)), lastVal
-//	for (let t = searchStart + searchStep; t <= searchEnd; t += searchStep) {
-//		lastVal = val
-//		val = implicitSurface(parametricCurve(t))
-//		if (val * lastVal <= 0) {
-//			iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t))
-//		}
-//	}
-//	return iss
-//}
-function intersectionICurvePSurface(f0, f1, parametricSurface) {
+//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number,
+// searchStep: number, implicitSurface) { assertNumbers(searchStart, searchEnd, searchStep) const iss = [] let val =
+// implicitSurface(parametricCurve(searchStart)), lastVal for (let t = searchStart + searchStep; t <= searchEnd; t +=
+// searchStep) { lastVal = val val = implicitSurface(parametricCurve(t)) if (val * lastVal <= 0) {
+// iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t)) } } return iss }
+function intersectionICurvePSurface$$1(f0, f1, parametricSurface) {
 }
 //
 //function test2() {
@@ -42610,11 +44013,11 @@ function intersectionICurvePSurface(f0, f1, parametricSurface) {
 // 0.05, dids, didt, bounds) .map(({points, tangents}, i) => { const curve = new ImplicitCurve(ic, points, tangents)
 // return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i)) }) //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5,
 // 0) //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0) console.log(curves.length) return curves  }
-function cassini(a, c) {
+function cassini$$1(a, c) {
     return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (Math.pow(a, 4) - Math.pow(c, 4));
 }
-var MathFunctionR2R;
-(function (MathFunctionR2R) {
+var MathFunctionR2R$$1;
+(function (MathFunctionR2R$$1) {
     function forNerdamer(expression, args = ['x', 'y']) {
         const ndf = nerdamer_core(expression);
         const ndfs = nerdamer_core.diff(ndf, args[0]);
@@ -42627,25 +44030,30 @@ var MathFunctionR2R;
         f.yy = nerdamer_core.diff(ndft, args[1]).buildFunction(args);
         return f;
     }
-    MathFunctionR2R.forNerdamer = forNerdamer;
+    MathFunctionR2R$$1.forNerdamer = forNerdamer;
     function nerdamerToR2_R(expression, args = ['x', 'y']) {
         return expression.buildFunction(args);
     }
-    MathFunctionR2R.nerdamerToR2_R = nerdamerToR2_R;
+    MathFunctionR2R$$1.nerdamerToR2_R = nerdamerToR2_R;
     function forFFxFy(f, fx, fy) {
         f.x = fx;
         f.y = fy;
         return f;
     }
-    MathFunctionR2R.forFFxFy = forFFxFy;
-})(MathFunctionR2R || (MathFunctionR2R = {}));
-const cas2 = cassini(0.9, 1.02);
+    MathFunctionR2R$$1.forFFxFy = forFFxFy;
+})(MathFunctionR2R$$1 || (MathFunctionR2R$$1 = {}));
+const cas2$$1 = cassini$$1(0.9, 1.02);
+function arrayLerp$$1(lerp$$1, arr, t) {
+    if (0 === t % 1)
+        return arr[t];
+    return lerp$$1(arr[Math.floor(t)], arr[Math.ceil(t)], t % 1);
+}
 
-function doNotSerialize(target, key) {
+function doNotSerialize$$1(target, key) {
     const map = target.__SERIALIZATION_BLACKLIST || (target.__SERIALIZATION_BLACKLIST = {});
     map[key] = 'no';
 }
-class ClassSerializer {
+class ClassSerializer$$1 {
     constructor() {
         this.CLASS_NAMES = new Map();
         this.NAME_CLASSES = new Map();
@@ -42676,7 +44084,6 @@ class ClassSerializer {
         return JSON.stringify(this.serializeObj(v));
     }
     serializeObj(v) {
-        const path = [];
         const gatherList = (v) => {
             //console.log(path.toString())
             if (undefined !== v && v.hasOwnProperty('constructor') && this.CLASS_NAMES.has(v.constructor)) {
@@ -42692,9 +44099,7 @@ class ClassSerializer {
                 else {
                     visited.add(v);
                     for (let i = 0; i < v.length; i++) {
-                        path.push('' + i);
                         gatherList(v[i]);
-                        path.pop();
                     }
                 }
             }
@@ -42714,15 +44119,11 @@ class ClassSerializer {
                             if (key == '__noxProxy' || key == '__noxTarget')
                                 continue;
                             if (!v.__SERIALIZATION_BLACKLIST || !v.__SERIALIZATION_BLACKLIST[key]) {
-                                path.push(key);
                                 gatherList(v[key]);
-                                path.pop();
                             }
                         }
                     }
-                    path.push('proto');
                     gatherList(Object.getPrototypeOf(v));
-                    path.pop();
                 }
             }
         };
@@ -42841,7 +44242,7 @@ class ClassSerializer {
                             //})
                         }
                     }
-                    Object.defineProperty(result, 'loadID', { value: getGlobalId(), enumerable: false, writable: false });
+                    Object.defineProperty(result, 'loadID', { value: getGlobalId$$1(), enumerable: false, writable: false });
                     this.updater && this.updater(result);
                 }
             }
@@ -42900,79 +44301,77 @@ const fragmentShaderLighting = `
 	}
 `;
 const vertexShaderLighting = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	uniform mat4 LGL_ModelViewMatrix;
-	attribute vec4 LGL_Vertex;
-	uniform mat3 LGL_NormalMatrix;
-	attribute vec3 LGL_Normal;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	uniform mat4 ts_ModelViewMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat3 ts_NormalMatrix;
+	attribute vec3 ts_Normal;
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
-        vPosition = LGL_ModelViewMatrix * LGL_Vertex;
-		normal = normalize(LGL_NormalMatrix * LGL_Normal);
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+        vPosition = ts_ModelViewMatrix * ts_Vertex;
+		normal = normalize(ts_NormalMatrix * ts_Normal);
 	}
 `;
 const vertexShaderWaves = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	uniform mat4 LGL_ModelViewMatrix;
-	attribute vec4 LGL_Vertex;
-	uniform mat3 LGL_NormalMatrix;
-	attribute vec3 LGL_Normal;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	uniform mat4 ts_ModelViewMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat3 ts_NormalMatrix;
+	attribute vec3 ts_Normal;
 	uniform vec4 color;
 	varying vec3 normal;
 	varying vec4 vPosition;
 	void main() {
-		normal = normalize(LGL_NormalMatrix * LGL_Normal);
-		float offset = mod  (((LGL_Vertex.x + LGL_Vertex.y + LGL_Vertex.z) * 31.0), 20.0) - 10.0;
-		vec4 modPos = LGL_Vertex + vec4(normal * offset, 0);
-		gl_Position = LGL_ModelViewProjectionMatrix * modPos;
-        vPosition = LGL_ModelViewMatrix * modPos;
+		normal = normalize(ts_NormalMatrix * ts_Normal);
+		float offset = mod  (((ts_Vertex.x + ts_Vertex.y + ts_Vertex.z) * 31.0), 20.0) - 10.0;
+		vec4 modPos = ts_Vertex + vec4(normal * offset, 0);
+		gl_Position = ts_ModelViewProjectionMatrix * modPos;
+        vPosition = ts_ModelViewMatrix * modPos;
 	}
 `;
-
-
 const vertexShaderBasic = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
 	}
 `;
 const vertexShaderColor = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	attribute vec4 color;
 	varying vec4 fragColor;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
 		fragColor = color;
 	}
 `;
 const vertexShaderArc = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	uniform float step, offset;
 	uniform float radius, width;
 	void main() {
 		float r = radius;
-		float t = offset + LGL_Vertex.x * step;
-		float pRadius = r - LGL_Vertex.y * width;
+		float t = offset + ts_Vertex.x * step;
+		float pRadius = r - ts_Vertex.y * width;
 		vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
-		gl_Position = LGL_ModelViewProjectionMatrix * p;
+		gl_Position = ts_ModelViewProjectionMatrix * p;
 }
 `;
 const vertexShaderConic3d = `
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	uniform float startT, endT, scale;
 	uniform vec3 center, f1, f2;
 	uniform int mode;
 	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
 	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
 	void main() {
-		float t = startT + LGL_Vertex.x * (endT - startT);
+		float t = startT + ts_Vertex.x * (endT - startT);
 
 		vec3 normal = normalize(cross(f1, f2));
 
@@ -42990,59 +44389,59 @@ const vertexShaderConic3d = `
 			tangent = f1 * sinh(t) + f2 * cosh(t);
 		}
 		vec3 outDir = normalize(cross(normal, tangent));
-		vec3 p2 = p + scale * (outDir * LGL_Vertex.y + normal * LGL_Vertex.z);
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
+		vec3 p2 = p + scale * (outDir * ts_Vertex.y + normal * ts_Vertex.z);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `;
 const vertexShaderBezier = `
-    // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	uniform float width, startT, endT;
 	uniform vec3 p0, p1, p2, p3;
 	void main() {
-		// LGL_Vertex.y is in [0, 1]
-		float t = startT + LGL_Vertex.x * (endT - startT), s = 1.0 - t;
+		// ts_Vertex.y is in [0, 1]
+		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
 		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
-		vec4 p = vec4(pPos - LGL_Vertex.y * width * pNormal, 1);
-		gl_Position = LGL_ModelViewProjectionMatrix * p;
+		vec4 p = vec4(pPos - ts_Vertex.y * width * pNormal, 1);
+		gl_Position = ts_ModelViewProjectionMatrix * p;
 	}
 `;
 const vertexShaderBezier3d = `
-    // calculates a bezier curve using LGL_Vertex.x as the (t) parameter of the curve
+    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
 	uniform vec3 ps[4];
 	uniform vec3 p0, p1, p2, p3, normal;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	void main() {
-		// LGL_Vertex.y is in [0, 1]
+		// ts_Vertex.y is in [0, 1]
 		vec3 p5 = ps[0];
-		float t = startT + LGL_Vertex.x * (endT - startT), s = 1.0 - t;
+		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 p = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
 		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 outDir = normalize(cross(normal, pTangent));
 		vec3 correctNormal = normalize(cross(pTangent, outDir));
-		vec3 p2 = p + scale * (outDir * LGL_Vertex.y + correctNormal * LGL_Vertex.z);
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(p2, 1);
+		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `;
 const vertexShaderGeneric = `
 	uniform float scale;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
-	uniform mat3 LGL_NormalMatrix;
-	attribute vec3 LGL_Normal;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat3 ts_NormalMatrix;
+	attribute vec3 ts_Normal;
 	void main() {
-		vec3 normal = normalize(LGL_NormalMatrix * LGL_Normal);
-		vec4 vertexPos = LGL_Vertex + vec4(normal * scale, 0);
-		gl_Position = LGL_ModelViewProjectionMatrix * vertexPos;
+		vec3 normal = normalize(ts_NormalMatrix * ts_Normal);
+		vec4 vertexPos = ts_Vertex + vec4(normal * scale, 0);
+		gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
 	}
 `;
 const vertexShaderRing = `
@@ -43050,13 +44449,13 @@ const vertexShaderRing = `
 	uniform float step;
 	uniform float innerRadius, outerRadius;
 	attribute float index;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
-	attribute vec4 LGL_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
 	void main() {
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(index, index, index, 1);
-		float id = atan(LGL_Vertex.x, LGL_Vertex.y) / M_PI  * 32.0;
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(index, index, index, 1);
+		float id = atan(ts_Vertex.x, ts_Vertex.y) / M_PI  * 32.0;
 		float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
-		gl_Position = LGL_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
 	}
 `;
 const fragmentShaderColor = `
@@ -43088,11 +44487,11 @@ const fragmentShaderColorHighlight = `
 `;
 const vertexShaderTexture = `
 	varying vec2 texturePos;
-	attribute vec4 LGL_Vertex;
-	uniform mat4 LGL_ModelViewProjectionMatrix;
+	attribute vec4 ts_Vertex;
+	uniform mat4 ts_ModelViewProjectionMatrix;
 	void main() {
-		texturePos = LGL_Vertex.xy;
-		gl_Position = LGL_ModelViewProjectionMatrix * LGL_Vertex;
+		texturePos = ts_Vertex.xy;
+		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
 	}
 `;
 const fragmentShaderTextureColor = `
@@ -43105,10 +44504,7 @@ const fragmentShaderTextureColor = `
 	}
 `;
 
-//# sourceMappingURL=shaders.js.map
-
-const { pow: pow$4, sign: sign$13 } = Math;
-function parseGetParams(str) {
+function parseGetParams$$1(str) {
     const result = {};
     str
         .split('&')
@@ -43123,7 +44519,7 @@ function parseGetParams(str) {
     });
     return result;
 }
-const COLORS = {
+const COLORS$$1 = {
     RD_FILL: chroma('#9EDBF9'),
     RD_STROKE: chroma('#77B0E0'),
     TS_FILL: chroma('#D19FE3'),
@@ -43131,15 +44527,15 @@ const COLORS = {
     PP_FILL: chroma('#F3B6CF'),
     PP_STROKE: chroma('#EB81B4'),
 };
-class BREPGLContext {
+class BREPGLContext$$1 {
     constructor(gl) {
         this.cachedMeshes = new WeakMap();
-        this.shaders = initShaders(gl);
-        initMeshes(this.meshes = {}, gl);
+        this.shaders = initShaders$$1(gl);
+        initMeshes$$1(this.meshes = {}, gl);
     }
     static create(gl) {
-        addOwnProperties(gl, BREPGLContext.prototype);
-        addOwnProperties(gl, new BREPGLContext(gl));
+        addOwnProperties(gl, BREPGLContext$$1.prototype);
+        addOwnProperties(gl, new BREPGLContext$$1(gl));
         return gl;
     }
     drawPoint(p, color = GL_COLOR_BLACK, size = 5) {
@@ -43150,10 +44546,10 @@ class BREPGLContext {
         this.popMatrix();
     }
     drawEdge(edge, color = GL_COLOR_BLACK, width = 2) {
-        CURVE_PAINTERS[edge.curve.constructor.name](this, edge.curve, color, edge.minT, edge.maxT, width);
+        CURVE_PAINTERS$$1[edge.curve.constructor.name](this, edge.curve, color, edge.minT, edge.maxT, width);
     }
     drawCurve(curve, color = GL_COLOR_BLACK, width = 2, tStart, tEnd) {
-        CURVE_PAINTERS[curve.constructor.name](this, curve, color, tStart, tEnd, width);
+        CURVE_PAINTERS$$1[curve.constructor.name](this, curve, color, tStart, tEnd, width);
     }
     drawVector(vector, anchor, color = GL_COLOR_BLACK, size = 1) {
         this.pushMatrix();
@@ -43177,7 +44573,7 @@ class BREPGLContext {
         this.translate(customPlane.sMin, customPlane.tMin, customPlane.w);
         this.scale(customPlane.sMax - customPlane.sMin, customPlane.tMax - customPlane.tMin, 1);
         const mesh = dotted ? this.meshes.xyDottedLinePlane : this.meshes.xyLinePlane;
-        this.shaders.singleColor.uniforms({ color: color }).draw(mesh, DRAW_MODES.LINES);
+        this.shaders.singleColor.uniforms({ color: color }).draw(mesh, this.LINES);
         this.popMatrix();
     }
 }
@@ -43193,17 +44589,17 @@ function conicPainter(mode, gl, ellipse, color, startT, endT, width = 2) {
         mode: mode,
     }).draw(gl.meshes.pipe);
 }
-const CURVE_PAINTERS = {
-    [SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
-    [EllipseCurve.name]: conicPainter.bind(undefined, 0),
-    [ParabolaCurve.name]: conicPainter.bind(undefined, 1),
-    [HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
-    [ImplicitCurve.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
+const CURVE_PAINTERS$$1 = {
+    [SemiEllipseCurve$$1.name]: conicPainter.bind(undefined, 0),
+    [EllipseCurve$$1.name]: conicPainter.bind(undefined, 0),
+    [ParabolaCurve$$1.name]: conicPainter.bind(undefined, 1),
+    [HyperbolaCurve$$1.name]: conicPainter.bind(undefined, 2),
+    [ImplicitCurve$$1.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
         let mesh = gl.cachedMeshes.get(curve);
         if (!mesh) {
             mesh = new Mesh()
                 .addIndexBuffer('TRIANGLES')
-                .addVertexBuffer('normals', 'LGL_Normal');
+                .addVertexBuffer('normals', 'ts_Normal');
             curve.addToMesh(mesh);
             mesh.compile();
             //mesh=Mesh.sphere(2)
@@ -43217,7 +44613,7 @@ const CURVE_PAINTERS = {
             scale: width,
         }).draw(mesh);
     },
-    [BezierCurve.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
+    [BezierCurve$$1.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
         gl.shaders.bezier3d.uniforms({
             p0: curve.p0,
             p1: curve.p1,
@@ -43230,7 +44626,7 @@ const CURVE_PAINTERS = {
             normal: normal,
         }).draw(gl.meshes.pipe);
     },
-    [L3.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
+    [L3$$1.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
         gl.pushMatrix();
         const a = curve.at(startT), b = curve.at(endT);
         const ab = b.minus(a), abT = ab.getPerpendicular().unit();
@@ -43243,18 +44639,19 @@ const CURVE_PAINTERS = {
         gl.popMatrix();
     },
 };
-CURVE_PAINTERS[PICurve$1.name] = CURVE_PAINTERS[ImplicitCurve.name];
-function initMeshes(_meshes, _gl) {
+CURVE_PAINTERS$$1[PICurve$$1.name] = CURVE_PAINTERS$$1[ImplicitCurve$$1.name];
+CURVE_PAINTERS$$1[PPCurve$$1.name] = CURVE_PAINTERS$$1[ImplicitCurve$$1.name];
+function initMeshes$$1(_meshes, _gl) {
     _gl.makeCurrent();
     _meshes.sphere1 = Mesh.sphere(2);
     _meshes.segment = Mesh.plane({ startY: -0.5, height: 1, detailX: 128 });
     _meshes.text = Mesh.plane();
-    _meshes.vector = Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true);
-    _meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true);
+    _meshes.vector = Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3$$1.X, TAU, 16, true);
+    _meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3$$1.X, TAU, 8, true);
     _meshes.xyLinePlane = Mesh.plane();
     _meshes.xyDottedLinePlane = makeDottedLinePlane();
 }
-function initShaders(_gl) {
+function initShaders$$1(_gl) {
     _gl.makeCurrent();
     return {
         singleColor: Shader.create(vertexShaderBasic, fragmentShaderColor),
@@ -43282,7 +44679,7 @@ function makeDottedLinePlane(count = 128) {
     mesh.compile();
     return mesh;
 }
-function initNavigationEvents(_gl, eye, paintScreen) {
+function initNavigationEvents$$1(_gl, eye, paintScreen) {
     const canvas = _gl.canvas;
     let lastPos = V3.O;
     //_gl.onmousedown.push((e) => {
@@ -43304,7 +44701,7 @@ function initNavigationEvents(_gl, eye, paintScreen) {
             const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
             eye.pos = eye.pos.plus(worldMoveCamera);
             eye.focus = eye.focus.plus(worldMoveCamera);
-            setupCamera(eye, _gl);
+            setupCamera$$1(eye, _gl);
             paintScreen();
         }
         // scene rotation
@@ -43319,19 +44716,19 @@ function initNavigationEvents(_gl, eye, paintScreen) {
             matrix = matrix.times(M4.rotateLine(eye.focus, horizontalRotationAxis, rotateUD));
             eye.pos = matrix.transformPoint(eye.pos);
             eye.up = matrix.transformVector(eye.up);
-            setupCamera(eye, _gl);
+            setupCamera$$1(eye, _gl);
             paintScreen();
         }
         lastPos = pagePos;
     });
     canvas.addEventListener('wheel', function (e) {
         // zoom
-        const wheelY = -sign$13(e.deltaY) * 2;
+        const wheelY = -sign$1(e.deltaY) * 2;
         // console.log(e.deltaY, e.deltaX)
-        eye.zoomFactor *= pow$4(0.9, -wheelY);
-        const mouseCoordsOnCanvas = getPosOnTarget(e);
+        eye.zoomFactor *= pow(0.9, -wheelY);
+        const mouseCoordsOnCanvas = getPosOnTarget$$1(e);
         const mousePosFrustrum = V(mouseCoordsOnCanvas.x * 2 / _gl.canvas.offsetWidth - 1, -mouseCoordsOnCanvas.y * 2 / _gl.canvas.offsetHeight + 1, 0);
-        const moveCamera = mousePosFrustrum.times(1 - 1 / pow$4(0.9, -wheelY));
+        const moveCamera = mousePosFrustrum.times(1 - 1 / pow(0.9, -wheelY));
         const inverseProjectionMatrix = _gl.projectionMatrix.inversed();
         const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera);
         //console.log("moveCamera", moveCamera)
@@ -43340,11 +44737,11 @@ function initNavigationEvents(_gl, eye, paintScreen) {
         eye.focus = eye.focus.plus(worldMoveCamera);
         // tilt
         const mousePosWC = inverseProjectionMatrix.transformPoint(mousePosFrustrum);
-        const tiltMatrix = M4.rotateLine(mousePosWC, eye.pos.to(eye.focus), -sign$13(e.deltaX) * 10 * DEG);
+        const tiltMatrix = M4.rotateLine(mousePosWC, eye.pos.to(eye.focus), -sign$1(e.deltaX) * 10 * DEG);
         eye.up = tiltMatrix.transformVector(eye.up);
         eye.pos = tiltMatrix.transformPoint(eye.pos);
         eye.focus = tiltMatrix.transformPoint(eye.focus);
-        setupCamera(eye, _gl);
+        setupCamera$$1(eye, _gl);
         paintScreen();
         e.preventDefault();
     });
@@ -43352,16 +44749,16 @@ function initNavigationEvents(_gl, eye, paintScreen) {
 /**
  * Transforms position on the screen into a line in world coordinates.
  */
-function getMouseLine(pos, _gl) {
+function getMouseLine$$1(pos, _gl) {
     const ndc1 = V(pos.x * 2 / _gl.canvas.width - 1, -pos.y * 2 / _gl.canvas.height + 1, 0);
     const ndc2 = V(pos.x * 2 / _gl.canvas.width - 1, -pos.y * 2 / _gl.canvas.height + 1, 1);
     //console.log(ndc)
     const inverseProjectionMatrix = _gl.projectionMatrix.inversed();
     const s = inverseProjectionMatrix.transformPoint(ndc1);
     const dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s);
-    return L3.anchorDirection(s, dir);
+    return L3$$1.anchorDirection(s, dir);
 }
-function getPosOnTarget(e) {
+function getPosOnTarget$$1(e) {
     const target = e.target;
     const targetRect = target.getBoundingClientRect();
     const mouseCoordsOnElement = {
@@ -43370,7 +44767,7 @@ function getPosOnTarget(e) {
     };
     return mouseCoordsOnElement;
 }
-function setupCamera(_eye, _gl) {
+function setupCamera$$1(_eye, _gl) {
     const { pos, focus, up, zoomFactor } = _eye;
     //console.log("pos", pos.$, "focus", focus.$, "up", up.$)
     _gl.matrixMode(_gl.PROJECTION);
@@ -43381,104 +44778,106 @@ function setupCamera(_eye, _gl) {
     _gl.ortho(-lr, lr, -bt, bt, -1e4, 1e4);
     _gl.lookAt(pos, focus, up);
     _gl.matrixMode(_gl.MODELVIEW);
-    cameraChangeListeners.forEach(l => l(_eye));
+    cameraChangeListeners$$1.forEach(l => l(_eye));
 }
-const cameraChangeListeners = [];
-const SHADERS_TYPE_VAR = false && initShaders(0);
-// let shaders: typeof SHADERS_TYPE_VAR
-// declare let a: B2, b: B2, c: B2, d: B2, edges: Edge[] = [], hovering: any,
-// 	, normallines: boolean = false, b2s: B2[] = []
-// const
+const cameraChangeListeners$$1 = [];
+const SHADERS_TYPE_VAR$$1 = false && initShaders$$1(0);
 
 
 
 var brepts = Object.freeze({
-	curvePoint: curvePoint,
-	curvePointMF: curvePointMF,
-	Curve: Curve,
-	XiEtaCurve: XiEtaCurve,
-	ImplicitCurve: ImplicitCurve,
-	BezierCurve: BezierCurve,
-	EllipseCurve: EllipseCurve,
-	HyperbolaCurve: HyperbolaCurve,
-	L3: L3,
-	PICurve: PICurve$1,
-	ParabolaCurve: ParabolaCurve,
-	SemiEllipseCurve: SemiEllipseCurve,
-	P3: P3,
-	get PointVsFace () { return PointVsFace; },
-	Surface: Surface,
-	ImplicitSurface: ImplicitSurface,
-	ParametricSurface: ParametricSurface,
-	ConicSurface: ConicSurface,
-	EllipsoidSurface: EllipsoidSurface,
-	ProjectedCurveSurface: ProjectedCurveSurface,
-	CylinderSurface: CylinderSurface,
-	RotationREqFOfZ: RotationREqFOfZ,
-	SemiCylinderSurface: SemiCylinderSurface,
-	SemiEllipsoidSurface: SemiEllipsoidSurface,
-	PlaneSurface: PlaneSurface,
-	ZDirVolumeVisitor: ZDirVolumeVisitor,
-	CalculateAreaVisitor: CalculateAreaVisitor,
-	get B2T () { return B2T; },
-	CustomPlane: CustomPlane,
-	Edge: Edge,
-	PCurveEdge: PCurveEdge,
-	StraightEdge: StraightEdge,
+	breakDownPPCurves: breakDownPPCurves$$1,
+	AABB2: AABB2$$1,
+	stInAABB2: stInAABB2$$1,
+	curvePoint: curvePoint$$1,
+	curvePointMF: curvePointMF$$1,
+	Curve: Curve$$1,
+	XiEtaCurve: XiEtaCurve$$1,
+	ImplicitCurve: ImplicitCurve$$1,
+	BezierCurve: BezierCurve$$1,
+	EllipseCurve: EllipseCurve$$1,
+	HyperbolaCurve: HyperbolaCurve$$1,
+	L3: L3$$1,
+	PICurve: PICurve$$1,
+	PPCurve: PPCurve$$1,
+	ParabolaCurve: ParabolaCurve$$1,
+	SemiEllipseCurve: SemiEllipseCurve$$1,
+	P3: P3$$1,
+	get PointVsFace () { return PointVsFace$$1; },
+	Surface: Surface$$1,
+	ImplicitSurface: ImplicitSurface$$1,
+	ParametricSurface: ParametricSurface$$1,
+	ConicSurface: ConicSurface$$1,
+	EllipsoidSurface: EllipsoidSurface$$1,
+	ProjectedCurveSurface: ProjectedCurveSurface$$1,
+	CylinderSurface: CylinderSurface$$1,
+	RotationREqFOfZ: RotationREqFOfZ$$1,
+	SemiCylinderSurface: SemiCylinderSurface$$1,
+	SemiEllipsoidSurface: SemiEllipsoidSurface$$1,
+	PlaneSurface: PlaneSurface$$1,
+	ZDirVolumeVisitor: ZDirVolumeVisitor$$1,
+	CalculateAreaVisitor: CalculateAreaVisitor$$1,
+	get B2T () { return B2T$$1; },
+	CustomPlane: CustomPlane$$1,
+	Edge: Edge$$1,
+	PCurveEdge: PCurveEdge$$1,
+	StraightEdge: StraightEdge$$1,
 	FaceInfoFactory: FaceInfoFactory,
-	Face: Face,
-	PlaneFace: PlaneFace,
-	RotationFace: RotationFace,
-	EPS: EPS,
-	getGlobalId: getGlobalId,
-	addLikeSurfaceFaces: addLikeSurfaceFaces,
-	assembleFaceFromLooseEdges: assembleFaceFromLooseEdges,
-	calcNextEdgeIndex: calcNextEdgeIndex,
-	dotCurve: dotCurve,
-	dotCurve2: dotCurve2,
-	INSIDE: INSIDE,
-	OUTSIDE: OUTSIDE$1,
-	COPLANAR_SAME: COPLANAR_SAME,
-	COPLANAR_OPPOSITE: COPLANAR_OPPOSITE,
-	ALONG_EDGE_OR_PLANE: ALONG_EDGE_OR_PLANE,
-	splitsVolumeEnclosingFaces: splitsVolumeEnclosingFaces,
-	splitsVolumeEnclosingFacesP: splitsVolumeEnclosingFacesP,
-	splitsVolumeEnclosingFacesP2: splitsVolumeEnclosingFacesP2,
-	splitsVolumeEnclosingCone: splitsVolumeEnclosingCone,
-	splitsVolumeEnclosingCone2: splitsVolumeEnclosingCone2,
-	fff: fff,
-	triangulateVertices: triangulateVertices,
-	intersectionUnitCircleLine: intersectionUnitCircleLine,
-	intersectionUnitCircleLine2: intersectionUnitCircleLine2,
-	intersectionCircleLine: intersectionCircleLine,
-	intersectionUnitHyperbolaLine: intersectionUnitHyperbolaLine,
-	followAlgorithm2d: followAlgorithm2d,
-	followAlgorithm2dAdjustable: followAlgorithm2dAdjustable,
-	intersectionICurveICurve: intersectionICurveICurve,
-	intersectionICurveICurve2: intersectionICurveICurve2,
-	intersectionICurvePSurface: intersectionICurvePSurface,
-	cassini: cassini,
-	get MathFunctionR2R () { return MathFunctionR2R; },
-	cas2: cas2,
-	B2: B2,
-	doNotSerialize: doNotSerialize,
-	ClassSerializer: ClassSerializer,
-	parseGetParams: parseGetParams,
-	COLORS: COLORS,
-	CURVE_PAINTERS: CURVE_PAINTERS,
-	initMeshes: initMeshes,
-	initShaders: initShaders,
-	initNavigationEvents: initNavigationEvents,
-	getMouseLine: getMouseLine,
-	getPosOnTarget: getPosOnTarget,
-	setupCamera: setupCamera,
-	cameraChangeListeners: cameraChangeListeners,
-	SHADERS_TYPE_VAR: SHADERS_TYPE_VAR,
-	BREPGLContext: BREPGLContext
+	Face: Face$$1,
+	PlaneFace: PlaneFace$$1,
+	RotationFace: RotationFace$$1,
+	EPS: EPS$$1,
+	getGlobalId: getGlobalId$$1,
+	addLikeSurfaceFaces: addLikeSurfaceFaces$$1,
+	assembleFaceFromLooseEdges: assembleFaceFromLooseEdges$$1,
+	calcNextEdgeIndex: calcNextEdgeIndex$$1,
+	dotCurve: dotCurve$$1,
+	dotCurve2: dotCurve2$$1,
+	INSIDE: INSIDE$$1,
+	OUTSIDE: OUTSIDE$$1,
+	COPLANAR_SAME: COPLANAR_SAME$$1,
+	COPLANAR_OPPOSITE: COPLANAR_OPPOSITE$$1,
+	ALONG_EDGE_OR_PLANE: ALONG_EDGE_OR_PLANE$$1,
+	splitsVolumeEnclosingFaces: splitsVolumeEnclosingFaces$$1,
+	splitsVolumeEnclosingFacesP: splitsVolumeEnclosingFacesP$$1,
+	splitsVolumeEnclosingFacesP2: splitsVolumeEnclosingFacesP2$$1,
+	splitsVolumeEnclosingCone: splitsVolumeEnclosingCone$$1,
+	splitsVolumeEnclosingCone2: splitsVolumeEnclosingCone2$$1,
+	fff: fff$$1,
+	triangulateVertices: triangulateVertices$$1,
+	intersectionUnitCircleLine: intersectionUnitCircleLine$$1,
+	intersectionUnitCircleLine2: intersectionUnitCircleLine2$$1,
+	intersectionCircleLine: intersectionCircleLine$$1,
+	intersectionUnitHyperbolaLine: intersectionUnitHyperbolaLine$$1,
+	curvePointPP: curvePointPP$$1,
+	followAlgorithmPP: followAlgorithmPP$$1,
+	followAlgorithm2d: followAlgorithm2d$$1,
+	followAlgorithm2dAdjustable: followAlgorithm2dAdjustable$$1,
+	intersectionICurveICurve: intersectionICurveICurve$$1,
+	intersectionICurveICurve2: intersectionICurveICurve2$$1,
+	intersectionICurvePSurface: intersectionICurvePSurface$$1,
+	cassini: cassini$$1,
+	get MathFunctionR2R () { return MathFunctionR2R$$1; },
+	cas2: cas2$$1,
+	arrayLerp: arrayLerp$$1,
+	BRep: BRep$$1,
+	doNotSerialize: doNotSerialize$$1,
+	ClassSerializer: ClassSerializer$$1,
+	parseGetParams: parseGetParams$$1,
+	COLORS: COLORS$$1,
+	CURVE_PAINTERS: CURVE_PAINTERS$$1,
+	initMeshes: initMeshes$$1,
+	initShaders: initShaders$$1,
+	initNavigationEvents: initNavigationEvents$$1,
+	getMouseLine: getMouseLine$$1,
+	getPosOnTarget: getPosOnTarget$$1,
+	setupCamera: setupCamera$$1,
+	cameraChangeListeners: cameraChangeListeners$$1,
+	SHADERS_TYPE_VAR: SHADERS_TYPE_VAR$$1,
+	BREPGLContext: BREPGLContext$$1
 });
 
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 };
-const drPs = [];
 const drVs = [];
 const b2s = [];
 const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl());
@@ -43486,47 +44885,68 @@ const aMeshes = [];
 //bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 //cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 let dMesh;
+let faceMesh;
 let b2meshes = [];
 let hovering;
 const addMissing = (to, from) => Object.keys(from).forEach(key => 'Buffer' != key && !to[key] && (to[key] = from[key]));
 // tslint:disable-next-line:class-name
+class RenderObjects {
+    constructor() {
+        this.a = undefined;
+        this.b = undefined;
+        this.c = undefined;
+        this.d = undefined;
+        this.edges = [];
+        this.wireframe = false;
+        this.normallines = false;
+        this.i = undefined;
+        this.hjk = undefined;
+        this.drPs = [];
+        this.drVs = [];
+        this.mesh = undefined;
+    }
+}
+const renderObjectKeys = Object.keys(new RenderObjects());
 addMissing(window, ts3dutils);
 addMissing(window, tsgl);
 addMissing(window, brepts);
+addMissing(window, new RenderObjects());
+const arrayLiteralType = (x) => x;
 const g = window;
-function initB2() {
-    // Object.assign(window, new __Context())
+function objectAssignConcatArray(a, b) {
+    for (const key of Object.keys(b)) {
+        if (Array.isArray(g[key]) && Array.isArray(b[key])) {
+            a[key].push(...b[key]);
+        }
+        else if (undefined !== b[key]) {
+            a[key] = b[key];
+        }
+    }
+    return a;
+}
+function initBRep() {
     eye.pos = V(1, 2, 101);
     eye.focus = V(0, 1, 0);
     eye.up = V(0, 1, 0);
     eye.zoomFactor = 8;
-    const hash = window.location.search.substr(1) || window.location.hash.substr(1);
-    //noinspection TsLint
-    // let i, points, vectors, mesh, hjk
-    //Object.assign(window, HJK())
+    const htmlContext = INIT_HTML();
+    const hash = window.location.search.substr(1) || window.location.hash.substr(1) || '';
     const command = decodeURIComponent(hash);
     console.log(command);
-    new Function(command)();
-    INIT_HTML();
-    // eval(command)
+    const hashContext = new Function(`let ${renderObjectKeys.join(',')};${command};return{${renderObjectKeys.join(',')}}`)();
+    // hashContext last, so i value in hash wins
+    objectAssignConcatArray(g, htmlContext);
+    objectAssignConcatArray(g, hashContext);
+    console.log(htmlContext);
     Object.assign(eye, g.i);
     // let gets: any = {a, b, c, d, mesh, edges, points, vectors}
     g.hjk && Object.assign(g, HJK());
-    ((x) => x)(['a', 'b', 'c', 'd']).forEach(k => {
+    arrayLiteralType(['a', 'b', 'c', 'd']).forEach(k => {
         if (g[k]) {
             aMeshes.push(g[k].toMesh());
             b2s.push(g[k]);
         }
     });
-    //cMesh && cMesh.computeWireframeFromFlatTriangles() && cMesh.compile()
-    if (g.points) {
-        console.log('drPs from GET');
-        drPs.push(...g.points);
-    }
-    if (g.vectors) {
-        console.log('vectors from GET');
-        drVs.push(...g.vectors);
-    }
     for (let i = 0; i < aMeshes.length; i++) {
         aMeshes[i].computeWireframeFromFlatTriangles('wireframe');
         aMeshes[i].computeNormalLines(0.1, 'normallines');
@@ -43536,7 +44956,7 @@ function initB2() {
         console.log('edges from GET');
         dMesh = new Mesh()
             .addIndexBuffer('TRIANGLES')
-            .addVertexBuffer('normals', 'LGL_Normal')
+            .addVertexBuffer('normals', 'ts_Normal')
             .addVertexBuffer('curve1', 'curve1')
             .addVertexBuffer('curve1colors', 'curve1colors');
         g.edges.forEach((edge, edgeIndex) => {
@@ -43548,7 +44968,7 @@ function initB2() {
                 dMesh.curve1.push(points[i], points[i + 1]);
                 dMesh.curve1colors.push(color, color);
             }
-            edge.curve instanceof PICurve$1 && edge.curve.addToMesh(dMesh, 8, 0.02, 2);
+            edge.curve instanceof PICurve$$1 && edge.curve.addToMesh(dMesh, 8, 0.02, 2);
         });
         //dMesh.computeWireframeFromFlatTriangles()
     }
@@ -43558,6 +44978,27 @@ function initB2() {
         b2meshes.forEach(m => m.computeWireframeFromFlatTriangles());
         b2meshes.forEach(m => m.computeNormalLines(0.5));
         b2meshes.forEach(m => m.compile());
+    }
+    if (g.face) {
+        if (!g.face.length) {
+            g.face = [g.face];
+        }
+        faceMesh = new Mesh()
+            .addIndexBuffer('TRIANGLES')
+            .addIndexBuffer('LINES')
+            .addVertexBuffer('tangents', 'tangents')
+            .addVertexBuffer('normals', 'ts_Normal');
+        for (const face of g.face) {
+            face.addToMesh(faceMesh);
+            for (const edge of face.allEdges) {
+                const ts = edge.curve.calcSegmentTs(edge.aT, edge.bT, edge.reversed, true);
+                for (const t of ts) {
+                    const p = edge.curve.at(t);
+                    faceMesh.tangents.push(p, p.plus(edge.tangentAt(t)));
+                }
+            }
+        }
+        faceMesh.compile();
     }
     dMesh && dMesh.compile();
 }
@@ -43579,12 +45020,12 @@ function viewerPaint(time$$1, gl) {
         gl.pushMatrix();
         //gl.translate(30, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20); // prevent Z-fighting
-        aMesh.indexBuffers.wireframe && gl.shaders.singleColor.uniforms({ color: COLORS.TS_STROKE.gl() })
-            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.wireframe, DRAW_MODES.LINES);
-        aMesh.indexBuffers.normallines && gl.shaders.singleColor.uniforms({ color: COLORS.TS_STROKE.gl() })
-            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.normallines, DRAW_MODES.LINES);
-        gl.shaders.singleColor.uniforms({ color: COLORS.TS_STROKE.gl() })
-            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.LINES, DRAW_MODES.LINES);
+        aMesh.indexBuffers.wireframe && gl.shaders.singleColor.uniforms({ color: COLORS$$1.TS_STROKE.gl() })
+            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.wireframe, gl.LINES);
+        aMesh.indexBuffers.normallines && gl.shaders.singleColor.uniforms({ color: COLORS$$1.TS_STROKE.gl() })
+            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.normallines, gl.LINES);
+        gl.shaders.singleColor.uniforms({ color: COLORS$$1.TS_STROKE.gl() })
+            .drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.LINES, gl.LINES);
         gl.projectionMatrix.m[11] += 1 / (1 << 20);
         let faceIndex = b2s[i].faces.length;
         while (faceIndex--) {
@@ -43594,13 +45035,17 @@ function viewerPaint(time$$1, gl) {
                 color: hovering == face
                     ? meshColors.emod(i).emod(faceIndex).darken(2).gl()
                     : meshColorssGL.emod(i).emod(faceIndex),
-            }).draw(aMesh, DRAW_MODES.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
+            }).draw(aMesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
         }
         gl.popMatrix();
     }
+    if (faceMesh) {
+        gl.shaders.singleColor.uniforms({ color: chroma('red').gl() })
+            .drawBuffers({ ts_Vertex: faceMesh.vertexBuffers['tangents'] }, undefined, gl.LINES);
+    }
     //if (dMesh) {
     //   gl.shaders.multiColor.uniforms({color: COLORS.PP_STROKE.gl() }).drawBuffers({
-    //        LGL_Vertex: dMesh.vertexBuffers.curve1,
+    //        ts_Vertex: dMesh.vertexBuffers.curve1,
     //        color: dMesh.vertexBuffers.curve1colors,
     //    }, undefined, gl.LINES)
     //}
@@ -43609,7 +45054,7 @@ function viewerPaint(time$$1, gl) {
         gl.pushMatrix();
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20); // prevent Z-fighting
-        sMesh.LINES && gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, DRAW_MODES.LINES);
+        sMesh.LINES && gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, gl.LINES);
         gl.projectionMatrix.m[11] += 1 / (1 << 20);
         sMesh.TRIANGLES && gl.shaders.lighting.uniforms({
             color: chroma('#ffFF00').gl(),
@@ -43618,34 +45063,36 @@ function viewerPaint(time$$1, gl) {
         gl.popMatrix();
     }
     gl.enable(gl.CULL_FACE);
-    if (hovering instanceof Edge) {
+    if (hovering instanceof Edge$$1) {
         gl.projectionMatrix.m[11] -= 1 / (1 << 20); // prevent Z-fighting
         gl.drawEdge(hovering, GL_COLOR_BLACK, 2 / eye.zoomFactor);
         gl.projectionMatrix.m[11] += 1 / (1 << 20);
     }
-    g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 0.01));
+    g.edges && g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 0.01));
     //drPs.forEach(v => drawPoint(v, undefined, 0.3))
-    drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor));
+    g.drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor));
     b2planes.forEach(plane => gl.drawPlane(plane, chroma(plane.color).gl(), hovering == plane));
-    //console.log(gl.drawCallCount)
+    gl.begin(gl.LINE_STRIP);
+    gl.color('red');
+    gl.end();
 }
-// let meshes: any = {}
+//var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
 const b2planes = [
-    new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000),
-    new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00),
-    new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff),
+    new CustomPlane$$1(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000),
+    new CustomPlane$$1(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00),
+    new CustomPlane$$1(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff),
 ];
 function viewerMain() {
     return __awaiter(this, void 0, void 0, function* () {
         const paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl));
-        B2T.defaultFont = yield B2T.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff');
+        B2T$$1.defaultFont = yield B2T$$1.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff');
         window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
             console.log(errorMsg, url, lineNumber, column, errorObj);
         };
-        const gl = BREPGLContext.create(TSGLContext.create({ canvas: document.getElementById('testcanvas') }));
+        const gl = BREPGLContext$$1.create(TSGLContext.create({ canvas: document.getElementById('testcanvas') }));
         gl.fullscreen();
         gl.canvas.oncontextmenu = () => false;
-        setupCamera(eye, gl);
+        setupCamera$$1(eye, gl);
         //gl.cullFace(gl.FRONT_AND_BACK);
         gl.clearColor(1.0, 1.0, 1.0, 0.0);
         gl.enable(gl.BLEND);
@@ -43657,8 +45104,8 @@ function viewerMain() {
         gl.loadIdentity();
         gl.scale(10, 10, 10);
         gl.loadIdentity();
-        initNavigationEvents(gl, eye, paintScreen);
-        cameraChangeListeners.push(function (eye) {
+        initNavigationEvents$$1(gl, eye, paintScreen);
+        cameraChangeListeners$$1.push(function (eye) {
             const round = (x) => round10(x, -3);
             const roundedEye = { pos: eye.pos.map(round), focus: eye.focus.map(round), up: eye.up.map(round), zoomFactor: round(eye.zoomFactor) };
             const iSource = 'i=' + roundedEye.toSource().replace(/[\n\r\s]+|^\(|\)$/g, '');
@@ -43671,8 +45118,8 @@ function viewerMain() {
         // initInfoEvents(paintScreen, g l)
         //initToolTips() // hide tooltip on mouseover
         //initPointInfoEvents()
-        initB2();
-        setupCamera(eye, gl);
+        initBRep();
+        setupCamera$$1(eye, gl);
         paintScreen();
     });
 }
@@ -43695,25 +45142,25 @@ function HJK() {
     //const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625,
     // -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009,
     // 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
-    const pcs = SemiCylinderSurface.UNIT
+    const pcs = SemiCylinderSurface$$1.UNIT
         .rotateZ(-40 * DEG)
         .scale(0.5, 0.05, 4)
         .translate(0.5, 0, -2)
         .flipped();
-    const ses = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z);
+    const ses = new SemiEllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
     const curves = ses.isCurvesWithSurface(pcs);
     return {
         //a,
         //b,
         //c,
         mesh: [pcs.toMesh(), ses.toMesh()],
-        edges: curves.map(c => Edge.forCurveAndTs(c)),
+        edges: curves.map(c => Edge$$1.forCurveAndTs(c)),
         points: curves.flatMap(c => c.points),
     };
 }
-//# sourceMappingURL=viewer.js.map
 
 exports.viewerMain = viewerMain;
+exports.RenderObjects = RenderObjects;
 
 return exports;
 

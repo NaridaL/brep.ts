@@ -3,7 +3,7 @@ import {suite, test, testCurve, testISTs} from './manager'
 import {V} from 'ts3dutils'
 import {HyperbolaCurve, intersectionUnitHyperbolaLine, P3} from '..'
 
-const {sqrt} = Math
+import {sqrt} from '../src/math'
 
 suite('HyperbolaCurve', () => {
 

@@ -1,9 +1,11 @@
-class RangeTree {
+import { int } from 'ts3dutils'
+
+export class RangeTree {
 
 
 	nextIntervals: RangeTree = undefined
 	prevIntervals: RangeTree = undefined
-	intervals: { left: number, right: number }[] = []
+	intervals: RangeTree.Interval[] = []
 	recIntCount: int = 0
 
 	constructor(public s: number,
@@ -34,7 +36,7 @@ class RangeTree {
 	//    }
 	//}
 
-	removeInterval(interval: { left: number, right: number }) {
+	removeInterval(interval: RangeTree.Interval) {
 		let x: any
 		while (true) {
 			if (interval.right < x.s) {
@@ -62,12 +64,12 @@ class RangeTree {
 		}
 	}
 
-	addIntervals(intervals: { left: number, right: number }[]) {
-		let last
+	addIntervals(intervals: RangeTree.Interval[]) {
+		let last: RangeTree.Interval[]
 
-		function recurse(rt: RangeTree, intervals: { left: number, right: number }[]) {
+		function recurse(rt: RangeTree, intervals: RangeTree.Interval[]) {
 			rt.recIntCount = intervals.length
-			const intsLeft = [], intsRight = []
+			const intsLeft:RangeTree.Interval[] = [], intsRight:RangeTree.Interval[] = []
 			for (const int of intervals) {
 				(int.right < rt.s ? intsLeft : rt.s < int.left ? intsRight : rt.intervals).push(int)
 			}
@@ -139,4 +141,10 @@ class RangeTree {
 			+ ` ${this.recIntCount}/` + this.intervals.toSource()
 			+ ('\n' + this.left + '\n' + this.right).replace(/^/gm, '\t')
 	}
+}
+export namespace RangeTree {
+    export interface Interval {
+        left: number
+        right: number
+    }
 }

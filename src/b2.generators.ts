@@ -10,7 +10,7 @@ import {
 	SemiEllipsoidSurface, StraightEdge, Surface, XiEtaCurve,
 } from './index'
 
-const {PI, min, max, ceil} = Math
+import {PI, min, max, ceil} from './math'
 
 
 function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
@@ -24,7 +24,7 @@ function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surface {
 	}
 	if (curve instanceof BezierCurve || curve instanceof XiEtaCurve) {
 		const curveDir = offset.times(flipped ? 1 : -1)
-		return new ProjectedCurveSurface(curve, curveDir, 0, 1, flipped ? 0 : -1, flipped ? 1 : 0)
+		return new ProjectedCurveSurface(curve, curveDir, undefined, undefined, flipped ? 0 : -1, flipped ? 1 : 0)
 	}
 	throw new Error()
 }
@@ -220,7 +220,7 @@ export namespace B2T {
 		if (0 == res) return B2T.box(1, 1, 1)
 
 		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
-		const stencilFaces = []
+		const stencilFaces: Face[] = []
 
 		function recurse(steps: int, m4: M4) {
 			stencilFaces.push(...punch.transform(m4).faces)
@@ -330,7 +330,7 @@ export namespace B2T {
 				}
 				return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
 			} else {
-			    throw new Error(edge)
+			    throw new Error(edge.toString())
 			}
 		})
 		let stepStartEdges = baseLoop, stepEndEdges: Edge[]
@@ -346,6 +346,7 @@ export namespace B2T {
 					const curve = 0 === rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
 					return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
 				}
+				return undefined
 			})
 			for (let edgeIndex = 0; edgeIndex < baseLoop.length; edgeIndex++) {
 				if (baseSurfaces[edgeIndex]) {
@@ -444,17 +445,17 @@ export namespace B2T {
 	const loadedFonts = new Map<string, opentype.Font>()
 
 	export function loadFont(fontPath: string): Promise<opentype.Font> {
-		return new Promise<opentype.Font>(function (executor, reject) {
+		return new Promise<opentype.Font>(function (resolve, reject) {
 			const font = loadedFonts.get(fontPath)
 			if (font) {
-				executor(font)
+				resolve(font)
 			} else {
 				opentype.load(fontPath, function (err, f) {
 					if (err) {
 						reject(err)
 					} else {
 						loadedFonts.set(fontPath, f)
-						executor(f)
+						resolve(f)
 					}
 				})
 			}

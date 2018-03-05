@@ -5,7 +5,7 @@ import {
 	SemiEllipseCurve, Surface, PlaneSurface, PointVsFace,
 } from '../index'
 
-const {PI, cos, sin, abs, sqrt, sign} = Math
+import {PI, cos, sin, abs, sqrt, sign} from '../math'
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	/**

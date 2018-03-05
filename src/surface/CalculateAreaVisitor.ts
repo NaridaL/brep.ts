@@ -6,7 +6,7 @@ import {
     ImplicitCurve,
 } from '../index'
 
-const { PI } = Math
+import { PI } from '../math'
 
 
 export const CalculateAreaVisitor = {
@@ -185,10 +185,10 @@ export const CalculateAreaVisitor = {
                 const start = Math.ceil(minT + NLA_PRECISION)
                 const end = Math.floor(maxT - NLA_PRECISION)
                 for (let i = start; i <= end; i++) {
-                    const at = points[i], tangent = tangents[i]
-                    // thisDir1 and surface normals are perpendicular, so we don't need to .unit()
-                    // the result of .cross()
+                    const at = points[i], tangent = tangents[i].toLength(edge.curve.stepSize)
+                    console.log("at", at.sce, "tangent", tangent.sce, 'tangent.length()', tangent.length(), this.normalP(at).cross(thisDir1).unit().sce)
                     const scaling = this.normalP(at).cross(thisDir1).unit().dot(tangent)
+                    console.log('partsum', at.dot(thisDir1) * scaling)
                     sum += at.dot(thisDir1) * scaling
                 }
                 const f = (t: number) => {

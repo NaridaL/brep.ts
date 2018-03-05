@@ -13,8 +13,9 @@ import {
 	StraightEdge, Surface, triangulateVertices, EPS,
 } from './index'
 
-const {PI,  min, max,  sign, ceil, floor, abs} = Math
+import {PI,  min, max,  sign, ceil, floor, abs} from './math'
 
+export type FaceMesh = Mesh & { LINES: int[], TRIANGLES: int[], normals: V3[] }
 
 export abstract class Face extends Transformable {
 	'constructor': new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string, info?: any) => this
@@ -747,7 +748,7 @@ export abstract class Face extends Transformable {
 		return this.allEdges
 	}
 
-	addEdgeLines(mesh: Mesh) {
+	addEdgeLines(mesh: Mesh & {vertices: V3[], LINES: int[]}) {
 		assert(false, 'buggy, fix')
 		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0()), mvl = mesh.vertices!.length
 		for (let i = 0; i < vertices.length; i++) {
@@ -790,17 +791,17 @@ export abstract class Face extends Transformable {
 		return undefined != nearestPointT ? nearestPointT : NaN
 	}
 
-	toMesh() {
+	toMesh(): FaceMesh {
 		const mesh = new Mesh()
 			.addIndexBuffer('TRIANGLES')
 			.addIndexBuffer('LINES')
-			.addVertexBuffer('normals', 'LGL_Normal')
+			.addVertexBuffer('normals', 'ts_Normal')
 		this.addToMesh(mesh)
 		//mesh.compile()
 		return mesh
 	}
 
-	abstract addToMesh(mesh: Mesh & { TRIANGLES: int[], normals: V3[] }): void
+	abstract addToMesh(mesh: FaceMesh): void
 
 	zDirVolume(): { centroid: V3, volume: number } {
 		return this.surface.zDirVolume(this.getAllEdges())
@@ -900,11 +901,11 @@ export class PlaneFace extends Face {
 		return new PlaneFace(planeSurface, edges, holes)
 	}
 
-	addToMesh(mesh: Mesh & { TRIANGLES: int[], normals: V3[] }) {
-		const mvl = mesh.vertices!.length
+	addToMesh(mesh: FaceMesh) {
+		const mvl = mesh.vertices.length
 		const normal = this.surface.plane.normal1
 		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0())
-		for (let i = 0; i < vertices.length; i++) { mesh.LINES!.push(mvl + i, mvl + (i + 1) % vertices.length) }
+		for (let i = 0; i < vertices.length; i++) { mesh.LINES.push(mvl + i, mvl + (i + 1) % vertices.length) }
 		const holeStarts: number[] = []
 		this.holes.forEach(hole => {
 			holeStarts.push(vertices.length)
@@ -1347,11 +1348,11 @@ export class RotationFace extends Face {
 	 *
 	 */
 
-	addToMesh(this: this & { surface: ParametricSurface }, mesh: Mesh, uStep: number = this.surface.uStep, vStep: number = this.surface.vStep) {
-		assertf(() => uStep > 0 && vStep > 0, uStep, vStep, 'Surface: ' + this.surface)
-		const triangles: int[] = []
-		const pIJFunc = (i: number, j: number) => this.surface.pSTFunc()(i * uStep, j * vStep)
-		const normalIJFunc = (i: number, j: number) => this.surface.normalSTFunc()(i * uStep, j * vStep)
+    addToMesh(this: this & { surface: ParametricSurface }, mesh: FaceMesh, uStep: number = this.surface.uStep, vStep: number = this.surface.vStep) {
+        assertf(() => uStep > 0 && vStep > 0, uStep, vStep, 'Surface: ' + this.surface)
+        const triangles: int[] = []
+        const pIJFunc = (i: number, j: number) => this.surface.pSTFunc()(i * uStep, j * vStep)
+        const normalIJFunc = (i: number, j: number) => this.surface.normalSTFunc()(i * uStep, j * vStep)
 		const loops = [this.contour].concat(this.holes)
 		const {vertices, verticesUV, normals, loopStarts} = this.surface instanceof SemiEllipsoidSurface || this.surface instanceof ConicSurface
 			? this.unrollEllipsoidLoops(loops, uStep, vStep)
@@ -1363,7 +1364,7 @@ export class RotationFace extends Face {
 			const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart
 			const base = mesh.vertices!.length + loopStarts[vertexLoopIndex]
 			for (let i = 0; i < vertexLoopLength; i++) {
-				mesh.LINES!.push(base + i, base + (i + 1) % vertexLoopLength)
+				mesh.LINES.push(base + i, base + (i + 1) % vertexLoopLength)
 			}
 		}
 
