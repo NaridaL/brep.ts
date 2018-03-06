@@ -67,6 +67,10 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		].filter(x => x)
 	}
 
+	static forAB(a: number, b: number, center: V3 = V3.O): SemiEllipseCurve {
+		return super.forAB(a, b, center) as SemiEllipseCurve
+	}
+
 	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): { area: number, centroid: V3 } {
 		return EllipseCurve.prototype.getAreaInDir.call(this, right, up, tStart, tEnd)
 	}
@@ -244,7 +248,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const startT = this.inverseMatrix.transformPoint(p).angleXY()
 		const pRelCenter = p.minus(this.center)
 		const f = (t: number) => this.tangentAt(t).dot(this.f1.times(Math.cos(t)).plus(this.f2.times(Math.sin(t))).minus(pRelCenter))
-		return newtonIterate1d(f, startT)
+		return newtonIterate1d(f, startT, 8)
 	}
 
 	area(): number {

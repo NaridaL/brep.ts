@@ -5,7 +5,6 @@ import {
 import {BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve} from './index'
 
 export class P3 extends Transformable {
-
 	static readonly YZ = new P3(V3.X, 0)
 	static readonly ZX = new P3(V3.Y, 0)
 	static readonly XY = new P3(V3.Z, 0)
@@ -41,12 +40,12 @@ export class P3 extends Transformable {
 	static normalOnAnchor(normal: V3, anchor: V3): P3 {
 		assertVectors(normal, anchor)
 		const n1 = normal.unit()
-		return new P3(n1, n1.dot(anchor))
+		return new this(n1, n1.dot(anchor))
 	}
 
 	/**
+	 * Create a plane which intersects the X, Y and Z axes at the specified offsets.
 	 * x/x0 + y/y0 + y/y0 = 1
-	 *
 	 */
 	static forAxisIntercepts(x0: number, y0: number, z0: number): P3 {
 		assertNumbers(x0, y0, z0)
@@ -54,9 +53,26 @@ export class P3 extends Transformable {
 		return new P3(normal.unit(), normal.length())
 	}
 
+	/**
+	 * Create a plane containing `anchor` and extending in directions `v0` and `v1`.
+	 * `v0` and `v1` may not be parallel.
+	 * @param anchor
+	 * @param v0
+	 * @param v1
+	 */
 	static forAnchorAndPlaneVectors(anchor: V3, v0: V3, v1: V3): P3 {
 		assertVectors(anchor, v0, v1)
-		return P3.normalOnAnchor(v0.cross(v1), anchor)
+		assert(!v0.isParallelTo(v1))
+		return this.normalOnAnchor(v0.cross(v1), anchor)
+	}
+
+	/**
+	 * Create a plane which contains botha point and a line. The point may not lie on the line.
+	 * @param p
+	 * @param line
+	 */
+	static forPointAndLine(p: V3, line: L3) {
+		return this.forAnchorAndPlaneVectors(line.anchor, line.dir1, line.anchor.to(p))
 	}
 
 	axisIntercepts(): V3 {
@@ -104,7 +120,7 @@ export class P3 extends Transformable {
 		return eq0(this.normal1.dot(plane.normal1))
 	}
 
-	toSource(rounder?): string {
+	toSource(): string {
 		return callsce('new P3', this.normal1, this.w)
 	}
 

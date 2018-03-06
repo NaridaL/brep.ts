@@ -26,9 +26,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	constructor(readonly center: V3,
 				readonly f1: V3,
 				readonly f2: V3,
-				readonly dir: V3) {
-		super()
+				readonly dir: V3,
+				sMin: number = 0,
+				sMax: number = PI,
+				tMin: number = 0,
+				tMax: number = 1) {
+		super(sMin, sMax, tMin, tMax)
 		assertVectors(center, f1, f2, dir)
+		assert(0 <= tMin)
 		this.matrix = M4.forSys(f1, f2, dir, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
@@ -39,10 +44,10 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		return this.center
 	}
 
-	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve): ConicSurface {
+	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve, sMin?: number, sMax?: number, tMin?: number, tMax?: number): ConicSurface {
 		assertVectors(apex)
 		assertInst(SemiEllipseCurve, ellipse)
-		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center))
+		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center), sMin, sMax, tMin, tMax)
 	}
 
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
@@ -367,7 +372,3 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 ConicSurface.prototype.uStep = PI / 16
 ConicSurface.prototype.vStep = 256
-ConicSurface.prototype.sMin = 0
-ConicSurface.prototype.sMax = PI
-ConicSurface.prototype.tMin = 0
-ConicSurface.prototype.tMax = 16

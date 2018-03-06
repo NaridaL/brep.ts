@@ -1,5 +1,4 @@
 import {assert, between, V3, isCCW} from 'ts3dutils'
-import {V, NLA_PRECISION} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
 import {Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge, breakDownPPCurves} from '../index'
@@ -8,12 +7,19 @@ import {ceil, min} from '../math'
 
 
 export abstract class ParametricSurface extends Surface {
-	sMin: number
-	sMax: number
-	tMin: number
-	tMax: number
 	uStep: number
 	vStep: number
+
+	constructor(
+		readonly sMin: number,
+		readonly sMax: number,
+		readonly tMin: number,
+		readonly tMax: number,
+	) {
+		super()
+		assert(sMin < sMax)
+		assert(tMin < tMax)
+	}
 
     static isCurvesParametricImplicitSurface(ps: ParametricSurface,
                                              is: ImplicitSurface,

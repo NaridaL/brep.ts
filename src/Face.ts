@@ -677,7 +677,7 @@ export abstract class Face extends Transformable {
 		const mirroring = m4.isMirroring()
 		const newEdges = Edge.reversePath(this.contour.map(e => e.transform(m4)), mirroring)
 		const newHoles = this.holes.map(hole => Edge.reversePath(hole.map(e => e.transform(m4)), mirroring))
-		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info)
+		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info) as this
 	}
 
 	flipped() {

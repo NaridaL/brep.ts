@@ -29,7 +29,7 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 	}
 
 	flipped(): RotationREqFOfZ {
-		return new RotationREqFOfZ(this.matrix, this.rt, this.tMin, this.tMax, -this.normalDir, this.drdz)
+		return new RotationREqFOfZ(this.matrix, this.rt, this.tMin, this.tMax, -this.normalDir, this.drdz) as this
 	}
 
 	transform(m4: M4): RotationREqFOfZ {

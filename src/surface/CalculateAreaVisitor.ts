@@ -2,8 +2,7 @@ import { assert, assertNever, eq, glqInSteps, V3, NLA_PRECISION } from 'ts3dutil
 
 import {
 	BezierCurve, ConicSurface, CylinderSurface, dotCurve, Edge, EllipseCurve, EllipsoidSurface, HyperbolaCurve, L3,
-	ParabolaCurve, PlaneSurface, ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve, StraightEdge, PICurve,
-    ImplicitCurve,
+	ParabolaCurve, PlaneSurface, ProjectedCurveSurface, SemiEllipseCurve, StraightEdge, ImplicitCurve,
 } from '../index'
 
 import { PI } from '../math'
@@ -27,7 +26,7 @@ export const CalculateAreaVisitor = {
 			} else if (edge.curve instanceof L3) {
 				return 0
 			} else {
-				assertNever()
+				throw new Error()
 			}
 		}).sum()
 		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
@@ -39,7 +38,7 @@ export const CalculateAreaVisitor = {
 		let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0
 		let r1 = this.surface.right, u1 = this.surface.up
 		for (const edge of edges) {
-			let edgeCentroid, edgeArea: number, centroidS, centroidT
+			let edgeArea: number, centroidS, centroidT
 			if (edge instanceof StraightEdge) {
 				const midPoint = edge.a.lerp(edge.b, 0.5)
 				edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
@@ -104,7 +103,7 @@ export const CalculateAreaVisitor = {
 
 	[EllipsoidSurface.name](this: EllipsoidSurface, edges: Edge[], canApproximate = true): number {
 		assert(this.isVerticalSpheroid())
-		const { f1, f2, f3 } = this
+		const { f1, f3 } = this
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const circleRadius = f1.length()
 		const f31 = f3.unit()
@@ -124,7 +123,6 @@ export const CalculateAreaVisitor = {
 					}
 					const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
 					const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(), -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit()
-					const df3 = tangent.dot(f31)
 					//const scaling = df3 / localAt.lengthXY()
 					const scaling = dotter.dot(tangent)
 					//console.log(t, at.str, arcLength, scaling)
@@ -186,7 +184,7 @@ export const CalculateAreaVisitor = {
                 const end = Math.floor(maxT - NLA_PRECISION)
                 for (let i = start; i <= end; i++) {
                     const at = points[i], tangent = tangents[i].toLength(edge.curve.stepSize)
-                    console.log("at", at.sce, "tangent", tangent.sce, 'tangent.length()', tangent.length(), this.normalP(at).cross(thisDir1).unit().sce)
+                    console.log('at', at.sce, 'tangent', tangent.sce, 'tangent.length()', tangent.length(), this.normalP(at).cross(thisDir1).unit().sce)
                     const scaling = this.normalP(at).cross(thisDir1).unit().dot(tangent)
                     console.log('partsum', at.dot(thisDir1) * scaling)
                     sum += at.dot(thisDir1) * scaling
@@ -215,7 +213,7 @@ export const CalculateAreaVisitor = {
                 return val * sign
             }
         }).sum()
-        console.log("totalArea", totalArea)
+        console.log('totalArea', totalArea)
 		return totalArea
 	},
 

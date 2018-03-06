@@ -1,4 +1,4 @@
-import {suite, test, b2Equal, b2EqualAnd, skip, linkB3, Assert} from './manager'
+import {suite, test, testBRepOp, testBRepAnd, skip, outputLink, Assert} from './manager'
 import {PlaneFace, BRep, Edge, Face, B2T, StraightEdge, PlaneSurface, L3, PCurveEdge, SemiEllipseCurve, P3, SemiCylinderSurface, RotationFace, BezierCurve, ProjectedCurveSurface} from '..'
 import {V3, V, M4, DEG} from 'ts3dutils'
 import {JavaMap as CustomMap, JavaSet as CustomSet} from 'javasetmap.ts'
@@ -8,7 +8,7 @@ function doTest(assert: Assert, face: PlaneFace, brep2: BRep, resultEdges: Edge[
 		brep2 = new BRep([brep2], false)
 	}
 	brep2.buildAdjacencies()
-	linkB3({
+	outputLink({
 		a: new BRep([face]),
 		b: brep2,
 		edges: resultEdges,
@@ -38,7 +38,7 @@ function doTest(assert: Assert, face: PlaneFace, brep2: BRep, resultEdges: Edge[
 function doTestWithBrep(assert: Assert, face: Face, faceBrep: BRep, brep2: BRep, expectedEdges: Edge[], expectedPoints: V3[], desc: string, backwards?: boolean) {
 	faceBrep.buildAdjacencies()
 	brep2.buildAdjacencies()
-	linkB3(assert, {
+	outputLink(assert, {
 		a: faceBrep,
 		b: brep2,
 		edges: expectedEdges,
@@ -70,7 +70,7 @@ function doTestWithBrep(assert: Assert, face: Face, faceBrep: BRep, brep2: BRep,
 
 	edgePointInfos && edgePointInfos.forEach(info => !uniquePoints.some(up => up.like(info.p)) && assert.ok(info.p) && uniquePoints.push(info.p))
 	console.log('edgePointInfos', edgePointInfos)
-    linkB3(assert, {
+    outputLink(assert, {
         a: faceBrep,
         b: brep2,
         edges: edges,
@@ -486,14 +486,14 @@ suite('BRep 2', () => {
 				StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
 				PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
-		b2EqualAnd(assert, pie, boxKnife, result)
+		testBRepAnd(assert, pie, boxKnife, result)
 
 
 		const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal1.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
 		const k2 = boxKnife.translate(-1, 0, 0)
 		doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.O, V(0, 0, 5)],
 			'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
-		b2Equal(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
+		testBRepOp(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
 	})
 	test('BRep.prototype.minus cut hole through side of pie', assert => {
 		const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
@@ -550,7 +550,7 @@ suite('BRep 2', () => {
 				new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 5.291502622129181, 4), V(6, 0, 4), 3.7084973778708186, 9),
 				new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
 				new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 7.937253933193773, 4), 1, 8.937253933193773)], [])], false)
-		b2EqualAnd(assert, pie, punch, result)
+		testBRepAnd(assert, pie, punch, result)
 	})
 
 	test('BRep.prototype.minus including ProjectedCurveSurface', assert =>  {
@@ -607,7 +607,7 @@ suite('BRep 2', () => {
 				new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 3.185436104380006, 4), 1, 4.185436104380006),
 				new PCurveEdge(new BezierCurve(V(10, 0, 4), V(15, 5, 4), V(-5, 5, 4), V(0, 0, 4), -0.10000000000000009, 1.1), V(1, 3.185436104380006, 4), V(6, 3.720106174228432, 4), 0.6940041057331853, 0.4553578481913726, undefined, V(16.85436104380006, 5.820123171995558, 0), V(22.20106174228432, -1.339264554258822, 0)),
 				new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 3.720106174228432, 4), V(6, 0, 4), 5.279893825771568, 9)], [])], false)
-		b2EqualAnd(assert, a, punch, result)
+		testBRepAnd(assert, a, punch, result)
 	})
 
 	suite('test intersection of volumes where no faces intersect', () => {
@@ -625,14 +625,14 @@ suite('BRep 2', () => {
 		 */
 
 		const b = B2T.box(10, 10, 10), a = B2T.box(2, 2, 2).translate(1, 1, 1)
-		test('a - b', assert => b2EqualAnd(assert, a, b.flipped(), BRep.EMPTY) )
-		test('b - a', assert => b2EqualAnd(assert, a.flipped(), b, new BRep(b.faces.concat(a.flipped().faces), false)) )
-		test('a + b', assert => b2EqualAnd(assert, a.flipped(), b.flipped(), b.flipped()) )
-		test('a and b', assert => b2EqualAnd(assert, a, b, a) )
+		test('a - b', assert => testBRepAnd(assert, a, b.flipped(), BRep.EMPTY) )
+		test('b - a', assert => testBRepAnd(assert, a.flipped(), b, new BRep(b.faces.concat(a.flipped().faces), false)) )
+		test('a + b', assert => testBRepAnd(assert, a.flipped(), b.flipped(), b.flipped()) )
+		test('a and b', assert => testBRepAnd(assert, a, b, a) )
 
 		const c = B2T.box(2, 2, 2).translate(20)
-		test('a - c', assert => b2EqualAnd(assert, a, c.flipped(), a) )
-		test('a + c', assert => b2EqualAnd(assert, a.flipped(), c.flipped(), new BRep(c.faces.concat(a.faces), false).flipped()) )
-		test('a and c', assert => b2EqualAnd(assert, a, c, BRep.EMPTY) )
+		test('a - c', assert => testBRepAnd(assert, a, c.flipped(), a) )
+		test('a + c', assert => testBRepAnd(assert, a.flipped(), c.flipped(), new BRep(c.faces.concat(a.faces), false).flipped()) )
+		test('a and c', assert => testBRepAnd(assert, a, c, BRep.EMPTY) )
 	})
 })

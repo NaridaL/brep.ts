@@ -1,4 +1,4 @@
-import {linkB3, suite, test, testISCurves, testLoopContainsPoint, testParametricSurface, testImplicitSurface} from './manager'
+import {outputLink, suite, test, testISCurves, testLoopContainsPoint, testParametricSurface, testImplicitSurface} from './manager'
 
 import {assertf, DEG, M4, V, V3} from 'ts3dutils'
 import {
@@ -102,7 +102,7 @@ suite('SemiEllipsoidSurface', () => {
 			new PCurveEdge(new SemiEllipseCurve(V(0.11093750000000002, 0, 0), V(0, 0, 0.9938273849586506), V(0, 0.9938273849586506, 0), 0, 3.141592653589793), V(0.11093749999999993, 0, 0.9938273849586506), V(0.11093750000000002, 0.010000000000000009, 0.9937770731375071), 0, 0.010062279327831384, null, V(0, 0.9938273849586506, 0), V(0, 0.993777073137507, -0.010000000000000007)),
 			new PCurveEdge(new SemiEllipseCurve(V(0, 0.010000000000000009, 0), V(0, 0, -0.9999499987499375), V(0.9999499987499375, 0, 0), 0, 3.141592653589793), V(0.11093750000000002, 0.010000000000000009, 0.9937770731375071), V(0.047968750000000004, 0.010000000000000009, 0.9987987780446257), 3.0304207486077566, 3.0936030871101416, null, V(-0.9937770731375071, 0, 0.11093749999999983), V(-0.9987987780446257, 0, 0.0479687500000002))]
 		assertf(() => Edge.isLoop(loop))
-		linkB3(assert, {edges: loop})
+		outputLink(assert, {edges: loop})
 		assert.ok(s1.edgeLoopCCW(loop))
 	})
 })

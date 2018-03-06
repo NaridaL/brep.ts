@@ -106,6 +106,11 @@ export abstract class Edge extends Transformable {
 		return doReverse ? arrayFromFunction(path.length, i => path[path.length - 1 - i].flipped()) : path
 	}
 
+	/**
+	 * Create an axis-aligned rectangle of edges on the XY-plane with the bottom-left corner on the origin.
+	 * @param width
+	 * @param height
+	 */
 	static rect(width: number = 1, height: number = width): Edge[] {
 		const vertices = [new V3(0, 0, 0), new V3(width, 0, 0), new V3(width, height, 0), new V3(0, height, 0)]
 		return StraightEdge.chain(vertices)

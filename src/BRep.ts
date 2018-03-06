@@ -214,8 +214,14 @@ export class BRep extends Transformable {
 		return newFaces
 	}
 
-	static join(b2s: BRep[], generator?: string) {
-		return new BRep(b2s.flatMap(b2 => b2.faces), false, generator)
+	/**
+	 * Create a [BRep] by concatenating the faces of other BReps. Only use this if certain that the faces of the BReps do not intersect.
+	 * Otherwise, use [BRep.plus].
+	 * @param bReps
+	 * @param generator
+	 */
+	static join(bReps: BRep[], generator?: string) {
+		return new BRep(bReps.flatMap(b2 => b2.faces), false, generator)
 	}
 
 	containsPoint(p: V3, forceInsideOutside: boolean = false): boolean {

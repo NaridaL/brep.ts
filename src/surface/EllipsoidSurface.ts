@@ -6,7 +6,7 @@ import {Mesh} from 'tsgl'
 
 import {
 	Curve, CylinderSurface, Edge, EllipseCurve, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface, PointVsFace,
-	ProjectedCurveSurface, Surface, dotCurve, R2_R,
+	ProjectedCurveSurface, Surface, dotCurve, R2_R, R2,
 } from '../index'
 
 import {PI, cos, sin, abs, sign} from '../math'
@@ -24,7 +24,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 				readonly f1: V3,
 				readonly f2: V3,
 				readonly f3: V3) {
-		super()
+		super(-PI, PI, -PI / 2, PI / 2)
 		assertVectors(center, f1, f2, f3)
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.inverseMatrix = this.matrix.inversed()
@@ -231,7 +231,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 			this.center,
 			this.f1,
 			this.f2,
-			this.f3.negated())
+			this.f3.negated()) as this
 	}
 
 	toMesh(subdivisions: int = 3): Mesh {
@@ -253,7 +253,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		// return mesh
 	}
 
-	normalSTFunc() {
+	normalSTFunc(): R2<V3> {
 		// ugh
 		// paramtric ellipsoid point q(a, b)
 		// normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
@@ -269,11 +269,11 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		}
 	}
 
-	normalP(p) {
+	normalP(p: V3) {
 		return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit()
 	}
 
-	normalST(s, t) {
+	normalST(s: number, t: number) {
 		return this.normalMatrix.transformVector(V3.sphere(s, t))
 	}
 
@@ -307,7 +307,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 				assert(hint == -PI || hint == PI)
 				alpha = hint
 			}
-			let beta = Math.asin(pLC.z)
+			const beta = Math.asin(pLC.z)
 			return new V3(alpha, beta, 0)
 		}
 	}

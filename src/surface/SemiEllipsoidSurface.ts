@@ -93,7 +93,7 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 			if (le(anchorY, -d) && !eq0(distPlaneCenter)) {
 				return []
 			} else if (le(anchorY, 0) && !plane.normal1.isParallelTo(V3.Y)) {
-				let f1 = plane.normal1.isParallelTo(V3.Y) ? V3.Z : plane.normal1.cross(V3.Y).toLength(isCircleRadius)
+				const f1 = plane.normal1.isParallelTo(V3.Y) ? V3.Z : plane.normal1.cross(V3.Y).toLength(isCircleRadius)
 				const f2 = f1.cross(plane.normal1)
 				const minEta = -anchorY / f2.y, minT = max(0, Math.asin(minEta))
 				return [new SemiEllipseCurve(plane.anchor, f1, f2, minT, PI - minT)]
@@ -726,7 +726,3 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 
 SemiEllipsoidSurface.prototype.uStep = PI / 16
 SemiEllipsoidSurface.prototype.vStep = PI / 16
-SemiEllipsoidSurface.prototype.sMin = 0
-SemiEllipsoidSurface.prototype.sMax = PI
-SemiEllipsoidSurface.prototype.tMin = -PI / 2
-SemiEllipsoidSurface.prototype.tMax = PI / 2

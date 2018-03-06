@@ -43,7 +43,7 @@ export class PPCurve extends ImplicitCurve {
         }
     }
 
-	containsPoint(p) {
+	containsPoint(p: V3) {
 		assertVectors(p)
 		// TODO: wrong, as there could be another curve
 		return this.parametricSurface1.containsPoint(p) && this.parametricSurface2.containsPoint(p) && !isNaN(this.pointT(p))
@@ -79,7 +79,7 @@ export class PPCurve extends ImplicitCurve {
 				const p = this.at(lambda)
 				assert(this.parametricSurface1.containsPoint(p))
 				const pp1 = this.parametricSurface1.stP(p)
-				let {x: u, y: v} = this.parametricSurface2.stP(p)
+				const {x: u, y: v} = this.parametricSurface2.stP(p)
 				const startValues = [pp1.x, pp1.y, u, v]
 
 				function f(vals: Tuple4<number>) {

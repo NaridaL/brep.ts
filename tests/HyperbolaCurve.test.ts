@@ -6,12 +6,10 @@ import {HyperbolaCurve, intersectionUnitHyperbolaLine, P3} from '..'
 import {sqrt} from '../src/math'
 
 suite('HyperbolaCurve', () => {
-
-
 	test('testCurve', assert => {
 		testCurve(assert, HyperbolaCurve.XY)
 	})
-	test('HyperbolaCurve', assert => {
+	test('testCurve 2', assert => {
 		const hbSheared = HyperbolaCurve.XY.shearX(2, 3)
 		assert.notOk(hbSheared.isOrthogonal())
 		const hbShearedRA = hbSheared.rightAngled()

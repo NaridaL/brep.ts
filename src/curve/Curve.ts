@@ -325,7 +325,7 @@ export abstract class Curve extends Transformable implements Equalable {
 	/**
 	 * Derivative of tangentAt for parameter t at t.
 	 */
-	abstract ddt(t: number): V3
+	abstract ddt?(t: number): V3
 
 	abstract containsPoint(p: V3): boolean
 
@@ -556,6 +556,7 @@ function mkPPCurves(ps1: ParametricSurface,
 }
 
 export type R2_R = (s: number, t: number) => number
+export type R2<R> = (s: number, t: number) => R
 
 export interface AABB2 {
     sMin: number

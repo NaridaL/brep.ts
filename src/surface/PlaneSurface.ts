@@ -7,26 +7,33 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 
 	constructor(readonly plane: P3,
-				readonly right: V3 = plane.normal1.getPerpendicular().unit(),
-				readonly up: V3 = plane.normal1.cross(right).unit(),
-				readonly sMin: number = -100,
-				readonly sMax: number = 100,
-				readonly tMin: number = -100,
-				readonly tMax: number = 100) {
-		super()
+		readonly right: V3 = plane.normal1.getPerpendicular().unit(),
+		readonly up: V3 = plane.normal1.cross(right).unit(),
+		sMin: number = -100,
+		sMax: number = 100,
+		tMin: number = -100,
+		tMax: number = 100) {
+		super(sMin, sMax, tMin, tMax)
 		assertInst(P3, plane)
 		assert(this.right.cross(this.up).like(this.plane.normal1))
 		this.matrix = M4.forSys(right, up, plane.normal1, plane.anchor)
 	}
 
-    toSource(rounder: (x: number) => number = x => x): string {
-        return callsce.call(undefined, 'new PlaneSurface', ...this.getConstructorParameters())
-    }
+	toSource(rounder: (x: number) => number = x => x): string {
+		return callsce.call(undefined, 'new PlaneSurface', ...this.getConstructorParameters())
+	}
 
 	static throughPoints(a: V3, b: V3, c: V3): PlaneSurface {
 		return new PlaneSurface(P3.throughPoints(a, b, c))
 	}
 
+	static forAnchorAndPlaneVectors(anchor: V3, v0: V3, v1: V3, sMin?: number, sMax?: number, tMin?: number, tMax?: number): PlaneSurface {
+		return new PlaneSurface(
+			P3.forAnchorAndPlaneVectors(anchor, v0, v1),
+			v0, v1,
+			sMin, sMax,
+			tMin, tMax)
+	}
 	isCoplanarTo(surface: Surface): boolean {
 		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
 	}
@@ -63,21 +70,6 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 
 	edgeLoopCCW(contour: Edge[]): boolean {
 		return isCCW(contour.flatMap(edge => edge.points()), this.plane.normal1)
-		// let totalAngle = 0
-		// for (let i = 0; i < contour.length; i++) {
-		// 	const ipp = (i + 1) % contour.length
-		// 	const edge = contour[i], nextEdge = contour[ipp]
-		// 	assert(edge.b.like(nextEdge.a), 'edges dont form a loop')
-		// 	if (edge.curve instanceof SemiEllipseCurve) {
-		// 		totalAngle += edge.rotViaPlane(this.plane.normal1)
-		// 		// console.log(edge.toString(), edge.rotViaPlane(this.plane.normal1))
-		// 	}
-		// 	totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.plane.normal1)
-		// }
-		// const result = totalAngle > 0
-		// const result2 = PlaneFace.prototype.calculateArea.apply({surface: this, contour: contour}).area > 0
-		// //assert (result == result2)
-		// return result2
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {

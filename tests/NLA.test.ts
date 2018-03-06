@@ -1,4 +1,4 @@
-import {inDifferentSystems, suite, test, testLoopContainsPoint, b2Equal, b2equals, linkBRep} from './manager'
+import {inDifferentSystems, suite, test, testLoopContainsPoint, testBRepOp, b2equals, linkBRep} from './manager'
 
 import {JavaSet as CustomSet} from 'javasetmap.ts'
 import {DEG, M4, P3XY, V, V3, eq} from 'ts3dutils'

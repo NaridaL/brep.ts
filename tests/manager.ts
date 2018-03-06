@@ -6,7 +6,7 @@ try {
 } catch (e) { }
 
 export * from 'ts3dutils/tests/manager'
-import {arrayFromFunction, assert, DEG, eq, eq0, glqInSteps, int, lerp, M4, V, V3, NLA_PRECISION} from 'ts3dutils'
+import {arrayFromFunction, assert, DEG, eq, eq0, glqInSteps, int, lerp, M4, V, V3, NLA_PRECISION, toSource} from 'ts3dutils'
 import {Assert, test} from 'ts3dutils/tests/manager'
 
 import slug from 'slug'
@@ -22,13 +22,13 @@ import {
 
 import * as fs from 'fs'
 
-export function b2equals(assert: Assert, actual, expected, message = '') {
+export function b2equals(assert: Assert, actual: BRep, expected: BRep, message = '') {
     if (!(actual instanceof BRep)) {
         assert.push(false, typeof actual, BRep, 'actual is not a BRep')
         return
     }
 
-    assert.equal(actual.faces.length, expected.faces.length, 'no of faces')
+    assert.push(actual.faces.length == expected.faces.length, actual.toSource(false), expected.toSource(false), `no of faces ${actual.faces.length} != ${expected.faces.length}`)
 
     actual.faces.forEach(face => {
         if (!expected.faces.some(expectedFace => expectedFace.likeFace(face))) {
@@ -37,26 +37,39 @@ export function b2equals(assert: Assert, actual, expected, message = '') {
     })
 }
 
-export function b2EqualAnd(test, a: BRep, b: BRep, expected: BRep) {
-    return b2Equal(test, a, b, () => a.and(b), expected)
+export function bRepEqual(assert: Assert, actual: BRep, expected: BRep, message = '') {
+    let actualTranslated
+    //try {
+    const x = expected.getAABB().max.x
+    actualTranslated = actual.translate(x === -Infinity ? 0 : x + 1)
+    //} catch (e) { }
+    outputLink(assert, {
+        a: expected,
+        b: actualTranslated,
+    })
+    b2equals(assert, actual, expected)
 }
 
-export function b2Equal(test, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep) {
+export function testBRepAnd(assert: Assert, a: BRep, b: BRep, expected: BRep) {
+    return testBRepOp(assert, a, b, () => a.and(b), expected)
+}
+
+export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep) {
     let actual
     try {
         actual = calculateActual()
     } finally {
         if (actual) {
             const abWidth = a.getAABB().addAABB(b.getAABB()).size().x
-            linkB3(test, {
+            outputLink(assert, {
                 a,
                 b,
                 c: actual.translate(abWidth + 1).toSource(false),
                 d: expected.translate(2 * (abWidth + 1)).toSource(false),
             })
-            b2equals(test, actual, expected)
+            b2equals(assert, actual, expected)
         } else {
-            linkB3(test, {a, b})
+            outputLink(assert, {a, b})
         }
     }
 }
@@ -83,17 +96,17 @@ export function makeLink(values: any) {
     }).join(';')
 }
 
-export function linkB3(assert: Assert, values, msg = 'view') {
+export function outputLink(assert: Assert, values, msg = 'view') {
     const script = 'TEST_NAME = ' + assert.getTestName().toSource() + '\n' +
         Object.getOwnPropertyNames(values).map(name => {
             const val = values[name]
-            return 'const ' + name + ' = ' + (typeof val == 'string' ? val : val.toSource())
+            return 'const ' + name + ' = ' + (typeof val == 'string' ? val : toSource(val))
         }).join('\n') + '\n' +
         'return {' + Object.keys(values).join(',') + '}'
     const o = sanitizeFilename(assert.getTestName() + '_' + msg) + '.html'
     fs.writeFileSync(__dirname +'/results/' + o, demoFile.replace('/*INSERT*/', script), 'utf8')
     // linkBRep(assert, makeLink(values), msg)
-    assert.link('http://localhost:10001/tests/results/' + o)
+    assert.link('http://localhost:10001/tests/results/' + o, msg)
 }
 
 const demoFile = fs.readFileSync(__dirname + '/../viewer.html', 'utf8')
@@ -106,7 +119,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
         isCurves = surface1.isCurvesWithSurface(surface2)
     } finally {
         if (isCurves) {
-            linkB3(assert, {
+            outputLink(assert, {
                 mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
                 edges: isCurves.map(c => Edge.forCurveAndTs(c))
             })
@@ -128,7 +141,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
                 // > 0, 'pN1.cross(pN2).dot(dp) > 0')
             }
         } else {
-            linkB3(assert, {
+            outputLink(assert, {
                 mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
             })
         }
@@ -136,7 +149,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 }
 
 export function testPointT(assert: Assert, curve: Curve, p: V3, expectedT?: number, precision?: number) {
-    linkB3(assert, {
+    outputLink(assert, {
         edges: [Edge.forCurveAndTs(curve)],
         drPs: [p]
     })
@@ -161,7 +174,7 @@ export function testPointT(assert: Assert, curve: Curve, p: V3, expectedT?: numb
  */
 export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
     const points = [loop[0].a, loop[0].atAvgT()]
-    linkB3(assert, {
+    outputLink(assert, {
         mesh: surface.sce + '.toMesh()',
         edges: loop,
         points: points,
@@ -187,7 +200,7 @@ export function surfaceVolumeAndArea(face: Face) {
         const faceMeshVol = face.toMesh().calcVolume()
 
         test('face volume', assert => {
-            linkB3(assert, {mesh: face.toSource() + '.toMesh()'})
+            outputLink(assert, {mesh: face.toSource() + '.toMesh()'})
             const actual = face.zDirVolume().volume, expected = faceMeshVol.volume
             assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
         })
@@ -196,7 +209,7 @@ export function surfaceVolumeAndArea(face: Face) {
             assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
         })
         test('face area', assert => {
-            linkB3(assert, {mesh: face.toSource() + '.toMesh()', face: face})
+            outputLink(assert, {mesh: face.toSource() + '.toMesh()', face: face})
             const actualArea = face.calcArea()
             const expectedArea = faceMeshVol.area
             assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
@@ -333,7 +346,7 @@ export function testImplicitSurface(t: Assert, surface: ImplicitSurface) {
 
 export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isInfosWithCurve') {
     const intersections = c1[f](c2).map(info => info.p)
-    linkB3(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections}, `view`)
+    outputLink(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections}, `view`)
     assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
     intersections.forEach((is, i) => {
         assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
@@ -374,7 +387,7 @@ export function testCurvesColinear(test: Assert, curve1: Curve, curve2: Curve): 
     test.ok(curve1.isColinearTo(curve2))
     const t = (curve1.tMin + curve1.tMax) / 2
     test.notOk(curve1.translate(curve1.tangentAt(t).getPerpendicular().unit()).isColinearTo(curve2))
-    linkB3(test, {edges: [curve1, curve2].map(c => Edge.forCurveAndTs(c))})
+    outputLink(test, {edges: [curve1, curve2].map(c => Edge.forCurveAndTs(c))})
     for (let i = 0; i < 10; i++) {
         const t = lerp(curve1.tMin, curve1.tMax, i / 9)
         if (!curve2.containsPoint(curve1.at(t))) {

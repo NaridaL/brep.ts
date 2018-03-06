@@ -3,6 +3,7 @@ import {assert, assertInst, assertVectors, eq0, hasConstructor, le, M4, pqFormul
 import {
 	BezierCurve, Curve, Edge, L3, P3, PlaneSurface, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface,
     ImplicitSurface,
+	OUTSIDE,
 } from '../index'
 
 import {PI, sign} from '../math'
@@ -18,8 +19,8 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 	constructor(baseCurve: SemiEllipseCurve,
 				dir1: V3,
-				sMin: number,
-				sMax: number,
+				sMin: number = baseCurve.tMin,
+				sMax: number = baseCurve.tMax,
 				zMin = -Infinity,
 				zMax = Infinity) {
 		super(baseCurve, dir1, sMin, sMax, zMin, zMax)

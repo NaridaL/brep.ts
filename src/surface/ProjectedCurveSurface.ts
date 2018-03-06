@@ -22,11 +22,11 @@ export class ProjectedCurveSurface extends ParametricSurface {
 
 	constructor(readonly baseCurve: Curve,
 				readonly dir: V3,
-				readonly sMin: number = baseCurve.tMin,
-				readonly sMax: number = baseCurve.tMax,
-				readonly tMin: number = -100,
-				readonly tMax: number = 100) {
-		super()
+				sMin: number = baseCurve.tMin,
+				sMax: number = baseCurve.tMax,
+				tMin: number = -100,
+				tMax: number = 100) {
+		super(sMin, sMax, tMin, tMax)
 		assertInst(Curve, baseCurve)
 		assertInst(V3, dir)
 		assertNumbers(sMin, sMax, tMin, tMax)
