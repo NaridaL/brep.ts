@@ -14,6 +14,7 @@ export abstract class Curve extends Transformable implements Equalable {
 	static hlol = 0
 	tIncrement: number
 	hlol: number
+	// prettier-ignore
 	'constructor': new (...args: any[]) => this
 
 	constructor(readonly tMin: number, readonly tMax: number) {
@@ -444,14 +445,13 @@ export function breakDownPPCurves(
     sStep: number, tStep: number,
     stepSize: number,
 ): Curve[] {
-    const EPS = 1 / (1 << 20)
     const {sMin, sMax, tMin, tMax} = ps1
     const bounds = stInAABB2.bind(undefined, ps1)
     const bounds2 = stInAABB2.bind(undefined, ps2)
     const deltaS = sMax - sMin, deltaT = tMax - tMin
     const sRes = ceil(deltaS / sStep), tRes = ceil(deltaT / tStep)
     const grid = new Array(sRes * tRes).fill(0)
-    const printGrid = () => console.log(arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n'))
+    //const printGrid = () => console.log(arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n'))
     const at = (i: int, j: int) => grid[j * sRes + i]
     const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
     const result: { points: V3[], tangents: V3[] }[] = []

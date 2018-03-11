@@ -1,7 +1,7 @@
 import {ParametricSurface, ImplicitCurve, curvePointPP, Curve, followAlgorithmPP} from '../index'
-import {assert, V3, Tuple3, assertVectors, newtonIterate, Tuple4, assertNever, M4, callsce} from 'ts3dutils'
+import {assert, V3, Tuple3, assertVectors, newtonIterate, Tuple4, assertNever, M4, callsce, arrayRange, bisect} from 'ts3dutils'
 
-import {floor, ceil} from '../math'
+import {max, min, floor, ceil, abs} from '../math'
 
 export class PPCurve extends ImplicitCurve {
     constructor(points: ReadonlyArray<V3>,
@@ -49,33 +49,17 @@ export class PPCurve extends ImplicitCurve {
 		return this.parametricSurface1.containsPoint(p) && this.parametricSurface2.containsPoint(p) && !isNaN(this.pointT(p))
 	}
 
-	rootsAprox() {
-		const roots: Tuple3<number[]> = [[], [], []]
-		const ps = this.points
-		let lastDiff = ps[1].minus(ps[0])
-		for (let i = 2; i < ps.length; i++) {
-			const diff = ps[i].minus(ps[i - 1])
-			for (let dim = 0; dim < 3; dim++) {
-				if (Math.sign(lastDiff.e(dim)) != Math.sign(diff.e(dim))) {
-					roots[dim].push(i)
-				}
-			}
-			lastDiff = diff
-		}
-		return roots
-	}
-
 	rootPoints() {
 		const pF1 = this.parametricSurface1.pSTFunc()
 		const pF2 = this.parametricSurface2.pSTFunc()
 		const pN1 = this.parametricSurface1.normalSTFunc()
 		const pN2 = this.parametricSurface2.normalSTFunc()
 
-		const rootsAprox = this.rootsAprox()
+		const rootsApprox = this.rootsApprox()
 		const results: Tuple3<V3[]> = [[], [], []]
 		for (let dim = 0; dim < 3; dim++) {
-			for (let i = 0; i < rootsAprox[dim].length; i++) {
-				const lambda = rootsAprox[dim][i]
+			for (let i = 0; i < rootsApprox[dim].length; i++) {
+				const lambda = rootsApprox[dim][i]
 				const p = this.at(lambda)
 				assert(this.parametricSurface1.containsPoint(p))
 				const pp1 = this.parametricSurface1.stP(p)
@@ -113,11 +97,7 @@ export class PPCurve extends ImplicitCurve {
 		return n1.cross(n2)
 	}
 
-	pointT(point: V3) {
-	}
-
     transform(m4: M4, desc?: string) {
-        const dirFactor = m4.isMirroring() ? -1 : 1
         return new PPCurve(
             m4.transformedPoints(this.points),
             m4.transformedVectors(this.tangents),

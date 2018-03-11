@@ -1,13 +1,58 @@
-import {assert, assertInst, assertVectors, eq, eq0, getIntervals, isCCW, M4, pqFormula, TAU, V3} from 'ts3dutils'
+/**
+ * @prettier
+ */
+import {
+	assert,
+	assertInst,
+	assertVectors,
+	eq,
+	eq0,
+	getIntervals,
+	M4,
+	pqFormula,
+	TAU,
+	V3,
+	newtonIterate,
+} from 'ts3dutils'
 
 import {
-	Curve, Edge, EllipseCurve, HyperbolaCurve, ImplicitSurface, L3, P3, ParabolaCurve, ParametricSurface,
-	SemiEllipseCurve, Surface, PlaneSurface, PointVsFace,
+	Curve,
+	Edge,
+	EllipseCurve,
+	HyperbolaCurve,
+	ImplicitSurface,
+	L3,
+	P3,
+	ParabolaCurve,
+	ParametricSurface,
+	SemiEllipseCurve,
+	Surface,
+	PlaneSurface,
+	PointVsFace,
 } from '../index'
 
-import {PI, cos, sin, abs, sqrt, sign} from '../math'
+import { PI, cos, sin, abs, sqrt, sign } from '../math'
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
+	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
+		if (undefined === ss || undefined === st) {
+			// similar to stP
+			const pLC = this.inverseMatrix.transformPoint(pWC)
+			const angle = pLC.angleXY()
+			if (undefined === ss) {
+				ss = angle < -PI / 2 ? angle + TAU : angle
+			}
+			if (undefined === st) {
+				st = pLC.z + (pLC.lengthXY() - pLC.z) * sqrt(2) / 2
+			}
+		}
+		const f = ([s, t]: [number, number]) => {
+			const pSTToPWC = this.pST(s, t).to(pWC)
+			return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s, t).dot(pSTToPWC)]
+		}
+		const { 0: x, 1: y } = newtonIterate(f, [ss, st])
+		return new V3(x, y, 0)
+	}
 	/**
 	 * Unit cone. x² + y² = z², 0 <= z
 	 */
@@ -23,36 +68,49 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	 * @param f2
 	 * @param dir Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
 	 */
-	constructor(readonly center: V3,
-				readonly f1: V3,
-				readonly f2: V3,
-				readonly dir: V3,
-				sMin: number = 0,
-				sMax: number = PI,
-				tMin: number = 0,
-				tMax: number = 1) {
+	constructor(
+		readonly center: V3,
+		readonly f1: V3,
+		readonly f2: V3,
+		readonly dir: V3,
+		sMin: number = 0,
+		sMax: number = PI,
+		tMin: number = 0,
+		tMax: number = 16,
+	) {
 		super(sMin, sMax, tMin, tMax)
 		assertVectors(center, f1, f2, dir)
 		assert(0 <= tMin)
 		this.matrix = M4.forSys(f1, f2, dir, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
-		this.normalMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
+		this.normalMatrix = this.matrix
+			.as3x3()
+			.inversed()
+			.transposed()
+			.scale(this.normalDir)
 	}
 
 	get apex() {
 		return this.center
 	}
 
-	static atApexThroughEllipse(apex: V3, ellipse: SemiEllipseCurve, sMin?: number, sMax?: number, tMin?: number, tMax?: number): ConicSurface {
+	static atApexThroughEllipse(
+		apex: V3,
+		ellipse: SemiEllipseCurve,
+		sMin?: number,
+		sMax?: number,
+		tMin?: number,
+		tMax?: number,
+	): ConicSurface {
 		assertVectors(apex)
 		assertInst(SemiEllipseCurve, ellipse)
 		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center), sMin, sMax, tMin, tMax)
 	}
 
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
-		const {x: ax, y: ay, z: az} = anchor
-		const {x: dx, y: dy, z: dz} = dir
+		const { x: ax, y: ay, z: az } = anchor
+		const { x: dx, y: dy, z: dz } = dir
 
 		// this cone: x² + y² = z²
 		// line: p = anchor + t * dir1
@@ -74,20 +132,21 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 			if (eq0(d)) {
 				// d = 0 => z² - y² = 0 => z² = y² => z = y
 				// plane goes through origin/V3.O
-				return [new L3(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
-					new L3(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0)]
+				return [
+					new L3(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
+					new L3(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0),
+				]
 			} else {
-
 				// hyperbola
 				const center = new V3(d / a, 0, 0)
 				const f1 = new V3(0, 0, abs(d / a)) // abs, because we always want the hyperbola to be pointing up
 				const f2 = new V3(0, d / a, 0)
 				return [new HyperbolaCurve(center, f1, f2)]
 			}
-
 		} else {
 			// c != 0
-			const aa = a * a, cc = c * c
+			const aa = a * a,
+				cc = c * c
 			if (eq0(d)) {
 				// ax + cz = d => x = d - cz / a => x² = d² - 2cdz/a + c²z²/a²
 				// x² + y² = z²
@@ -98,8 +157,10 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				} else if (aa < cc) {
 					assert(false, 'intersection is single point V3.O')
 				} else if (aa > cc) {
-					return [new L3(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
-						new L3(V3.O, new V3(c, -sqrt(aa - cc), -a).unit())]
+					return [
+						new L3(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
+						new L3(V3.O, new V3(c, -sqrt(aa - cc), -a).unit()),
+					]
 				}
 			} else {
 				if (eq(aa, cc)) {
@@ -108,9 +169,13 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 					const parabolaVertexTangentPoint = new V3(d / 2 / a, d / c, d / 2 / c)
 					const p2 = new V3(0, 0, d / c)
 					const f2 = p2.minus(parabolaVertex)
-					return [new ParabolaCurve(parabolaVertex, parabolaVertexTangentPoint.minus(parabolaVertex), f2.z < 0
-						? f2.negated()
-						: f2)]
+					return [
+						new ParabolaCurve(
+							parabolaVertex,
+							parabolaVertexTangentPoint.minus(parabolaVertex),
+							f2.z < 0 ? f2.negated() : f2,
+						),
+					]
 				} else if (aa < cc) {
 					// ellipse
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
@@ -130,16 +195,17 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				}
 			}
 		}
-
 	}
 
 	equals(obj: any): boolean {
-		return this == obj ||
-			Object.getPrototypeOf(this) == Object.getPrototypeOf(obj)
-			&& this.center.equals(obj.center)
-			&& this.f1.equals(obj.f1)
-			&& this.f2.equals(obj.f2)
-			&& this.dir.equals(obj.dir)
+		return (
+			this == obj ||
+			(Object.getPrototypeOf(this) == Object.getPrototypeOf(obj) &&
+				this.center.equals(obj.center) &&
+				this.f1.equals(obj.f1) &&
+				this.f2.equals(obj.f2) &&
+				this.dir.equals(obj.dir))
+		)
 	}
 
 	like(object: any): boolean {
@@ -149,9 +215,11 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	getVectors() {
-		return [{anchor: this.center, dir1: this.dir},
-			{anchor: this.center.plus(this.dir), dir1: this.f1},
-			{anchor: this.center.plus(this.dir), dir1: this.f2}]
+		return [
+			{ anchor: this.center, dir1: this.dir },
+			{ anchor: this.center.plus(this.dir), dir1: this.f1 },
+			{ anchor: this.center.plus(this.dir), dir1: this.f2 },
+		]
 	}
 
 	getSeamPlane(): P3 {
@@ -187,8 +255,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (this === surface) return true
 		if (!(surface instanceof ConicSurface) || !this.apex.like(surface.apex)) return false
 		// at this point apexes are equal
-		return this.containsEllipse(
-			new SemiEllipseCurve(surface.center.plus(surface.dir), surface.f1, surface.f2))
+		return this.containsEllipse(new SemiEllipseCurve(surface.center.plus(surface.dir), surface.f1, surface.f2))
 	}
 
 	containsEllipse(ellipse: SemiEllipseCurve): boolean {
@@ -196,13 +263,12 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (ellipseLC.center.z < 0) {
 			return false
 		}
-		const {f1, f2} = ellipseLC.rightAngled()
-		const p1 = ellipseLC.center.plus(f1), p2 = ellipseLC.center.plus(f2)
+		const { f1, f2 } = ellipseLC.rightAngled()
+		const p1 = ellipseLC.center.plus(f1),
+			p2 = ellipseLC.center.plus(f2)
 		// check if both endpoints are on the cone's surface
 		// and that one main axis is perpendicular to the Z-axis
-		return eq(p1.x ** 2 + p1.y ** 2, p1.z ** 2)
-			&& eq(p2.x ** 2 + p2.y ** 2, p2.z ** 2)
-			&& (eq0(f1.z) || eq0(f2.z))
+		return eq(p1.x ** 2 + p1.y ** 2, p1.z ** 2) && eq(p2.x ** 2 + p2.y ** 2, p2.z ** 2) && (eq0(f1.z) || eq0(f2.z))
 	}
 
 	containsLine(line: L3): boolean {
@@ -217,14 +283,15 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
 			return false
 		}
-		const {center, f1, f2} = curveLC.rightAngled()
+		const { center, f1, f2 } = curveLC.rightAngled()
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		// and that "y" axis is parallel to surface
-		return eq(center.x * center.x + center.y * center.y, center.z * center.z)
-			&& eq0(f1.z)
-			&& eq(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z)
-
+		return (
+			eq(center.x * center.x + center.y * center.y, center.z * center.z) &&
+			eq0(f1.z) &&
+			eq(f2.x * f2.x + f2.y * f2.y, f2.z * f2.z)
+		)
 	}
 
 	containsHyperbola(curve: HyperbolaCurve): boolean {
@@ -234,12 +301,11 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
 			return false
 		}
-		const {center, f1, f2} = curveLC.rightAngled()
+		const { center, f1, f2 } = curveLC.rightAngled()
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
 		return true
-		return eq(center.x * center.x + center.y * center.y, center.z * center.z)
-			&& eq0(f1.z)
+		return eq(center.x * center.x + center.y * center.y, center.z * center.z) && eq0(f1.z)
 	}
 
 	containsCurve(curve: Curve): boolean {
@@ -256,26 +322,33 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		}
 	}
 
-	transform(m4: M4): ConicSurface {
+	transform(m4: M4): this {
 		return new ConicSurface(
 			m4.transformPoint(this.center),
 			m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1),
 			m4.transformVector(this.f2),
-			m4.transformVector(this.dir)) as this
+			m4.transformVector(this.dir),
+		) as this
 	}
 
 	rightAngled() {
 		// TODO
+		throw new Error('not implemented')
 	}
 
-	flipped(): ConicSurface {
-		return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir)
+	flipped(): this {
+		return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir) as this
 	}
 
 	normalSTFunc(): (s: number, t: number) => V3 {
-		const {f1, f2} = this, f3 = this.dir
+		const { f1, f2 } = this,
+			f3 = this.dir
 		return (d, z) => {
-			return f2.cross(f1).plus(f2.cross(f3.times(Math.cos(d)))).plus(f3.cross(f1.times(Math.sin(d)))).unit()
+			return f2
+				.cross(f1)
+				.plus(f2.cross(f3.times(Math.cos(d))))
+				.plus(f3.cross(f1.times(Math.sin(d))))
+				.unit()
 		}
 	}
 
@@ -332,7 +405,13 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (surface instanceof PlaneSurface) {
 			return this.isCurvesWithPlane(surface.plane)
 		} else if (ImplicitSurface.is(surface)) {
-			return ParametricSurface.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / this.dir.length(), 0.02)
+			return ParametricSurface.isCurvesParametricImplicitSurface(
+				this,
+				surface,
+				0.1,
+				0.1 / this.dir.length(),
+				0.02,
+			)
 		}
 		return super.isCurvesWithSurface(surface)
 	}
@@ -352,9 +431,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		const d = planeLC.w
 		// generated curves need to be rotated back before transforming to world coordinates
 		const rotationMatrix = M4.rotateZ(planeNormal.angleXY())
-		const wcMatrix = eq0(planeNormal.lengthXY())
-			? this.matrix
-			: this.matrix.times(rotationMatrix)
+		const wcMatrix = eq0(planeNormal.lengthXY()) ? this.matrix : this.matrix.times(rotationMatrix)
 		return ConicSurface.unitISPlane(a, c, d).flatMap<Curve>(curve => {
 			const curveWC = curve.transform(wcMatrix)
 			if (curve instanceof EllipseCurve) {
@@ -364,8 +441,11 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				return intervals.flatMap(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b))
 			}
 			const p = curveWC.at(0.2)
-			return this.normalP(p).cross(plane.normal1).dot(curveWC.tangentAt(0.2)) > 0
-				? curveWC : curveWC.reversed()
+			return this.normalP(p)
+				.cross(plane.normal1)
+				.dot(curveWC.tangentAt(0.2)) > 0
+				? curveWC
+				: curveWC.reversed()
 		})
 	}
 }

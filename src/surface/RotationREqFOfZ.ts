@@ -1,9 +1,11 @@
-import {assert, assertInst, eq0, M4, V3} from 'ts3dutils'
+/**
+ * @prettier
+ */
+import { assert, assertInst, eq0, M4, V3, arrayFromFunction, V, newtonIterate, newtonIterate1d } from 'ts3dutils'
 
-import {ImplicitSurface, ParametricSurface, EPS} from '../index'
+import { ImplicitSurface, ParametricSurface, EPS } from '../index'
 
-import {PI, cos, sin, atan2} from '../math'
-
+import { PI, cos, sin, atan2 } from '../math'
 
 /**
  * Rotation surface with r = f(z)
@@ -11,13 +13,18 @@ import {PI, cos, sin, atan2} from '../math'
 export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurface {
 	matrixInverse: M4
 
-	constructor(readonly matrix: M4,
-				readonly rt: (z: number) => number, // r(z)
-				readonly tMin: number,
-				readonly tMax: number,
-				readonly normalDir: number,
-				readonly drdz: (z: number) => number = z => (rt(z + EPS) - rt(z)) / EPS) { // d/dz (r(z))
-		super()
+	function = 2
+
+	constructor(
+		readonly matrix: M4,
+		readonly rt: (z: number) => number, // r(z)
+		readonly tMin: number,
+		readonly tMax: number,
+		readonly normalDir: number,
+		readonly drdz: (z: number) => number = z => (rt(z + EPS) - rt(z)) / EPS,
+	) {
+		// d/dz (r(z))
+		super(0, PI, tMin, tMax)
 		assertInst(M4, matrix)
 		assert(matrix.isNoProj())
 		assert(1 == normalDir || -1 == normalDir)
@@ -28,12 +35,19 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 		return [this.matrix, this.rt, this.tMin, this.tMax, this.normalDir, this.drdz]
 	}
 
-	flipped(): RotationREqFOfZ {
+	flipped(): this {
 		return new RotationREqFOfZ(this.matrix, this.rt, this.tMin, this.tMax, -this.normalDir, this.drdz) as this
 	}
 
-	transform(m4: M4): RotationREqFOfZ {
-		return new RotationREqFOfZ(m4.times(this.matrix), this.rt, this.tMin, this.tMax, this.normalDir, this.drdz)
+	transform(m4: M4): this {
+		return new RotationREqFOfZ(
+			m4.times(this.matrix),
+			this.rt,
+			this.tMin,
+			this.tMax,
+			this.normalDir,
+			this.drdz,
+		) as this
 	}
 
 	containsPoint(p: V3): boolean {
@@ -82,7 +96,7 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 	}
 
 	implicitFunction(): (pWC: V3) => number {
-		return (pWC) => {
+		return pWC => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
 			const radiusLC = pLC.lengthXY()
 			return this.rt(pLC.z) - radiusLC
@@ -90,13 +104,57 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 	}
 
 	stPFunc(): (pWC: V3) => V3 {
-		return (pWC) => {
+		return pWC => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
 			return new V3(atan2(pLC.y, pLC.x), pLC.z, 0)
 		}
 	}
+
+	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
+		const pLC = this.matrixInverse.transformPoint(pWC)
+		return new V3(
+			pLC.angleXY(),
+			closestXToP(this.rt, this.drdz, this.tMin, this.tMax, new V3(pLC.z, pLC.lengthXY(), 0), st),
+			0,
+		)
+	}
 }
 
+RotationREqFOfZ.prototype.uStep = PI / 16
+RotationREqFOfZ.prototype.vStep = 1 / 4
+
 Object.assign(RotationREqFOfZ.prototype, ImplicitSurface.prototype)
-RotationREqFOfZ.prototype.sMin = 0
-RotationREqFOfZ.prototype.sMax = PI
+
+/**
+ * For a function f(x) = y, returns the parameter x for which (x, f(x)) is closest to a point (px, py)
+ * @param f
+ * @param df
+ * @param xMin
+ * @param xMax
+ * @param p
+ * @param startX
+ */
+function closestXToP(
+	f: (x: number) => number,
+	df: (x: number) => number,
+	xMin: number,
+	xMax: number,
+	p: V3,
+	startX?: number,
+) {
+	const STEPS = 32
+	if (undefined === startX) {
+		startX = arrayFromFunction(STEPS, i => xMin + (xMax - xMin) * i / STEPS).withMax(
+			x => -Math.hypot(x - p.x, f(x) - p.y),
+		)
+	}
+
+	return newtonIterate1d(
+		(t: number) =>
+			V(t, f(t))
+				.minus(p)
+				.dot(V(t, df(t))),
+		startX,
+		4,
+	)
+}

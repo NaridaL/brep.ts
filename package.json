@@ -91,5 +91,14 @@
     "opentype.js": "opentype",
     "svg-pathdata": "svgpathdata"
   },
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "prettier": {
+    "useTabs": true,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "requirePragma": true,
+    "printWidth": 120,
+    "tabWidth": 4
+  }
 }

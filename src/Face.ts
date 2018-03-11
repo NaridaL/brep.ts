@@ -18,6 +18,7 @@ import {PI,  min, max,  sign, ceil, floor, abs} from './math'
 export type FaceMesh = Mesh & { LINES: int[], TRIANGLES: int[], normals: V3[] }
 
 export abstract class Face extends Transformable {
+	// prettier-ignore
 	'constructor': new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string, info?: any) => this
 	allEdges: Edge[]
 	protected aabb: AABB

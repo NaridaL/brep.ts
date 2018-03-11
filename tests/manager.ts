@@ -1,169 +1,225 @@
+/**
+ * @prettier
+ */
 declare const require: any
 try {
-    (global as any).WebGLRenderingContext = {}
-    //const mock = require('mock-require')
-    //mock('tsgl', {})
-} catch (e) { }
+	;(global as any).WebGLRenderingContext = {}
+	//const mock = require('mock-require')
+	//mock('tsgl', {})
+} catch (e) {}
 
 export * from 'ts3dutils/tests/manager'
-import {arrayFromFunction, assert, DEG, eq, eq0, glqInSteps, int, lerp, M4, V, V3, NLA_PRECISION, toSource} from 'ts3dutils'
-import {Assert, test} from 'ts3dutils/tests/manager'
+import {
+	arrayFromFunction,
+	assert,
+	DEG,
+	eq,
+	eq0,
+	glqInSteps,
+	int,
+	lerp,
+	M4,
+	V,
+	V3,
+	NLA_PRECISION,
+	toSource,
+} from 'ts3dutils'
+import { Assert, test } from 'ts3dutils/tests/manager'
 
 import slug from 'slug'
 
 function sanitizeFilename(s: string) {
-    return slug(s.replace(/-/g, 'minus').replace(/\+/g, 'plus'), '_')
+	return slug(s.replace(/-/g, 'minus').replace(/\+/g, 'plus'), '_')
 }
 
 import {
-    BRep, ConicSurface, Curve, Edge, Face, ImplicitSurface, L3, P3, ParametricSurface, PlaneSurface,
-    PointVsFace, Surface,
+	BRep,
+	ConicSurface,
+	Curve,
+	Edge,
+	Face,
+	ImplicitSurface,
+	L3,
+	P3,
+	ParametricSurface,
+	PlaneSurface,
+	PointVsFace,
+	Surface,
 } from '..'
 
 import * as fs from 'fs'
 
 export function b2equals(assert: Assert, actual: BRep, expected: BRep, message = '') {
-    if (!(actual instanceof BRep)) {
-        assert.push(false, typeof actual, BRep, 'actual is not a BRep')
-        return
-    }
+	if (!(actual instanceof BRep)) {
+		assert.push(false, typeof actual, BRep, 'actual is not a BRep')
+		return
+	}
 
-    assert.push(actual.faces.length == expected.faces.length, actual.toSource(false), expected.toSource(false), `no of faces ${actual.faces.length} != ${expected.faces.length}`)
+	assert.push(
+		actual.faces.length == expected.faces.length,
+		actual.toSource(false),
+		expected.toSource(false),
+		`no of faces ${actual.faces.length} != ${expected.faces.length}`,
+	)
 
-    actual.faces.forEach(face => {
-        if (!expected.faces.some(expectedFace => expectedFace.likeFace(face))) {
-            assert.push(false, actual.toSource(false), expected.toSource(false), 'Unexpected face in result:' + face.toSource())
-        }
-    })
+	actual.faces.forEach(face => {
+		if (!expected.faces.some(expectedFace => expectedFace.likeFace(face))) {
+			assert.push(
+				false,
+				actual.toSource(false),
+				expected.toSource(false),
+				'Unexpected face in result:' + face.toSource(),
+			)
+		}
+	})
 }
 
 export function bRepEqual(assert: Assert, actual: BRep, expected: BRep, message = '') {
-    let actualTranslated
-    //try {
-    const x = expected.getAABB().max.x
-    actualTranslated = actual.translate(x === -Infinity ? 0 : x + 1)
-    //} catch (e) { }
-    outputLink(assert, {
-        a: expected,
-        b: actualTranslated,
-    })
-    b2equals(assert, actual, expected)
+	let actualTranslated
+	//try {
+	const x = expected.getAABB().max.x
+	actualTranslated = actual.translate(x === -Infinity ? 0 : x + 1)
+	//} catch (e) { }
+	outputLink(assert, {
+		a: expected,
+		b: actualTranslated,
+	})
+	b2equals(assert, actual, expected)
 }
 
 export function testBRepAnd(assert: Assert, a: BRep, b: BRep, expected: BRep) {
-    return testBRepOp(assert, a, b, () => a.and(b), expected)
+	return testBRepOp(assert, a, b, () => a.and(b), expected)
 }
 
 export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep) {
-    let actual
-    try {
-        actual = calculateActual()
-    } finally {
-        if (actual) {
-            const abWidth = a.getAABB().addAABB(b.getAABB()).size().x
-            outputLink(assert, {
-                a,
-                b,
-                c: actual.translate(abWidth + 1).toSource(false),
-                d: expected.translate(2 * (abWidth + 1)).toSource(false),
-            })
-            b2equals(assert, actual, expected)
-        } else {
-            outputLink(assert, {a, b})
-        }
-    }
+	let actual
+	try {
+		actual = calculateActual()
+	} finally {
+		if (actual) {
+			const abWidth = a
+				.getAABB()
+				.addAABB(b.getAABB())
+				.size().x
+			outputLink(assert, {
+				a,
+				b,
+				c: actual.translate(abWidth + 1).toSource(false),
+				d: expected.translate(2 * (abWidth + 1)).toSource(false),
+			})
+			b2equals(assert, actual, expected)
+		} else {
+			outputLink(assert, { a, b })
+		}
+	}
 }
-
 
 export function registerTests(o: { [key: string]: (assert: Assert) => void })
 export function registerTests(moduleName: string, o: { [key: string]: (assert: Assert) => void })
 export function registerTests(moduleName: any, o?: any) {
-    if ('string' == typeof moduleName) {
-        QUnit.module(moduleName)
-    } else {
-        o = moduleName
-    }
-    for (const key in o) {
-        QUnit.test(key, o[key])
-    }
+	if ('string' == typeof moduleName) {
+		QUnit.module(moduleName)
+	} else {
+		o = moduleName
+	}
+	for (const key in o) {
+		QUnit.test(key, o[key])
+	}
 }
 
-
 export function makeLink(values: any) {
-    return Object.getOwnPropertyNames(values).map(name => {
-        const val = values[name]
-        return name + '=' + (typeof val == 'string' ? val : val.toSource())
-    }).join(';')
+	return Object.getOwnPropertyNames(values)
+		.map(name => {
+			const val = values[name]
+			return name + '=' + (typeof val == 'string' ? val : val.toSource())
+		})
+		.join(';')
 }
 
 export function outputLink(assert: Assert, values, msg = 'view') {
-    const script = 'TEST_NAME = ' + assert.getTestName().toSource() + '\n' +
-        Object.getOwnPropertyNames(values).map(name => {
-            const val = values[name]
-            return 'const ' + name + ' = ' + (typeof val == 'string' ? val : toSource(val))
-        }).join('\n') + '\n' +
-        'return {' + Object.keys(values).join(',') + '}'
-    const o = sanitizeFilename(assert.getTestName() + '_' + msg) + '.html'
-    fs.writeFileSync(__dirname +'/results/' + o, demoFile.replace('/*INSERT*/', script), 'utf8')
-    // linkBRep(assert, makeLink(values), msg)
-    assert.link('http://localhost:10001/tests/results/' + o, msg)
+	const script =
+		'TEST_NAME = ' +
+		assert.getTestName().toSource() +
+		'\n' +
+		Object.getOwnPropertyNames(values)
+			.map(name => {
+				const val = values[name]
+				return 'const ' + name + ' = ' + (typeof val == 'string' ? val : toSource(val))
+			})
+			.join('\n') +
+		'\n' +
+		'return {' +
+		Object.keys(values).join(',') +
+		'}'
+	const o = sanitizeFilename(assert.getTestName() + '_' + msg) + '.html'
+	fs.writeFileSync(__dirname + '/results/' + o, demoFile.replace('/*INSERT*/', script), 'utf8')
+	// linkBRep(assert, makeLink(values), msg)
+	assert.link('http://localhost:10001/tests/results/' + o, msg)
 }
 
 const demoFile = fs.readFileSync(__dirname + '/../viewer.html', 'utf8')
 
 export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: Surface | P3, curveCount: int) {
-    surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
-    surface2 instanceof P3 && (surface2 = new PlaneSurface(surface2))
-    let isCurves
-    try {
-        isCurves = surface1.isCurvesWithSurface(surface2)
-    } finally {
-        if (isCurves) {
-            outputLink(assert, {
-                mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
-                edges: isCurves.map(c => Edge.forCurveAndTs(c))
-            })
+	surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
+	surface2 instanceof P3 && (surface2 = new PlaneSurface(surface2))
+	let isCurves
+	try {
+		isCurves = surface1.isCurvesWithSurface(surface2)
+	} finally {
+		if (isCurves) {
+			outputLink(assert, {
+				mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
+				edges: isCurves.map(c => Edge.forCurveAndTs(c)),
+			})
 
-            assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
-            for (const curve of isCurves) {
-                assert.ok(surface1.containsCurve(curve), 'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str)
-                assert.ok(surface2.containsCurve(curve), 'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str)
-                const t = curve.tMin || 0.2, p = curve.at(t), dp = curve.tangentAt(t)
-                assert.ok(surface1.containsPoint(p), 'surface1.containsPoint(curve.at(curve.sMin))')
-                assert.ok(surface2.containsPoint(p), 'surface2.containsPoint(curve.at(curve.tMax))')
+			assert.equal(isCurves.length, curveCount, 'number of curves = ' + curveCount)
+			for (const curve of isCurves) {
+				assert.ok(
+					surface1.containsCurve(curve),
+					'surface1.containsCurve(curve) ' + surface1.str + ' ' + curve.str,
+				)
+				assert.ok(
+					surface2.containsCurve(curve),
+					'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str,
+				)
+				const t = curve.tMin || 0.2,
+					p = curve.at(t),
+					dp = curve.tangentAt(t)
+				assert.ok(surface1.containsPoint(p), 'surface1.containsPoint(curve.at(curve.sMin))')
+				assert.ok(surface2.containsPoint(p), 'surface2.containsPoint(curve.at(curve.tMax))')
 
-                const pN1 = surface1.normalP(p)
-                const pN2 = surface2.normalP(p)
-                const expectedTangent = pN1.cross(pN2)
-                // expectedTangent can be zero if the surfaces just touch and dont cross each other
-                //!expectedTangent.likeZero() && assert.ok(expectedTangent.isParallelTo(dp),
-                // 'pN1.cross(pN2).isParallelTo(dp)') !expectedTangent.likeZero() && assert.ok(expectedTangent.dot(dp)
-                // > 0, 'pN1.cross(pN2).dot(dp) > 0')
-            }
-        } else {
-            outputLink(assert, {
-                mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
-            })
-        }
-    }
+				const pN1 = surface1.normalP(p)
+				const pN2 = surface2.normalP(p)
+				const expectedTangent = pN1.cross(pN2)
+				// expectedTangent can be zero if the surfaces just touch and dont cross each other
+				//!expectedTangent.likeZero() && assert.ok(expectedTangent.isParallelTo(dp),
+				// 'pN1.cross(pN2).isParallelTo(dp)') !expectedTangent.likeZero() && assert.ok(expectedTangent.dot(dp)
+				// > 0, 'pN1.cross(pN2).dot(dp) > 0')
+			}
+		} else {
+			outputLink(assert, {
+				mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
+			})
+		}
+	}
 }
 
 export function testPointT(assert: Assert, curve: Curve, p: V3, expectedT?: number, precision?: number) {
-    outputLink(assert, {
-        edges: [Edge.forCurveAndTs(curve)],
-        drPs: [p]
-    })
-    const actualT = curve.pointT(p)
-    if (undefined !== expectedT) {
-        if (isNaN(expectedT)) {
-            assert.push(isNaN(actualT), curve.pointT(p), expectedT, 'testing pointT')
-        } else {
-            assert.fuzzyEqual(actualT, expectedT, 'testing pointT', precision)
-        }
-    }
-    if (!isNaN(actualT)) {
-        assert.v3like(curve.at(actualT), p)
-    }
+	outputLink(assert, {
+		edges: [Edge.forCurveAndTs(curve)],
+		drPs: [p],
+	})
+	const actualT = curve.pointT(p)
+	if (undefined !== expectedT) {
+		if (isNaN(expectedT)) {
+			assert.push(isNaN(actualT), curve.pointT(p), expectedT, 'testing pointT')
+		} else {
+			assert.fuzzyEqual(actualT, expectedT, 'testing pointT', precision)
+		}
+	}
+	if (!isNaN(actualT)) {
+		assert.v3like(curve.at(actualT), p)
+	}
 }
 
 /**
@@ -173,225 +229,287 @@ export function testPointT(assert: Assert, curve: Curve, p: V3, expectedT?: numb
  * @param loop
  */
 export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
-    const points = [loop[0].a, loop[0].atAvgT()]
-    outputLink(assert, {
-        mesh: surface.sce + '.toMesh()',
-        edges: loop,
-        points: points,
-    }, 'testLoopCCW')
-    assert.ok(surface.edgeLoopCCW(loop))
-    assert.ok(!surface.edgeLoopCCW(Edge.reversePath(loop)))
+	const points = [loop[0].a, loop[0].atAvgT()]
+	outputLink(
+		assert,
+		{
+			mesh: surface.sce + '.toMesh()',
+			edges: loop,
+			points: points,
+		},
+		'testLoopCCW',
+	)
+	assert.ok(surface.edgeLoopCCW(loop))
+	assert.ok(!surface.edgeLoopCCW(Edge.reversePath(loop)))
 }
 
 export function testZDirVolumeAndArea(assert: Assert, face: Face) {
-    linkBRep(assert, `mesh=${face.sce}.toMesh()`)
-    const faceMeshVol = face.toMesh().calcVolume()
-    const actual = face.zDirVolume().volume, expected = faceMeshVol.volume
-    assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
+	linkBRep(assert, `mesh=${face.sce}.toMesh()`)
+	const faceMeshVol = face.toMesh().calcVolume()
+	const actual = face.zDirVolume().volume,
+		expected = faceMeshVol.volume
+	assert.fuzzyEqual(actual, expected, undefined, 0.05)
 
-    const actualArea = face.calcArea()
-    const expectedArea = faceMeshVol.area
-    assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
+	const actualArea = face.calcArea()
+	const expectedArea = faceMeshVol.area
+	assert.fuzzyEqual(actualArea, expectedArea, undefined, 0.05)
 }
 
-export function surfaceVolumeAndArea(face: Face) {
-    return () => {
-        const flippedFace = face.flipped()
-        const faceMeshVol = face.toMesh().calcVolume()
+export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolume?: number) {
+	const flippedFace = face.flipped()
+	const faceMeshVol = face.toMesh().calcVolume()
 
-        test('face volume', assert => {
-            outputLink(assert, {mesh: face.toSource() + '.toMesh()'})
-            const actual = face.zDirVolume().volume, expected = faceMeshVol.volume
-            assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
+	test(msg + ' area', assert => {
+		outputLink(assert, { mesh: face.toSource() + '.toMesh()', face: face })
+		const actualArea = face.calcArea()
+		const expectedArea = faceMeshVol.area
+		assert.fuzzyEqual(actualArea, expectedArea, undefined, 0.05)
+	})
+	test(msg + ' flipped() area', assert => {
+		outputLink(assert, { mesh: face.flipped().toSource() + '.toMesh()', face: face.flipped() })
+		const actualArea = flippedFace.calcArea()
+		const expectedArea = faceMeshVol.area
+		assert.fuzzyEqual(actualArea, expectedArea, undefined, 0.05)
+	})
+	test(msg + ' volume', assert => {
+		outputLink(assert, { mesh: face.toSource() + '.toMesh()' })
+		const actual = face.zDirVolume().volume,
+			expected = undefined === expectedVolume ? faceMeshVol.volume : expectedVolume
+		console.log(actual, expected, eq(actual, expected, 0.05))
+		assert.fuzzyEqual(actual, expected, undefined, 0.05)
+	})
+	test(msg + ' flipped() volume', assert => {
+		const actual = flippedFace.zDirVolume().volume
+		const expected = undefined === expectedVolume ? -faceMeshVol.volume : -expectedVolume
+		assert.fuzzyEqual(actual, expected, undefined, 0.05)
+	})
+	test(msg + ' centroid', assert => {
+		const actual = face.zDirVolume().centroid
+		const expected = faceMeshVol.centroid
+        outputLink(assert, {
+            mesh: face.toSource() + '.toMesh()',
+            drPs: [expected, actual],
         })
-        test('face.flipped() volume', assert => {
-            const actual = flippedFace.zDirVolume().volume, expected = -faceMeshVol.volume
-            assert.push(eq(actual, expected, 0.1), actual, expected, 'diff = ' + (actual - expected))
-        })
-        test('face area', assert => {
-            outputLink(assert, {mesh: face.toSource() + '.toMesh()', face: face})
-            const actualArea = face.calcArea()
-            const expectedArea = faceMeshVol.area
-            assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
-        })
-        test('face.flipped() area', assert => {
-            const actualArea = flippedFace.calcArea()
-            const expectedArea = faceMeshVol.area
-            assert.push(eq(actualArea, expectedArea, 0.1), actualArea, expectedArea, 'diff = ' + (actualArea - expectedArea))
-        })
-    }
+		assert.v3like(actual, expected, undefined, 0.05)
+	})
+	test(msg + ' flipped() centroid', assert => {
+		const actual = flippedFace.zDirVolume().centroid
+		const expected = faceMeshVol.centroid
+		outputLink(assert, {
+			mesh: face.toSource() + '.toMesh()',
+			drPs: [expected, actual],
+		})
+		assert.v3like(actual, expected, undefined, 0.05)
+	})
 }
 
-export function testCurve(ass: Assert, curve: Curve, checkTangents = true) {
-    const STEPS = 12
-    for (let i = 0; i < STEPS; i++) {
-        const t = lerp(curve.tMin, curve.tMax, i / (STEPS - 1))
-        const p = curve.at(t)
-        // check that pointT and containsPoint behave as expected
-        ass.push(
-            eq(t, curve.pointT(p)),
-            curve.pointT(p),
-            t,
-            't eq pointT(at(t)) for ' + t,
-        )
-        ass.ok(curve.containsPoint(p), `containsPoint(at(t == ${t}) == ${p})`)
+export function testCurve(assert: Assert, curve: Curve, checkTangents = true) {
+	const STEPS = 12
+	for (let i = 0; i < STEPS; i++) {
+		const t = lerp(curve.tMin, curve.tMax, i / (STEPS - 1))
+		const p = curve.at(t)
+		// check that pointT and containsPoint behave as expected
+		assert.push(eq(t, curve.pointT(p)), curve.pointT(p), t, 't eq pointT(at(t)) for ' + t)
+		assert.ok(curve.containsPoint(p), `containsPoint(at(t == ${t}) == ${p})`)
 
-        // check that tangentAt() behaves correctly
-        if (checkTangents) {
-            const eps = t != curve.tMax ? 1e-8 : -1e-8
-            const expectedTangent = curve.at(t + eps).minus(p).div(eps)
-            const actualTangent = curve.tangentAt(t)
-            ass.v3like(actualTangent, expectedTangent, undefined, 1e-3)
-        }
-    }
+		// check that tangentAt() behaves correctly
+		if (checkTangents) {
+			const eps = t != curve.tMax ? 1e-8 : -1e-8
+			const expectedTangent = curve
+				.at(t + eps)
+				.minus(p)
+				.div(eps)
+			const actualTangent = curve.tangentAt(t)
+			assert.v3like(actualTangent, expectedTangent, undefined, 1e-3)
+		}
+	}
 
-    // test curve length
-    if (curve.arcLength !== Curve.prototype.arcLength) {
-        const expected = glqInSteps(t => curve.tangentAt(t).length(), curve.tMin, curve.tMax, 4)
-        const actual = curve.arcLength(curve.tMin, curve.tMax)
-        ass.push(
-            eq(expected, actual, 1e-6),
-            expected,
-            actual,
-            'curve should have same length as the numericaly calculated value',
-        )
-    }
+	// test curve length
+	if (curve.arcLength !== Curve.prototype.arcLength) {
+		const expected = glqInSteps(t => curve.tangentAt(t).length(), curve.tMin, curve.tMax, 4)
+		const actual = curve.arcLength(curve.tMin, curve.tMax)
+		assert.push(
+			eq(expected, actual, 1e-6),
+			expected,
+			actual,
+			'curve should have same length as the numericaly calculated value',
+		)
+	}
 }
 
-export function testParametricSurface(ass: Assert, surf: ParametricSurface) {
-    linkBRep(ass, `mesh=[${surf}.toMesh()]`, 'view')
-    const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)]
-        .map(pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0))
-    const points = params.map(({x, y}) => surf.pST(x, y))
-    const psFlipped = surf.flipped()
-    for (let i = 0; i < points.length; i++) {
-        const p = points[i], pNormal = surf.normalP(p)
-        const pm = params[i]
-        ass.ok(surf.containsPoint(p))
-        assert(surf.containsPoint(p))
+export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
+	assert.ok(ParametricSurface.is(surf))
+	outputLink(
+		assert,
+		{
+			mesh: `[${surf}.toMesh()]`,
+		},
+		'view',
+	)
+	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)].map(
+		pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0),
+	)
+	const points = params.map(({ x, y }) => surf.pST(x, y))
+	const psFlipped = surf.flipped()
+	for (let i = 0; i < points.length; i++) {
+		const p = points[i],
+			pNormal = surf.normalP(p)
+		const pm = params[i]
+		assert.ok(surf.containsPoint(p))
 
-        const psFlippedNormal = psFlipped.normalP(p)
-        ass.ok(psFlippedNormal.negated().like(pNormal))
-        assert(psFlippedNormal.negated().like(pNormal))
+		const psFlippedNormal = psFlipped.normalP(p)
+		assert.v3like(psFlippedNormal.negated(), pNormal)
 
-        const pm2 = surf.stP(p)
-        ass.ok(pm.like(pm2))
-        assert(pm.like(pm2))
+		const pm2 = surf.stP(p)
+		assert.v3like(pm2, pm, 'pm == stP(pST(pm))')
 
-        if (ParametricSurface.is(surf)) {
-            const eps = 0.0001
-            const dpds = surf.dpds()(pm.x, pm.y)
-            const dpdt = surf.dpdt()(pm.x, pm.y)
-            const dpdsNumeric = p.to(surf.pST(pm.x + eps, pm.y)).div(eps)
-            const dpdtNumeric = p.to(surf.pST(pm.x, pm.y + eps)).div(eps)
-            assert(dpdsNumeric.angleTo(dpds) < 5 * DEG)
-            assert(dpdtNumeric.angleTo(dpdt) < 5 * DEG)
-            const pmNormal = surf.normalST(pm.x, pm.y)
-            assert(pmNormal.hasLength(1))
-            ass.ok(pNormal.like(pmNormal))
-            assert(pNormal.like(pmNormal))
-            const computedNormal = dpds.cross(dpdt).unit()
-            assert(computedNormal.angleTo(pNormal) < 5 * DEG)
-        }
-        if (ImplicitSurface.is(surf)) {
-            ass.ok(eq0(surf.implicitFunction()(p)))
-            assert(eq0(surf.implicitFunction()(p)))
-        }
-    }
-    const matrices = [M4.mirror(P3.XY), M4.mirror(P3.YZ), M4.mirror(P3.ZX)]
-    for (let mI = 0; mI < matrices.length; mI++) {
-        const m = matrices[mI]
-        for (let i = 0; i < points.length; i++) {
-            const p = points[i], pNormal = surf.normalP(p)
-            const normalMatrix = m.as3x3().inversed().transposed()
-            const mNormal = normalMatrix.transformVector(pNormal)
-            const mP = m.transformPoint(p)
-            const mSurface = surf.transform(m)
-            ass.ok(mSurface.normalP(mP).like(mNormal))
-            assert(mSurface.normalP(mP).like(mNormal))
+		// test dpds and dpdt
+		const eps = 0.0001
+		const dpds = surf.dpds()(pm.x, pm.y)
+		const dpdt = surf.dpdt()(pm.x, pm.y)
+		const dpdsNumeric = p.to(surf.pST(pm.x + eps, pm.y)).div(eps)
+		const dpdtNumeric = p.to(surf.pST(pm.x, pm.y + eps)).div(eps)
+		assert.v3like(dpdsNumeric, dpds, 'dpds', 0.01)
+		assert.v3like(dpdtNumeric, dpdt, 'dpdt', 0.01)
+		const pmNormal = surf.normalST(pm.x, pm.y)
+		assert.ok(pmNormal.hasLength(1))
+		assert.v3like(pmNormal, pNormal)
+		const computedNormal = dpds.cross(dpdt).unit()
+		assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)
+		if (ImplicitSurface.is(surf)) {
+			assert.ok(eq0(surf.implicitFunction()(p)))
+		}
 
-            ass.ok(mSurface.containsPoint(mP))
-            assert(mSurface.containsPoint(mP))
+		// test pointFoot:
+		const offsetPoint = p.plus(pNormal.toLength(0.5))
+		const actualFoot = surf.pointFoot(offsetPoint)
+		// the original params may not actually be the closest.
+		//if (!actualFoot.like(pm) && surf.pST(actualFoot.x, actualFoot.y).distanceTo(p) > 0.5) {
+		//    assert.v3like(actualFoot, pm, 'distance to foot ' + surf.pST(actualFoot.x, actualFoot.y).distanceTo(p))
+		//}
+		const offsetPoint2 = p.plus(pNormal.toLength(-0.5))
+		const actualFoot2 = surf.pointFoot(offsetPoint2)
+		// the original params may not actually be the closest.
+		//if (!actualFoot2.like(pm) && surf.pST(actualFoot2.x, actualFoot2.y).distanceTo(p) > 0.5) {
+		//    assert.v3like(actualFoot2, pm, 'distance to foot ' + surf.pST(actualFoot2.x, actualFoot2.y).distanceTo(p))
+		//}
+	}
+	const matrices = [M4.mirror(P3.XY), M4.mirror(P3.YZ), M4.mirror(P3.ZX)]
+	for (let mI = 0; mI < matrices.length; mI++) {
+		const m = matrices[mI]
+		for (let i = 0; i < points.length; i++) {
+			const p = points[i],
+				pNormal = surf.normalP(p)
+			const normalMatrix = m
+				.as3x3()
+				.inversed()
+				.transposed()
+			const mNormal = normalMatrix.transformVector(pNormal)
+			const mP = m.transformPoint(p)
+			const mSurface = surf.transform(m)
+			assert.ok(mSurface.normalP(mP).like(mNormal))
 
+			assert.ok(mSurface.containsPoint(mP))
 
-            //const mPSFlipped = mSurface.flipped()
-            //ass.ok(mPSFlipped.normalP(mP).negated().like(mNormal))
-            //assert(mPSFlipped.normalP(mP).negated().like(mNormal))
-        }
-    }
+			//const mPSFlipped = mSurface.flipped()
+			//assert.ok(mPSFlipped.normalP(mP).negated().like(mNormal))
+			//assert(mPSFlipped.normalP(mP).negated().like(mNormal))
+		}
+	}
 }
 
-export function testImplicitSurface(t: Assert, surface: ImplicitSurface) {
-    const EPS = 1e-8
-    const testPoints = [
-        V3.O.plus(V(0.2, 0, 0)), // V3.O fails on ellipsoidSurface
-        V3.Y,
-        V3.X,
-        V3.Z.plus(V(0.2, 0, 0)),
-        V3.XY,
-        V3.XYZ,
-        new V3(10, 10, 10),
-        new V3(5, 6, 7)
-    ]
-    for (const testPoint of testPoints) {
-        const i = surface.implicitFunction()(testPoint)
-        const didpGuess = testPoint.map((el, dim) => {
-            const i2 = surface.implicitFunction()(testPoint.plus(V3.O.withElement(dim, EPS)))
-            return (i2 - i) / EPS
-        })
-        const didp = surface.didp(testPoint)
-        t.push(didpGuess.to(didp).length() < 1e-6, didp, didpGuess, `actual: ${didp} guess: ${didpGuess} p: ${testPoint}`)
-    }
+export function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {
+	const EPS = 1e-8
+	const testPoints = [
+		V3.O.plus(V(0.2, 0, 0)), // V3.O fails on ellipsoidSurface
+		V3.Y,
+		V3.X,
+		V3.Z.plus(V(0.2, 0, 0)),
+		V3.XY,
+		V3.XYZ,
+		new V3(10, 10, 10),
+		new V3(5, 6, 7),
+	]
+	for (const testPoint of testPoints) {
+		const i = surface.implicitFunction()(testPoint)
+		const didpGuess = testPoint.map((el, dim) => {
+			const i2 = surface.implicitFunction()(testPoint.plus(V3.O.withElement(dim, EPS)))
+			return (i2 - i) / EPS
+		})
+		const didp = surface.didp(testPoint)
+		assert.v3like(didp, didpGuess, undefined, 1e-5)
+	}
 }
 
 export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isInfosWithCurve') {
-    const intersections = c1[f](c2).map(info => info.p)
-    outputLink(assert, {edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections}, `view`)
-    assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
-    intersections.forEach((is, i) => {
-        assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
-        assert.ok(c1.containsPoint(is), `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
-        assert.ok(c2.containsPoint(is), `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
-    })
+	const intersections = c1[f](c2).map(info => info.p)
+	outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections }, `view`)
+	assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
+	intersections.forEach((is, i) => {
+		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
+		assert.ok(c1.containsPoint(is), `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
+		assert.ok(c2.containsPoint(is), `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
+	})
 }
 
 export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: int) {
-    surface instanceof P3 && (surface = new PlaneSurface(surface))
-    const ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
-    const points = ists.map(t => curve.at(t))
-    linkBRep(assert, `mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
-        ists.join(', ') || 'view')
-    assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
-    for (const t of ists) {
-        const p = curve.at(t)
-        assert.ok(surface.containsPoint(p), 'surface.containsPoint(p) ' + surface.str + ' ' + p.str
-            + ' t: ' + t
-            + (ImplicitSurface.is(surface) ? ' dist: ' + surface.implicitFunction()(p) : ''))
-    }
+	surface instanceof P3 && (surface = new PlaneSurface(surface))
+	const ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
+	const points = ists.map(t => curve.at(t))
+	linkBRep(
+		assert,
+		`mesh=[${surface}.toMesh()];edges=[${Edge.forCurveAndTs(curve, curve.tMin, curve.tMax)}];points=${points.sce}`,
+		ists.join(', ') || 'view',
+	)
+	assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
+	for (const t of ists) {
+		const p = curve.at(t)
+		assert.ok(
+			surface.containsPoint(p),
+			'surface.containsPoint(p) ' +
+				surface.str +
+				' ' +
+				p.str +
+				' t: ' +
+				t +
+				(ImplicitSurface.is(surface) ? ' dist: ' + surface.implicitFunction()(p) : ''),
+		)
+	}
 }
 
 export function linkBRep(assert: Assert, hash: string, message = 'view') {
-    const escapedHash = encodeURIComponent(hash.replace(/, /g, ',').replace(/(\n|\t)+/g, '')).replace(/\(/g, '%28').replace(/\)/g, '%29')
-    assert.link('http://localhost:10001/viewer.html#' + escapedHash, message)
+	const escapedHash = encodeURIComponent(hash.replace(/, /g, ',').replace(/(\n|\t)+/g, ''))
+		.replace(/\(/g, '%28')
+		.replace(/\)/g, '%29')
+	assert.link('http://localhost:10001/viewer.html#' + escapedHash, message)
 }
 
 export function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
-    const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
-    linkBRep(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
-    assert.equal(surface.loopContainsPoint(loop, p), result)
+	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
+	linkBRep(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
+	assert.equal(surface.loopContainsPoint(loop, p), result)
 }
 
 export const FONT_PATH = __dirname + '/../fonts'
 
 export function testCurvesColinear(test: Assert, curve1: Curve, curve2: Curve): void {
-    test.ok(curve1.isColinearTo(curve2))
-    const t = (curve1.tMin + curve1.tMax) / 2
-    test.notOk(curve1.translate(curve1.tangentAt(t).getPerpendicular().unit()).isColinearTo(curve2))
-    outputLink(test, {edges: [curve1, curve2].map(c => Edge.forCurveAndTs(c))})
-    for (let i = 0; i < 10; i++) {
-        const t = lerp(curve1.tMin, curve1.tMax, i / 9)
-        if (!curve2.containsPoint(curve1.at(t))) {
-            test.ok(false)
-        }
-    }
+	test.ok(curve1.isColinearTo(curve2))
+	const t = (curve1.tMin + curve1.tMax) / 2
+	test.notOk(
+		curve1
+			.translate(
+				curve1
+					.tangentAt(t)
+					.getPerpendicular()
+					.unit(),
+			)
+			.isColinearTo(curve2),
+	)
+	outputLink(test, { edges: [curve1, curve2].map(c => Edge.forCurveAndTs(c)) })
+	for (let i = 0; i < 10; i++) {
+		const t = lerp(curve1.tMin, curve1.tMax, i / 9)
+		if (!curve2.containsPoint(curve1.at(t))) {
+			test.ok(false)
+		}
+	}
 }

@@ -1,9 +1,9 @@
-import {arrayFromFunction, arrayRange, assert, assertVectors, clamp, int, M4, TAU, V3} from 'ts3dutils'
+import {arrayFromFunction, arrayRange, assert, assertVectors, clamp, int, M4, TAU, V3, bisect, eq0, Tuple3} from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
 import {Curve, PICurve,} from '../index'
 
-import {ceil, floor} from '../math'
+import {ceil, floor, max, min} from '../math'
 
 export abstract class ImplicitCurve extends Curve {
     constructor(readonly points: ReadonlyArray<V3>,
@@ -60,7 +60,7 @@ export abstract class ImplicitCurve extends Curve {
     }
 
     getConstructorParameters(): any[] {
-        return []
+        throw new Error()
     }
 
     roots(): [number[], number[], number[]] {
@@ -90,6 +90,38 @@ export abstract class ImplicitCurve extends Curve {
             prevTangent = tangent
             prevMatrix = tangentMatrix
         }
+    }
+
+    rootsApprox() {
+        const roots: Tuple3<number[]> = [[], [], []]
+        const points = this.points
+        let lastDiff = points[1].minus(points[0])
+        for (let i = 2; i < points.length; i++) {
+            const diff = points[i].minus(points[i - 1])
+            for (let dim = 0; dim < 3; dim++) {
+                if (Math.sign(lastDiff.e(dim)) != Math.sign(diff.e(dim))) {
+                    roots[dim].push(i)
+                }
+            }
+            lastDiff = diff
+        }
+        return roots
+    }
+
+    pointT(pWC: V3): number {
+        const startT = arrayRange(floor(this.tMin), ceil(this.tMax), 1).withMax(t => -pWC.distanceTo(this.points[t]))
+        if (undefined === startT) throw new Error()
+        if (this.points[startT].like(pWC)) return startT
+        const a = max(0, startT - 1), b = min(this.points.length - 1, startT + 1)
+        const tangent = this.tangentAt(startT)
+        const f = (t: number) => this.at(t).to(pWC).dot(tangent)
+        // const df = (t: number) => -this.tangentAt(clamp(t, 0, this.points.length - 1)).dot(tangent)
+        //checkDerivate(f, df, 0, this.points.length - 2, 3)
+        const t = bisect(f, a, b, 32)
+        if (!isFinite(t) || !eq0(this.at(t).distanceTo(pWC))) {
+            return NaN
+        }
+        return t
     }
 }
 

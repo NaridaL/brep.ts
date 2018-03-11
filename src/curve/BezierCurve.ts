@@ -2,7 +2,7 @@ import {
 	arrayFromFunction, assert, assertf, assertInst, assertNever, assertNumbers, assertVectors, between, combinations,
 	eq, eq0, fuzzyUniques, fuzzyUniquesF, gaussLegendre24Weights, gaussLegendre24Xs, gaussLegendreQuadrature24,
 	hasConstructor, int, lerp, M4, Matrix, MINUS, newtonIterate1d, newtonIterate2dWithDerivatives,
-	newtonIterateWithDerivative, NLA_PRECISION, solveCubicReal2, Tuple3, V, V3, Vector,
+	newtonIterateWithDerivative, NLA_PRECISION, solveCubicReal2, Tuple3, V, V3, Vector, FloatArray,
 } from 'ts3dutils'
 import {Mesh} from 'tsgl'
 

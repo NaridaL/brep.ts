@@ -222,7 +222,7 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 	//	e.preventDefault()
 	//	e.stopPropagation()
 	//})
-	canvas.addEventListener('mousemove', e => {
+	canvas.addEventListener('mousemove', (e: MouseEvent) => {
 		const pagePos = V(e.pageX, e.pageY)
 		const delta = lastPos.to(pagePos)
 		//noinspection JSBitwiseOperatorUsage
@@ -254,7 +254,7 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 		}
 		lastPos = pagePos
 	})
-	canvas.addEventListener('wheel', function (e) {
+	canvas.addEventListener('wheel', (e: MouseEvent) => {
 		// zoom
 		const wheelY = -sign(e.deltaY) * 2
 		// console.log(e.deltaY, e.deltaX)

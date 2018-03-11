@@ -70,9 +70,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
 		assertVectors(p)
 		if (!this.containsPoint(p)) return OUTSIDE
-		// create plane that goes through cylinder seam
 		const line = new L3(p, this.dir.unit())
-		const seamBase = this.baseCurve.at(PI)
 		const lineOut = this.dir.cross(this.normalP(p))
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}

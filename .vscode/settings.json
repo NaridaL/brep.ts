@@ -1,8 +1,5 @@
 {
     "typescript.tsdk": "node_modules\\typescript\\lib",
-    // "mocha.env": {
-    //     "TS_NODE_NO_WARNINGS": true
-    // },
     "mocha.files.glob": "tests/**/*.test.ts",
     "mocha.requires": [
         "ts-node/register"
@@ -10,4 +7,8 @@
     "mocha.env": {
         "TS_NODE_PROJECT": "tests/tsconfig.json"
     },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.rulers": [120]
+    }
 }

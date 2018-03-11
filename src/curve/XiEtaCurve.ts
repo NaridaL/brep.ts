@@ -1,27 +1,54 @@
+/**
+ * @prettier
+ */
 import {
-	arrayFromFunction, assertf, assertInst, assertNumbers, assertVectors, eq0, hasConstructor, int, M4, NLA_PRECISION,
-	TAU, V, V3,
+	arrayFromFunction,
+	assertf,
+	assertInst,
+	assertNumbers,
+	assertVectors,
+	eq0,
+	hasConstructor,
+	int,
+	M4,
+	NLA_PRECISION,
+	TAU,
+	V,
+	V3,
 } from 'ts3dutils'
 import { Mesh, pushQuad } from 'tsgl'
 
 import {
-	BezierCurve, ConicSurface, Curve, EllipseCurve, EllipsoidSurface, ISInfo, L3, P3, PlaneSurface,
-	ProjectedCurveSurface, SemiEllipsoidSurface, Surface,
+	BezierCurve,
+	ConicSurface,
+	Curve,
+	EllipseCurve,
+	EllipsoidSurface,
+	ISInfo,
+	L3,
+	P3,
+	PlaneSurface,
+	ProjectedCurveSurface,
+	SemiEllipsoidSurface,
+	Surface,
 } from '../index'
 
-import {PI} from '../math'
+import { PI } from '../math'
 
 export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3
 	readonly matrix: M4
 	readonly inverseMatrix: M4
+	// prettier-ignore
 	readonly 'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
 
-	constructor(readonly center: V3,
-				readonly f1: V3,
-				readonly f2: V3,
-				readonly tMin: number = -PI,
-				readonly tMax: number = PI) {
+	constructor(
+		readonly center: V3,
+		readonly f1: V3,
+		readonly f2: V3,
+		readonly tMin: number = -PI,
+		readonly tMax: number = PI,
+	) {
 		super(tMin, tMax)
 		assertVectors(center, f1, f2)
 		this.normal = f1.cross(f2)
@@ -32,6 +59,7 @@ export abstract class XiEtaCurve extends Curve {
 		} else {
 			this.matrix = M4.forSys(f1, f2, f1.unit(), center)
 			const f1p = f1.getPerpendicular()
+			// prettier-ignore
 			this.inverseMatrix = new M4(
 				1, 0, 0, 0,
 				0, 0, 0, 0,
@@ -68,7 +96,7 @@ export abstract class XiEtaCurve extends Curve {
 		throw new Error('abstract')
 	}
 
-	addToMesh(mesh: Mesh & { TRIANGLES: int[], normals: V3[] }, res: int = 4, radius: number = 0, pointStep = 1): void {
+	addToMesh(mesh: Mesh & { TRIANGLES: int[]; normals: V3[] }, res: int = 4, radius: number = 0, pointStep = 1): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
 		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
 		const inc = this.tIncrement
@@ -79,12 +107,18 @@ export abstract class XiEtaCurve extends Curve {
 			const start = mesh.vertices.length
 			if (0 !== i) {
 				for (let j = 0; j < res; j++) {
-					pushQuad(mesh.TRIANGLES, true,
-						start - res + j, start + j,
-						start - res + (j + 1) % res, start + (j + 1) % res)
+					pushQuad(
+						mesh.TRIANGLES,
+						true,
+						start - res + j,
+						start + j,
+						start - res + (j + 1) % res,
+						start + (j + 1) % res,
+					)
 				}
 			}
-			const point = this.at(t), tangent = this.tangentAt(t)
+			const point = this.at(t),
+				tangent = this.tangentAt(t)
 			const matrix = M4.forSys(this.normal, tangent.cross(this.normal), tangent, point)
 			mesh.normals.push(...matrix.transformedVectors(baseNormals))
 			mesh.vertices.push(...matrix.transformedPoints(baseVertices))
@@ -107,7 +141,7 @@ export abstract class XiEtaCurve extends Curve {
 				return this.isTsWithPlane(curve.getPlane()).mapFilter(tThis => {
 					const p = this.at(tThis)
 					if (curve.containsPoint(p)) {
-						return {tThis, tOther: curve.pointT(p), p}
+						return { tThis, tOther: curve.pointT(p), p }
 					}
 					return undefined
 				})
@@ -121,17 +155,21 @@ export abstract class XiEtaCurve extends Curve {
 			m4.transformPoint(this.center),
 			m4.transformVector(this.f1),
 			m4.transformVector(this.f2),
-			this.tMin, this.tMax) as this
+			this.tMin,
+			this.tMax,
+		) as this
 	}
 
 	equals(obj: any): obj is this {
-		return this == obj ||
-            undefined != obj
-            && this.constructor == obj.constructor
-            && this.center.equals(obj.center)
-            && this.f1.equals(obj.f1)
-            && this.f2.equals(obj.f2)
-    }
+		return (
+			this == obj ||
+			(undefined != obj &&
+				this.constructor == obj.constructor &&
+				this.center.equals(obj.center) &&
+				this.f1.equals(obj.f1) &&
+				this.f2.equals(obj.f2))
+		)
+	}
 
 	hashCode(): int {
 		let hashCode = 0
@@ -142,10 +180,12 @@ export abstract class XiEtaCurve extends Curve {
 	}
 
 	likeCurve(curve: Curve): boolean {
-		return hasConstructor(curve, this.constructor)
-			&& this.center.like(curve.center)
-			&& this.f1.like(curve.f1)
-			&& this.f2.like(curve.f2)
+		return (
+			hasConstructor(curve, this.constructor) &&
+			this.center.like(curve.center) &&
+			this.f1.like(curve.f1) &&
+			this.f2.like(curve.f2)
+		)
 	}
 
 	normalP(t: number): V3 {
@@ -180,9 +220,14 @@ export abstract class XiEtaCurve extends Curve {
 		if (plane.normal1.isParallelTo(this.normal)) {
 			return []
 		}
-		const n = plane.normal1, w = plane.w,
-			center = this.center, f1 = this.f1, f2 = this.f2,
-			g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center)
+		const n = plane.normal1,
+			w = plane.w,
+			center = this.center,
+			f1 = this.f1,
+			f2 = this.f2,
+			g1 = n.dot(f1),
+			g2 = n.dot(f2),
+			g3 = w - n.dot(center)
 
 		return this.constructor.magic(g1, g2, g3)
 	}
@@ -198,7 +243,14 @@ export abstract class XiEtaCurve extends Curve {
 		return eq0(pLC.z) && this.constructor.XYLCValid(pLC)
 	}
 
-	isInfosWithLine(anchorWC: V3, dirWC: V3, tMin?: number, tMax?: number, lineMin = -100000, lineMax = 100000): ISInfo[] {
+	isInfosWithLine(
+		anchorWC: V3,
+		dirWC: V3,
+		tMin?: number,
+		tMax?: number,
+		lineMin = -100000,
+		lineMax = 100000,
+	): ISInfo[] {
 		const anchorLC = this.inverseMatrix.transformPoint(anchorWC)
 		const dirLC = this.inverseMatrix.transformVector(dirWC)
 		if (eq0(dirLC.z)) {
@@ -214,11 +266,13 @@ export abstract class XiEtaCurve extends Curve {
 			const isp = dirLC.times(otherTAtZ0).plus(anchorLC)
 			if (this.constructor.XYLCValid(isp)) {
 				// point lies on unit circle
-				return [{
-					tThis: this.constructor.XYLCPointT(isp),
-					tOther: otherTAtZ0,
-					p: anchorWC.plus(dirWC.times(otherTAtZ0)),
-				}]
+				return [
+					{
+						tThis: this.constructor.XYLCPointT(isp),
+						tOther: otherTAtZ0,
+						p: anchorWC.plus(dirWC.times(otherTAtZ0)),
+					},
+				]
 			}
 		}
 		return []
@@ -232,10 +286,13 @@ export abstract class XiEtaCurve extends Curve {
 			if (isEllipse.length < 1) return []
 			const possibleInfos = this.isInfosWithCurve(isEllipse[0] as EllipseCurve)
 			return possibleInfos.filter(info => surface.containsPoint(info.p)).map(info => info.tThis)
-		} else if (surface instanceof ProjectedCurveSurface ||
+		} else if (
+			surface instanceof ProjectedCurveSurface ||
 			surface instanceof EllipsoidSurface ||
-			surface instanceof ConicSurface) {
-			return surface.isCurvesWithPlane(this.getPlane())
+			surface instanceof ConicSurface
+		) {
+			return surface
+				.isCurvesWithPlane(this.getPlane())
 				.flatMap(curve => this.isInfosWithCurve(curve))
 				.map(info => info.tThis)
 		} else {
@@ -251,7 +308,7 @@ export abstract class XiEtaCurve extends Curve {
 			const infos = bezierLC.isTsWithPlane(P3.XY).mapFilter(tOther => {
 				const pLC = bezierLC.at(tOther)
 				if (this.constructor.XYLCValid(pLC)) {
-					return {tOther: tOther, p: bezierWC.at(tOther), tThis: this.constructor.XYLCPointT(pLC)}
+					return { tOther: tOther, p: bezierWC.at(tOther), tThis: this.constructor.XYLCPointT(pLC) }
 				}
 				return undefined
 			})
@@ -288,5 +345,4 @@ export abstract class XiEtaCurve extends Curve {
 		mesh[bufferName].push(this.center, this.center.plus(this.f2))
 		mesh[bufferName].push(this.center, this.center.plus(this.normal))
 	}
-
 }

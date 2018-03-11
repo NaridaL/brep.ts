@@ -18,6 +18,7 @@ suite('SemiEllipseCurve', () => {
 		testCurve(assert, curve)
 		testCurve(assert, curve.reversed())
 	})
+    test('UNIT.shearX(2, 3)', assert => testCurve(assert, SemiEllipseCurve.UNIT.shearX(2, 2)))
 	test('isTsWithPlane', assert => {
 		const plane = new P3(V(2, 7, 1).unit(), 2)
 		testISTs(assert, curve.scale(1, 3, 1), plane, 2)

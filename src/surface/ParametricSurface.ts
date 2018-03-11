@@ -104,6 +104,7 @@ export abstract class ParametricSurface extends Surface {
 
 	toMesh(): Mesh {
 		assert(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax))
+		assert(isFinite(this.uStep) && isFinite(this.vStep))
 		return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(),
 			this.sMin, this.sMax, this.tMin, this.tMax,
 			ceil((this.sMax - this.sMin) / this.uStep),

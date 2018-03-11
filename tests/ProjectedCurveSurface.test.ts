@@ -4,9 +4,9 @@ import {
     test,
     testISTs,
     testParametricSurface,
-    surfaceVolumeAndArea,
     testISCurves,
-    testLoopCCW
+    testLoopCCW,
+    surfaceVolumeAndAreaTests,
 } from './manager'
 
 import {DEG, M4, V, V3} from 'ts3dutils'
@@ -59,8 +59,8 @@ suite('ProjectedCurveSurface', () => {
         const pic = ses.isCurvesWithSurface(pcs)[0]
         testISTs(assert, pic, new PlaneSurface(P3.XY), 1)
     })
-    suite('area and volume', surfaceVolumeAndArea(pcsFace))
-    suite('area and volume 2', surfaceVolumeAndArea(pcsFace.transform(M4.FOO)))
+    suite('area and volume', () => surfaceVolumeAndAreaTests(pcsFace))
+    suite('area and volume 2', () => surfaceVolumeAndAreaTests(pcsFace.transform(M4.FOO)))
 
     // create a pcs face which includes a PICurve
     const bezierEdge = Edge.forCurveAndTs(BezierCurve.EX2D, 0, 1)
@@ -91,8 +91,8 @@ suite('ProjectedCurveSurface', () => {
         testISCurves(assert, pcs, pcs2, 2)
     })
 
-    suite('area and volume with PICurves', surfaceVolumeAndArea(piCurveFace))
-    suite('area and volume with PICurves 2', surfaceVolumeAndArea(piCurveFace.transform(M4.FOO)))
+    suite('area and volume with PICurves', () => surfaceVolumeAndAreaTests(piCurveFace))
+    suite('area and volume with PICurves 2', () => surfaceVolumeAndAreaTests(piCurveFace.transform(M4.FOO)))
 
     test('Face containsPoint', assert => {
         const face = new RotationFace(

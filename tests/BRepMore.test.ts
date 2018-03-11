@@ -1,5 +1,5 @@
 import {suite, test, testBRepOp, testBRepAnd, skip, outputLink, Assert} from './manager'
-import {PlaneFace, BRep, Edge, Face, B2T, StraightEdge, PlaneSurface, L3, PCurveEdge, SemiEllipseCurve, P3, SemiCylinderSurface, RotationFace, BezierCurve, ProjectedCurveSurface} from '..'
+import {PlaneFace, BRep, Edge, Face, B2T, StraightEdge, PlaneSurface, L3, PCurveEdge, SemiEllipseCurve, P3, SemiCylinderSurface, RotationFace, BezierCurve, ProjectedCurveSurface, IntersectionPointInfo} from '..'
 import {V3, V, M4, DEG} from 'ts3dutils'
 import {JavaMap as CustomMap, JavaSet as CustomSet} from 'javasetmap.ts'
 
@@ -44,10 +44,11 @@ function doTestWithBrep(assert: Assert, face: Face, faceBrep: BRep, brep2: BRep,
 		edges: expectedEdges,
 		drPs: expectedPoints,
 	}, `expected ${desc}`)
-	const faceMap = new Map(), faceEdgePoints = new CustomMap(), checkedPairs = new CustomSet()
+	const faceMap = new Map(), faceEdgePoints: Map<Edge, IntersectionPointInfo[]> = new CustomMap(), checkedPairs = new CustomSet()
+    let x
 	if (!backwards) {
 		brep2.faces.forEach(face2 => {
-			face.intersectFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, new CustomMap(), checkedPairs)
+			face.intersectFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, x = new CustomMap(), checkedPairs)
 		})
 	} else {
 		brep2.faces.forEach(face2 => {
@@ -55,15 +56,10 @@ function doTestWithBrep(assert: Assert, face: Face, faceBrep: BRep, brep2: BRep,
 		})
 	}
 	const edges = faceMap.get(face) || []
-	console.log(faceMap)
-	assert.equal(edges.length, expectedEdges.length, expectedEdges.length + ' == resultEdges.length == edges.length' + edges.toSource())
-	expectedEdges.forEach(edge => {
-		assert.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
-	})
 	const edgePointInfos = face.getAllEdges()
 			.mapFilter(e => {
 				const canonEdgePoints = faceEdgePoints.get(e.getCanon())
-				return canonEdgePoints && canonEdgePoints.filter(p => !p.faces || p.faces[faceBrep.edgeFaces.get(e.getCanon()).findIndex(fi => fi.face == face)])
+				return canonEdgePoints
 			})
 			.concatenated()
 	const uniquePoints = []
@@ -76,6 +72,11 @@ function doTestWithBrep(assert: Assert, face: Face, faceBrep: BRep, brep2: BRep,
         edges: edges,
         drPs: uniquePoints,
     }, `actual ${desc}`)
+    console.log(faceMap)
+    assert.equal(edges.length, expectedEdges.length, expectedEdges.length + ' == resultEdges.length == edges.length' + edges.toSource())
+    expectedEdges.forEach(edge => {
+        assert.ok(edges.some(edge2 => edge.like(edge2)), `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`)
+    })
 	assert.equal(uniquePoints.length, expectedPoints.length, expectedPoints.length + ' == resultPoints.length == uniquePoints.length' + uniquePoints.toSource())
 	expectedPoints.forEach(p => {
 		assert.ok(uniquePoints.some(up => up.like(p)), `uniquePoints.some(up => up.like(p)) [${uniquePoints.toSource()}]`)
@@ -476,7 +477,7 @@ suite('BRep 2', () => {
 		doTest3(assert, baseFace14, edges14, points14, result14, 'extending an existing hole')
 	})
 
-	test('BRep.prototype.minus remove half of a half-pie', assert => {
+	test('remove half of a half-pie', assert => {
 		const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		const boxKnife = B2T.box(11, 10, 7, 'knife').translate(-10, -1, -1).flipped()
 
@@ -495,7 +496,7 @@ suite('BRep 2', () => {
 			'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
 		testBRepOp(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
 	})
-	test('BRep.prototype.minus cut hole through side of pie', assert => {
+	test('cut hole through side of pie', assert => {
 		const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		const punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1).flipped()
 		const result = new BRep([
@@ -553,7 +554,7 @@ suite('BRep 2', () => {
 		testBRepAnd(assert, pie, punch, result)
 	})
 
-	test('BRep.prototype.minus including ProjectedCurveSurface', assert =>  {
+	test('minus including ProjectedCurveSurface', assert =>  {
 		const s1 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		const s2 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		const a = B2T.extrudeEdges([
@@ -610,7 +611,7 @@ suite('BRep 2', () => {
 		testBRepAnd(assert, a, punch, result)
 	})
 
-	suite('test intersection of volumes where no faces intersect', () => {
+	suite('intersection of volumes where no faces intersect', () => {
 		/**
 		 * A in B:
 		 * A - B = 0
