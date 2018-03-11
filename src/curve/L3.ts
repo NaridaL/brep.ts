@@ -356,3 +356,4 @@ export class L3 extends Curve {
 }
 
 L3.prototype.hlol = Curve.hlol++
+L3.prototype.tIncrement = 256

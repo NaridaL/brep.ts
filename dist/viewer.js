@@ -23374,6 +23374,7 @@ L3$$1.X = new L3$$1(V3.O, V3.X);
 L3$$1.Y = new L3$$1(V3.O, V3.Y);
 L3$$1.Z = new L3$$1(V3.O, V3.Z);
 L3$$1.prototype.hlol = Curve$$1.hlol++;
+L3$$1.prototype.tIncrement = 256;
 
 class PICurve$$1 extends ImplicitCurve$$1 {
     constructor(points, tangents, parametricSurface, implicitSurface, pmPoints, pmTangents, stepSize, dir = 1, generator, tMin, tMax) {
