@@ -1,6 +1,7 @@
 import { V, V3, DEG } from 'ts3dutils'
-import { suite, test, testISCurves, testISTs, testLoopContainsPoint, testParametricSurface, testZDirVolumeAndArea,
-    testImplicitSurface } from './manager'
+import { suite, test, testISCurves, testISTs, testLoopContainsPoint, testParametricSurface,
+    testImplicitSurface,
+    surfaceVolumeAndAreaTests } from './manager'
 import {
 	L3, P3, PCurveEdge, PICurve, PlaneSurface, PointVsFace, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface,
 	StraightEdge, B2T, Edge, Face,
@@ -88,7 +89,7 @@ suite('SemiCylinderSurface', () => {
 		assert.ok(line.containsPoint(isPoints[0]), '' + line.distanceToPoint(isPoints[0]))
 		assert.ok(line.containsPoint(isPoints[1]), '' + line.distanceToPoint(isPoints[1]))
 	})
-	test('zDirVolume', assert => {
+	suite('zDirVolume', () => {
 		const face = B2T.extrudeEdges([
 			Edge.forCurveAndTs(SemiEllipseCurve.forAB(-1, 1), 0, PI),
 			StraightEdge.throughPoints(V3.X, V3.X.negated())
@@ -107,16 +108,16 @@ suite('SemiCylinderSurface', () => {
 		const face4 = Face.create(modface.surface, [e0,
 			StraightEdge.throughPoints(e0.b, modface.contour[2].a), modface.contour[2],
 			StraightEdge.throughPoints(modface.contour[2].b, e0.a)])
-		testZDirVolumeAndArea(assert, face)
-		testZDirVolumeAndArea(assert, face.rotateY(-45 * DEG).translate(1, 0, 2))
-		testZDirVolumeAndArea(assert, face.rotateY(90 * DEG).translate(1, 0, 2))
-		testZDirVolumeAndArea(assert, face2)
-		testZDirVolumeAndArea(assert, face2.rotateY(-45 * DEG).translate(1, 0, 2))
-		testZDirVolumeAndArea(assert, face2.rotateY(90 * DEG).translate(1, 0, 2))
-		testZDirVolumeAndArea(assert, face3)
-		testZDirVolumeAndArea(assert, face3.translate(1, 0, 2))
-		testZDirVolumeAndArea(assert, face4)
-		testZDirVolumeAndArea(assert, face4.translate(1, 0, 2))
+        surfaceVolumeAndAreaTests(face)
+		surfaceVolumeAndAreaTests(face.rotateY(-45 * DEG).translate(1, 0, 2), '')
+		surfaceVolumeAndAreaTests(face.rotateY(90 * DEG).translate(1, 0, 2), '')
+		surfaceVolumeAndAreaTests(face2, '')
+		surfaceVolumeAndAreaTests(face2.rotateY(-45 * DEG).translate(1, 0, 2), '')
+		surfaceVolumeAndAreaTests(face2.rotateY(90 * DEG).translate(1, 0, 2), '')
+		surfaceVolumeAndAreaTests(face3, '')
+		surfaceVolumeAndAreaTests(face3.translate(1, 0, 2), '')
+		surfaceVolumeAndAreaTests(face4, '')
+		surfaceVolumeAndAreaTests(face4.translate(1, 0, 2), '')
 	})
 	test('loopContainsPoint', assert => {
 		const surface = new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(0, 0, -1), undefined, undefined)

@@ -1,7 +1,7 @@
 import * as opentype from 'opentype.js'
 import {
 	arrayFromFunction, assert, assertf, assertInst, assertNumbers, assertVectors, callsce, eq, eq0, GOLDEN_RATIO, int,
-	le, lerp, lt, M4, MINUS, NLA_PRECISION, raddd, snap, TAU, V, V3,
+	le, lerp, lt, M4, MINUS, NLA_PRECISION, raddd, snap, TAU, V, V3, DEG,
 } from 'ts3dutils'
 
 import {
@@ -120,12 +120,12 @@ export namespace B2T {
 		return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, depth), name, generator)
 	}
 
-	export function puckman(radius: number, rads: raddd, height: number, name: string): BRep {
+	export function puckman(radius: number, rads: raddd, height: number, name: string='puckman' + getGlobalId()): BRep {
 		assertf(() => lt(0, radius))
 		assertf(() => lt(0, rads) && le(rads, TAU))
 		assertf(() => lt(0, height))
 		const edges = StraightEdge.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true)
-		return B2T.rotateEdges(edges, rads, name || 'puckman' + getGlobalId())
+		return B2T.rotateEdges(edges, rads, name  )
 	}
 
 	export function registerVertexName(map: Map<V3, string>, name: string, p: V3) {
@@ -216,6 +216,11 @@ export namespace B2T {
 		return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator)
 	}
 
+	/**
+	 * Create a [[BRep]] of a menger sponge.
+	 * @param res 0: just a cube, 1: every cube face has one hole, 2: 9 holes, etc
+	 * @param name
+	 */
 	export function menger(res: int = 2, name: string = 'menger' + getGlobalId()): BRep {
 		let result = B2T.box(1, 1, 1)
 		if (0 == res) return result
@@ -271,19 +276,12 @@ export namespace B2T {
 	 * @param rads
 	 * @param name
 	 */
-	export function torus(rSmall: number, rLarge: number, rads: raddd, name: string): BRep {
+	export function torus(rSmall: number, rLarge: number, rads: raddd=TAU, name: string='torus' + getGlobalId()): BRep {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		const curve = SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0))
 		const baseEdges = [PCurveEdge.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge.forCurveAndTs(curve, 0, Math.PI)]
-		return B2T.rotateEdges(baseEdges, rads, name || 'torus' + getGlobalId())
-	}
-
-	export function torusUnsplit(rSmall: number, rLarge: number, rads: raddd, name: string): BRep {
-		assertNumbers(rSmall, rLarge, rads)
-		assertf(() => rLarge > rSmall)
-		const baseEdge = PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI)
-		return B2T.rotateEdges([baseEdge], rads, name || 'torus' + getGlobalId())
+		return B2T.rotateEdges(baseEdges, rads, name )
 	}
 
 	/**
@@ -561,6 +559,13 @@ export namespace B2T {
 		//return numbersBRep
 	}
 
+	export function whatever3() {
+		return B2T.rotateEdges(StraightEdge.chain([V3.O, V3.X, V3.Z]), TAU)
+		.and(
+			B2T.box().rotateZ(40 * DEG).translate(0.1, 0.1, 0.1)
+		).faces.filter(x => x.surface instanceof ConicSurface).sce
+	}
+
 	export function d20() {
 		const iso = isocahedron()
 		const numbersBRep = BRep.join(iso.faces.map((face, i) => {
@@ -733,12 +738,10 @@ export namespace B2T {
 		return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator)
 	}
 
-	// Returns a
-	// Faces will face outwards.
-	//
 	/**
 	 * Create a tetrahedron (3 sided pyramid) [BRep].
 	 * `a`, `b`, `c` and `d` can be in any order. The only constraint is that they cannot be on a common plane.
+	 * The resulting tetrahedron will always have outwards facing faces.
 	 * @param a
 	 * @param b
 	 * @param c
@@ -766,7 +769,7 @@ export namespace B2T {
 			new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + 'bdc'),
 			new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda'),
 		]
-		const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`
+		const gen = callsce('B2T.tetrahedron', a, b, c, d)
 		return new BRep(faces, false, gen)
 	}
 

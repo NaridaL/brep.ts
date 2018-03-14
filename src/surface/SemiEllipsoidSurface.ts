@@ -735,44 +735,6 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
 	}
 
-	zDirVolumeForLoop2(loop: Edge[]): number {
-		const angles = this.inverseMatrix.getZ().toAngles()
-		const T = M4.rotateY(-angles.theta)
-			.times(M4.rotateZ(-angles.phi))
-			.times(this.inverseMatrix)
-		const rot90x = M4.rotateX(PI / 2)
-		let totalVolume = 0
-		assert(V3.X.isParallelTo(T.transformVector(V3.Z)))
-		//const zDistanceFactor = toT.transformVector(V3.Z).length()
-		loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
-			const nextEdgeIndex = (edgeIndex + 1) % edges.length,
-				nextEdge = edges[nextEdgeIndex]
-
-			function f(t: number) {
-				const at2d = edge.curve.at(t).withElement('x', 0)
-				const result =
-					1 /
-					3 *
-					(1 - (at2d.y ** 2 + at2d.z ** 2)) *
-					edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()))
-				return result
-			}
-
-			if (edge.b.like(V3.X)) {
-				const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
-				totalVolume += 2 / 3 * angleDiff
-			}
-			if (edge.b.like(V3.X.negated())) {
-				const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI) % (2 * PI)
-				totalVolume += 2 / 3 * angleDiff
-			}
-			const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT)
-			totalVolume += volume
-		})
-
-		return totalVolume * this.f1.dot(this.f2.cross(this.f3))
-	}
-
 	surfaceAreaApprox(): number {
 		// See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
 		const mainAxes = this.mainAxes(),

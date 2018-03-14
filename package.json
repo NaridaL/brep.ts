@@ -32,6 +32,7 @@
     "cross-env": "^5.1.3",
     "deepmerge": "^2.0.1",
     "highlight.js": "^9.12.0",
+    "material-ui": "^0.20.0",
     "mocha": "^5.0.0",
     "mock-require": "^3.0.1",
     "naridal-tslib-config": "^1.0.0",
@@ -80,9 +81,10 @@
     "minify": "uglifyjs dist/bundle.js --output dist/bundle.min.js --compress --mangle && uglifyjs dist/bundle.module.js --output dist/bundle.module.min.js --compress --mangle",
     "test": "(cd tests && mocha --ui tdd --require ts-node/register ./**/*.test.ts)",
     "test2": "(cd tests && cross-env TS_NODE_NO_WARNINGS=true mocha --ui tdd --require ts-node/register ./**/*.test.ts)",
-    "test:watch": "(cd tests && mocha --ui tdd -r ts-node/register ./**/*.test.ts -w -R min --watch-extensions ts)",
+    "test:watch": "cd tests && mocha --ui tdd -r ts-node/register ./**/*.test.ts -w -R min --watch-extensions ts",
     "test:ci": "npm run build && npm run lint && npm test",
-    "watchdemo": "rollup -c rollup.demo.config.js -w"
+    "watchdemo": "rollup -c rollup.demo.config.js -w",
+    "foo": "cd .."
   },
   "types": "src/index.ts",
   "umdGlobal": "brep_ts",

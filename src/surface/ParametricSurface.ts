@@ -1,4 +1,4 @@
-import {assert, between, V3, isCCW} from 'ts3dutils'
+import {assert, between, V3, isCCW,assertNumbers} from 'ts3dutils'
 import {Mesh} from 'tsgl'
 
 import {Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge, breakDownPPCurves} from '../index'
@@ -17,7 +17,8 @@ export abstract class ParametricSurface extends Surface {
 		readonly tMax: number,
 	) {
 		super()
-		assert(sMin < sMax)
+        assertNumbers(sMin, sMax, tMin, tMax)
+        assert(sMin < sMax)
 		assert(tMin < tMax)
 	}
 
@@ -102,7 +103,7 @@ export abstract class ParametricSurface extends Surface {
 
 	abstract pointFoot(pWC: V3, ss?: number, st?: number): V3
 
-	toMesh(): Mesh {
+	toMesh() {
 		assert(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax))
 		assert(isFinite(this.uStep) && isFinite(this.vStep))
 		return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(),

@@ -9,7 +9,6 @@ import {
     testLoopContainsPoint,
     testParametricSurface,
     testImplicitSurface,
-    testZDirVolumeAndArea,
     surfaceVolumeAndAreaTests, testCurve,
 } from './manager'
 

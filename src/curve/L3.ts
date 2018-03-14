@@ -347,7 +347,7 @@ export class L3 extends Curve {
 	transform(m4: M4) {
 		const newAnchor = m4.transformPoint(this.anchor)
 		const newDir = m4.transformVector(this.dir1)
-		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length())
+		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length()) as this
 	}
 
 	hashCode(): int {

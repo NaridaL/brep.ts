@@ -494,7 +494,7 @@ suite('BRep 2', () => {
 		const k2 = boxKnife.translate(-1, 0, 0)
 		doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.O, V(0, 0, 5)],
 			'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
-		testBRepOp(assert, pie, k2, pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
+		testBRepOp(assert, pie, k2, () => pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
 	})
 	test('cut hole through side of pie', assert => {
 		const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')

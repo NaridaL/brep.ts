@@ -361,7 +361,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	pSTFunc(): (s: number, t: number) => V3 {
 		return (s, t) => {
 			// center + f1 t cos s + f2 t sin s + t dir
-			return this.matrix.transformPoint(new V3(t * cos(s), t * sin(s), t))
+			const resultLC = new V3(t * cos(s), t * sin(s), t)
+			return this.matrix.transformPoint(resultLC)
 		}
 	}
 
@@ -372,8 +373,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		}
 	}
 
-	dpdt(): (s: number, t: number) => V3 {
-		return (s, t) => {
+	dpdt(): (s: number) => V3 {
+		return s => {
 			const resultLC = new V3(cos(s), sin(s), 1)
 			return this.matrix.transformVector(resultLC)
 		}
@@ -389,10 +390,6 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 	containsPoint(p: V3) {
 		return eq0(this.implicitFunction()(p))
-	}
-
-	boundsFunction() {
-		assert(false)
 	}
 
 	stP(pWC: V3) {

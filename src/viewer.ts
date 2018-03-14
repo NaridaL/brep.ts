@@ -45,6 +45,7 @@ export class RenderObjects {
 	drPs:  (V3 | { info: string, p: V3 })[] = []
 	drVs: any = []
 	mesh: (Mesh & { TRIANGLES: int[], normals: V3[] }) = undefined
+	paintMeshNormals = false
 }
 const renderObjectKeys = Object.keys(new RenderObjects()) as (keyof RenderObjects)[]
 
@@ -169,6 +170,8 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.loadIdentity()
 
+	setupCamera(eye, gl)
+
 	gl.drawVectors(drVs)
 	gl.shaders.lighting.uniforms({ camPos: eye.pos })
 	//gl.scale(100, 100, 100)
@@ -201,7 +204,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 
 	if (faceMesh) {
 	    gl.shaders.singleColor.uniforms({color: chroma('red').gl() })
-            .drawBuffers({ts_Vertex: faceMesh.vertexBuffers['tangents']}, undefined, gl.LINES)
+            .drawBuffers({ts_Vertex: faceMesh.vertexBuffers.tangents}, undefined, gl.LINES)
     }
 
     //if (dMesh) {
@@ -216,7 +219,9 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		gl.pushMatrix()
 		//gl.scale(10, 10, 10)
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-		sMesh.LINES && gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, gl.LINES)
+		if (g.paintMeshNormals && sMesh.LINES) {
+		  gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, gl.LINES)
+		}
 		gl.projectionMatrix.m[11] += 1 / (1 << 20)
 		sMesh.TRIANGLES && gl.shaders.lighting.uniforms({
 			color: chroma('#ffFF00').gl(),
@@ -373,9 +378,16 @@ const b2planes = [
 	new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff),
 	//	sketchPlane
 ]
+let paintScreen: () => void
 declare var BREPTS_ROOT: string
 export async function viewerMain() {
-	const paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl))
+	const meshNormalsCheckbox = document.getElementById('paint-mesh-normals')
+	meshNormalsCheckbox.onclick = e => {
+		g.paintMeshNormals = !g.paintMeshNormals
+		paintScreen()
+	}
+
+	paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl))
 	B2T.defaultFont = await B2T.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff')
 	window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
 		console.log(errorMsg, url, lineNumber, column, errorObj)
@@ -479,4 +491,23 @@ function HJK() {
 		points: curves.flatMap(c => (c as ImplicitCurve).points),
 	}
 
+}
+
+export function alignX() {
+	eye.focus = V3.O
+	eye.pos = V(100, 0, 0)
+	eye.up = V3.Z
+	paintScreen()
+}
+export function alignY() {
+	eye.focus = V3.O
+	eye.pos = V(0, 100, 0)
+	eye.up = V3.Z
+	paintScreen()
+}
+export function alignZ() {
+	eye.focus = V3.O
+	eye.pos = V(0, 0, 100)
+	eye.up = V3.Y
+	paintScreen()
 }

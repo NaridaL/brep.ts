@@ -38,9 +38,8 @@ import { PI } from '../math'
 export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3
 	readonly matrix: M4
-	readonly inverseMatrix: M4
-	// prettier-ignore
-	readonly 'constructor': typeof XiEtaCurve & ( new(center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this )
+	readonly inverseMatrix: M4;
+	readonly ['constructor']: typeof XiEtaCurve & (new (center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this)
 
 	constructor(
 		readonly center: V3,

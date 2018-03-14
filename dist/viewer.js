@@ -12873,14 +12873,14 @@ function arithmeticGeometricMean(x, y) {
  * EllipticF(phi, k2) = INT[0; phi] 1 / sqrt(1 - k2 * sin²(phi)) dphi
  */
 function EllipticF(phi, k2) {
-    return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
+    return gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
 }
 /**
  * incomplete elliptic integral of the second kind
  * EllipticE(phi, k2) = INT[0; phi] sqrt(1 - k2 * sin²(phi)) dphi
  */
 function EllipticE(phi, k2) {
-    return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
+    return gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
 }
 const DEG = .017453292519943295;
 function rad2deg(rad) {
@@ -13546,7 +13546,7 @@ const gaussLegendre24Weights = [
     0.0123412297999871995468056670700372915759,
     0.0123412297999871995468056670700372915759,
 ];
-function gaussLegendreQuadrature24(f, startT, endT) {
+function gaussLegendreQuadrature24$1(f, startT, endT) {
     //let result = 0
     //for (let i = 0; i < gaussLegendre24Xs.length; i++) {
     //	// gauss-legendre goes from -1 to 1, so we need to scale
@@ -15754,7 +15754,7 @@ var ts3dutils = Object.freeze({
 	newtonIterate2dWithDerivatives: newtonIterate2dWithDerivatives,
 	gaussLegendre24Xs: gaussLegendre24Xs,
 	gaussLegendre24Weights: gaussLegendre24Weights,
-	gaussLegendreQuadrature24: gaussLegendreQuadrature24,
+	gaussLegendreQuadrature24: gaussLegendreQuadrature24$1,
 	glq24_11: glq24_11,
 	glqInSteps: glqInSteps,
 	midpointRuleQuadrature: midpointRuleQuadrature,
@@ -18642,22 +18642,48 @@ class Mesh extends Transformable {
         const triangles = this.TRIANGLES;
         const vertices = this.vertices;
         for (let i = 0; i < triangles.length; i += 3) {
-            const i0 = triangles[i + 0], i1 = triangles[i + 1], i2 = triangles[i + 2];
-            const v0 = vertices[i0], v1 = vertices[i1], v2 = vertices[i2];
-            const v01 = v1.minus(v0), v02 = v2.minus(v0);
-            const normal = v01.cross(v02);
+            const ai = triangles[i + 0], bi = triangles[i + 1], ci = triangles[i + 2];
+            const a = vertices[ai], b = vertices[bi], c = vertices[ci];
+            const ab = b.minus(a), ac = c.minus(a);
+            const normal = ab.cross(ac);
             //const centroidZ = (v0.z + v1.z + v2.z) / 3
-            const faceCentroid = v0.plus(v1.plus(v2)).div(3);
+            const faceCentroid = a.plus(b.plus(c)).div(3);
             //totalVolume += centroidZ * (area === v01.cross(v02).length() / 2) * v01.cross(v02).unit().z
             totalVolumeX2 += faceCentroid.z * normal.z;
             const faceAreaX2 = normal.length();
             totalAreaX2 += faceAreaX2;
-            totalCentroidWithZX2 = totalCentroidWithZX2.plus(faceCentroid.times(faceCentroid.z * normal.z / 2));
+            // calculate the weighted centroid of the shadow volume:
+            // = INTEGRATE [0; 1] INTEGRATE [0; 1 - s] (a + s ab + t ac) * (a + s ab + t ac).z dt ds
+            // = INTEGRATE [0; 1] INTEGRATE [0; 1 - s] a a.z + a s ab.z + a t ac.z
+            // + s ab a.z + s² ab * ab.z + s t ab ac.z
+            // + t ac a.z + s t ac ab.z + t² ac ac.z dt ds
+            // = INTEGRATE [0; 1] INTEGRATE [0; 1 - s] t² ac ac.z
+            // + t (a ac.z + s ab ac.z + ac a.z + s ac ab.z)
+            // + (a a.z + a s ab.z + s ab a.z + s² ab * ab.z) dt ds
+            // = INTEGRATE [0; 1] (1/3 t³ ac ac.z
+            // + 1/2 t² (a ac.z + s ab ac.z + ac a.z + s ac ab.z)
+            // + t (a a.z + a s ab.z + s ab a.z + s² ab * ab.z))[0; 1 - s] ds
+            // = INTEGRATE [0; 1] 1/3 (-s³ + 3s² -3s +1) ac ac.z
+            // + 1/2 (s² - 2s + 1) (a ac.z + s ab ac.z + ac a.z + s ac ab.z)
+            // + (1 - s) (a a.z + a s ab.z + s ab a.z + s² ab * ab.z) ds
+            // = INTEGRATE [0; 1] s³ (-1/3 ac ac.z + 1/2 ab ac.z + 1/2 ac ab.z - ab ab.z)
+            // + s² (ac ac.z + 1/2 a ac.z - ab ac.z + 1/2 ac a.z - ac ab.z - a ab.z - ab a.z + ab ab.z)
+            // + s (-ac ac.z - a ac.z - ac a.z + 1/2 ab ac.z + 1/2 ac ab.z - a a.z + a ab.z + ab a.z)
+            // + (1/3 ac ac.z + 1/2 a ac.z + 1/2 ac a.z + a a.z) ds
+            // = 1/4 (-1/3 ac ac.z + 1/2 ab ac.z + 1/2 ac ab.z - ab ab.z)
+            // + 1/3 (ac ac.z + 1/2 a ac.z - ab ac.z + 1/2 ac a.z - ac ab.z - a ab.z - ab a.z + ab ab.z)
+            // + 1/2 (-ac ac.z - a ac.z - ac a.z + 1/2 ab ac.z + 1/2 ac ab.z - a a.z + a ab.z + ab a.z)
+            // + (1/3 ac ac.z + 1/2 a ac.z + 1/2 ac a.z + a a.z)
+            // = (4 a (3 a.z + ab.z + ac.z) + ab (4 a.z + 2 ab.z + ac.z) + ac (4 a.z + ab.z + 2 ac.z))/24
+            // = (a (2 a.z + b.z + c.z) + b (a.z + 2 b.z + c.z) + c (a.z + b.z + 2 c.z))/24
+            const faceShadowCentroid = V3.add(a.times(2 * a.z + b.z + c.z), b.times(a.z + 2 * b.z + c.z), c.times(a.z + b.z + 2 * c.z)).times(normal.z);
+            totalCentroidWithZX2 = totalCentroidWithZX2.plus(faceShadowCentroid);
         }
         // sumInPlaceTree adds negligible additional accuracy for XY sphere
+        const volume = totalVolumeX2 / 2;
         return {
-            volume: totalVolumeX2 / 2,
-            centroid: totalCentroidWithZX2.div(totalVolumeX2 / 2).schur(new V3(1, 1, 0.5)),
+            volume,
+            centroid: eq0(volume) ? V3.O : totalCentroidWithZX2.div(24 * volume).schur(new V3(1, 1, 0.5)),
             area: totalAreaX2 / 2
         };
     }
@@ -21368,7 +21394,7 @@ class Curve$$1 extends Transformable {
         const df = (t) => this.tangentAt(t).squared() + (this.at(t).minus(p).dot(this.ddt(t)));
         const STEPS = 32;
         if (undefined === tStart) {
-            tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
+            tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / (STEPS - 1))
                 .withMax(t => -this.at(t).distanceTo(p));
         }
         return newtonIterateWithDerivative(f, tStart, 16, df);
@@ -22454,7 +22480,7 @@ class BezierCurve$$1 extends Curve$$1 {
      * @param {number=} sMax
      * @returns
      */
-    isInfosWithBezie3(bezier, tMin, tMax, sMin, sMax) {
+    isInfosWithBezier3(bezier, tMin, tMax, sMin, sMax) {
         const handleStartTS = (startT, startS) => {
             if (!result.some(info => eq(info.tThis, startT) && eq(info.tOther, startS))) {
                 const f1 = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)));
@@ -22546,29 +22572,6 @@ class BezierCurve$$1 extends Curve$$1 {
             return this.isInfosWithBezier(curve);
         }
         return curve.isInfosWithCurve(this).map(({ tThis, tOther, p }) => ({ tThis: tOther, tOther: tThis, p }));
-    }
-    getAreaInDirSurface(dir1, surface, aT, bT) {
-        assertf(() => dir1.hasLength(1));
-        // INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
-        const f = (t) => {
-            const tangent = this.tangentAt(t);
-            const at = this.at(t);
-            const outsideVector = tangent.cross(surface.normalP(at));
-            const sign = Math.sign(outsideVector.dot(dir1));
-            return at.dot(dir1) * tangent.rejected1Length(dir1) * sign;
-            //return this.at(t).dot(dir1) * tangent.minus(dir1.times(tangent.dot(dir1))).length()
-        };
-        const cx = (t) => {
-            const height = this.at(t).dot(dir1);
-            //console.log(t, this.at(t).minus(dir1.times(height / 2)).sce, f(t))
-            return this.at(t).minus(dir1.times(height / 2));
-        };
-        const area = gaussLegendreQuadrature24(f, aT, bT);
-        const x = V3.add.apply(undefined, arrayFromFunction(24, i => {
-            const t = aT + (gaussLegendre24Xs[i] + 1) / 2 * (bT - aT);
-            return cx(t).times(gaussLegendre24Weights[i] * f(t));
-        })).div(2 * (bT - aT) * area);
-        return { area: area, centroid: x };
     }
     magic(t0 = this.tMin, t1 = this.tMax, result = []) {
         const splits = 20;
@@ -24410,6 +24413,7 @@ class ParametricSurface$$1 extends Surface$$1 {
         this.sMax = sMax;
         this.tMin = tMin;
         this.tMax = tMax;
+        assertNumbers(sMin, sMax, tMin, tMax);
         assert(sMin < sMax);
         assert(tMin < tMax);
     }
@@ -24762,7 +24766,8 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     pSTFunc() {
         return (s, t) => {
             // center + f1 t cos s + f2 t sin s + t dir
-            return this.matrix.transformPoint(new V3(t * cos$1(s), t * sin$1(s), t));
+            const resultLC = new V3(t * cos$1(s), t * sin$1(s), t);
+            return this.matrix.transformPoint(resultLC);
         };
     }
     dpds() {
@@ -24772,7 +24777,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         };
     }
     dpdt() {
-        return (s, t) => {
+        return s => {
             const resultLC = new V3(cos$1(s), sin$1(s), 1);
             return this.matrix.transformVector(resultLC);
         };
@@ -24786,9 +24791,6 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     }
     containsPoint(p) {
         return eq0(this.implicitFunction()(p));
-    }
-    boundsFunction() {
-        assert(false);
     }
     stP(pWC) {
         const pLC = this.inverseMatrix.transformPoint(pWC);
@@ -25323,8 +25325,8 @@ class EllipsoidSurface$$1 extends ParametricSurface$$1 {
         }
         const phi = Math.acos(c / a);
         const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
-        const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
-        const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
+        const incompleteEllipticInt1 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
+        const incompleteEllipticInt2 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
         return ((2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi)) *
             (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2)));
     }
@@ -25366,7 +25368,6 @@ class ProjectedCurveSurface$$1 extends ParametricSurface$$1 {
         this.dir = dir;
         assertInst(Curve$$1, baseCurve);
         assertInst(V3, dir);
-        assertNumbers(sMin, sMax, tMin, tMax);
         assert(sMin < sMax);
         assert(tMin < tMax);
     }
@@ -25413,6 +25414,7 @@ class ProjectedCurveSurface$$1 extends ParametricSurface$$1 {
         const projBaseCurve = this.baseCurve.project(projPlane);
         return pWC => {
             const projPoint = projPlane.projectedPoint(pWC);
+            assertNumbers(this.sMin);
             const t = projBaseCurve.pointT(projPoint, this.sMin, this.sMax);
             const z = L3$$1.pointT(this.baseCurve.at(t), this.dir, pWC);
             return new V3(t, z, 0);
@@ -25531,7 +25533,7 @@ class ProjectedCurveSurface$$1 extends ParametricSurface$$1 {
         return new this.constructor(this.baseCurve, this.dir.negated(), this.sMin, this.sMax, -this.tMax, -this.tMin);
     }
 }
-ProjectedCurveSurface$$1.prototype.uStep = 1 / 40;
+ProjectedCurveSurface$$1.prototype.uStep = 1 / 128;
 ProjectedCurveSurface$$1.prototype.vStep = 256;
 
 class CylinderSurface$$1 extends ProjectedCurveSurface$$1 {
@@ -26498,38 +26500,6 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
         }
         return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
     }
-    zDirVolumeForLoop2(loop) {
-        const angles = this.inverseMatrix.getZ().toAngles();
-        const T = M4.rotateY(-angles.theta)
-            .times(M4.rotateZ(-angles.phi))
-            .times(this.inverseMatrix);
-        const rot90x = M4.rotateX(PI$3 / 2);
-        let totalVolume = 0;
-        assert(V3.X.isParallelTo(T.transformVector(V3.Z)));
-        //const zDistanceFactor = toT.transformVector(V3.Z).length()
-        loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
-            const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex];
-            function f(t) {
-                const at2d = edge.curve.at(t).withElement('x', 0);
-                const result = 1 /
-                    3 *
-                    (1 - (Math.pow(at2d.y, 2) + Math.pow(at2d.z, 2))) *
-                    edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()));
-                return result;
-            }
-            if (edge.b.like(V3.X)) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
-                totalVolume += 2 / 3 * angleDiff;
-            }
-            if (edge.b.like(V3.X.negated())) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
-                totalVolume += 2 / 3 * angleDiff;
-            }
-            const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT);
-            totalVolume += volume;
-        });
-        return totalVolume * this.f1.dot(this.f2.cross(this.f3));
-    }
     surfaceAreaApprox() {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
         const mainAxes = this.mainAxes(), a = mainAxes.f1.length(), b = mainAxes.f2.length(), c = mainAxes.f3.length();
@@ -26562,8 +26532,8 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
         }
         const phi = Math.acos(c / a);
         const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
-        const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
-        const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
+        const incompleteEllipticInt1 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
+        const incompleteEllipticInt2 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
         return ((2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi)) *
             (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2)));
     }
@@ -26732,107 +26702,167 @@ const ZDirVolumeVisitor$$1 = {
      * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
      */
     [ConicSurface$$1.name](edges) {
+        console.log(this);
+        const dpds = this.dpds();
+        const dpdt = this.dpdt();
         // INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z dt
         const totalVolume = edges
-            .map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve$$1 ||
-                edge.curve instanceof HyperbolaCurve$$1 ||
-                edge.curve instanceof ParabolaCurve$$1) {
-                const f = t => {
-                    const at = edge.curve.at(t), tangent = edge.tangentAt(t);
-                    return ((at.z + at.rejectedFrom(this.dir).z) /
-                        2 *
-                        at.projectedOn(this.dir).lengthXY() *
-                        tangent.dot(V3.Z.cross(this.dir).unit()));
+            .map(edgeWC => {
+            const curveWC = edgeWC.curve;
+            if (curveWC instanceof SemiEllipseCurve$$1 ||
+                curveWC instanceof HyperbolaCurve$$1 ||
+                curveWC instanceof ParabolaCurve$$1) {
+                const f = (curveT) => {
+                    const at = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
+                    const stOfPWC = this.stP(at);
+                    // INTEGRATE [0; atST.y] (dpds(atST.x, t) X dpdt(atST.x)).z * pST(atST.x, t).z dt
+                    // dpds(s, t) === t * dpds(s, 1)
+                    // => INTEGRATE [0; atST.y] (t * dpds(atST.x, 1) X dpdt(atST.x)).z * pST(atST.x, t).z dt
+                    // => (dpds(atST.x, 1) X dpdt(atST.x)).z * INTEGRATE [0; atST.y] t * pST(atST.x, t).z dt
+                    // pST(s, t) === t * (pST(s, 1) - center) + center
+                    // => (dpds(atST.x, 1) X dpdt(atST.x)).z
+                    //      * INTEGRATE [0; atST.y] t² * (pST(atST.x, t) - center).z + t * center.z dt
+                    // => (dpds(atST.x, 1) X dpdt(atST.x)).z
+                    //      * INTEGRATE [0; atST.y] t² * (pST(atST.x, t) - center).z + t * center.z dt
+                    // => (dpds(atST.x, 1) X dpdt(atST.x)).z
+                    //      * (1/3 t³ pST(atST.x, 1).z + 1/2 t² center.z)[0; atST.y]
+                    const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
+                        .inversed()
+                        .transformVector(tangentWC).x;
+                    const factor = Math.pow(stOfPWC.y, 3) / 3 * (this.pST(stOfPWC.x, 1).z - this.center.z) +
+                        Math.pow(stOfPWC.y, 2) / 2 * this.center.z;
+                    const actual = dpds(stOfPWC.x, factor).cross(dpdt(stOfPWC.x)).z;
+                    return actual * ds;
                 };
-                // ellipse with normal1 parallel to dir need to be counted negatively so CCW faces result in a positive
-                // area
-                const sign = edge.curve instanceof SemiEllipseCurve$$1
-                    ? -Math.sign(edge.curve.normal.dot(this.dir))
-                    : -Math.sign(this.center
-                        .to(edge.curve.center)
-                        .cross(edge.curve.f1)
-                        .dot(this.dir));
-                const val = glqInSteps(f, edge.aT, edge.bT, 1);
-                return val * sign;
+                const val = glqInSteps(f, edgeWC.aT, edgeWC.bT, 1);
+                return val;
             }
-            else if (edge.curve instanceof L3$$1) {
+            else if (curveWC instanceof L3$$1) {
                 return 0;
             }
             else {
-                assertNever();
+                throw new Error();
             }
         })
             .sum();
-        return { volume: totalVolume * Math.sign(this.normal.dot(this.dir)) };
+        const centroidZX2Parts = edges.map(edgeWC => {
+            const curveWC = edgeWC.curve;
+            if (curveWC instanceof SemiEllipseCurve$$1 ||
+                curveWC instanceof HyperbolaCurve$$1 ||
+                curveWC instanceof ParabolaCurve$$1) {
+                const f = (curveT) => {
+                    const at = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
+                    const stOfPWC = this.stP(at);
+                    // INTEGRATE [0; atST.y] dpds(atST.x, t) X dpdt(atST.x, t) * pST(atST.x, t).z dt
+                    // dpdt is constant with respect to t
+                    // => (dpds(atST.x, t) X dpdt(atST.x, t)).z
+                    //      * (INTEGRATE [0; atST.y] t * pST(atST.x, t) * pST(atST.x, t).z dt)
+                    // dpds(s, t) === t * dpds(s, 1)
+                    // pST(s, t) === t * (pST(s, 1) - center) + center
+                    // INTEGRATE [0; atST.y] t * pST(atST.x, t) * pST(atST.x, t).z dt
+                    // = INTEGRATE [0; atST.y] t *
+                    //                         (t * (pST(s, 1) - center) + center) *
+                    //                         (t (pST(s, 1) - center).z + center.z) dt
+                    // = INTEGRATE [0; atST.y] t³ (pST(s, 1) - center) * (pST(s, 1) - center).z
+                    //                       + t² ((pST(s, 1) - center) * center.z + (pST(s, 1) - center).z * center)
+                    //                       + t center center.z dt
+                    // = (1/4 t^4 (pST(s, 1) - center) * (pST(s, 1) - center).z
+                    //   (1/3 t³ ((pST(s, 1) - center) * center.z + (pST(s, 1) - center).z * center)
+                    //   (1/2 t² center center.z dt)[0; atST.y]
+                    const pSTS1V = this.pST(stOfPWC.x, 1).minus(this.center);
+                    const factor = V3.add(pSTS1V.times(1 / 4 * Math.pow(stOfPWC.y, 4) * pSTS1V.z + 1 / 3 * Math.pow(stOfPWC.y, 3) * this.center.z), this.center.times(1 / 3 * Math.pow(stOfPWC.y, 3) * pSTS1V.z + 1 / 2 * Math.pow(stOfPWC.y, 2) * this.center.z));
+                    const partialCentroid = factor.times(dpds(stOfPWC.x, 1).cross(dpdt(stOfPWC.x)).z);
+                    const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
+                        .inversed()
+                        .transformVector(tangentWC).x;
+                    return partialCentroid.times(ds);
+                };
+                return glqV3$$1(f, edgeWC.aT, edgeWC.bT);
+            }
+            else if (curveWC instanceof L3$$1) {
+                return V3.O;
+            }
+            else {
+                throw new Error();
+            }
+        });
+        const centroid = V3.add(...centroidZX2Parts)
+            .schur(new V3(1, 1, 0.5))
+            .div(totalVolume);
+        return { volume: totalVolume, centroid: centroid };
     },
     [PlaneSurface$$1.name](edges) {
-        const { centroid, area } = this.calculateArea();
+        const { centroid, area } = planeSurfaceAreaAndCentroid$$1(this, edges);
         return {
-            volume: this.surface.plane.normal1.z * centroid.z * area,
+            volume: this.plane.normal1.z * centroid.z * area,
             centroid: new V3(centroid.x, centroid.y, centroid.z / 2),
         };
     },
     /**
-     * at(t)
-     * |\                                    ^
-     * | \ at(t).projectedOn(dir1)            \  dir1
-     * |  \                                    \
-     * |   \ at(t).rejectedFrom(dir1)
-     * |   |
-     * |___|
-     *        z = 0
-     *
-     *
-     * A = ((at(t) + at(t).rejectedFrom(dir1)) / 2).z * at(t).projectedOn(dir1).lengthXY()
-     * scaling = tangentAt(t) DOT dir1.cross(V3.Z).unit()
+     * Generic implementation.
      */
-    [SemiCylinderSurface$$1.name](edges) {
-        if (V3.Z.cross(this.dir).likeO())
-            return { volume: 0 };
-        // the tangent needs to be projected onto a vector which is perpendicular to the volume-slices
-        const scalingVector = this.dir.cross(V3.Z).unit();
-        // the length of the base of the trapezoid is calculated by dotting with the baseVector
-        const baseVector = this.dir.rejectedFrom(V3.Z).unit();
-        // INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-        const totalArea = edges
-            .map(edge => {
-            if (edge.curve instanceof SemiEllipseCurve$$1) {
-                const f = t => {
-                    // use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-                    const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
-                    const area = (at.z + at.rejectedFrom(this.dir).z) / 2 * at.projectedOn(this.dir).dot(baseVector);
-                    const scale = tangent.dot(scalingVector);
-                    //assert(Math.sign(scale) == Math.sign(this.normalP(at).dot(V3.Z)), this.normalP(at).dot(V3.Z))
-                    //console.log(
-                    //	"", t,
-                    //	",", area,
-                    //	",", scale,
-                    //	"atz", at.z)
-                    return area * scale;
-                };
-                // ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
-                // area
-                const sign = -Math.sign(edge.curve.normal.dot(this.dir));
-                const val = glqInSteps(f, edge.aT, edge.bT, 1);
-                return val * sign;
-            }
-            else if (edge.curve instanceof L3$$1) {
-                return 0;
+    [ParametricSurface$$1.name](edges) {
+        const dpds = this.dpds();
+        const dpdt = this.dpdt();
+        const volume = edges
+            .map(edgeWC => {
+            const curveWC = edgeWC.curve;
+            if (curveWC instanceof ImplicitCurve$$1) {
+                throw new Error();
             }
             else {
-                assertNever();
+                const f = (curveT) => {
+                    // use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
+                    const pWC = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
+                    const stOfPWC = this.stP(pWC);
+                    const slice = (t) => {
+                        const p = this.pST(stOfPWC.x, t);
+                        const normal = dpds(stOfPWC.x, t).cross(dpdt(stOfPWC.x, t));
+                        return p.z * normal.z;
+                    };
+                    const sliceIntegral0ToPWCT = glqInSteps(slice, 0, stOfPWC.y, 1);
+                    // const dt = tangentWC.dot(scalingVector)
+                    const dt = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+                        .inversed()
+                        .transformVector(tangentWC).x;
+                    const result = sliceIntegral0ToPWCT * dt;
+                    return result;
+                };
+                const val = glqInSteps(f, edgeWC.aT, edgeWC.bT, 1);
+                return val;
             }
         })
             .sum();
-        return { volume: totalArea * Math.sign(this.baseCurve.normal.dot(this.dir)) };
+        const centroidParts = edges.map(edgeWC => {
+            const curveWC = edgeWC.curve;
+            console.log(edgeWC.sce);
+            const f = (curveT) => {
+                const pWC = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
+                const stOfPWC = this.stP(pWC);
+                const slice = (t) => {
+                    const p = this.pST(stOfPWC.x, t);
+                    const normal = dpds(stOfPWC.x, t).cross(dpdt(stOfPWC.x, t));
+                    return new V3(p.x, p.y, p.z / 2).times(p.z * normal.z);
+                };
+                const sliceIntegral0ToPWCT = glqV3$$1(slice, 0, stOfPWC.y);
+                // const dt = tangentWC.dot(scalingVector)
+                const dt = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+                    .inversed()
+                    .transformVector(tangentWC).x;
+                const result = sliceIntegral0ToPWCT.times(dt);
+                return result;
+            };
+            return glqV3$$1(f, edgeWC.aT, edgeWC.bT);
+        });
+        const centroid = V3.add(...centroidParts).div(volume);
+        return { volume, centroid };
     },
     /**
      * at(t)
      * |\                                    ^
      * | \ at(t).projectedOn(dir1)            \  dir1
      * |  \                                    \
-     * |   \ at(t).rejectedFrom(dir1)
+     * |   \ at(t).rejectedFrom(dir1) = b
      * |   |
      * |___|
      *        z = 0
@@ -26844,99 +26874,78 @@ const ZDirVolumeVisitor$$1 = {
     [ProjectedCurveSurface$$1.name](edges) {
         if (V3.Z.cross(this.dir).likeO())
             return { volume: 0, centroid: V3.O };
-        // NB: the surface normal doesn't influence the resulting area:
         // normalize this.dir so it always points up
         const upDir1 = this.dir.toLength(Math.sign(this.dir.z) || 1);
         const scalingVector = V3.Z.cross(upDir1).unit();
         // the length of the base of the trapezoid is calculated by dotting with the baseVector
         const baseVector = upDir1.rejectedFrom(V3.Z).unit();
         // INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-        const totalVolume = edges
-            .map(edge => {
-            if (edge.curve instanceof L3$$1) {
+        const volume = edges
+            .map(edgeWC => {
+            if (edgeWC.curve instanceof L3$$1) {
                 return 0;
             }
-            else if (edge.curve instanceof ImplicitCurve$$1) {
-                const { points, tangents } = edge.curve;
-                const minT = edge.minT, maxT = edge.maxT;
+            else if (edgeWC.curve instanceof ImplicitCurve$$1) {
+                const { points, tangents } = edgeWC.curve;
+                const minT = edgeWC.minT, maxT = edgeWC.maxT;
                 let sum = 0;
                 const start = Math.ceil(minT + NLA_PRECISION);
                 const end = Math.floor(maxT - NLA_PRECISION);
                 for (let i = start; i <= end; i++) {
                     const at = points[i], tangent = tangents[i];
-                    const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(this.dir).dot(baseVector);
+                    const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector);
                     const scale = tangent.dot(scalingVector);
                     sum += area * scale;
                 }
                 const f = (t) => {
-                    const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
-                    const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(this.dir).dot(baseVector);
+                    const at = edgeWC.curve.at(t), tangent = edgeWC.curve.tangentAt(t);
+                    const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector);
                     const scale = tangent.dot(scalingVector);
                     return area * scale;
                 };
                 sum += f(minT) * -(start - minT);
                 sum += f(maxT) * -(maxT - end);
-                return sum * Math.sign(edge.deltaT());
+                return sum * Math.sign(edgeWC.deltaT());
             }
             else {
-                const f = (t) => {
+                const f = (curveT) => {
                     // use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-                    const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
-                    const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(this.dir).dot(baseVector);
+                    const at = edgeWC.curve.at(curveT), tangent = edgeWC.curve.tangentAt(curveT);
+                    const b = at.rejectedFrom1(upDir1);
+                    const area = at.z * b.to(at).dot(baseVector) / 2 + b.z * b.to(at).dot(baseVector) / 2;
+                    const area2 = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector);
+                    assert(eq(area, area2), area, area2);
                     const scale = tangent.dot(scalingVector);
                     return area * scale;
                 };
-                const val = glqInSteps(f, edge.aT, edge.bT, 1);
+                const val = glqInSteps(f, edgeWC.aT, edgeWC.bT, 4);
                 return val;
             }
         })
             .sum();
-        return { volume: totalVolume };
-    },
-    zDirVolumeForLoop2(loop) {
-        const angles = this.inverseMatrix.getZ().toAngles();
-        const T = M4.rotateY(-angles.theta)
-            .times(M4.rotateZ(-angles.phi))
-            .times(this.inverseMatrix);
-        const rot90x = M4.rotateX(PI$3 / 2);
-        let totalVolume = 0;
-        assert(V3.X.isParallelTo(T.transformVector(V3.Z)));
-        //const zDistanceFactor = toT.transformVector(V3.Z).length()
-        loop.map(edge => edge.transform(T)).forEach((edge, edgeIndex, edges) => {
-            const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex];
-            function f(t) {
-                const at2d = edge.curve.at(t).withElement('x', 0);
-                const result = 1 /
-                    3 *
-                    (1 - (Math.pow(at2d.y, 2) + Math.pow(at2d.z, 2))) *
-                    edge.tangentAt(t).dot(rot90x.transformVector(at2d.unit()));
-                console.log('at2d', at2d.sce, 'result', result);
-                return result;
-            }
-            //if (edge.)
-            if (edge.b.like(V3.X)) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
-                totalVolume += 2 / 3 * angleDiff;
-                console.log('xaa');
-            }
-            if (edge.b.like(V3.X.negated())) {
-                const angleDiff = (edge.bDir.angleRelativeNormal(nextEdge.aDir, V3.X) + 2 * PI$3) % (2 * PI$3);
-                totalVolume += 2 / 3 * angleDiff;
-                console.log('xbb');
-            }
-            const volume = gaussLegendreQuadrature24(f, edge.aT, edge.bT);
-            console.log('edge', edge, 'volume', volume);
-            totalVolume += volume;
+        // calc centroid:
+        const centroidParts = edges.map(edgeWC => {
+            const fCentroid = (curveT) => {
+                // use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
+                const at = edgeWC.curve.at(curveT), tangent = edgeWC.curve.tangentAt(curveT);
+                const b = at.rejectedFrom1(upDir1);
+                const areaCentroidA = V3.add(at.xy(), b, at).times(at.z * b.to(at).dot(baseVector) / 2 / 3);
+                const areaCentroidB = V3.add(at.xy(), b, b.xy()).times(b.z * b.to(at).dot(baseVector) / 2 / 3);
+                const scale = tangent.dot(scalingVector);
+                return areaCentroidA.plus(areaCentroidB).times(scale);
+            };
+            return glqV3$$1(fCentroid, edgeWC.aT, edgeWC.bT);
         });
-        return totalVolume * this.f1.dot(this.f2.cross(this.f3));
+        const centroid = V3.add(...centroidParts).div(volume);
+        return { volume, centroid };
     },
     // volume does scale linearly, so this could be done in the local coordinate system
-    // however, shear matrices lead to point-to-plane distances having to calculated along a vector other than
+    // however, shear matrices lead to point-to-plane distances having to be calculated along a vector other than
     // the plane normal
-    [SemiEllipsoidSurface$$1.name](loop) {
+    [SemiEllipsoidSurface$$1.name](edges) {
         const dpds = this.dpds();
         const dpdt = this.dpdt();
-        const totalVolume = loop
+        const totalVolume = edges
             .map((edgeWC, edgeIndex, edges) => {
             const curveWC = edgeWC.curve;
             const f = (curveT) => {
@@ -27000,11 +27009,11 @@ const ZDirVolumeVisitor$$1 = {
                 const result = sliceIntegral0ToPWCS * dt;
                 return result;
             };
-            return gaussLegendreQuadrature24(f, edgeWC.aT, edgeWC.bT);
+            return gaussLegendreQuadrature24$1(f, edgeWC.aT, edgeWC.bT);
         })
             .sum();
         // calc centroid:
-        const centroidZX2Parts = loop.map(edgeWC => {
+        const centroidZX2Parts = edges.map(edgeWC => {
             const f = (curveT) => {
                 const curveWC = edgeWC.curve;
                 const pWC = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
@@ -27014,14 +27023,14 @@ const ZDirVolumeVisitor$$1 = {
                     const normal = dpds(phi, stOfPWC.y).cross(dpdt(phi, stOfPWC.y));
                     return p.times(p.z * normal.z);
                 };
-                const sliceIntegral0ToPWCS = glqV3(slice, 0, stOfPWC.x);
+                const sliceIntegral0ToPWCS = glqV3$$1(slice, 0, stOfPWC.x);
                 const dt = M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
                     .inversed()
                     .transformVector(tangentWC).y;
                 const result = sliceIntegral0ToPWCS.times(dt);
                 return result;
             };
-            return glqV3(f, edgeWC.aT, edgeWC.bT);
+            return glqV3$$1(f, edgeWC.aT, edgeWC.bT);
         });
         const centroid = V3.add(...centroidZX2Parts)
             .schur(new V3(1, 1, 0.5))
@@ -27031,7 +27040,7 @@ const ZDirVolumeVisitor$$1 = {
         console.log(this);
         console.log(localBasePlane);
         //const zDistanceFactor = toT.transformVector(V3.Z).length()
-        const localVolume = loop
+        const localVolume = edges
             .map((edgeWC, edgeIndex, edges) => {
             const edgeLC = edgeWC.transform(this.inverseMatrix);
             // const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
@@ -27057,7 +27066,6 @@ const ZDirVolumeVisitor$$1 = {
                 // slice = normal(s, t).length() * (plane.normal.dot(at(s, t)) - w)
                 function slice(phi) {
                     const p = V(r * cos$1(phi), r * sin$1(phi), z);
-                    const dpdt = V(r * -sin$1(phi), r * cos$1(phi), 0);
                     // return (localBasePlane.normal1.dot(p) - localBasePlane.w) *localBasePlane.normal1.dot(p) * dpdt.cross(localBasePlane.normal1).length()
                     return (SemiEllipsoidSurface$$1.UNIT.dpds()(phi, atLCST.y)
                         .cross(SemiEllipsoidSurface$$1.UNIT.dpdt()(phi, atLCST.y))
@@ -27065,7 +27073,7 @@ const ZDirVolumeVisitor$$1 = {
                         (localBasePlane.normal1.dot(p) - localBasePlane.w) * // height
                         localBasePlane.normal1.dot(p));
                 }
-                const testValue = gaussLegendreQuadrature24(slice, 0, atLCST.x);
+                const testValue = gaussLegendreQuadrature24$1(slice, 0, atLCST.x);
                 // scaling = sqrt(1 - tangent.z ** 2)
                 const scaling = SemiEllipsoidSurface$$1.UNIT.dpdt()(atLCST.x, atLCST.y).dot(tangent); // atLC.getPerpendicular().cross(atLC).unit().dot(tangent)
                 console.log('scaling', scaling);
@@ -27073,7 +27081,7 @@ const ZDirVolumeVisitor$$1 = {
                 // edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
                 return result;
             }
-            return gaussLegendreQuadrature24(f, edgeLC.aT, edgeLC.bT);
+            return gaussLegendreQuadrature24$1(f, edgeLC.aT, edgeLC.bT);
         })
             .sum();
         const volumeScalingFactor = this.f1.dot(this.f2.cross(this.f3));
@@ -27081,7 +27089,7 @@ const ZDirVolumeVisitor$$1 = {
         return { volume: localVolume * volumeScalingFactor, centroid: undefined };
     },
 };
-function glqV3(f, startT, endT) {
+function glqV3$$1(f, startT, endT) {
     return gaussLegendre24Xs
         .reduce((val, currVal, index) => {
         const x = startT + (currVal + 1) / 2 * (endT - startT);
@@ -27095,6 +27103,8 @@ function glqV3(f, startT, endT) {
  */
 const CalculateAreaVisitor$$1 = {
     [ConicSurface$$1.name](edges) {
+        const dpds = this.dpds();
+        const dpdt = this.dpdt();
         // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
         const totalArea = edges
             .map(edge => {
@@ -27102,21 +27112,24 @@ const CalculateAreaVisitor$$1 = {
                 edge.curve instanceof HyperbolaCurve$$1 ||
                 edge.curve instanceof ParabolaCurve$$1) {
                 const f = (t) => {
-                    const at = edge.curve.at(t), tangent = edge.tangentAt(t);
-                    return (at
-                        .minus(this.center)
-                        .cross(tangent.rejectedFrom(this.dir))
-                        .length() / 2);
+                    const at = edge.curve.at(t), tangentWC = edge.tangentAt(t);
+                    const stOfPWC = this.stP(at);
+                    // INTEGRATE [0; atST.y]
+                    //   dpds(atST.x, t) X dpdt(atST.x, t)
+                    // dt
+                    // dpdt is constant with respect to t
+                    // => dpdt(atST.x, 0) X (INTEGRATE [0; atST.y] dpds(atST.x, t) dt)
+                    // dpds(s, t) === t * dpds(s, 1)
+                    // => dpdt(atST.x, 0) X (1/2 t² dpds(atST.x, 1))[0; atST.y]
+                    // => dpdt(atST.x, 0) X dpds(atST.x, atST.y² / 2)
+                    const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+                        .inversed()
+                        .transformVector(tangentWC).x;
+                    return (dpdt(stOfPWC.x, stOfPWC.y)
+                        .cross(dpds(stOfPWC.x, Math.pow(stOfPWC.y, 2) / 2))
+                        .length() * ds);
                 };
-                // ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
-                // positive area hyperbola normal1 can be perpendicular to
-                const sign = edge.curve instanceof SemiEllipseCurve$$1
-                    ? -Math.sign(edge.curve.normal.dot(this.dir))
-                    : -Math.sign(this.center
-                        .to(edge.curve.center)
-                        .cross(edge.curve.f1)
-                        .dot(this.dir));
-                return glqInSteps(f, edge.aT, edge.bT, 4) * sign;
+                return glqInSteps(f, edge.aT, edge.bT, 1);
             }
             else if (edge.curve instanceof L3$$1) {
                 return 0;
@@ -27128,77 +27141,10 @@ const CalculateAreaVisitor$$1 = {
             .sum();
         // if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
         // Math.abs is not an option as "holes" may also be passed
-        return totalArea * Math.sign(this.normal.dot(this.dir));
+        return totalArea * this.normalDir;
     },
     [PlaneSurface$$1.name](edges) {
-        let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0;
-        let r1 = this.surface.right, u1 = this.surface.up;
-        for (const edge of edges) {
-            let edgeArea, centroidS, centroidT;
-            if (edge instanceof StraightEdge$$1) {
-                const midPoint = edge.a.lerp(edge.b, 0.5);
-                edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2);
-                centroidS = midPoint.dot(r1) / 2;
-                centroidT = midPoint.dot(u1);
-                const edgeLength = edge.a.distanceTo(edge.b);
-                edgeArea = edgeLength * edge.curve.dir1.dot(r1);
-                edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1);
-            }
-            else {
-                const curve = edge.curve;
-                if (curve instanceof SemiEllipseCurve$$1) {
-                    const info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT);
-                    edgeArea = info.area;
-                    const parametricCentroid = this.surface.stPFunc()(info.centroid);
-                    centroidS = parametricCentroid.x;
-                    centroidT = parametricCentroid.y;
-                }
-                else if (curve instanceof BezierCurve$$1) {
-                    edgeArea = curve.getAreaInDirSurface(u1, this.surface, edge.aT, edge.bT).area;
-                }
-                else {
-                    assertNever();
-                }
-            }
-            tcs += edgeArea * centroidS;
-            tct += edgeArea * centroidT;
-            totalArea += edgeArea;
-        }
-        centroid = r1.times(tcs).plus(u1.times(tct));
-        assert(isFinite(totalArea));
-        return { area: totalArea, centroid: centroid };
-    },
-    /**
-     * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse
-     * ==> Elliptic integrals/numeric calculation is necessary
-     */
-    [CylinderSurface$$1.name](edges) {
-        // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-        const totalArea = edges
-            .map(edge => {
-            if (edge.curve instanceof EllipseCurve$$1) {
-                const f = (t) => {
-                    const at = edge.curve.at(t), tangent = edge.tangentAt(t);
-                    return at.dot(this.dir) * tangent.rejected1Length(this.dir);
-                };
-                // ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
-                // area
-                const sign = -Math.sign(edge.curve.normal.dot(this.dir));
-                const val = glqInSteps(f, edge.aT, edge.bT, 4);
-                console.log('edge', edge, val);
-                return val * sign;
-            }
-            else if (edge.curve instanceof L3$$1) {
-                return 0;
-            }
-            else {
-                throw new Error();
-            }
-        })
-            .sum();
-        // if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-        // Math.abs is not an option as "holes" may also be passed
-        return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir));
+        return planeSurfaceAreaAndCentroid$$1(this, edges);
     },
     [SemiEllipsoidSurface$$1.name](edges, canApproximate = true) {
         const areaParts = edges.map((edgeWC, ei) => {
@@ -27274,34 +27220,6 @@ const CalculateAreaVisitor$$1 = {
         });
         return areaParts.sum();
     },
-    //[SemiCylinderSurface.name](this: SemiCylinderSurface, edges: Edge[], canApproximate = true): number {
-    //	assert(this.isVerticalSpheroid())
-    //	const { f1, f2, f3 } = this
-    //	// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-    //	const circleRadius = f1.length()
-    //	const f31 = f3.unit()
-    //	const totalArea = edges.map(edge => {
-    //		if (edge.curve instanceof SemiEllipseCurve) {
-    //			const f = (t: number) => {
-    //				const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-    //				const localAt = this.inverseMatrix.transformPoint(at)
-    //				let angleXY = localAt.angleXY()
-    //				if (eq(Math.abs(angleXY), PI)) {
-    //					if (edge.curve.normal.isParallelTo(this.f2)) {
-    //						angleXY = PI * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2))
-    //					} else {
-    //						angleXY = PI * dotCurve(this.f2, tangent, edge.curve.ddt(t))
-    //					}
-    //				}
-    //				const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
-    //				const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(),
-    // -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit() const df3 = tangent.dot(f31) //const
-    // scaling = df3 / localAt.lengthXY() const scaling = dotter.dot(tangent) //console.log(t, at.str, arcLength,
-    // scaling) return arcLength * scaling } const val = glqInSteps(f, edge.aT, edge.bT, 1) return val } else {
-    // assertNever() } }).sum()
-    //
-    //	return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
-    //},
     [ProjectedCurveSurface$$1.name](edges) {
         // calculation cannot be done in local coordinate system, as the area doesn't scale proportionally
         const thisDir1 = this.dir.unit();
@@ -27336,10 +27254,12 @@ const CalculateAreaVisitor$$1 = {
                         .dot(tangent);
                     return at.dot(thisDir1) * scaling;
                 };
+                // sum += f(minT) * (start - minT)
+                // sum += f(maxT) * (maxT - end)
                 console.log('foo', start - minT, maxT - end);
                 console.log('start', start, 'end', end, 'minT', minT, 'maxT', maxT);
-                //sum += f(minT) * (start - minT - 0.5) * 0.5
-                //sum += f(maxT) * (maxT - end - 0.5) * 0.5
+                sum += f(minT) * (start - minT - 0.5) * 0.5;
+                sum += f(maxT) * (maxT - end - 0.5) * 0.5;
                 console.log(sum);
                 console.log('f(minT) * (start - minT - 0.5) * 0.5', f(minT) * (start - minT - 0.5) * 0.5);
                 console.log('f(maxT) * (maxT - end - 0.5) * 0.5', f(maxT) * (maxT - end - 0.5) * 0.5);
@@ -27363,6 +27283,64 @@ const CalculateAreaVisitor$$1 = {
         return totalArea;
     },
 };
+function planeSurfaceAreaAndCentroid$$1(surface, edges) {
+    let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0;
+    const r1 = surface.right, u1 = surface.up;
+    for (const edge of edges) {
+        let edgeArea, centroidS, centroidT;
+        if (edge instanceof StraightEdge$$1) {
+            const midPoint = edge.a.lerp(edge.b, 0.5);
+            edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2);
+            centroidS = midPoint.dot(r1) / 2;
+            centroidT = midPoint.dot(u1);
+            const edgeLength = edge.a.distanceTo(edge.b);
+            edgeArea = edgeLength * edge.curve.dir1.dot(r1);
+            edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1);
+        }
+        else {
+            const curve = edge.curve;
+            if (curve instanceof SemiEllipseCurve$$1) {
+                const info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT);
+                edgeArea = info.area;
+                const parametricCentroid = surface.stPFunc()(info.centroid);
+                centroidS = parametricCentroid.x;
+                centroidT = parametricCentroid.y;
+            }
+            else if (curve instanceof BezierCurve$$1) {
+                const { aT, bT } = edge;
+                const dir1 = u1;
+                assertf(() => dir1.hasLength(1));
+                // INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
+                const f = (t) => {
+                    const tangent = curve.tangentAt(t);
+                    const at = curve.at(t);
+                    const outsideVector = tangent.cross(surface.normalP(at));
+                    const sign = Math.sign(outsideVector.dot(dir1));
+                    return at.dot(dir1) * tangent.rejected1Length(dir1) * sign;
+                    //return curve.at(t).dot(dir1) * tangent.minus(dir1.times(tangent.dot(dir1))).length()
+                };
+                const cx = (t) => {
+                    const height = curve.at(t).dot(dir1);
+                    //console.log(t, curve.at(t).minus(dir1.times(height / 2)).sce, f(t))
+                    return curve.at(t).minus(dir1.times(height / 2));
+                };
+                const area = gaussLegendreQuadrature24(f, aT, bT);
+                const x = glqV3$$1(cx, aT, bT).div(2 * (bT - aT) * area);
+                return { area: area, centroid: x };
+                edgeArea = curve.getAreaInDirSurface(u1, surface, edge.aT, edge.bT).area;
+            }
+            else {
+                throw new Error();
+            }
+        }
+        tcs += edgeArea * centroidS;
+        tct += edgeArea * centroidT;
+        totalArea += edgeArea;
+    }
+    centroid = r1.times(tcs).plus(u1.times(tct));
+    assert(isFinite(totalArea));
+    return { area: totalArea, centroid: centroid };
+}
 
 var TINF_OK = 0;
 var TINF_DATA_ERROR = -3;
@@ -39527,12 +39505,12 @@ var B2T$$1;
         return B2T$$1.extrudeVertices(baseVertices, P3$$1.XY.flipped(), new V3(0, 0, depth), name, generator);
     }
     B2T$$1.box = box;
-    function puckman(radius, rads, height, name) {
+    function puckman(radius, rads, height, name = 'puckman' + getGlobalId$$1()) {
         assertf(() => lt(0, radius));
         assertf(() => lt(0, rads) && le(rads, TAU));
         assertf(() => lt(0, height));
         const edges = StraightEdge$$1.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true);
-        return B2T$$1.rotateEdges(edges, rads, name || 'puckman' + getGlobalId$$1());
+        return B2T$$1.rotateEdges(edges, rads, name);
     }
     B2T$$1.puckman = puckman;
     function registerVertexName(map, name, p) {
@@ -39605,6 +39583,11 @@ var B2T$$1;
         return rotateEdges([StraightEdge$$1.throughPoints(ee.b, ee.a), ee], rot, name, generator);
     }
     B2T$$1.sphere = sphere;
+    /**
+     * Create a [[BRep]] of a menger sponge.
+     * @param res 0: just a cube, 1: every cube face has one hole, 2: 9 holes, etc
+     * @param name
+     */
     function menger(res = 2, name = 'menger' + getGlobalId$$1()) {
         let result = B2T$$1.box(1, 1, 1);
         if (0 == res)
@@ -39658,21 +39641,14 @@ var B2T$$1;
      * @param rads
      * @param name
      */
-    function torus(rSmall, rLarge, rads, name) {
+    function torus(rSmall, rLarge, rads = TAU, name = 'torus' + getGlobalId$$1()) {
         assertNumbers(rSmall, rLarge, rads);
         assertf(() => rLarge > rSmall);
         const curve = SemiEllipseCurve$$1.semicircle(rSmall, new V3(rLarge, 0, 0));
         const baseEdges = [PCurveEdge$$1.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge$$1.forCurveAndTs(curve, 0, Math.PI)];
-        return B2T$$1.rotateEdges(baseEdges, rads, name || 'torus' + getGlobalId$$1());
+        return B2T$$1.rotateEdges(baseEdges, rads, name);
     }
     B2T$$1.torus = torus;
-    function torusUnsplit(rSmall, rLarge, rads, name) {
-        assertNumbers(rSmall, rLarge, rads);
-        assertf(() => rLarge > rSmall);
-        const baseEdge = PCurveEdge$$1.forCurveAndTs(SemiEllipseCurve$$1.semicircle(rSmall, new V3(rLarge, 0, 0)), -Math.PI, Math.PI);
-        return B2T$$1.rotateEdges([baseEdge], rads, name || 'torus' + getGlobalId$$1());
-    }
-    B2T$$1.torusUnsplit = torusUnsplit;
     /**
      * Create a [BRep] by smoothly rotating edges around Z.
      * baseLoop should be CCW on XZ plane for a bounded BRep
@@ -39939,6 +39915,11 @@ var B2T$$1;
         //return numbersBRep
     }
     B2T$$1.whatever = whatever;
+    function whatever3() {
+        return B2T$$1.rotateEdges(StraightEdge$$1.chain([V3.O, V3.X, V3.Z]), TAU)
+            .and(B2T$$1.box().rotateZ(40 * DEG).translate(0.1, 0.1, 0.1)).faces.filter(x => x.surface instanceof ConicSurface$$1).sce;
+    }
+    B2T$$1.whatever3 = whatever3;
     function d20() {
         const iso = isocahedron();
         const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
@@ -40085,12 +40066,10 @@ var B2T$$1;
         return B2T$$1.extrudeEdges(edges, baseFacePlane, offset, name, generator);
     }
     B2T$$1.extrudeVertices = extrudeVertices;
-    // Returns a
-    // Faces will face outwards.
-    //
     /**
      * Create a tetrahedron (3 sided pyramid) [BRep].
      * `a`, `b`, `c` and `d` can be in any order. The only constraint is that they cannot be on a common plane.
+     * The resulting tetrahedron will always have outwards facing faces.
      * @param a
      * @param b
      * @param c
@@ -40118,7 +40097,7 @@ var B2T$$1;
             new PlaneFace$$1(PlaneSurface$$1.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + 'bdc'),
             new PlaneFace$$1(PlaneSurface$$1.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + 'cda'),
         ];
-        const gen = `B2T.tetrahedron(${a.sce}, ${b.sce}, ${c.sce}, ${d.sce})`;
+        const gen = callsce('B2T.tetrahedron', a, b, c, d);
         return new BRep$$1(faces, false, gen);
     }
     B2T$$1.tetrahedron = tetrahedron;
@@ -42169,8 +42148,8 @@ class RotationFace$$1 extends Face$$1 {
             maxV = max$1(maxV, v);
         });
         if (ParametricSurface$$1.is(this.surface)) {
-            assert(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION);
-            assert(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION);
+            //assert(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION)
+            //assert(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION)
         }
         const uOffset = floor(minU + NLA_PRECISION), vOffset = floor(minV + NLA_PRECISION);
         const uRes = ceil(maxU - NLA_PRECISION) - uOffset, vRes = ceil(maxV - NLA_PRECISION) - vOffset;
@@ -45214,7 +45193,9 @@ var brepts = Object.freeze({
 	SemiEllipsoidSurface: SemiEllipsoidSurface$$1,
 	PlaneSurface: PlaneSurface$$1,
 	ZDirVolumeVisitor: ZDirVolumeVisitor$$1,
+	glqV3: glqV3$$1,
 	CalculateAreaVisitor: CalculateAreaVisitor$$1,
+	planeSurfaceAreaAndCentroid: planeSurfaceAreaAndCentroid$$1,
 	projectCurve: projectCurve$$1,
 	projectPointCurve: projectPointCurve$$1,
 	rotateCurve: rotateCurve$$1,
@@ -45305,6 +45286,7 @@ class RenderObjects {
         this.drPs = [];
         this.drVs = [];
         this.mesh = undefined;
+        this.paintMeshNormals = false;
     }
 }
 const renderObjectKeys = Object.keys(new RenderObjects());
@@ -45414,6 +45396,7 @@ const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()));
 function viewerPaint(time$$1, gl) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.loadIdentity();
+    setupCamera$$1(eye, gl);
     gl.drawVectors(drVs);
     gl.shaders.lighting.uniforms({ camPos: eye.pos });
     //gl.scale(100, 100, 100)
@@ -45443,7 +45426,7 @@ function viewerPaint(time$$1, gl) {
     }
     if (faceMesh) {
         gl.shaders.singleColor.uniforms({ color: chroma('red').gl() })
-            .drawBuffers({ ts_Vertex: faceMesh.vertexBuffers['tangents'] }, undefined, gl.LINES);
+            .drawBuffers({ ts_Vertex: faceMesh.vertexBuffers.tangents }, undefined, gl.LINES);
     }
     //if (dMesh) {
     //   gl.shaders.multiColor.uniforms({color: COLORS.PP_STROKE.gl() }).drawBuffers({
@@ -45456,7 +45439,9 @@ function viewerPaint(time$$1, gl) {
         gl.pushMatrix();
         //gl.scale(10, 10, 10)
         gl.projectionMatrix.m[11] -= 1 / (1 << 20); // prevent Z-fighting
-        sMesh.LINES && gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, gl.LINES);
+        if (g.paintMeshNormals && sMesh.LINES) {
+            gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, gl.LINES);
+        }
         gl.projectionMatrix.m[11] += 1 / (1 << 20);
         sMesh.TRIANGLES && gl.shaders.lighting.uniforms({
             color: chroma('#ffFF00').gl(),
@@ -45510,9 +45495,15 @@ const b2planes = [
     new CustomPlane$$1(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00),
     new CustomPlane$$1(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff),
 ];
+let paintScreen;
 function viewerMain() {
     return __awaiter(this, void 0, void 0, function* () {
-        const paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl));
+        const meshNormalsCheckbox = document.getElementById('paint-mesh-normals');
+        meshNormalsCheckbox.onclick = e => {
+            g.paintMeshNormals = !g.paintMeshNormals;
+            paintScreen();
+        };
+        paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl));
         B2T$$1.defaultFont = yield B2T$$1.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff');
         window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
             console.log(errorMsg, url, lineNumber, column, errorObj);
@@ -45586,8 +45577,29 @@ function HJK() {
         points: curves.flatMap(c => c.points),
     };
 }
+function alignX() {
+    eye.focus = V3.O;
+    eye.pos = V(100, 0, 0);
+    eye.up = V3.Z;
+    paintScreen();
+}
+function alignY() {
+    eye.focus = V3.O;
+    eye.pos = V(0, 100, 0);
+    eye.up = V3.Z;
+    paintScreen();
+}
+function alignZ() {
+    eye.focus = V3.O;
+    eye.pos = V(0, 0, 100);
+    eye.up = V3.Y;
+    paintScreen();
+}
 
 exports.viewerMain = viewerMain;
+exports.alignX = alignX;
+exports.alignY = alignY;
+exports.alignZ = alignZ;
 exports.RenderObjects = RenderObjects;
 
 return exports;

@@ -24,10 +24,15 @@ import { sign } from '../math'
  * Choose dir appropriately to select surface orientation.
  */
 export class ProjectedCurveSurface extends ParametricSurface {
-	// prettier-ignore
-	'constructor': typeof ProjectedCurveSurface & {
-			new <T extends ProjectedCurveSurface>(baseCurve: Curve, dir: V3,
-												  sMin: number, sMax: number, tMin: number, tMax: number): T
+	readonly ['constructor']: typeof ProjectedCurveSurface & {
+		new <T extends ProjectedCurveSurface>(
+			baseCurve: Curve,
+			dir: V3,
+			sMin: number,
+			sMax: number,
+			tMin: number,
+			tMax: number,
+		): T
 	}
 
 	constructor(
@@ -41,7 +46,6 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		super(sMin, sMax, tMin, tMax)
 		assertInst(Curve, baseCurve)
 		assertInst(V3, dir)
-		assertNumbers(sMin, sMax, tMin, tMax)
 		assert(sMin < sMax)
 		assert(tMin < tMax)
 	}
@@ -91,7 +95,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		const projCurve = this.baseCurve.project(basePlane)
 		const projPoint = basePlane.projectedPoint(pWC)
 		const t = projCurve.closestTToPoint(projPoint, ss, this.sMin, this.sMax)
-        const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
+		const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
 		return new V3(t, z, 0)
 	}
 
@@ -100,6 +104,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		const projBaseCurve = this.baseCurve.project(projPlane)
 		return pWC => {
 			const projPoint = projPlane.projectedPoint(pWC)
+            assertNumbers(this.sMin)
 			const t = projBaseCurve.pointT(projPoint, this.sMin, this.sMax)
 			const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
 			return new V3(t, z, 0)
@@ -255,5 +260,5 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		)
 	}
 }
-ProjectedCurveSurface.prototype.uStep = 1 / 40
+ProjectedCurveSurface.prototype.uStep = 1 / 128
 ProjectedCurveSurface.prototype.vStep = 256

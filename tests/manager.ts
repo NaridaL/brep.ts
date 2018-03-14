@@ -3,7 +3,7 @@
  */
 declare const require: any
 try {
-	;(global as any).WebGLRenderingContext = {}
+	(global as any).WebGLRenderingContext = {}
 	//const mock = require('mock-require')
 	//mock('tsgl', {})
 } catch (e) {}
@@ -243,18 +243,6 @@ export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
 	assert.ok(!surface.edgeLoopCCW(Edge.reversePath(loop)))
 }
 
-export function testZDirVolumeAndArea(assert: Assert, face: Face) {
-	linkBRep(assert, `mesh=${face.sce}.toMesh()`)
-	const faceMeshVol = face.toMesh().calcVolume()
-	const actual = face.zDirVolume().volume,
-		expected = faceMeshVol.volume
-	assert.fuzzyEqual(actual, expected, undefined, 0.05)
-
-	const actualArea = face.calcArea()
-	const expectedArea = faceMeshVol.area
-	assert.fuzzyEqual(actualArea, expectedArea, undefined, 0.05)
-}
-
 export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolume?: number) {
 	const flippedFace = face.flipped()
 	const faceMeshVol = face.toMesh().calcVolume()
@@ -264,42 +252,54 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 		const actualArea = face.calcArea()
 		const expectedArea = faceMeshVol.area
 		assert.fuzzyEqual(actualArea, expectedArea, undefined, 0.05)
+        console.log('OK! actual = ' + actualArea+', expected = '+ expectedArea)
 	})
 	test(msg + ' flipped() area', assert => {
 		outputLink(assert, { mesh: face.flipped().toSource() + '.toMesh()', face: face.flipped() })
 		const actualArea = flippedFace.calcArea()
 		const expectedArea = faceMeshVol.area
 		assert.fuzzyEqual(actualArea, expectedArea, undefined, 0.05)
+        console.log('OK! actual = ' + actualArea+', expected = '+ expectedArea)
 	})
 	test(msg + ' volume', assert => {
 		outputLink(assert, { mesh: face.toSource() + '.toMesh()' })
 		const actual = face.zDirVolume().volume,
 			expected = undefined === expectedVolume ? faceMeshVol.volume : expectedVolume
-		console.log(actual, expected, eq(actual, expected, 0.05))
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
+        console.log('OK! actual = ' + actual+', expected = '+ expected)
 	})
 	test(msg + ' flipped() volume', assert => {
+        outputLink(assert, { mesh: flippedFace.toSource() + '.toMesh()' })
 		const actual = flippedFace.zDirVolume().volume
 		const expected = undefined === expectedVolume ? -faceMeshVol.volume : -expectedVolume
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
+        console.log('OK! actual = ' + actual+', expected = '+ expected)
 	})
 	test(msg + ' centroid', assert => {
-		const actual = face.zDirVolume().centroid
-		const expected = faceMeshVol.centroid
-        outputLink(assert, {
-            mesh: face.toSource() + '.toMesh()',
-            drPs: [expected, actual],
-        })
-		assert.v3like(actual, expected, undefined, 0.05)
-	})
-	test(msg + ' flipped() centroid', assert => {
-		const actual = flippedFace.zDirVolume().centroid
+		const actual = flippedFace.zDirVolume()
 		const expected = faceMeshVol.centroid
 		outputLink(assert, {
 			mesh: face.toSource() + '.toMesh()',
-			drPs: [expected, actual],
+			drPs: [expected, actual.centroid],
+			edges: face.getAllEdges(),
 		})
-		assert.v3like(actual, expected, undefined, 0.05)
+		if (!eq0(actual.volume)) {
+			// centroid doesn't make sense when volume is 0
+			assert.v3like(actual.centroid, expected, undefined, 0.05)
+            console.log('OK! actual = ' + actual+', expected = '+ expected)
+		}
+	})
+	test(msg + ' flipped() centroid', assert => {
+		const actual = flippedFace.zDirVolume()
+		const expected = faceMeshVol.centroid
+		outputLink(assert, {
+			mesh: face.toSource() + '.toMesh()',
+			drPs: [expected, actual.centroid],
+		})
+		if (!eq0(actual.volume)) {
+			// centroid doesn't make sense when volume is 0
+			assert.v3like(actual.centroid, expected, undefined, 0.05)
+		}
 	})
 }
 
@@ -372,7 +372,7 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 		assert.v3like(dpdsNumeric, dpds, 'dpds', 0.01)
 		assert.v3like(dpdtNumeric, dpdt, 'dpdt', 0.01)
 		const pmNormal = surf.normalST(pm.x, pm.y)
-		assert.ok(pmNormal.hasLength(1))
+		assert.ok(pmNormal.hasLength(1), 'pmNormal.hasLength(1)')
 		assert.v3like(pmNormal, pNormal)
 		const computedNormal = dpds.cross(dpdt).unit()
 		assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)

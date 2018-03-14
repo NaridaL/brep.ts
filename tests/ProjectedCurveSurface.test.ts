@@ -7,6 +7,7 @@ import {
     testISCurves,
     testLoopCCW,
     surfaceVolumeAndAreaTests,
+    outputLink,
 } from './manager'
 
 import {DEG, M4, V, V3} from 'ts3dutils'
@@ -29,24 +30,37 @@ import {
 } from '..'
 
 suite('ProjectedCurveSurface', () => {
-    suite('ProjectedCurveSurface', inDifferentSystems((assert, m4) => {
-        const baseCurve = BezierCurve.graphXY(2, -3, -3, 2)
-        const pcs = new ProjectedCurveSurface(baseCurve, V3.Z, undefined, undefined, -100, 100).transform(m4)
-        testParametricSurface(assert, pcs)
-    }))
-    const curve = BezierCurve.graphXY(2, -3, -3, 2)
-    const edge = PCurveEdge.forCurveAndTs(curve, 0, 1)
+    const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, 0, 2)
+    const testSurface = new ProjectedCurveSurface(baseCurve, V3.Z, undefined, undefined, 0, 2)
+    console.log('FOO', testSurface.rotateY(90 * DEG).translate(0, 0, 1).toMesh().calcVolume())
+    const edge = PCurveEdge.forCurveAndTs(baseCurve, 0, 2)
     const edges = [
         edge,
-        StraightEdge.throughPoints(curve.at(1), curve.at(1).plus(V(0, 0, 10))),
-        edge.flipped().transform(M4.translate(0, 0, 10)),
-        StraightEdge.throughPoints(curve.at(0).plus(V(0, 0, 10)), curve.at(0))]
+        StraightEdge.throughPoints(baseCurve.at(2), baseCurve.at(2).plus(V(0, 0, 2))),
+        edge.flipped().translate(0, 0, 2),
+        StraightEdge.throughPoints(baseCurve.at(0).plus(V(0, 0, 2)), baseCurve.at(0)),
+    ]
+    const testFace = new RotationFace(testSurface, edges)
+    suite('is parametric surface', inDifferentSystems((assert, m4) => {
+        testParametricSurface(assert, testSurface.transform(m4))
+        testParametricSurface(assert, testSurface.shearX(2, 2))
+    }))
+    const curve = BezierCurve.graphXY(2, -3, -3, 2)
     const surface = new ProjectedCurveSurface(curve, V3.Z)
-    const pcsFace = new RotationFace(surface, edges)
 
+    //test('(face w/ dir=V3.Z).rotateY(20 * DEG) ps test', assert => testParametricSurface(assert, pcsFace.rotateY(20 *
+    // DEG).surface as ParametricSurface))
+    suite('face w/ dir=V3.Z', () => surfaceVolumeAndAreaTests(testFace))
+    suite('(face w/ dir=V3.Z).rotateY(90 * DEG).translate(0, 0, 1)', () => surfaceVolumeAndAreaTests(testFace.rotateY(90 * DEG).translate(0, 0, 1)))
+    suite('(face w/ dir=V3.Z).shearX(2, 2)', () => surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))
+    //suite('(face w/ dir=V3.Z).foo()', () => surfaceVolumeAndAreaTests(testFace.foo()))
+    test('foo', assert => outputLink(assert, {
+        mesh: `[${testSurface}.foo().toMesh()]`,
+        edges: edges.map(e => e.foo())
+    }))
     suite('Face line intersection test', inDifferentSystems((assert, m4) => {
         const line = new L3(V3.Z, V3.X).transform(m4)
-        const d = pcsFace.transform(m4).intersectsLine(line)
+        const d = testFace.transform(m4).intersectsLine(line)
         assert.ok(d)
     }))
     const pcs = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -1, 4)
@@ -59,8 +73,6 @@ suite('ProjectedCurveSurface', () => {
         const pic = ses.isCurvesWithSurface(pcs)[0]
         testISTs(assert, pic, new PlaneSurface(P3.XY), 1)
     })
-    suite('area and volume', () => surfaceVolumeAndAreaTests(pcsFace))
-    suite('area and volume 2', () => surfaceVolumeAndAreaTests(pcsFace.transform(M4.FOO)))
 
     // create a pcs face which includes a PICurve
     const bezierEdge = Edge.forCurveAndTs(BezierCurve.EX2D, 0, 1)
@@ -91,8 +103,8 @@ suite('ProjectedCurveSurface', () => {
         testISCurves(assert, pcs, pcs2, 2)
     })
 
-    suite('area and volume with PICurves', () => surfaceVolumeAndAreaTests(piCurveFace))
-    suite('area and volume with PICurves 2', () => surfaceVolumeAndAreaTests(piCurveFace.transform(M4.FOO)))
+    suite('face w/ PICurve', () => surfaceVolumeAndAreaTests(piCurveFace))
+    suite('(face w/ PICurve).foo()', () => surfaceVolumeAndAreaTests(piCurveFace.transform(M4.FOO)))
 
     test('Face containsPoint', assert => {
         const face = new RotationFace(

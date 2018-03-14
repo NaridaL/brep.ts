@@ -18,8 +18,7 @@ import {PI,  min, max,  sign, ceil, floor, abs} from './math'
 export type FaceMesh = Mesh & { LINES: int[], TRIANGLES: int[], normals: V3[] }
 
 export abstract class Face extends Transformable {
-	// prettier-ignore
-	'constructor': new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string, info?: any) => this
+	readonly ['constructor']: new (surface: Surface, contour: Edge[], holes?: Edge[][], name?: string, info?: any) => this
 	allEdges: Edge[]
 	protected aabb: AABB
 
@@ -1384,8 +1383,8 @@ export class RotationFace extends Face {
 			maxV = max(maxV, v)
 		})
 		if (ParametricSurface.is(this.surface)) {
-			assert(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION)
-			assert(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION)
+			//assert(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION)
+			//assert(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION)
 		}
 		const uOffset = floor(minU + NLA_PRECISION), vOffset = floor(minV + NLA_PRECISION)
 		const uRes = ceil(maxU - NLA_PRECISION) - uOffset, vRes = ceil(maxV - NLA_PRECISION) - vOffset

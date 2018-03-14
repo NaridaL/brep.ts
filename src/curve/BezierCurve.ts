@@ -535,14 +535,14 @@ export class BezierCurve extends Curve {
 	 * @param {number=} sMax
 	 * @returns
 	 */
-	isInfosWithBezie3(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number) {
+	isInfosWithBezier3(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number) {
 		const handleStartTS = (startT: number, startS: number) => {
 			if (!result.some(info => eq(info.tThis, startT) && eq(info.tOther, startS))) {
 				const f1: R2_R = (t, s) => this.tangentAt(t).dot(this.at(t).minus(bezier.at(s)))
 				const f2: R2_R = (t, s) => bezier.tangentAt(s).dot(this.at(t).minus(bezier.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
-				const fdt1 = (b1, b2, t1, t2) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
-				const fdt2 = (b1, b2, t1, t2) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
+				const fdt1 = (b1: BezierCurve, b2: BezierCurve, t1: number, t2: number) => b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + (b1.tangentAt(t1).squared())
+				const fdt2 = (b1: BezierCurve, b2: BezierCurve, t1: number, t2: number) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
 				const ni = newtonIterate2dWithDerivatives(f1, f2, startT, startS, 16,
 					fdt1.bind(undefined, this, bezier), fdt2.bind(undefined, this, bezier),
 					(t, s) => -fdt2(bezier, this, s, t), (t, s) => -fdt1(bezier, this, s, t))
@@ -641,31 +641,6 @@ export class BezierCurve extends Curve {
 			return this.isInfosWithBezier(curve)
 		}
 		return curve.isInfosWithCurve(this).map(({tThis, tOther, p}) => ({tThis: tOther, tOther: tThis, p}))
-	}
-
-	getAreaInDirSurface(dir1: V3, surface: Surface, aT: number, bT: number): { centroid: V3, area: number } {
-		assertf(() => dir1.hasLength(1))
-		// INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
-		const f = (t: number) => {
-			const tangent = this.tangentAt(t)
-			const at = this.at(t)
-			const outsideVector = tangent.cross(surface.normalP(at))
-			const sign = Math.sign(outsideVector.dot(dir1))
-			return at.dot(dir1) * tangent.rejected1Length(dir1) * sign
-			//return this.at(t).dot(dir1) * tangent.minus(dir1.times(tangent.dot(dir1))).length()
-		}
-		const cx = (t: number) => {
-			const height = this.at(t).dot(dir1)
-			//console.log(t, this.at(t).minus(dir1.times(height / 2)).sce, f(t))
-			return this.at(t).minus(dir1.times(height / 2))
-		}
-
-		const area = gaussLegendreQuadrature24(f, aT, bT)
-		const x = V3.add.apply(undefined, arrayFromFunction(24, i => {
-			const t = aT + (gaussLegendre24Xs[i] + 1) / 2 * (bT - aT)
-			return cx(t).times(gaussLegendre24Weights[i] * f(t))
-		})).div(2 * (bT - aT) * area)
-		return {area: area, centroid: x}
 	}
 
 	magic(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {

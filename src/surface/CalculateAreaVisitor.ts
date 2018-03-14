@@ -1,12 +1,11 @@
 /**
  * @prettier
  */
-import { assert, assertNever, glqInSteps, V3, NLA_PRECISION, M4, round10 } from 'ts3dutils'
+import { assert, glqInSteps, V3, NLA_PRECISION, M4, assertf, eq } from 'ts3dutils'
 
 import {
 	BezierCurve,
 	ConicSurface,
-	CylinderSurface,
 	Edge,
 	EllipseCurve,
 	HyperbolaCurve,
@@ -18,10 +17,13 @@ import {
 	StraightEdge,
 	ImplicitCurve,
 	SemiEllipsoidSurface,
+	glqV3,
 } from '../index'
 
 export const CalculateAreaVisitor = {
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): number {
+		const dpds = this.dpds()
+		const dpdt = this.dpdt()
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const totalArea = edges
 			.map(edge => {
@@ -32,26 +34,28 @@ export const CalculateAreaVisitor = {
 				) {
 					const f = (t: number) => {
 						const at = edge.curve.at(t),
-							tangent = edge.tangentAt(t)
+							tangentWC = edge.tangentAt(t)
+						const stOfPWC = this.stP(at)
+						// INTEGRATE [0; atST.y]
+						//   dpds(atST.x, t) X dpdt(atST.x, t)
+						// dt
+						// dpdt is constant with respect to t
+						// => dpdt(atST.x, 0) X (INTEGRATE [0; atST.y] dpds(atST.x, t) dt)
+						// dpds(s, t) === t * dpds(s, 1)
+						// => dpdt(atST.x, 0) X (1/2 t² dpds(atST.x, 1))[0; atST.y]
+						// => dpdt(atST.x, 0) X dpds(atST.x, atST.y² / 2)
+
+						const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+							.inversed()
+							.transformVector(tangentWC).x
+
 						return (
-							at
-								.minus(this.center)
-								.cross(tangent.rejectedFrom(this.dir))
-								.length() / 2
+							dpdt(stOfPWC.x, stOfPWC.y)
+								.cross(dpds(stOfPWC.x, stOfPWC.y ** 2 / 2))
+								.length() * ds
 						)
 					}
-					// ellipse with normal1 parallel to dir1 need to be counted negatively so CCW faces result in a
-					// positive area hyperbola normal1 can be perpendicular to
-					const sign =
-						edge.curve instanceof SemiEllipseCurve
-							? -Math.sign(edge.curve.normal.dot(this.dir))
-							: -Math.sign(
-									this.center
-										.to(edge.curve.center)
-										.cross(edge.curve.f1)
-										.dot(this.dir),
-							  )
-					return glqInSteps(f, edge.aT, edge.bT, 4) * sign
+					return glqInSteps(f, edge.aT, edge.bT, 1)
 				} else if (edge.curve instanceof L3) {
 					return 0
 				} else {
@@ -61,80 +65,11 @@ export const CalculateAreaVisitor = {
 			.sum()
 		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
 		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.normal.dot(this.dir))
+		return totalArea * this.normalDir
 	},
 
 	[PlaneSurface.name](this: PlaneSurface, edges: Edge[]) {
-		let centroid = V3.O,
-			tcs = 0,
-			tct = 0,
-			totalArea = 0
-		let r1 = this.surface.right,
-			u1 = this.surface.up
-		for (const edge of edges) {
-			let edgeArea: number, centroidS, centroidT
-			if (edge instanceof StraightEdge) {
-				const midPoint = edge.a.lerp(edge.b, 0.5)
-				edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
-				centroidS = midPoint.dot(r1) / 2
-				centroidT = midPoint.dot(u1)
-				const edgeLength = edge.a.distanceTo(edge.b)
-				edgeArea = edgeLength * edge.curve.dir1.dot(r1)
-				edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
-			} else {
-				const curve = edge.curve
-				if (curve instanceof SemiEllipseCurve) {
-					const info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT)
-					edgeArea = info.area
-					const parametricCentroid = this.surface.stPFunc()(info.centroid)
-					centroidS = parametricCentroid.x
-					centroidT = parametricCentroid.y
-				} else if (curve instanceof BezierCurve) {
-					edgeArea = curve.getAreaInDirSurface(u1, this.surface, edge.aT, edge.bT).area
-				} else {
-					assertNever()
-				}
-			}
-
-			tcs += edgeArea * centroidS
-			tct += edgeArea * centroidT
-			totalArea += edgeArea
-		}
-		centroid = r1.times(tcs).plus(u1.times(tct))
-		assert(isFinite(totalArea))
-		return { area: totalArea, centroid: centroid }
-	},
-
-	/**
-	 * Calculating the surface area of a projected ellipse is analogous to the circumference of the ellipse
-	 * ==> Elliptic integrals/numeric calculation is necessary
-	 */
-	[CylinderSurface.name](this: CylinderSurface, edges: Edge[]): number {
-		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-		const totalArea = edges
-			.map(edge => {
-				if (edge.curve instanceof EllipseCurve) {
-					const f = (t: number) => {
-						const at = edge.curve.at(t),
-							tangent = edge.tangentAt(t)
-						return at.dot(this.dir) * tangent.rejected1Length(this.dir)
-					}
-					// ellipse with normal parallel to dir1 need to be counted negatively so CCW faces result in a positive
-					// area
-					const sign = -Math.sign(edge.curve.normal.dot(this.dir))
-					const val = glqInSteps(f, edge.aT, edge.bT, 4)
-					console.log('edge', edge, val)
-					return val * sign
-				} else if (edge.curve instanceof L3) {
-					return 0
-				} else {
-					throw new Error()
-				}
-			})
-			.sum()
-		// if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-		// Math.abs is not an option as "holes" may also be passed
-		return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir))
+		return planeSurfaceAreaAndCentroid(this, edges)
 	},
 
 	[SemiEllipsoidSurface.name](this: SemiEllipsoidSurface, edges: Edge[], canApproximate = true): number {
@@ -220,36 +155,6 @@ export const CalculateAreaVisitor = {
 		return areaParts.sum()
 	},
 
-	//[SemiCylinderSurface.name](this: SemiCylinderSurface, edges: Edge[], canApproximate = true): number {
-	//	assert(this.isVerticalSpheroid())
-	//	const { f1, f2, f3 } = this
-	//	// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-	//	const circleRadius = f1.length()
-	//	const f31 = f3.unit()
-	//	const totalArea = edges.map(edge => {
-	//		if (edge.curve instanceof SemiEllipseCurve) {
-	//			const f = (t: number) => {
-	//				const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t)
-	//				const localAt = this.inverseMatrix.transformPoint(at)
-	//				let angleXY = localAt.angleXY()
-	//				if (eq(Math.abs(angleXY), PI)) {
-	//					if (edge.curve.normal.isParallelTo(this.f2)) {
-	//						angleXY = PI * -Math.sign((edge.bT - edge.aT) * edge.curve.normal.dot(this.f2))
-	//					} else {
-	//						angleXY = PI * dotCurve(this.f2, tangent, edge.curve.ddt(t))
-	//					}
-	//				}
-	//				const arcLength = angleXY * circleRadius * Math.sqrt(1 - localAt.z ** 2)
-	//				const dotter = this.matrix.transformVector(new V3(-localAt.z * localAt.x / localAt.lengthXY(),
-	// -localAt.z * localAt.y / localAt.lengthXY(), localAt.lengthXY())).unit() const df3 = tangent.dot(f31) //const
-	// scaling = df3 / localAt.lengthXY() const scaling = dotter.dot(tangent) //console.log(t, at.str, arcLength,
-	// scaling) return arcLength * scaling } const val = glqInSteps(f, edge.aT, edge.bT, 1) return val } else {
-	// assertNever() } }).sum()
-
-	//
-	//	return totalArea * Math.sign(this.f1.cross(this.f2).dot(this.f3))
-	//},
-
 	[ProjectedCurveSurface.name](this: ProjectedCurveSurface, edges: Edge[]): number {
 		// calculation cannot be done in local coordinate system, as the area doesn't scale proportionally
 		const thisDir1 = this.dir.unit()
@@ -294,10 +199,12 @@ export const CalculateAreaVisitor = {
 							.dot(tangent)
 						return at.dot(thisDir1) * scaling
 					}
+					// sum += f(minT) * (start - minT)
+					// sum += f(maxT) * (maxT - end)
 					console.log('foo', start - minT, maxT - end)
 					console.log('start', start, 'end', end, 'minT', minT, 'maxT', maxT)
-					//sum += f(minT) * (start - minT - 0.5) * 0.5
-					//sum += f(maxT) * (maxT - end - 0.5) * 0.5
+					sum += f(minT) * (start - minT - 0.5) * 0.5
+					sum += f(maxT) * (maxT - end - 0.5) * 0.5
 					console.log(sum)
 					console.log('f(minT) * (start - minT - 0.5) * 0.5', f(minT) * (start - minT - 0.5) * 0.5)
 					console.log('f(maxT) * (maxT - end - 0.5) * 0.5', f(maxT) * (maxT - end - 0.5) * 0.5)
@@ -336,4 +243,66 @@ export const CalculateAreaVisitor = {
 	// edge.bT, 4) return val * sign } else if (edge.curve instanceof L3) { return 0 } else { assertNever() } }).sum()
 	// // if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here // Math.abs is
 	// not an option as "holes" may also be passed return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir)) },
+}
+
+export function planeSurfaceAreaAndCentroid(surface: PlaneSurface, edges: Edge[]) {
+	let centroid = V3.O,
+		tcs = 0,
+		tct = 0,
+		totalArea = 0
+	const r1 = surface.right,
+		u1 = surface.up
+	for (const edge of edges) {
+		let edgeArea: number, centroidS, centroidT
+		if (edge instanceof StraightEdge) {
+			const midPoint = edge.a.lerp(edge.b, 0.5)
+			edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2)
+			centroidS = midPoint.dot(r1) / 2
+			centroidT = midPoint.dot(u1)
+			const edgeLength = edge.a.distanceTo(edge.b)
+			edgeArea = edgeLength * edge.curve.dir1.dot(r1)
+			edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
+		} else {
+			const curve = edge.curve
+			if (curve instanceof SemiEllipseCurve) {
+				const info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT)
+				edgeArea = info.area
+				const parametricCentroid = surface.stPFunc()(info.centroid)
+				centroidS = parametricCentroid.x
+				centroidT = parametricCentroid.y
+			} else if (curve instanceof BezierCurve) {
+				const { aT, bT } = edge
+				const dir1 = u1
+				assertf(() => dir1.hasLength(1))
+				// INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
+				const f = (t: number) => {
+					const tangent = curve.tangentAt(t)
+					const at = curve.at(t)
+					const outsideVector = tangent.cross(surface.normalP(at))
+					const sign = Math.sign(outsideVector.dot(dir1))
+					return at.dot(dir1) * tangent.rejected1Length(dir1) * sign
+					//return curve.at(t).dot(dir1) * tangent.minus(dir1.times(tangent.dot(dir1))).length()
+				}
+				const cx = (t: number) => {
+					const height = curve.at(t).dot(dir1)
+					//console.log(t, curve.at(t).minus(dir1.times(height / 2)).sce, f(t))
+					return curve.at(t).minus(dir1.times(height / 2))
+				}
+
+				const area = gaussLegendreQuadrature24(f, aT, bT)
+				const x = glqV3(cx, aT, bT).div(2 * (bT - aT) * area)
+				return { area: area, centroid: x }
+				edgeArea = curve.getAreaInDirSurface(u1, surface, edge.aT, edge.bT).area
+			} else {
+				throw new Error()
+			}
+		}
+
+		tcs += edgeArea * centroidS
+		tct += edgeArea * centroidT
+		totalArea += edgeArea
+	}
+	centroid = r1.times(tcs).plus(u1.times(tct))
+	assert(isFinite(totalArea))
+	return { area: totalArea, centroid: centroid }
 }

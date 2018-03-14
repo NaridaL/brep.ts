@@ -1,11 +1,12 @@
+import {linkBRep, suite, test, testISCurves, testLoopCCW, testLoopContainsPoint, testParametricSurface, surfaceVolumeAndAreaTests} from './manager'
 import {DEG, V, V3} from 'ts3dutils'
 import {
-	B2T, ConicSurface, Edge, HyperbolaCurve, L3, P3, PCurveEdge, PointVsFace, SemiEllipseCurve, SemiEllipsoidSurface,
-	StraightEdge,
-	ParabolaCurve,
-	EllipseCurve,
+B2T, ConicSurface, Edge, HyperbolaCurve, L3, P3, PCurveEdge, PointVsFace, SemiEllipseCurve, SemiEllipsoidSurface,
+StraightEdge,
+ParabolaCurve,
+EllipseCurve,
+RotationFace,
 } from '..'
-import {linkBRep, suite, test, testISCurves, testLoopCCW, testLoopContainsPoint, testParametricSurface} from './manager'
 
 import {PI} from '../src/math'
 
@@ -21,6 +22,15 @@ suite('ConicSurface', () => {
 			V(0, 0, -2.4),
 			V(-12, 0, 0)))
 	})
+	const testFace = new RotationFace(new ConicSurface(V3.Z,V(-1, 0, 0),V3.Y,V(0, 0, -1)), [
+		new PCurveEdge(new HyperbolaCurve(V(0.10792279653395696, 0.0905579787672639, 1),V(0, 0, -0.1408832052805518),V(0.0905579787672639, -0.10792279653395696, 0),-7,7),V(-0.4634542598189221, 0.7714986384017117, 0.1),V(0.1, 0.1, 0.8585786437626904),-2.5414277085137025,-0.08737743596203365,undefined,V(0.5785088487178852, -0.6894399988070802, 0.8889049006895381),V(0.09090389553440875, -0.10833504408394042, 0.012325683343243887),'genseg17'),
+		new PCurveEdge(new HyperbolaCurve(V(-0.00792279653395693, 0.009442021232736126, 1),V(0, 0, -0.012325683343243885),V(0.009442021232736126, 0.00792279653395693, 0),-7,7),V(0.1, 0.1, 0.8585786437626904),V(0.6814525440390486, 0.5878966152502569, 0.1),3.131301331471644,4.983809888872043,undefined,V(0.10833504408394039, 0.09090389553440875, -0.14088320528055173),V(0.6894399988070802, 0.5785088487178854, -0.8999155946699233),'genseg18'),
+		new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0.09999999999999998),V(0.9, 0, 0),V(0, 0.9, 0),0,3.141592653589793),V(0.6814525440390486, 0.5878966152502569, 0.1),V(-0.4634542598189221, 0.7714986384017117, 0.1),0.7118273326574678,2.1117446875459924,undefined,V(-0.5878966152502568, 0.6814525440390486, 0),V(-0.7714986384017115, -0.4634542598189224, 0),'genseg19')], [])
+	test('testFace surface is parametric surface', assert => testParametricSurface(assert, testFace.surface as ConicSurface))
+	suite('testFace', () => surfaceVolumeAndAreaTests(testFace))
+	suite('testFace.scale(2)', () => surfaceVolumeAndAreaTests(testFace.scale(2)))
+	suite('testFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))
+	suite('testFace.foo()', () => surfaceVolumeAndAreaTests(testFace.foo()))
 	test('testLoopCCW', assert => {
 		const surface = new ConicSurface(V(0, 0, 53.51411369448604), V(198.46477746372744, 0, 0), V(0, 198.46477746372744, 0), V(0, 0, 191.42941531213293)).scale(1 / 200)
 		const loop = [

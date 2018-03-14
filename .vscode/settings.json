@@ -10,5 +10,6 @@
     "[typescript]": {
         "editor.formatOnSave": true,
         "editor.rulers": [120]
-    }
+    },
+    "tslint.autoFixOnSave": true
 }

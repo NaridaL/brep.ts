@@ -265,3 +265,10 @@ suite('serialization', () => {
 		b2equals(assert, output, input)
 	})
 })
+
+suite('tsgl', () => {
+    test('centroid of tetrahedron O X Y Z', assert => {
+        const centroid = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z).toMesh().calcVolume().centroid
+        assert.v3like(centroid, V(0.25, 0.25, 0.25))
+    })
+})

@@ -14,8 +14,7 @@ export abstract class Curve extends Transformable implements Equalable {
 	static hlol = 0
 	tIncrement: number
 	hlol: number
-	// prettier-ignore
-	'constructor': new (...args: any[]) => this
+	readonly ['constructor']: new (...args: any[]) => this
 
 	constructor(readonly tMin: number, readonly tMax: number) {
 		super()
@@ -230,7 +229,7 @@ export abstract class Curve extends Transformable implements Equalable {
 
 		const STEPS = 32
         if (undefined === tStart) {
-            tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS)
+            tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / (STEPS - 1))
                 .withMax(t => -this.at(t).distanceTo(p))
         }
 
