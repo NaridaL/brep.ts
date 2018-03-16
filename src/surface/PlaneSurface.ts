@@ -1,7 +1,7 @@
 import {arrayFromFunction, assert, assertInst, isCCW, M4, V, V3, callsce} from 'ts3dutils'
 import {Mesh, pushQuad} from 'tsgl'
 
-import {Curve, Edge, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface,} from '../index'
+import {Curve, Edge, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface, ImplicitCurve,} from '../index'
 
 export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
@@ -69,6 +69,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {
+	    assert(Edge.isLoop(contour), 'isLoop')
 		return isCCW(contour.flatMap(edge => edge.points()), this.plane.normal1)
 	}
 
@@ -99,7 +100,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	containsCurve(curve: Curve): boolean {
-		return this.plane.containsCurve(curve)
+		return curve instanceof ImplicitCurve ? super.containsCurve(curve) : this.plane.containsCurve(curve)
 	}
 
 	transform(m4: M4) {
@@ -114,17 +115,17 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return [this.plane, this.right, this.up]
 	}
 
-	toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {
-		const mesh = new Mesh()
-			.addIndexBuffer('TRIANGLES')
-			.addVertexBuffer('normals', 'ts_Normal')
-		const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor)
-		mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p))
-		mesh.normals = arrayFromFunction(4, i => this.plane.normal1)
-		pushQuad(mesh.TRIANGLES, false, 0, 1, 2, 3)
-		mesh.compile()
-		return mesh
-	}
+	// toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {
+	// 	const mesh = new Mesh()
+	// 		.addIndexBuffer('TRIANGLES')
+	// 		.addVertexBuffer('normals', 'ts_Normal')
+	// 	const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor)
+	// 	mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p))
+	// 	mesh.normals = arrayFromFunction(4, i => this.plane.normal1)
+	// 	pushQuad(mesh.TRIANGLES, false, 0, 1, 2, 3)
+	// 	mesh.compile()
+	// 	return mesh
+	// }
 
 	dpds(): (s: number, t: number) => V3 {
 		return () => this.right
@@ -141,4 +142,11 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	didp(pWC: V3): V3 {
 		return this.plane.normal1
 	}
+
+	normalST() {
+	    return this.plane.normal1
+    }
 }
+
+PlaneSurface.prototype.uStep = 1e6
+PlaneSurface.prototype.vStep = 1e6

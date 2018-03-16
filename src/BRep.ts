@@ -57,7 +57,7 @@ export function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, face
 	function nextStart() { return edges.find(edge => !visited.has(edge)) }
 
 	const loops = []
-	let startEdge, currentEdge
+	let startEdge, currentEdge: Edge|undefined
 	while (startEdge = nextStart()) {
 		currentEdge = startEdge
 		const loop = []
@@ -1216,7 +1216,7 @@ export function followAlgorithmPP(
         st2s.push(st2)
         if (i > 4) {
             if (!bounds1(st1.x, st1.y) || !bounds2(st2.x, st2.y)) {
-                break;
+                break
             }
         }
         Q = Q.plus(tangent)

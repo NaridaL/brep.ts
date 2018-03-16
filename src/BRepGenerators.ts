@@ -1,17 +1,58 @@
+/**
+ * @prettier
+ */
 import * as opentype from 'opentype.js'
 import {
-	arrayFromFunction, assert, assertf, assertInst, assertNumbers, assertVectors, callsce, eq, eq0, GOLDEN_RATIO, int,
-	le, lerp, lt, M4, MINUS, NLA_PRECISION, raddd, snap, TAU, V, V3, DEG,
+	arrayFromFunction,
+	assert,
+	assertf,
+	assertInst,
+	assertNumbers,
+	assertVectors,
+	callsce,
+	eq,
+	eq0,
+	GOLDEN_RATIO,
+	int,
+	le,
+	lerp,
+	lt,
+	M4,
+	MINUS,
+	raddd,
+	snap,
+	TAU,
+	V,
+	V3,
+	DEG,
 } from 'ts3dutils'
 
 import {
-	BRep, BezierCurve, ConicSurface, Curve, Edge, EllipseCurve, Face, FaceInfoFactory, getGlobalId, L3, P3, PCurveEdge,
-	PlaneFace, PlaneSurface, ProjectedCurveSurface, SemiCylinderSurface, SemiEllipseCurve,
-	SemiEllipsoidSurface, StraightEdge, Surface, XiEtaCurve,
+	BRep,
+	BezierCurve,
+	ConicSurface,
+	Curve,
+	Edge,
+	EllipseCurve,
+	Face,
+	FaceInfoFactory,
+	getGlobalId,
+	L3,
+	P3,
+	PCurveEdge,
+	PlaneFace,
+	PlaneSurface,
+	ProjectedCurveSurface,
+	SemiCylinderSurface,
+	SemiEllipseCurve,
+	SemiEllipsoidSurface,
+	StraightEdge,
+	Surface,
+	XiEtaCurve,
+	RotatedCurveSurface,
 } from './index'
 
-import {PI, min, max, ceil} from './math'
-
+import { PI, min, max } from './math'
 
 /**
  * Create a surface by projecting a curve in a direction.
@@ -39,7 +80,13 @@ export function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surfac
 /**
  * Create a surface by projecting a curve onto a point.
  */
-export function projectPointCurve(curve: Curve, tMin = curve.tMin, tMax = curve.tMax, p: V3, flipped: boolean): Surface {
+export function projectPointCurve(
+	curve: Curve,
+	tMin = curve.tMin,
+	tMax = curve.tMax,
+	p: V3,
+	flipped: boolean,
+): Surface {
 	if (curve instanceof L3) {
 		const up = curve.anchor.to(p).rejectedFrom(curve.dir1)
 		return PlaneSurface.forAnchorAndPlaneVectors(curve.anchor, curve.dir1, up.unit(), tMin, tMax, 0, up.length())
@@ -56,44 +103,90 @@ export function projectPointCurve(curve: Curve, tMin = curve.tMin, tMax = curve.
  * Create a surface by rotating a curve in the XZ-plane, with X > 0, around the Z-axis according to the right-hand rule.
  * @param curve The curve to rotate.
  * @param rotationAxis The line around which to rotate the curve.
- * @param flipped Whether the surface's default orientation (normal = curve tangent cross rotation tangent) should be flipped.
+ * @param flipped Whether the surface's default orientation (normal = curve tangent cross rotation tangent) should be
+ * flipped.
  */
-export function rotateCurve(curve: Curve, tMin = curve.tMin, tMax = curve.tMax, degrees: raddd, flipped: boolean): Surface {
+export function rotateCurve(
+	curve: Curve,
+	tMin = curve.tMin,
+	tMax = curve.tMax,
+	degrees: raddd,
+	flipped: boolean,
+): Surface {
 	assertf(() => new PlaneSurface(P3.ZX).containsCurve(curve))
 	if (curve instanceof L3) {
 		if (curve.dir1.isParallelTo(V3.Z)) {
 			if (eq0(curve.anchor.x)) {
 				return undefined
 			}
-			const baseEllipse = new SemiEllipseCurve(V3.O, curve.anchor.xy(), curve.anchor.xy().getPerpendicular(), 0, degrees)
-			const factor = !flipped ? 1 : -1
-			return new SemiCylinderSurface(baseEllipse, V3.Z.times(factor), 0, degrees, curve.at(tMin).z * factor, curve.at(tMax).z * factor)
+			const baseEllipse = new SemiEllipseCurve(
+				V3.O,
+				curve.anchor.xy(),
+				curve.anchor.xy().getPerpendicular(),
+				0,
+				degrees,
+			)
+			// if curve.dir1 is going up (+Z), it the cylinder surface should face inwards
+			const factor = (curve.dir1.z > 0 ? -1 : 1) * (flipped ? -1 : 1)
+			const [zMin, zMax] = [curve.at(tMin).z * factor, curve.at(tMax).z * factor].sort(MINUS)
+			return new SemiCylinderSurface(baseEllipse, V3.Z.times(factor), 0, degrees, zMin, zMax)
 		}
-		if (curve.at(tMin).dot(curve.dir1) * curve.at(tMax).dot(curve.dir1) < 0) {
-			throw new Error('line cannot cross the Z axis in the [tMin, tMax] interval, as conic surfaces cannot have an hourglass shape.')
+		if (
+			curve
+				.at(tMin)
+				.xy()
+				.dot(curve.dir1) *
+				curve
+					.at(tMax)
+					.xy()
+					.dot(curve.dir1) <
+			0
+		) {
+			throw new Error(
+				'line cannot cross the Z axis in the [tMin, tMax] interval, as conic surfaces cannot have an hourglass shape.',
+			)
 		}
 		if (curve.dir1.isPerpendicularTo(V3.Z)) {
 			// if line.dir1 is pointing aways from V3.Z, then the surface should face up
-			const factor = (curve.at(tMin).dot(curve.dir1) > 0 ? 1 : -1) * (flipped ? -1 : 1)
+			const factor = (curve.at(lerp(tMin, tMax, 0.5)).dot(curve.dir1) > 0 ? 1 : -1) * (flipped ? -1 : 1)
 			return new PlaneSurface(new P3(V3.Z.times(factor), curve.anchor.z * factor))
 		} else {
 			// apex is intersection of segment with Z-axis
-			const a = curve.at(tMin), b = curve.at(tMax)
+			const a = curve.at(tMin),
+				b = curve.at(tMax)
 			const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
 			const apex = new V3(0, 0, apexZ)
-			const flipped = a.x > b.x
-			return new ConicSurface(apex, curve.dir1, )
+			const factor = -(a.x > b.x ? -1 : 1) * (flipped ? -1 : 1)
+			const s = new ConicSurface(
+				apex,
+				new V3(curve.dir1.lengthXY(), 0, 0),
+				new V3(0, curve.dir1.lengthXY(), 0),
+				new V3(0, 0, (a.x > b.x ? -1 : 1) * curve.dir1.z),
+				0,
+				degrees,
+				0,
+				1,
+			)
+			return factor > 0 ? s : s.flipped()
 		}
 	}
 	if (curve instanceof SemiEllipseCurve) {
+		const a = curve.at(tMin),
+			b = curve.at(tMax)
 		const ell = curve.rightAngled()
-		const f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z)
+		const f1Perp = ell.f1.isPerpendicularTo(V3.Z),
+			f2Perp = ell.f2.isPerpendicularTo(V3.Z)
 		if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
-			let f3length = f1Perp ? ell.f1.length() : ell.f2.length()
-			if (flipped) {
-				f3length *= -1
+			flipped = flipped == a.z > b.z
+			let width = ell.f1.length(),
+				height = ell.f2.length()
+			if (ell.f1.isParallelTo(V3.Z)) {
+				[width, height] = [height, width]
 			}
-			return new SemiEllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length))
+			return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
+		} else {
+			const s = new RotatedCurveSurface(curve, tMin, tMax)
+			return s
 		}
 	}
 	throw new Error()
@@ -107,25 +200,33 @@ export namespace B2T {
 	 * @param depth z-direction size.
 	 * @param name
 	 */
-	export function box(width: number = 1, height: number = 1, depth: number = 1, name: string = 'box' + getGlobalId()): BRep {
+	export function box(
+		width: number = 1,
+		height: number = 1,
+		depth: number = 1,
+		name: string = 'box' + getGlobalId(),
+	): BRep {
 		assertNumbers(width, height, depth)
 		assert('string' === typeof name)
-		const baseVertices = [
-			new V3(0, 0, 0),
-			new V3(0, height, 0),
-			new V3(width, height, 0),
-			new V3(width, 0, 0),
-		]
+		const baseVertices = [new V3(0, 0, 0), new V3(0, height, 0), new V3(width, height, 0), new V3(width, 0, 0)]
 		const generator = callsce('B2T.box', width, height, depth, name)
 		return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, depth), name, generator)
 	}
 
-	export function puckman(radius: number, rads: raddd, height: number, name: string='puckman' + getGlobalId()): BRep {
+	export function puckman(
+		radius: number,
+		rads: raddd,
+		height: number,
+		name: string = 'puckman' + getGlobalId(),
+	): BRep {
 		assertf(() => lt(0, radius))
 		assertf(() => lt(0, rads) && le(rads, TAU))
 		assertf(() => lt(0, height))
-		const edges = StraightEdge.chain([V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)], true)
-		return B2T.rotateEdges(edges, rads, name  )
+		const edges = StraightEdge.chain(
+			[V3.O, new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)],
+			true,
+		)
+		return B2T.rotateEdges(edges, rads, name)
 	}
 
 	export function registerVertexName(map: Map<V3, string>, name: string, p: V3) {
@@ -144,12 +245,14 @@ export namespace B2T {
 	 * @param gen
 	 * @param infoFactory
 	 */
-	export function extrudeEdges(baseFaceEdges: Edge[],
-								 baseFacePlane: P3 = P3.XY,
-								 offset: V3 = V3.Z,
-								 name: string = 'extrude' + getGlobalId(),
-								 gen?: string,
-								 infoFactory?: FaceInfoFactory<any>): BRep {
+	export function extrudeEdges(
+		baseFaceEdges: Edge[],
+		baseFacePlane: P3 = P3.XY,
+		offset: V3 = V3.Z,
+		name: string = 'extrude' + getGlobalId(),
+		gen?: string,
+		infoFactory?: FaceInfoFactory<any>,
+	): BRep {
 		baseFaceEdges = fixEdges(baseFaceEdges)
 		//Array.from(combinations(baseFaceEdges.length)).forEach(({i, j}) => {
 		//	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce +
@@ -174,12 +277,12 @@ export namespace B2T {
 		const topInfo = infoFactory && infoFactory.extrudeBottom(topSurface, topFaceEdges)
 		const topFace = new PlaneFace(topSurface, topFaceEdges, [], name + 'Top', topInfo)
 
-
 		baseFaceEdges.forEach(edge => B2T.registerVertexName(vertexNames, edge.name + 'A', edge.a))
 		topFaceEdges.forEach(edge => B2T.registerVertexName(vertexNames, edge.name + 'A', edge.a))
 
-		const ribs = arrayFromFunction(edgeCount,
-			i => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i))
+		const ribs = arrayFromFunction(edgeCount, i =>
+			StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + 'Rib' + i),
+		)
 
 		const faces = baseFaceEdges.map((edge, i) => {
 			const faceName = name + 'Wall' + i
@@ -194,13 +297,22 @@ export namespace B2T {
 		return new BRep(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames)
 	}
 
-
-	export function cylinder(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cylinder' + getGlobalId()): BRep {
+	export function cylinder(
+		radius: number = 1,
+		height: number = 1,
+		rads: raddd = TAU,
+		name: string = 'cylinder' + getGlobalId(),
+	): BRep {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return rotateEdges(StraightEdge.chain(vertices, true), rads, name)
 	}
 
-	export function cone(radius: number = 1, height: number = 1, rads: raddd = TAU, name: string = 'cone' + getGlobalId()): BRep {
+	export function cone(
+		radius: number = 1,
+		height: number = 1,
+		rads: raddd = TAU,
+		name: string = 'cone' + getGlobalId(),
+	): BRep {
 		const vertices = [new V3(0, 0, 0), new V3(radius, 0, height), new V3(0, 0, height)]
 		return rotateEdges(StraightEdge.chain(vertices, true), rads, name)
 	}
@@ -208,10 +320,14 @@ export namespace B2T {
 	export function sphere(radius: number = 1, name: string = 'sphere' + getGlobalId(), rot: raddd = TAU): BRep {
 		const ee = PCurveEdge.create(
 			new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
-			new V3(0, 0, -radius), new V3(0, 0, radius),
-			0, PI,
+			new V3(0, 0, -radius),
+			new V3(0, 0, radius),
+			0,
+			PI,
 			undefined,
-			new V3(radius, 0, 0), new V3(-radius, 0, 0))
+			new V3(radius, 0, 0),
+			new V3(-radius, 0, 0),
+		)
 		const generator = callsce('B2T.sphere', radius, name, rot)
 		return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator)
 	}
@@ -224,7 +340,9 @@ export namespace B2T {
 	export function menger(res: int = 2, name: string = 'menger' + getGlobalId()): BRep {
 		let result = B2T.box(1, 1, 1)
 		if (0 == res) return result
-		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
+		const punch = B2T.box(1 / 3, 1 / 3, 2)
+			.translate(1 / 3, 1 / 3, -1 / 2)
+			.flipped()
 
 		function recurse(steps: int, m4: M4) {
 			result = result.and(punch.transform(m4))
@@ -232,7 +350,7 @@ export namespace B2T {
 				const scaled = m4.times(M4.scale(1 / 3, 1 / 3, 1))
 				for (let i = 0; i < 9; i++) {
 					if (4 == i) continue
-					recurse(steps - 1, scaled.times(M4.translate(i % 3, i / 3 | 0, 0)))
+					recurse(steps - 1, scaled.times(M4.translate(i % 3, (i / 3) | 0, 0)))
 				}
 			}
 		}
@@ -246,7 +364,9 @@ export namespace B2T {
 	export function menger2(res: int = 2, name: string = 'menger' + getGlobalId()): BRep {
 		if (0 == res) return B2T.box(1, 1, 1)
 
-		const punch = B2T.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped()
+		const punch = B2T.box(1 / 3, 1 / 3, 2)
+			.translate(1 / 3, 1 / 3, -1 / 2)
+			.flipped()
 		const stencilFaces: Face[] = []
 
 		function recurse(steps: int, m4: M4) {
@@ -255,7 +375,7 @@ export namespace B2T {
 				const scaled = m4.times(M4.scale(1 / 3, 1 / 3, 1))
 				for (let i = 0; i < 9; i++) {
 					if (4 == i) continue
-					recurse(steps - 1, scaled.times(M4.translate(i % 3, i / 3 | 0, 0)))
+					recurse(steps - 1, scaled.times(M4.translate(i % 3, (i / 3) | 0, 0)))
 				}
 			}
 		}
@@ -276,103 +396,89 @@ export namespace B2T {
 	 * @param rads
 	 * @param name
 	 */
-	export function torus(rSmall: number, rLarge: number, rads: raddd=TAU, name: string='torus' + getGlobalId()): BRep {
+	export function torus(
+		rSmall: number,
+		rLarge: number,
+		rads: raddd = TAU,
+		name: string = 'torus' + getGlobalId(),
+	): BRep {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
-		const curve = SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0))
-		const baseEdges = [PCurveEdge.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge.forCurveAndTs(curve, 0, Math.PI)]
-		return B2T.rotateEdges(baseEdges, rads, name )
+		const curves = [
+			SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)),
+			SemiEllipseCurve.semicircle(-rSmall, new V3(rLarge, 0, 0)),
+		]
+		const baseEdges = curves.map(c => PCurveEdge.forCurveAndTs(c, 0, Math.PI).rotateX(PI / 2))
+		return B2T.rotateEdges(baseEdges, rads, name)
 	}
 
 	/**
 	 * Create a [BRep] by smoothly rotating edges around Z.
 	 * baseLoop should be CCW on XZ plane for a bounded BRep
 	 */
-	export function rotateEdges(baseLoop: Edge[], totalRads: raddd, name: string = 'rotateEdges' + getGlobalId(), generator?: string, infoFactory?: FaceInfoFactory<any>): BRep {
+	export function rotateEdges(
+		baseLoop: Edge[],
+		totalRads: raddd,
+		name: string = 'rotateEdges' + getGlobalId(),
+		generator?: string,
+		infoFactory?: FaceInfoFactory<any>,
+	): BRep {
+		assert(baseLoop.every(e => new PlaneSurface(P3.ZX).containsCurve(e.curve)))
 		assert(!eq(PI, totalRads) || PI == totalRads) // URHGJ
 		assertf(() => lt(0, totalRads) && le(totalRads, TAU))
 		totalRads = snap(totalRads, TAU)
+		assertf(() => Edge.isLoop(baseLoop))
 		const basePlane = new PlaneSurface(P3.ZX.flipped()).edgeLoopCCW(baseLoop)
 			? new PlaneSurface(P3.ZX.flipped())
 			: new PlaneSurface(P3.ZX)
-		assertf(() => Edge.isLoop(baseLoop))
-		const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
-		const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
+		// const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
+		// const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
 		const open = !eq(totalRads, 2 * PI)
 		const baseRibCurves = baseLoop.map(edge => {
-			const a = edge.a, radius = a.lengthXY()
+			const a = edge.a,
+				radius = a.lengthXY()
 			if (!eq0(radius)) {
 				return new SemiEllipseCurve(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0))
 			}
 			return undefined
 		})
 		const baseSurfaces = baseLoop.map((edge, i) => {
-			const ipp = (i + 1) % baseLoop.length
-			if (edge instanceof StraightEdge) {
-				const line = edge.curve
-				if (line.dir1.isParallelTo(V3.Z)) {
-					if (eq0(edge.a.x)) {
-						return undefined
-					}
-					const flipped = edge.a.z > edge.b.z
-					const [tMin, tMax] = [0, edge.b.z - edge.a.z].sort(MINUS)
-					return new SemiCylinderSurface(baseRibCurves[i], !flipped ? V3.Z : V3.Z.negated(),
-						undefined, undefined, tMin, tMax)
-				} else if (line.dir1.isPerpendicularTo(V3.Z)) {
-					const flipped = edge.a.x > edge.b.x
-					let surface = new PlaneSurface(new P3(V3.Z, edge.a.z))
-					if (!flipped) surface = surface.flipped()
-					return surface
-				} else {
-					// apex is intersection of segment with Z-axis
-					const a = edge.a, b = edge.b
-					const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
-					const apex = new V3(0, 0, apexZ)
-					const flipped = edge.a.z > edge.b.z
-					const base = baseRibCurves[a.x > b.x ? i : ipp] as SemiEllipseCurve
-					const surface = ConicSurface.atApexThroughEllipse(apex, base)
-					return flipped != (-1 == surface.normalDir) ? surface.flipped() : surface
-				}
-			}
-			/*
-			    at(t) = f1 * cos t + f2 sin t
-			    rotated projection
-			    at2(t) = V(at(t).lengthXY(), 0, at(t).z)
-			    at2(t).x = sqrt((f1x cos t + f2x sin t)² + (f1y cos t + f2y sin t)²)
-			    at2(t).x = sqrt((f1x² + f1y²) cos² t + (f1x f2x + f1y f2y) cos t sin t + (f2x² + f2y²)sin²t)
-			    at2(t).x = sqrt((a² + b²) cos² t + (a c + b d) cos t sin t + (c² + d²)sin²t)
-			    (x cos t + y sin t)² = x² cos² t + x y cos t sin t + y² sin² t
-			 */
-			if (edge.curve instanceof SemiEllipseCurve) {
-				const flipped = edge.a.z > edge.b.z
-				const ell = edge.curve.rightAngled()
-				assert(ell.normal.isPerpendicularTo(V3.Z))
-				assert(L3.Z.containsPoint(ell.center))
-				let width = ell.f1.length(), height = ell.f2.length()
-				if (!ell.isCircular()) {
-					assert(ell.f1.isParallelTo(V3.Z) && ell.f2.isParallelTo(V3.X)
-						|| ell.f2.isParallelTo(V3.Z) && ell.f1.isParallelTo(V3.X))
-					if (ell.f1.isParallelTo(V3.Z)) {
-						[width, height] = [height, width]
-					}
-				}
-				return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
-			} else {
-			    throw new Error(edge.toString())
-			}
+			const s = rotateCurve(edge.curve, edge.minT, edge.maxT, PI, edge.deltaT() > 0)
+			const t = lerp(edge.aT, edge.bT, 0.5)
+			s &&
+				assert(
+					edge
+						.tangentAt(t)
+						.cross(V3.Y)
+						.dot(s.normalP(edge.curve.at(t))) < 0,
+				)
+			return s
 		})
-		let stepStartEdges = baseLoop, stepEndEdges: Edge[]
+		let stepStartEdges = baseLoop,
+			stepEndEdges: Edge[]
 		const faces = []
 		for (let rot = 0; rot < totalRads; rot += PI) {
-			const aT = 0, bT = min(totalRads - rot, PI)
-			const rotation = M4.rotateZ(rot + bT), rotrot = M4.rotateZ(rot)
+			const aT = 0,
+				bT = min(totalRads - rot, PI)
+			const rotation = M4.rotateZ(rot + bT)
 			stepEndEdges = rot + bT == TAU ? baseLoop : baseLoop.map(edge => edge.transform(rotation))
 			const ribs = arrayFromFunction(baseLoop.length, i => {
-				const a = stepStartEdges[i].a, radius = a.lengthXY()
+				const a = stepStartEdges[i].a,
+					radius = a.lengthXY()
 				const b = stepEndEdges[i].a
 				if (!eq0(radius)) {
 					const curve = 0 === rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
-					return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + 'rib' + i)
+					return new PCurveEdge(
+						curve,
+						a,
+						b,
+						aT,
+						bT,
+						undefined,
+						curve.tangentAt(aT),
+						curve.tangentAt(bT),
+						name + 'rib' + i,
+					)
 				}
 				return undefined
 			})
@@ -384,7 +490,8 @@ export namespace B2T {
 						stepStartEdges[edgeIndex].flipped(),
 						!eq0(edge.a.x) && ribs[edgeIndex],
 						stepEndEdges[edgeIndex],
-						!eq0(edge.b.x) && ribs[ipp].flipped()].filter(x => x)
+						!eq0(edge.b.x) && ribs[ipp].flipped(),
+					].filter(x => x)
 					const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
 					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
 					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
@@ -395,10 +502,12 @@ export namespace B2T {
 		if (open) {
 			const endFaceEdges = Edge.reversePath(stepEndEdges)
 			const infoStart = infoFactory && infoFactory.rotationStart(basePlane, baseLoop, undefined)
-			const infoEnd = infoFactory && infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined)
+			const infoEnd =
+				infoFactory && infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined)
 			faces.push(
 				new PlaneFace(basePlane, baseLoop, undefined, name + 'start', infoStart),
-				new PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + 'end', infoEnd))
+				new PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + 'end', infoEnd),
+			)
 		}
 		const infiniteVolume = new PlaneSurface(P3.ZX).edgeLoopCCW(baseLoop)
 		return new BRep(faces, infiniteVolume, generator)
@@ -443,7 +552,9 @@ export namespace B2T {
 	// return new BRep(faces, undefined) }
 
 	export function quaffle() {
-		const baseK = B2T.sphere(1).translate(0, 1.7).flipped()
+		const baseK = B2T.sphere(1)
+			.translate(0, 1.7)
+			.flipped()
 		//const baseK = B2T.box().scale(0.2).translate(0, 0.95).flipped()
 		// const vs = B2T.DODECAHEDRON_VERTICES.concat(
 		// B2T.DODECAHEDRON_FACE_VERTICES.map(fis => fis
@@ -457,28 +568,34 @@ export namespace B2T {
 
 	export function extrudeFace(face: PlaneFace, dir: V3) {
 		return new BRep(
-			extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(
-				face, face.translate(dir.x, dir.y, dir.z).flipped(),
-				face.holes.flatMap(
-					hole =>
-						extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false)
+			extrudeEdges(face.contour, face.surface.plane, dir)
+				.faces.slice(0, -2)
+				.concat(
+					face,
+					face.translate(dir.x, dir.y, dir.z).flipped(),
+					face.holes.flatMap(hole =>
+						extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2),
+					),
+				),
+			false,
+		)
 	}
 
 	export let defaultFont: opentype.Font
 
 	export function loadFonts(): Promise<opentype.Font> {
-		return loadFont('fonts/FiraSansMedium.woff').then(font => defaultFont = font)
+		return loadFont('fonts/FiraSansMedium.woff').then(font => (defaultFont = font))
 	}
 
 	const loadedFonts = new Map<string, opentype.Font>()
 
 	export function loadFont(fontPath: string): Promise<opentype.Font> {
-		return new Promise<opentype.Font>(function (resolve, reject) {
+		return new Promise<opentype.Font>(function(resolve, reject) {
 			const font = loadedFonts.get(fontPath)
 			if (font) {
 				resolve(font)
 			} else {
-				opentype.load(fontPath, function (err, f) {
+				opentype.load(fontPath, function(err, f) {
 					if (err) {
 						reject(err)
 					} else {
@@ -494,7 +611,7 @@ export namespace B2T {
 		if (defaultFont) {
 			callback()
 		} else {
-			opentype.load('fonts/FiraSansMedium.woff', function (err, font) {
+			opentype.load('fonts/FiraSansMedium.woff', function(err, font) {
 				if (err) {
 					throw new Error('Could not load font: ' + err)
 				} else {
@@ -529,30 +646,39 @@ export namespace B2T {
 			return loop
 		})
 		const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace as any)
-		const generator = `B2T.text(${text.sce}, ${size}, ${depth})`
+		const generator = callsce(text, size, depth)
 		return BRep.join(faces.map(face => B2T.extrudeFace(face as PlaneFace, V(0, 0, -depth))), generator)
 	}
 
 	export function minorityReport() {
 		const a = B2T.sphere()
-		const b = B2T.text('LEO CROW', 64, 128).scale(0.1 / 32).translate(-0.5, -0.05, 1.2).flipped()
+		const b = B2T.text('LEO CROW', 64, 128)
+			.scale(0.1 / 32)
+			.translate(-0.5, -0.05, 1.2)
+			.flipped()
 		const c = B2T.sphere(0.98)
 		return a.and(b).plus(c)
 	}
 
 	export function whatever() {
 		const iso = isocahedron()
-		const numbersBRep = BRep.join(iso.faces.map((face, i) => {
-			const numberBRep = text('' + (i + 1), 0.4, -2)
-			const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
+		const numbersBRep = BRep.join(
+			iso.faces.map((face, i) => {
+				const numberBRep = text('' + (i + 1), 0.4, -2)
+				const centroid = face.contour
+					.map(edge => edge.a)
+					.reduce((a, b) => a.plus(b), V3.O)
+					.div(3)
 
-			const sys = M4.forSys(
-				face.contour[0].aDir,
-				centroid.cross(face.contour[0].aDir),
-				centroid.unit(),
-				centroid)
-			return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)))
-		}))
+				const sys = M4.forSys(
+					face.contour[0].aDir,
+					centroid.cross(face.contour[0].aDir),
+					centroid.unit(),
+					centroid,
+				)
+				return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)))
+			}),
+		)
 		const s = sphere(0.9)
 		//return iso.and(numbersBRep)
 		return iso.and(s).and(numbersBRep)
@@ -560,25 +686,31 @@ export namespace B2T {
 	}
 
 	export function whatever3() {
-		return B2T.rotateEdges(StraightEdge.chain([V3.O, V3.X, V3.Z]), TAU)
-		.and(
-			B2T.box().rotateZ(40 * DEG).translate(0.1, 0.1, 0.1)
-		).faces.filter(x => x.surface instanceof ConicSurface).sce
+		const t = B2T.torus(1, 2)
+		return B2T.box(5, 5, 2)
+			.translate(-2.5, -2.5)
+			.minus(t)
 	}
 
 	export function d20() {
 		const iso = isocahedron()
-		const numbersBRep = BRep.join(iso.faces.map((face, i) => {
-			const numberBRep = text('' + (i + 1), 0.4, -2)
-			const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3)
+		const numbersBRep = BRep.join(
+			iso.faces.map((face, i) => {
+				const numberBRep = text('' + (i + 1), 0.4, -2)
+				const centroid = face.contour
+					.map(edge => edge.a)
+					.reduce((a, b) => a.plus(b), V3.O)
+					.div(3)
 
-			const sys = M4.forSys(
-				face.contour[0].aDir,
-				centroid.cross(face.contour[0].aDir),
-				centroid.unit(),
-				centroid)
-			return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)))
-		}))
+				const sys = M4.forSys(
+					face.contour[0].aDir,
+					centroid.cross(face.contour[0].aDir),
+					centroid.unit(),
+					centroid,
+				)
+				return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)))
+			}),
+		)
 		const s = sphere(0.9)
 		//return iso.and(numbersBRep)
 		return iso.and(s).and(numbersBRep)
@@ -602,18 +734,22 @@ export namespace B2T {
 	export function rotStep(edges: Edge[], totalRads: raddd, count: int): BRep
 	export function rotStep(edges: Edge[], angles: raddd[]): BRep
 	export function rotStep(edges: Edge[], totalRadsOrAngles: raddd | raddd[], countO?: int): BRep {
-		const angles: number[] = 'number' === typeof totalRadsOrAngles
-			? arrayFromFunction(countO, i => (i + 1) / countO * totalRadsOrAngles)
-			: totalRadsOrAngles
+		const angles: number[] =
+			'number' === typeof totalRadsOrAngles
+				? arrayFromFunction(countO, i => (i + 1) / countO * totalRadsOrAngles)
+				: totalRadsOrAngles
 		const count = angles.length
 		const open = !eq(TAU, angles.last)
-		const ribs = [edges, ...angles.map(phi => {
-			if (eq(TAU, phi)) {
-				return edges
-			}
-			const matrix = M4.rotateZ(phi)
-			return edges.map(edge => edge.transform(matrix))
-		})]
+		const ribs = [
+			edges,
+			...angles.map(phi => {
+				if (eq(TAU, phi)) {
+					return edges
+				}
+				const matrix = M4.rotateZ(phi)
+				return edges.map(edge => edge.transform(matrix))
+			}),
+		]
 		const horizontalEdges = arrayFromFunction(count, i => {
 			const ipp = (i + 1) % (count + 1)
 			return arrayFromFunction(edges.length, j => {
@@ -625,8 +761,8 @@ export namespace B2T {
 		})
 
 		const faces: Face[] = []
-			let face: Face
-			edges.forEach((edge, i) => {
+		let face: Face
+		edges.forEach((edge, i) => {
 			const ipp = (i + 1) % edges.length
 			// for straight edges perpendicular to the Z-axis, we only create one face.
 			if (edge instanceof StraightEdge && edge.curve.dir1.isPerpendicularTo(V3.Z)) {
@@ -664,13 +800,19 @@ export namespace B2T {
 			}
 			for (let r = 0; r < count; r++) {
 				const rpp = (r + 1) % (count + 1)
-				const faceEdges = [ribs[r][i].flipped(), horizontalEdges[r][i], ribs[rpp][i], horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped()].filter(x => x)
+				const faceEdges = [
+					ribs[r][i].flipped(),
+					horizontalEdges[r][i],
+					ribs[rpp][i],
+					horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped(),
+				].filter(x => x)
 				let surface
 				if (edge instanceof StraightEdge) {
 					surface = new PlaneSurface(P3.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a))
 				} else {
 					const maxX = edges[i].getAABB().max.x
-					const phi = angles[r], prevPhi = 0 == r ? 0 : angles[r - 1]
+					const phi = angles[r],
+						prevPhi = 0 == r ? 0 : angles[r - 1]
 					const offset = V3.polar(maxX, prevPhi).to(V3.polar(maxX, phi))
 					surface = projectCurve(ribs[r][i].curve, offset, false)
 				}
@@ -689,25 +831,39 @@ export namespace B2T {
 		return edges.flatMap(edge => {
 			const c = edge.curve
 			if (c instanceof EllipseCurve) {
-				const splitEdges = (edge.minT < 0 && edge.maxT > 0)
-					? edge.split(0)
-					: [edge]
+				const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge]
 				return splitEdges.map(edge => {
 					if (edge.minT >= 0) {
-						return Edge.create(new SemiEllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax),
-							edge.a, edge.b,
-							edge.aT, edge.bT,
+						return Edge.create(
+							new SemiEllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax),
+							edge.a,
+							edge.b,
+							edge.aT,
+							edge.bT,
 							undefined,
-							edge.aDir, edge.bDir,
-							edge.name)
+							edge.aDir,
+							edge.bDir,
+							edge.name,
+						)
 					} else {
 						// "rotate" the curve
-						return Edge.create(new SemiEllipseCurve(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI, min(PI, c.tMax + PI)),
-							edge.a, edge.b,
-							edge.aT + PI, edge.bT + PI,
+						return Edge.create(
+							new SemiEllipseCurve(
+								c.center,
+								c.f1.negated(),
+								c.f2.negated(),
+								c.tMin + PI,
+								min(PI, c.tMax + PI),
+							),
+							edge.a,
+							edge.b,
+							edge.aT + PI,
+							edge.bT + PI,
 							undefined,
-							edge.aDir, edge.bDir,
-							edge.name)
+							edge.aDir,
+							edge.bDir,
+							edge.name,
+						)
 					}
 				})
 			}
@@ -728,7 +884,13 @@ export namespace B2T {
 	 * @param name
 	 * @param generator
 	 */
-	export function extrudeVertices(baseVertices: V3[], baseFacePlane: P3, offset: V3, name?: string, generator?: string) {
+	export function extrudeVertices(
+		baseVertices: V3[],
+		baseFacePlane: P3,
+		offset: V3,
+		name?: string,
+		generator?: string,
+	) {
 		assert(baseVertices.every(v => v instanceof V3), 'baseVertices.every(v => v instanceof V3)')
 		assertInst(P3, baseFacePlane)
 		assertVectors(offset)
@@ -773,7 +935,8 @@ export namespace B2T {
 		return new BRep(faces, false, gen)
 	}
 
-	const b = 1 / GOLDEN_RATIO, c = 2 - GOLDEN_RATIO
+	const b = 1 / GOLDEN_RATIO,
+		c = 2 - GOLDEN_RATIO
 	export const TETRAHEDRON_VERTICES = [
 		new V3(1, 0, -1 / Math.sqrt(2)),
 		new V3(-1, 0, -1 / Math.sqrt(2)),
@@ -814,7 +977,8 @@ export namespace B2T {
 		[4, 0, 5, 19, 16],
 		[12, 8, 13, 16, 19],
 		[15, 9, 10, 18, 17],
-		[7, 1, 2, 17, 18]]
+		[7, 1, 2, 17, 18],
+	]
 
 	export const OCTAHEDRON_VERTICES = [
 		new V3(1, 0, 0),
@@ -822,7 +986,8 @@ export namespace B2T {
 		new V3(0, 1, 0),
 		new V3(0, -1, 0),
 		new V3(0, 0, 1),
-		new V3(0, 0, -1)]
+		new V3(0, 0, -1),
+	]
 	export const OCTAHEDRON_FACE_VERTICES = [
 		[0, 2, 4],
 		[2, 1, 4],
@@ -832,9 +997,10 @@ export namespace B2T {
 		[2, 0, 5],
 		[1, 2, 5],
 		[3, 1, 5],
-		[0, 3, 5]]
+		[0, 3, 5],
+	]
 
-	const {x: s, y: t} = new V3(1, GOLDEN_RATIO, 0).unit()
+	const { x: s, y: t } = new V3(1, GOLDEN_RATIO, 0).unit()
 	export const ISOCAHEDRON_VERTICES = [
 		new V3(-s, t, 0),
 		new V3(s, t, 0),
@@ -849,7 +1015,8 @@ export namespace B2T {
 		new V3(t, 0, -s),
 		new V3(t, 0, s),
 		new V3(-t, 0, -s),
-		new V3(-t, 0, s)]
+		new V3(-t, 0, s),
+	]
 	export const ISOCAHEDRON_FACE_VERTICES = [
 		// 5 faces around point 0
 		[0, 11, 5],
@@ -877,7 +1044,8 @@ export namespace B2T {
 		[2, 4, 11],
 		[6, 2, 10],
 		[8, 6, 7],
-		[9, 8, 1]]
+		[9, 8, 1],
+	]
 
 	/**
 	 * Create a dodecahedron [BRep]. The vertices are on the unit sphere.
@@ -906,10 +1074,13 @@ export namespace B2T {
 			const surface = PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]])
 			const contour = arrayFromFunction(faceIndexes.length, i => {
 				const ipp = (i + 1) % faceIndexes.length
-				const iA = faceIndexes[i], iB = faceIndexes[ipp]
-				const iMin = min(iA, iB), iMax = max(iA, iB), edgeID = iMin * VS.length + iMax
+				const iA = faceIndexes[i],
+					iB = faceIndexes[ipp]
+				const iMin = min(iA, iB),
+					iMax = max(iA, iB),
+					edgeID = iMin * VS.length + iMax
 				let edge = edgeMap.get(edgeID)
-				!edge && edgeMap.set(edgeID, edge = StraightEdge.throughPoints(VS[iMin], VS[iMax]))
+				!edge && edgeMap.set(edgeID, (edge = StraightEdge.throughPoints(VS[iMin], VS[iMax])))
 				return iA < iB ? edge : edge.flipped()
 			})
 			return new PlaneFace(surface, contour)
@@ -923,7 +1094,7 @@ export namespace B2T {
 	 * @param apex The tip of the pyramid.
 	 * @param name
 	 */
-	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + getGlobalId(), ): BRep {
+	export function pyramidEdges(baseEdges: Edge[], apex: V3, name: string = 'pyramid' + getGlobalId()): BRep {
 		assertInst(Edge, ...baseEdges)
 		assertVectors(apex)
 

@@ -147,9 +147,14 @@
 	</script>
 	<canvas id="testcanvas" width="1000px" height="500px"></canvas>
 	<div id="tip-wrap" style="position: absolute;z-index: 6000; left: 8px; top:8px;">
-		<a class="waves-effect waves-light btn red" onClick="viewer.alignX()">X</a>
-		<a class="waves-effect waves-light btn green" onClick="viewer.alignY()">Y</a>
-		<a class="waves-effect waves-light btn blue" onClick="viewer.alignZ()">Z</a>
+		<a class="waves-effect waves-light btn red" onClick="viewer.alignX(1)">+X</a>
+		<a class="waves-effect waves-light btn red" onClick="viewer.alignX(-1)">-X</a>
+		<a class="waves-effect waves-light btn green" onClick="viewer.alignY(1)">+Y</a>
+		<a class="waves-effect waves-light btn green" onClick="viewer.alignY(-1)">-Y</a>
+		<a class="waves-effect waves-light btn blue" onClick="viewer.alignZ(1)">+Z</a>
+		<a class="waves-effect waves-light btn blue" onClick="viewer.alignZ(-1)">-Z</a>
+		<a class="waves-effect waves-light btn" onClick="viewer.rot(22.5)">↺</a>
+		<a class="waves-effect waves-light btn" onClick="viewer.rot(-22.5)">↻</a>
 
 		<div class="switch" style="display: inline-block">
 			<input type="checkbox" class="filled-in" id="paint-mesh-normals" />

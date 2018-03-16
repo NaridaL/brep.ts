@@ -10,6 +10,8 @@ import {ceil, floor, abs} from '../math'
 
 export type ISInfo = { tThis: number, tOther: number, p: V3 }
 
+let insideIsInfosWithCurve = false
+
 export abstract class Curve extends Transformable implements Equalable {
 	static hlol = 0
 	tIncrement: number
@@ -201,7 +203,7 @@ export abstract class Curve extends Transformable implements Equalable {
 	/**
 	 * Curve parameter t for point p on curve.
 	 */
-	abstract pointT(p: V3): number
+	abstract pointT(p: V3, tMin?: number, tMax?: number): number
 
 	/**
 	 * The point on the line that is closest to the given point.
@@ -218,6 +220,7 @@ export abstract class Curve extends Transformable implements Equalable {
 		return this.at(t).to(this.at(t + eps))
 	}
 
+	// TODO: tmin/tmax first
 	closestTToPoint(p: V3, tStart?: number, tMin = this.tMin, tMax = this.tMax): number {
 		// this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
 		// the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
@@ -309,7 +312,21 @@ export abstract class Curve extends Transformable implements Equalable {
 	 * Behavior when curves are colinear: self intersections
 	 */
 	isInfosWithCurve(curve: Curve): ISInfo[] {
-		return Curve.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax)
+	    if (insideIsInfosWithCurve) {
+            return Curve.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax)
+        } else {
+	        try {
+	            insideIsInfosWithCurve = true
+                const infos = curve.isInfosWithCurve(this)
+                return infos.map((info) => {
+                    assert(info)
+                    const {tThis, tOther, p} = info
+                    return {tOther: tThis, tThis: tOther, p}
+                })
+            } finally {
+	            insideIsInfosWithCurve = false
+            }
+        }
 	}
 
 	/**

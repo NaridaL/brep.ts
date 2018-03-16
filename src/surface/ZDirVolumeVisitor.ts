@@ -31,21 +31,14 @@ import {
 
 import { sin, cos, exp } from '../math'
 
+/**
+ * In general: the z-dir shadow volume of a face is the integral: SURFACE_INTEGRAL[p in face] (normal(p).z * p.z) dp
+ * In general: the centroid of the z-dir shadow volume of a face is the integral:
+ *     SURFACE_INTEGRAL[p in face] ((p schur (1, 1, 0.5)) * normal(p).z * p.z) dp
+ *     dividing the z component by 2 is usually done at the very end
+ */
+
 export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volume: number; centroid: V3 } } = {
-	/**
-	 * at(t)
-	 * |\                                    ^
-	 * | \ at(t).projectedOn(dir)             \  dir
-	 * |  \                                    \
-	 * |   \ at(t).rejectedFrom(dir)
-	 * |   |
-	 * |___|
-	 *        z = 0
-	 *
-	 *
-	 * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
-	 * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
-	 */
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): { volume: number; centroid: V3 } {
 		console.log(this)
 		const dpds = this.dpds()
@@ -200,7 +193,7 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 				const slice = (t: number) => {
 					const p = this.pST(stOfPWC.x, t)
 					const normal = dpds(stOfPWC.x, t).cross(dpdt(stOfPWC.x, t))
-					return new V3(p.x, p.y, p.z / 2).times(p.z * normal.z)
+					return p.times(p.z * normal.z)
 				}
 				const sliceIntegral0ToPWCT = glqV3(slice, 0, stOfPWC.y)
 				// const dt = tangentWC.dot(scalingVector)

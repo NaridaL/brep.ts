@@ -11,9 +11,7 @@ import { PI, cos, sin, atan2 } from '../math'
  * Rotation surface with r = f(z)
  */
 export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurface {
-	matrixInverse: M4
-
-	function = 2
+	readonly matrixInverse: M4
 
 	constructor(
 		readonly matrix: M4,

@@ -125,10 +125,10 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return le(0, t) && le(t, PI)
 	}
 
-	pointT(p: V3) {
-		assertVectors(p)
-		assert(this.containsPoint(p))
-		const pLC = this.inverseMatrix.transformPoint(p)
+	pointT(pWC: V3) {
+		assertVectors(pWC)
+		assert(this.containsPoint(pWC))
+		const pLC = this.inverseMatrix.transformPoint(pWC)
 		const t = SemiEllipseCurve.XYLCPointT(pLC)
 		assert(this.isValidT(t))
 		return t

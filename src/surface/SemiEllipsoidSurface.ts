@@ -688,6 +688,7 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 			} else if (pT < isT && le(isT, PI)) {
 				inside = !inside
 			}
+			return false
 		}
 
 		for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {

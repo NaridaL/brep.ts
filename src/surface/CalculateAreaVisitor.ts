@@ -45,13 +45,13 @@ export const CalculateAreaVisitor = {
 						// => dpdt(atST.x, 0) X (1/2 t² dpds(atST.x, 1))[0; atST.y]
 						// => dpdt(atST.x, 0) X dpds(atST.x, atST.y² / 2)
 
-						const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+						const ds = M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
 							.inversed()
 							.transformVector(tangentWC).x
 
 						return (
-							dpdt(stOfPWC.x, stOfPWC.y)
-								.cross(dpds(stOfPWC.x, stOfPWC.y ** 2 / 2))
+							dpds(stOfPWC.x, stOfPWC.y ** 2 / 2)
+								.cross(dpdt(stOfPWC.x))
 								.length() * ds
 						)
 					}

@@ -12925,7 +12925,7 @@ function numberToStr(value, length) {
         for (let endPos = startPos + 1; endPos <= length; endPos++) {
             const prefixDecimals = decimals.substr(0, startPos);
             const period = decimals.substr(startPos, endPos);
-            const testValue = parseFloat(toDecimal + prefixDecimals + repeatString(Math.ceil((17 - startPos) / period.length), period));
+            const testValue = parseFloat(toDecimal + prefixDecimals + period.repeat(Math.ceil((17 - startPos) / period.length)));
             if (test(testValue, toDecimal + prefixDecimals + overline(period)))
                 return closestValueStr + '=';
         }
@@ -15375,6 +15375,18 @@ class M4 extends Matrix {
             0, 0, 0, 1
         ];
         return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
+    }
+    isZRotation() {
+        const mask = [
+            2, 2, 0, 0,
+            2, 2, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        ];
+        return mask.every((expected, index) => expected == 2 || expected == this.m[index]) &&
+            eq(1, Math.pow(this.m[0], 2) + Math.pow(this.m[1], 2)) &&
+            this.m[0] == this.m[5] &&
+            this.m[1] == -this.m[4];
     }
     toSource() {
         if (this.isIdentity()) {
@@ -21206,6 +21218,7 @@ var tsgl = Object.freeze({
 
 const { abs: abs$2, acos, acosh, asin, asinh, atan, atanh, atan2, ceil, cbrt, expm1, clz32, cos: cos$1, cosh, exp, floor, fround, hypot, imul, log: log$1, log1p, log2, log10, max: max$1, min: min$1, pow, random, round, sign: sign$1, sin: sin$1, sinh, sqrt, tan, tanh, trunc, E, LN10, LN2, LOG10E, LOG2E, PI: PI$3, SQRT1_2, SQRT2 } = Math;
 
+let insideIsInfosWithCurve = false;
 class Curve$$1 extends Transformable {
     constructor(tMin, tMax) {
         super();
@@ -21384,6 +21397,7 @@ class Curve$$1 extends Transformable {
     diff(t, eps) {
         return this.at(t).to(this.at(t + eps));
     }
+    // TODO: tmin/tmax first
     closestTToPoint(p, tStart, tMin = this.tMin, tMax = this.tMax) {
         // this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
         // the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
@@ -21472,7 +21486,22 @@ class Curve$$1 extends Transformable {
      * Behavior when curves are colinear: self intersections
      */
     isInfosWithCurve(curve) {
-        return Curve$$1.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax);
+        if (insideIsInfosWithCurve) {
+            return Curve$$1.ispsRecursive(this, this.tMin, this.tMax, curve, curve.tMin, curve.tMax);
+        }
+        else {
+            try {
+                insideIsInfosWithCurve = true;
+                return curve.isInfosWithCurve(this).map((info) => {
+                    assert(info);
+                    const { tThis, tOther, p } = info;
+                    return { tOther: tThis, tThis: tOther, p };
+                });
+            }
+            finally {
+                insideIsInfosWithCurve = false;
+            }
+        }
     }
     arcLength(startT, endT, steps = 1) {
         assert(startT < endT, 'startT < endT');
@@ -23246,7 +23275,7 @@ class L3$$1 extends Curve$$1 {
             }
             return [];
         }
-        throw new Error();
+        super.isInfosWithCurve(curve);
     }
     isInfoWithLine(line) {
         // todo infos?
@@ -23324,9 +23353,9 @@ class L3$$1 extends Curve$$1 {
             return { t: NaN, s: NaN, distance: this.distanceToLine(line) };
         }
         const a = line.anchor, b = line.dir1, c = this.anchor, d = this.dir1;
-        const bd = b.dot(d), bb = b.squared(), dd = d.squared(), amc = a.minus(c), divisor = bd * bd - dd * bb;
-        const t = (amc.dot(b) * bd - amc.dot(d) * bb) / divisor;
-        const s = (amc.dot(b) * dd - amc.dot(d) * bd) / divisor;
+        const bd = b.dot(d), bb = b.squared(), dd = d.squared(), ca = a.minus(c), divisor = bd * bd - dd * bb;
+        const t = (ca.dot(b) * bd - ca.dot(d) * bb) / divisor;
+        const s = (ca.dot(b) * dd - ca.dot(d) * bd) / divisor;
         return {
             t: t,
             s: s,
@@ -23959,10 +23988,10 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     isValidT(t) {
         return le(0, t) && le(t, PI$3);
     }
-    pointT(p) {
-        assertVectors(p);
-        assert(this.containsPoint(p));
-        const pLC = this.inverseMatrix.transformPoint(p);
+    pointT(pWC) {
+        assertVectors(pWC);
+        assert(this.containsPoint(pWC));
+        const pLC = this.inverseMatrix.transformPoint(pWC);
         const t = SemiEllipseCurve$$1.XYLCPointT(pLC);
         assert(this.isValidT(t));
         return t;
@@ -24308,6 +24337,7 @@ class Surface$$1 extends Transformable {
             else if (isT > 0) {
                 inside = !inside;
             }
+            return false;
         }
         for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
             const edge = loop[edgeIndex];
@@ -24363,20 +24393,28 @@ class Surface$$1 extends Transformable {
         return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters());
     }
     isCurvesWithSurface(surface) {
-        return surface.isCurvesWithSurface(this).map(curve => curve.reversed());
+        return surface.isCurvesWithSurface(this); //.map(curve => curve.reversed())
     }
     containsCurve(curve) {
+        if (curve instanceof PICurve$$1) {
+            if (this.equals(curve.parametricSurface) || this.equals(curve.implicitSurface)) {
+                return true;
+            }
+        }
+        if (curve instanceof PPCurve$$1) {
+            if (this.equals(curve.parametricSurface1) || this.equals(curve.parametricSurface2)) {
+                return true;
+            }
+        }
         if (curve instanceof ImplicitCurve$$1) {
-            for (let i = ceil(curve.tMin); i <= floor(curve.tMax); i++) {
+            for (let i = ceil(curve.tMin) + 1; i <= floor(curve.tMax) - 1; i++) {
                 if (!this.containsPoint(curve.points[i])) {
                     return false;
                 }
             }
             return true;
         }
-        else {
-            return false;
-        }
+        return false;
     }
     flipped2(doFlip) {
         return doFlip ? this.flipped() : this;
@@ -25701,7 +25739,6 @@ class RotationREqFOfZ$$1 extends ParametricSurface$$1 {
         this.tMax = tMax;
         this.normalDir = normalDir;
         this.drdz = drdz;
-        this.function = 2;
         assertInst(M4, matrix);
         assert(matrix.isNoProj());
         assert(1 == normalDir || -1 == normalDir);
@@ -25794,6 +25831,200 @@ function closestXToP(f, df, xMin, xMax, p, startX) {
         .minus(p)
         .dot(V(t, df(t))), startX, 4);
 }
+
+/**
+ * @prettier
+ */
+/**
+ * Rotation surface with r = f(z)
+ */
+class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
+    constructor(curve, tMin = curve.tMin, tMax = curve.tMax, matrix = M4.IDENTITY) {
+        // d/dz (r(z))
+        super(0, PI$3, tMin, tMax);
+        this.curve = curve;
+        this.tMin = tMin;
+        this.tMax = tMax;
+        this.matrix = matrix;
+        assertInst(M4, matrix);
+        assert(matrix.isNoProj());
+        assert(eq0(curve.at(tMin).y));
+        this.matrixInverse = matrix.inversed();
+    }
+    getConstructorParameters() {
+        return [this.curve, this.tMin, this.tMax, this.matrix];
+    }
+    flipped() {
+        return new RotatedCurveSurface$$1(this.curve, this.tMin, this.tMax, this.matrix.times(M4.mirror(P3$$1.YZ)));
+    }
+    transform(m4) {
+        return new RotatedCurveSurface$$1(this.curve, this.tMin, this.tMax, m4.isMirroring() ? m4.times(this.matrix).times(M4.mirror(P3$$1.YZ)) : m4.times(this.matrix));
+    }
+    containsPoint(pWC) {
+        const pLC = this.matrixInverse.transformPoint(pWC);
+        const radius = pLC.lengthXY();
+        return this.curve.containsPoint(new V3(radius, 0, pLC.z));
+    }
+    pSTFunc() {
+        return (s, t) => {
+            const { x: radius, z: z } = this.curve.at(t);
+            return this.matrix.transformPoint(V3.polar(radius, s, z));
+        };
+    }
+    dpds() {
+        return (s, t) => {
+            const radius = this.curve.at(t).x;
+            const resultLC = new V3(radius * -sin$1(s), radius * cos$1(s), 0);
+            return this.matrix.transformVector(resultLC);
+        };
+    }
+    dpdt() {
+        return (s, t) => {
+            const { x: drdt, z: dzdt } = this.curve.tangentAt(t);
+            return this.matrix.transformVector(V3.polar(drdt, s, dzdt));
+        };
+    }
+    normalSTFunc() {
+        const matrix = this.matrix
+            .inversed()
+            .transposed()
+            .as3x3();
+        const normalLength = this.matrix.isMirroring() ? -1 : 1;
+        return (s, t) => {
+            const { x: drdt, z: dzdt } = this.curve.tangentAt(t);
+            return matrix.transformVector(V3.polar(dzdt, s, -drdt)).toLength(normalLength);
+        };
+    }
+    stPFunc() {
+        return pWC => {
+            const pLC = this.matrixInverse.transformPoint(pWC);
+            const angle = abs$2(pLC.angleXY());
+            const radius = pLC.lengthXY();
+            return new V3(angle, this.curve.pointT(new V3(radius, 0, pLC.z)), 0);
+        };
+    }
+    pointFoot(pWC, startS, startT) {
+        const pLC = this.matrixInverse.transformPoint(pWC);
+        const angle = abs$2(pLC.angleXY());
+        const radius = pLC.lengthXY();
+        return new V3(angle, this.curve.closestTToPoint(new V3(radius, 0, pLC.z)), 0);
+    }
+    isTsForLine(line) {
+        const anchorLC = this.matrixInverse.transformPoint(line.anchor);
+        const dirLC = this.matrixInverse.transformPoint(line.dir1);
+        if (dirLC.isParallelTo(V3.Z)) {
+            return this.curve
+                .isInfosWithLine(new V3(anchorLC.lengthXY(), 0, anchorLC.z), dirLC)
+                .map(info => info.tOther);
+        }
+        else if (L3$$1.containsPoint(anchorLC.xy(), dirLC.xy(), V3.O)) {
+            // line goes through Z axis
+            const dotter = dirLC.xy().unit();
+            return [
+                ...this.curve.isInfosWithLine(new V3(dotter.dot(anchorLC), 0, anchorLC.z), new V3(dotter.dot(dirLC), 0, dirLC.z)),
+                ...this.curve.isInfosWithLine(new V3(-dotter.dot(anchorLC), 0, anchorLC.z), new V3(-dotter.dot(dirLC), 0, dirLC.z)),
+            ]
+                .map(info => info.tOther)
+                .filter(t => fuzzyBetween(L3$$1.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax));
+        }
+        else if (dirLC.isPerpendicularTo(V3.Z)) {
+            const sec = this.isCurvesWithPlane(new P3$$1(V3.Z, anchorLC.z))[0];
+            if (!sec)
+                return [];
+            assertInst(SemiEllipseCurve$$1, sec);
+            return sec.isInfosWithLine(anchorLC, dirLC).map(info => info.tOther);
+        }
+        else {
+            // transform into hyperbola
+            // f(t) = V(((ax + t dx)² + (ay + t dy)²) ** 1/2, 0, az + t dz)
+            // f(t) = V((ax² + 2 ax t dx + t² dx² + ay² + 2 ay t dy + t² dy²) ** 1/2, 0, az + t dz)
+            // f(t) = V((t² (dx² + dy²) + 2 t (ax dx + ay dy) + ax² + ay²) ** 1/2, 0, az + t * dz)
+            // (anchorLC.xy + t * dirLC.xy) * dir.xy = 0
+            // t * dirLC.xy² = -anchorLC.xy * dirLC.xy
+            const closestTToZ = -anchorLC.xy().dot(dirLC.xy()) / dirLC.xy().squared();
+            const closestPointToZ = L3$$1.at(anchorLC, dirLC, closestTToZ);
+            const scaleX = closestPointToZ.lengthXY();
+            const lineGradientWC = dirLC.z / dirLC.lengthXY();
+            const scaleZ = scaleX * lineGradientWC;
+            const hc = HyperbolaCurve$$1.XY.transform(M4.rotateX(90 * DEG)
+                .scale(scaleX, 0, scaleZ)
+                .translate(0, 0, closestPointToZ.z));
+            console.log(hc.sce, closestPointToZ);
+            const infos = hc.isInfosWithCurve(this.curve);
+            return infos
+                .map(info => (info.p.z - anchorLC.z) / dirLC.z)
+                .filter(t => fuzzyBetween(L3$$1.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax));
+        }
+    }
+    isCurvesWithPlane(plane) {
+        const planeLC = plane.transform(this.matrixInverse);
+        if (planeLC.normal1.isParallelTo(V3.Z)) {
+            return this.curve.isTsWithPlane(planeLC).map(t => {
+                const { x: radius } = this.curve.at(t);
+                return new SemiEllipseCurve$$1(new V3(0, 0, planeLC.w), new V3(radius, 0, 0), new V3(0, radius, 0), this.sMin, this.sMax).transform(this.matrix);
+            });
+        }
+        else if (planeLC.normal1.isPerpendicularTo(V3.Z) && planeLC.containsPoint(V3.O)) {
+            return [this.curve.rotateZ(V3.Y.angleRelativeNormal(planeLC.normal1, V3.Z)).transform(this.matrix)];
+        }
+        else {
+            return ParametricSurface$$1.isCurvesParametricImplicitSurface(this, new PlaneSurface$$1(plane), 0.05, 0.05, 0.02);
+        }
+    }
+    loopContainsPoint(contour, point) {
+        throw new Error('Method not implemented.');
+    }
+    isCoplanarTo(surface) {
+        return (this == surface ||
+            (hasConstructor(surface, RotatedCurveSurface$$1) &&
+                surface.curve.transform(this.matrixInverse).isColinearTo(this.curve) &&
+                this.matrixInverse.times(surface.matrix).isZRotation()));
+    }
+    like(object) {
+        if (!this.isCoplanarTo(object))
+            return false;
+        // normals need to point in the same direction (outwards or inwards) for both
+        const pSMinTMin = this.pSTFunc()(this.sMin, this.tMin);
+        const thisNormal = this.normalSTFunc()(this.sMin, this.tMin);
+        const otherNormal = object.normalP(pSMinTMin);
+        return 0 < thisNormal.dot(otherNormal);
+    }
+    equals(obj) {
+        return (this == obj ||
+            (hasConstructor(obj, RotatedCurveSurface$$1) && this.curve.equals(obj.curve) && this.matrix.equals(obj.matrix)));
+    }
+    isCurvesWithSurface(surface) {
+        if (surface instanceof PlaneSurface$$1) {
+            return this.isCurvesWithPlane(surface.plane);
+        }
+        return super.isCurvesWithSurface(surface);
+    }
+    containsCurve(curve) {
+        if (curve.constructor == this.curve.constructor) {
+            const curveLC = curve.transform(this.matrixInverse);
+            // find a point on curveLC which isn't on the Z-axis
+            const t = [0, 0.5, 1].map(x => lerp(curveLC.tMin, curveLC.tMax, x)).withMax(t => curveLC.at(t).lengthXY());
+            const angle = curveLC.at(t).angleXY();
+            const curveLCRotated = curveLC.rotateZ(-angle);
+            if (this.curve.isColinearTo(curveLCRotated)) {
+                return true;
+            }
+        }
+        if (curve instanceof SemiEllipseCurve$$1) {
+            const curveLC = curve.transform(this.matrixInverse);
+            if (curveLC.normal.isParallelTo(V3.Z)) {
+                return (curveLC.isCircular() && this.curve.containsPoint(new V3(curveLC.f1.length(), 0, curveLC.center.z)));
+            }
+            return false;
+        }
+        return super.containsCurve(curve);
+    }
+    hashCode() {
+        return [this.curve, this.matrix].hashCode();
+    }
+}
+RotatedCurveSurface$$1.prototype.uStep = PI$3 / 16;
+RotatedCurveSurface$$1.prototype.vStep = 1 / 4;
 
 class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     constructor(baseCurve, dir1, sMin = baseCurve.tMin, sMax = baseCurve.tMax, zMin = -Infinity, zMax = Infinity) {
@@ -26452,6 +26683,7 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
             else if (pT < isT && le(isT, PI$3)) {
                 inside = !inside;
             }
+            return false;
         }
         for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
             const edge = loop[edgeIndex];
@@ -26623,6 +26855,7 @@ class PlaneSurface$$1 extends ParametricSurface$$1 {
         return [this.plane.intersectionWithPlane(plane)];
     }
     edgeLoopCCW(contour) {
+        assert(Edge$$1.isLoop(contour), 'isLoop');
         return isCCW(contour.flatMap(edge => edge.points()), this.plane.normal1);
     }
     loopContainsPoint(loop, p) {
@@ -26647,7 +26880,7 @@ class PlaneSurface$$1 extends ParametricSurface$$1 {
         return this.plane.containsPoint(p);
     }
     containsCurve(curve) {
-        return this.plane.containsCurve(curve);
+        return curve instanceof ImplicitCurve$$1 ? super.containsCurve(curve) : this.plane.containsCurve(curve);
     }
     transform(m4) {
         return new PlaneSurface$$1(this.plane.transform(m4));
@@ -26658,17 +26891,17 @@ class PlaneSurface$$1 extends ParametricSurface$$1 {
     getConstructorParameters() {
         return [this.plane, this.right, this.up];
     }
-    toMesh(xMin = -10, xMax = 10, yMin = -10, yMax = 10) {
-        const mesh = new Mesh()
-            .addIndexBuffer('TRIANGLES')
-            .addVertexBuffer('normals', 'ts_Normal');
-        const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor);
-        mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p));
-        mesh.normals = arrayFromFunction(4, i => this.plane.normal1);
-        pushQuad(mesh.TRIANGLES, false, 0, 1, 2, 3);
-        mesh.compile();
-        return mesh;
-    }
+    // toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {
+    // 	const mesh = new Mesh()
+    // 		.addIndexBuffer('TRIANGLES')
+    // 		.addVertexBuffer('normals', 'ts_Normal')
+    // 	const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor)
+    // 	mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p))
+    // 	mesh.normals = arrayFromFunction(4, i => this.plane.normal1)
+    // 	pushQuad(mesh.TRIANGLES, false, 0, 1, 2, 3)
+    // 	mesh.compile()
+    // 	return mesh
+    // }
     dpds() {
         return () => this.right;
     }
@@ -26681,26 +26914,23 @@ class PlaneSurface$$1 extends ParametricSurface$$1 {
     didp(pWC) {
         return this.plane.normal1;
     }
+    normalST() {
+        return this.plane.normal1;
+    }
 }
+PlaneSurface$$1.prototype.uStep = 1e6;
+PlaneSurface$$1.prototype.vStep = 1e6;
 
 /**
  * @prettier
  */
+/**
+ * In general: the z-dir shadow volume of a face is the integral: SURFACE_INTEGRAL[p in face] (normal(p).z * p.z) dp
+ * In general: the centroid of the z-dir shadow volume of a face is the integral:
+ *     SURFACE_INTEGRAL[p in face] ((p schur (1, 1, 0.5)) * normal(p).z * p.z) dp
+ *     dividing the z component by 2 is usually done at the very end
+ */
 const ZDirVolumeVisitor$$1 = {
-    /**
-     * at(t)
-     * |\                                    ^
-     * | \ at(t).projectedOn(dir)             \  dir
-     * |  \                                    \
-     * |   \ at(t).rejectedFrom(dir)
-     * |   |
-     * |___|
-     *        z = 0
-     *
-     *
-     * A = ((at(t) + at(t).rejectedFrom(dir)) / 2).z * at(t).projectedOn(dir).lengthXY()
-     * scaling = tangentAt(t) DOT dir.cross(V3.Z).unit()
-     */
     [ConicSurface$$1.name](edges) {
         console.log(this);
         const dpds = this.dpds();
@@ -26842,7 +27072,7 @@ const ZDirVolumeVisitor$$1 = {
                 const slice = (t) => {
                     const p = this.pST(stOfPWC.x, t);
                     const normal = dpds(stOfPWC.x, t).cross(dpdt(stOfPWC.x, t));
-                    return new V3(p.x, p.y, p.z / 2).times(p.z * normal.z);
+                    return p.times(p.z * normal.z);
                 };
                 const sliceIntegral0ToPWCT = glqV3$$1(slice, 0, stOfPWC.y);
                 // const dt = tangentWC.dot(scalingVector)
@@ -27122,11 +27352,11 @@ const CalculateAreaVisitor$$1 = {
                     // dpds(s, t) === t * dpds(s, 1)
                     // => dpdt(atST.x, 0) X (1/2 t² dpds(atST.x, 1))[0; atST.y]
                     // => dpdt(atST.x, 0) X dpds(atST.x, atST.y² / 2)
-                    const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+                    const ds = M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
                         .inversed()
                         .transformVector(tangentWC).x;
-                    return (dpdt(stOfPWC.x, stOfPWC.y)
-                        .cross(dpds(stOfPWC.x, Math.pow(stOfPWC.y, 2) / 2))
+                    return (dpds(stOfPWC.x, Math.pow(stOfPWC.y, 2) / 2)
+                        .cross(dpdt(stOfPWC.x))
                         .length() * ds);
                 };
                 return glqInSteps(f, edge.aT, edge.bT, 1);
@@ -39398,6 +39628,9 @@ function load(url, callback) {
 }
 
 /**
+ * @prettier
+ */
+/**
  * Create a surface by projecting a curve in a direction.
  *
  * @param curve The curve to project.
@@ -39440,7 +39673,8 @@ function projectPointCurve$$1(curve, tMin = curve.tMin, tMax = curve.tMax, p, fl
  * Create a surface by rotating a curve in the XZ-plane, with X > 0, around the Z-axis according to the right-hand rule.
  * @param curve The curve to rotate.
  * @param rotationAxis The line around which to rotate the curve.
- * @param flipped Whether the surface's default orientation (normal = curve tangent cross rotation tangent) should be flipped.
+ * @param flipped Whether the surface's default orientation (normal = curve tangent cross rotation tangent) should be
+ * flipped.
  */
 function rotateCurve$$1(curve, tMin = curve.tMin, tMax = curve.tMax, degrees, flipped) {
     assertf(() => new PlaneSurface$$1(P3$$1.ZX).containsCurve(curve));
@@ -39450,15 +39684,25 @@ function rotateCurve$$1(curve, tMin = curve.tMin, tMax = curve.tMax, degrees, fl
                 return undefined;
             }
             const baseEllipse = new SemiEllipseCurve$$1(V3.O, curve.anchor.xy(), curve.anchor.xy().getPerpendicular(), 0, degrees);
-            const factor = !flipped ? 1 : -1;
-            return new SemiCylinderSurface$$1(baseEllipse, V3.Z.times(factor), 0, degrees, curve.at(tMin).z * factor, curve.at(tMax).z * factor);
+            // if curve.dir1 is going up (+Z), it the cylinder surface should face inwards
+            const factor = (curve.dir1.z > 0 ? -1 : 1) * (flipped ? -1 : 1);
+            const [zMin, zMax] = [curve.at(tMin).z * factor, curve.at(tMax).z * factor].sort(MINUS);
+            return new SemiCylinderSurface$$1(baseEllipse, V3.Z.times(factor), 0, degrees, zMin, zMax);
         }
-        if (curve.at(tMin).dot(curve.dir1) * curve.at(tMax).dot(curve.dir1) < 0) {
+        if (curve
+            .at(tMin)
+            .xy()
+            .dot(curve.dir1) *
+            curve
+                .at(tMax)
+                .xy()
+                .dot(curve.dir1) <
+            0) {
             throw new Error('line cannot cross the Z axis in the [tMin, tMax] interval, as conic surfaces cannot have an hourglass shape.');
         }
         if (curve.dir1.isPerpendicularTo(V3.Z)) {
             // if line.dir1 is pointing aways from V3.Z, then the surface should face up
-            const factor = (curve.at(tMin).dot(curve.dir1) > 0 ? 1 : -1) * (flipped ? -1 : 1);
+            const factor = (curve.at(lerp(tMin, tMax, 0.5)).dot(curve.dir1) > 0 ? 1 : -1) * (flipped ? -1 : 1);
             return new PlaneSurface$$1(new P3$$1(V3.Z.times(factor), curve.anchor.z * factor));
         }
         else {
@@ -39466,19 +39710,26 @@ function rotateCurve$$1(curve, tMin = curve.tMin, tMax = curve.tMax, degrees, fl
             const a = curve.at(tMin), b = curve.at(tMax);
             const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x);
             const apex = new V3(0, 0, apexZ);
-            const flipped = a.x > b.x;
-            return new ConicSurface$$1(apex, curve.dir1);
+            const factor = -(a.x > b.x ? -1 : 1) * (flipped ? -1 : 1);
+            const s = new ConicSurface$$1(apex, new V3(curve.dir1.lengthXY(), 0, 0), new V3(0, curve.dir1.lengthXY(), 0), new V3(0, 0, (a.x > b.x ? -1 : 1) * curve.dir1.z), 0, degrees, 0, 1);
+            return factor > 0 ? s : s.flipped();
         }
     }
     if (curve instanceof SemiEllipseCurve$$1) {
+        const a = curve.at(tMin), b = curve.at(tMax);
         const ell = curve.rightAngled();
         const f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp = ell.f2.isPerpendicularTo(V3.Z);
         if (L3$$1.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
-            let f3length = f1Perp ? ell.f1.length() : ell.f2.length();
-            if (flipped) {
-                f3length *= -1;
+            flipped = flipped == a.z > b.z;
+            let width = ell.f1.length(), height = ell.f2.length();
+            if (ell.f1.isParallelTo(V3.Z)) {
+                [width, height] = [height, width];
             }
-            return new SemiEllipsoidSurface$$1(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length));
+            return SemiEllipsoidSurface$$1.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center);
+        }
+        else {
+            const s = new RotatedCurveSurface$$1(curve, tMin, tMax);
+            return s;
         }
     }
     throw new Error();
@@ -39495,12 +39746,7 @@ var B2T$$1;
     function box(width = 1, height = 1, depth = 1, name = 'box' + getGlobalId$$1()) {
         assertNumbers(width, height, depth);
         assert('string' === typeof name);
-        const baseVertices = [
-            new V3(0, 0, 0),
-            new V3(0, height, 0),
-            new V3(width, height, 0),
-            new V3(width, 0, 0),
-        ];
+        const baseVertices = [new V3(0, 0, 0), new V3(0, height, 0), new V3(width, height, 0), new V3(width, 0, 0)];
         const generator = callsce('B2T.box', width, height, depth, name);
         return B2T$$1.extrudeVertices(baseVertices, P3$$1.XY.flipped(), new V3(0, 0, depth), name, generator);
     }
@@ -39592,7 +39838,9 @@ var B2T$$1;
         let result = B2T$$1.box(1, 1, 1);
         if (0 == res)
             return result;
-        const punch = B2T$$1.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped();
+        const punch = B2T$$1.box(1 / 3, 1 / 3, 2)
+            .translate(1 / 3, 1 / 3, -1 / 2)
+            .flipped();
         function recurse(steps, m4) {
             result = result.and(punch.transform(m4));
             if (steps > 1) {
@@ -39600,7 +39848,7 @@ var B2T$$1;
                 for (let i = 0; i < 9; i++) {
                     if (4 == i)
                         continue;
-                    recurse(steps - 1, scaled.times(M4.translate(i % 3, i / 3 | 0, 0)));
+                    recurse(steps - 1, scaled.times(M4.translate(i % 3, (i / 3) | 0, 0)));
                 }
             }
         }
@@ -39613,7 +39861,9 @@ var B2T$$1;
     function menger2(res = 2, name = 'menger' + getGlobalId$$1()) {
         if (0 == res)
             return B2T$$1.box(1, 1, 1);
-        const punch = B2T$$1.box(1 / 3, 1 / 3, 2).translate(1 / 3, 1 / 3, -1 / 2).flipped();
+        const punch = B2T$$1.box(1 / 3, 1 / 3, 2)
+            .translate(1 / 3, 1 / 3, -1 / 2)
+            .flipped();
         const stencilFaces = [];
         function recurse(steps, m4) {
             stencilFaces.push(...punch.transform(m4).faces);
@@ -39622,7 +39872,7 @@ var B2T$$1;
                 for (let i = 0; i < 9; i++) {
                     if (4 == i)
                         continue;
-                    recurse(steps - 1, scaled.times(M4.translate(i % 3, i / 3 | 0, 0)));
+                    recurse(steps - 1, scaled.times(M4.translate(i % 3, (i / 3) | 0, 0)));
                 }
             }
         }
@@ -39644,8 +39894,11 @@ var B2T$$1;
     function torus(rSmall, rLarge, rads = TAU, name = 'torus' + getGlobalId$$1()) {
         assertNumbers(rSmall, rLarge, rads);
         assertf(() => rLarge > rSmall);
-        const curve = SemiEllipseCurve$$1.semicircle(rSmall, new V3(rLarge, 0, 0));
-        const baseEdges = [PCurveEdge$$1.forCurveAndTs(curve, -Math.PI, 0), PCurveEdge$$1.forCurveAndTs(curve, 0, Math.PI)];
+        const curves = [
+            SemiEllipseCurve$$1.semicircle(rSmall, new V3(rLarge, 0, 0)),
+            SemiEllipseCurve$$1.semicircle(-rSmall, new V3(rLarge, 0, 0)),
+        ];
+        const baseEdges = curves.map(c => PCurveEdge$$1.forCurveAndTs(c, 0, Math.PI).rotateX(PI$3 / 2));
         return B2T$$1.rotateEdges(baseEdges, rads, name);
     }
     B2T$$1.torus = torus;
@@ -39654,14 +39907,16 @@ var B2T$$1;
      * baseLoop should be CCW on XZ plane for a bounded BRep
      */
     function rotateEdges(baseLoop, totalRads, name = 'rotateEdges' + getGlobalId$$1(), generator, infoFactory) {
+        assert(baseLoop.every(e => new PlaneSurface$$1(P3$$1.ZX).containsCurve(e.curve)));
         assert(!eq(PI$3, totalRads) || PI$3 == totalRads); // URHGJ
         assertf(() => lt(0, totalRads) && le(totalRads, TAU));
         totalRads = snap(totalRads, TAU);
+        assertf(() => Edge$$1.isLoop(baseLoop));
         const basePlane = new PlaneSurface$$1(P3$$1.ZX.flipped()).edgeLoopCCW(baseLoop)
             ? new PlaneSurface$$1(P3$$1.ZX.flipped())
             : new PlaneSurface$$1(P3$$1.ZX);
-        assertf(() => Edge$$1.isLoop(baseLoop));
-        const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI$3);
+        // const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
+        // const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
         const open = !eq(totalRads, 2 * PI$3);
         const baseRibCurves = baseLoop.map(edge => {
             const a = edge.a, radius = a.lengthXY();
@@ -39671,68 +39926,20 @@ var B2T$$1;
             return undefined;
         });
         const baseSurfaces = baseLoop.map((edge, i) => {
-            const ipp = (i + 1) % baseLoop.length;
-            if (edge instanceof StraightEdge$$1) {
-                const line = edge.curve;
-                if (line.dir1.isParallelTo(V3.Z)) {
-                    if (eq0(edge.a.x)) {
-                        return undefined;
-                    }
-                    const flipped = edge.a.z > edge.b.z;
-                    const [tMin, tMax] = [0, edge.b.z - edge.a.z].sort(MINUS);
-                    return new SemiCylinderSurface$$1(baseRibCurves[i], !flipped ? V3.Z : V3.Z.negated(), undefined, undefined, tMin, tMax);
-                }
-                else if (line.dir1.isPerpendicularTo(V3.Z)) {
-                    const flipped = edge.a.x > edge.b.x;
-                    let surface = new PlaneSurface$$1(new P3$$1(V3.Z, edge.a.z));
-                    if (!flipped)
-                        surface = surface.flipped();
-                    return surface;
-                }
-                else {
-                    // apex is intersection of segment with Z-axis
-                    const a = edge.a, b = edge.b;
-                    const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x);
-                    const apex = new V3(0, 0, apexZ);
-                    const flipped = edge.a.z > edge.b.z;
-                    const base = baseRibCurves[a.x > b.x ? i : ipp];
-                    const surface = ConicSurface$$1.atApexThroughEllipse(apex, base);
-                    return flipped != (-1 == surface.normalDir) ? surface.flipped() : surface;
-                }
-            }
-            /*
-                at(t) = f1 * cos t + f2 sin t
-                rotated projection
-                at2(t) = V(at(t).lengthXY(), 0, at(t).z)
-                at2(t).x = sqrt((f1x cos t + f2x sin t)² + (f1y cos t + f2y sin t)²)
-                at2(t).x = sqrt((f1x² + f1y²) cos² t + (f1x f2x + f1y f2y) cos t sin t + (f2x² + f2y²)sin²t)
-                at2(t).x = sqrt((a² + b²) cos² t + (a c + b d) cos t sin t + (c² + d²)sin²t)
-                (x cos t + y sin t)² = x² cos² t + x y cos t sin t + y² sin² t
-             */
-            if (edge.curve instanceof SemiEllipseCurve$$1) {
-                const flipped = edge.a.z > edge.b.z;
-                const ell = edge.curve.rightAngled();
-                assert(ell.normal.isPerpendicularTo(V3.Z));
-                assert(L3$$1.Z.containsPoint(ell.center));
-                let width = ell.f1.length(), height = ell.f2.length();
-                if (!ell.isCircular()) {
-                    assert(ell.f1.isParallelTo(V3.Z) && ell.f2.isParallelTo(V3.X)
-                        || ell.f2.isParallelTo(V3.Z) && ell.f1.isParallelTo(V3.X));
-                    if (ell.f1.isParallelTo(V3.Z)) {
-                        [width, height] = [height, width];
-                    }
-                }
-                return SemiEllipsoidSurface$$1.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center);
-            }
-            else {
-                throw new Error(edge.toString());
-            }
+            const s = rotateCurve$$1(edge.curve, edge.minT, edge.maxT, PI$3, edge.deltaT() > 0);
+            const t = lerp(edge.aT, edge.bT, 0.5);
+            s &&
+                assert(edge
+                    .tangentAt(t)
+                    .cross(V3.Y)
+                    .dot(s.normalP(edge.curve.at(t))) < 0);
+            return s;
         });
         let stepStartEdges = baseLoop, stepEndEdges;
         const faces = [];
         for (let rot = 0; rot < totalRads; rot += PI$3) {
             const aT = 0, bT = min$1(totalRads - rot, PI$3);
-            const rotation = M4.rotateZ(rot + bT), rotrot = M4.rotateZ(rot);
+            const rotation = M4.rotateZ(rot + bT);
             stepEndEdges = rot + bT == TAU ? baseLoop : baseLoop.map(edge => edge.transform(rotation));
             const ribs = arrayFromFunction(baseLoop.length, i => {
                 const a = stepStartEdges[i].a, radius = a.lengthXY();
@@ -39751,7 +39958,7 @@ var B2T$$1;
                         stepStartEdges[edgeIndex].flipped(),
                         !eq0(edge.a.x) && ribs[edgeIndex],
                         stepEndEdges[edgeIndex],
-                        !eq0(edge.b.x) && ribs[ipp].flipped()
+                        !eq0(edge.b.x) && ribs[ipp].flipped(),
                     ].filter(x => x);
                     const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot);
                     const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined);
@@ -39808,7 +40015,9 @@ var B2T$$1;
     // PlaneSurface(P3.ZX.flipped()), loop), new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)) }
     // return new BRep(faces, undefined) }
     function quaffle() {
-        const baseK = B2T$$1.sphere(1).translate(0, 1.7).flipped();
+        const baseK = B2T$$1.sphere(1)
+            .translate(0, 1.7)
+            .flipped();
         //const baseK = B2T.box().scale(0.2).translate(0, 0.95).flipped()
         // const vs = B2T.DODECAHEDRON_VERTICES.concat(
         // B2T.DODECAHEDRON_FACE_VERTICES.map(fis => fis
@@ -39821,11 +40030,13 @@ var B2T$$1;
     }
     B2T$$1.quaffle = quaffle;
     function extrudeFace(face, dir) {
-        return new BRep$$1(extrudeEdges(face.contour, face.surface.plane, dir).faces.slice(0, -2).concat(face, face.translate(dir.x, dir.y, dir.z).flipped(), face.holes.flatMap(hole => extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false);
+        return new BRep$$1(extrudeEdges(face.contour, face.surface.plane, dir)
+            .faces.slice(0, -2)
+            .concat(face, face.translate(dir.x, dir.y, dir.z).flipped(), face.holes.flatMap(hole => extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false);
     }
     B2T$$1.extrudeFace = extrudeFace;
     function loadFonts() {
-        return loadFont('fonts/FiraSansMedium.woff').then(font => B2T$$1.defaultFont = font);
+        return loadFont('fonts/FiraSansMedium.woff').then(font => (B2T$$1.defaultFont = font));
     }
     B2T$$1.loadFonts = loadFonts;
     const loadedFonts = new Map();
@@ -39890,13 +40101,16 @@ var B2T$$1;
             return loop;
         });
         const faces = Face$$1.assembleFacesFromLoops(loops, new PlaneSurface$$1(P3$$1.XY), PlaneFace$$1);
-        const generator = `B2T.text(${text.sce}, ${size}, ${depth})`;
+        const generator = callsce(text, size, depth);
         return BRep$$1.join(faces.map(face => B2T$$1.extrudeFace(face, V(0, 0, -depth))), generator);
     }
     B2T$$1.text = text;
     function minorityReport() {
         const a = B2T$$1.sphere();
-        const b = B2T$$1.text('LEO CROW', 64, 128).scale(0.1 / 32).translate(-0.5, -0.05, 1.2).flipped();
+        const b = B2T$$1.text('LEO CROW', 64, 128)
+            .scale(0.1 / 32)
+            .translate(-0.5, -0.05, 1.2)
+            .flipped();
         const c = B2T$$1.sphere(0.98);
         return a.and(b).plus(c);
     }
@@ -39905,7 +40119,10 @@ var B2T$$1;
         const iso = isocahedron();
         const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
             const numberBRep = text('' + (i + 1), 0.4, -2);
-            const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3);
+            const centroid = face.contour
+                .map(edge => edge.a)
+                .reduce((a, b) => a.plus(b), V3.O)
+                .div(3);
             const sys = M4.forSys(face.contour[0].aDir, centroid.cross(face.contour[0].aDir), centroid.unit(), centroid);
             return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)));
         }));
@@ -39916,15 +40133,20 @@ var B2T$$1;
     }
     B2T$$1.whatever = whatever;
     function whatever3() {
-        return B2T$$1.rotateEdges(StraightEdge$$1.chain([V3.O, V3.X, V3.Z]), TAU)
-            .and(B2T$$1.box().rotateZ(40 * DEG).translate(0.1, 0.1, 0.1)).faces.filter(x => x.surface instanceof ConicSurface$$1).sce;
+        const t = B2T$$1.torus(1, 2);
+        return B2T$$1.box(5, 5, 2)
+            .translate(-2.5, -2.5)
+            .minus(t);
     }
     B2T$$1.whatever3 = whatever3;
     function d20() {
         const iso = isocahedron();
         const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
             const numberBRep = text('' + (i + 1), 0.4, -2);
-            const centroid = face.contour.map(edge => edge.a).reduce((a, b) => a.plus(b), V3.O).div(3);
+            const centroid = face.contour
+                .map(edge => edge.a)
+                .reduce((a, b) => a.plus(b), V3.O)
+                .div(3);
             const sys = M4.forSys(face.contour[0].aDir, centroid.cross(face.contour[0].aDir), centroid.unit(), centroid);
             return numberBRep.transform(sys.times(M4.translate(-numberBRep.getAABB().size().x / 2, -0.1, -0.04)));
         }));
@@ -39940,13 +40162,16 @@ var B2T$$1;
             : totalRadsOrAngles;
         const count = angles.length;
         const open = !eq(TAU, angles.last);
-        const ribs = [edges, ...angles.map(phi => {
+        const ribs = [
+            edges,
+            ...angles.map(phi => {
                 if (eq(TAU, phi)) {
                     return edges;
                 }
                 const matrix = M4.rotateZ(phi);
                 return edges.map(edge => edge.transform(matrix));
-            })];
+            }),
+        ];
         const horizontalEdges = arrayFromFunction(count, i => {
             const ipp = (i + 1) % (count + 1);
             return arrayFromFunction(edges.length, j => {
@@ -39999,7 +40224,12 @@ var B2T$$1;
             }
             for (let r = 0; r < count; r++) {
                 const rpp = (r + 1) % (count + 1);
-                const faceEdges = [ribs[r][i].flipped(), horizontalEdges[r][i], ribs[rpp][i], horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped()].filter(x => x);
+                const faceEdges = [
+                    ribs[r][i].flipped(),
+                    horizontalEdges[r][i],
+                    ribs[rpp][i],
+                    horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped(),
+                ].filter(x => x);
                 let surface;
                 if (edge instanceof StraightEdge$$1) {
                     surface = new PlaneSurface$$1(P3$$1.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a));
@@ -40025,9 +40255,7 @@ var B2T$$1;
         return edges.flatMap(edge => {
             const c = edge.curve;
             if (c instanceof EllipseCurve$$1) {
-                const splitEdges = (edge.minT < 0 && edge.maxT > 0)
-                    ? edge.split(0)
-                    : [edge];
+                const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge];
                 return splitEdges.map(edge => {
                     if (edge.minT >= 0) {
                         return Edge$$1.create(new SemiEllipseCurve$$1(c.center, c.f1, c.f2, max$1(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
@@ -40142,7 +40370,7 @@ var B2T$$1;
         [4, 0, 5, 19, 16],
         [12, 8, 13, 16, 19],
         [15, 9, 10, 18, 17],
-        [7, 1, 2, 17, 18]
+        [7, 1, 2, 17, 18],
     ];
     B2T$$1.OCTAHEDRON_VERTICES = [
         new V3(1, 0, 0),
@@ -40150,7 +40378,7 @@ var B2T$$1;
         new V3(0, 1, 0),
         new V3(0, -1, 0),
         new V3(0, 0, 1),
-        new V3(0, 0, -1)
+        new V3(0, 0, -1),
     ];
     B2T$$1.OCTAHEDRON_FACE_VERTICES = [
         [0, 2, 4],
@@ -40160,7 +40388,7 @@ var B2T$$1;
         [2, 0, 5],
         [1, 2, 5],
         [3, 1, 5],
-        [0, 3, 5]
+        [0, 3, 5],
     ];
     const { x: s, y: t } = new V3(1, GOLDEN_RATIO, 0).unit();
     B2T$$1.ISOCAHEDRON_VERTICES = [
@@ -40175,7 +40403,7 @@ var B2T$$1;
         new V3(t, 0, -s),
         new V3(t, 0, s),
         new V3(-t, 0, -s),
-        new V3(-t, 0, s)
+        new V3(-t, 0, s),
     ];
     B2T$$1.ISOCAHEDRON_FACE_VERTICES = [
         // 5 faces around point 0
@@ -40201,7 +40429,7 @@ var B2T$$1;
         [2, 4, 11],
         [6, 2, 10],
         [8, 6, 7],
-        [9, 8, 1]
+        [9, 8, 1],
     ];
     /**
      * Create a dodecahedron [BRep]. The vertices are on the unit sphere.
@@ -40233,7 +40461,7 @@ var B2T$$1;
                 const iA = faceIndexes[i], iB = faceIndexes[ipp];
                 const iMin = min$1(iA, iB), iMax = max$1(iA, iB), edgeID = iMin * VS.length + iMax;
                 let edge = edgeMap.get(edgeID);
-                !edge && edgeMap.set(edgeID, edge = StraightEdge$$1.throughPoints(VS[iMin], VS[iMax]));
+                !edge && edgeMap.set(edgeID, (edge = StraightEdge$$1.throughPoints(VS[iMin], VS[iMax])));
                 return iA < iB ? edge : edge.flipped();
             });
             return new PlaneFace$$1(surface, contour);
@@ -45189,6 +45417,7 @@ var brepts = Object.freeze({
 	ProjectedCurveSurface: ProjectedCurveSurface$$1,
 	CylinderSurface: CylinderSurface$$1,
 	RotationREqFOfZ: RotationREqFOfZ$$1,
+	RotatedCurveSurface: RotatedCurveSurface$$1,
 	SemiCylinderSurface: SemiCylinderSurface$$1,
 	SemiEllipsoidSurface: SemiEllipsoidSurface$$1,
 	PlaneSurface: PlaneSurface$$1,
@@ -45577,22 +45806,26 @@ function HJK() {
         points: curves.flatMap(c => c.points),
     };
 }
-function alignX() {
+function alignX(dir) {
     eye.focus = V3.O;
-    eye.pos = V(100, 0, 0);
+    eye.pos = V(100 * dir, 0, 0);
     eye.up = V3.Z;
     paintScreen();
 }
-function alignY() {
+function alignY(dir) {
     eye.focus = V3.O;
-    eye.pos = V(0, 100, 0);
+    eye.pos = V(0, 100 * dir, 0);
     eye.up = V3.Z;
     paintScreen();
 }
-function alignZ() {
+function alignZ(dir) {
     eye.focus = V3.O;
-    eye.pos = V(0, 0, 100);
+    eye.pos = V(0, 0, 100 * dir);
     eye.up = V3.Y;
+    paintScreen();
+}
+function rot(angleInDeg) {
+    eye.up = M4.rotateLine(eye.pos, eye.pos.to(eye.focus), angleInDeg * DEG).transformVector(eye.up);
     paintScreen();
 }
 
@@ -45600,6 +45833,7 @@ exports.viewerMain = viewerMain;
 exports.alignX = alignX;
 exports.alignY = alignY;
 exports.alignZ = alignZ;
+exports.rot = rot;
 exports.RenderObjects = RenderObjects;
 
 return exports;

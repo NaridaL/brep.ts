@@ -552,8 +552,6 @@ suite('BREP', () => {
             testBRepAnd(assert, a, b, result)
         })
         test('sphere() - sphere(0.2).translate(0, 1.05)', assert => {
-            console.log('http://google.com')
-            console.log('file:///C:/Users/aval/foo.html')
             const a = B2T.sphere()
             const v = V(-0.5773502691896257, 0.5773502691896257, 0.5773502691896257)
             // const m4 = M4.forSys(v, v.getPerpendicular
@@ -2494,6 +2492,13 @@ suite('BREP', () => {
                         159.06073045098708, 0)
                 ], new P3(V3.Z, 0), V(0, 0, -100),
                 'extrude90').flipped()
+            const result = BRep.EMPTY
+            testBRepAnd(assert, a, b, result)
+        })
+
+        test('box - torus', assert => {
+            const a = B2T.box(5, 5, 3).translate(-2.5, -2.5, -1.5)
+            const b = B2T.torus(1, 2).flipped()
             const result = BRep.EMPTY
             testBRepAnd(assert, a, b, result)
         })

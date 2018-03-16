@@ -215,7 +215,7 @@ export class L3 extends Curve {
 			}
 			return []
 		}
-		throw new Error()
+		return super.isInfosWithCurve(curve)
 	}
 
 	isInfoWithLine(line: L3): V3 | undefined {
@@ -299,9 +299,9 @@ export class L3 extends Curve {
 			return {t: NaN, s: NaN, distance: this.distanceToLine(line)}
 		}
 		const a = line.anchor, b = line.dir1, c = this.anchor, d = this.dir1
-		const bd = b.dot(d), bb = b.squared(), dd = d.squared(), amc = a.minus(c), divisor = bd * bd - dd * bb
-		const t = (amc.dot(b) * bd - amc.dot(d) * bb) / divisor
-		const s = (amc.dot(b) * dd - amc.dot(d) * bd) / divisor
+		const bd = b.dot(d), bb = b.squared(), dd = d.squared(), ca = a.minus(c), divisor = bd * bd - dd * bb
+		const t = (ca.dot(b) * bd - ca.dot(d) * bb) / divisor
+		const s = (ca.dot(b) * dd - ca.dot(d) * bd) / divisor
 		return {
 			t: t,
 			s: s,

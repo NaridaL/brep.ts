@@ -104,7 +104,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		const projBaseCurve = this.baseCurve.project(projPlane)
 		return pWC => {
 			const projPoint = projPlane.projectedPoint(pWC)
-            assertNumbers(this.sMin)
+			assertNumbers(this.sMin)
 			const t = projBaseCurve.pointT(projPoint, this.sMin, this.sMax)
 			const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
 			return new V3(t, z, 0)

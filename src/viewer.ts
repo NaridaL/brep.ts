@@ -1,6 +1,6 @@
 import chroma, { Color } from 'chroma-js'
 import nerdamer from 'nerdamer'
-import { arrayFromFunction, assert, DEG, int, round10, V, V3} from 'ts3dutils'
+import { arrayFromFunction, assert, DEG, int, round10, V, V3, M4} from 'ts3dutils'
 import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from 'tsgl'
 import deepmerge from 'deepmerge'
 
@@ -493,21 +493,25 @@ function HJK() {
 
 }
 
-export function alignX() {
+export function alignX(dir: number) {
 	eye.focus = V3.O
-	eye.pos = V(100, 0, 0)
+	eye.pos = V(100 * dir, 0, 0)
 	eye.up = V3.Z
 	paintScreen()
 }
-export function alignY() {
+export function alignY(dir: number) {
 	eye.focus = V3.O
-	eye.pos = V(0, 100, 0)
+	eye.pos = V(0, 100 * dir, 0)
 	eye.up = V3.Z
 	paintScreen()
 }
-export function alignZ() {
+export function alignZ(dir: number) {
 	eye.focus = V3.O
-	eye.pos = V(0, 0, 100)
+	eye.pos = V(0, 0, 100 * dir)
 	eye.up = V3.Y
 	paintScreen()
+}
+export function rot(angleInDeg: number) {
+    eye.up = M4.rotateLine(eye.pos, eye.pos.to(eye.focus), angleInDeg * DEG).transformVector(eye.up)
+    paintScreen()
 }

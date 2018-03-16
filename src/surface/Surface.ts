@@ -1,7 +1,7 @@
 import {Equalable} from 'javasetmap.ts'
 import {callsce, eq0, int, NLA_PRECISION, Transformable, V3,} from 'ts3dutils'
 
-import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3, CalculateAreaVisitor, ZDirVolumeVisitor} from '../index'
+import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3, CalculateAreaVisitor, ZDirVolumeVisitor, ParametricSurface, PICurve, PPCurve} from '../index'
 
 import {ceil, floor} from '../math'
 
@@ -19,6 +19,7 @@ export abstract class Surface extends Transformable implements Equalable {
 			} else if (isT > 0) {
 				inside = !inside
 			}
+			return false
 		}
 
 		for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
@@ -78,6 +79,7 @@ export abstract class Surface extends Transformable implements Equalable {
 	abstract isTsForLine(line: L3): number[]
 
 	/**
+	 * TODO remove constraint
 	 * IMPORTANT: The tangents of the resulting curves need to be equal to the cross product of this and surface in the
 	 * point. I.e.: for every point p p on a returned curve: curve.tangentAt(curve.pointT(p)) == this.normalP(p)
 	 * X surface.normalP(p)
@@ -88,20 +90,29 @@ export abstract class Surface extends Transformable implements Equalable {
 	abstract isCurvesWithPlane(plane: P3): Curve[]
 
 	isCurvesWithSurface(surface: Surface): Curve[] {
-		return surface.isCurvesWithSurface(this).map(curve => curve.reversed())
+		return surface.isCurvesWithSurface(this)//.map(curve => curve.reversed())
 	}
 
 	containsCurve(curve: Curve): boolean {
+		if (curve instanceof PICurve) {
+			if (this.equals(curve.parametricSurface) || this.equals(curve.implicitSurface)) {
+				return true
+			}
+		}
+		if (curve instanceof PPCurve) {
+			if (this.equals(curve.parametricSurface1) || this.equals(curve.parametricSurface2)) {
+				return true
+			}
+		}
 		if (curve instanceof ImplicitCurve) {
-			for (let i = ceil(curve.tMin); i <= floor(curve.tMax); i++) {
+			for (let i = ceil(curve.tMin) + 1; i <= floor(curve.tMax) - 1; i++) {
 				if (!this.containsPoint(curve.points[i])) {
 					return false
 				}
 			}
 			return true
-		} else {
-			return false
 		}
+			return false
 	}
 
 	abstract containsPoint(pWC: V3): boolean
