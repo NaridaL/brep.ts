@@ -41,5 +41,5 @@ export const {
 	LOG2E,
 	PI,
 	SQRT1_2,
-	SQRT2
+	SQRT2,
 } = Math

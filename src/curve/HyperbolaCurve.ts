@@ -1,8 +1,8 @@
-import {arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, snap0, V3} from 'ts3dutils'
+import { arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, snap0, V3 } from 'ts3dutils'
 
-import {Curve, XiEtaCurve, intersectionUnitHyperbolaLine} from '../index'
+import { Curve, XiEtaCurve, intersectionUnitHyperbolaLine } from '../index'
 
-import {PI, sign, abs, } from '../math'
+import { PI, sign, abs } from '../math'
 
 /**
  * x² - y² = 1
@@ -54,7 +54,6 @@ export class HyperbolaCurve extends XiEtaCurve {
 			const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
 			return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x: any) => x !== false)
 		}
-
 	}
 
 	at(t: number): V3 {
@@ -64,8 +63,8 @@ export class HyperbolaCurve extends XiEtaCurve {
 	}
 
 	toString() {
-	    return `${this.center} + ${this.f1} * cosh(t) + ${this.f2} * sinh(t)`
-    }
+		return `${this.center} + ${this.f1} * cosh(t) + ${this.f2} * sinh(t)`
+	}
 
 	tangentAt(t: number): V3 {
 		assertNumbers(t)
@@ -92,9 +91,9 @@ export class HyperbolaCurve extends XiEtaCurve {
 		if (this === curve) {
 			return true
 		}
-		const {f1: f1, f2: f2} = this.rightAngled(), {f1: c1, f2: c2} = curve.rightAngled()
-		return eq(f1.squared(), Math.abs(f1.dot(c1)))
-			&& eq(f2.squared(), Math.abs(f2.dot(c2)))
+		const { f1: f1, f2: f2 } = this.rightAngled(),
+			{ f1: c1, f2: c2 } = curve.rightAngled()
+		return eq(f1.squared(), Math.abs(f1.dot(c1))) && eq(f2.squared(), Math.abs(f2.dot(c2)))
 	}
 
 	reversed() {
@@ -102,18 +101,23 @@ export class HyperbolaCurve extends XiEtaCurve {
 	}
 
 	rightAngled(): HyperbolaCurve {
-		const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() + f1.squared()
+		const f1 = this.f1,
+			f2 = this.f2,
+			a = f1.dot(f2),
+			b = f2.squared() + f1.squared()
 		if (eq0(a)) {
 			return this
 		}
-		const g1 = 2 * a, g2 = b + Math.sqrt(b * b - 4 * a * a)
-		const {x1: xi, y1: eta} = intersectionUnitHyperbolaLine(g1, g2, 0)
+		const g1 = 2 * a,
+			g2 = b + Math.sqrt(b * b - 4 * a * a)
+		const { x1: xi, y1: eta } = intersectionUnitHyperbolaLine(g1, g2, 0)
 		return new HyperbolaCurve(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(eta).plus(f2.times(xi)))
 	}
 
 	eccentricity(): number {
 		const mainAxes = this.rightAngled()
-		const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length()
+		const f1length = mainAxes.f1.length(),
+			f2length = mainAxes.f1.length()
 		const [a, b] = f1length > f2length ? [f1length, f2length] : [f2length, f1length]
 		return Math.sqrt(1 + b * b / a / a)
 	}
@@ -124,7 +128,8 @@ export class HyperbolaCurve extends XiEtaCurve {
 		// xi² - eta² = 1 (by def for hyperbola)
 
 		return arrayFromFunction(3, dim => {
-			const a = this.f2.e(dim), b = this.f1.e(dim)
+			const a = this.f2.e(dim),
+				b = this.f1.e(dim)
 			return HyperbolaCurve.magic(a, b, 0)
 		})
 	}

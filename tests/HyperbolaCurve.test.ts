@@ -1,9 +1,9 @@
-import {suite, test, testCurve, testISTs} from './manager'
+import { suite, test, testCurve, testISTs } from './manager'
 
-import {V} from 'ts3dutils'
-import {HyperbolaCurve, intersectionUnitHyperbolaLine, P3} from '..'
+import { V } from 'ts3dutils'
+import { HyperbolaCurve, intersectionUnitHyperbolaLine, P3 } from '..'
 
-import {sqrt} from '../src/math'
+import { sqrt } from '../src/math'
 
 suite('HyperbolaCurve', () => {
 	test('testCurve', assert => {
@@ -17,7 +17,7 @@ suite('HyperbolaCurve', () => {
 		assert.ok(hbSheared.isColinearTo(hbShearedRA))
 		testCurve(assert, hbShearedRA)
 
-		assert.deepEqual(intersectionUnitHyperbolaLine(1, 0, 2), {x1: 2, y1: sqrt(3), x2: 2, y2: -sqrt(3)})
+		assert.deepEqual(intersectionUnitHyperbolaLine(1, 0, 2), { x1: 2, y1: sqrt(3), x2: 2, y2: -sqrt(3) })
 	})
 	test('isTsWithPlane', assert => {
 		testISTs(assert, HyperbolaCurve.XY, P3.YZ, 0)

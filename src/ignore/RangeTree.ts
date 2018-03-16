@@ -1,23 +1,19 @@
 import { int } from 'ts3dutils'
 
 export class RangeTree {
-
-
 	nextIntervals: RangeTree = undefined
 	prevIntervals: RangeTree = undefined
 	intervals: RangeTree.Interval[] = []
 	recIntCount: int = 0
 
-	constructor(public s: number,
-				public left: RangeTree | Number,
-				public right: RangeTree | Number,) {
-	}
+	constructor(public s: number, public left: RangeTree | Number, public right: RangeTree | Number) {}
 
 	static fromArray(values: number[], start = 0, end = values.length): RangeTree | Number {
 		if (end - start == 1) {
 			return values[start]
 		} else {
-			const p = start + Math.floor((end - start) / 2), s = values[p - 1]
+			const p = start + Math.floor((end - start) / 2),
+				s = values[p - 1]
 			return new RangeTree(s, RangeTree.fromArray(values, start, p), RangeTree.fromArray(values, p, end))
 		}
 	}
@@ -69,9 +65,10 @@ export class RangeTree {
 
 		function recurse(rt: RangeTree, intervals: RangeTree.Interval[]) {
 			rt.recIntCount = intervals.length
-			const intsLeft:RangeTree.Interval[] = [], intsRight:RangeTree.Interval[] = []
+			const intsLeft: RangeTree.Interval[] = [],
+				intsRight: RangeTree.Interval[] = []
 			for (const int of intervals) {
-				(int.right < rt.s ? intsLeft : rt.s < int.left ? intsRight : rt.intervals).push(int)
+				;(int.right < rt.s ? intsLeft : rt.s < int.left ? intsRight : rt.intervals).push(int)
 			}
 			intsLeft.length && recurse(rt.left as RangeTree, intsLeft)
 			if (rt.intervals) {
@@ -133,18 +130,21 @@ export class RangeTree {
 		addIntersections(P1, result)
 		addIntersections(P2, result)
 		addIntersections(P3, result)
-
 	}
 
 	toString() {
-		return `${this.s} next: ${this.nextIntervals && this.nextIntervals.s}, prev: ${this.prevIntervals && this.prevIntervals.s} `
-			+ ` ${this.recIntCount}/` + this.intervals.toSource()
-			+ ('\n' + this.left + '\n' + this.right).replace(/^/gm, '\t')
+		return (
+			`${this.s} next: ${this.nextIntervals && this.nextIntervals.s}, prev: ${this.prevIntervals &&
+				this.prevIntervals.s} ` +
+			` ${this.recIntCount}/` +
+			this.intervals.toSource() +
+			('\n' + this.left + '\n' + this.right).replace(/^/gm, '\t')
+		)
 	}
 }
 export namespace RangeTree {
-    export interface Interval {
-        left: number
-        right: number
-    }
+	export interface Interval {
+		left: number
+		right: number
+	}
 }

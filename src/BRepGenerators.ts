@@ -181,7 +181,7 @@ export function rotateCurve(
 			let width = ell.f1.length(),
 				height = ell.f2.length()
 			if (ell.f1.isParallelTo(V3.Z)) {
-				[width, height] = [height, width]
+				;[width, height] = [height, width]
 			}
 			return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
 		} else {
@@ -917,7 +917,7 @@ export namespace B2T {
 			throw new Error('four points are coplanar')
 		}
 		if (dDistance > 0) {
-			[c, d] = [d, c]
+			;[c, d] = [d, c]
 		}
 		const ab = StraightEdge.throughPoints(a, b)
 		const ac = StraightEdge.throughPoints(a, c)

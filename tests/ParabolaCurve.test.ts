@@ -1,6 +1,6 @@
-import {lerp, V} from 'ts3dutils'
-import {Curve, Edge, P3, ParabolaCurve} from '..'
-import {Assert, outputLink, suite, test, testCurve, testISTs, testCurvesColinear} from './manager'
+import { lerp, V } from 'ts3dutils'
+import { Curve, Edge, P3, ParabolaCurve } from '..'
+import { Assert, outputLink, suite, test, testCurve, testISTs, testCurvesColinear } from './manager'
 
 suite('ParabolaCurve', () => {
 	const curve = new ParabolaCurve(V(1, 1), V(4, 1, -2), V(1, 10, 2))

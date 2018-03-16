@@ -1,7 +1,6 @@
-import {int, M4} from 'ts3dutils'
+import { int, M4 } from 'ts3dutils'
 
-import {Edge, Face, Surface} from './index'
-
+import { Edge, Face, Surface } from './index'
 
 /**
  * Created by aval on 19.04.2017.
@@ -16,7 +15,7 @@ export abstract class FaceInfoFactory<T> {
 			info(surface: Surface, contour: Edge[], holes: Edge[][]): T {
 				return staticInfo
 			}
-		}
+		}()
 	}
 
 	info(surface: Surface, contour: Edge[], holes: Edge[][]): T {

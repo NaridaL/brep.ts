@@ -1,5 +1,5 @@
-import {assert} from 'ts3dutils'
-import {getGlobalId} from './index'
+import { assert } from 'ts3dutils'
+import { getGlobalId } from './index'
 
 export function doNotSerialize(target: any, key: PropertyKey) {
 	const map = target.__SERIALIZATION_BLACKLIST || (target.__SERIALIZATION_BLACKLIST = {})
@@ -95,14 +95,14 @@ export class ClassSerializer {
 				return v
 			}
 			if ('undefined' == typeof v) {
-				return {'#REF': -1}
+				return { '#REF': -1 }
 			}
 			if (v.hasOwnProperty('constructor') && this.CLASS_NAMES.has(v.constructor)) {
-				return {'#REF': this.CLASS_NAMES.get(v.constructor)}
+				return { '#REF': this.CLASS_NAMES.get(v.constructor) }
 			}
 			let index
 			if (allowLinks && !first && undefined !== (index = listMap.get(v))) {
-				return {'#REF': index}
+				return { '#REF': index }
 			}
 
 			if (Array.isArray(v)) {
@@ -119,7 +119,7 @@ export class ClassSerializer {
 				if (v.getConstructorParameters) {
 					return {
 						'#CONSTRUCTOR': this.CLASS_NAMES.get(v.constructor),
-						'#ARGS': transform(v.getConstructorParameters(), false)
+						'#ARGS': transform(v.getConstructorParameters(), false),
 					}
 				}
 				const result: any = {}
@@ -157,7 +157,7 @@ export class ClassSerializer {
 			if (v && v.constructor === Array) {
 				onReady(v)
 				for (let i = 0; i < v.length; i++) {
-					fixObject(v[i], x => v[i] = x)
+					fixObject(v[i], x => (v[i] = x))
 				}
 			} else if ('object' == typeof v && undefined != v) {
 				if ('#CONSTRUCTOR' in v) {
@@ -165,7 +165,7 @@ export class ClassSerializer {
 					const proto = this.NAME_CLASSES.get(protoName as string)
 					assert(proto, protoName + ' Missing ')
 					let args: any[]
-					fixObject(v['#ARGS'], x => args = x)
+					fixObject(v['#ARGS'], x => (args = x))
 					onReady(new proto(...args))
 				} else if ('#REF' in v) {
 					const ref = v['#REF']
@@ -177,7 +177,7 @@ export class ClassSerializer {
 						} else if (fixedObjects[ref]) {
 							onReady(fixedObjects[ref])
 						} else {
-							fixObject(tree[ref], x => onReady(fixedObjects[ref] = x))
+							fixObject(tree[ref], x => onReady((fixedObjects[ref] = x)))
 						}
 					}
 				} else {
@@ -188,14 +188,14 @@ export class ClassSerializer {
 							onReady(result)
 						})
 					} else {
-						onReady(result = v)
+						onReady((result = v))
 					}
 
 					const keys = Object.keys(v)
 					for (let i = 0; i < keys.length; i++) {
 						//if ('name' == keys[i]) console.log(result)
 						if ('#PROTO' != keys[i]) {
-							fixObject(v[keys[i]], x => result[keys[i]] = x)
+							fixObject(v[keys[i]], x => (result[keys[i]] = x))
 							//Object.defineProperty(result, keys[i], {
 							//	value: fixObjects(v[keys[i]]),
 							//	enumerable: true,
@@ -204,7 +204,11 @@ export class ClassSerializer {
 							//})
 						}
 					}
-					Object.defineProperty(result, 'loadID', {value: getGlobalId(), enumerable: false, writable: false})
+					Object.defineProperty(result, 'loadID', {
+						value: getGlobalId(),
+						enumerable: false,
+						writable: false,
+					})
 					this.updater && this.updater(result)
 				}
 			} else {
@@ -237,11 +241,10 @@ export class ClassSerializer {
 		const tree = JSON.parse(string)
 		// console.log(tree)
 		const fixedObjects = new Array(tree.length)
-		fixObject({'#REF': 0}, () => {})
+		fixObject({ '#REF': 0 }, () => {})
 		// console.log(tree)
 		// linkReferences(tree)
 		// console.log(tree)
 		return fixedObjects[0]
 	}
-
 }

@@ -1,8 +1,19 @@
 import {
-	assert, assertInst, assertNumbers, assertVectors, callsce, eq, eq0, floatHashCode, int, M4, Transformable, V3,
+	assert,
+	assertInst,
+	assertNumbers,
+	assertVectors,
+	callsce,
+	eq,
+	eq0,
+	floatHashCode,
+	int,
+	M4,
+	Transformable,
+	V3,
 } from 'ts3dutils'
 
-import {BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve} from './index'
+import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve } from './index'
 
 export class P3 extends Transformable {
 	static readonly YZ = new P3(V3.X, 0)
@@ -19,8 +30,7 @@ export class P3 extends Transformable {
 	 * @param normal1 unit plane normal1
 	 * @param w signed (rel to normal1) distance from the origin
 	 */
-	constructor(readonly normal1: V3,
-				readonly w: number = 0) {
+	constructor(readonly normal1: V3, readonly w: number = 0) {
 		super()
 		assertVectors(normal1)
 		assertNumbers(w)
@@ -33,7 +43,10 @@ export class P3 extends Transformable {
 
 	static throughPoints(a: V3, b: V3, c: V3): P3 {
 		assertVectors(a, b, c)
-		const n1 = b.minus(a).cross(c.minus(a)).unit()
+		const n1 = b
+			.minus(a)
+			.cross(c.minus(a))
+			.unit()
 		return new P3(n1, n1.dot(a))
 	}
 
@@ -76,7 +89,8 @@ export class P3 extends Transformable {
 	}
 
 	axisIntercepts(): V3 {
-		const w = this.w, n = this.normal1
+		const w = this.w,
+			n = this.normal1
 		return new V3(w / n.x, w / n.y, w / n.z)
 	}
 
@@ -193,8 +207,12 @@ export class P3 extends Transformable {
 		 .plus(n2.cross(n0).times(x1.dot(n1)))
 		 .div(m.determinant())
 		 */
-		const n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit()
-		const p = M4.forRows(n0, n1, n2).inversed().transformVector(new V3(this.w, plane.w, 0))
+		const n0 = this.normal1,
+			n1 = plane.normal1,
+			n2 = n0.cross(n1).unit()
+		const p = M4.forRows(n0, n1, n2)
+			.inversed()
+			.transformVector(new V3(this.w, plane.w, 0))
 		return new L3(p, n2)
 	}
 
@@ -220,20 +238,21 @@ export class P3 extends Transformable {
 	containsCurve(curve: Curve): boolean {
 		if (curve instanceof L3) {
 			return this.containsLine(curve)
-		} else if (curve instanceof SemiEllipseCurve ||
+		} else if (
+			curve instanceof SemiEllipseCurve ||
 			curve instanceof EllipseCurve ||
 			curve instanceof HyperbolaCurve ||
-			curve instanceof ParabolaCurve) {
+			curve instanceof ParabolaCurve
+		) {
 			return this.containsPoint(curve.center) && this.normal1.isParallelTo(curve.normal)
 		} else if (curve instanceof BezierCurve) {
 			return curve.points.every(p => this.containsPoint(p))
 		} else {
 			throw new Error('' + curve)
 		}
-
 	}
 
 	hashCode(): int {
-		return this.normal1.hashCode() * 31 | 0 + floatHashCode(this.w)
+		return (this.normal1.hashCode() * 31) | (0 + floatHashCode(this.w))
 	}
 }

@@ -1,123 +1,177 @@
 import * as manager from './manager'
-import {testBRepOp, testBRepAnd, b2equals, outputLink, suite, test, skip, FONT_PATH} from './manager'
+import { testBRepOp, testBRepAnd, b2equals, outputLink, suite, test, skip, FONT_PATH } from './manager'
 
-import {AABB, DEG, isCCW, M4, NLA_PRECISION, TAU, V, V3} from 'ts3dutils'
+import { AABB, DEG, isCCW, M4, NLA_PRECISION, TAU, V, V3 } from 'ts3dutils'
 import {
-	ALONG_EDGE_OR_PLANE, BRep, B2T, BezierCurve, ConicSurface, COPLANAR_OPPOSITE, COPLANAR_SAME, Edge, HyperbolaCurve,
-	INSIDE, L3, OUTSIDE, P3, PCurveEdge, PICurve, PlaneFace, PlaneSurface, PointVsFace, ProjectedCurveSurface,
-	RotationFace, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface, splitsVolumeEnclosingCone,
-	splitsVolumeEnclosingCone2, splitsVolumeEnclosingFaces, splitsVolumeEnclosingFacesP, StraightEdge,
+	ALONG_EDGE_OR_PLANE,
+	BRep,
+	B2T,
+	BezierCurve,
+	ConicSurface,
+	COPLANAR_OPPOSITE,
+	COPLANAR_SAME,
+	Edge,
+	HyperbolaCurve,
+	INSIDE,
+	L3,
+	OUTSIDE,
+	P3,
+	PCurveEdge,
+	PICurve,
+	PlaneFace,
+	PlaneSurface,
+	PointVsFace,
+	ProjectedCurveSurface,
+	RotationFace,
+	SemiCylinderSurface,
+	SemiEllipseCurve,
+	SemiEllipsoidSurface,
+	splitsVolumeEnclosingCone,
+	splitsVolumeEnclosingCone2,
+	splitsVolumeEnclosingFaces,
+	splitsVolumeEnclosingFacesP,
+	StraightEdge,
 } from '..'
 
-import {PI} from '../src/math'
+import { PI } from '../src/math'
 
 suite('Face', () => {
-    test('equals', assert => {
-        const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
-        const b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(10, 0, 0), V(10, 10, 0)])
-        const c = PlaneFace.forVertices(new P3(V(0, 0, -1), 0), [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)].slice().reverse())
-        assert.ok(a.equals(a))
+	test('equals', assert => {
+		const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
+		const b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(10, 0, 0), V(10, 10, 0)])
+		const c = PlaneFace.forVertices(
+			new P3(V(0, 0, -1), 0),
+			[V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)].slice().reverse(),
+		)
+		assert.ok(a.equals(a))
 
-        assert.ok(a.equals(b))
-        assert.ok(b.equals(a))
+		assert.ok(a.equals(b))
+		assert.ok(b.equals(a))
 
-        assert.notOk(a.equals(c))
-        assert.notOk(c.equals(a))
+		assert.notOk(a.equals(c))
+		assert.notOk(c.equals(a))
 
-        assert.notOk(b.equals(c))
-        assert.notOk(c.equals(b))
-    })
-    test('transform', assert => {
-        const loop = Edge.pathFromSVG('m 2 0, 1 1, -2 1 Z')
-        const face = new PlaneFace(P3.XY, loop)
-        const faceMirrored = face.mirroredX()
-        assert.ok(faceMirrored.mirroredX().likeFace(face))
-    })
-    test('containsPoint', assert => {
-        let a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
-        assert.ok(a.containsPoint(V(5, 5, 0)))
-        assert.notOk(a.containsPoint(V(11, 5, 0)))
+		assert.notOk(b.equals(c))
+		assert.notOk(c.equals(b))
+	})
+	test('transform', assert => {
+		const loop = Edge.pathFromSVG('m 2 0, 1 1, -2 1 Z')
+		const face = new PlaneFace(P3.XY, loop)
+		const faceMirrored = face.mirroredX()
+		assert.ok(faceMirrored.mirroredX().likeFace(face))
+	})
+	test('containsPoint', assert => {
+		let a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
+		assert.ok(a.containsPoint(V(5, 5, 0)))
+		assert.notOk(a.containsPoint(V(11, 5, 0)))
 
+		let b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(5, 0, 0), V(6, 5, 0)])
+		assert.ok(b.containsPoint(V(2, 5, 0)))
 
-        let b = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(5, 0, 0), V(6, 5, 0)])
-        assert.ok(b.containsPoint(V(2, 5, 0)))
+		let c = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(5, 0, 0), V(6, 5, 0), V(10, 5, 0)])
+		assert.ok(c.containsPoint(V(2, 5, 0)))
 
-        let c = PlaneFace.forVertices(P3.XY, [V(0, 10, 0), V(0, 0, 0), V(5, 0, 0), V(6, 5, 0), V(10, 5, 0)])
-        assert.ok(c.containsPoint(V(2, 5, 0)))
+		a = a.rotateZ(30 * DEG)
+		const m = M4.rotateZ(30 * DEG)
+		assert.ok(a.containsPoint(m.transformPoint(V(5, 5, 0))))
+		assert.notOk(a.containsPoint(m.transformPoint(V(-5, 5, 0))))
 
+		b = b.rotateZ(30 * DEG)
+		assert.ok(b.containsPoint(m.transformPoint(V(2, 5, 0))))
 
-        a = a.rotateZ(30 * DEG)
-        const m = M4.rotateZ(30 * DEG)
-        assert.ok(a.containsPoint(m.transformPoint(V(5, 5, 0))))
-        assert.notOk(a.containsPoint(m.transformPoint(V(-5, 5, 0))))
+		c = c.rotateZ(30 * DEG)
+		assert.ok(c.containsPoint(m.transformPoint(V(2, 5, 0))))
+	})
 
-        b = b.rotateZ(30 * DEG)
-        assert.ok(b.containsPoint(m.transformPoint(V(2, 5, 0))))
+	test('containsPoint 2', assert => {
+		const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
+		assert.notOk(a.containsPoint(V(-0.00000001, 11, 0)))
 
-        c = c.rotateZ(30 * DEG)
-        assert.ok(c.containsPoint(m.transformPoint(V(2, 5, 0))))
-    })
+		assert.ok(
+			PlaneFace.forVertices(new P3(V(0, 0, -1), 0), [V(-1, -10, 0), V(0, 25, 0), V(25, 0, 0)]).containsPoint(
+				V(0, 0, 0),
+			),
+		)
+	})
+	test('withHole', assert => {
+		const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
+		const holeVertices = [V(2, 3, 0), V(8, 7, 0), V(7, 2, 0)]
 
-    test('containsPoint 2', assert => {
-        const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
-        assert.notOk(a.containsPoint(V(-0.00000001, 11, 0)))
+		assert.notOk(a.containsPoint(V(-0.00000001, 11, 0)))
+	})
 
-        assert.ok(PlaneFace.forVertices(new P3(V(0, 0, -1), 0), [V(-1, -10, 0), V(0, 25, 0), V(25, 0, 0)]).containsPoint(V(0, 0, 0)))
-    })
-    test('withHole', assert => {
-        const a = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
-        const holeVertices = [V(2, 3, 0), V(8, 7, 0), V(7, 2, 0)]
+	test('containsPoint2 3', assert => {
+		const face = new PlaneFace(new P3(V(0, 0, -1), 0), [
+			new StraightEdge(
+				new L3(V(0, 0.3333333333333333, 0), V(-1, 0, 0)),
+				V(0.3333333333333333, 0.3333333333333333, 0),
+				V(0, 0.3333333333333333, 0),
+				-0.3333333333333333,
+				0,
+			),
+			new StraightEdge(
+				new L3(V(0, 0, 0), V(0, 1, 0)),
+				V(0, 0.3333333333333333, 0),
+				V(0, 1, 0),
+				0.3333333333333333,
+				1,
+			),
+			new StraightEdge(new L3(V(0, 1, 0), V(1, 0, 0)), V(0, 1, 0), V(1, 1, 0), 0, 1),
+			new StraightEdge(new L3(V(1, 1, 0), V(0, -1, 0)), V(1, 1, 0), V(1, 0, 0), 0, 1),
+			new StraightEdge(
+				new L3(V(1, 0, 0), V(-1, 0, 0)),
+				V(1, 0, 0),
+				V(0.33333333333333326, 0, 0),
+				0,
+				0.6666666666666667,
+			),
+			new StraightEdge(
+				new L3(V(0.3333333333333333, 0, 0), V(0, 1, 0)),
+				V(0.33333333333333326, 0, 0),
+				V(0.3333333333333333, 0.3333333333333333, 0),
+				0,
+				0.3333333333333333,
+			),
+		])
+		assert.equal(face.containsPoint2(V(0.33333345254262287, 0.3333333333333333, 0)), PointVsFace.INSIDE)
+	})
 
+	test('pointsToInside', assert => {
+		const face = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
 
-        assert.notOk(a.containsPoint(V(-0.00000001, 11, 0)))
+		assert.equal(face.pointsToInside(V3.O, V3.X.negated()), PointVsFace.OUTSIDE)
 
-    })
+		const v = V(10, 10, 0)
+		assert.equal(face.pointsToInside(v, V(-1, -1, 0)), PointVsFace.INSIDE)
+		assert.equal(face.pointsToInside(v, V(1, 1, 0)), PointVsFace.OUTSIDE)
+		assert.equal(face.pointsToInside(v, V(-1, 0, 0)), PointVsFace.ON_EDGE)
+		assert.equal(face.pointsToInside(v, V(0, -1, 0)), PointVsFace.ON_EDGE)
 
-    test('containsPoint2 3', assert => {
-        const face = new PlaneFace(new P3(V(0, 0, -1), 0), [
-            new StraightEdge(new L3(V(0, 0.3333333333333333, 0), V(-1, 0, 0)), V(0.3333333333333333, 0.3333333333333333, 0), V(0, 0.3333333333333333, 0), -0.3333333333333333, 0),
-            new StraightEdge(new L3(V(0, 0, 0), V(0, 1, 0)), V(0, 0.3333333333333333, 0), V(0, 1, 0), 0.3333333333333333, 1),
-            new StraightEdge(new L3(V(0, 1, 0), V(1, 0, 0)), V(0, 1, 0), V(1, 1, 0), 0, 1),
-            new StraightEdge(new L3(V(1, 1, 0), V(0, -1, 0)), V(1, 1, 0), V(1, 0, 0), 0, 1),
-            new StraightEdge(new L3(V(1, 0, 0), V(-1, 0, 0)), V(1, 0, 0), V(0.33333333333333326, 0, 0), 0, 0.6666666666666667),
-            new StraightEdge(new L3(V(0.3333333333333333, 0, 0), V(0, 1, 0)), V(0.33333333333333326, 0, 0), V(0.3333333333333333, 0.3333333333333333, 0), 0, 0.3333333333333333)])
-        assert.equal(face.containsPoint2(V(0.33333345254262287, 0.3333333333333333, 0)), PointVsFace.INSIDE)
-    })
+		const face2 = new PlaneFace(
+			new PlaneSurface(new P3(V(0, 0, -1), 0)),
+			[
+				StraightEdge.throughPoints(V(0, 0, 0), V(0, 5, 0)),
+				StraightEdge.throughPoints(V(0, 5, 0), V(5, 5, 0)),
+				StraightEdge.throughPoints(V(5, 5, 0), V(5, 0, 0)),
+				StraightEdge.throughPoints(V(5, 0, 0), V(0, 0, 0)),
+			],
+			[],
+		)
+	})
+	test('pointsToInside2', assert => {
+		const face = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
 
-    test('pointsToInside', assert => {
-        const face = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
+		assert.equal(face.pointsToInside2(V3.O, V3.X.negated()), PointVsFace.OUTSIDE)
 
-        assert.equal(face.pointsToInside(V3.O, V3.X.negated()), PointVsFace.OUTSIDE)
-
-        const v = V(10, 10, 0)
-        assert.equal(face.pointsToInside(v, V(-1, -1, 0)), PointVsFace.INSIDE)
-        assert.equal(face.pointsToInside(v, V(1, 1, 0)), PointVsFace.OUTSIDE)
-        assert.equal(face.pointsToInside(v, V(-1, 0, 0)), PointVsFace.ON_EDGE)
-        assert.equal(face.pointsToInside(v, V(0, -1, 0)), PointVsFace.ON_EDGE)
-
-
-        const face2 = new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
-            StraightEdge.throughPoints(V(0, 0, 0), V(0, 5, 0)),
-            StraightEdge.throughPoints(V(0, 5, 0), V(5, 5, 0)),
-            StraightEdge.throughPoints(V(5, 5, 0), V(5, 0, 0)),
-            StraightEdge.throughPoints(V(5, 0, 0), V(0, 0, 0))], [])
-
-
-    })
-    test('pointsToInside2', assert => {
-        const face = PlaneFace.forVertices(P3.XY, [V(0, 0, 0), V(10, 0, 0), V(10, 10, 0), V(0, 10, 0)])
-
-        assert.equal(face.pointsToInside2(V3.O, V3.X.negated()), PointVsFace.OUTSIDE)
-
-        const v = V(10, 10, 0)
-        assert.equal(face.pointsToInside2(v, V(-1, -1, 0)), PointVsFace.INSIDE)
-        assert.equal(face.pointsToInside2(v, V(1, 1, 0)), PointVsFace.OUTSIDE)
-        assert.equal(face.pointsToInside2(v, V(-1, 0, 0)), PointVsFace.ON_EDGE)
-        assert.equal(face.pointsToInside2(v, V(0, -1, 0)), PointVsFace.ON_EDGE)
-
-    })
+		const v = V(10, 10, 0)
+		assert.equal(face.pointsToInside2(v, V(-1, -1, 0)), PointVsFace.INSIDE)
+		assert.equal(face.pointsToInside2(v, V(1, 1, 0)), PointVsFace.OUTSIDE)
+		assert.equal(face.pointsToInside2(v, V(-1, 0, 0)), PointVsFace.ON_EDGE)
+		assert.equal(face.pointsToInside2(v, V(0, -1, 0)), PointVsFace.ON_EDGE)
+	})
 })
 
+// prettier-ignore
 suite('BREP', () => {
     suite('assembleFacesFromLoops', () => {
 

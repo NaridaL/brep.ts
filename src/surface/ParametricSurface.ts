@@ -1,53 +1,52 @@
-import {assert, between, V3, isCCW,assertNumbers} from 'ts3dutils'
-import {Mesh} from 'tsgl'
+import { assert, between, V3, isCCW, assertNumbers } from 'ts3dutils'
+import { Mesh } from 'tsgl'
 
-import {Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge, breakDownPPCurves} from '../index'
+import { Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge, breakDownPPCurves } from '../index'
 
-import {ceil, min} from '../math'
-
+import { ceil, min } from '../math'
 
 export abstract class ParametricSurface extends Surface {
 	uStep: number
 	vStep: number
 
-	constructor(
-		readonly sMin: number,
-		readonly sMax: number,
-		readonly tMin: number,
-		readonly tMax: number,
-	) {
+	constructor(readonly sMin: number, readonly sMax: number, readonly tMin: number, readonly tMax: number) {
 		super()
-        assertNumbers(sMin, sMax, tMin, tMax)
-        assert(sMin < sMax)
+		assertNumbers(sMin, sMax, tMin, tMax)
+		assert(sMin < sMax)
 		assert(tMin < tMax)
 	}
 
-    static isCurvesParametricImplicitSurface(ps: ParametricSurface,
-                                             is: ImplicitSurface,
-                                             sStep: number,
-                                             tStep: number = sStep,
-                                             curveStepSize: number): Curve[] {
-        const pf = ps.pSTFunc(), icc = is.implicitFunction()
-        const dpds = ps.dpds()
-        const dpdt = ps.dpdt()
-        const didp = is.didp.bind(is)
-        const ist = (x: number, y: number) => icc(pf(x, y))
-        const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
-        const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
-        const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
-        const curves
-            = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize)
-            .map(({points, tangents}, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize))
-        return curves
-    }
+	static isCurvesParametricImplicitSurface(
+		ps: ParametricSurface,
+		is: ImplicitSurface,
+		sStep: number,
+		tStep: number = sStep,
+		curveStepSize: number,
+	): Curve[] {
+		const pf = ps.pSTFunc(),
+			icc = is.implicitFunction()
+		const dpds = ps.dpds()
+		const dpdt = ps.dpdt()
+		const didp = is.didp.bind(is)
+		const ist = (x: number, y: number) => icc(pf(x, y))
+		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
+		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
+		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
+		const curves = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize).map(({ points, tangents }, i) =>
+			PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize),
+		)
+		return curves
+	}
 
-    static isCurvesParametricParametricSurface(ps1: ParametricSurface,
-                                               ps2: ParametricSurface,
-                                               s1Step: number,
-                                               t1Step: number = s1Step,
-                                               curveStepSize: number): Curve[] {
-        return breakDownPPCurves(ps1, ps2, s1Step, t1Step, curveStepSize)
-    }
+	static isCurvesParametricParametricSurface(
+		ps1: ParametricSurface,
+		ps2: ParametricSurface,
+		s1Step: number,
+		t1Step: number = s1Step,
+		curveStepSize: number,
+	): Curve[] {
+		return breakDownPPCurves(ps1, ps2, s1Step, t1Step, curveStepSize)
+	}
 
 	static is(obj: any): obj is ParametricSurface {
 		return obj.pSTFunc
@@ -106,18 +105,24 @@ export abstract class ParametricSurface extends Surface {
 	toMesh() {
 		assert(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax))
 		assert(isFinite(this.uStep) && isFinite(this.vStep))
-		return Mesh.parametric(this.pSTFunc(), this.normalSTFunc(),
-			this.sMin, this.sMax, this.tMin, this.tMax,
+		return Mesh.parametric(
+			this.pSTFunc(),
+			this.normalSTFunc(),
+			this.sMin,
+			this.sMax,
+			this.tMin,
+			this.tMax,
 			ceil((this.sMax - this.sMin) / this.uStep),
-			ceil((this.tMax - this.tMin) / this.vStep))
+			ceil((this.tMax - this.tMin) / this.vStep),
+		)
 	}
 
 	isCurvesWithImplicitSurface(is: ImplicitSurface, sStep: number, tStep: number, stepSize: number): Curve[] {
 		return ParametricSurface.isCurvesParametricImplicitSurface(this, is, sStep, tStep, stepSize)
 	}
 
-    edgeLoopCCW(contour: Edge[]): boolean {
-        const ptpF = this.stPFunc()
-        return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
-    }
+	edgeLoopCCW(contour: Edge[]): boolean {
+		const ptpF = this.stPFunc()
+		return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
+	}
 }

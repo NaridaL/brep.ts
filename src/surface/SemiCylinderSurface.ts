@@ -1,12 +1,21 @@
-import {assert, assertInst, assertVectors, eq0, hasConstructor, le, M4, pqFormula, TAU, V3,} from 'ts3dutils'
+import { assert, assertInst, assertVectors, eq0, hasConstructor, le, M4, pqFormula, TAU, V3 } from 'ts3dutils'
 
 import {
-	BezierCurve, Curve, Edge, L3, P3, PlaneSurface, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface,
-    ImplicitSurface,
+	BezierCurve,
+	Curve,
+	Edge,
+	L3,
+	P3,
+	PlaneSurface,
+	PointVsFace,
+	ProjectedCurveSurface,
+	SemiEllipseCurve,
+	Surface,
+	ImplicitSurface,
 	OUTSIDE,
 } from '../index'
 
-import {PI, sign} from '../math'
+import { PI, sign } from '../math'
 
 export class SemiCylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
@@ -17,24 +26,35 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	readonly normalDir: number
 	readonly baseCurve: SemiEllipseCurve
 
-	constructor(baseCurve: SemiEllipseCurve,
-				dir1: V3,
-				sMin: number = baseCurve.tMin,
-				sMax: number = baseCurve.tMax,
-				zMin = -Infinity,
-				zMax = Infinity) {
+	constructor(
+		baseCurve: SemiEllipseCurve,
+		dir1: V3,
+		sMin: number = baseCurve.tMin,
+		sMax: number = baseCurve.tMax,
+		zMin = -Infinity,
+		zMax = Infinity,
+	) {
 		super(baseCurve, dir1, sMin, sMax, zMin, zMax)
 		assertInst(SemiEllipseCurve, baseCurve)
 		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.baseCurve.normal.dot(this.dir))
-		this.pLCNormalWCMatrix = this.matrix.as3x3().inversed().transposed().scale(this.normalDir)
-        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
+		this.pLCNormalWCMatrix = this.matrix
+			.as3x3()
+			.inversed()
+			.transposed()
+			.scale(this.normalDir)
+		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
 	}
 
 	static semicylinder(radius: number): SemiCylinderSurface {
-		return new SemiCylinderSurface(new SemiEllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, undefined, undefined)
+		return new SemiCylinderSurface(
+			new SemiEllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)),
+			V3.Z,
+			undefined,
+			undefined,
+		)
 	}
 
 	/**
@@ -43,8 +63,8 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	 * @param dirLC not necessarily unit
 	 */
 	static unitISLineTs(anchorLC: V3, dirLC: V3): number[] {
-		const {x: ax, y: ay} = anchorLC
-		const {x: dx, y: dy} = dirLC
+		const { x: ax, y: ay } = anchorLC
+		const { x: dx, y: dy } = dirLC
 
 		// this cylinder: x² + y² = 1
 		// line: p = anchorLC + t * dirLC
@@ -85,15 +105,21 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 			return []
 		}
 		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
-		assert(!SemiCylinderSurface.unitISLineTs(anchorLC, dirLC).length || !isNaN(SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)[0]), 'sad ' + dirLC)
+		assert(
+			!SemiCylinderSurface.unitISLineTs(anchorLC, dirLC).length ||
+				!isNaN(SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)[0]),
+			'sad ' + dirLC,
+		)
 		return SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
 	isCoplanarTo(surface: Surface): surface is SemiCylinderSurface {
-		return this == surface ||
-			hasConstructor(surface, SemiCylinderSurface)
-			&& this.dir.isParallelTo(surface.dir)
-			&& this.containsSemiEllipse(surface.baseCurve, false)
+		return (
+			this == surface ||
+			(hasConstructor(surface, SemiCylinderSurface) &&
+				this.dir.isParallelTo(surface.dir) &&
+				this.containsSemiEllipse(surface.baseCurve, false))
+		)
 	}
 
 	like(surface: Surface): boolean {
@@ -106,8 +132,11 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 	containsSemiEllipse(ellipse: SemiEllipseCurve, checkAABB: boolean = true) {
 		const projEllipse = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir))
-		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(projEllipse) &&
-			(!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y))
+		return (
+			this.baseCurve == ellipse ||
+			(this.baseCurve.isColinearTo(projEllipse) &&
+				(!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y)))
+		)
 	}
 
 	containsCurve(curve: Curve) {
@@ -125,20 +154,16 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	implicitFunction() {
 		return (pWC: V3) => {
 			const pLC = this.inverseMatrix.transformPoint(pWC)
-            return (pLC.lengthXY() - 1) * this.normalDir
+			return (pLC.lengthXY() - 1) * this.normalDir
 		}
 	}
 
-    didp(pWC: V3) {
-        const pLC = this.inverseMatrix.transformPoint(pWC)
-        const pLCLengthXY = pLC.lengthXY()
-        const didpLC = new V3(
-            pLC.x / pLCLengthXY,
-            pLC.y / pLCLengthXY,
-            0,
-        )
-        return this.pLCNormalWCMatrix.transformVector(didpLC)
-    }
+	didp(pWC: V3) {
+		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLCLengthXY = pLC.lengthXY()
+		const didpLC = new V3(pLC.x / pLCLengthXY, pLC.y / pLCLengthXY, 0)
+		return this.pLCNormalWCMatrix.transformVector(didpLC)
+	}
 
 	containsPoint(pWC: V3): boolean {
 		const pLC = this.inverseMatrix.transformPoint(pWC)
@@ -153,20 +178,25 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	}
 
 	isCurvesWithSurface(surface2: Surface): Curve[] {
-        if (surface2 instanceof ProjectedCurveSurface) {
+		if (surface2 instanceof ProjectedCurveSurface) {
 			if (surface2.dir.isParallelTo(this.dir)) {
 				const projectedCurve = surface2.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir))
 				return this.baseCurve.isInfosWithCurve(projectedCurve).map(info => {
-					const lineDir = sign(this.normalP(info.p).cross(surface2.normalP(info.p)).dot(this.dir)) || 1
+					const lineDir =
+						sign(
+							this.normalP(info.p)
+								.cross(surface2.normalP(info.p))
+								.dot(this.dir),
+						) || 1
 					return new L3(info.p, this.dir.times(lineDir))
 				})
 			}
 		}
 		if (surface2 instanceof SemiCylinderSurface) {
-            if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
-                throw new Error()
-            }
-        }
+			if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
+				throw new Error()
+			}
+		}
 		return super.isCurvesWithSurface(surface2)
 	}
 
@@ -191,13 +221,3 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 SemiCylinderSurface.prototype.uStep = TAU / 32
 SemiCylinderSurface.prototype.vStep = 256
-
-
-
-
-
-
-
-
-
-

@@ -1,18 +1,20 @@
-import {arrayFromFunction, assert, assertInst, isCCW, M4, V, V3, callsce} from 'ts3dutils'
-import {Mesh, pushQuad} from 'tsgl'
+import { arrayFromFunction, assert, assertInst, isCCW, M4, V, V3, callsce } from 'ts3dutils'
+import { Mesh, pushQuad } from 'tsgl'
 
-import {Curve, Edge, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface, ImplicitCurve,} from '../index'
+import { Curve, Edge, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface, ImplicitCurve } from '../index'
 
 export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4
 
-	constructor(readonly plane: P3,
+	constructor(
+		readonly plane: P3,
 		readonly right: V3 = plane.normal1.getPerpendicular().unit(),
 		readonly up: V3 = plane.normal1.cross(right).unit(),
 		sMin: number = -100,
 		sMax: number = 100,
 		tMin: number = -100,
-		tMax: number = 100) {
+		tMax: number = 100,
+	) {
 		super(sMin, sMax, tMin, tMax)
 		assertInst(P3, plane)
 		assert(this.right.cross(this.up).like(this.plane.normal1))
@@ -27,12 +29,16 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return new PlaneSurface(P3.throughPoints(a, b, c))
 	}
 
-	static forAnchorAndPlaneVectors(anchor: V3, v0: V3, v1: V3, sMin?: number, sMax?: number, tMin?: number, tMax?: number): PlaneSurface {
-		return new PlaneSurface(
-			P3.forAnchorAndPlaneVectors(anchor, v0, v1),
-			v0, v1,
-			sMin, sMax,
-			tMin, tMax)
+	static forAnchorAndPlaneVectors(
+		anchor: V3,
+		v0: V3,
+		v1: V3,
+		sMin?: number,
+		sMax?: number,
+		tMin?: number,
+		tMax?: number,
+	): PlaneSurface {
+		return new PlaneSurface(P3.forAnchorAndPlaneVectors(anchor, v0, v1), v0, v1, sMin, sMax, tMin, tMax)
 	}
 	isCoplanarTo(surface: Surface): boolean {
 		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
@@ -69,7 +75,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {
-	    assert(Edge.isLoop(contour), 'isLoop')
+		assert(Edge.isLoop(contour), 'isLoop')
 		return isCCW(contour.flatMap(edge => edge.points()), this.plane.normal1)
 	}
 
@@ -82,7 +88,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 
 	stPFunc() {
 		const matrixInverse = this.matrix.inversed()
-		return function (pWC: V3) {
+		return function(pWC: V3) {
 			return matrixInverse.transformPoint(pWC)
 		}
 	}
@@ -144,8 +150,8 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	normalST() {
-	    return this.plane.normal1
-    }
+		return this.plane.normal1
+	}
 }
 
 PlaneSurface.prototype.uStep = 1e6

@@ -1,9 +1,8 @@
-import {V, V3} from 'ts3dutils'
-import {BezierCurve, P3, PlaneSurface, SemiEllipseCurve, SemiEllipsoidSurface, EllipseCurve,} from '..'
-import {suite, test, testCurve, testISTs, testCurveISInfos} from './manager'
+import { V, V3 } from 'ts3dutils'
+import { BezierCurve, P3, PlaneSurface, SemiEllipseCurve, SemiEllipsoidSurface, EllipseCurve } from '..'
+import { suite, test, testCurve, testISTs, testCurveISInfos } from './manager'
 
-import {PI, sin} from '../src/math'
-
+import { PI, sin } from '../src/math'
 
 suite('SemiEllipseCurve', () => {
 	const curve = SemiEllipseCurve.UNIT.shearX(2, 1)
@@ -18,7 +17,7 @@ suite('SemiEllipseCurve', () => {
 		testCurve(assert, curve)
 		testCurve(assert, curve.reversed())
 	})
-    test('UNIT.shearX(2, 3)', assert => testCurve(assert, SemiEllipseCurve.UNIT.shearX(2, 2)))
+	test('UNIT.shearX(2, 3)', assert => testCurve(assert, SemiEllipseCurve.UNIT.shearX(2, 2)))
 	test('isTsWithPlane', assert => {
 		const plane = new P3(V(2, 7, 1).unit(), 2)
 		testISTs(assert, curve.scale(1, 3, 1), plane, 2)
@@ -45,15 +44,24 @@ suite('SemiEllipseCurve', () => {
 		const closestT = curve.closestTToPoint(p)
 		const pDist = curve.at(closestT).distanceTo(p)
 		const EPS = 0.001
-		assert.push(pDist < curve.at(closestT - EPS).distanceTo(p), curve.at(closestT - EPS).distanceTo(p), '> ' + pDist,
-			'' + (pDist - curve.at(closestT - EPS).distanceTo(p)) + 'larger')
-		assert.push(pDist < curve.at(closestT + EPS).distanceTo(p), curve.at(closestT + EPS).distanceTo(p), '> ' + pDist)
+		assert.push(
+			pDist < curve.at(closestT - EPS).distanceTo(p),
+			curve.at(closestT - EPS).distanceTo(p),
+			'> ' + pDist,
+			'' + (pDist - curve.at(closestT - EPS).distanceTo(p)) + 'larger',
+		)
+		assert.push(
+			pDist < curve.at(closestT + EPS).distanceTo(p),
+			curve.at(closestT + EPS).distanceTo(p),
+			'> ' + pDist,
+		)
 	})
 	test('isColinearTo', assert => {
 		assert.ok(SemiEllipseCurve.forAB(1, 2).isColinearTo(SemiEllipseCurve.forAB(1, -2)))
 	})
 	test('isInfosWithEllipse', assert => {
-		const c1 = SemiEllipseCurve.semicircle(5), c2 = SemiEllipseCurve.semicircle(5, V(3, 0))
+		const c1 = SemiEllipseCurve.semicircle(5),
+			c2 = SemiEllipseCurve.semicircle(5, V(3, 0))
 		testCurveISInfos(assert, c1, c2, 1)
 
 		const verticalEllipse = new SemiEllipseCurve(V(2, 0), V(1, 1), V(1, 10))
@@ -69,7 +77,8 @@ suite('SemiEllipseCurve', () => {
 		testCurveISInfos(assert, c1, test, 1)
 	})
 	test('EllipseCurve.isInfosWithEllipse', assert => {
-		const c1 = EllipseCurve.circle(5), c2 = EllipseCurve.circle(5, V(3, 0))
+		const c1 = EllipseCurve.circle(5),
+			c2 = EllipseCurve.circle(5, V(3, 0))
 		testCurveISInfos(assert, c1, c2, 2)
 
 		const verticalEllipse = new EllipseCurve(V(2, 0), V(1, 1), V(1, 10))

@@ -1,6 +1,6 @@
-import {ShaderType} from 'tsgl'
+import { ShaderType } from 'tsgl'
 
-export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3', camPos: 'FLOAT_VEC3' }> = `
+export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3'; camPos: 'FLOAT_VEC3' }> = `
 	precision highp float;
 	uniform vec4 color;
 	uniform vec3 camPos;
@@ -107,10 +107,10 @@ export const vertexShaderColor: ShaderType<{}> = `
 	}
 `
 export const vertexShaderArc: ShaderType<{
-	color: 'FLOAT_VEC4',
-	step: 'FLOAT',
-	offset: 'FLOAT',
-	radius: 'FLOAT',
+	color: 'FLOAT_VEC4'
+	step: 'FLOAT'
+	offset: 'FLOAT'
+	radius: 'FLOAT'
 	width: 'FLOAT'
 }> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
@@ -126,12 +126,12 @@ export const vertexShaderArc: ShaderType<{
 }
 `
 export const vertexShaderConic3d: ShaderType<{
-	startT: 'FLOAT',
-	endT: 'FLOAT',
-	scale: 'FLOAT',
-	center: 'FLOAT_VEC3',
-	f1: 'FLOAT_VEC3',
-	f2: 'FLOAT_VEC3',
+	startT: 'FLOAT'
+	endT: 'FLOAT'
+	scale: 'FLOAT'
+	center: 'FLOAT_VEC3'
+	f1: 'FLOAT_VEC3'
+	f2: 'FLOAT_VEC3'
 	mode: 'INT'
 }> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
@@ -165,13 +165,13 @@ export const vertexShaderConic3d: ShaderType<{
 	}
 `
 export const vertexShaderBezier: ShaderType<{
-	width: 'FLOAT',
-	startT: 'FLOAT',
-	endT: 'FLOAT',
-	p0: 'FLOAT_VEC3',
-	p1: 'FLOAT_VEC3',
-	p2: 'FLOAT_VEC3',
-	p3: 'FLOAT_VEC3',
+	width: 'FLOAT'
+	startT: 'FLOAT'
+	endT: 'FLOAT'
+	p0: 'FLOAT_VEC3'
+	p1: 'FLOAT_VEC3'
+	p2: 'FLOAT_VEC3'
+	p3: 'FLOAT_VEC3'
 }> = `
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform mat4 ts_ModelViewProjectionMatrix;
@@ -191,14 +191,14 @@ export const vertexShaderBezier: ShaderType<{
 	}
 `
 export const vertexShaderBezier3d: ShaderType<{
-	scale: 'FLOAT',
-	startT: 'FLOAT',
-	endT: 'FLOAT',
-	p0: 'FLOAT_VEC3',
-	p1: 'FLOAT_VEC3',
-	p2: 'FLOAT_VEC3',
-	p3: 'FLOAT_VEC3',
-	normal: 'FLOAT_VEC3',
+	scale: 'FLOAT'
+	startT: 'FLOAT'
+	endT: 'FLOAT'
+	p0: 'FLOAT_VEC3'
+	p1: 'FLOAT_VEC3'
+	p2: 'FLOAT_VEC3'
+	p3: 'FLOAT_VEC3'
+	normal: 'FLOAT_VEC3'
 }> = `
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
@@ -232,7 +232,7 @@ export const vertexShaderGeneric: ShaderType<{ scale: 'FLOAT' }> = `
 		gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
 	}
 `
-export const vertexShaderRing: ShaderType<{ step: 'FLOAT', innerRadius: 'FLOAT', outerRadius: 'FLOAT' }> = `
+export const vertexShaderRing: ShaderType<{ step: 'FLOAT'; innerRadius: 'FLOAT'; outerRadius: 'FLOAT' }> = `
 	#define M_PI 3.1415926535897932384626433832795
 	uniform float step;
 	uniform float innerRadius, outerRadius;

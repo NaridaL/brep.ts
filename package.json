@@ -86,7 +86,7 @@
     "test:ci": "npm run build && npm run lint && npm test",
     "demo:watch": "rollup -c rollup.demo.config.js -w",
     "demo:build": "rollup -c rollup.demo.config.js",
-    "foo": "cd .."
+    "prettier": "prettier"
   },
   "types": "src/index.ts",
   "umdGlobal": "brep_ts",
@@ -101,7 +101,6 @@
     "semi": false,
     "singleQuote": true,
     "trailingComma": "all",
-    "requirePragma": true,
     "printWidth": 120,
     "tabWidth": 4
   }

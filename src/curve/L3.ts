@@ -1,25 +1,39 @@
 import {
-	arrayFromFunction, assert, assertf, assertInst, assertNumbers, assertVectors, clamp, eq, eq0, hasConstructor, int,
-	M4, NLA_PRECISION, TAU, V3,
+	arrayFromFunction,
+	assert,
+	assertf,
+	assertInst,
+	assertNumbers,
+	assertVectors,
+	clamp,
+	eq,
+	eq0,
+	hasConstructor,
+	int,
+	M4,
+	NLA_PRECISION,
+	TAU,
+	V3,
 } from 'ts3dutils'
-import {Mesh, pushQuad} from 'tsgl'
+import { Mesh, pushQuad } from 'tsgl'
 
-import {Curve, ISInfo, P3} from '../index'
+import { Curve, ISInfo, P3 } from '../index'
 
 /**
  * 3-dimensional line
  */
 export class L3 extends Curve {
-
 	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
 	static readonly X: L3 = new L3(V3.O, V3.X)
 	static readonly Y: L3 = new L3(V3.O, V3.Y)
 	static readonly Z: L3 = new L3(V3.O, V3.Z)
 
-	constructor(readonly anchor: V3, // line anchor
-				readonly dir1: V3, // normalized line dir
-				tMin: number = -4096,
-				tMax: number = 4096) {
+	constructor(
+		readonly anchor: V3, // line anchor
+		readonly dir1: V3, // normalized line dir
+		tMin: number = -4096,
+		tMax: number = 4096,
+	) {
 		super(tMin, tMax)
 		assertVectors(anchor, dir1)
 		assert(dir1.hasLength(1), 'dir must be unit' + dir1)
@@ -66,13 +80,20 @@ export class L3 extends Curve {
 			const start = mesh.vertices.length
 			if (0 !== i) {
 				for (let j = 0; j < res; j++) {
-					pushQuad(mesh.TRIANGLES, true,
-						start - res + j, start + j,
-						start - res + (j + 1) % res, start + (j + 1) % res)
+					pushQuad(
+						mesh.TRIANGLES,
+						true,
+						start - res + j,
+						start + j,
+						start - res + (j + 1) % res,
+						start + (j + 1) % res,
+					)
 				}
 			}
 			const t = 0 == i ? tMin : tMax
-			const point = this.at(t), tangent = this.dir1, x = this.dir1.getPerpendicular()
+			const point = this.at(t),
+				tangent = this.dir1,
+				x = this.dir1.getPerpendicular()
 			const matrix = M4.forSys(x, this.dir1.cross(x), this.dir1, point)
 			mesh.normals.push(...matrix.transformedVectors(baseNormals))
 			mesh.vertices.push(...matrix.transformedPoints(baseVertices))
@@ -91,23 +112,20 @@ export class L3 extends Curve {
 	}
 
 	likeCurve(curve: Curve): boolean {
-		return this == curve ||
-			hasConstructor(curve, L3)
-			&& this.anchor.like(curve.anchor)
-			&& this.dir1.like(curve.dir1)
+		return (
+			this == curve || (hasConstructor(curve, L3) && this.anchor.like(curve.anchor) && this.dir1.like(curve.dir1))
+		)
 	}
 
 	equals(obj: any): boolean {
-		return this == obj ||
-			Object.getPrototypeOf(obj) == L3.prototype
-			&& this.anchor.equals(obj.anchor)
-			&& this.dir1.equals(obj.dir1)
+		return (
+			this == obj ||
+			(Object.getPrototypeOf(obj) == L3.prototype && this.anchor.equals(obj.anchor) && this.dir1.equals(obj.dir1))
+		)
 	}
 
 	isColinearTo(obj: Curve): boolean {
-		return obj instanceof L3
-			&& this.containsPoint(obj.anchor)
-			&& eq(1, Math.abs(this.dir1.dot(obj.dir1)))
+		return obj instanceof L3 && this.containsPoint(obj.anchor) && eq(1, Math.abs(this.dir1.dot(obj.dir1)))
 	}
 
 	distanceToLine(line: L3): number {
@@ -132,7 +150,9 @@ export class L3 extends Curve {
 	asSegmentDistanceToPoint(x: V3, sStart: number, sEnd: number) {
 		let t = x.minus(this.anchor).dot(this.dir1)
 		t = clamp(t, sStart, sEnd)
-		return this.at(t).minus(x).length()
+		return this.at(t)
+			.minus(x)
+			.length()
 	}
 
 	asSegmentDistanceToLine(line: L3, sStart: number, sEnd: number) {
@@ -211,7 +231,7 @@ export class L3 extends Curve {
 				const tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div
 				const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
 				const p = this.at(tThis)
-				return [{tThis: tThis, tOther: tOther, p: p}]
+				return [{ tThis: tThis, tOther: tOther, p: p }]
 			}
 			return []
 		}
@@ -238,7 +258,7 @@ export class L3 extends Curve {
 	/**
 	 * returns s and t with this.at(s) == line.at(t)
 	 */
-	intersectionLineST(line: L3): { s: number, t: number } {
+	intersectionLineST(line: L3): { s: number; t: number } {
 		// the two points on two lines the closest two each other are the ones whose
 		// connecting
 		// TODO Where does this come from?
@@ -249,7 +269,7 @@ export class L3 extends Curve {
 		const anchorDiff = line.anchor.minus(this.anchor)
 		const s = anchorDiff.cross(this.dir1).dot(dirCross) / div
 		const t = anchorDiff.cross(line.dir1).dot(dirCross) / div
-		return {s: s, t: t}
+		return { s: s, t: t }
 		//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1,
 		// "s", s, "t", t, "div", div)
 	}
@@ -268,7 +288,7 @@ export class L3 extends Curve {
 		return nearestT
 	}
 
-	infoClosestToLine(line: L3): { t: number, s?: number, closest?: V3, closest2?: V3, distance: number } {
+	infoClosestToLine(line: L3): { t: number; s?: number; closest?: V3; closest2?: V3; distance: number } {
 		/*
 		 line = a + s*b
 		 this = c + t*d
@@ -296,10 +316,17 @@ export class L3 extends Curve {
 		 t = ((a - c)*b*(b*d) - (a - c)*d * (b*b)) / ((d*b)*(b*d) - (d*d) * (b*b))
 		 */
 		if (this.isParallelToLine(line)) {
-			return {t: NaN, s: NaN, distance: this.distanceToLine(line)}
+			return { t: NaN, s: NaN, distance: this.distanceToLine(line) }
 		}
-		const a = line.anchor, b = line.dir1, c = this.anchor, d = this.dir1
-		const bd = b.dot(d), bb = b.squared(), dd = d.squared(), ca = a.minus(c), divisor = bd * bd - dd * bb
+		const a = line.anchor,
+			b = line.dir1,
+			c = this.anchor,
+			d = this.dir1
+		const bd = b.dot(d),
+			bb = b.squared(),
+			dd = d.squared(),
+			ca = a.minus(c),
+			divisor = bd * bd - dd * bb
 		const t = (ca.dot(b) * bd - ca.dot(d) * bb) / divisor
 		const s = (ca.dot(b) * dd - ca.dot(d) * bd) / divisor
 		return {

@@ -1,27 +1,35 @@
 import chroma from 'chroma-js'
-import {addOwnProperties, arrayFromFunction, DEG, int, M4, TAU, V, V3} from 'ts3dutils'
-import { GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext} from 'tsgl'
+import { addOwnProperties, arrayFromFunction, DEG, int, M4, TAU, V, V3 } from 'ts3dutils'
+import { GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext } from 'tsgl'
 
 import {
-	BezierCurve, Curve, CustomPlane, Edge, EllipseCurve, HyperbolaCurve,
-	ImplicitCurve, L3, ParabolaCurve, PICurve, SemiEllipseCurve, PPCurve,
-	} from './index'
+	BezierCurve,
+	Curve,
+	CustomPlane,
+	Edge,
+	EllipseCurve,
+	HyperbolaCurve,
+	ImplicitCurve,
+	L3,
+	ParabolaCurve,
+	PICurve,
+	SemiEllipseCurve,
+	PPCurve,
+} from './index'
 import * as shaders from './shaders'
 
-import {pow, sign} from './math'
+import { pow, sign } from './math'
 
 export function parseGetParams(str: string) {
 	const result: { [key: string]: string } = {}
-	str
-		.split('&')
-		.forEach(function (item) {
-			const splitIndex = item.indexOf('=')
-			if (-1 == splitIndex) {
-				result[item] = item
-			} else {
-				result[item.substr(0, splitIndex)] = decodeURI(item.substr(splitIndex + 1))
-			}
-		})
+	str.split('&').forEach(function(item) {
+		const splitIndex = item.indexOf('=')
+		if (-1 == splitIndex) {
+			result[item] = item
+		} else {
+			result[item.substr(0, splitIndex)] = decodeURI(item.substr(splitIndex + 1))
+		}
+	})
 	return result
 }
 
@@ -37,11 +45,11 @@ export interface BREPGLContext extends TSGLContext {}
 export class BREPGLContext {
 	shaders: SHADERS_TYPE
 
-	cachedMeshes: WeakMap<any, Mesh & { TRIANGLES: int[], normals: V3[] }> = new WeakMap()
+	cachedMeshes: WeakMap<any, Mesh & { TRIANGLES: int[]; normals: V3[] }> = new WeakMap()
 
 	constructor(gl: BREPGLContext) {
 		this.shaders = initShaders(gl)
-		initMeshes(this.meshes = {}, gl)
+		initMeshes((this.meshes = {}), gl)
 	}
 
 	static create(gl: TSGLContext) {
@@ -54,7 +62,7 @@ export class BREPGLContext {
 		this.pushMatrix()
 		this.translate(p)
 		this.scale(size, size, size)
-		this.shaders.singleColor.uniforms({color: color}).draw(this.meshes.sphere1)
+		this.shaders.singleColor.uniforms({ color: color }).draw(this.meshes.sphere1)
 		this.popMatrix()
 	}
 
@@ -72,14 +80,16 @@ export class BREPGLContext {
 		const vT = vector.getPerpendicular().unit()
 		this.multMatrix(M4.forSys(vector, vT, vector.cross(vT).unit(), anchor))
 		1 != size && this.scale(size, size, size)
-		this.shaders.singleColor.uniforms({
-			color: color,
-		}).draw(this.meshes.vector)
+		this.shaders.singleColor
+			.uniforms({
+				color: color,
+			})
+			.draw(this.meshes.vector)
 
 		this.popMatrix()
 	}
 
-	drawVectors(drVs: { dir1: V3, anchor: V3, color: GL_COLOR }[]) {
+	drawVectors(drVs: { dir1: V3; anchor: V3; color: GL_COLOR }[]) {
 		this.drawVector(V3.X, V3.O, chroma('red').gl(), undefined)
 		this.drawVector(V3.Y, V3.O, chroma('green').gl(), undefined)
 		this.drawVector(V3.Z, V3.O, chroma('blue').gl(), undefined)
@@ -94,26 +104,45 @@ export class BREPGLContext {
 		this.scale(customPlane.sMax - customPlane.sMin, customPlane.tMax - customPlane.tMin, 1)
 
 		const mesh = dotted ? this.meshes.xyDottedLinePlane : this.meshes.xyLinePlane
-		this.shaders.singleColor.uniforms({color: color}).draw(mesh, this.LINES)
+		this.shaders.singleColor.uniforms({ color: color }).draw(mesh, this.LINES)
 
 		this.popMatrix()
 	}
 }
 
-function conicPainter(mode: 0 | 1 | 2, gl: BREPGLContext, ellipse: SemiEllipseCurve, color: GL_COLOR, startT: number, endT: number, width = 2) {
-	gl.shaders.ellipse3d.uniforms({
-		f1: ellipse.f1,
-		f2: ellipse.f2,
-		center: ellipse.center,
-		color: color,
-		startT: startT,
-		endT: endT,
-		scale: width,
-		mode: mode,
-	}).draw(gl.meshes.pipe)
+function conicPainter(
+	mode: 0 | 1 | 2,
+	gl: BREPGLContext,
+	ellipse: SemiEllipseCurve,
+	color: GL_COLOR,
+	startT: number,
+	endT: number,
+	width = 2,
+) {
+	gl.shaders.ellipse3d
+		.uniforms({
+			f1: ellipse.f1,
+			f2: ellipse.f2,
+			center: ellipse.center,
+			color: color,
+			startT: startT,
+			endT: endT,
+			scale: width,
+			mode: mode,
+		})
+		.draw(gl.meshes.pipe)
 }
 
-export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContext, curve: Curve, color: GL_COLOR, startT: number, endT: number, width: number) => void } = {
+export const CURVE_PAINTERS: {
+	[curveConstructorName: string]: (
+		gl: BREPGLContext,
+		curve: Curve,
+		color: GL_COLOR,
+		startT: number,
+		endT: number,
+		width: number,
+	) => void
+} = {
 	[SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
@@ -121,9 +150,7 @@ export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContex
 	[ImplicitCurve.name](gl, curve: ImplicitCurve, color, startT, endT, width = 2, normal = V3.Z) {
 		let mesh = gl.cachedMeshes.get(curve)
 		if (!mesh) {
-			mesh = new Mesh()
-				.addIndexBuffer('TRIANGLES')
-				.addVertexBuffer('normals', 'ts_Normal')
+			mesh = new Mesh().addIndexBuffer('TRIANGLES').addVertexBuffer('normals', 'ts_Normal')
 			curve.addToMesh(mesh)
 			mesh.compile()
 			//mesh=Mesh.sphere(2)
@@ -132,34 +159,42 @@ export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContex
 		// TODO: draw only part
 		//startT: startT,
 		//	endT: endT,
-		gl.shaders.generic3d.uniforms({
-			color: color,
-			scale: width,
-		}).draw(mesh)
+		gl.shaders.generic3d
+			.uniforms({
+				color: color,
+				scale: width,
+			})
+			.draw(mesh)
 	},
 	[BezierCurve.name](gl, curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
-		gl.shaders.bezier3d.uniforms({
-			p0: curve.p0,
-			p1: curve.p1,
-			p2: curve.p2,
-			p3: curve.p3,
-			color: color,
-			startT: startT,
-			endT: endT,
-			scale: width,
-			normal: normal,
-		}).draw(gl.meshes.pipe)
+		gl.shaders.bezier3d
+			.uniforms({
+				p0: curve.p0,
+				p1: curve.p1,
+				p2: curve.p2,
+				p3: curve.p3,
+				color: color,
+				startT: startT,
+				endT: endT,
+				scale: width,
+				normal: normal,
+			})
+			.draw(gl.meshes.pipe)
 	},
 	[L3.name](gl, curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
 		gl.pushMatrix()
-		const a = curve.at(startT), b = curve.at(endT)
-		const ab = b.minus(a), abT = ab.getPerpendicular().unit()
+		const a = curve.at(startT),
+			b = curve.at(endT)
+		const ab = b.minus(a),
+			abT = ab.getPerpendicular().unit()
 		const m = M4.forSys(ab, abT, ab.cross(abT).unit(), a)
 		gl.multMatrix(m)
 		gl.scale(1, width, width)
-		gl.shaders.singleColor.uniforms({
-			color: color, // TODO: error checking
-		}).draw(gl.meshes.pipe)
+		gl.shaders.singleColor
+			.uniforms({
+				color: color, // TODO: error checking
+			})
+			.draw(gl.meshes.pipe)
 
 		gl.popMatrix()
 	},
@@ -167,11 +202,10 @@ export const CURVE_PAINTERS: { [curveConstructorName: string]: (gl: BREPGLContex
 CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 CURVE_PAINTERS[PPCurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
-
 export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BREPGLContext) {
 	_gl.makeCurrent()
 	_meshes.sphere1 = Mesh.sphere(2)
-	_meshes.segment = Mesh.plane({startY: -0.5, height: 1, detailX: 128})
+	_meshes.segment = Mesh.plane({ startY: -0.5, height: 1, detailX: 128 })
 	_meshes.text = Mesh.plane()
 	_meshes.vector = Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true)
 	_meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
@@ -197,7 +231,6 @@ export function initShaders(_gl: TSGLContext) {
 	}
 }
 
-
 function makeDottedLinePlane(count: int = 128) {
 	const mesh = new Mesh().addIndexBuffer('LINES')
 	const OXvertices = arrayFromFunction(count, i => new V3(i / count, 0, 0))
@@ -210,9 +243,9 @@ function makeDottedLinePlane(count: int = 128) {
 	return mesh
 }
 
-export type Eye = { pos: V3, focus: V3, up: V3, zoomFactor: number }
+export type Eye = { pos: V3; focus: V3; up: V3; zoomFactor: number }
 export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: () => void) {
-	const canvas=_gl.canvas
+	const canvas = _gl.canvas
 	let lastPos: V3 = V3.O
 	//_gl.onmousedown.push((e) => {
 	//	e.preventDefault()
@@ -260,7 +293,11 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 		// console.log(e.deltaY, e.deltaX)
 		eye.zoomFactor *= pow(0.9, -wheelY)
 		const mouseCoordsOnCanvas = getPosOnTarget(e)
-		const mousePosFrustrum = V(mouseCoordsOnCanvas.x * 2 / _gl.canvas.offsetWidth - 1, -mouseCoordsOnCanvas.y * 2 / _gl.canvas.offsetHeight + 1, 0)
+		const mousePosFrustrum = V(
+			mouseCoordsOnCanvas.x * 2 / _gl.canvas.offsetWidth - 1,
+			-mouseCoordsOnCanvas.y * 2 / _gl.canvas.offsetHeight + 1,
+			0,
+		)
 		const moveCamera = mousePosFrustrum.times(1 - 1 / pow(0.9, -wheelY))
 		const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 		const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
@@ -297,12 +334,13 @@ export function getPosOnTarget(e: MouseEvent) {
 	const targetRect = target.getBoundingClientRect()
 	const mouseCoordsOnElement = {
 		x: e.clientX - targetRect.left,
-		y: e.clientY - targetRect.top}
+		y: e.clientY - targetRect.top,
+	}
 	return mouseCoordsOnElement
 }
 
 export function setupCamera(_eye: Eye, _gl: TSGLContext) {
-	const {pos, focus, up, zoomFactor} = _eye
+	const { pos, focus, up, zoomFactor } = _eye
 	//console.log("pos", pos.$, "focus", focus.$, "up", up.$)
 	_gl.matrixMode(_gl.PROJECTION)
 	_gl.loadIdentity()

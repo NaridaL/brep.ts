@@ -2,14 +2,15 @@
  * @prettier
  */
 import {
-    outputLink,
-    suite,
-    test,
-    testISCurves,
-    testLoopContainsPoint,
-    testParametricSurface,
-    testImplicitSurface,
-    surfaceVolumeAndAreaTests, testCurve,
+	outputLink,
+	suite,
+	test,
+	testISCurves,
+	testLoopContainsPoint,
+	testParametricSurface,
+	testImplicitSurface,
+	surfaceVolumeAndAreaTests,
+	testCurve,
 } from './manager'
 
 import { assertf, DEG, M4, V, V3 } from 'ts3dutils'
@@ -37,16 +38,16 @@ suite('SemiEllipsoidSurface', () => {
 		.translate(1, 2, 3)
 		.shearX(2, 3)
 	suite('is a parametric surface', () => {
-	    test('UNIT', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT))
-	    test('UNIT.scale(2)', assert => testParametricSurface(assert, ses2))
-	    test('UNIT.shearX(2, 3)', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.shearX(2, 3)))
-	    test('UNIT.foo()', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.foo()))
-	    test('UNIT.foo().flipped()', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.foo().flipped()))
+		test('UNIT', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT))
+		test('UNIT.scale(2)', assert => testParametricSurface(assert, ses2))
+		test('UNIT.shearX(2, 3)', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.shearX(2, 3)))
+		test('UNIT.foo()', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.foo()))
+		test('UNIT.foo().flipped()', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.foo().flipped()))
 	})
 	suite('is an im implicit surface', () => {
-	    test('UNIT' ,assert => testImplicitSurface(assert, SemiEllipsoidSurface.UNIT))
-        test('UNIT.scale(2)', assert => testImplicitSurface(assert, ses2))
-        test('UNIT.shearX(2, 3)', assert => testImplicitSurface(assert, SemiEllipsoidSurface.UNIT.shearX(2, 3)))
+		test('UNIT', assert => testImplicitSurface(assert, SemiEllipsoidSurface.UNIT))
+		test('UNIT.scale(2)', assert => testImplicitSurface(assert, ses2))
+		test('UNIT.shearX(2, 3)', assert => testImplicitSurface(assert, SemiEllipsoidSurface.UNIT.shearX(2, 3)))
 	})
 	test('testSurface', assert => {
 		testISCurves(
@@ -317,52 +318,53 @@ suite('SemiEllipsoidSurface', () => {
 		assert.ok(s1.edgeLoopCCW(loop))
 	})
 
-    suite('triangular face from P3.XY to V3.Z', () => {
-        const surface = SemiEllipsoidSurface.UNIT
-        const loop = [
-            Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 10 * DEG, 40 * DEG),
-            Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2),
-            Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(10 * DEG, 0), V3.Z), PI / 2, 0),
-        ]
-        const face = Face.create(surface, loop)
+	suite('triangular face from P3.XY to V3.Z', () => {
+		const surface = SemiEllipsoidSurface.UNIT
+		const loop = [
+			Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 10 * DEG, 40 * DEG),
+			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2),
+			Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V3.sphere(10 * DEG, 0), V3.Z), PI / 2, 0),
+		]
+		const face = Face.create(surface, loop)
 
-        surfaceVolumeAndAreaTests(face, undefined, 4/3*PI*(30/360) /2)
-        surfaceVolumeAndAreaTests(face.scale(1, 1, 2), '.scale(1, 1, 2)', 4/3*PI*(30/360) /2 * 2)
-        surfaceVolumeAndAreaTests(face.shearX(2, 2), '.shearX(2, 2)')
-        surfaceVolumeAndAreaTests(face.foo(), '.foo()')
-    })
-    //suite('triangular face from P3.XY to V3.Z', () => {
-    //
-    //    const surface = SemiEllipsoidSurface.UNIT
-    //    const loop = [
-    //        StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
-    //        Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, 1), 0, PI / 2),
-    //        Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0),
-    //    ]
-    //    const face = Face.create(surface, loop)
-    //
-    //    surfaceVolumeAndAreaTests(face)
-    //    surfaceVolumeAndAreaTests(face.transform(M4.FOO), '.transform(M4.foo)')
-    //})
+		surfaceVolumeAndAreaTests(face, undefined, 4 / 3 * PI * (30 / 360) / 2)
+		surfaceVolumeAndAreaTests(face.scale(1, 1, 2), '.scale(1, 1, 2)', 4 / 3 * PI * (30 / 360) / 2 * 2)
+		surfaceVolumeAndAreaTests(face.shearX(2, 2), '.shearX(2, 2)')
+		surfaceVolumeAndAreaTests(face.foo(), '.foo()')
+	})
+	//suite('triangular face from P3.XY to V3.Z', () => {
+	//
+	//    const surface = SemiEllipsoidSurface.UNIT
+	//    const loop = [
+	//        StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
+	//        Edge.forCurveAndTs(SemiEllipseCurve.forAB(1, 1), 0, PI / 2),
+	//        Edge.forCurveAndTs(new SemiEllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0),
+	//    ]
+	//    const face = Face.create(surface, loop)
+	//
+	//    surfaceVolumeAndAreaTests(face)
+	//    surfaceVolumeAndAreaTests(face.transform(M4.FOO), '.transform(M4.foo)')
+	//})
 })
 
 suite('EllipsoidSurface', () => {
-    test('mainAxes', assert => {
-        const es = new SemiEllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
-        outputLink(assert, {
-            mesh: `${es.sce}.toMesh()`,
-            drPs: [V(-5, 1, -1)],
-            edges: [
-                StraightEdge.throughPoints(
-                    V(-5, 1, -1),
-                    V(-5, 1, -1).plus(V(-9.660064978873681e-7, 0.999999999962889, 0.000008560880502697739).times(100),)
-                ),
-                StraightEdge.throughPoints(
-                    V(-5, 1, -1),
-                    V(-5, 1, -1).plus(V(0.14427746420619014, -0.6925318281897137, -1.413919149220665).times(100),)
-                )]
-        })
-        const esn = es.mainAxes()
+	test('mainAxes', assert => {
+		const es = new SemiEllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
+		outputLink(assert, {
+			mesh: `${es.sce}.toMesh()`,
+			drPs: [V(-5, 1, -1)],
+			edges: [
+				StraightEdge.throughPoints(
+					V(-5, 1, -1),
+					V(-5, 1, -1).plus(V(-9.660064978873681e-7, 0.999999999962889, 0.000008560880502697739).times(100)),
+				),
+				StraightEdge.throughPoints(
+					V(-5, 1, -1),
+					V(-5, 1, -1).plus(V(0.14427746420619014, -0.6925318281897137, -1.413919149220665).times(100)),
+				),
+			],
+		})
+		const esn = es.mainAxes()
 		assert.ok(esn.f1.isPerpendicularTo(esn.f2))
 		assert.ok(esn.f2.isPerpendicularTo(esn.f3))
 		assert.ok(esn.f3.isPerpendicularTo(esn.f1))

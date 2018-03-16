@@ -1,22 +1,23 @@
-import {suite, test, testBRepOp, b2equals, outputLink, bRepEqual} from './manager'
+import { suite, test, testBRepOp, b2equals, outputLink, bRepEqual } from './manager'
 import {
-    B2T,
-    StraightEdge,
-    BRep,
-    SemiEllipseCurve,
-    Edge,
-    PlaneFace,
-    L3,
-    PlaneSurface,
-    P3,
-    RotationFace,
-    PCurveEdge,
-    SemiCylinderSurface,
-    ConicSurface,
-    RotatedCurveSurface,
+	B2T,
+	StraightEdge,
+	BRep,
+	SemiEllipseCurve,
+	Edge,
+	PlaneFace,
+	L3,
+	PlaneSurface,
+	P3,
+	RotationFace,
+	PCurveEdge,
+	SemiCylinderSurface,
+	ConicSurface,
+	RotatedCurveSurface,
 } from '..'
-import {TAU, V, DEG, V3, M4} from 'ts3dutils'
+import { TAU, V, DEG, V3, M4 } from 'ts3dutils'
 
+// prettier-ignore
 suite('BRep generators', () => {
     test('rotStep w/ straight edges', assert => {
         const actual = B2T.rotStep(StraightEdge.chain([V(2, 0, 2), V(4, 0, 2), V(4, 0, 4)]), TAU, 5)

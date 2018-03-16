@@ -182,7 +182,7 @@ export function testISCurves(assert: Assert, surface1: Surface | P3, surface2: S
 					surface2.containsCurve(curve),
 					'surface2.containsCurve(curve) ' + surface2.str + ' ' + curve.str,
 				)
-				const t = lerp(curve.tMin ,curve.tMax, 0.5),
+				const t = lerp(curve.tMin, curve.tMax, 0.5),
 					p = curve.at(t),
 					dp = curve.tangentAt(t)
 				assert.ok(surface1.containsPoint(p), 'surface1.containsPoint(curve.at(curve.tMin))')
@@ -360,8 +360,12 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 		assert.ok(surf.containsPoint(p))
 
 		const psFlippedNormal = psFlipped.normalP(p)
-        const psFlippedST = psFlipped.stP(p)
-        assert.v3like(psFlipped.pST(psFlippedST.x, psFlippedST.y), p, 'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p')
+		const psFlippedST = psFlipped.stP(p)
+		assert.v3like(
+			psFlipped.pST(psFlippedST.x, psFlippedST.y),
+			p,
+			'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p',
+		)
 		assert.v3like(psFlippedNormal, pNormal.negated(), 'pNormal == -psFlippedNormal')
 
 		const pm2 = surf.stP(p)
@@ -458,33 +462,34 @@ export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f 
 
 export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: int) {
 	surface instanceof P3 && (surface = new PlaneSurface(surface))
-    let ists
-    try {
-        ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
-        assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
-        for (const t of ists) {
-            const p = curve.at(t)
-            assert.ok(
-                surface.containsPoint(p),
-                'surface.containsPoint(p) ' +
-                surface.str +
-                ' ' +
-                p.str +
-                ' t: ' +
-                t +
-                (ImplicitSurface.is(surface) ? ' dist: ' + surface.implicitFunction()(p) : ''),
-            )
-        }
-    } finally {
-        outputLink(
-            assert, {
-                mesh: `[${surface}.toMesh()]`,
-                edges: [Edge.forCurveAndTs(curve)],
-                drPs: ists ? ists.map(t => curve.at(t)) : []
-            },
-            ists && ists.join(', ') || 'view',
-        )
-    }
+	let ists
+	try {
+		ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
+		assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
+		for (const t of ists) {
+			const p = curve.at(t)
+			assert.ok(
+				surface.containsPoint(p),
+				'surface.containsPoint(p) ' +
+					surface.str +
+					' ' +
+					p.str +
+					' t: ' +
+					t +
+					(ImplicitSurface.is(surface) ? ' dist: ' + surface.implicitFunction()(p) : ''),
+			)
+		}
+	} finally {
+		outputLink(
+			assert,
+			{
+				mesh: `[${surface}.toMesh()]`,
+				edges: [Edge.forCurveAndTs(curve)],
+				drPs: ists ? ists.map(t => curve.at(t)) : [],
+			},
+			(ists && ists.join(', ')) || 'view',
+		)
+	}
 }
 
 export function linkBRep(assert: Assert, hash: string, message = 'view') {

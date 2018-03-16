@@ -1,11 +1,19 @@
-import {assert, assertInst, assertVectors, eq0, isCCW, M4, NLA_PRECISION, pqFormula, TAU, V3} from 'ts3dutils'
+import { assert, assertInst, assertVectors, eq0, isCCW, M4, NLA_PRECISION, pqFormula, TAU, V3 } from 'ts3dutils'
 
 import {
-	Curve, Edge, EllipseCurve, L3, P3, PointVsFace, ProjectedCurveSurface, SemiEllipseCurve, Surface,
-    SemiCylinderSurface,
+	Curve,
+	Edge,
+	EllipseCurve,
+	L3,
+	P3,
+	PointVsFace,
+	ProjectedCurveSurface,
+	SemiEllipseCurve,
+	Surface,
+	SemiCylinderSurface,
 } from '../index'
 
-import {PI, abs} from '../math'
+import { PI, abs } from '../math'
 
 export class CylinderSurface extends ProjectedCurveSurface {
 	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)
@@ -34,8 +42,8 @@ export class CylinderSurface extends ProjectedCurveSurface {
 	 * @param dir not necessarily unit
 	 */
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
-		const {x: ax, y: ay} = anchor
-		const {x: dx, y: dy} = dir
+		const { x: ax, y: ay } = anchor
+		const { x: dx, y: dy } = dir
 
 		// this cylinder: x² + y² = 1
 		// line: p = anchor + t * dir
@@ -74,15 +82,21 @@ export class CylinderSurface extends ProjectedCurveSurface {
 			return []
 		}
 		const localAnchor = this.inverseMatrix.transformPoint(line.anchor)
-		assert(!CylinderSurface.unitISLineTs(localAnchor, localDir).length || !isNaN(CylinderSurface.unitISLineTs(localAnchor, localDir)[0]), 'sad ' + localDir)
+		assert(
+			!CylinderSurface.unitISLineTs(localAnchor, localDir).length ||
+				!isNaN(CylinderSurface.unitISLineTs(localAnchor, localDir)[0]),
+			'sad ' + localDir,
+		)
 		return CylinderSurface.unitISLineTs(localAnchor, localDir)
 	}
 
 	isCoplanarTo(surface: Surface): surface is this {
-		return this == surface ||
-			surface instanceof CylinderSurface
-			&& this.dir.isParallelTo(surface.dir)
-			&& this.containsEllipse(surface.baseCurve)
+		return (
+			this == surface ||
+			(surface instanceof CylinderSurface &&
+				this.dir.isParallelTo(surface.dir) &&
+				this.containsEllipse(surface.baseCurve))
+		)
 	}
 
 	like(object: any) {
@@ -141,7 +155,7 @@ export class CylinderSurface extends ProjectedCurveSurface {
 	}
 
 	isCurvesWithSurface(surface: Surface): Curve[] {
-	    return SemiCylinderSurface.prototype.isCurvesWithSurface.apply(this, surface)
+		return SemiCylinderSurface.prototype.isCurvesWithSurface.apply(this, surface)
 	}
 
 	getCenterLine() {
@@ -153,7 +167,8 @@ export class CylinderSurface extends ProjectedCurveSurface {
 			let totalAngle = 0
 			for (let i = 0; i < loop.length; i++) {
 				const ipp = (i + 1) % loop.length
-				const edge = loop[i], nextEdge = loop[ipp]
+				const edge = loop[i],
+					nextEdge = loop[ipp]
 				totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b))
 			}
 			return totalAngle > 0
@@ -174,13 +189,3 @@ export class CylinderSurface extends ProjectedCurveSurface {
 
 CylinderSurface.prototype.uStep = TAU / 128
 CylinderSurface.prototype.vStep = 256
-
-
-
-
-
-
-
-
-
-

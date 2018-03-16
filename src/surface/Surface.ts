@@ -1,15 +1,27 @@
-import {Equalable} from 'javasetmap.ts'
-import {callsce, eq0, int, NLA_PRECISION, Transformable, V3,} from 'ts3dutils'
+import { Equalable } from 'javasetmap.ts'
+import { callsce, eq0, int, NLA_PRECISION, Transformable, V3 } from 'ts3dutils'
 
-import {Curve, dotCurve, Edge, ImplicitCurve, L3, P3, CalculateAreaVisitor, ZDirVolumeVisitor, ParametricSurface, PICurve, PPCurve} from '../index'
+import {
+	Curve,
+	dotCurve,
+	Edge,
+	ImplicitCurve,
+	L3,
+	P3,
+	CalculateAreaVisitor,
+	ZDirVolumeVisitor,
+	ParametricSurface,
+	PICurve,
+	PPCurve,
+} from '../index'
 
-import {ceil, floor} from '../math'
+import { ceil, floor } from '../math'
 
 export abstract class Surface extends Transformable implements Equalable {
 	static loopContainsPointGeneral(loop: Edge[], p: V3, testLine: L3, lineOut: V3): PointVsFace {
 		const testPlane = P3.normalOnAnchor(lineOut, p)
 		// edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
-		const colinearEdges = loop.map((edge) => edge.colinearToLine(testLine))
+		const colinearEdges = loop.map(edge => edge.colinearToLine(testLine))
 		let inside = false
 
 		function logIS(isP: V3) {
@@ -24,10 +36,12 @@ export abstract class Surface extends Transformable implements Equalable {
 
 		for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
 			const edge = loop[edgeIndex]
-			const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
+			const nextEdgeIndex = (edgeIndex + 1) % loop.length,
+				nextEdge = loop[nextEdgeIndex]
 			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
 			if (colinearEdges[edgeIndex]) {
-				const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b)
+				const lineAT = testLine.pointT(edge.a),
+					lineBT = testLine.pointT(edge.b)
 				if (Math.min(lineAT, lineBT) <= NLA_PRECISION && -NLA_PRECISION <= Math.max(lineAT, lineBT)) {
 					return PointVsFace.ON_EDGE
 				}
@@ -46,7 +60,8 @@ export abstract class Surface extends Transformable implements Equalable {
 							return PointVsFace.ON_EDGE
 						}
 						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) > 0
-						const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+						const nextInside =
+							colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
 						if (edgeInside != nextInside) {
 							if (logIS(edge.b)) return PointVsFace.ON_EDGE
 						}
@@ -61,7 +76,6 @@ export abstract class Surface extends Transformable implements Equalable {
 			}
 		}
 		return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
-
 	}
 
 	toString(): string {
@@ -90,7 +104,7 @@ export abstract class Surface extends Transformable implements Equalable {
 	abstract isCurvesWithPlane(plane: P3): Curve[]
 
 	isCurvesWithSurface(surface: Surface): Curve[] {
-		return surface.isCurvesWithSurface(this)//.map(curve => curve.reversed())
+		return surface.isCurvesWithSurface(this) //.map(curve => curve.reversed())
 	}
 
 	containsCurve(curve: Curve): boolean {
@@ -112,7 +126,7 @@ export abstract class Surface extends Transformable implements Equalable {
 			}
 			return true
 		}
-			return false
+		return false
 	}
 
 	abstract containsPoint(pWC: V3): boolean
@@ -147,7 +161,7 @@ export abstract class Surface extends Transformable implements Equalable {
 		return this.getConstructorParameters().hashCode()
 	}
 
-	zDirVolume(allEdges: Edge[]): { centroid: V3, volume: number } {
+	zDirVolume(allEdges: Edge[]): { centroid: V3; volume: number } {
 		return this.visit(ZDirVolumeVisitor, allEdges)
 	}
 
@@ -156,19 +170,23 @@ export abstract class Surface extends Transformable implements Equalable {
 	}
 }
 
-export enum PointVsFace {INSIDE, OUTSIDE, ON_EDGE}
+export enum PointVsFace {
+	INSIDE,
+	OUTSIDE,
+	ON_EDGE,
+}
 
 export abstract class ImplicitSurface extends Surface {
-    static is(obj: any): obj is ImplicitSurface {
-        return obj.implicitFunction && obj.didp
-    }
+	static is(obj: any): obj is ImplicitSurface {
+		return obj.implicitFunction && obj.didp
+	}
 
-    abstract implicitFunction(): (pWC: V3) => number
+	abstract implicitFunction(): (pWC: V3) => number
 
-    /**
-     * partial derivatives of this.implicitFunction in point pWC
-     * @param pWC
-     * @return
-     */
-    abstract didp(pWC: V3): V3
+	/**
+	 * partial derivatives of this.implicitFunction in point pWC
+	 * @param pWC
+	 * @return
+	 */
+	abstract didp(pWC: V3): V3
 }
