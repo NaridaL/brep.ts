@@ -22,7 +22,7 @@ import {
 
 import { Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, XiEtaCurve } from '../index'
 
-import { PI, min, max } from '.././math'
+import { max, min, PI } from '.././math'
 
 export class EllipseCurve extends XiEtaCurve {
 	static readonly XY = new EllipseCurve(V3.O, V3.X, V3.Y)

@@ -4,18 +4,17 @@ import {
 	BezierCurve,
 	Curve,
 	Edge,
+	ImplicitSurface,
 	L3,
+	OUTSIDE,
 	P3,
-	PlaneSurface,
 	PointVsFace,
 	ProjectedCurveSurface,
 	SemiEllipseCurve,
 	Surface,
-	ImplicitSurface,
-	OUTSIDE,
 } from '../index'
 
-import { PI, sign } from '../math'
+import { sign } from '../math'
 
 export class SemiCylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)

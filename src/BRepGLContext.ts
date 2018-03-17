@@ -13,8 +13,8 @@ import {
 	L3,
 	ParabolaCurve,
 	PICurve,
-	SemiEllipseCurve,
 	PPCurve,
+	SemiEllipseCurve,
 } from './index'
 import * as shaders from './shaders'
 

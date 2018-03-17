@@ -1,6 +1,3 @@
-/**
- * @prettier
- */
 import {
 	assert,
 	assertInst,
@@ -9,10 +6,10 @@ import {
 	eq0,
 	getIntervals,
 	M4,
+	newtonIterate,
 	pqFormula,
 	TAU,
 	V3,
-	newtonIterate,
 } from 'ts3dutils'
 
 import {
@@ -25,13 +22,13 @@ import {
 	P3,
 	ParabolaCurve,
 	ParametricSurface,
-	SemiEllipseCurve,
-	Surface,
 	PlaneSurface,
 	PointVsFace,
+	SemiEllipseCurve,
+	Surface,
 } from '../index'
 
-import { PI, cos, sin, abs, sqrt, sign } from '../math'
+import { abs, cos, PI, sign, sin, sqrt } from '../math'
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	pointFoot(pWC: V3, ss?: number, st?: number): V3 {

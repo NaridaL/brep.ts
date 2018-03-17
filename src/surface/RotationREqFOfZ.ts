@@ -1,11 +1,8 @@
-/**
- * @prettier
- */
-import { assert, assertInst, eq0, M4, V3, arrayFromFunction, V, newtonIterate, newtonIterate1d } from 'ts3dutils'
+import { arrayFromFunction, assert, assertInst, eq0, M4, newtonIterate1d, V, V3 } from 'ts3dutils'
 
-import { ImplicitSurface, ParametricSurface, EPS } from '../index'
+import { EPS, ImplicitSurface, ParametricSurface } from '../index'
 
-import { PI, cos, sin, atan2 } from '../math'
+import { atan2, cos, PI, sin } from '../math'
 
 /**
  * Rotation surface with r = f(z)

@@ -30,9 +30,9 @@ import {
 	V3,
 } from 'ts3dutils'
 
-import { BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, SemiEllipseCurve, Surface, PlaneSurface } from './index'
+import { BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, PlaneSurface, SemiEllipseCurve, Surface } from './index'
 
-import { PI, sign, ceil, floor, abs } from './math'
+import { abs, ceil, floor, PI, sign } from './math'
 
 export abstract class Edge extends Transformable {
 	readonly aDir: V3

@@ -10,11 +10,9 @@ import {
 	combinations,
 	eq,
 	eq0,
+	FloatArray,
 	fuzzyUniques,
 	fuzzyUniquesF,
-	gaussLegendre24Weights,
-	gaussLegendre24Xs,
-	gaussLegendreQuadrature24,
 	hasConstructor,
 	int,
 	lerp,
@@ -30,7 +28,6 @@ import {
 	V,
 	V3,
 	Vector,
-	FloatArray,
 } from 'ts3dutils'
 import { Mesh } from 'tsgl'
 
@@ -50,7 +47,7 @@ import {
 	Surface,
 } from '../index'
 
-import { PI, abs, sin, cos } from '../math'
+import { abs, cos, PI, sin } from '../math'
 
 export class BezierCurve extends Curve {
 	/**

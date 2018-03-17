@@ -1,7 +1,6 @@
-import { arrayFromFunction, assert, assertInst, isCCW, M4, V, V3, callsce } from 'ts3dutils'
-import { Mesh, pushQuad } from 'tsgl'
+import { assert, assertInst, callsce, isCCW, M4, V3 } from 'ts3dutils'
 
-import { Curve, Edge, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface, ImplicitCurve } from '../index'
+import { Curve, Edge, ImplicitCurve, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface } from '../index'
 
 export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	readonly matrix: M4

@@ -1,19 +1,16 @@
-import { ParametricSurface, ImplicitCurve, curvePointPP, Curve, followAlgorithmPP } from '../index'
 import {
 	assert,
-	V3,
-	Tuple3,
 	assertVectors,
-	newtonIterate,
-	Tuple4,
-	assertNever,
-	M4,
 	callsce,
-	arrayRange,
-	bisect,
+	M4,
+	newtonIterate,
+	Tuple3,
+	Tuple4,
+	V3,
 } from 'ts3dutils'
+import { Curve, curvePointPP, followAlgorithmPP, ImplicitCurve, ParametricSurface } from '../index'
 
-import { max, min, floor, ceil, abs } from '../math'
+import { ceil, floor } from '../math'
 
 export class PPCurve extends ImplicitCurve {
 	constructor(

@@ -25,7 +25,7 @@ import {
 	XiEtaCurve,
 } from '../index'
 
-import { PI, min, max } from '../math'
+import { max, min, PI } from '../math'
 
 export class SemiEllipseCurve extends XiEtaCurve {
 	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)

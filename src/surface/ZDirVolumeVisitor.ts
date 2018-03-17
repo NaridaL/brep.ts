@@ -1,35 +1,32 @@
-/**
- * @prettier
- */
 import {
-	V3,
-	NLA_PRECISION,
-	M4,
-	gaussLegendreQuadrature24,
-	glqInSteps,
-	V,
 	assert,
 	eq,
-	gaussLegendre24Xs,
 	gaussLegendre24Weights,
+	gaussLegendre24Xs,
+	gaussLegendreQuadrature24,
+	glqInSteps,
+	M4,
+	NLA_PRECISION,
+	V,
+	V3,
 } from 'ts3dutils'
 import {
 	ConicSurface,
 	Edge,
+	HyperbolaCurve,
+	ImplicitCurve,
+	L3,
+	P3,
+	ParabolaCurve,
+	ParametricSurface,
 	PlaneSurface,
+	planeSurfaceAreaAndCentroid,
+	ProjectedCurveSurface,
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
-	HyperbolaCurve,
-	ParabolaCurve,
-	L3,
-	ProjectedCurveSurface,
-	ImplicitCurve,
-	P3,
-	planeSurfaceAreaAndCentroid,
-	ParametricSurface,
 } from '../index'
 
-import { sin, cos, exp } from '../math'
+import { cos, sin } from '../math'
 
 /**
  * In general: the z-dir shadow volume of a face is the integral: SURFACE_INTEGRAL[p in face] (normal(p).z * p.z) dp
@@ -257,8 +254,8 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 						const scale = tangent.dot(scalingVector)
 						return area * scale
 					}
-					sum += f(minT) * -(start - minT)
-					sum += f(maxT) * -(maxT - end)
+					sum += f(minT) * (start - minT - 0.5)
+					sum += f(maxT) * (maxT - end - 0.5)
 					return sum * Math.sign(edgeWC.deltaT())
 				} else {
 					const f = (curveT: number) => {

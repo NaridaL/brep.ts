@@ -1,4 +1,3 @@
-/** @prettier */
 import {
 	arrayFromFunction,
 	assert,
@@ -20,14 +19,13 @@ import {
 	lt,
 	M4,
 	MINUS,
+	newtonIterate,
 	NLA_PRECISION,
 	pqFormula,
 	snap,
-	V3,
-	newtonIterate,
 	toSource,
+	V3,
 } from 'ts3dutils'
-import { Mesh } from 'tsgl'
 
 import {
 	Curve,
@@ -39,15 +37,15 @@ import {
 	P3,
 	ParametricSurface,
 	PICurve,
+	PlaneSurface,
 	PointVsFace,
 	ProjectedCurveSurface,
 	SemiCylinderSurface,
 	SemiEllipseCurve,
 	Surface,
-	PlaneSurface,
 } from '../index'
 
-import { PI, min, max, sign, abs, sqrt } from '../math'
+import { abs, max, min, PI, sign, sqrt } from '../math'
 
 export class SemiEllipsoidSurface extends EllipsoidSurface {
 	static readonly UNIT = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)

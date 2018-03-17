@@ -1,22 +1,19 @@
-/**
- * @prettier
- */
-import { assert, assertInst, eq0, M4, V3, lerp, hasConstructor, le, fuzzyBetween, DEG } from 'ts3dutils'
+import { assert, assertInst, DEG, eq0, fuzzyBetween, hasConstructor, lerp, M4, V3 } from 'ts3dutils'
 
 import {
-	ParametricSurface,
 	Curve,
+	Edge,
+	HyperbolaCurve,
 	L3,
 	P3,
-	Edge,
-	PointVsFace,
-	Surface,
-	SemiEllipseCurve,
+	ParametricSurface,
 	PlaneSurface,
-	HyperbolaCurve,
+	PointVsFace,
+	SemiEllipseCurve,
+	Surface,
 } from '../index'
 
-import { PI, cos, sin, abs } from '../math'
+import { abs, cos, PI, sin } from '../math'
 
 /**
  * Rotation surface with r = f(z)

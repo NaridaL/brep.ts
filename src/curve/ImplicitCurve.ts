@@ -3,14 +3,14 @@ import {
 	arrayRange,
 	assert,
 	assertVectors,
+	bisect,
 	clamp,
+	eq0,
 	int,
 	M4,
 	TAU,
-	V3,
-	bisect,
-	eq0,
 	Tuple3,
+	V3,
 } from 'ts3dutils'
 import { Mesh, pushQuad } from 'tsgl'
 

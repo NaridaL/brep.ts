@@ -3,33 +3,33 @@ import {
 	assert,
 	assertInst,
 	assertVectors,
+	bisect,
 	callsce,
+	clamp,
 	fuzzyUniques,
 	int,
 	M4,
 	V3,
-	clamp,
-	bisect,
 } from 'ts3dutils'
 
 import {
 	Curve,
 	curvePoint,
 	EllipsoidSurface,
+	followAlgorithm2d,
 	ImplicitCurve,
 	ImplicitSurface,
+	MathFunctionR2R,
 	P3,
 	ParametricSurface,
 	PlaneSurface,
 	ProjectedCurveSurface,
+	R2_R,
 	SemiEllipsoidSurface,
 	Surface,
-	MathFunctionR2R,
-	followAlgorithm2d,
-	R2_R,
 } from '../index'
 
-import { floor, abs, ceil, min, max } from '../math'
+import { abs, ceil, floor, max, min } from '../math'
 
 export class PICurve extends ImplicitCurve {
 	dids: (s: number, t: number) => number

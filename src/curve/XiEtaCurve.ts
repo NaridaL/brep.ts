@@ -1,6 +1,3 @@
-/**
- * @prettier
- */
 import {
 	arrayFromFunction,
 	assertf,

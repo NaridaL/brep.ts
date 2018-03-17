@@ -41,6 +41,7 @@ import {
 	dotCurve2,
 	Edge,
 	EllipsoidSurface,
+	EPS,
 	fff,
 	getGlobalId,
 	INSIDE,
@@ -58,10 +59,9 @@ import {
 	StraightEdge,
 	Surface,
 	triangulateVertices,
-	EPS,
 } from './index'
 
-import { PI, min, max, sign, ceil, floor, abs } from './math'
+import { abs, ceil, floor, max, min, PI, sign } from './math'
 
 export type FaceMesh = Mesh & { LINES: int[]; TRIANGLES: int[]; normals: V3[] }
 

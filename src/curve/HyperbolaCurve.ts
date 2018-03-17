@@ -1,8 +1,8 @@
 import { arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, snap0, V3 } from 'ts3dutils'
 
-import { Curve, XiEtaCurve, intersectionUnitHyperbolaLine } from '../index'
+import { Curve, intersectionUnitHyperbolaLine, XiEtaCurve } from '../index'
 
-import { PI, sign, abs } from '../math'
+import { abs, PI, sign } from '../math'
 
 /**
  * x² - y² = 1

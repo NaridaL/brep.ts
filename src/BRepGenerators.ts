@@ -1,6 +1,3 @@
-/**
- * @prettier
- */
 import * as opentype from 'opentype.js'
 import {
 	arrayFromFunction,
@@ -24,12 +21,11 @@ import {
 	TAU,
 	V,
 	V3,
-	DEG,
 } from 'ts3dutils'
 
 import {
-	BRep,
 	BezierCurve,
+	BRep,
 	ConicSurface,
 	Curve,
 	Edge,
@@ -43,16 +39,16 @@ import {
 	PlaneFace,
 	PlaneSurface,
 	ProjectedCurveSurface,
+	RotatedCurveSurface,
 	SemiCylinderSurface,
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	StraightEdge,
 	Surface,
 	XiEtaCurve,
-	RotatedCurveSurface,
 } from './index'
 
-import { PI, min, max } from './math'
+import { max, min, PI } from './math'
 
 /**
  * Create a surface by projecting a curve in a direction.

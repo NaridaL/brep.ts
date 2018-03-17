@@ -1,23 +1,20 @@
-/**
- * @prettier
- */
-import { assert, glqInSteps, V3, NLA_PRECISION, M4, assertf, eq } from 'ts3dutils'
+import { assert, assertf, glqInSteps, M4, NLA_PRECISION, V3 } from 'ts3dutils'
 
 import {
 	BezierCurve,
 	ConicSurface,
 	Edge,
 	EllipseCurve,
+	glqV3,
 	HyperbolaCurve,
+	ImplicitCurve,
 	L3,
 	ParabolaCurve,
 	PlaneSurface,
 	ProjectedCurveSurface,
 	SemiEllipseCurve,
-	StraightEdge,
-	ImplicitCurve,
 	SemiEllipsoidSurface,
-	glqV3,
+	StraightEdge,
 } from '../index'
 
 export const CalculateAreaVisitor = {
@@ -45,7 +42,7 @@ export const CalculateAreaVisitor = {
 						// => dpdt(atST.x, 0) X (1/2 t² dpds(atST.x, 1))[0; atST.y]
 						// => dpdt(atST.x, 0) X dpds(atST.x, atST.y² / 2)
 
-						const ds = M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
+						const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
 							.inversed()
 							.transformVector(tangentWC).x
 
@@ -172,22 +169,10 @@ export const CalculateAreaVisitor = {
 					for (let i = start; i <= end; i++) {
 						const at = points[i],
 							tangent = tangents[i].toLength(edge.curve.stepSize)
-						console.log(
-							'at',
-							at.sce,
-							'tangent',
-							tangent.sce,
-							'tangent.length()',
-							tangent.length(),
-							this.normalP(at)
-								.cross(thisDir1)
-								.unit().sce,
-						)
 						const scaling = this.normalP(at)
 							.cross(thisDir1)
 							.unit()
 							.dot(tangent)
-						console.log('partsum', at.dot(thisDir1) * scaling)
 						sum += at.dot(thisDir1) * scaling
 					}
 					const f = (t: number) => {
@@ -199,21 +184,15 @@ export const CalculateAreaVisitor = {
 							.dot(tangent)
 						return at.dot(thisDir1) * scaling
 					}
-					// sum += f(minT) * (start - minT)
-					// sum += f(maxT) * (maxT - end)
-					console.log('foo', start - minT, maxT - end)
-					console.log('start', start, 'end', end, 'minT', minT, 'maxT', maxT)
-					sum += f(minT) * (start - minT - 0.5) * 0.5
-					sum += f(maxT) * (maxT - end - 0.5) * 0.5
-					console.log(sum)
-					console.log('f(minT) * (start - minT - 0.5) * 0.5', f(minT) * (start - minT - 0.5) * 0.5)
-					console.log('f(maxT) * (maxT - end - 0.5) * 0.5', f(maxT) * (maxT - end - 0.5) * 0.5)
+					sum += f(minT) * (start - minT - 0.5)
+					sum += f(maxT) * (maxT - end - 0.5)
 					return sum * Math.sign(edge.deltaT())
 				} else {
 					const f = (t: number) => {
-						const at = edge.curve.at(t),
-							tangent = edge.tangentAt(t)
-						return at.dot(thisDir1) * tangent.rejected1Length(thisDir1)
+						const at = edge.curve.at(t)
+						const tangent = edge.tangentAt(t)
+						const scaling = tangent.rejected1Length(thisDir1)
+						return at.dot(thisDir1) * scaling
 					}
 					const val = glqInSteps(f, edge.aT, edge.bT, 1)
 					const sign = Math.sign(

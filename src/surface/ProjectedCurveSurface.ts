@@ -1,20 +1,17 @@
-/**
- * @prettier
- */
 import { assert, assertInst, assertNumbers, assertVectors, hasConstructor, int, M4, V3 } from 'ts3dutils'
 
 import {
 	Curve,
 	Edge,
+	ImplicitCurve,
+	ImplicitSurface,
 	L3,
 	P3,
 	ParametricSurface,
-	ImplicitCurve,
 	PlaneSurface,
 	PointVsFace,
 	SemiEllipsoidSurface,
 	Surface,
-	ImplicitSurface,
 } from '../index'
 
 import { sign } from '../math'

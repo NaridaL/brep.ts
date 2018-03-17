@@ -1,4 +1,3 @@
-/** @prettier */
 import {
 	arrayFromFunction,
 	assert,
@@ -18,18 +17,18 @@ import {
 	lt,
 	M4,
 	MINUS,
+	newtonIterate,
 	NLA_PRECISION,
 	pqFormula,
-	V3,
-	newtonIterate2d,
-	newtonIterate,
 	SCE,
+	V3,
 } from 'ts3dutils'
 import { Mesh } from 'tsgl'
 
 import {
 	Curve,
 	CylinderSurface,
+	dotCurve,
 	Edge,
 	EllipseCurve,
 	ImplicitSurface,
@@ -39,14 +38,11 @@ import {
 	PlaneSurface,
 	PointVsFace,
 	ProjectedCurveSurface,
-	Surface,
-	dotCurve,
-	R2_R,
 	R2,
-	stInAABB2,
+	Surface,
 } from '../index'
 
-import { PI, cos, sin, abs, sign } from '../math'
+import { abs, cos, PI, sign, sin } from '../math'
 
 export class EllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)

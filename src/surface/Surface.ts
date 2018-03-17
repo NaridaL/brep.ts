@@ -2,17 +2,16 @@ import { Equalable } from 'javasetmap.ts'
 import { callsce, eq0, int, NLA_PRECISION, Transformable, V3 } from 'ts3dutils'
 
 import {
+	CalculateAreaVisitor,
 	Curve,
 	dotCurve,
 	Edge,
 	ImplicitCurve,
 	L3,
 	P3,
-	CalculateAreaVisitor,
-	ZDirVolumeVisitor,
-	ParametricSurface,
 	PICurve,
 	PPCurve,
+	ZDirVolumeVisitor,
 } from '../index'
 
 import { ceil, floor } from '../math'

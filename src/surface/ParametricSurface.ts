@@ -1,7 +1,7 @@
-import { assert, between, V3, isCCW, assertNumbers } from 'ts3dutils'
+import { assert, assertNumbers, between, isCCW, V3 } from 'ts3dutils'
 import { Mesh } from 'tsgl'
 
-import { Curve, PICurve, Surface, MathFunctionR2R, ImplicitSurface, Edge, breakDownPPCurves } from '../index'
+import { breakDownPPCurves, Curve, Edge, ImplicitSurface, MathFunctionR2R, PICurve, Surface } from '../index'
 
 import { ceil, min } from '../math'
 

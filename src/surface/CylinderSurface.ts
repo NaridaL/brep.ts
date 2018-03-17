@@ -8,12 +8,12 @@ import {
 	P3,
 	PointVsFace,
 	ProjectedCurveSurface,
+	SemiCylinderSurface,
 	SemiEllipseCurve,
 	Surface,
-	SemiCylinderSurface,
 } from '../index'
 
-import { PI, abs } from '../math'
+import { abs, PI } from '../math'
 
 export class CylinderSurface extends ProjectedCurveSurface {
 	static readonly UNIT = new CylinderSurface(EllipseCurve.XY, V3.Z)

@@ -30,11 +30,11 @@ import {
 	MathFunctionR2R,
 	P3,
 	ParametricSurface,
-	Surface,
 	PPCurve,
+	Surface,
 } from '../index'
 
-import { ceil, floor, abs } from '../math'
+import { abs, ceil, floor } from '../math'
 
 export type ISInfo = { tThis: number; tOther: number; p: V3 }
 

@@ -39,15 +39,15 @@ import {
 	FaceInfoFactory,
 	L3,
 	P3,
+	ParametricSurface,
 	PlaneFace,
 	PointVsFace,
 	R2_R,
-	Surface,
-	ParametricSurface,
 	stInAABB2,
+	Surface,
 } from './index'
 
-import { PI, sign, abs, sqrt } from './math'
+import { abs, PI, sign, sqrt } from './math'
 
 export const EPS = 1e-5
 
@@ -183,7 +183,7 @@ export class BRep extends Transformable {
 		this.faces = faces
 		assertInst(Face, ...faces)
 		this.infiniteVolume = infiniteVolume
-		assert(false === this.infiniteVolume || true === this.infiniteVolume)
+		assert(!this.infiniteVolume || true === this.infiniteVolume)
 		this.generator = generator
 		this.vertexNames = vertexNames
 		this.edgeFaces = undefined
@@ -308,7 +308,6 @@ export class BRep extends Transformable {
 		dirLoop: for (const dir of dirs) {
 			const testLine = new L3(p, dir)
 			let inside = this.infiniteVolume,
-				result = false,
 				minT = Infinity
 			for (const face of this.faces) {
 				assert(!face.surface.containsCurve(testLine))
