@@ -97,7 +97,7 @@ suite('SemiEllipseCurve', () => {
 		const e2 = SemiEllipseCurve.UNIT.scale(0.5, 0.1, 1).translate(0.5)
 		testCurveISInfos(assert, e1, e2, 1)
 	})
-	test('SemiEllipseCurve.isInfosWithBezier2D()', assert => {
+	test('isInfosWithBezier2D', assert => {
 		const ell = SemiEllipseCurve.forAB(3, 1)
 		const bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
 		testCurveISInfos(assert, ell, bez, 3)

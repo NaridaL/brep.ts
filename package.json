@@ -55,6 +55,7 @@
     "slug": "^0.9.1",
     "ts-node": "^5.0.1",
     "tslint": "^5.9.1",
+    "tslint-config-prettier": "^1.10.0",
     "typescript": "^2.8.0-insiders.20180127",
     "uglify-es": "^3.3.10"
   },
@@ -86,7 +87,7 @@
     "test:ci": "npm run build && npm run lint && npm test",
     "demo:watch": "rollup -c rollup.demo.config.js -w",
     "demo:build": "rollup -c rollup.demo.config.js",
-    "prettier": "prettier"
+    "prettier": "prettier -l --write \"{src,test}/**/*.ts\""
   },
   "types": "src/index.ts",
   "umdGlobal": "brep_ts",

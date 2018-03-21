@@ -17,6 +17,7 @@ import {
 import { ceil, floor } from '../math'
 
 export abstract class Surface extends Transformable implements Equalable {
+	readonly ['constructor']: new (...args: any[]) => this
 	static loopContainsPointGeneral(loop: Edge[], p: V3, testLine: L3, lineOut: V3): PointVsFace {
 		const testPlane = P3.normalOnAnchor(lineOut, p)
 		// edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
@@ -108,9 +109,9 @@ export abstract class Surface extends Transformable implements Equalable {
 
 	containsCurve(curve: Curve): boolean {
 		if (curve instanceof PICurve) {
-			if (this.equals(curve.parametricSurface) || this.equals(curve.implicitSurface)) {
-				return true
-			}
+			// if (this.equals(curve.parametricSurface) || this.equals(curve.implicitSurface)) {
+			// 	return true
+			// }
 		}
 		if (curve instanceof PPCurve) {
 			if (this.equals(curve.parametricSurface1) || this.equals(curve.parametricSurface2)) {
@@ -154,7 +155,13 @@ export abstract class Surface extends Transformable implements Equalable {
 		return curves
 	}
 
-	abstract equals(obj: any): boolean
+	equals(obj: any): boolean {
+		return (
+			this === obj ||
+			(this.constructor === obj.constructor &&
+				this.getConstructorParameters().equals(obj.getConstructorParameters()))
+		)
+	}
 
 	hashCode(): int {
 		return this.getConstructorParameters().hashCode()

@@ -18,7 +18,8 @@ import {
 } from './index'
 import * as shaders from './shaders'
 
-import { pow, sign } from './math'
+import { start } from 'repl'
+import { ceil, floor, pow, sign } from './math'
 
 export function parseGetParams(str: string) {
 	const result: { [key: string]: string } = {}
@@ -147,24 +148,67 @@ export const CURVE_PAINTERS: {
 	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
 	[HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
-	[ImplicitCurve.name](gl, curve: ImplicitCurve, color, startT, endT, width = 2, normal = V3.Z) {
+	[ImplicitCurve.name](gl, curve: ImplicitCurve, color, startT, endT, width = 2) {
 		let mesh = gl.cachedMeshes.get(curve)
+		const RES = 4
 		if (!mesh) {
 			mesh = new Mesh().addIndexBuffer('TRIANGLES').addVertexBuffer('normals', 'ts_Normal')
-			curve.addToMesh(mesh)
+			curve.addToMesh(mesh, RES)
 			mesh.compile()
-			//mesh=Mesh.sphere(2)
 			gl.cachedMeshes.set(curve, mesh)
 		}
-		// TODO: draw only part
-		//startT: startT,
-		//	endT: endT,
-		gl.shaders.generic3d
-			.uniforms({
-				color: color,
-				scale: width,
-			})
-			.draw(mesh)
+		const startIndex = ceil(startT)
+		const endIndex = floor(endT)
+		if (startIndex <= endIndex) {
+			const indexFactor =
+				2 * // no of triangles per face
+				RES * // no of faces
+				3 // no of indexes per triangle
+			gl.shaders.generic3d
+				.uniforms({
+					color: color,
+					scale: width,
+				})
+				.draw(mesh, gl.TRIANGLES, startIndex * indexFactor, (floor(endT) - startIndex) * indexFactor)
+			if (startT % 1 !== 0) {
+				const p = curve.at(startT)
+				gl.pushMatrix()
+				const m = M4.forSys(
+					p.to(curve.points[startIndex]),
+					mesh.normals[startIndex * RES].toLength(width),
+					mesh.normals[startIndex * RES + 1].toLength(width),
+					p,
+				)
+				gl.multMatrix(m)
+				gl.shaders.singleColor.uniforms({ color: color }).draw(gl.meshes.pipeSegmentForICurve)
+				console.log(gl.meshes.pipeSegmentForICurve)
+				gl.popMatrix()
+			}
+			if (endT % 1 !== 0) {
+				const p = curve.at(endT)
+				gl.pushMatrix()
+				const m = M4.forSys(
+					curve.points[endIndex].to(p),
+					mesh.normals[endIndex * RES].toLength(width),
+					mesh.normals[endIndex * RES + 1].toLength(width),
+					curve.points[endIndex],
+				)
+				gl.multMatrix(m)
+				gl.shaders.singleColor.uniforms({ color: color }).draw(gl.meshes.pipeSegmentForICurve)
+				gl.popMatrix()
+			}
+		} else {
+			const p1 = curve.at(startT)
+			const p2 = curve.at(endT)
+			gl.pushMatrix()
+			const v0 = p1.to(p2),
+				v1 = v0.getPerpendicular().toLength(width),
+				v2 = v0.cross(v1).toLength(width)
+			const m = M4.forSys(v0, v1, v2, p1)
+			gl.multMatrix(m)
+			gl.shaders.singleColor.uniforms({ color: color }).draw(gl.meshes.pipeSegmentForICurve)
+			gl.popMatrix()
+		}
 	},
 	[BezierCurve.name](gl, curve: BezierCurve, color, startT, endT, width = 2, normal = V3.Z) {
 		gl.shaders.bezier3d
@@ -211,6 +255,11 @@ export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BREPGLContext
 	_meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
 	_meshes.xyLinePlane = Mesh.plane()
 	_meshes.xyDottedLinePlane = makeDottedLinePlane()
+	_meshes.pipeSegmentForICurve = Mesh.offsetVertices(
+		M4.rotateY(90 * DEG).transformedPoints(arrayFromFunction(4, i => V3.polar(1, TAU * i / 4))),
+		V3.X,
+		true,
+	)
 }
 
 export function initShaders(_gl: TSGLContext) {

@@ -181,7 +181,7 @@ export function rotateCurve(
 			}
 			return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
 		} else {
-			const s = new RotatedCurveSurface(curve, tMin, tMax)
+			const s = new RotatedCurveSurface(curve, M4.IDENTITY, tMin, tMax)
 			return s
 		}
 	}
@@ -642,7 +642,7 @@ export namespace B2T {
 			return loop
 		})
 		const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace as any)
-		const generator = callsce(text, size, depth)
+		const generator = callsce('B2T.text', text, size, depth)
 		return BRep.join(faces.map(face => B2T.extrudeFace(face as PlaneFace, V(0, 0, -depth))), generator)
 	}
 

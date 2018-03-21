@@ -1,6 +1,7 @@
 import { int, V3 } from 'ts3dutils'
 
 import chroma from 'chroma-js'
+import { GL_COLOR } from 'tsgl'
 import { getGlobalId, L3, P3, PlaneSurface } from './index'
 
 export class CustomPlane extends P3 {
@@ -10,7 +11,7 @@ export class CustomPlane extends P3 {
 	readonly tMax: number
 	readonly sMin: number
 	readonly sMax: number
-	readonly color: chroma.Color
+	readonly color: GL_COLOR
 	readonly name: string
 
 	constructor(
@@ -18,7 +19,7 @@ export class CustomPlane extends P3 {
 		right: V3,
 		up: V3,
 		name: string,
-		color: chroma.Color = chroma.random(),
+		color: GL_COLOR = chroma.random().gl(),
 		rightStart: number = -500,
 		rightEnd: number = 500,
 		upStart: number = -500,
@@ -33,6 +34,7 @@ export class CustomPlane extends P3 {
 		this.tMin = upStart
 		this.tMax = upEnd
 		this.name = name
+		this.color = color
 	}
 
 	get plane() {
@@ -43,7 +45,7 @@ export class CustomPlane extends P3 {
 		return new PlaneSurface(this, this.right, this.up)
 	}
 
-	static forPlane(plane: P3, color: chroma.Color, name?: string) {
+	static forPlane(plane: P3, color: GL_COLOR, name?: string) {
 		//assert(!name)
 		const up = plane.normal1.getPerpendicular().unit(),
 			right = up.cross(plane.normal1)

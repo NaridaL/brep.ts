@@ -78,10 +78,6 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)))
 	}
 
-	getConstructorParameters(): any[] {
-		return [this.baseCurve, this.dir, this.sMin, this.sMax, this.tMin, this.tMax]
-	}
-
 	normalP(p: V3): V3 {
 		return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit()
 	}

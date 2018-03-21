@@ -11,6 +11,7 @@ import {
 	M4,
 	Transformable,
 	V3,
+	hasConstructor,
 } from 'ts3dutils'
 
 import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve } from './index'
@@ -250,6 +251,10 @@ export class P3 extends Transformable {
 		} else {
 			throw new Error('' + curve)
 		}
+	}
+
+	equals(obj: any) {
+		return hasConstructor(obj, P3) && this.normal1.equals(obj.normal1) && this.w == obj.w
 	}
 
 	hashCode(): int {

@@ -6,7 +6,7 @@
 	<title>BREP.ts</title>
 
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script> -->
 
 	<script type="text/javascript" src="/node_modules/svg-pathdata/dist/SVGPathData.js"></script>
 	<script type="text/javascript" src="/lib/earcut.dev.js"></script>
@@ -166,7 +166,14 @@
 				<span class="lever"></span>
 				mesh normals
 			</label> -->
-		</span>
+		</div>
+		<div class="switch" style="display: inline-block">
+			<input type="checkbox" class="filled-in" id="paint-wireframe" />
+				<label for="paint-wireframe" >
+					wireframe
+				</label>
+		</div>
+
 		<!-- <div id="tip">This should be visible.</div>
 		<div id="tip-arrow"></div> -->
 	</div>

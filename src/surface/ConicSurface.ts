@@ -152,7 +152,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				if (eq(aa, cc)) {
 					return [new L3(V3.O, new V3(c, 0, -a).unit())]
 				} else if (aa < cc) {
-					assert(false, 'intersection is single point V3.O')
+					throw new Error('intersection is single point V3.O')
 				} else if (aa > cc) {
 					return [
 						new L3(V3.O, new V3(c, sqrt(aa - cc), -a).unit()),
@@ -234,7 +234,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.center, this.f1, this.f2, this.dir]
+		return [this.center, this.f1, this.f2, this.dir, this.sMin, this.sMax, this.tMin, this.tMax]
 	}
 
 	isTsForLine(line: L3): number[] {

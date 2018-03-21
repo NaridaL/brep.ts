@@ -1,22 +1,24 @@
-import { suite, test, testCurve, testISTs, testPointT } from './manager'
+import { suite, test, testCurve, testCurveISInfos, testISCurves, testISTs, testPointT } from './manager'
 
-import { DEG, V, V3, M4, eq } from 'ts3dutils'
+import { DEG, eq, M4, V, V3 } from 'ts3dutils'
 import {
 	BezierCurve,
 	EllipsoidSurface,
 	P3,
+	PCurveEdge,
 	PICurve,
 	PlaneSurface,
 	ProjectedCurveSurface,
-	SemiEllipsoidSurface,
+	RotatedCurveSurface,
 	SemiCylinderSurface,
 	SemiEllipseCurve,
+	SemiEllipsoidSurface,
 } from '..'
 
 suite('PICurve', () => {
 	suite('pointT', () => {
 		test('1', assert => {
-			const pic = PICurve.forStartEnd(
+			const piCurve = PICurve.forStartEnd(
 				new ProjectedCurveSurface(
 					new BezierCurve(
 						V(0.20296874999999998, 0.11703124999999998, 1.2),
@@ -38,10 +40,10 @@ suite('PICurve', () => {
 				0.02,
 			)
 			const p = V(0.010937499999999989, 0.2890625, 0.9572477433702835)
-			testPointT(assert, pic, p, NaN)
+			testPointT(assert, piCurve, p, NaN)
 		})
 		test('2', assert => {
-			const pic = PICurve.forParametricStartEnd(
+			const piCurve = PICurve.forParametricStartEnd(
 				new ProjectedCurveSurface(
 					new BezierCurve(
 						V(0, 2, 0),
@@ -52,8 +54,8 @@ suite('PICurve', () => {
 						1.1,
 					),
 					V(0, 0, -1),
-					0,
-					1,
+					-0.1,
+					1.1,
 					-1,
 					0,
 				),
@@ -71,18 +73,18 @@ suite('PICurve', () => {
 					0,
 					2,
 				),
-				V(0.543312790740714, -0.5455452074045042, 0),
-				V(0.45794084603336055, -0.4349260970573627, 0),
+				V(0.5020636899504077, -0.30021571809025155, 0),
+				V(0.50440179447819, -0.6990167000940748, 0),
 				0.05,
-				V(0.0026015534861132676, 0.04993227332556462, 0),
-				0,
-				10,
+				V(-0.048940803585290286, 0.010237076947353528, 0),
+				0.21324043802451342,
+				10.421498564770445,
 			)
-			const p = pic.points[8]
-			testPointT(assert, pic, p, 8)
+			const p = piCurve.points[8]
+			testPointT(assert, piCurve, p, 8)
 		})
 		test('3', assert => {
-			const pic = PICurve.forParametricStartEnd(
+			const piCurve = PICurve.forParametricStartEnd(
 				new ProjectedCurveSurface(
 					new BezierCurve(
 						V(0.01100000000000001, 0.28900000000000003, 1.2),
@@ -99,18 +101,18 @@ suite('PICurve', () => {
 					1,
 				),
 				new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
-				V(-0.19976905595802608, 0.24321160282169424, 0),
-				V(1.0002090044741139, 0.24724388010624657, 0),
+				V(0, 0.2427341017251267, 0),
+				V(1, 0.24724084890251513, 0),
 				0.05,
-				V(0.049999788672478875, -0.000145370930566841, 0),
+				V(0.04999991966434234, -0.00008963012502444188, 0),
 				0,
-				24,
+				20,
 			)
 			const p = V(-0.16499999999999998, 0.255, 0.9527591510974849)
-			testPointT(assert, pic, p, 23.99581946671034)
+			testPointT(assert, piCurve, p, 20)
 		})
 		test('4', assert => {
-			const pic = PICurve.forParametricStartEnd(
+			const piCurve = PICurve.forParametricStartEnd(
 				new ProjectedCurveSurface(
 					new BezierCurve(
 						V(4, 13.8, 15.7),
@@ -140,18 +142,18 @@ suite('PICurve', () => {
 					0,
 					2,
 				),
-				V(0.45794084603335994, -0.43492609705736124, 0),
-				V(0.5433127907407138, -0.5455452074045032, 0),
+				V(0.5002392685936982, -0.30000289827476356, 0),
+				V(0.501457710232049, -0.6998923972267981, 0),
 				0.05,
-				V(-0.0038210833733155064, -0.049853779413943866, 8.673617379884035e-19),
-				0,
-				11,
+				V(-0.04998533362291978, 0.0012109593739698047, 0),
+				0.018324617645703256,
+				9.887672300683334,
 			)
 			const p = V(2.700000000000252, 13.710000000000084, 13.80000000000074)
-			testPointT(assert, pic, p, 6.3461388249955215)
+			testPointT(assert, piCurve, p)
 		})
 		test('5', assert => {
-			const pic = PICurve.forParametricStartEnd(
+			const piCurve = PICurve.forParametricStartEnd(
 				new ProjectedCurveSurface(
 					new BezierCurve(
 						V(0.3333333333333333, -0.1111111111111111, -1.333333333333333),
@@ -181,10 +183,10 @@ suite('PICurve', () => {
 				21,
 			)
 			const p = V(0.30360395660901607, -6.873697213268433e-13, -0.9527983194419218)
-			testPointT(assert, pic, p, 13.449200584902428)
+			testPointT(assert, piCurve, p, 13.449200584902428)
 		})
 		test('6', assert => {
-			const pic = PICurve.forParametricStartEnd(
+			const piCurve = PICurve.forParametricStartEnd(
 				new ProjectedCurveSurface(
 					new BezierCurve(
 						V(0, 2, 0),
@@ -222,16 +224,251 @@ suite('PICurve', () => {
 				11,
 			)
 			const p = V(0.49999999999999967, 0, 0.30000000000000004)
-			testPointT(assert, pic, p)
+			testPointT(assert, piCurve, p)
 		})
+	})
+	test('is curves', assert => {
+		const pcs = new ProjectedCurveSurface(
+			new BezierCurve(
+				V(4, 13.8, 15.7),
+				V(3, 13.5, 13),
+				V(1, 12.8, 6.9),
+				V(0, 12.5, 4.200000000000001),
+				-0.1,
+				1.1,
+			),
+			V(-1, -0.8, -5.5),
+			0,
+			1,
+			-1,
+			0,
+		)
+		const ses = new SemiCylinderSurface(
+			new SemiEllipseCurve(
+				V(2.5, 13.4, 11.65),
+				V(-0.2, -0.16000000000000003, -1.1),
+				V(0.2, 0.08000000000000002, 0.68),
+				0,
+				3.141592653589793,
+			),
+			V(6.123233995736766e-17, 0.30000000000000004, 2.1000000000000005),
+			0,
+			3.141592653589793,
+			0,
+			2,
+		)
+		console.log(pcs.isCurvesWithSurface(ses).sce)
+		testISCurves(assert, pcs, ses, 1)
+		const edges = [
+			new PCurveEdge(
+				PICurve.forParametricStartEnd(
+					new ProjectedCurveSurface(
+						new BezierCurve(
+							V(0, 2, 0),
+							V(0.3333333333333333, 1, 0),
+							V(0.6666666666666666, -1, 0),
+							V(1, -2, 0),
+							-0.1,
+							1.1,
+						),
+						V(0, 0, -1),
+						-0.1,
+						1.1,
+						-1,
+						0,
+					),
+					new SemiCylinderSurface(
+						new SemiEllipseCurve(
+							V(0, 0, 0.5),
+							V(1.2246467991473533e-17, 0, -0.2),
+							V(0, 0.2, 0),
+							0,
+							3.141592653589793,
+						),
+						V(1, 0, 6.123233995736766e-17),
+						0,
+						3.141592653589793,
+						0,
+						2,
+					),
+					V(0.5020636899504077, -0.30021571809025155, 0),
+					V(0.50440179447819, -0.6990167000940748, 0),
+					0.05,
+					V(-0.048940803585290286, 0.010237076947353528, 0),
+					0.21324043802451342,
+					10.421498564770445,
+				),
+				V(0.49999999999915834, 3.7878311598404935e-12, 0.3),
+				V(0.5000000000011606, -5.222877685895355e-12, 0.7000000000000001),
+				0.21324043802451342,
+				10.421498564770445,
+				undefined,
+				V(-0.05, 0.22500000000000006, 4.261306993203557e-12),
+				V(0.05, -0.225, -5.8757343350152756e-12),
+				undefined,
+			),
+		]
+		const piCurve = PICurve.forParametricStartEnd(
+			new ProjectedCurveSurface(
+				new BezierCurve(
+					V(0.01100000000000001, 0.28900000000000003, 1.2),
+					V(-0.04100000000000001, 0.28900000000000003, 1.2),
+					V(-0.1, 0.279, 1.2),
+					V(-0.16499999999999998, 0.255, 1.2),
+					0,
+					1,
+				),
+				V(0, 0, -1),
+				0,
+				1,
+				0,
+				1,
+			),
+			new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+			V(0, 0.2427341017251267, 0),
+			V(1, 0.24724084890251513, 0),
+			0.05,
+			V(0.04999991966434234, -0.00008963012502444188, 0),
+			0,
+			20,
+		)
+		const pic2 = new PCurveEdge(
+			PICurve.forParametricStartEnd(
+				new ProjectedCurveSurface(
+					new BezierCurve(
+						V(0.01100000000000001, 0.28900000000000003, 1.2),
+						V(-0.04100000000000001, 0.28900000000000003, 1.2),
+						V(-0.1, 0.279, 1.2),
+						V(-0.16499999999999998, 0.255, 1.2),
+						0,
+						1,
+					),
+					V(0, 0, -1),
+					0,
+					1,
+					0,
+					1,
+				),
+				new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+				V(0, 0.2427341017251267, 0),
+				V(1, 0.24724084890251513, 0),
+				0.05,
+				V(0.04999991966434234, -0.00008963012502444188, 0),
+				0,
+				20,
+			),
+			V(0.01100000000000001, 0.28900000000000003, 0.9572658982748733),
+			V(-0.16499999999999998, 0.255, 0.9527591510974849),
+			0,
+			20,
+			undefined,
+			V(-0.007799987467637408, 0, 0.00008963012502444188),
+			V(-0.009748975193987298, -0.0035996216100876227, -0.0007249233929057179),
+			undefined,
+		)
+		;[
+			PICurve.forParametricStartEnd(
+				new ProjectedCurveSurface(
+					new BezierCurve(
+						V(0, 2, 0),
+						V(0.3333333333333333, 1, 0),
+						V(0.6666666666666666, -1, 0),
+						V(1, -2, 0),
+						-0.1,
+						1.1,
+					),
+					V(0, 0, -1),
+					-0.1,
+					1.1,
+					-1,
+					0,
+				),
+				new SemiCylinderSurface(
+					new SemiEllipseCurve(
+						V(0, 0, 0.5),
+						V(1.2246467991473533e-17, 0, -0.2),
+						V(0, 0.2, 0),
+						0,
+						3.141592653589793,
+					),
+					V(1, 0, 6.123233995736766e-17),
+					0,
+					3.141592653589793,
+					0,
+					2,
+				),
+				V(0.49441919231892134, -0.6984170426639139, 0),
+				V(0.5293754631948687, -0.34986900885706007, 0),
+				0.05,
+				V(0.04344758580313105, -0.02474484366245956, 0),
+				0,
+				0.9878894241992384,
+			),
+			PICurve.forParametricStartEnd(
+				new ProjectedCurveSurface(
+					new BezierCurve(
+						V(0, 2, 0),
+						V(0.3333333333333333, 1, 0),
+						V(0.6666666666666666, -1, 0),
+						V(1, -2, 0),
+						-0.1,
+						1.1,
+					),
+					V(0, 0, -1),
+					-0.1,
+					1.1,
+					-1,
+					0,
+				),
+				new SemiCylinderSurface(
+					new SemiEllipseCurve(
+						V(0, 0, 0.5),
+						V(1.2246467991473533e-17, 0, -0.2),
+						V(0, 0.2, 0),
+						0,
+						3.141592653589793,
+					),
+					V(1, 0, 6.123233995736766e-17),
+					0,
+					3.141592653589793,
+					0,
+					2,
+				),
+				V(0.5293754631948687, -0.34986900885706007, 0),
+				V(0.49441919231892134, -0.6984170426639139, 0),
+				0.05,
+				V(-0.0122531615274917, 0.048475354898971056, 0),
+				2.011113594053313,
+				10.99999999976717,
+			),
+		]
 	})
 	test('isTsWithSurface', assert => {
 		const pcs = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
 			.scale(0.2, 0.2, 1)
 			.rotateX(-90 * DEG)
 		const ses = SemiEllipsoidSurface.UNIT
-		const pic = ses.isCurvesWithSurface(pcs)[0]
-		testISTs(assert, pic, new PlaneSurface(P3.XY), 1)
+		const piCurve = ses.isCurvesWithSurface(pcs)[0]
+		console.log(piCurve)
+		testISTs(assert, piCurve, new PlaneSurface(P3.XY), 1)
+	})
+	test('isTsWithPlane', assert => {
+		const piCurve = PICurve.forParametricStartEnd(
+			new RotatedCurveSurface(new SemiEllipseCurve(V(3, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793), M4.forSys(
+                V(1, -1.2060416625018976e-16, -2.1265768495757713e-17),
+                V(-1.2246467991473532e-16, -0.984807753012208, -0.17364817766693033),
+                V(0, -0.17364817766693033, 0.984807753012208),
+            ), 0, 3.141592653589793),
+			new PlaneSurface(new P3(V(-1, 0, 0), 2.5), V(0, -1, 0), V3.Z),
+			V(2.2459278597319283, 0, 0),
+			V(3.141592653589793, 2.0943951023931957, 0),
+			0.02,
+			V(0, 0.02, 0),
+			0,
+			122,
+		)
+		const plane = new P3(V(0, -0.1220799925322713, -0.9925202644900105), 0.8281304558850031)
+		testISTs(assert, piCurve, plane, 1)
 	})
 	test('testCurve', assert => {
 		const curve = PICurve.forParametricStartEnd(
@@ -258,8 +495,8 @@ suite('PICurve', () => {
 			0,
 			13.433240755090269,
 		)
-		testCurve(assert, curve)
-		testCurve(assert, curve.transform(M4.FOO))
+		testCurve(assert, curve, true, 'curve')
+		testCurve(assert, curve.transform(M4.FOO), true, 'curve.foo()')
 	})
 	test('testCurve 2', assert => {
 		const curve = PICurve.forParametricStartEnd(
@@ -299,7 +536,7 @@ suite('PICurve', () => {
 			2,
 			10,
 		)
-		testCurve(assert, curve, false)
-		testCurve(assert, curve.transform(M4.FOO), false)
+		testCurve(assert, curve, false, 'curve')
+		testCurve(assert, curve.transform(M4.FOO), false, 'curve.foo()')
 	})
 })

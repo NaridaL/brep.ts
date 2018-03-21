@@ -1,6 +1,3 @@
-/**
- * @prettier
- */
 declare const require: any
 try {
 	;(global as any).WebGLRenderingContext = {}
@@ -19,10 +16,10 @@ import {
 	int,
 	lerp,
 	M4,
-	V,
-	V3,
 	NLA_PRECISION,
 	toSource,
+	V,
+	V3,
 } from 'ts3dutils'
 import { Assert, test } from 'ts3dutils/tests/manager'
 
@@ -264,14 +261,14 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 		console.log('OK! actual = ' + actualArea + ', expected = ' + expectedArea)
 	})
 	test(msg + ' volume', assert => {
-		outputLink(assert, { mesh: face.toSource() + '.toMesh()' })
+		outputLink(assert, { mesh: face.toSource() + '.toMesh()', edges: face.allEdges })
 		const actual = face.zDirVolume().volume,
 			expected = undefined === expectedVolume ? faceMeshVol.volume : expectedVolume
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
 		console.log('OK! actual = ' + actual + ', expected = ' + expected)
 	})
 	test(msg + ' flipped() volume', assert => {
-		outputLink(assert, { mesh: flippedFace.toSource() + '.toMesh()' })
+		outputLink(assert, { mesh: flippedFace.toSource() + '.toMesh()', edges: flippedFace.allEdges })
 		const actual = flippedFace.zDirVolume().volume
 		const expected = undefined === expectedVolume ? -faceMeshVol.volume : -expectedVolume
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
@@ -305,7 +302,16 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 	})
 }
 
-export function testCurve(assert: Assert, curve: Curve, checkTangents = true) {
+export function testCurve(assert: Assert, curve: Curve, checkTangents = true, msg?: string) {
+	const edge = Edge.forCurveAndTs(curve)
+	outputLink(
+		assert,
+		{
+			edges: [edge],
+			drPs: [edge.a, edge.b],
+		},
+		msg,
+	)
 	const STEPS = 12
 	for (let i = 0; i < STEPS; i++) {
 		const t = lerp(curve.tMin, curve.tMax, i / (STEPS - 1))
@@ -340,7 +346,6 @@ export function testCurve(assert: Assert, curve: Curve, checkTangents = true) {
 }
 
 export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
-	assert.ok(ParametricSurface.is(surf))
 	outputLink(
 		assert,
 		{
@@ -348,6 +353,15 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 		},
 		'view',
 	)
+
+	assert.ok(ParametricSurface.is(surf))
+
+	// test equals
+	const clone = new surf .constructor(...surf.getConstructorParameters())
+	assert.ok(clone.equals(surf), 'clone.equals(surf)')
+	assert.ok(clone.isCoplanarTo(surf), 'clone.isParallelTo(surf)')
+	assert.ok(clone.like(surf), 'clone.like(surf)')
+
 	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)].map(
 		pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0),
 	)
@@ -460,6 +474,13 @@ export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f 
 	})
 }
 
+/**
+ * Test intersections of a curve with a surface.
+ * @param assert
+ * @param curve
+ * @param surface
+ * @param tCount
+ */
 export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tCount: int) {
 	surface instanceof P3 && (surface = new PlaneSurface(surface))
 	let ists

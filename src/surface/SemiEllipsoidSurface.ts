@@ -295,10 +295,6 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		return ParametricSurface.prototype.toMesh.call(this)
 	}
 
-	getConstructorParameters(): any[] {
-		return [this.center, this.f1, this.f2, this.f3]
-	}
-
 	clipCurves(curves: Curve[]): Curve[] {
 		return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()))
 	}
@@ -312,7 +308,6 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 			0.05,
 		)
 		curves2 = this.clipCurves(curves2)
-		curves2 = surface.clipCurves(curves2)
 		return curves2
 
 		function iii(ists: number[], surface: Surface, curve: Curve, min: number, max: number) {

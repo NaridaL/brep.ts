@@ -1,21 +1,21 @@
-import { suite, test, testBRepOp, b2equals, outputLink, bRepEqual } from './manager'
+import { DEG, M4, TAU, V, V3 } from 'ts3dutils'
 import {
 	B2T,
-	StraightEdge,
 	BRep,
-	SemiEllipseCurve,
-	Edge,
-	PlaneFace,
-	L3,
-	PlaneSurface,
-	P3,
-	RotationFace,
-	PCurveEdge,
-	SemiCylinderSurface,
 	ConicSurface,
+	Edge,
+	L3,
+	P3,
+	PCurveEdge,
+	PlaneFace,
+	PlaneSurface,
 	RotatedCurveSurface,
+	RotationFace,
+	SemiCylinderSurface,
+	SemiEllipseCurve,
+	StraightEdge,
 } from '..'
-import { TAU, V, DEG, V3, M4 } from 'ts3dutils'
+import { b2equals, bRepEqual, outputLink, suite, test, testBRepOp } from './manager'
 
 // prettier-ignore
 suite('BRep generators', () => {
@@ -180,22 +180,22 @@ suite('BRep generators', () => {
     test('torus', assert => {
         const actual = B2T.torus(1, 2)
         const expected = new BRep([
-            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0),V3.X,V(0, 6.123233995736766e-17, 1),0,3.141592653589793),0,3.141592653589793,M4.IDENTITY), [
+            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793), M4.IDENTITY, 0, 3.141592653589793), [
                 new PCurveEdge(new SemiEllipseCurve(V(2, 0, 0),V3.X,V(0, 6.123233995736766e-17, 1),0,3.141592653589793),V(1, 7.498798913309288e-33, 1.2246467991473532e-16),V(3, 0, 0),3.141592653589793,0,undefined,V(1.2246467991473532e-16, 6.123233995736766e-17, 1),V(0, -6.123233995736766e-17, -1),'undefined.rotateX(1.5707963267948966)undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V(3, 0, 0),V(0, 3, 0),0,3.141592653589793),V(3, 0, 0),V(-3, 3.6739403974420594e-16, 0),0,3.141592653589793,undefined,V(0, 3, 0),V(-3.6739403974420594e-16, -3, 0),'torus0rib0undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V(-2, 2.4492935982947064e-16, 0),V(-1, 1.2246467991473532e-16, 0),V(-7.498798913309288e-33, -6.123233995736766e-17, 1),0,3.141592653589793),V(-3, 3.6739403974420594e-16, 0),V(-1, 1.2246467991473532e-16, 1.2246467991473532e-16),0,3.141592653589793,undefined,V(-7.498798913309288e-33, -6.123233995736766e-17, 1),V(1.2246467991473532e-16, 6.123233995736765e-17, -1),'undefined.rotateX(1.5707963267948966)undefinedundefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V3.X,V3.Y,0,3.141592653589793),V(-1, 1.2246467991473532e-16, 0),V3.X,3.141592653589793,0,undefined,V(1.2246467991473532e-16, 1, 0),V(0, -1, 0),'torus0rib1undefined')], []),
-            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0),V(-1, 0, 0),V(0, -6.123233995736766e-17, -1),0,3.141592653589793),0,3.141592653589793,M4.IDENTITY), [
+            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0), V(-1, 0, 0), V(0, -6.123233995736766e-17, -1), 0, 3.141592653589793), M4.IDENTITY, 0, 3.141592653589793), [
                 new PCurveEdge(new SemiEllipseCurve(V(2, 0, 0),V(-1, 0, 0),V(0, -6.123233995736766e-17, -1),0,3.141592653589793),V(3, -7.498798913309288e-33, -1.2246467991473532e-16),V3.X,3.141592653589793,0,undefined,V(-1.2246467991473532e-16, -6.123233995736766e-17, -1),V(0, 6.123233995736766e-17, 1),'undefined.rotateX(1.5707963267948966)undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V3.X,V3.Y,0,3.141592653589793),V3.X,V(-1, 1.2246467991473532e-16, 0),0,3.141592653589793,undefined,V3.Y,V(-1.2246467991473532e-16, -1, 0),'torus0rib1undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V(-2, 2.4492935982947064e-16, 0),V(1, -1.2246467991473532e-16, 0),V(7.498798913309288e-33, 6.123233995736766e-17, -1),0,3.141592653589793),V(-1, 1.2246467991473532e-16, 0),V(-3, 3.6739403974420594e-16, -1.2246467991473532e-16),0,3.141592653589793,undefined,V(7.498798913309288e-33, 6.123233995736766e-17, -1),V(-1.2246467991473532e-16, -6.123233995736765e-17, 1),'undefined.rotateX(1.5707963267948966)undefinedundefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V(3, 0, 0),V(0, 3, 0),0,3.141592653589793),V(-3, 3.6739403974420594e-16, 0),V(3, 0, 0),3.141592653589793,0,undefined,V(3.6739403974420594e-16, 3, 0),V(0, -3, 0),'torus0rib0undefined')], []),
-            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0),V3.X,V(0, 6.123233995736766e-17, 1),0,3.141592653589793),0,3.141592653589793,M4.forSys(V(-1, 1.2246467991473532e-16, 0),V(-1.2246467991473532e-16, -1, 0),V3.Z)), [
+            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793), M4.forSys(V(-1, 1.2246467991473532e-16, 0), V(-1.2246467991473532e-16, -1, 0), V3.Z), 0, 3.141592653589793), [
                 new PCurveEdge(new SemiEllipseCurve(V(-2, 2.4492935982947064e-16, 0),V(-1, 1.2246467991473532e-16, 0),V(-7.498798913309288e-33, -6.123233995736766e-17, 1),0,3.141592653589793),V(-1, 1.2246467991473532e-16, 1.2246467991473532e-16),V(-3, 3.6739403974420594e-16, 0),3.141592653589793,0,undefined,V(-1.2246467991473532e-16, -6.123233995736765e-17, 1),V(7.498798913309288e-33, 6.123233995736766e-17, -1),'undefined.rotateX(1.5707963267948966)undefinedundefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V(-3, 3.6739403974420594e-16, 0),V(-3.6739403974420594e-16, -3, 0),0,3.141592653589793),V(-3, 3.6739403974420594e-16, 0),V(3, 0, 0),0,3.141592653589793,undefined,V(-3.6739403974420594e-16, -3, 0),V(7.347880794884119e-16, 3, 0),'torus0rib0undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V(2, 0, 0),V3.X,V(0, 6.123233995736766e-17, 1),0,3.141592653589793),V(3, 0, 0),V(1, 7.498798913309288e-33, 1.2246467991473532e-16),0,3.141592653589793,undefined,V(0, 6.123233995736766e-17, 1),V(-1.2246467991473532e-16, -6.123233995736766e-17, -1),'undefined.rotateX(1.5707963267948966)undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V(-1, 1.2246467991473532e-16, 0),V(-1.2246467991473532e-16, -1, 0),0,3.141592653589793),V3.X,V(-1, 1.2246467991473532e-16, 0),3.141592653589793,0,undefined,V(-2.4492935982947064e-16, -1, 0),V(1.2246467991473532e-16, 1, 0),'torus0rib1undefined')], []),
-            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0),V(-1, 0, 0),V(0, -6.123233995736766e-17, -1),0,3.141592653589793),0,3.141592653589793,M4.forSys(V(-1, 1.2246467991473532e-16, 0),V(-1.2246467991473532e-16, -1, 0),V3.Z)), [
+            new RotationFace(new RotatedCurveSurface(new SemiEllipseCurve(V(2, 0, 0), V(-1, 0, 0), V(0, -6.123233995736766e-17, -1), 0, 3.141592653589793), M4.forSys(V(-1, 1.2246467991473532e-16, 0), V(-1.2246467991473532e-16, -1, 0), V3.Z), 0, 3.141592653589793), [
                 new PCurveEdge(new SemiEllipseCurve(V(-2, 2.4492935982947064e-16, 0),V(1, -1.2246467991473532e-16, 0),V(7.498798913309288e-33, 6.123233995736766e-17, -1),0,3.141592653589793),V(-3, 3.6739403974420594e-16, -1.2246467991473532e-16),V(-1, 1.2246467991473532e-16, 0),3.141592653589793,0,undefined,V(1.2246467991473532e-16, 6.123233995736765e-17, -1),V(-7.498798913309288e-33, -6.123233995736766e-17, 1),'undefined.rotateX(1.5707963267948966)undefinedundefined'),
                 new PCurveEdge(new SemiEllipseCurve(V3.O,V(-1, 1.2246467991473532e-16, 0),V(-1.2246467991473532e-16, -1, 0),0,3.141592653589793),V(-1, 1.2246467991473532e-16, 0),V3.X,0,3.141592653589793,undefined,V(-1.2246467991473532e-16, -1, 0),V(2.4492935982947064e-16, 1, 0),'torus0rib1undefined'),
                 new PCurveEdge(new SemiEllipseCurve(V(2, 0, 0),V(-1, 0, 0),V(0, -6.123233995736766e-17, -1),0,3.141592653589793),V3.X,V(3, -7.498798913309288e-33, -1.2246467991473532e-16),0,3.141592653589793,undefined,V(0, -6.123233995736766e-17, -1),V(1.2246467991473532e-16, 6.123233995736766e-17, 1),'undefined.rotateX(1.5707963267948966)undefined'),

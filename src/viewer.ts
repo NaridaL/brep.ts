@@ -1,12 +1,12 @@
 import chroma, { Color } from 'chroma-js'
-import nerdamer from 'nerdamer'
-import { arrayFromFunction, assert, DEG, int, round10, V, V3, M4 } from 'ts3dutils'
-import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from 'tsgl'
 import deepmerge from 'deepmerge'
+import nerdamer from 'nerdamer'
+import { arrayFromFunction, assert, DEG, int, M4, round10, V, V3 } from 'ts3dutils'
+import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from 'tsgl'
 
 import {
-	BRep,
 	B2T,
+	BRep,
 	BREPGLContext,
 	cameraChangeListeners,
 	COLORS,
@@ -30,12 +30,12 @@ import {
 
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 }
 const drVs: any[] = []
-const b2s: BRep[] = []
+const bReps: BRep[] = []
 const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
-const aMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int; count: int }>; TRIANGLES: int[]; normals: V3[] })[] = []
+let bRepMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int; count: int }>; TRIANGLES: int[]; normals: V3[] })[] = []
 //bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 //cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
-let dMesh: Mesh & {
+let edgesMesh: Mesh & {
 	faceIndexes?: Map<Face, { start: int; count: int }>
 	TRIANGLES: int[]
 	normals: V3[]
@@ -43,7 +43,7 @@ let dMesh: Mesh & {
 	curve1colors: GL_COLOR[]
 }
 let faceMesh: Mesh & { tangents: V3[]; TRIANGLES: int[]; normals: V3[] }
-let b2meshes: (Mesh & { TRIANGLES: int[]; normals: V3[] })[] = []
+let meshes: (Mesh & { TRIANGLES: int[]; normals: V3[] })[] = []
 let hovering: {}
 
 import * as ts3dutils from 'ts3dutils'
@@ -67,6 +67,7 @@ export class RenderObjects {
 	drVs: any = []
 	mesh: Mesh & { TRIANGLES: int[]; normals: V3[] } = undefined
 	paintMeshNormals = false
+	paintWireframe = false
 }
 const renderObjectKeys = Object.keys(new RenderObjects()) as (keyof RenderObjects)[]
 
@@ -115,20 +116,30 @@ function initBRep() {
 	g.hjk && Object.assign(g, HJK())
 	arrayLiteralType(['a', 'b', 'c', 'd']).forEach(k => {
 		if (g[k]) {
-			aMeshes.push(g[k].toMesh())
-			b2s.push(g[k])
+			bReps.push(g[k])
 		}
 	})
 
-	for (let i = 0; i < aMeshes.length; i++) {
-		aMeshes[i].computeWireframeFromFlatTriangles('wireframe')
-		aMeshes[i].computeNormalLines(0.1, 'normallines')
-		aMeshes[i].compile()
+	bRepMeshes = bReps.map(bRep => bRep.toMesh())
+	bRepMeshes.forEach(mesh => {
+		mesh.computeWireframeFromFlatTriangles('wireframe')
+		mesh.computeNormalLines(0.1, 'normallines')
+		mesh.compile()
+	})
+
+	if (g.mesh) {
+		console.log('mesh/es from GET', bRepMeshes)
+		meshes = g.mesh instanceof Array ? g.mesh : [g.mesh]
+		meshes.forEach(mesh => {
+			mesh.computeWireframeFromFlatTriangles('wireframe')
+			mesh.computeNormalLines(0.1, 'normallines')
+			mesh.compile()
+		})
 	}
 
 	if (g.edges) {
 		console.log('edges from GET')
-		dMesh = new Mesh()
+		edgesMesh = new Mesh()
 			.addIndexBuffer('TRIANGLES')
 			.addVertexBuffer('normals', 'ts_Normal')
 			.addVertexBuffer('curve1', 'curve1')
@@ -139,19 +150,13 @@ function initBRep() {
 				const color = edgeViewerColors[(edgeIndex + i % 2) % edgeViewerColors.length]
 				// const tangent = edge.tangentAt(i)
 				// dMesh.curve1.push(points[i], points[i].plus(tangent.toLength(1)))
-				dMesh.curve1.push(points[i], points[i + 1])
-				dMesh.curve1colors.push(color, color)
+				edgesMesh.curve1.push(points[i], points[i + 1])
+				edgesMesh.curve1colors.push(color, color)
 			}
-			edge.curve instanceof PICurve && (edge.curve as PICurve).addToMesh(dMesh, 8, 0.02, 2)
+			edge.curve instanceof PICurve && (edge.curve as PICurve).addToMesh(edgesMesh, 8, 0.02, 2)
 		})
 		//dMesh.computeWireframeFromFlatTriangles()
-	}
-	if (g.mesh) {
-		console.log('mesh/es from GET', b2meshes)
-		b2meshes = g.mesh instanceof Array ? g.mesh : [g.mesh]
-		b2meshes.forEach(m => m.computeWireframeFromFlatTriangles())
-		b2meshes.forEach(m => m.computeNormalLines(0.5))
-		b2meshes.forEach(m => m.compile())
+		edgesMesh.compile()
 	}
 	if (g.face) {
 		if (!g.face.length) {
@@ -175,32 +180,16 @@ function initBRep() {
 		faceMesh.compile()
 	}
 
-	dMesh && dMesh.compile()
-
-	g.drPs.push(
-		V(1.9667168746827193, 12.142185950318702, 6.9048962482255565),
-		V(1.9964821799505612, 12.909334371880835, 8.689129899557217),
-	)
+	g.drPs.push()
 }
 
 const meshColors: Color[][] = [
-	chroma
-		.scale(['#ff297f', '#6636FF'])
-		.mode('lab')
-		.colors(20, null as 'alpha'),
-	chroma
-		.scale(['#ffe93a', '#ff6e35'])
-		.mode('lab')
-		.colors(20, null as 'alpha'),
-	chroma
-		.scale(['#1eff33', '#4960ff'])
-		.mode('lab')
-		.colors(20, null as 'alpha'),
-	chroma
-		.scale(['#31fff8', '#2dff2a'])
-		.mode('lab')
-		.colors(20, null as 'alpha'),
-]
+	chroma.scale(['#ff297f', '#6636FF']),
+	chroma.scale(['#ffe93a', '#ff6e35']),
+	chroma.scale(['#1eff33', '#4960ff']),
+	chroma.scale(['#31fff8', '#2dff2a']),
+].map(scale => scale.mode('lab').colors(20, null as 'alpha'))
+
 const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()))
 
 function viewerPaint(time: int, gl: BREPGLContext) {
@@ -211,29 +200,30 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 
 	gl.drawVectors(drVs)
 	gl.shaders.lighting.uniforms({ camPos: eye.pos })
-	//gl.scale(100, 100, 100)
-	for (let i = 0; i < aMeshes.length; i++) {
-		const aMesh = aMeshes[i]
+	for (let i = 0; i < bRepMeshes.length; i++) {
+		const mesh = bRepMeshes[i]
 		gl.pushMatrix()
 		//gl.translate(30, 0, 0)
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-		aMesh.indexBuffers.wireframe &&
+		g.paintWireframe &&
+			mesh.indexBuffers.wireframe &&
 			gl.shaders.singleColor
 				.uniforms({ color: COLORS.TS_STROKE.gl() })
-				.drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.wireframe, gl.LINES)
-		aMesh.indexBuffers.normallines &&
+				.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers.wireframe, gl.LINES)
+		g.paintMeshNormals &&
+			mesh.indexBuffers.normallines &&
 			gl.shaders.singleColor
 				.uniforms({ color: COLORS.TS_STROKE.gl() })
-				.drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.normallines, gl.LINES)
+				.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers.normallines, gl.LINES)
 		gl.shaders.singleColor
 			.uniforms({ color: COLORS.TS_STROKE.gl() })
-			.drawBuffers(aMesh.vertexBuffers, aMesh.indexBuffers.LINES, gl.LINES)
+			.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers.LINES, gl.LINES)
 		gl.projectionMatrix.m[11] += 1 / (1 << 20)
 
-		let faceIndex = b2s[i].faces.length
+		let faceIndex = bReps[i].faces.length
 		while (faceIndex--) {
-			const face = b2s[i].faces[faceIndex]
-			const faceTriangleIndexes = aMesh.faceIndexes.get(face)
+			const face = bReps[i].faces[faceIndex]
+			const faceTriangleIndexes = mesh.faceIndexes.get(face)
 			gl.shaders.lighting
 				.uniforms({
 					color:
@@ -245,7 +235,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 									.gl()
 							: meshColorssGL.emod(i).emod(faceIndex),
 				})
-				.draw(aMesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
+				.draw(mesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
 		}
 
 		gl.popMatrix()
@@ -257,32 +247,29 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 			.drawBuffers({ ts_Vertex: faceMesh.vertexBuffers.tangents }, undefined, gl.LINES)
 	}
 
-	//if (dMesh) {
-	//   gl.shaders.multiColor.uniforms({color: COLORS.PP_STROKE.gl() }).drawBuffers({
-	//        ts_Vertex: dMesh.vertexBuffers.curve1,
-	//        color: dMesh.vertexBuffers.curve1colors,
-	//    }, undefined, gl.LINES)
-	//}
-
-	//gl.disable(gl.CULL_FACE)
-	for (const sMesh of b2meshes) {
+	for (const mesh of meshes) {
 		gl.pushMatrix()
-		//gl.scale(10, 10, 10)
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
-		if (g.paintMeshNormals && sMesh.LINES) {
-			gl.shaders.singleColor.uniforms({ color: chroma('#FF6600').gl() }).draw(sMesh, gl.LINES)
-		}
+		g.paintWireframe &&
+			mesh.indexBuffers.wireframe &&
+			gl.shaders.singleColor
+				.uniforms({ color: COLORS.TS_STROKE.gl() })
+				.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers.wireframe, gl.LINES)
+		g.paintMeshNormals &&
+			mesh.indexBuffers.normallines &&
+			gl.shaders.singleColor
+				.uniforms({ color: COLORS.TS_STROKE.gl() })
+				.drawBuffers(mesh.vertexBuffers, mesh.indexBuffers.normallines, gl.LINES)
 		gl.projectionMatrix.m[11] += 1 / (1 << 20)
-		sMesh.TRIANGLES &&
+		mesh.TRIANGLES &&
 			gl.shaders.lighting
 				.uniforms({
 					color: chroma('#ffFF00').gl(),
 					camPos: eye.pos,
 				})
-				.draw(sMesh)
+				.draw(mesh)
 		gl.popMatrix()
 	}
-	gl.enable(gl.CULL_FACE)
 
 	if (hovering instanceof Edge) {
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
@@ -291,114 +278,14 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 	}
 	g.edges && g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 0.01))
 
-	//drPs.forEach(v => drawPoint(v, undefined, 0.3))
 	g.drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor))
-	b2planes.forEach(plane => gl.drawPlane(plane, chroma(plane.color).gl(), hovering == plane))
+	drawPlanes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
 
-	gl.begin(gl.LINES)
-	gl.color('red')
-	;[
-		V(1.9964821799505612, 12.909334371880835, 8.689129899557217),
-		V(2.5101919194688476, 12.933345047236825, 9.165430470760121),
-		V(1.9964821799505612, 12.909334371880835, 8.689129899557217),
-		V(3.2538521121831194, 13.847878124392269, 15.457832069605494),
-		V(1.9964821850876586, 12.909334372120943, 8.689129904320223),
-		V(2.5101919185568375, 12.93334504351616, 9.165430444168257),
-		V(1.9964821850876586, 12.909334372120943, 8.689129904320223),
-		V(3.2538521212586273, 13.847878124816457, 15.457832078020111),
-		V(1.9964821925242604, 12.909334381266273, 8.68912996724424),
-		V(2.5101919359809575, 12.933345056806344, 9.165430542098752),
-		V(1.9964821925242604, 12.909334381266273, 8.68912996724424),
-		V(3.2538521247919965, 13.847878134684363, 15.45783213940122),
-		V(1.8218363352308937, 12.7885018846819, 7.806510944547504),
-		V(2.29514836221636, 12.819606101777245, 8.308227680406198),
-		V(1.8218363352308937, 12.7885018846819, 7.806510944547504),
-		V(3.0555914218934435, 13.706838419548413, 14.479068543710866),
-		V(1.821836339964014, 12.788501884992941, 7.806510949564671),
-		V(2.295148361675461, 12.819606098558742, 8.308227657552145),
-		V(1.821836339964014, 12.788501884992941, 7.806510949564671),
-		V(3.0555914313391197, 13.706838420169145, 14.479068553723401),
-		V(1.8218363475684447, 12.788501893865265, 7.806511011273081),
-		V(2.2951483792664673, 12.8196061112703, 8.308227752127143),
-		V(1.8218363475684447, 12.788501893865265, 7.806511011273081),
-		V(3.055591436012631, 13.706838430846759, 14.479068621371335),
-		V(1.7277382656193339, 12.729137445125945, 7.365136550173377),
-		V(2.186986299823212, 12.76971597558448, 7.924735083905459),
-		V(1.7277382656193339, 12.729137445125945, 7.365136550173377),
-		V(2.9297780502212563, 13.630735134476552, 13.934007050666509),
-		V(1.7277382702118143, 12.72913744553173, 7.365136555769363),
-		V(2.186986299645003, 12.769715972704248, 7.924735063636892),
-		V(1.7277382702118143, 12.72913744553173, 7.365136555769363),
-		V(2.9297780600105154, 13.630735135341519, 13.934007062594826),
-		V(1.7277382776397319, 12.72913745414192, 7.365136615862083),
-		V(2.1869863170403896, 12.769715985059637, 7.924735155926495),
-		V(1.7277382776397319, 12.72913745414192, 7.365136615862083),
-		V(2.929778064964271, 13.630735146201154, 13.93400713170385),
-		V(1.6645197659959867, 12.699732978037632, 7.134789243459134),
-		V(2.1355967430755665, 12.75825932295719, 7.827119844143795),
-		V(1.6645197659959867, 12.699732978037632, 7.134789243459134),
-		V(2.8244454606232514, 13.589380837830804, 13.610380669315465),
-		V(1.6645197707067565, 12.699732978622896, 7.134789250382441),
-		V(2.135596743456188, 12.758259320397164, 7.8271198264519795),
-		V(1.6645197707067565, 12.699732978622896, 7.134789250382441),
-		V(2.824445470991864, 13.589380839118995, 13.610380684553967),
-		V(1.6645197775952436, 12.69973298693411, 7.134789308215048),
-		V(2.1355967603326667, 12.758259332556596, 7.827119917214905),
-		V(1.6645197775952436, 12.69973298693411, 7.134789308215048),
-		V(2.8244454755773103, 13.589380849729952, 13.610380751723484),
-		V(1.592426633088209, 12.686575012806308, 7.000434579435366),
-		V(2.1176859458264383, 12.787970672287305, 8.025359783445278),
-		V(1.592426633088209, 12.686575012806308, 7.000434579435366),
-		V(2.6677592444089084, 13.562084400044048, 13.32751303805217),
-		V(1.5924266383408021, 12.686575013820265, 7.000434589684618),
-		V(2.117685947455429, 12.787970670276042, 8.025359770343838),
-		V(1.5924266383408021, 12.686575013820265, 7.000434589684618),
-		V(2.6677592559990595, 13.562084402281402, 13.327513060667737),
-		V(1.5924266438415353, 12.686575021561403, 7.000434642706151),
-		V(2.117685962917322, 12.787970682265797, 8.02535985908238),
-		V(1.5924266438415353, 12.686575021561403, 7.000434642706151),
-		V(2.6677592592379686, 13.562084411933393, 13.327513120318608),
-		V(1.2118634489282387, 12.623374558396131, 6.274289272758952),
-		V(1.9283403204949994, 12.93917086036047, 8.91474950944938),
-		V(1.2118634489282387, 12.623374558396131, 6.274289272758952),
-		V(1.8419176736158995, 13.369968935428403, 11.372340095611822),
-		V(1.2118634560930075, 12.623374561554094, 6.274289299163554),
-		V(1.9283403286332865, 12.93917086175841, 8.914749524117928),
-		V(1.2118634560930075, 12.623374561554094, 6.274289299163554),
-		V(1.841917687625618, 13.369968941603364, 11.372340147242385),
-		V(1.2118634552287813, 12.623374565862076, 6.27428932373946),
-		V(1.9283403336404912, 12.939170870843412, 8.914749585655846),
-		V(1.2118634552287813, 12.623374565862076, 6.27428932373946),
-		V(1.8419176877978076, 13.3699689466606, 11.372340172849437),
-		V(1.2950187532608401, 12.66833856964527, 6.628758817799041),
-		V(2.031127225493759, 12.971400227563478, 9.191855506566256),
-		V(1.2950187532608401, 12.66833856964527, 6.628758817799041),
-		V(2.005315997279287, 13.449846782827057, 12.009826479901449),
-		V(1.2950187606219248, 12.668338572675886, 6.628758843430008),
-		V(2.031127233142119, 12.971400228500679, 9.19185551771568),
-		V(1.2950187606219248, 12.668338572675886, 6.628758843430008),
-		V(2.0053160113977646, 13.449846788639745, 12.009826529061355),
-		V(1.2950187603638126, 12.668338577460352, 6.628758871609717),
-		V(2.031127239354124, 12.971400238160633, 9.19185558390587),
-		V(1.2950187603638126, 12.668338577460352, 6.628758871609717),
-		V(2.005316011432072, 13.449846793958752, 12.009826556424537),
-		V(1.3676218085324439, 12.677054974095531, 6.753110506275613),
-		V(2.073647601259866, 12.937827633275013, 9.002134596168434),
-		V(1.3676218085324439, 12.677054974095531, 6.753110506275613),
-		V(2.148919513184255, 13.48371101048007, 12.37169117586395),
-		V(1.3676218155927018, 12.677054976703257, 6.753110528765854),
-		V(2.073647607598869, 12.937827633476159, 9.002134601379865),
-		V(1.3676218155927018, 12.677054976703257, 6.753110528765854),
-		V(2.148919527253074, 13.483711015676427, 12.371691220679754),
-		V(1.367621816345421, 12.677054982162092, 6.75311056246142),
-		V(2.073647616081405, 12.937827643930206, 9.002134674679803),
-		V(1.367621816345421, 12.677054982162092, 6.75311056246142),
-		V(2.1489195273210138, 13.483711021776081, 12.371691253518652),
-	].forEach(x => gl.vertex(x))
-	gl.end()
+	// gl.begin(gl.LINES)
+	// gl.color('red')
+	// ;[].forEach(x => gl.vertex(x))
+	// gl.end()
 }
-
-// let meshes: any = {}
 
 function getHovering(
 	mouseLine: L3,
@@ -473,9 +360,9 @@ function getHovering(
 function initInfoEvents(paintScreen: () => {}, gl: BREPGLContext) {
 	gl.canvas.addEventListener('mousemove', function(e) {
 		const mouseLine = getMouseLine({ x: e.clientX, y: e.clientY }, gl)
-		const faces = b2s.flatMap(b2 => b2 && b2.faces)
+		const faces = bReps.flatMap(b2 => b2 && b2.faces)
 		const testEdges: Edge[] = [
-			...b2s.flatMap(b2 => Array.from<Edge>(b2.buildAdjacencies().edgeFaces.keys())),
+			...bReps.flatMap(b2 => Array.from<Edge>(b2.buildAdjacencies().edgeFaces.keys())),
 			...g.edges,
 		]
 		hovering = getHovering(mouseLine, faces, undefined, [], testEdges, 0.1, 'faces', 'edges')
@@ -503,10 +390,10 @@ function initInfoEvents(paintScreen: () => {}, gl: BREPGLContext) {
 }
 
 //var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
-const b2planes = [
-	new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000),
-	new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00),
-	new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff),
+const drawPlanes = [
+	new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', chroma(0xff0000).gl()),
+	new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', chroma(0x00ff00).gl()),
+	new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', chroma(0x0000ff).gl()),
 	//	sketchPlane
 ]
 let paintScreen: () => void
@@ -515,6 +402,12 @@ export async function viewerMain() {
 	const meshNormalsCheckbox = document.getElementById('paint-mesh-normals')
 	meshNormalsCheckbox.onclick = e => {
 		g.paintMeshNormals = !g.paintMeshNormals
+		paintScreen()
+	}
+
+	const wireframeCheckbox = document.getElementById('paint-wireframe')
+	wireframeCheckbox.onclick = e => {
+		g.paintWireframe = !g.paintWireframe
 		paintScreen()
 	}
 

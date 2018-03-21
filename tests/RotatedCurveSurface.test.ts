@@ -1,32 +1,29 @@
-/**
- * @prettier
- */
 import {
+	outputLink,
 	suite,
 	test,
-	testParametricSurface,
-	outputLink,
 	testISCurves,
-	testLoopContainsPoint,
 	testISTs,
+	testLoopContainsPoint,
+	testParametricSurface,
 } from './manager'
 
-import { M4, TAU, DEG, V3, V } from 'ts3dutils'
+import { DEG, M4, TAU, V, V3 } from 'ts3dutils'
 import {
-	RotationREqFOfZ,
 	B2T,
-	SemiEllipseCurve,
+	Edge,
+	HyperbolaCurve,
+	L3,
+	P3,
+	PlaneSurface,
 	rotateCurve,
 	RotatedCurveSurface,
-	P3,
-	Edge,
+	RotationREqFOfZ,
+	SemiEllipseCurve,
 	StraightEdge,
-	L3,
-	PlaneSurface,
-	HyperbolaCurve,
 } from '..'
 
-import { sin, cos, PI } from '../src/math'
+import { cos, PI, sin } from '../src/math'
 
 suite('RotatedCurveSurface', () => {
 	const baseCurve = SemiEllipseCurve.forAB(2, 2)
@@ -39,6 +36,16 @@ suite('RotatedCurveSurface', () => {
 		testParametricSurface(assert, torusSurface)
 		testParametricSurface(assert, torusSurface.scale(2))
 		testParametricSurface(assert, torusSurface.shearX(2, 2))
+	})
+	test('coplanar with curve translated up, surface down', assert => {
+		const torusSurface2 = rotateCurve(
+			baseCurve.translate(0, 0, 2),
+			undefined,
+			undefined,
+			100 * DEG,
+			false,
+		).translate(0, 0, -2) as RotatedCurveSurface
+		assert.ok(torusSurface.isCoplanarTo(torusSurface2))
 	})
 	test('is curves with plane perpendicular to rotation axis', assert => {
 		const cs = testISCurves(assert, torusSurface, new P3(V3.Z, 4), 2)
@@ -53,9 +60,9 @@ suite('RotatedCurveSurface', () => {
 	test('is curves with plane 2', assert => {
 		const torus = new RotatedCurveSurface(
 			new SemiEllipseCurve(V(2, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793),
+			M4.scale(-1, 1, 1),
 			0,
 			3.141592653589793,
-			M4.scale(-1, 1, 1),
 		)
 		const plane = new PlaneSurface(new P3(V3.Y, 2.5), V(-1, 0, 0), V3.Z)
 		testISCurves(assert, torus, plane, 1)

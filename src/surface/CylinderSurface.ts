@@ -21,7 +21,14 @@ export class CylinderSurface extends ProjectedCurveSurface {
 	readonly inverseMatrix: M4
 	readonly baseCurve: EllipseCurve
 
-	constructor(baseEllipse: EllipseCurve, dir1: V3, zMin = -Infinity, zMax = Infinity) {
+	constructor(
+		baseEllipse: EllipseCurve,
+		dir1: V3,
+		sMin: number = baseEllipse.tMin,
+		sMax: number = baseEllipse.tMax,
+		zMin = -Infinity,
+		zMax = Infinity,
+	) {
 		super(baseEllipse, dir1, undefined, undefined, zMin, zMax)
 		assert(2 == arguments.length)
 		assertVectors(dir1)
@@ -56,10 +63,6 @@ export class CylinderSurface extends ProjectedCurveSurface {
 		const b = 2 * (ax * dx + ay * dy)
 		const c = ax ** 2 + ay ** 2 - 1
 		return pqFormula(b / a, c / a)
-	}
-
-	getConstructorParameters(): any[] {
-		return [this.baseCurve, this.dir]
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {

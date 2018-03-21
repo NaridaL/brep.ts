@@ -160,10 +160,7 @@ export abstract class Curve extends Transformable implements Equalable {
 	/**
 	 * Searches a 2d area for (an) implicit curve(s).
 	 * @param implicitCurve
-	 * @param sMin Defines area to search.
-	 * @param sMax Defines area to search.
-	 * @param tMin Defines area to search.
-	 * @param tMax Defines area to search.
+	 * @param bounds Defines area to search.
 	 * @param sStep Granularity of search in s-direction.
 	 * @param tStep Granularity of search in t-direction.
 	 * @param stepSize step size to take along the curve
@@ -171,16 +168,17 @@ export abstract class Curve extends Transformable implements Equalable {
 	 */
 	static breakDownIC(
 		implicitCurve: MathFunctionR2R,
-		{ sMin, sMax, tMin, tMax }: { sMin: number; sMax: number; tMin: number; tMax: number },
+		bounds: AABB2,
 		sStep: number,
 		tStep: number,
 		stepSize: number,
+		validST: R2<boolean>,
 	): { points: V3[]; tangents: V3[] }[] {
 		const EPS = 1 / (1 << 20)
 		//undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
 		//undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
 
-		const bounds = (s: number, t: number) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
+		const { sMin, sMax, tMin, tMax } = bounds
 		const deltaS = sMax - sMin,
 			deltaT = tMax - tMin
 		const sRes = ceil(deltaS / sStep),
@@ -195,13 +193,13 @@ export abstract class Curve extends Transformable implements Equalable {
 						.join(''),
 				).join('\n'),
 			)
-		const at = (i: int, j: int) => grid[j * sRes + i]
+		const get = (i: int, j: int) => grid[j * sRes + i]
 		const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
 		const result: { points: V3[]; tangents: V3[] }[] = []
 		const logTable = []
 		for (let i = 0; i < sRes; i++) {
 			search: for (let j = 0; j < tRes; j++) {
-				if (at(i, j)) continue
+				if (get(i, j)) continue
 				set(i, j)
 				let s = sMin + (i + 0.5) * sStep,
 					t = tMin + (j + 0.5) * tStep
@@ -212,11 +210,11 @@ export abstract class Curve extends Transformable implements Equalable {
 					const fp = implicitCurve(s, t)
 					const dfpdx = implicitCurve.x(s, t),
 						dfpdy = implicitCurve.y(s, t)
-					if (0 === dfpdx * dfpdx + dfpdy * dfpdy) {
+					if (0 === dfpdx ** 2 + dfpdy ** 2) {
 						// top of a hill, keep looking
 						continue search
 					}
-					const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
+					const scale = fp / (dfpdx ** 2 + dfpdy ** 2)
 					s -= scale * dfpdx
 					t -= scale * dfpdy
 				}
@@ -231,17 +229,17 @@ export abstract class Curve extends Transformable implements Equalable {
 					startT,
 					s,
 					t,
-					'bounds(s, t)': bounds(s, t),
+					'bounds(s, t)': stInAABB2(bounds, s, t),
 					'ic(s,t)': implicitCurve(s, t),
 				})
-				if (!(i == li && j == lj) && at(li, lj)) {
+				if (!(i == li && j == lj) && get(li, lj)) {
 					continue search
 				}
 				set(li, lj)
 				// s, t are now good starting coordinates to use follow algorithm
-				if (bounds(s, t) && eq0(implicitCurve(s, t))) {
+				if (stInAABB2(bounds, s, t) && validST(s, t) && eq0(implicitCurve(s, t))) {
 					console.log(V(s, t).sce)
-					const subResult = mkcurves(implicitCurve, s, t, stepSize, implicitCurve.x, implicitCurve.y, bounds)
+					const subResult = mkcurves(implicitCurve, s, t, stepSize, bounds, validST)
 					for (const curveData of subResult) {
 						assert(curveData.points.length > 2)
 						for (const { x, y } of curveData.points) {
@@ -524,15 +522,15 @@ function mkcurves(
 	sStart: number,
 	tStart: number,
 	stepSize: number,
-	dids: R2_R,
-	didt: R2_R,
-	bounds: (s: number, t: number) => boolean,
+	bounds: AABB2,
+	validST: R2<boolean>,
 ): { points: V3[]; tangents: V3[] }[] {
 	const start = V(sStart, tStart)
+	assert(stepSize > 0)
 	// checkDerivate(s => implicitCurve(s, 0), s => dids(s, 0), -1, 1, 0)
 	// checkDerivate(t => implicitCurve(0, t), t => didt(0, t), -1, 1, 0)
-	const { points, tangents } = followAlgorithm2d(implicitCurve, start, stepSize, bounds)
-	if (points[0].distanceTo(points.last) < stepSize && points.length > 2) {
+	const { points, tangents } = followAlgorithm2d(implicitCurve, start, stepSize, bounds, validST)
+	if (points.length > 4 && points[0].distanceTo(points.last) <= abs(stepSize)) {
 		// this is a loop: split it
 		for (let i = 0; i < points.length - 1; i++) {
 			assert(!points[i].equals(points[i + 1]))
@@ -542,8 +540,8 @@ function mkcurves(
 			points2 = points.slice(half - 1, points.length)
 		const tangents1 = tangents.slice(0, half),
 			tangents2 = tangents.slice(half - 1, tangents.length)
-		tangents2[tangents2.length - 1] = tangents1[0]
-		points2[tangents2.length - 1] = points1[0]
+		//tangents2[tangents2.length - 1] = tangents1[0]
+		//points2[tangents2.length - 1] = points1[0]
 		for (let i = 0; i < points1.length - 1; i++) {
 			assert(!points1[i].equals(points1[i + 1]))
 		}
@@ -558,12 +556,14 @@ function mkcurves(
 			start,
 			-stepSize,
 			bounds,
+			validST,
 		)
 		const result = followAlgorithm2d(
 			implicitCurve,
 			reversePoints.last,
 			stepSize,
 			bounds,
+			validST,
 			undefined,
 			reverseTangents.last.negated(),
 		)

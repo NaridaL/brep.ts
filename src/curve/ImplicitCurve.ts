@@ -29,8 +29,8 @@ export abstract class ImplicitCurve extends Curve {
 	) {
 		super(tMin, tMax)
 		assert(points.length > 2)
-		assert(0 <= tMin && tMin <= points.length - 1)
-		assert(0 <= tMax && tMax <= points.length - 1)
+		assert(0 <= tMin && tMin <= points.length - 1, tMin, points.length)
+		assert(0 <= tMax && tMax <= points.length - 1, tMax, points.length)
 	}
 
 	likeCurve(curve: Curve): boolean {
@@ -85,14 +85,20 @@ export abstract class ImplicitCurve extends Curve {
 		return [allTs, allTs, allTs]
 	}
 
+	/**
+	 * @param mesh
+	 * @param res
+	 * @param radius default to 0. Use the shader to achieve dynamic scaling.
+	 * @param pointStep
+	 */
 	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
 		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
 		let prevTangent = V3.Z,
 			prevMatrix = M4.IDENTITY
-		for (let i = ceil(this.tMin); i < floor(this.tMax); i += pointStep) {
+		for (let i = 0; i < this.points.length; i += pointStep) {
 			const start = mesh.vertices.length
-			if (ceil(this.tMin) !== i) {
+			if (0 !== i) {
 				for (let j = 0; j < res; j++) {
 					pushQuad(
 						mesh.TRIANGLES,

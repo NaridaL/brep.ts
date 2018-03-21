@@ -20,7 +20,7 @@ import { Mesh, pushQuad } from 'tsgl'
 import { Curve, ISInfo, P3 } from '../index'
 
 /**
- * 3-dimensional line
+ * A 3-dimensional line. Defined by an anchor and a normalized direction vector.
  */
 export class L3 extends Curve {
 	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
@@ -279,7 +279,7 @@ export class L3 extends Curve {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.anchor, this.dir1]
+		return [this.anchor, this.dir1, this.tMin, this.tMax]
 	}
 
 	closestTToPoint(p: V3): number {

@@ -1,32 +1,32 @@
 import {
 	inDifferentSystems,
-	suite,
-	test,
-	testISTs,
-	testParametricSurface,
-	testISCurves,
-	testLoopCCW,
-	surfaceVolumeAndAreaTests,
 	outputLink,
+	suite,
+	surfaceVolumeAndAreaTests,
+	test,
+	testISCurves,
+	testISTs,
+	testLoopCCW,
+	testParametricSurface,
 } from './manager'
 
 import { DEG, M4, V, V3 } from 'ts3dutils'
 import {
+	B2T,
 	BezierCurve,
+	Edge,
+	Face,
 	L3,
 	P3,
 	PCurveEdge,
+	PICurve,
 	PlaneSurface,
+	ProjectedCurveSurface,
 	RotationFace,
+	SemiCylinderSurface,
+	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	StraightEdge,
-	ProjectedCurveSurface,
-	Edge,
-	B2T,
-	PICurve,
-	SemiEllipseCurve,
-	Face,
-	SemiCylinderSurface,
 } from '..'
 
 suite('ProjectedCurveSurface', () => {
@@ -65,12 +65,7 @@ suite('ProjectedCurveSurface', () => {
 		surfaceVolumeAndAreaTests(testFace.rotateY(90 * DEG).translate(0, 0, 1)),
 	)
 	suite('(face w/ dir=V3.Z).shearX(2, 2)', () => surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))
-	//suite('(face w/ dir=V3.Z).foo()', () => surfaceVolumeAndAreaTests(testFace.foo()))
-	test('foo', assert =>
-		outputLink(assert, {
-			mesh: `[${testSurface}.foo().toMesh()]`,
-			edges: edges.map(e => e.foo()),
-		}))
+	suite('(face w/ dir=V3.Z).foo()', () => surfaceVolumeAndAreaTests(testFace.foo()))
 	suite(
 		'Face line intersection test',
 		inDifferentSystems((assert, m4) => {
@@ -84,6 +79,7 @@ suite('ProjectedCurveSurface', () => {
 		testParametricSurface(assert, pcs)
 	})
 	test('isTsWithSurface', assert => {
+
 		const pcs = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
 			.scale(0.2, 0.2, 1)
 			.rotateX(-90 * DEG)
@@ -115,8 +111,8 @@ suite('ProjectedCurveSurface', () => {
 						1.1,
 					),
 					V(0, 0, -1),
-					0,
-					1,
+					-0.1,
+					1.1,
 					-1,
 					0,
 				),
@@ -134,17 +130,17 @@ suite('ProjectedCurveSurface', () => {
 					0,
 					2,
 				),
-				V(0.543312790740714, -0.5455452074045042, 0),
-				V(0.45794084603336055, -0.4349260970573627, 0),
+				V(0.5020636899504077, -0.30021571809025155, 0),
+				V(0.50440179447819, -0.6990167000940748, 0),
 				0.05,
-				V(0.0026015534861132676, 0.04993227332556462, 0),
-				6.22402514974994,
-				10,
+				V(-0.048940803585290286, 0.010237076947353528, 0),
+				0.21324043802451342,
+				10.421498564770445,
 			),
 			V(0.49999999999999994, 0, 0.30000000000000004),
 			V(0.4579408460333606, 0.1891173898820845, 0.4349260970573627),
-			6.224025149750126,
-			10,
+            0.21324043802451342,
+            3.9862958940211684,
 			undefined,
 			V(-0.04683824539832595, 0.21076813481893145, -0.0014356938902703453),
 			V(-0.003821083373315509, 0.017154318833024252, 0.04985377941394385),
@@ -198,47 +194,10 @@ suite('ProjectedCurveSurface', () => {
 			'genseg3',
 		),
 		new PCurveEdge(
-			PICurve.forParametricStartEnd(
-				new ProjectedCurveSurface(
-					new BezierCurve(
-						V(0, 2, 0),
-						V(0.3333333333333333, 1, 0),
-						V(0.6666666666666666, -1, 0),
-						V(1, -2, 0),
-						-0.1,
-						1.1,
-					),
-					V(0, 0, -1),
-					0,
-					1,
-					-1,
-					0,
-				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
-						V(0, 0, 0.5),
-						V(-1.2246467991473533e-17, 2.4492935982947065e-17, 0.2),
-						V(-1.4997597826618578e-33, -0.2, 2.4492935982947065e-17),
-						0,
-						3.141592653589793,
-					),
-					V(1, 0, 6.123233995736766e-17),
-					0,
-					3.141592653589793,
-					0,
-					2,
-				),
-				V(0.45794084603336055, -0.43492609705736274, 0),
-				V(0.543312790740714, -0.5455452074045042, 0),
-				0.05,
-				V(-0.0038210833733155047, -0.04985377941394385, 0),
-				6.3461388249955215,
-				11,
-			),
+            PICurve.forParametricStartEnd(new ProjectedCurveSurface(new BezierCurve(V(0, 2, 0),V(0.3333333333333333, 1, 0),V(0.6666666666666666, -1, 0),V(1, -2, 0),-0.1,1.1),V(0, 0, -1),0,1,-1,0),new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0.5),V(-1.2246467991473533e-17, 2.4492935982947065e-17, 0.2),V(-1.4997597826618578e-33, -0.2, 2.4492935982947065e-17),0,3.141592653589793),V(1, 0, 6.123233995736766e-17),0,3.141592653589793,0,2),V(0.4839777423387698, -0.686554960163734, 0),V(0.4944895751568088, -0.3015431287112728, 0),0.05,V(0.024931684232969407, -0.04334064052719462, 0),1.1569694674108177,11.336604127893224),
 			V(0.49999999999999994, 2.4492935982947065e-17, 0.7),
 			V(0.543312790740714, -0.19474504892931377, 0.5455452074045042),
-			6.346138825001836,
-			11,
+            1.1569694674108177,5.303950261557475,
 			undefined,
 			V(0.04658715677301388, -0.209638049867369, 0.0007477447876345841),
 			V(0.002601553486113264, -0.011677707635158832, -0.04993227332556462),
@@ -301,7 +260,7 @@ suite('ProjectedCurveSurface', () => {
 			assert,
 			a.faces.find(f => f.surface instanceof ProjectedCurveSurface).surface,
 			b.faces.find(f => f.surface instanceof SemiCylinderSurface).surface,
-			2,
+			1,
 		)
 	})
 	test('isCurvesWithSurface w/ PCS', assert => {
@@ -311,7 +270,8 @@ suite('ProjectedCurveSurface', () => {
 	})
 
 	suite('face w/ PICurve', () => surfaceVolumeAndAreaTests(piCurveFace))
-	suite('(face w/ PICurve).foo()', () => surfaceVolumeAndAreaTests(piCurveFace.transform(M4.FOO)))
+	suite('(face w/ PICurve).shearX(2, 2)', () => surfaceVolumeAndAreaTests(piCurveFace.shearX(2, 2)))
+	suite('(face w/ PICurve).foo()', () => surfaceVolumeAndAreaTests(piCurveFace.foo()))
 
 	test('Face containsPoint', assert => {
 		const face = new RotationFace(

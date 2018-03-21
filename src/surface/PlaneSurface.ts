@@ -1,4 +1,4 @@
-import { assert, assertInst, callsce, isCCW, M4, V3 } from 'ts3dutils'
+import { assert, assertInst, callsce, hasConstructor, isCCW, M4, V3 } from 'ts3dutils'
 
 import { Curve, Edge, ImplicitCurve, ImplicitSurface, L3, P3, ParametricSurface, PointVsFace, Surface } from '../index'
 
@@ -40,7 +40,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return new PlaneSurface(P3.forAnchorAndPlaneVectors(anchor, v0, v1), v0, v1, sMin, sMax, tMin, tMax)
 	}
 	isCoplanarTo(surface: Surface): boolean {
-		return surface instanceof PlaneSurface && this.plane.isCoplanarToPlane(surface.plane)
+		return hasConstructor(surface, PlaneSurface) && this.plane.isCoplanarToPlane(surface.plane)
 	}
 
 	isTsForLine(line: L3): number[] {
@@ -48,7 +48,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	like(surface: Surface): boolean {
-		return surface instanceof PlaneSurface && this.plane.like(surface.plane)
+		return hasConstructor(surface, PlaneSurface) && this.plane.like(surface.plane)
 	}
 
 	pST(s: number, t: number): V3 {
@@ -117,20 +117,8 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.plane, this.right, this.up]
+		return [this.plane, this.right, this.up, this.sMin, this.sMax, this.tMin, this.tMax]
 	}
-
-	// toMesh(xMin: number = -10, xMax: number = 10, yMin: number = -10, yMax: number = 10) {
-	// 	const mesh = new Mesh()
-	// 		.addIndexBuffer('TRIANGLES')
-	// 		.addVertexBuffer('normals', 'ts_Normal')
-	// 	const matrix = M4.forSys(this.right, this.up, this.plane.normal1, this.plane.anchor)
-	// 	mesh.vertices = [V(xMin, yMin), V(xMax, yMin), V(xMin, yMax), V(xMax, yMax)].map(p => matrix.transformPoint(p))
-	// 	mesh.normals = arrayFromFunction(4, i => this.plane.normal1)
-	// 	pushQuad(mesh.TRIANGLES, false, 0, 1, 2, 3)
-	// 	mesh.compile()
-	// 	return mesh
-	// }
 
 	dpds(): (s: number, t: number) => V3 {
 		return () => this.right
@@ -138,10 +126,6 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 
 	dpdt(): (s: number, t: number) => V3 {
 		return () => this.up
-	}
-
-	equals(obj: any): boolean {
-		return undefined
 	}
 
 	didp(pWC: V3): V3 {

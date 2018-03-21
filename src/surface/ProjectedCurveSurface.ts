@@ -139,22 +139,24 @@ export class ProjectedCurveSurface extends ParametricSurface {
 					const correctDir = this.normalP(p).cross(surface.normalP(p))
 					return new L3(p, dir1.times(sign(correctDir.dot(dir1))))
 				})
+			} else if (ImplicitSurface.is(surface)) {
+				let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(
+					this,
+					surface,
+					0.1,
+					0.1 / surface.dir.length(),
+					0.05,
+				)
+				curves2 = surface.clipCurves(curves2)
+				return curves2
 			} else {
-				let curves2 = ImplicitSurface.is(surface)
-					? ParametricSurface.isCurvesParametricImplicitSurface(
-							this,
-							surface,
-							0.1,
-							0.1 / surface.dir.length(),
-							0.05,
-					  )
-					: ParametricSurface.isCurvesParametricParametricSurface(
-							this,
-							surface,
-							0.05,
-							0.1 / surface.dir.length(),
-							0.05,
-					  )
+				let curves2 = ParametricSurface.isCurvesParametricParametricSurface(
+					this,
+					surface,
+					0.05,
+					0.1 / surface.dir.length(),
+					0.05,
+				)
 				curves2 = this.clipCurves(curves2)
 				curves2 = surface.clipCurves(curves2)
 				return curves2

@@ -53,16 +53,16 @@ export abstract class Edge extends Transformable {
 		assert(!eq(aT, bT))
 		assertVectors(a, b)
 		assertf(() => curve instanceof Curve, curve)
-		assertf(() => !curve.isValidT || (curve.isValidT(aT) && curve.isValidT(bT)), aT + ' ' + bT)
+		assertf(() => !curve.isValidT || (curve.isValidT(aT) && curve.isValidT(bT)), aT, bT, curve)
 		//if (curve instanceof PICurve) {
 		//    assertf(() => curve.at(aT).to(a).length() < 0.1, ''+curve.at(aT)+a)
 		//    assertf(() => curve.at(bT).to(b).length() < 0.1, '' + curve.at(bT) + b)
 		//} else {
-		assertf(() => curve.at(aT).like(a), '' + curve.at(aT) + a)
-		assertf(() => curve.at(bT).like(b), '' + curve.at(bT) + b)
+		assertf(() => curve.at(aT).like(a), () => '' + curve.at(aT) + a + ' aT should have been ' + curve.pointT(a))
+		assertf(() => curve.at(bT).like(b), '' + curve.at(bT) + b + ' bT should have been ' + curve.pointT(b))
 		//}
-		assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax))
-		assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax))
+		assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax), aT, curve.tMin, curve.tMax)
+		assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax), bT, curve.tMin, curve.tMax)
 		this.aT = clamp(aT, curve.tMin, curve.tMax)
 		this.bT = clamp(bT, curve.tMin, curve.tMax)
 		this.reversed = this.aT > this.bT
@@ -688,8 +688,6 @@ export class PCurveEdge extends Edge {
 export class StraightEdge extends Edge {
 	readonly tangent: V3
 	readonly curve: L3
-
-	// flippedOf: StraightEdge
 
 	constructor(line: L3, a: V3, b: V3, aT: number, bT: number, public flippedOf?: StraightEdge, name?: string) {
 		super(line, a, b, aT, bT, flippedOf, name)

@@ -1,5 +1,5 @@
 import earcut from 'earcut'
-import { JavaMap as CustomMap, JavaSet as CustomSet, Pair } from 'javasetmap.ts'
+import { JavaMap, JavaSet as CustomSet, Pair } from 'javasetmap.ts'
 import nerdamer from 'nerdamer'
 import {
 	AABB,
@@ -17,7 +17,9 @@ import {
 	lt,
 	M4,
 	mapPush,
+	newtonIterate,
 	newtonIterate2d,
+	newtonIterateWithDerivative,
 	NLA_DEBUG,
 	NLA_PRECISION,
 	SCE,
@@ -31,6 +33,7 @@ import {
 import { Mesh } from 'tsgl'
 
 import {
+	AABB2,
 	Curve,
 	curvePoint,
 	curvePointMF,
@@ -42,6 +45,7 @@ import {
 	ParametricSurface,
 	PlaneFace,
 	PointVsFace,
+	R2,
 	R2_R,
 	stInAABB2,
 	Surface,
@@ -171,12 +175,9 @@ export class BRep extends Transformable {
 	generator: string | undefined
 	vertexNames: Map<V3, string>
 	edgeFaces:
-		| CustomMap<
-				Edge,
-				{ face: Face; edge: Edge; normalAtCanonA: V3; inside: V3; reversed: boolean; angle: number }[]
-		  >
+		| JavaMap<Edge, { face: Face; edge: Edge; normalAtCanonA: V3; inside: V3; reversed: boolean; angle: number }[]>
 		| undefined
-	vertFaces: CustomMap<V3, Edge[]>
+	vertFaces: JavaMap<V3, Edge[]>
 
 	constructor(faces: Face[], infiniteVolume: boolean, generator?: string, vertexNames?) {
 		super()
@@ -605,11 +606,11 @@ export class BRep extends Transformable {
 		newFaces.push(...oldFaces.filter(face => oldFaceStatuses.get(face) == 'inside'))
 	}
 
-	getLooseEdgeSegments(
-		edgePointInfoss: CustomMap<Edge, IntersectionPointInfo[]>,
-		edgeFaces: CustomMap<Edge, any[]>,
+	static getLooseEdgeSegments(
+		edgePointInfoss: JavaMap<Edge, IntersectionPointInfo[]>,
+		edgeFaces: JavaMap<Edge, any[]>,
 	): Map<Edge, Edge[]> {
-		const result = new CustomMap<Edge, Edge[]>()
+		const result = new JavaMap<Edge, Edge[]>()
 		// if there are no point info, the original edge will be kept, so we should return nothing
 		// otherwise, something will be returned, even if it a new edge identical to the base edge
 		for (const [canonEdge, pointInfos] of edgePointInfoss) {
@@ -677,8 +678,8 @@ export class BRep extends Transformable {
 
 	getIntersectionEdges(brep2: BRep) {
 		const faceMap = new Map(),
-			thisEdgePoints = new CustomMap(),
-			otherEdgePoints = new CustomMap()
+			thisEdgePoints = new JavaMap(),
+			otherEdgePoints = new JavaMap()
 
 		const likeSurfaceFaces: Map<Edge, IntersectionPointInfo[]> = []
 
@@ -798,14 +799,14 @@ export class BRep extends Transformable {
 	//}
 
 	buildAdjacencies(): this & {
-		edgeFaces: CustomMap<
+		edgeFaces: JavaMap<
 			Edge,
 			{ face: Face; edge: Edge; normalAtCanonA: V3; inside: V3; reversed: boolean; angle: number }[]
 		>
 	} {
 		if (this.edgeFaces) return this
 
-		this.edgeFaces = new CustomMap() as any
+		this.edgeFaces = new JavaMap() as any
 		for (const face of this.faces) {
 			for (const edge of face.getAllEdges()) {
 				const canon = edge.getCanon()
@@ -874,8 +875,8 @@ export class BRep extends Transformable {
 		other.buildAdjacencies()
 
 		const faceMap = new Map()
-		const thisEdgePoints = new CustomMap<Edge, IntersectionPointInfo[]>(),
-			otherEdgePoints = new CustomMap<Edge, IntersectionPointInfo[]>()
+		const thisEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>(),
+			otherEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>()
 
 		const checkedPairs = new CustomSet<Pair<any, any>>()
 
@@ -898,7 +899,7 @@ export class BRep extends Transformable {
 			return this
 		} else {
 			if (buildThis) {
-				const edgeLooseSegments = this.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces)
+				const edgeLooseSegments = BRep.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces)
 				//noinspection JSUnusedLocalSymbols
 				const els = this.faces.map(face => [
 					face,
@@ -909,7 +910,7 @@ export class BRep extends Transformable {
 				this.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
 			}
 			if (buildOther) {
-				const edgeLooseSegments = this.getLooseEdgeSegments(otherEdgePoints, other.edgeFaces)
+				const edgeLooseSegments = BRep.getLooseEdgeSegments(otherEdgePoints, other.edgeFaces)
 				//noinspection JSUnusedLocalSymbols
 				const els = other.faces.map(face => [
 					face,
@@ -1452,10 +1453,14 @@ export function followAlgorithm2d(
 	ic: MathFunctionR2R,
 	startP: V3,
 	stepLength: number = 0.5,
-	bounds: (s: number, t: number) => boolean,
-	endP: V3 = startP,
+	bounds: AABB2,
+	validST: R2<boolean>,
+	endP?: V3,
 	startTangent?: V3,
-): { points: V3[]; tangents: V3[] } {
+): {
+	points: V3[]
+	tangents: V3[]
+} {
 	assertNumbers(stepLength, ic(0, 0))
 	assertVectors(startP)
 	if (!startTangent) {
@@ -1468,7 +1473,8 @@ export function followAlgorithm2d(
 	const eps = stepLength / 32
 	let i = 0,
 		p = startP,
-		tangent = startTangent
+		tangent = startTangent,
+		fullLoop = false
 	do {
 		points.push(p)
 		tangents.push(tangent)
@@ -1479,9 +1485,7 @@ export function followAlgorithm2d(
 			dfpdy = ic.y(newP.x, newP.y)
 		const newTangent = new V3(-dfpdy, dfpdx, 0).toLength(stepLength)
 		//const reversedDir = p.minus(prevp).dot(tangent) < 0
-		if (p.equals(newP)) {
-			assertNever()
-		}
+		assert(!p.equals(newP))
 		// check if we passed a singularity
 		if (tangent.dot(newTangent) < 0) {
 			const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y)
@@ -1494,17 +1498,45 @@ export function followAlgorithm2d(
 				throw new Error()
 			}
 		}
-		if (i > 4) {
-			if (!bounds(p.x, p.y)) {
+		// check for endP
+		if (endP && p.equals(endP)) {
+			console.log('endP', endP.sce)
+			break
+		}
+		// check if loop
+		if (fullLoop) {
+			if (p.distanceTo(startP) > abs(stepLength)) {
+				console.log('fl2')
+				const p = points.pop()
+				console.log('popped ' + p.sce)
+				tangents.pop()
+				assert(points.last.distanceTo(startP) <= abs(stepLength))
 				break
 			}
-			// full loop or arrived at end
-			if (p.distanceTo(endP) < stepLength) {
-				points.push(endP)
-				const endTangent = new V3(-ic.y(endP.x, endP.y), ic.x(endP.x, endP.y), 0).toLength(stepLength)
-				tangents.push(endTangent)
-				break
+		} else {
+			if (i > 4 && p.distanceTo(startP) <= abs(stepLength)) {
+				console.log('fl1')
+				fullLoop = true
 			}
+		}
+		// check if out of bounds
+		if (i > 1 && !stInAABB2(bounds, p.x, p.y)) {
+			console.log('b', stepLength)
+			const endP = figureOutBorderPoint(bounds, p, ic)
+			points.pop()
+			tangents.pop()
+			if (points.last.distanceTo(endP) < abs(stepLength) / 2) {
+				points.pop()
+				tangents.pop()
+			}
+			const endTangent = new V3(-ic.y(endP.x, endP.y), ic.x(endP.x, endP.y), 0).toLength(stepLength)
+			points.push(endP)
+			tangents.push(endTangent)
+			break
+		}
+		if (i > 4 && !validST(p.x, p.y)) {
+			console.log('c', stepLength, points)
+			break
 		}
 		assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)
 		tangent = newTangent
@@ -1514,6 +1546,29 @@ export function followAlgorithm2d(
 
 	//assert(points.length > 6)
 	return { points, tangents }
+}
+
+/**
+ * Given a point p just outside the bounds, figure out the nearby intersection of the bounds with the ic.
+ * @param bounds
+ * @param p
+ * @param ic
+ */
+function figureOutBorderPoint(bounds: AABB2, p: V3, ic: MathFunctionR2R): V3 {
+	if (p.x < bounds.sMin || bounds.sMax < p.x) {
+		const s = bounds.sMax < p.x ? bounds.sMax : bounds.sMin
+		const t = newtonIterateWithDerivative(t => ic(s, t), p.y, 4, t => ic.y(s, t))
+		if (stInAABB2(bounds, s, t)) {
+			return new V3(s, t, 0)
+		}
+	}
+	if (p.y < bounds.tMin || bounds.tMax < p.y) {
+		const t = bounds.tMax < p.y ? bounds.tMax : bounds.tMin
+		const s = newtonIterateWithDerivative(s => ic(s, t), p.x, 4, s => ic.x(s, t))
+		assert(stInAABB2(bounds, s, t))
+		return new V3(s, t, 0)
+	}
+	throw new Error(p + ' ' + bounds)
 }
 
 export function followAlgorithm2dAdjustable(
@@ -1650,7 +1705,7 @@ export function cassini(a: number, c: number): (x: number, y: number) => number 
 }
 
 /**
- * A function R² -> R with first and second derivatives.
+ * A function R² -> R with first and (optionally) second derivatives.
  */
 export interface MathFunctionR2R {
 	readonly x: R2_R

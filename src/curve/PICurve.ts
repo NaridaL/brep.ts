@@ -8,7 +8,10 @@ import {
 	clamp,
 	fuzzyUniques,
 	int,
+	lerp,
 	M4,
+	newtonIterate2d,
+	newtonIterate2dWithDerivatives,
 	V3,
 } from 'ts3dutils'
 
@@ -62,6 +65,41 @@ export class PICurve extends ImplicitCurve {
 			assert(!points[i].equals(points[i + 1]))
 			//assert(parametricSurface.pST(pmPoints[i].x, pmPoints[i].y).equals(points[i]))
 		}
+		{
+			const ps = this.parametricSurface
+			const is = implicitSurface
+			const pFunc = ps.pSTFunc(),
+				iFunc = is.implicitFunction()
+			const dpds = ps.dpds()
+			const dpdt = ps.dpdt()
+			const didp = is.didp.bind(is)
+			const mf = MathFunctionR2R.forFFxFy(
+				(x, y) => iFunc(pFunc(x, y)),
+				(s, t) => didp(pFunc(s, t)).dot(dpds(s, t)),
+				(s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)),
+			)
+			const { points, tangents } = followAlgorithm2d(
+				mf,
+				this.pmPoints[0],
+				stepSize,
+				ps,
+				(s, t) => is.containsPoint(pFunc(s, t)),
+				this.pmPoints.last,
+				this.pmTangents[0],
+			)
+			if (points.length !== this.points.length) {
+				followAlgorithm2d(
+					mf,
+					this.pmPoints[0],
+					stepSize,
+					ps,
+					(s, t) => is.containsPoint(pFunc(s, t)),
+					this.pmPoints.last,
+					this.pmTangents[0],
+				)
+			}
+			assert(points.length == this.points.length, points.length, this.points.length)
+		}
 	}
 
 	static forParametricStartEnd(
@@ -84,7 +122,15 @@ export class PICurve extends ImplicitCurve {
 			(s, t) => didp(pFunc(s, t)).dot(dpds(s, t)),
 			(s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)),
 		)
-		const { points, tangents } = followAlgorithm2d(mf, pmStart, stepSize, ps.bounds.bind(ps), pmEnd, startPMTangent)
+		const { points, tangents } = followAlgorithm2d(
+			mf,
+			pmStart,
+			stepSize,
+			ps,
+			(s, t) => is.containsPoint(pFunc(s, t)),
+			pmEnd,
+			startPMTangent,
+		)
 		return PICurve.forParametricPointsTangents(ps, is, points, tangents, stepSize, 1, tMin, tMax)
 	}
 
@@ -258,12 +304,38 @@ export class PICurve extends ImplicitCurve {
 		throw new Error()
 	}
 
-	isTsWithPlane(plane: P3): number[] {
-		assertInst(P3, plane)
+	isTsWithPlane(planeWC: P3): number[] {
+		const result: number[] = []
+		let prevSignedDistance = planeWC.distanceToPointSigned(this.points[0])
+		for (let i = 1; i < this.points.length; i++) {
+			const point = this.points[i]
+			const signedDistance = planeWC.distanceToPointSigned(point)
+			if (prevSignedDistance * signedDistance <= 0) {
+				const pF = this.parametricSurface.pSTFunc()
+				const dpds = this.parametricSurface.dpds()
+				const dpdt = this.parametricSurface.dpdt()
+				const startST = this.pmPoints[abs(prevSignedDistance) < abs(signedDistance) ? i - 1 : i]
+				const isST = newtonIterate2dWithDerivatives(
+					this.implicitCurve(),
+					(s, t) => planeWC.distanceToPointSigned(pF(s, t)),
+					startST.x,
+					startST.y,
+					4,
+					this.dids,
+					this.didt,
+					(s, t) => dpds(s, t).dot(planeWC.normal1),
+					(s, t) => dpdt(s, t).dot(planeWC.normal1),
+				)
+				result.push(this.pointT(this.parametricSurface.pST(isST.x, isST.y)))
+			}
+			prevSignedDistance = signedDistance
+		}
+		return result
+		assertInst(P3, planeWC)
 		const ps = this.parametricSurface,
 			is = this.implicitSurface
-		const pscs = ps.isCurvesWithPlane(plane)
-		const iscs = is.isCurvesWithPlane(plane)
+		const pscs = ps.isCurvesWithPlane(planeWC)
+		const iscs = is.isCurvesWithPlane(planeWC)
 		const infos = iscs.flatMap(isc => pscs.flatMap(psc => isc.isInfosWithCurve(psc)))
 		const ts = fuzzyUniques(infos.map(info => this.pointT(info.p)))
 		return ts.filter(t => !isNaN(t) && this.isValidT(t))

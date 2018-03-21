@@ -1,16 +1,13 @@
-/**
- * @prettier
- */
 import {
 	outputLink,
 	suite,
+	surfaceVolumeAndAreaTests,
 	test,
+	testCurve,
+	testImplicitSurface,
 	testISCurves,
 	testLoopContainsPoint,
 	testParametricSurface,
-	testImplicitSurface,
-	surfaceVolumeAndAreaTests,
-	testCurve,
 } from './manager'
 
 import { assertf, DEG, M4, V, V3 } from 'ts3dutils'
@@ -18,6 +15,7 @@ import {
 	B2T,
 	BezierCurve,
 	Edge,
+	Face,
 	P3,
 	PCurveEdge,
 	PICurve,
@@ -27,7 +25,6 @@ import {
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	StraightEdge,
-	Face,
 } from '..'
 
 import { PI, sin } from '../src/math'
@@ -254,7 +251,7 @@ suite('SemiEllipsoidSurface', () => {
 				),
 				V(0.047968750000000004, 0.010000000000000009, 0.9987987780446257),
 				V(-0.032863624384797126, 4.024633241122271e-18, 0.9994598452125503),
-				30,
+				29,
 				0,
 				null,
 				V(-0.003388613668575339, 0, 0.00016274305244215148),

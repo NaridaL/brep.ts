@@ -174,7 +174,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 	rootPoints() {}
 
 	getConstructorParameters(): any[] {
-		return [this.center, this.f1, this.f2, this.f3]
+		return [this.center, this.f1, this.f2, this.f3, this.sMin, this.sMax, this.tMin, this.tMax]
 	}
 
 	equals(obj: any): boolean {

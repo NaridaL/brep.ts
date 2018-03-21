@@ -14,6 +14,11 @@ export abstract class ParametricSurface extends Surface {
 		assertNumbers(sMin, sMax, tMin, tMax)
 		assert(sMin < sMax)
 		assert(tMin < tMax)
+		assert(
+			(x => x[x.length - 4])(this.getConstructorParameters()) == this.sMin,
+			this.getConstructorParameters(),
+			this.sMin,
+		)
 	}
 
 	static isCurvesParametricImplicitSurface(
@@ -32,8 +37,8 @@ export abstract class ParametricSurface extends Surface {
 		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
 		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
 		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
-		const curves = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize).map(({ points, tangents }, i) =>
-			PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize),
+		const curves = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, (s, t) => is.containsPoint(pf(s, t))).map(
+			({ points, tangents }, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize),
 		)
 		return curves
 	}
@@ -124,5 +129,14 @@ export abstract class ParametricSurface extends Surface {
 	edgeLoopCCW(contour: Edge[]): boolean {
 		const ptpF = this.stPFunc()
 		return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
+	}
+
+	like(object: any): boolean {
+		if (!this.isCoplanarTo(object)) return false
+		// normals need to point in the same direction (outwards or inwards) for both
+		const pSMinTMin = this.pSTFunc()(this.sMin, this.tMin)
+		const thisNormal = this.normalSTFunc()(this.sMin, this.tMin)
+		const otherNormal = object.normalP(pSMinTMin)
+		return 0 < thisNormal.dot(otherNormal)
 	}
 }

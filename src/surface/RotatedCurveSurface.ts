@@ -23,12 +23,14 @@ export class RotatedCurveSurface extends ParametricSurface {
 
 	constructor(
 		readonly curve: Curve,
-		readonly tMin: number = curve.tMin,
-		readonly tMax: number = curve.tMax,
 		readonly matrix: M4 = M4.IDENTITY,
+		sMin: number = 0,
+		sMax: number = PI,
+		tMin: number = curve.tMin,
+		tMax: number = curve.tMax,
 	) {
 		// d/dz (r(z))
-		super(0, PI, tMin, tMax)
+		super(sMin, sMax, tMin, tMax)
 		assertInst(M4, matrix)
 		assert(matrix.isNoProj())
 		assert(eq0(curve.at(tMin).y))
@@ -36,19 +38,28 @@ export class RotatedCurveSurface extends ParametricSurface {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.curve, this.tMin, this.tMax, this.matrix]
+		return [this.curve, this.matrix, this.sMin, this.sMax, this.tMin, this.tMax]
 	}
 
 	flipped(): this {
-		return new RotatedCurveSurface(this.curve, this.tMin, this.tMax, this.matrix.times(M4.mirror(P3.YZ))) as this
+		return new RotatedCurveSurface(
+			this.curve,
+			this.matrix.times(M4.mirror(P3.YZ)),
+			this.sMin,
+			this.sMax,
+			this.tMin,
+			this.tMax,
+		) as this
 	}
 
 	transform(m4: M4): this {
 		return new RotatedCurveSurface(
 			this.curve,
+			m4.isMirroring() ? m4.times(this.matrix).times(M4.mirror(P3.YZ)) : m4.times(this.matrix),
+			this.sMin,
+			this.sMax,
 			this.tMin,
 			this.tMax,
-			m4.isMirroring() ? m4.times(this.matrix).times(M4.mirror(P3.YZ)) : m4.times(this.matrix),
 		) as this
 	}
 
@@ -110,7 +121,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 
 	isTsForLine(line: L3): number[] {
 		const anchorLC = this.matrixInverse.transformPoint(line.anchor)
-		const dirLC = this.matrixInverse.transformPoint(line.dir1)
+		const dirLC = this.matrixInverse.transformVector(line.dir1)
 		if (dirLC.isParallelTo(V3.Z)) {
 			if (!fuzzyBetween(anchorLC.angleXY(), this.sMin, this.sMax)) return []
 			return this.curve
@@ -132,7 +143,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 				.map(info => info.tOther)
 				.filter(t => fuzzyBetween(L3.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax))
 		} else if (dirLC.isPerpendicularTo(V3.Z)) {
-			const sec = this.isCurvesWithPlane(new P3(V3.Z, anchorLC.z))[0] as SemiEllipseCurve | undefined
+			const sec = this.isCurvesWithPlaneLC(new P3(V3.Z, anchorLC.z))[0] as SemiEllipseCurve | undefined
 			if (!sec) return []
 			assertInst(SemiEllipseCurve, sec)
 			return sec.isInfosWithLine(anchorLC, dirLC).map(info => info.tOther)
@@ -163,8 +174,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 		}
 	}
 
-	isCurvesWithPlane(plane: P3): Curve[] {
-		const planeLC = plane.transform(this.matrixInverse)
+	private isCurvesWithPlaneLC(planeLC: P3): Curve[] | undefined {
 		if (planeLC.normal1.isParallelTo(V3.Z)) {
 			return this.curve.isTsWithPlane(planeLC).map(t => {
 				const { x: radius } = this.curve.at(t)
@@ -178,6 +188,15 @@ export class RotatedCurveSurface extends ParametricSurface {
 			})
 		} else if (planeLC.normal1.isPerpendicularTo(V3.Z) && planeLC.containsPoint(V3.O)) {
 			return [this.curve.rotateZ(V3.Y.angleRelativeNormal(planeLC.normal1, V3.Z)).transform(this.matrix)]
+		}
+		return undefined
+	}
+
+	isCurvesWithPlane(plane: P3): Curve[] {
+		const planeLC = plane.transform(this.matrixInverse)
+		const planeLCCurves = this.isCurvesWithPlaneLC(planeLC)
+		if (planeLCCurves) {
+			return planeLCCurves.map(curve => curve.transform(this.matrix))
 		} else {
 			return ParametricSurface.isCurvesParametricImplicitSurface(this, new PlaneSurface(plane), 0.05, 0.05, 0.02)
 		}
@@ -188,28 +207,12 @@ export class RotatedCurveSurface extends ParametricSurface {
 	}
 
 	isCoplanarTo(surface: Surface): boolean {
-		return (
-			this == surface ||
-			(hasConstructor(surface, RotatedCurveSurface) &&
-				surface.curve.transform(this.matrixInverse).isColinearTo(this.curve) &&
-				this.matrixInverse.times(surface.matrix).isZRotation())
-		)
-	}
-
-	like(object: any): boolean {
-		if (!this.isCoplanarTo(object)) return false
-		// normals need to point in the same direction (outwards or inwards) for both
-		const pSMinTMin = this.pSTFunc()(this.sMin, this.tMin)
-		const thisNormal = this.normalSTFunc()(this.sMin, this.tMin)
-		const otherNormal = object.normalP(pSMinTMin)
-		return 0 < thisNormal.dot(otherNormal)
-	}
-
-	equals(obj: any): boolean {
-		return (
-			this == obj ||
-			(hasConstructor(obj, RotatedCurveSurface) && this.curve.equals(obj.curve) && this.matrix.equals(obj.matrix))
-		)
+		if (this === surface) return true
+		if (!hasConstructor(surface, RotatedCurveSurface)) return false
+		const surfaceLCToThisLC = this.matrixInverse.times(surface.matrix)
+		assert(!surfaceLCToThisLC.X.xy().likeO())
+		const zRotation = surfaceLCToThisLC.X.angleXY()
+		return surface.curve.transform(M4.rotateZ(-zRotation).times(surfaceLCToThisLC)).isColinearTo(this.curve)
 	}
 
 	isCurvesWithSurface(surface: Surface): Curve[] {
@@ -240,10 +243,6 @@ export class RotatedCurveSurface extends ParametricSurface {
 			return false
 		}
 		return super.containsCurve(curve)
-	}
-
-	hashCode() {
-		return [this.curve, this.matrix].hashCode()
 	}
 }
 
