@@ -463,7 +463,7 @@ export namespace B2T {
 					radius = a.lengthXY()
 				const b = stepEndEdges[i].a
 				if (!eq0(radius)) {
-					const curve = 0 === rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot)
+					const curve = 0 === rot ? baseRibCurves[i]! : baseRibCurves[i]!.rotateZ(rot)
 					return new PCurveEdge(
 						curve,
 						a,
@@ -486,8 +486,8 @@ export namespace B2T {
 						stepStartEdges[edgeIndex].flipped(),
 						!eq0(edge.a.x) && ribs[edgeIndex],
 						stepEndEdges[edgeIndex],
-						!eq0(edge.b.x) && ribs[ipp].flipped(),
-					].filter(x => x)
+						!eq0(edge.b.x) && ribs[ipp]!.flipped(),
+					].filter((x: any): x is Edge => x)
 					const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
 					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
 					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
@@ -496,7 +496,7 @@ export namespace B2T {
 			stepStartEdges = stepEndEdges
 		}
 		if (open) {
-			const endFaceEdges = Edge.reversePath(stepEndEdges)
+			const endFaceEdges = Edge.reversePath(stepEndEdges!)
 			const infoStart = infoFactory && infoFactory.rotationStart(basePlane, baseLoop, undefined)
 			const infoEnd =
 				infoFactory && infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined)
@@ -595,7 +595,7 @@ export namespace B2T {
 					if (err) {
 						reject(err)
 					} else {
-						loadedFonts.set(fontPath, f)
+						loadedFonts.set(fontPath, f!)
 						resolve(f)
 					}
 				})
@@ -611,7 +611,7 @@ export namespace B2T {
 				if (err) {
 					throw new Error('Could not load font: ' + err)
 				} else {
-					defaultFont = font
+					defaultFont = font!
 					callback()
 				}
 			})
@@ -732,7 +732,7 @@ export namespace B2T {
 	export function rotStep(edges: Edge[], totalRadsOrAngles: raddd | raddd[], countO?: int): BRep {
 		const angles: number[] =
 			'number' === typeof totalRadsOrAngles
-				? arrayFromFunction(countO, i => (i + 1) / countO * totalRadsOrAngles)
+				? arrayFromFunction(countO!, i => (i + 1) / countO! * totalRadsOrAngles)
 				: totalRadsOrAngles
 		const count = angles.length
 		const open = !eq(TAU, angles.last)
@@ -752,7 +752,7 @@ export namespace B2T {
 				if (!eq0(edges[j].a.lengthXY())) {
 					return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a)
 				}
-				return undefined
+				return undefined!
 			})
 		})
 
@@ -767,21 +767,21 @@ export namespace B2T {
 				if (open) {
 					const faceEdges: Edge[] = []
 					if (!eq0(edge.a.x)) {
-						faceEdges.push(...arrayFromFunction(count, j => horizontalEdges[j][i]))
+						faceEdges.push(...arrayFromFunction(count, j => horizontalEdges[j][i]!))
 					}
 					faceEdges.push(ribs[count][i])
 					if (!eq0(edge.b.x)) {
-						faceEdges.push(...arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp].flipped()))
+						faceEdges.push(...arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp]!.flipped()))
 					}
 					faceEdges.push(edge.flipped())
 					face = new PlaneFace(surface, faceEdges)
 				} else {
 					const contour = flipped
 						? arrayFromFunction(count, j => horizontalEdges[j][i])
-						: arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp].flipped())
+						: arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp]!.flipped())
 					let hole
 					if (flipped && !eq0(edge.b.x)) {
-						hole = arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp].flipped())
+						hole = arrayFromFunction(count, j => horizontalEdges[count - j - 1][ipp]!.flipped())
 					} else if (!flipped && !eq0(edge.a.x)) {
 						hole = arrayFromFunction(count, j => horizontalEdges[j][i])
 					}
@@ -800,7 +800,7 @@ export namespace B2T {
 					ribs[r][i].flipped(),
 					horizontalEdges[r][i],
 					ribs[rpp][i],
-					horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped(),
+					horizontalEdges[r][ipp] && horizontalEdges[r][ipp]!.flipped(),
 				].filter(x => x)
 				let surface
 				if (edge instanceof StraightEdge) {

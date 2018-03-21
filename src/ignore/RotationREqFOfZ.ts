@@ -1,4 +1,4 @@
-import { arrayFromFunction, assert, assertInst, eq0, M4, newtonIterate1d, V, V3 } from 'ts3dutils'
+import { arrayFromFunction, assert, assertInst, eq0, M4, newtonIterate1d, V, V3 } from '../../../ts3dutils/index'
 
 import { EPS, ImplicitSurface, ParametricSurface } from '../index'
 

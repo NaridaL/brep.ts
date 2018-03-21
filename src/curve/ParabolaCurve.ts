@@ -33,7 +33,7 @@ export class ParabolaCurve extends XiEtaCurve {
 		}))
 	}
 
-	static magic(a: number, b: number, c: number): number[] {
+	static intersectionUnitLine(a: number, b: number, c: number): number[] {
 		/*
 		 solve system (5)/(6)
 		 g1 * xi + g2 * eta = g3 (6)
@@ -153,7 +153,9 @@ export class ParabolaCurve extends XiEtaCurve {
 	asBezier() {
 		return BezierCurve.quadratic(
 			this.at(-1),
-			new L3(this.at(-1), this.tangentAt(-1).unit()).isInfoWithLine(new L3(this.at(1), this.tangentAt(1).unit())),
+			new L3(this.at(-1), this.tangentAt(-1).unit()).isInfoWithLine(
+				new L3(this.at(1), this.tangentAt(1).unit()),
+			)!,
 			this.at(1),
 		)
 	}

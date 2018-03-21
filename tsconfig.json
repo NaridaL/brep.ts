@@ -25,7 +25,7 @@
     "outDir": "out",
     "rootDir": "src",
     "sourceMap": true,
-//    "strict": true,
+   "strict": true,
     "target": "es6"
   },
   "exclude": [

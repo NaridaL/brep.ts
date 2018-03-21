@@ -238,7 +238,6 @@ export abstract class Curve extends Transformable implements Equalable {
 				set(li, lj)
 				// s, t are now good starting coordinates to use follow algorithm
 				if (stInAABB2(bounds, s, t) && validST(s, t) && eq0(implicitCurve(s, t))) {
-					console.log(V(s, t).sce)
 					const subResult = mkcurves(implicitCurve, s, t, stepSize, bounds, validST)
 					for (const curveData of subResult) {
 						assert(curveData.points.length > 2)
@@ -256,7 +255,7 @@ export abstract class Curve extends Transformable implements Equalable {
 				}
 			}
 		}
-		console.table(logTable)
+		// console.table(logTable)
 		for (const { points } of result) {
 			for (let i = 0; i < points.length - 1; i++) {
 				assert(!points[i].equals(points[i + 1]))
@@ -590,7 +589,7 @@ export function breakDownPPCurves(
 	//const printGrid = () => console.log(arrayFromFunction(tRes, i => grid.slice(sRes * i, sRes * (i + 1)).map(v => v ? 'X' : '_').join('')).join('\n'))
 	const at = (i: int, j: int) => grid[j * sRes + i]
 	const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
-	const result: { points: V3[]; tangents: V3[] }[] = []
+	const result: { points: V3[]; tangents: V3[]; st1s: V3[] }[] = []
 	const logTable = []
 	for (let i = 0; i < sRes; i++) {
 		search: for (let j = 0; j < tRes; j++) {

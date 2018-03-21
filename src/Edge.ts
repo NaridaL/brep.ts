@@ -59,7 +59,7 @@ export abstract class Edge extends Transformable {
 		//    assertf(() => curve.at(bT).to(b).length() < 0.1, '' + curve.at(bT) + b)
 		//} else {
 		assertf(() => curve.at(aT).like(a), () => '' + curve.at(aT) + a + ' aT should have been ' + curve.pointT(a))
-		assertf(() => curve.at(bT).like(b), '' + curve.at(bT) + b + ' bT should have been ' + curve.pointT(b))
+		assertf(() => curve.at(bT).like(b), () => '' + curve.at(bT) + b + ' bT should have been ' + curve.pointT(b))
 		//}
 		assertf(() => fuzzyBetween(aT, curve.tMin, curve.tMax), aT, curve.tMin, curve.tMax)
 		assertf(() => fuzzyBetween(bT, curve.tMin, curve.tMax), bT, curve.tMin, curve.tMax)

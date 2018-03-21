@@ -12,6 +12,7 @@ import {
 	gaussLegendreQuadrature24,
 	ge,
 	glqInSteps,
+	hasConstructor,
 	int,
 	le,
 	lt,
@@ -142,7 +143,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		const totalArea = edges
 			.map(edge => {
 				if (edge.curve instanceof EllipseCurve) {
-					const f = t => {
+					const f = (t: number) => {
 						const at = edge.curve.at(t),
 							tangent = edge.tangentAt(t)
 						const localAt = inverseMatrix.transformPoint(at)
@@ -155,7 +156,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 					console.log('edge', edge, val)
 					return val
 				} else {
-					assertNever()
+					throw new Error()
 				}
 			})
 			.sum()
@@ -234,15 +235,15 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		return EllipsoidSurface.unitISTsWithLine(anchorLC, dirLC)
 	}
 
-	isCoplanarTo(surface: Surface) {
+	isCoplanarTo(surface: Surface): boolean {
 		if (this === surface) return true
-		if (surface.constructor !== EllipsoidSurface) return false
+		if (!hasConstructor(surface, EllipsoidSurface)) return false
 		if (!this.center.like(surface.center)) return false
 		if (this.isSphere()) return surface.isSphere() && eq(this.f1.length(), this.f2.length())
 
-		const localOtherMatrix = this.inverseMatrix.times(surface.matrix)
-		// Ellipsoid with matrix localOtherMatrix is unit sphere iff localOtherMatrix is orthogonal
-		return localOtherMatrix.is3x3() && localOtherMatrix.isOrthogonal()
+		const otherMatrixLC = this.inverseMatrix.times(surface.matrix)
+		// Ellipsoid with matrix otherMatrixLC is unit sphere iff otherMatrixLC is orthogonal
+		return otherMatrixLC.like3x3() && otherMatrixLC.isOrthogonal()
 	}
 
 	containsEllipse(ellipse: EllipseCurve): boolean {

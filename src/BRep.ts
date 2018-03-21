@@ -17,7 +17,6 @@ import {
 	lt,
 	M4,
 	mapPush,
-	newtonIterate,
 	newtonIterate2d,
 	newtonIterateWithDerivative,
 	NLA_DEBUG,
@@ -615,14 +614,14 @@ export class BRep extends Transformable {
 		// otherwise, something will be returned, even if it a new edge identical to the base edge
 		for (const [canonEdge, pointInfos] of edgePointInfoss) {
 			if (0 == pointInfos.length) continue
-			const allFaces = edgeFaces.get(canonEdge)
+			const allFaces = edgeFaces.get(canonEdge)!
 			pointInfos.sort((a, b) => snap0(a.edgeT - b.edgeT) || +!!a.faces)
 			let startP = canonEdge.a,
 				startDir = canonEdge.aDir,
 				startT = canonEdge.aT,
 				startInfo
 
-			function addNewEdge(startInfo, endInfo, newEdge) {
+			function addNewEdge(startInfo, endInfo, newEdge: Edge) {
 				for (let i = 0; i < allFaces.length; i++) {
 					const faceInfo = allFaces[i]
 					const startYes = !startInfo || !startInfo.faces || startInfo.faces[i]
@@ -1500,28 +1499,23 @@ export function followAlgorithm2d(
 		}
 		// check for endP
 		if (endP && p.equals(endP)) {
-			console.log('endP', endP.sce)
 			break
 		}
 		// check if loop
 		if (fullLoop) {
 			if (p.distanceTo(startP) > abs(stepLength)) {
-				console.log('fl2')
 				const p = points.pop()
-				console.log('popped ' + p.sce)
 				tangents.pop()
 				assert(points.last.distanceTo(startP) <= abs(stepLength))
 				break
 			}
 		} else {
 			if (i > 4 && p.distanceTo(startP) <= abs(stepLength)) {
-				console.log('fl1')
 				fullLoop = true
 			}
 		}
 		// check if out of bounds
 		if (i > 1 && !stInAABB2(bounds, p.x, p.y)) {
-			console.log('b', stepLength)
 			const endP = figureOutBorderPoint(bounds, p, ic)
 			points.pop()
 			tangents.pop()
@@ -1535,7 +1529,6 @@ export function followAlgorithm2d(
 			break
 		}
 		if (i > 4 && !validST(p.x, p.y)) {
-			console.log('c', stepLength, points)
 			break
 		}
 		assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)

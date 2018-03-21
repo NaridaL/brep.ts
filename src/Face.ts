@@ -74,7 +74,7 @@ export abstract class Face extends Transformable {
 		info?: any,
 	) => this
 	allEdges: Edge[]
-	protected aabb: AABB
+	protected aabb: AABB | undefined = undefined
 
 	constructor(
 		readonly surface: Surface,
@@ -439,6 +439,7 @@ export abstract class Face extends Transformable {
 				)
 				return false
 			}
+			return false
 		}
 
 		// what needs to be generated: new edges on face
@@ -467,7 +468,18 @@ export abstract class Face extends Transformable {
 				assert(a.colinear || b.colinear || eq(a.t, b.t))
 				// if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
 				// segment starts/ends on edge/edge intersection
-				function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
+				function foo(
+					a,
+					b,
+					face: Face,
+					face2: Face,
+					thisPlane: Surface,
+					face2Plane: Surface,
+					thisBrep: BRep,
+					face2Brep: BRep,
+					first: boolean,
+					thisEdgePoints,
+				) {
 					if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
 						//if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
 						addPair(a.edge.getCanon(), b.edge.getCanon())
@@ -1459,25 +1471,18 @@ export class RotationFace extends Face {
 		assert(false, "Couldn't find canon seam u")
 	}
 
-	unrollLoop(edgeLoop: Edge[]) {
+	unrollLoop(this: this & { surface: ParametricSurface }, edgeLoop: Edge[]) {
 		const vs: V3[] = []
 		const reverseFunc = this.surface.stPFunc()
 		const verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0())
-		const startEdgeIndex = verticesNo0s.findIndex(
-			edgeVertices => !eq(reverseFunc(edgeVertices[0], Math.PI).x, Math.PI),
-		)
+		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(reverseFunc(edgeVertices[0]).x, Math.PI))
 		assert(-1 != startEdgeIndex)
 		// console.log(startEdgeIndex)
-		let hint = Math.PI
 		for (let i = 0; i < edgeLoop.length; i++) {
 			const edgeIndex = (i + startEdgeIndex) % edgeLoop.length
 			for (let j = 0; j < verticesNo0s[edgeIndex].length; j++) {
 				const p = verticesNo0s[edgeIndex][j]
-				const localP = reverseFunc(p, hint)
-				if (Math.abs(localP.x) < Math.PI - NLA_PRECISION) {
-					// update hint
-					hint = localP.x
-				}
+				const localP = reverseFunc(p)
 				// console.log(hint, p.sce, localP.sce)
 				vs.push(localP)
 			}
@@ -1488,7 +1493,7 @@ export class RotationFace extends Face {
 				hint = this.surface.normalP(edge.b).cross(edge.bDir)
 			}
 			edge.getVerticesNo0().forEach(p => {
-				vs.push(reverseFunc(p, hint))
+				vs.push(reverseFunc(p))
 			})
 		})
 		console.log('vs\n', vs.join('\n'), vs.length)

@@ -15,6 +15,7 @@ import {
 	CustomPlane,
 	Edge,
 	Face,
+	FaceMesh,
 	followAlgorithm2d,
 	getMouseLine,
 	ImplicitCurve,
@@ -42,7 +43,7 @@ let edgesMesh: Mesh & {
 	curve1: V3[]
 	curve1colors: GL_COLOR[]
 }
-let faceMesh: Mesh & { tangents: V3[]; TRIANGLES: int[]; normals: V3[] }
+let faceMesh: FaceMesh & { tangents: V3[] }
 let meshes: (Mesh & { TRIANGLES: int[]; normals: V3[] })[] = []
 let hovering: {}
 
@@ -113,7 +114,7 @@ function initBRep() {
 
 	Object.assign(eye, g.i)
 	// let gets: any = {a, b, c, d, mesh, edges, points, vectors}
-	g.hjk && Object.assign(g, HJK())
+	// g.hjk && Object.assign(g, HJK())
 	arrayLiteralType(['a', 'b', 'c', 'd']).forEach(k => {
 		if (g[k]) {
 			bReps.push(g[k])
@@ -457,68 +458,6 @@ export async function viewerMain() {
 	initBRep()
 	setupCamera(eye, gl)
 	paintScreen()
-}
-
-function HJKl() {
-	//math.derivative('x^2', 'x')
-	nerdamer.setFunction('cassini', 'acxy'.split(''), '(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
-	const cassini = nerdamer('(x^2 + y^2)^2 + 2 c^2 (x^2 - y^2) - (a^4 - c^4)')
-	const ndf = nerdamer('cassini(1, 1, x, y)')
-	const mf = MathFunctionR2R.forNerdamer(ndf)
-	//const pf = cs.parametricFunction(), icc = ses.implicitFunction()
-	//const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-	//assert(eq02(ic(start.x, start.y), 0.1))
-
-	const bounds2 = { sMin: -2, sMax: 2, tMin: -2, tMax: 2 }
-	const { sMin, tMin, sMax, tMax } = bounds2
-	const bounds = (s: number, t: number) => sMin <= s && s <= sMax && tMin <= t && t <= tMax
-	//const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt)
-	const { points, tangents } = followAlgorithm2d(mf, curvePointMF(mf, V(1, 0.5)), 0.05, bounds)
-	// const edges = [Edge.forCurveAndTs(new ImplicitCurve(points, tangents).scale(10))]
-	const edges = Curve.breakDownIC(mf, bounds2, 0.1, 0.1, 0.1).map(({ points, tangents }, i) =>
-		Edge.forCurveAndTs(new ImplicitCurve(points, tangents, 1))
-			.translate(0, 0, i * 0.1)
-			.scale(10),
-	)
-	//const curves =  Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02)
-	//const curves = mkcurves(ic, start.x, start.y, 0.05, dids, didt, bounds)
-	console.log(edges.length)
-	return { edges: edges, points: (edges[0].curve as ImplicitCurve).points }
-}
-
-function HJK() {
-	//return {}
-	//const a = B2T.cone(12, 12).scale(0.05,0.2)
-	//	.rotateZ(90*DEG)
-	//	.rotateY(-90*DEG)
-	//	.translate(2,0.2,0.7)
-	//const b = B2T.sphere(1, undefined, PI)
-	//const cone = new ConicSurface(
-	//	V(2, 0.2, 1.1),
-	//	V(0, 0.6, 0),
-	//	V(0, 0, -2.4),
-	//	V(-12, 0, 0))
-	//const sphere = new SemiEllipsoidSurface(V3.O,V3.X,V3.Y,V(0, 0, -1))
-	////const curves = cone.isCurvesWithSurface(sphere)
-	////assert(sphere.containsCurve(curves[0]))
-	//const c = a.minus(b).translate(0,3)
-	//const pcs = new ProjectedCurveSurface(new BezierCurve(V(-0.1040625, -0.095, 1.2), V(-0.1040625,
-	// -0.030937500000000007, 1.2), V(-0.065, 0.010000000000000009, 1.2), V(0.047968750000000004, 0.010000000000000009,
-	// 1.2), 0, 1), V(0, 0, -1), 0, 1, -200, 200)
-	const pcs = SemiCylinderSurface.UNIT.rotateZ(-40 * DEG)
-		.scale(0.5, 0.05, 4)
-		.translate(0.5, 0, -2)
-		.flipped()
-	const ses = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
-	const curves = ses.isCurvesWithSurface(pcs)
-	return {
-		//a,
-		//b,
-		//c,
-		mesh: [pcs.toMesh(), ses.toMesh()],
-		edges: curves.map(c => Edge.forCurveAndTs(c)),
-		points: curves.flatMap(c => (c as ImplicitCurve).points),
-	}
 }
 
 export function alignX(dir: number) {

@@ -11,18 +11,30 @@ import {
 	hasConstructor,
 	int,
 	M4,
-	NLA_PRECISION,
 	TAU,
 	V3,
 } from 'ts3dutils'
-import { Mesh, pushQuad } from 'tsgl'
+import { pushQuad } from 'tsgl'
 
-import { Curve, ISInfo, P3 } from '../index'
+import { Curve, FaceMesh, ISInfo, P3, Surface } from '../index'
 
 /**
  * A 3-dimensional line. Defined by an anchor and a normalized direction vector.
  */
 export class L3 extends Curve {
+	isInfosWithLine(
+		anchorWC: V3,
+		dirWC: V3,
+		tMin?: number,
+		tMax?: number,
+		lineMin?: number,
+		lineMax?: number,
+	): ISInfo[] {
+		throw new Error('Method not implemented.')
+	}
+	isTsWithSurface(surface: Surface): number[] {
+		return surface.isTsForLine(this)
+	}
 	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
 	static readonly X: L3 = new L3(V3.O, V3.X)
 	static readonly Y: L3 = new L3(V3.O, V3.Y)
@@ -61,7 +73,7 @@ export class L3 extends Curve {
 			throw new Error('Parallel planes')
 		}
 
-		return p1.intersectionWithPlane(p2)
+		return p1.intersectionWithPlane(p2)!
 	}
 
 	static containsPoint(anchor: V3, dir: V3, p: V3) {
@@ -70,13 +82,17 @@ export class L3 extends Curve {
 		return eq0(distance)
 	}
 
-	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1, tMin = this.tMin, tMax = this.tMax): void {
+	addToMesh(
+		mesh: FaceMesh,
+		res: int = 4,
+		radius: number = 0,
+		pointStep = 1,
+		tMin = this.tMin,
+		tMax = this.tMax,
+	): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
 		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
-		const inc = this.tIncrement
-		const start = Math.ceil((this.tMin + NLA_PRECISION) / inc)
-		const end = Math.floor((this.tMax - NLA_PRECISION) / inc)
-		for (let i = 0; i <= 1; i += 1) {
+		for (let i = 0; i <= 1; i += this.tIncrement) {
 			const start = mesh.vertices.length
 			if (0 !== i) {
 				for (let j = 0; j < res; j++) {
@@ -92,7 +108,6 @@ export class L3 extends Curve {
 			}
 			const t = 0 == i ? tMin : tMax
 			const point = this.at(t),
-				tangent = this.dir1,
 				x = this.dir1.getPerpendicular()
 			const matrix = M4.forSys(x, this.dir1.cross(x), this.dir1, point)
 			mesh.normals.push(...matrix.transformedVectors(baseNormals))

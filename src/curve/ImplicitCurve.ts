@@ -12,7 +12,7 @@ import {
 	Tuple3,
 	V3,
 } from 'ts3dutils'
-import { Mesh, pushQuad } from 'tsgl'
+import { MeshWith, pushQuad } from 'tsgl'
 
 import { Curve, PICurve } from '../index'
 
@@ -91,7 +91,7 @@ export abstract class ImplicitCurve extends Curve {
 	 * @param radius default to 0. Use the shader to achieve dynamic scaling.
 	 * @param pointStep
 	 */
-	addToMesh(mesh: Mesh, res: int = 4, radius: number = 0, pointStep = 1): void {
+	addToMesh(mesh: MeshWith<'normals' | 'TRIANGLES'>, res: int = 4, radius: number = 0, pointStep = 1): void {
 		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
 		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
 		let prevTangent = V3.Z,

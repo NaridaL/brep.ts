@@ -32,14 +32,7 @@ import {
 suite('ProjectedCurveSurface', () => {
 	const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, 0, 2)
 	const testSurface = new ProjectedCurveSurface(baseCurve, V3.Z, undefined, undefined, 0, 2)
-	console.log(
-		'FOO',
-		testSurface
-			.rotateY(90 * DEG)
-			.translate(0, 0, 1)
-			.toMesh()
-			.calcVolume(),
-	)
+
 	const edge = PCurveEdge.forCurveAndTs(baseCurve, 0, 2)
 	const edges = [
 		edge,

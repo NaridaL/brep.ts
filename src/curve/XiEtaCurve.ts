@@ -64,7 +64,10 @@ export abstract class XiEtaCurve extends Curve {
 		}
 	}
 
-	static magic(a: number, b: number, c: number): number[] {
+	/**
+	 * Intersection of the unit curve with the line ax + by = c.
+	 */
+	static intersectionUnitLine(a: number, b: number, c: number): number[] {
 		throw new Error('abstract')
 	}
 
@@ -225,7 +228,7 @@ export abstract class XiEtaCurve extends Curve {
 			g2 = n.dot(f2),
 			g3 = w - n.dot(center)
 
-		return this.constructor.magic(g1, g2, g3)
+		return this.constructor.intersectionUnitLine(g1, g2, g3)
 	}
 
 	pointT(p: V3): number {

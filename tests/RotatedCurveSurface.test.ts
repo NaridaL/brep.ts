@@ -18,7 +18,6 @@ import {
 	PlaneSurface,
 	rotateCurve,
 	RotatedCurveSurface,
-	RotationREqFOfZ,
 	SemiEllipseCurve,
 	StraightEdge,
 } from '..'

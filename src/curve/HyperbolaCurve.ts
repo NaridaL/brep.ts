@@ -27,7 +27,7 @@ export class HyperbolaCurve extends XiEtaCurve {
 	 * http://www.wolframalpha.com/input/?i=x%C2%BRep-y%C2%BRep%3D1,ax%2Bby%3Dc
 	 * Minor empiric test shows asinh(eta) consistently gets more accurate results than atanh(eta/xi)
 	 */
-	static magic(a: number, b: number, c: number): number[] {
+	static intersectionUnitLine(a: number, b: number, c: number): number[] {
 		if (eq0(b)) {
 			const sqrtVal = snap0(c ** 2 / a ** 2 - 1)
 			if (sqrtVal < 0 || c * a < 0) {
@@ -52,7 +52,9 @@ export class HyperbolaCurve extends XiEtaCurve {
 			const xi2 = (a * c + Math.sqrt(sqrtVal)) / (a ** 2 - b ** 2)
 			const eta1 = (b ** 2 * c - a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
 			const eta2 = (b ** 2 * c + a * Math.sqrt(sqrtVal)) / (b * (b ** 2 - a ** 2))
-			return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter((x: any) => x !== false)
+			return [xi1 > 0 && Math.asinh(eta1), xi2 > 0 && Math.asinh(eta2)].filter(
+				(x: any): x is number => x !== false,
+			)
 		}
 	}
 

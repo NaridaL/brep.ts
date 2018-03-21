@@ -53,7 +53,7 @@ export class EllipseCurve extends XiEtaCurve {
 		return angle
 	}
 
-	static magic(a: number, b: number, c: number): number[] {
+	static intersectionUnitLine(a: number, b: number, c: number): number[] {
 		const isLC = intersectionUnitCircleLine2(a, b, c)
 		return isLC.map(([xi, eta]) => Math.atan2(eta, xi))
 	}

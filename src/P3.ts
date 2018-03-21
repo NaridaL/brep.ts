@@ -7,11 +7,11 @@ import {
 	eq,
 	eq0,
 	floatHashCode,
+	hasConstructor,
 	int,
 	M4,
 	Transformable,
 	V3,
-	hasConstructor,
 } from 'ts3dutils'
 
 import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve } from './index'

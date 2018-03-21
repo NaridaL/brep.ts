@@ -10,7 +10,7 @@ export class PPCurve extends ImplicitCurve {
 		readonly parametricSurface1: ParametricSurface,
 		readonly parametricSurface2: ParametricSurface,
 		readonly st1s: ReadonlyArray<V3>,
-		readonly pmTangents: ReadonlyArray<V3>,
+		readonly pmTangents: ReadonlyArray<V3> | undefined,
 		readonly stepSize: number,
 		dir: number = 1,
 		generator?: string,
@@ -76,7 +76,7 @@ export class PPCurve extends ImplicitCurve {
 				const { x: u, y: v } = this.parametricSurface2.stP(p)
 				const startValues = [pp1.x, pp1.y, u, v]
 
-				function f(vals: Tuple4<number>) {
+				function f(vals: number[]) {
 					const [s, t, u, v] = vals
 					const diff = pF1(s, t).minus(pF2(u, v))
 					const n1 = pN1(s, t)

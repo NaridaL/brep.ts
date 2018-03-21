@@ -48,7 +48,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		// angle
 	}
 
-	static magic(a: number, b: number, c: number): number[] {
+	static intersectionUnitLine(a: number, b: number, c: number): number[] {
 		const isLC = intersectionUnitCircleLine2(a, b, c)
 		const result = []
 		for (const [xi, eta] of isLC) {
@@ -78,8 +78,9 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	static fromEllipse(curve: EllipseCurve, tMin: number, tMax: number): SemiEllipseCurve[] {
-		return [
-			tMin < 0 &&
+		const result: SemiEllipseCurve[] = []
+		tMin < 0 &&
+			result.push(
 				new SemiEllipseCurve(
 					curve.center,
 					curve.f1.negated(),
@@ -87,8 +88,9 @@ export class SemiEllipseCurve extends XiEtaCurve {
 					tMin + PI,
 					min(0, tMax) + PI,
 				),
-			tMax > 0 && new SemiEllipseCurve(curve.center, curve.f1, curve.f2, max(0, tMin), tMax),
-		].filter(x => x)
+			)
+		tMax > 0 && result.push(new SemiEllipseCurve(curve.center, curve.f1, curve.f2, max(0, tMin), tMax))
+		return result
 	}
 
 	static forAB(a: number, b: number, center: V3 = V3.O): SemiEllipseCurve {
@@ -192,7 +194,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const { f1, f2 } = this.rightAngled(),
 			a = f1.length(),
 			b = f2.length()
-		const h = (a - b) * (a - b) / (a + b) / (a + b) // (a - b)² / (a + b)²
+		const h = (a - b) ** 2 / (a + b) ** 2 // (a - b)² / (a + b)²
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 

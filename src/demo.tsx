@@ -1,18 +1,18 @@
 import chroma from 'chroma-js'
 import classnames from 'classnames'
-import React, {Component, MouseEvent, WheelEvent, InputHTMLAttributes} from 'react'
+import * as hljs from 'highlight.js'
+import React, {Component, InputHTMLAttributes, MouseEvent, WheelEvent} from 'react'
 import ReactDOM from 'react-dom'
 import {clamp, DEG, int, round10, TAU, V, V3} from 'ts3dutils'
 import {TSGLContext} from 'tsgl'
-import * as hljs from 'highlight.js'
 
-import {BRep, B2T, CustomPlane, Edge, P3} from './index'
 import {BREPGLContext, initMeshes, initNavigationEvents, initShaders, setupCamera} from './BREPGLContext'
+import {B2T, BRep, CustomPlane, Edge, P3} from './index'
 
 const fakeB2Mesh = (false as true) && ({} as BRep).toMesh()
 type B2Mesh = typeof fakeB2Mesh
 
-type DemoProps = { width: string, height: string, id: string, f: (...args: any[]) => BRep | BRep[], args: DemoArg[] }
+type DemoProps = { width: string, height: string, id: string, f(...args: any[]): BRep | BRep[], args: DemoArg[] }
 type DemoDesc = {
     showingSource: boolean
     id: string
@@ -81,10 +81,10 @@ class Demo extends Component<DemoProps, DemoDesc> {
     }
 }
 
-export type DemoArg = { name: string, def: string, type: 'string', fix: (x: string) => string, value?: string }
-    | { step?: number, name: string, def: number, type: 'int' | 'angle' | 'number', fix: (x: number) => number, value?: string }
+export type DemoArg = { name: string, def: string, type: 'string', fix(x: string): string, value?: string }
+    | { step?: number, name: string, def: number, type: 'int' | 'angle' | 'number', fix(x: number): number, value?: string }
 
-class InputComponent extends Component<InputHTMLAttributes<HTMLInputElement> & { step: number, change: (x: string) => void }, {}> {
+class InputComponent extends Component<InputHTMLAttributes<HTMLInputElement> & { step: number, change(x: string): void }, {}> {
     onWheel = (e: WheelEvent<HTMLInputElement>) => {
         const target = e.target as HTMLInputElement
         const delta = (e.shiftKey ? 0.1 : 1) * Math.sign(-e.deltaY) * this.props.step
@@ -162,9 +162,9 @@ const meshColorss = [
     chroma.scale(['#19ff66', '#1ffff2']).mode('lab').colors(20, 'gl'),
 ]
 const demoPlanes = [
-    new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', 0xff0000, -5, 5, -5, 5),
-    new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', 0x00ff00, -5, 5, -5, 5),
-    new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', 0x0000ff, -5, 5, -5, 5),
+    new CustomPlane(V3.O, V3.Y, V3.Z, 'planeYZ', chroma('red').gl(), -5, 5, -5, 5),
+    new CustomPlane(V3.O, V3.X, V3.Z, 'planeZX', chroma('green').gl(), -5, 5, -5, 5),
+    new CustomPlane(V3.O, V3.X, V3.Y, 'planeXY', chroma('blue').gl(), -5, 5, -5, 5),
     //	sketchPlane
 ]
 const hovering: any = undefined

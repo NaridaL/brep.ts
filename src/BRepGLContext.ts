@@ -16,10 +16,8 @@ import {
 	PPCurve,
 	SemiEllipseCurve,
 } from './index'
-import * as shaders from './shaders'
-
-import { start } from 'repl'
 import { ceil, floor, pow, sign } from './math'
+import * as shaders from './shaders'
 
 export function parseGetParams(str: string) {
 	const result: { [key: string]: string } = {}
@@ -336,7 +334,7 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 		}
 		lastPos = pagePos
 	})
-	canvas.addEventListener('wheel', (e: MouseEvent) => {
+	canvas.addEventListener('wheel', (e: WheelEvent) => {
 		// zoom
 		const wheelY = -sign(e.deltaY) * 2
 		// console.log(e.deltaY, e.deltaX)

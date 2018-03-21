@@ -165,7 +165,6 @@ export class RotatedCurveSurface extends ParametricSurface {
 					.scale(scaleX, 0, scaleZ)
 					.translate(0, 0, closestPointToZ.z),
 			)
-			console.log(hc.sce, closestPointToZ)
 
 			const infos = hc.isInfosWithCurve(this.curve)
 			return infos

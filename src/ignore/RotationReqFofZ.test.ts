@@ -1,9 +1,9 @@
-import { suite, test, testParametricSurface } from './manager'
+import { suite, test, testParametricSurface } from '../../tests/manager'
 
-import { M4, TAU } from 'ts3dutils'
-import { RotationREqFOfZ } from '..'
+import { M4, TAU } from '../../../ts3dutils/index'
+import { RotationREqFOfZ } from '../index'
 
-import { sin, cos } from '../src/math'
+import { sin, cos } from '../math'
 
 suite('RotationREqFOfZ', () => {
 	const sinSurface = new RotationREqFOfZ(

@@ -1,4 +1,4 @@
-import { int, V3 } from 'ts3dutils'
+import { V3 } from 'ts3dutils'
 
 import chroma from 'chroma-js'
 import { GL_COLOR } from 'tsgl'
@@ -18,7 +18,7 @@ export class CustomPlane extends P3 {
 		anchor: V3,
 		right: V3,
 		up: V3,
-		name: string,
+		name: string = 'CustomPlane' + getGlobalId(),
 		color: GL_COLOR = chroma.random().gl(),
 		rightStart: number = -500,
 		rightEnd: number = 500,
@@ -63,7 +63,7 @@ export class CustomPlane extends P3 {
 			new L3(this.anchor.plus(this.up.times(this.tMin)), this.right),
 			new L3(this.anchor.plus(this.up.times(this.tMax)), this.right),
 		]
-			.map((line2, line2Index) => {
+			.map((line2, line2Index): number => {
 				const info = line2.infoClosestToLine(line)
 				if (
 					(isNaN(info.t) || // parallel LINES

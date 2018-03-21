@@ -164,7 +164,7 @@ export class ClassSerializer {
 					const protoName = v['#CONSTRUCTOR'] as string
 					const proto = this.NAME_CLASSES.get(protoName as string)
 					assert(proto, protoName + ' Missing ')
-					let args: any[]
+					let args: any[] = undefined!
 					fixObject(v['#ARGS'], x => (args = x))
 					onReady(new proto(...args))
 				} else if ('#REF' in v) {

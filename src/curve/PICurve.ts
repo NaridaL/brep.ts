@@ -1,16 +1,13 @@
 import {
 	arrayRange,
 	assert,
-	assertInst,
 	assertVectors,
 	bisect,
 	callsce,
 	clamp,
 	fuzzyUniques,
 	int,
-	lerp,
 	M4,
-	newtonIterate2d,
 	newtonIterate2dWithDerivatives,
 	V3,
 } from 'ts3dutils'
@@ -78,7 +75,7 @@ export class PICurve extends ImplicitCurve {
 				(s, t) => didp(pFunc(s, t)).dot(dpds(s, t)),
 				(s, t) => didp(pFunc(s, t)).dot(dpdt(s, t)),
 			)
-			const { points, tangents } = followAlgorithm2d(
+			const { points } = followAlgorithm2d(
 				mf,
 				this.pmPoints[0],
 				stepSize,
@@ -325,20 +322,22 @@ export class PICurve extends ImplicitCurve {
 					this.didt,
 					(s, t) => dpds(s, t).dot(planeWC.normal1),
 					(s, t) => dpdt(s, t).dot(planeWC.normal1),
-				)
+				)!
 				result.push(this.pointT(this.parametricSurface.pST(isST.x, isST.y)))
 			}
 			prevSignedDistance = signedDistance
 		}
 		return result
-		assertInst(P3, planeWC)
-		const ps = this.parametricSurface,
-			is = this.implicitSurface
-		const pscs = ps.isCurvesWithPlane(planeWC)
-		const iscs = is.isCurvesWithPlane(planeWC)
-		const infos = iscs.flatMap(isc => pscs.flatMap(psc => isc.isInfosWithCurve(psc)))
-		const ts = fuzzyUniques(infos.map(info => this.pointT(info.p)))
-		return ts.filter(t => !isNaN(t) && this.isValidT(t))
+		// version which intersects the plane with the defining surfaces of this PICurve, but this causes
+		// issues when they are PICurves too:
+		// assertInst(P3, planeWC)
+		// const ps = this.parametricSurface,
+		// 	is = this.implicitSurface
+		// const pscs = ps.isCurvesWithPlane(planeWC)
+		// const iscs = is.isCurvesWithPlane(planeWC)
+		// const infos = iscs.flatMap(isc => pscs.flatMap(psc => isc.isInfosWithCurve(psc)))
+		// const ts = fuzzyUniques(infos.map(info => this.pointT(info.p)))
+		// return ts.filter(t => !isNaN(t) && this.isValidT(t))
 	}
 
 	pointT(p: V3): number {
@@ -434,6 +433,17 @@ export class PICurve extends ImplicitCurve {
 	roots(): [number[], number[], number[]] {
 		const allTs = arrayRange(0, this.points.length)
 		return [allTs, allTs, allTs]
+	}
+
+	isInfosWithLine(
+		anchorWC: V3,
+		dirWC: V3,
+		tMin?: number | undefined,
+		tMax?: number | undefined,
+		lineMin?: number | undefined,
+		lineMax?: number | undefined,
+	): { tThis: number; tOther: number; p: V3 }[] {
+		throw new Error('Method not implemented.')
 	}
 
 	toSource(rounder: (x: number) => number = x => x): string {
