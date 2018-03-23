@@ -19,7 +19,7 @@ import {
 	NLA_PRECISION,
 	Transformable,
 	V,
-	V3,
+	V3,checkDerivate
 } from 'ts3dutils'
 
 import {
@@ -316,7 +316,8 @@ export abstract class Curve extends Transformable implements Equalable {
 			this.tangentAt(t).squared() +
 			this.at(t)
 				.minus(p)
-				.dot(this.ddt(t))
+				.dot(this.ddt!(t))
+        //checkDerivate(f, df, tMin, tMax)
 
 		const STEPS = 32
 		if (undefined === tStart) {

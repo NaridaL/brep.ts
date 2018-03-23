@@ -1,70 +1,77 @@
 import {
 	arrayFromFunction,
 	assert,
+	assertf,
 	assertNumbers,
 	assertVectors,
+	checkDerivate,
 	eq,
 	eq0,
 	hasConstructor,
 	int,
 	le,
+	M4,
 	newtonIterate1d,
+	newtonIterateSmart,
 	pqFormula,
 	TAU,
 	V3,
+	lt,
+	between,
+	fuzzyBetween,
+	lerp,
 } from 'ts3dutils'
 
-import {
-	Curve,
-	EllipseCurve,
-	intersectionUnitCircleLine,
-	intersectionUnitCircleLine2,
-	ISInfo,
-	L3,
-	P3,
-	XiEtaCurve,
-} from '../index'
+import { Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, P3, XiEtaCurve } from '../index'
 
-import { max, min, PI } from '../math'
+import { max, min, PI, atan2 } from '../math'
 
 export class SemiEllipseCurve extends XiEtaCurve {
 	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
 
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
-		assert(0 <= this.tMin && this.tMin < PI)
-		assert(0 < this.tMax && this.tMax <= PI)
+		assert(-PI <= this.tMin && this.tMin < PI)
+		assert(-PI < this.tMax && this.tMax <= PI)
 	}
 
 	static XYLCValid(pLC: V3): boolean {
 		const { x, y } = pLC
-		return le(0, y) && eq0(x ** 2 + y ** 2 - 1)
+		return eq0(x ** 2 + y ** 2 - 1)
 	}
 
-	static XYLCPointT(pLC: V3): number {
-		// assert(le(0, pLC.y))
-		const angle = Math.atan2(pLC.y, pLC.x)
-		return angle < -PI / 2 ? angle + TAU : angle // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) :
-		// angle
+	static XYLCPointT(pLC: V3, tMin: number, tMax: number): number {
+assertNumbers(tMin, tMax)
+            const t = atan2(pLC.y, pLC.x)
+            const lowSplitter = lerp(tMin, tMax - TAU, 0.5)
+            if (t < lowSplitter) {
+                return t + TAU
+            }
+            const highSplitter = lerp(tMax, tMin + TAU, 0.5)
+            if (t > highSplitter) {
+                return t - TAU
+            }
+            return t
 	}
 
-	static intersectionUnitLine(a: number, b: number, c: number): number[] {
+	static intersectionUnitLine(a: number, b: number, c: number, tMin: number, tMax: number): number[] {
 		const isLC = intersectionUnitCircleLine2(a, b, c)
 		const result = []
 		for (const [xi, eta] of isLC) {
-			le(0, eta) && result.push(SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0)))
+		    const t = SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0), tMin, tMax)
+			fuzzyBetween(t, tMin, tMax) && result.push(t)
 		}
 		return result
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3, tMin:number, tMax:number): ISInfo[] {
 		// ell: x² + y² = 1 = p²
 		// line(t) = anchor + t dir
 		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
 		const pqDiv = dirLC.squared()
 		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv)
 		return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y)).map(tOther => ({
-			tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
+			tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC), tMin, tMax),
 			tOther: tOther,
 			p: L3.at(anchorWC, dirWC, tOther),
 		}))
@@ -77,19 +84,13 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
 	}
 
-	static fromEllipse(curve: EllipseCurve, tMin: number, tMax: number): SemiEllipseCurve[] {
+	split(tMin = this.tMin, tMax = this.tMax): SemiEllipseCurve[] {
 		const result: SemiEllipseCurve[] = []
 		tMin < 0 &&
 			result.push(
-				new SemiEllipseCurve(
-					curve.center,
-					curve.f1.negated(),
-					curve.f2.negated(),
-					tMin + PI,
-					min(0, tMax) + PI,
-				),
+				new SemiEllipseCurve(this.center, this.f1.negated(), this.f2.negated(), tMin + PI, min(0, tMax) + PI),
 			)
-		tMax > 0 && result.push(new SemiEllipseCurve(curve.center, curve.f1, curve.f2, max(0, tMin), tMax))
+		tMax > 0 && result.push(new SemiEllipseCurve(this.center, this.f1, this.f2, max(0, tMin), tMax))
 		return result
 	}
 
@@ -98,20 +99,77 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): { area: number; centroid: V3 } {
-		return EllipseCurve.prototype.getAreaInDir.call(this, right, up, tStart, tEnd)
+		//assertf(() => tStart < tEnd)
+		assertf(() => right.isPerpendicularTo(this.normal))
+		assertf(() => up.isPerpendicularTo(this.normal))
+		//assertf(() => EllipseCurve.isValidT(tStart), tStart)
+		//assertf(() => EllipseCurve.isValidT(tEnd), tEnd)
+
+		const upLC = this.inverseMatrix.transformVector(up)
+		const rightLC = upLC.cross(V3.Z)
+		const normTStart = tStart - rightLC.angleXY()
+		const normTEnd = tEnd - rightLC.angleXY()
+		const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit())
+		// integral of sqrt(1 - x²) from 0 to cos(t)
+		// Basically, we want
+		// INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
+		// INTEGRAL[PI/2: cos(t)] -sqrt(1 - x²) dx
+		// = INTEGRAL[cos(0); cos(t)] -sqrt(1 - x²) dx
+		// = INTEGRAL[0; t] -sqrt(1 - cos²(t)) * -sin(t) dt
+		// = INTEGRAL[0; t] -sin(t) * -sin(t) dt
+		// = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
+		// = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
+		function fArea(t: number) {
+			return (t - Math.sin(t) * Math.cos(t)) / 2
+		}
+
+		// for the centroid, we want
+		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
+		// cx = 1 / area * INTEGRAL[cos(t); PI/2] x * sqrt(1 - x²) dx
+		// cx = 1 / area * INTEGRAL[cos(0); cos(t)] x * -sqrt(1 - x²) dx
+		// ...
+		// cx = 1 / area * INTEGRAL[0; t] cos(t) * sin²(t) dt // WA
+		// cx = 1 / area * (sin^3(t) / 3)[0; t]
+		function cxTimesArea(t: number) {
+			return Math.pow(Math.sin(t), 3) / 3
+		}
+
+		// cy = 1 / area * INTEGRAL[cos(t); PI/2] f²(x) / 2 dx
+		// cy = 1 / area * INTEGRAL[cos(0); cos(t)] -(1 - x²) / 2 dx
+		// cy = 1 / area * INTEGRAL[0; t] (cos²(t) - 1) * -sin(t) / 2 dt
+		// cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
+		function cyTimesArea(t: number) {
+			return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24
+		}
+
+		const restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart))
+		const area = fArea(normTEnd) - fArea(normTStart) + restArea
+		const cxt =
+			(cxTimesArea(normTEnd) -
+				cxTimesArea(normTStart) +
+				-transformedOriginY * (-Math.cos(normTEnd) - Math.cos(normTStart)) / 2 * restArea) /
+			area
+		const cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area
+		const factor = this.matrix.xyAreaFactor() // * upLC.length()
+		//console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
+		assert(!eq0(factor))
+		return {
+			area: area * factor,
+			centroid: this.matrix.transformPoint(M4.rotateZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0))),
+		}
 	}
 
 	at(t: number): V3 {
 		assertNumbers(t)
 		//assert(this.isValidT(t))
-		// center + f1 cos t + f2 sin t
+		// = center + f1 cos t + f2 sin t
 		return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)))
 	}
 
 	tangentAt(t: number): V3 {
 		assertNumbers(t)
 		//assert(this.isValidT(t))
-		// f2 cos(t) - f1 sin(t)
+		// ) f2 cos(t) - f1 sin(t)
 		return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t)))
 	}
 
@@ -119,6 +177,10 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		assertNumbers(t)
 		assert(this.isValidT(t))
 		return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)))
+	}
+
+	tangentAt2(xi: number, eta: number): V3 {
+		return this.f2.times(xi).minus(this.f1.times(eta))
 	}
 
 	isCircular(): boolean {
@@ -150,15 +212,11 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		}
 	}
 
-	isValidT(t: number) {
-		return le(0, t) && le(t, PI)
-	}
-
 	pointT(pWC: V3) {
 		assertVectors(pWC)
 		assert(this.containsPoint(pWC))
 		const pLC = this.inverseMatrix.transformPoint(pWC)
-		const t = SemiEllipseCurve.XYLCPointT(pLC)
+		const t = SemiEllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
 		assert(this.isValidT(t))
 		return t
 	}
@@ -179,13 +237,13 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return this.arcLength(-Math.PI, Math.PI)
 	}
 
-	arcLength(startT: number, endT: number, steps: int = 2): number {
-		assert(startT < endT, 'startT < endT')
+	arcLength(tStart: number = this.tMin, tEnd: number = this.tMax, steps: int = 2): number {
+		assert(tStart < tEnd, 'startT < endT')
 		const f1Length = this.f1.length()
 		if (eq(f1Length, this.f2.length())) {
-			return f1Length * (endT - startT)
+			return f1Length * (tEnd - tStart)
 		}
-		return super.arcLength(startT, endT, steps)
+		return super.arcLength(tStart, tEnd, steps)
 	}
 
 	circumferenceApproximate(): number {
@@ -194,7 +252,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const { f1, f2 } = this.rightAngled(),
 			a = f1.length(),
 			b = f2.length()
-		const h = (a - b) ** 2 / (a + b) ** 2 // (a - b)² / (a + b)²
+		const h = (a - b) ** 2 / (a + b) ** 2
 		return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)))
 	}
 
@@ -233,19 +291,72 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const { x1: xi, y1: eta } = intersectionUnitCircleLine(g1, g2, 0)
 		const f1RA = f1.times(xi).plus(f2.times(eta))
 		const f2RA = f1.times(-eta).plus(f2.times(xi))
-		return new SemiEllipseCurve(this.center, f1RA, f2RA)
+		return new SemiEllipseCurve(this.center, f1RA, f2RA, -PI, PI)
 	}
 
-	asEllipse(): EllipseCurve {
-		return new EllipseCurve(this.center, this.f1, this.f2, this.tMin, this.tMax)
-	}
-
-	isInfosWithEllipse(ellipse: EllipseCurve | SemiEllipseCurve): ISInfo[] {
+	isInfosWithEllipse(ellipse: SemiEllipseCurve): ISInfo[] {
 		if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
-			ellipse instanceof SemiEllipseCurve && (ellipse = ellipse.asEllipse())
-			return this.asEllipse()
-				.isInfosWithCurve(ellipse)
-				.filter(info => this.isValidT(info.tThis) && ellipse.isValidT(info.tOther))
+			// ellipses are coplanar
+			const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled()
+
+			const r1 = ellipseLCRA.f1.lengthXY(),
+				r2 = ellipseLCRA.f2.lengthXY(),
+				centerDist = ellipseLCRA.center.lengthXY()
+			const rMin = min(r1, r2),
+				rMax = max(r1, r2)
+			if (
+				lt(centerDist + rMax, 1) || // entirely inside unit circle
+				lt(1, centerDist - rMax) || // entirely outside unit circle
+				lt(1, rMin - centerDist) || // contains unit circle
+				(eq(1, r1) && eq(1, r2) && eq0(centerDist)) // also unit circle, return no IS
+			) {
+				return []
+			}
+
+			const f = (t: number) => ellipseLCRA.at(t).lengthXY() - 1
+			const df = (t: number) =>
+				ellipseLCRA
+					.at(t)
+					.xy()
+					.dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY()
+			checkDerivate(f, df, -PI, PI, 1)
+			const ellipseLCRATs: number[] = []
+			for (let startT = -4 / 5 * PI; startT < PI; startT += PI / 4) {
+				let t = newtonIterateSmart(f, startT, 16, df, 1e-4)
+				le(t, -PI) && (t += TAU)
+				assert(!isNaN(t))
+				if (between(t, -PI, PI) && eq0(f(t)) && !ellipseLCRATs.some(r => eq(t, r))) {
+					ellipseLCRATs.push(t)
+				}
+			}
+			const result: ISInfo[] = []
+			for (const ellipseLCRAT of ellipseLCRATs) {
+				const p = this.matrix.transformPoint(ellipseLCRA.at(ellipseLCRAT))
+				if (this.containsPoint(p) && ellipse.containsPoint(p)) {
+					result.push({ tThis: this.pointT(p), tOther: ellipse.pointT(p), p })
+				}
+			}
+			return result
+
+			//const angle = ellipseLCRA.f1.angleXY()
+			//const aSqr = ellipseLCRA.f1.squared(), bSqr = ellipseLCRA.f2.squared()
+			//const a = Math.sqrt(aSqr), b = Math.sqrt(bSqr)
+			//const {x: centerX, y: centerY} = ellipseLCRA.center
+			//const rotCenterX = centerX * Math.cos(-angle) + centerY * -Math.sin(-angle)
+			//const rotCenterY = centerX * Math.sin(-angle) + centerY * Math.cos(-angle)
+			//const rotCenter = V(rotCenterX, rotCenterY)
+			//const f = t => {
+			//	const lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY
+			//	return lex * lex / aSqr + ley * ley / bSqr - 1
+			//}
+			//const f2 = (x, y) => (x * x + y * y - 1)
+			//const f3 = (x, y) => ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) /
+			// bSqr - 1) const results = [] const resetMatrix = this.matrix.times(M4.rotateZ(angle)) for (let startT =
+			// Math.PI / 4; startT < 2 * Math.PI; startT += Math.PI / 2) { const startP = EllipseCurve.XY.at(startT)
+			// const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10) if (p && !results.some(r => r.like(p))) {
+			// results.push(p) } } const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0)) return
+			// results.map(pLC => { const p = resetMatrix.transformPoint(pLC) return {tThis: this.pointT(p, PI),
+			// tOther: ellipse.pointT(p, PI), p} })
 		} else {
 			return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter(t => {
 				const p = this.at(t)
@@ -258,7 +369,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isInfosWithCurve(curve: Curve): ISInfo[] {
-		if (curve instanceof SemiEllipseCurve || curve instanceof EllipseCurve) {
+		if (curve instanceof SemiEllipseCurve) {
 			return this.isInfosWithEllipse(curve)
 		}
 		return super.isInfosWithCurve(curve)
@@ -277,14 +388,14 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		})
 	}
 
-	closestTToPoint(p: V3) {
+	closestTToPoint(p: V3, tStart?: number): number {
 		// (at(t) - p) * tangentAt(t) = 0
 		// (xi f1 + eta f2 + q) * (xi f2 - eta f1) = 0
 		// xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
 		//  (xi² - eta²) f1 f2 + xi eta (f2^2-f1^2) + xi f2 q - eta f1 q = 0
 
 		// atan2 of p is a good first approximation for the searched t
-		const startT = this.inverseMatrix.transformPoint(p).angleXY()
+		tStart = tStart || this.inverseMatrix.transformPoint(p).angleXY()
 		const pRelCenter = p.minus(this.center)
 		const f = (t: number) =>
 			this.tangentAt(t).dot(
@@ -293,7 +404,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 					.plus(this.f2.times(Math.sin(t)))
 					.minus(pRelCenter),
 			)
-		return newtonIterate1d(f, startT, 8)
+		return newtonIterate1d(f, tStart, 8)
 	}
 
 	area(): number {
@@ -313,8 +424,8 @@ export class SemiEllipseCurve extends XiEtaCurve {
 					.unit()
 					.times(Math.sin(phi)),
 			)
-		const localDir = this.inverseMatrix.transformVector(phiDir)
-		return localDir.angleXY()
+		const dirLC = this.inverseMatrix.transformVector(phiDir)
+		return dirLC.angleXY()
 	}
 }
 

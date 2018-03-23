@@ -86,6 +86,13 @@ export abstract class Surface extends Transformable implements Equalable {
 		return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters())
 	}
 
+	/**
+	 * Return points which would touch AABB. Doesnt include borders due to paramtetric bounds, for example.
+	 */
+	getExtremePoints(): V3[] {
+		return []
+	}
+
 	abstract normalP(p: V3): V3
 
 	abstract getConstructorParameters(): any[]

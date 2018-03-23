@@ -66,6 +66,9 @@ suite('RotatedCurveSurface', () => {
 		const plane = new PlaneSurface(new P3(V3.Y, 2.5), V(-1, 0, 0), V3.Z)
 		testISCurves(assert, torus, plane, 1)
 	})
+    test('aabb', () => {
+        // TODO
+    })
 
 	suite('isTsWithLine', () => {
 		test('vertical', assert => testISTs(assert, new L3(V(4, 4, 0), V3.Z), torusSurface, 1))

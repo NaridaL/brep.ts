@@ -34,8 +34,6 @@ import { Mesh } from 'tsgl'
 import {
 	Curve,
 	Edge,
-	EllipseCurve,
-	EllipsoidSurface,
 	ISInfo,
 	L3,
 	P3,
@@ -257,7 +255,7 @@ export class BezierCurve extends Curve {
 			const projEllipse = surface.baseCurve.project(projPlane)
 			return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther)
 		}
-		if (surface instanceof EllipsoidSurface) {
+		if (surface instanceof SemiEllipsoidSurface) {
 			const thisOC = this.transform(surface.inverseMatrix)
 			const f = (t: number) => thisOC.at(t).length() - 1
 			const df = (t: number) =>
@@ -289,10 +287,7 @@ export class BezierCurve extends Curve {
 					}
 				}
 			}
-			return result
-		}
-		if (surface instanceof SemiEllipsoidSurface) {
-			return this.isTsWithSurface(surface.asEllipsoidSurface()).filter(t => surface.containsPoint(this.at(t)))
+			return result.filter(t => surface.containsPoint(this.at(t)))
 		}
 		throw new Error()
 	}
@@ -404,11 +399,13 @@ export class BezierCurve extends Curve {
 		return [V3.O, a, b, c]
 	}
 
-	pointT(p: V3, tMin = this.tMin, tMax = this.tMax): number {
-		return this.closestTToPoint(p, undefined, tMin, tMax)
+	pointT2(p: V3, tMin = this.tMin, tMax = this.tMax): number {
+	    const t =this.closestTToPoint(p, undefined, tMin, tMax)
+       assert(this.at(t).like(p))
+		return t
 	}
 
-	pointT3(p: V3) {
+	pointT(p: V3) {
 		const { p0, p1, p2, p3 } = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -445,7 +442,7 @@ export class BezierCurve extends Curve {
 		throw new Error('multiple intersection ' + this.toString() + p.sce)
 	}
 
-	pointT2(p: V3) {
+	pointT3(p: V3) {
 		const { p0, p1, p2, p3 } = this
 		// calculate cubic equation coefficients
 		// a t³ + b t² + c t + d = 0
@@ -826,7 +823,7 @@ export class BezierCurve extends Curve {
 		return curve.isInfosWithCurve(this).map(({ tThis, tOther, p }) => ({ tThis: tOther, tOther: tThis, p }))
 	}
 
-	magic(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
+	magic(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurveOld[] = []): EllipseCurveOld[] {
 		const max3d = 0.01,
 			eps = 0.01
 		const splits = 20
@@ -880,12 +877,12 @@ export class BezierCurve extends Curve {
 			const li = ls2[i],
 				lj = ls2[j]
 			const isInfo = li.infoClosestToLine(lj)
-			return EllipseCurve.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s)
+			return EllipseCurveOld.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s)
 		})
 		return curves
 	}
 
-	magic2(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurve[] = []): EllipseCurve[] {
+	magic2(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurveOld[] = []): EllipseCurveOld[] {
 		const max3d = 0.01,
 			eps = 0.01
 		const a = this.at(t0),
@@ -904,7 +901,7 @@ export class BezierCurve extends Curve {
 				testP2 = this.at(testT2)
 			const radius = (isInfo.s + isInfo.t) / 2
 			if (eq(centerPoint.distanceTo(testP1), radius, eps)) {
-				const newCurve = EllipseCurve.circleForCenter2P(centerPoint, a, b, radius)
+				const newCurve = EllipseCurveOld.circleForCenter2P(centerPoint, a, b, radius)
 				result.push(newCurve)
 				return result
 			}

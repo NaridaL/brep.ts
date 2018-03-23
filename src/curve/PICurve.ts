@@ -288,7 +288,7 @@ export class PICurve extends ImplicitCurve {
 	isTsWithSurface(surface: Surface): number[] {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
-		} else if (surface instanceof EllipsoidSurface || surface instanceof SemiEllipsoidSurface) {
+		} else if (surface instanceof SemiEllipsoidSurface) {
 			const ps = this.parametricSurface,
 				is = this.implicitSurface
 			if (ps instanceof ProjectedCurveSurface && is instanceof SemiEllipsoidSurface) {

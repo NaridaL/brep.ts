@@ -29,6 +29,7 @@ import {
 	TAU,
 	Transformable,
 	V3,
+    round10,
 } from 'ts3dutils'
 import { Mesh, pushQuad } from 'tsgl'
 
@@ -1439,13 +1440,9 @@ export class RotationFace extends Face {
 
 	getAABB() {
 		if (this.aabb) return this.aabb
-		if (this.surface instanceof SemiEllipsoidSurface || this.surface instanceof EllipsoidSurface) {
 			this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()))
 			this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)))
 			return this.aabb
-		} else {
-			return super.getAABB()
-		}
 	}
 
 	getCanonSeamU(): number {
@@ -1468,7 +1465,7 @@ export class RotationFace extends Face {
 			const insideVector = localEdge.a.cross(localEdge.aDir)
 			return sign(insideVector.dot(V3.Y)) * PI
 		}
-		assert(false, "Couldn't find canon seam u")
+		assert(false, 'Couldn\'t find canon seam u')
 	}
 
 	unrollLoop(this: this & { surface: ParametricSurface }, edgeLoop: Edge[]) {
@@ -1556,7 +1553,7 @@ export class RotationFace extends Face {
 			}
 		}
 		let normals
-		if (this.surface instanceof EllipsoidSurface) {
+		if (this.surface instanceof SemiEllipsoidSurface) {
 			normals = vertices.map(v => ellipsoid.normalP(v))
 		} else {
 			const pN = ellipsoid.normalSTFunc()
@@ -1643,6 +1640,11 @@ export class RotationFace extends Face {
 				mesh.LINES.push(base + i, base + (i + 1) % vertexLoopLength)
 			}
 		}
+
+		const zip = (a, b) => a.map(function(e, i) {
+            return [e, b[i]];
+        });
+		//console.log(zip(vertices.map(v => v.map(x => round10(x, -5))), verticesUV.map(v => v.map(x => round10(x, -5)))).sce)
 
 		disableConsole()
 		let minU = Infinity,

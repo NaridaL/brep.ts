@@ -1,7 +1,7 @@
 import { inDifferentSystems, suite, test, testCurve, testCurveISInfos, testISTs, testPointT } from './manager'
 
 import { DEG, eq, eq0, M4, NLA_PRECISION, V, V3 } from 'ts3dutils'
-import { BezierCurve, EllipsoidSurface, L3, P3, SemiCylinderSurface, SemiEllipseCurve } from '..'
+import { BezierCurve, L3, P3, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface } from '..'
 
 import { PI } from '../src/math'
 
@@ -48,7 +48,7 @@ suite('BezierCurve', () => {
 		)
 		const t = 56.58829486216517
 		const p = curve.at(t)
-		assert.push(eq(t, curve.pointT2(p)), curve.pointT(p), t)
+        testPointT(assert, curve, p, t)
 	})
 	test('pointT 3', assert => {
 		const curve = new BezierCurve(
@@ -72,6 +72,18 @@ suite('BezierCurve', () => {
 			1,
 		)
 		const p = curve.p3
+		testPointT(assert, curve, p)
+	})
+	test('pointT 5', assert => {
+		const curve = new BezierCurve(
+			V(0.8206334274067109, 11.256506741925369, -1.7865161492630905),
+			V(0.3251803073063657, 11.360144245845092, -1.7115083098149875),
+			V(-0.5424898087174664, 11.566008153026027, -1.583693947946064),
+			V(-1.0379429288178115, 11.669645656945752, -1.5086861084979613),
+			0,
+			2,
+		)
+		const p = V(-1.4029204891815616, 11.73218160865475, -1.4514226904985894)
 		testPointT(assert, curve, p)
 	})
 	test('distanceToPoint', assert => {
@@ -166,7 +178,7 @@ suite('BezierCurve', () => {
 	test('isTsWithEllipsoidSurface', assert => {
 		//const curve = ParabolaCurve.XY.asBezier().scale(5).translate(0, 1)
 		const curve = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
-		const s = EllipsoidSurface.UNIT
+		const s = SemiEllipsoidSurface.UNIT
 
 		testISTs(assert, curve.translate(0.2), s, 4)
 		testISTs(assert, curve, s, 4)

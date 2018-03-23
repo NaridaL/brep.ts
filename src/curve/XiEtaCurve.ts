@@ -19,8 +19,6 @@ import {
 	BezierCurve,
 	ConicSurface,
 	Curve,
-	EllipseCurve,
-	EllipsoidSurface,
 	ISInfo,
 	L3,
 	P3,
@@ -228,7 +226,7 @@ export abstract class XiEtaCurve extends Curve {
 			g2 = n.dot(f2),
 			g3 = w - n.dot(center)
 
-		return this.constructor.intersectionUnitLine(g1, g2, g3)
+		return this.constructor.intersectionUnitLine(g1, g2, g3, this.tMin, this.tMax)
 	}
 
 	pointT(p: V3): number {
@@ -239,14 +237,14 @@ export abstract class XiEtaCurve extends Curve {
 
 	containsPoint(p: V3): boolean {
 		const pLC = this.inverseMatrix.transformPoint(p)
-		return eq0(pLC.z) && this.constructor.XYLCValid(pLC)
+		return eq0(pLC.z) && this.isValidT(this.constructor.XYLCPointT(pLC, this.tMin, this.tMax))
 	}
 
 	isInfosWithLine(
 		anchorWC: V3,
 		dirWC: V3,
-		tMin?: number,
-		tMax?: number,
+		tMin: number = this.tMin,
+		tMax: number = this.tMax,
 		lineMin = -100000,
 		lineMax = 100000,
 	): ISInfo[] {
@@ -256,7 +254,7 @@ export abstract class XiEtaCurve extends Curve {
 			// local line parallel to XY-plane
 			if (eq0(anchorLC.z)) {
 				// local line lies in XY-plane
-				return this.constructor.unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC)
+				return this.constructor.unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC, tMin, tMax)
 			}
 		} else {
 			// if the line intersects the XY-plane in a single point, there can be an intersection there
@@ -281,10 +279,11 @@ export abstract class XiEtaCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		} else if (surface instanceof SemiEllipsoidSurface) {
-			const isEllipse = surface.asEllipsoidSurface().isCurvesWithSurface(new PlaneSurface(this.getPlane()))
-			if (isEllipse.length < 1) return []
-			const possibleInfos = this.isInfosWithCurve(isEllipse[0] as EllipseCurve)
-			return possibleInfos.filter(info => surface.containsPoint(info.p)).map(info => info.tThis)
+			const isEllipses = surface.isCurvesWithPlane(this.getPlane())
+			return isEllipses
+				.flatMap(isEllipse => this.isInfosWithCurve(isEllipse))
+				.filter(info => surface.containsPoint(info.p))
+				.map(info => info.tThis)
 		} else if (
 			surface instanceof ProjectedCurveSurface ||
 			surface instanceof EllipsoidSurface ||
@@ -315,11 +314,7 @@ export abstract class XiEtaCurve extends Curve {
 		}
 	}
 
-	isInfosWithBezier2D(bezierWC: BezierCurve, sMin?: number, sMax?: number): ISInfo[] {
-		sMin = isFinite(sMin) ? sMin : bezierWC.tMin
-		sMax = isFinite(sMax) ? sMax : bezierWC.tMax
-		assertf(() => 0 < Math.PI)
-		assertf(() => sMin < sMax)
+	isInfosWithBezier2D(bezierWC: BezierCurve, sMin: number = bezierWC.tMin, sMax: number = bezierWC.tMax): ISInfo[] {
 		return Curve.ispsRecursive(this, this.tMin, this.tMax, bezierWC, sMin, sMax)
 	}
 

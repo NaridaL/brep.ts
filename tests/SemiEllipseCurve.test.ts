@@ -1,7 +1,7 @@
-import { V, V3 } from 'ts3dutils'
-import { BezierCurve, P3, PlaneSurface, SemiEllipseCurve, SemiEllipsoidSurface, EllipseCurve } from '..'
-import { suite, test, testCurve, testISTs, testCurveISInfos } from './manager'
+import { suite, test, testCurve, testCurveISInfos, testISTs } from './manager'
 
+import { V, V3 } from 'ts3dutils'
+import { BezierCurve, P3, PlaneSurface, SemiEllipseCurve, SemiEllipsoidSurface } from '..'
 import { PI, sin } from '../src/math'
 
 suite('SemiEllipseCurve', () => {
@@ -15,7 +15,6 @@ suite('SemiEllipseCurve', () => {
 	test('testCurve', assert => {
 		testCurve(assert, SemiEllipseCurve.UNIT)
 		testCurve(assert, curve)
-		testCurve(assert, curve.reversed())
 	})
 	test('UNIT.shearX(2, 3)', assert => testCurve(assert, SemiEllipseCurve.UNIT.shearX(2, 2)))
 	test('isTsWithPlane', assert => {
@@ -36,6 +35,11 @@ suite('SemiEllipseCurve', () => {
 	test('isTsWithSurface(PlaneSurface)', assert => {
 		const c = SemiEllipseCurve.UNIT.translate(1.2, -1)
 		const s = new PlaneSurface(P3.ZX)
+		testISTs(assert, c, s, 1)
+	})
+	test('isTsWithSurface(PlaneSurface) 2', assert => {
+		const c = SemiEllipseCurve.UNIT
+		const s = P3.YZ.translate(0.5, 0)
 		testISTs(assert, c, s, 1)
 	})
 	test('distanceToPoint', assert => {
@@ -59,43 +63,24 @@ suite('SemiEllipseCurve', () => {
 	test('isColinearTo', assert => {
 		assert.ok(SemiEllipseCurve.forAB(1, 2).isColinearTo(SemiEllipseCurve.forAB(1, -2)))
 	})
+	const c1 = SemiEllipseCurve.semicircle(5)
 	test('isInfosWithEllipse', assert => {
 		const c1 = SemiEllipseCurve.semicircle(5),
 			c2 = SemiEllipseCurve.semicircle(5, V(3, 0))
-		testCurveISInfos(assert, c1, c2, 1)
+		testCurveISInfos(assert, c1, c2, 1, 'c1 c2')
 
 		const verticalEllipse = new SemiEllipseCurve(V(2, 0), V(1, 1), V(1, 10))
-		testCurveISInfos(assert, c1, verticalEllipse, 2)
+		testCurveISInfos(assert, c1, verticalEllipse, 2, 'c1 verticalEllipse')
 
 		const verticalEllipse2 = new SemiEllipseCurve(V(10, 2), V(1, 1), V(1, 10))
-		testCurveISInfos(assert, c1, verticalEllipse2, 0)
+		testCurveISInfos(assert, c1, verticalEllipse2, 0, 'c1 verticalEllipse2')
 
 		const smallEllipse = SemiEllipseCurve.forAB(2, 3)
-		testCurveISInfos(assert, c1, smallEllipse, 0)
-
-		const test = new SemiEllipseCurve(V(6, 1, 0), V(3, 1, 0), V(4, 0, 0))
-		testCurveISInfos(assert, c1, test, 1)
+		testCurveISInfos(assert, c1, smallEllipse, 0, 'c1 smallEllipse')
 	})
-	test('EllipseCurve.isInfosWithEllipse', assert => {
-		const c1 = EllipseCurve.circle(5),
-			c2 = EllipseCurve.circle(5, V(3, 0))
-		testCurveISInfos(assert, c1, c2, 2)
-
-		const verticalEllipse = new EllipseCurve(V(2, 0), V(1, 1), V(1, 10))
-		testCurveISInfos(assert, c1, verticalEllipse, 4)
-
-		const verticalEllipse2 = new EllipseCurve(V(10, 2), V(1, 1), V(1, 10))
-		testCurveISInfos(assert, c1, verticalEllipse2, 0)
-
-		const smallEllipse = EllipseCurve.forAB(2, 3)
-		testCurveISInfos(assert, c1, smallEllipse, 0)
-
-		const test = new EllipseCurve(V(6, 1, 0), V(3, 1, 0), V(4, 0, 0))
-		testCurveISInfos(assert, c1, test, 2)
-
-		const e1 = SemiEllipseCurve.UNIT
-		const e2 = SemiEllipseCurve.UNIT.scale(0.5, 0.1, 1).translate(0.5)
-		testCurveISInfos(assert, e1, e2, 1)
+	test('c1 test', assert => {
+		const test = new SemiEllipseCurve(V(6, 1, 0), V(3, 1, 0), V(4, 0, 0))
+		testCurveISInfos(assert, c1, test, 1, 'c1 test')
 	})
 	test('isInfosWithBezier2D', assert => {
 		const ell = SemiEllipseCurve.forAB(3, 1)

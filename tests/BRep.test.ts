@@ -2113,6 +2113,19 @@ suite('BREP', () => {
             testBRepAnd(assert, a, b, result)
         })
 
+        test('remove half of a half-pie', assert => {
+            const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
+            const boxKnife = B2T.box(11, 10, 7, 'knife').translate(-10, -1, -1).flipped()
+
+            const resultTopPoint = V(1, 8 * Math.sin(Math.acos(1 / 8)), 0)
+            const result = B2T.extrudeEdges([
+                    StraightEdge.throughPoints(V(8, 0, 0), V(1, 0, 0)),
+                    StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
+                    PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
+                P3.XY.flipped(), V(0, 0, 5), 'pie/4')
+            testBRepAnd(assert, pie, boxKnife, result)
+        })
+
         test('box() - cylinder(0.2,2).translate(0.5,0.2)', assert => {
             const a = B2T.box()
             const b = B2T.cylinder(0.2, 2).translate(0.5, 0.2).flipped()

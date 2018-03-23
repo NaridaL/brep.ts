@@ -597,14 +597,14 @@ suite('BRep 2', () => {
 				StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
 				PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
-		testBRepAnd(assert, pie, boxKnife, result)
+		testBRepAnd(assert, pie, boxKnife, result, '1')
 
 
-		const testFace = pie.faces.find(face => face.surface.plane && face.surface.plane.normal1.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
+		const testFace = pie.faces.find((face:any) => face.surface.plane && face.surface.plane.normal1.like(V3.Y.negated()) && face.contour.some(edge => edge.a.x > 1))
 		const k2 = boxKnife.translate(-1, 0, 0)
 		doTestWithBrep(assert, testFace, pie, k2.flipped(), [], [V3.O, V(0, 0, 5)],
 			'volumes touch edge-edge but no overlap (empty result volume; generated points dont matter)')
-		testBRepOp(assert, pie, k2, () => pie.minus(k2), B2T.puckman(8, 90 * DEG, 5, 'pie/4'))
+		testBRepAnd(assert, pie, k2, B2T.puckman(8, 90 * DEG, 5, 'pie/4'), '2')
 	})
 	test('cut hole through side of pie', assert => {
 		const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')

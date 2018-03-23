@@ -1,10 +1,9 @@
-import { assert, assertf, glqInSteps, M4, NLA_PRECISION, V3 } from 'ts3dutils'
+import { assert, assertf, gaussLegendreQuadrature24, glqInSteps, M4, NLA_PRECISION, V3 } from 'ts3dutils'
 
 import {
 	BezierCurve,
 	ConicSurface,
 	Edge,
-	EllipseCurve,
 	glqV3,
 	HyperbolaCurve,
 	ImplicitCurve,
@@ -102,7 +101,7 @@ export const CalculateAreaVisitor = {
 					sum += at.dot(thisDir1) * scaling
 				}
 				return sum * Math.sign(edgeWC.deltaT())
-			} else if (curveWC instanceof EllipseCurve || curveWC instanceof SemiEllipseCurve) {
+			} else if (curveWC instanceof SemiEllipseCurve) {
 				if (this.isVerticalSpheroid()) {
 					const circleRadius = this.f1.length()
 					const f = (t: number) => {

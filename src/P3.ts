@@ -14,7 +14,7 @@ import {
 	V3,
 } from 'ts3dutils'
 
-import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve } from './index'
+import { BezierCurve, Curve, HyperbolaCurve, L3, ParabolaCurve, SemiEllipseCurve } from './index'
 
 export class P3 extends Transformable {
 	static readonly YZ = new P3(V3.X, 0)
@@ -241,7 +241,6 @@ export class P3 extends Transformable {
 			return this.containsLine(curve)
 		} else if (
 			curve instanceof SemiEllipseCurve ||
-			curve instanceof EllipseCurve ||
 			curve instanceof HyperbolaCurve ||
 			curve instanceof ParabolaCurve
 		) {

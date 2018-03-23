@@ -3,7 +3,6 @@ import { suite, test, testCurve, testCurveISInfos, testISCurves, testISTs, testP
 import { DEG, eq, M4, V, V3 } from 'ts3dutils'
 import {
 	BezierCurve,
-	EllipsoidSurface,
 	P3,
 	PCurveEdge,
 	PICurve,
@@ -34,7 +33,7 @@ suite('PICurve', () => {
 					-Infinity,
 					Infinity,
 				),
-				new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+				new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
 				V(0.010937499999999989, 0.2890625, -0.9572477433702835),
 				V(0.20296874999999998, 0.11703124999999998, -0.9721663299286162),
 				0.02,

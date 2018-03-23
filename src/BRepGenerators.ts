@@ -29,7 +29,6 @@ import {
 	ConicSurface,
 	Curve,
 	Edge,
-	EllipseCurve,
 	Face,
 	FaceInfoFactory,
 	getGlobalId,
@@ -826,7 +825,7 @@ export namespace B2T {
 	export function fixEdges(edges: Edge[]): Edge[] {
 		return edges.flatMap(edge => {
 			const c = edge.curve
-			if (c instanceof EllipseCurve) {
+			if (c instanceof SemiEllipseCurve && c.tMin === -PI && c.tmax === PI) {
 				const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge]
 				return splitEdges.map(edge => {
 					if (edge.minT >= 0) {

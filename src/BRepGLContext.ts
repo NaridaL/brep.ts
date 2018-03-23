@@ -7,7 +7,6 @@ import {
 	Curve,
 	CustomPlane,
 	Edge,
-	EllipseCurve,
 	HyperbolaCurve,
 	ImplicitCurve,
 	L3,
@@ -143,7 +142,6 @@ export const CURVE_PAINTERS: {
 	) => void
 } = {
 	[SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
-	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
 	[HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
 	[ImplicitCurve.name](gl, curve: ImplicitCurve, color, startT, endT, width = 2) {

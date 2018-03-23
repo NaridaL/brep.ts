@@ -84,11 +84,11 @@ export function bRepEqual(assert: Assert, actual: BRep, expected: BRep, message 
 	b2equals(assert, actual, expected)
 }
 
-export function testBRepAnd(assert: Assert, a: BRep, b: BRep, expected: BRep) {
-	return testBRepOp(assert, a, b, () => a.and(b), expected)
+export function testBRepAnd(assert: Assert, a: BRep, b: BRep, expected: BRep, message?: string) {
+	return testBRepOp(assert, a, b, () => a.and(b), expected, message)
 }
 
-export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep) {
+export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep, message?: string) {
 	let actual
 	try {
 		actual = calculateActual()
@@ -103,7 +103,7 @@ export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: ()
 				b,
 				c: actual.translate(abWidth + 1).toSource(false),
 				d: expected.translate(2 * (abWidth + 1)).toSource(false),
-			})
+			}, message)
 			b2equals(assert, actual, expected)
 		} else {
 			outputLink(assert, { a, b })
@@ -357,33 +357,20 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 	assert.ok(ParametricSurface.is(surf))
 
 	// test equals
-	const clone = new surf .constructor(...surf.getConstructorParameters())
+	const clone = new surf.constructor(...surf.getConstructorParameters())
 	assert.ok(clone.equals(surf), 'clone.equals(surf)')
 	assert.ok(clone.isCoplanarTo(surf), 'clone.isParallelTo(surf)')
 	assert.ok(clone.like(surf), 'clone.like(surf)')
 
-	const params = [V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)].map(
+	const params = [V(0, 0), V(0, 1), V(1, 0), V(1, 1), V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)].map(
 		pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0),
 	)
 	const points = params.map(({ x, y }) => surf.pST(x, y))
 	const psFlipped = surf.flipped()
 	for (let i = 0; i < points.length; i++) {
-		const p = points[i],
-			pNormal = surf.normalP(p)
+		const p = points[i]
 		const pm = params[i]
 		assert.ok(surf.containsPoint(p))
-
-		const psFlippedNormal = psFlipped.normalP(p)
-		const psFlippedST = psFlipped.stP(p)
-		assert.v3like(
-			psFlipped.pST(psFlippedST.x, psFlippedST.y),
-			p,
-			'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p',
-		)
-		assert.v3like(psFlippedNormal, pNormal.negated(), 'pNormal == -psFlippedNormal')
-
-		const pm2 = surf.stP(p)
-		assert.v3like(pm2, pm, 'pm == stP(pST(pm))')
 
 		// test dpds and dpdt
 		const eps = 0.0001
@@ -395,11 +382,28 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 		assert.v3like(dpdtNumeric, dpdt, 'dpdt', 0.01)
 		const pmNormal = surf.normalST(pm.x, pm.y)
 		assert.ok(pmNormal.hasLength(1), 'pmNormal.hasLength(1)')
-		assert.v3like(pmNormal, pNormal)
-		const computedNormal = dpds.cross(dpdt).unit()
-		assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)
+		const dpdsXdpdt = dpds.cross(dpdt)
 		if (ImplicitSurface.is(surf)) {
 			assert.ok(eq0(surf.implicitFunction()(p)))
+		}
+		const pm2 = surf.stP(p)
+        const pNormal = surf.normalP(p)
+        const psFlippedST = psFlipped.stP(p)
+        const psFlippedNormal = psFlipped.normalP(p)
+		if (!dpds.likeO() && !dpdt.likeO()) {
+			assert.v3like(pm2, pm, 'pm == stP(pST(pm))')
+            assert.v3like(
+                psFlipped.pST(psFlippedST.x, psFlippedST.y),
+                p,
+                'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p',
+            )
+
+            assert.v3like(pmNormal, pNormal)
+
+            const computedNormal = dpdsXdpdt.unit()
+            assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)
+
+            assert.v3like(psFlippedNormal, pNormal.negated(), 'pNormal == -psFlippedNormal')
 		}
 
 		// test pointFoot:
@@ -420,6 +424,8 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 	for (let mI = 0; mI < matrices.length; mI++) {
 		const m = matrices[mI]
 		for (let i = 0; i < points.length; i++) {
+		    const dpds = surf.dpds()(params[i].x, params[i].y)
+		    const dpdt = surf.dpdt()(params[i].x, params[i].y)
 			const p = points[i],
 				pNormal = surf.normalP(p)
 			const normalMatrix = m
@@ -429,7 +435,10 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 			const mNormal = normalMatrix.transformVector(pNormal)
 			const mP = m.transformPoint(p)
 			const mSurface = surf.transform(m)
-			assert.ok(mSurface.normalP(mP).like(mNormal))
+
+            if (!dpds.likeO() && !dpdt.likeO()) {
+                assert.v3like(mSurface.normalP(mP), mNormal)
+            }
 
 			assert.ok(mSurface.containsPoint(mP))
 
@@ -463,9 +472,16 @@ export function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {
 	}
 }
 
-export function testCurveISInfos(assert: Assert, c1: Curve, c2: Curve, count, f = 'isInfosWithCurve') {
+export function testCurveISInfos(
+	assert: Assert,
+	c1: Curve,
+	c2: Curve,
+	count: int,
+	msg: string = 'view',
+	f = 'isInfosWithCurve',
+) {
 	const intersections = c1[f](c2).map(info => info.p)
-	outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections }, `view`)
+	outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections }, msg)
 	assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
 	intersections.forEach((is, i) => {
 		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)

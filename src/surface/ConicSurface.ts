@@ -15,7 +15,6 @@ import {
 import {
 	Curve,
 	Edge,
-	EllipseCurve,
 	HyperbolaCurve,
 	ImplicitSurface,
 	L3,
@@ -45,7 +44,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		}
 		const f = ([s, t]: [number, number]) => {
 			const pSTToPWC = this.pST(s, t).to(pWC)
-			return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s, t).dot(pSTToPWC)]
+			return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)]
 		}
 		const { 0: x, 1: y } = newtonIterate(f, [ss, st])
 		return new V3(x, y, 0)
@@ -181,7 +180,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 					}
 					const p1 = new V3(d / (a - c), 0, -d / (a - c))
 					const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa))
-					return [new EllipseCurve(center, center.to(p1), center.to(p2))]
+					return [new SemiEllipseCurve(center, center.to(p1), center.to(p2), -PI, PI)]
 				} else if (aa > cc) {
 					// hyperbola
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
@@ -192,6 +191,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				}
 			}
 		}
+		throw new Error('???')
 	}
 
 	equals(obj: any): boolean {
@@ -328,11 +328,6 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		) as this
 	}
 
-	rightAngled() {
-		// TODO
-		throw new Error('not implemented')
-	}
-
 	flipped(): this {
 		return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir) as this
 	}
@@ -428,11 +423,11 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		const wcMatrix = eq0(planeNormal.lengthXY()) ? this.matrix : this.matrix.times(rotationMatrix)
 		return ConicSurface.unitISPlane(a, c, d).flatMap<Curve>(curve => {
 			const curveWC = curve.transform(wcMatrix)
-			if (curve instanceof EllipseCurve) {
+			if (curve instanceof SemiEllipseCurve) {
 				const curveLC = curve.transform(rotationMatrix)
 				const ts = curveLC.isTsWithPlane(P3.ZX)
 				const intervals = getIntervals(ts, -PI, PI).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0)
-				return intervals.flatMap(([a, b]) => SemiEllipseCurve.fromEllipse(curveWC as EllipseCurve, a, b))
+				return intervals.flatMap(([a, b]) => (curveWC as SemiEllipseCurve).split(a, b))
 			}
 			const p = curveWC.at(0.2)
 			return this.normalP(p)

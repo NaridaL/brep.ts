@@ -22,7 +22,6 @@ import {
 	SemiEllipsoidSurface,
 	StraightEdge,
 	ParabolaCurve,
-	EllipseCurve,
 	RotationFace,
 } from '..'
 

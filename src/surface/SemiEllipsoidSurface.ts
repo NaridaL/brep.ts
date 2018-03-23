@@ -32,7 +32,7 @@ import {
 	dotCurve,
 	dotCurve2,
 	Edge,
-	EllipsoidSurface,
+	ImplicitSurface,
 	L3,
 	P3,
 	ParametricSurface,
@@ -45,9 +45,9 @@ import {
 	Surface,
 } from '../index'
 
-import { abs, max, min, PI, sign, sqrt } from '../math'
+import { abs, cos, max, min, PI, sign, sin, sqrt } from '../math'
 
-export class SemiEllipsoidSurface extends EllipsoidSurface {
+export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
 	readonly matrix: M4
 	readonly inverseMatrix: M4
@@ -65,7 +65,7 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		tMin: number = -PI / 2,
 		tMax: number = PI / 2,
 	) {
-		super(center, f1, f2, f3, sMin, sMax, tMin, tMax)
+		super(sMin, sMax, tMin, tMax)
 		assert(0 <= sMin && sMin <= PI)
 		assert(0 <= sMax && sMax <= PI)
 		assert(-PI / 2 <= tMin && tMin <= PI / 2)
@@ -266,6 +266,10 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		return totalArea
 	}
 
+	getConstructorParameters(): any[] {
+		return [this.center, this.f1, this.f2, this.f3, this.sMin, this.sMax, this.tMin, this.tMax]
+	}
+
 	equals(obj: any): boolean {
 		return (
 			this == obj || (Object.getPrototypeOf(obj) == this.constructor.prototype && this.matrix.equals(obj.matrix))
@@ -297,6 +301,14 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 
 	clipCurves(curves: Curve[]): Curve[] {
 		return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()))
+	}
+	dpds(): (s: number, t: number) => V3 {
+		// dp(s, t) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
+		return (s: number, t: number) => this.matrix.transformVector(new V3(cos(t) * -sin(s), cos(t) * cos(s), 0))
+	}
+
+	dpdt(): (s: number, t: number) => V3 {
+		return (s: number, t: number) => this.matrix.transformVector(new V3(-sin(t) * cos(s), -sin(t) * sin(s), cos(t)))
 	}
 
 	isCurvesWithPCS(surface: ProjectedCurveSurface): Curve[] {
@@ -386,8 +398,8 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 					let aP = projectedCurves[i](aT2),
 						bP = projectedCurves[i](bT2)
 					0 === i && ([aP, bP] = [bP, aP])
-					assert(EllipsoidSurface.UNIT.containsPoint(aP))
-					assert(EllipsoidSurface.UNIT.containsPoint(bP))
+					assert(SemiEllipsoidSurface.UNIT.containsPoint(aP))
+					assert(SemiEllipsoidSurface.UNIT.containsPoint(bP))
 					curves.push(
 						PICurve.forStartEnd(
 							surface,
@@ -429,7 +441,7 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		}
 	}
 
-	isCurvesWithPlane(plane: P3): Curve[] {
+	isCurvesWithPlane(plane: P3) {
 		const planeLC = plane.transform(this.inverseMatrix)
 		return SemiEllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
 	}
@@ -791,10 +803,6 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		return plane.normal1.dot(this.f2) < 0 ? plane : plane.flipped()
 	}
 
-	asEllipsoidSurface() {
-		return new EllipsoidSurface(this.center, this.f1, this.f2, this.f3)
-	}
-
 	getExtremePoints(): V3[] {
 		assert(this.isSphere())
 		const thisRadius = this.f1.length()
@@ -810,7 +818,7 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 		if (undefined === startS || undefined === startT) {
 			let pLC1 = this.inverseMatrix.transformPoint(pWC).unit()
 			if (pLC1.y < 0) pLC1 = pLC1.negated()
-			;({ x: startS, y: startT } = (this.constructor as typeof EllipsoidSurface).UNIT.stP(pLC1))
+			;({ x: startS, y: startT } = SemiEllipsoidSurface.UNIT.stP(pLC1))
 		}
 		const dpds = this.dpds()
 		const dpdt = this.dpdt()
@@ -827,6 +835,21 @@ export class SemiEllipsoidSurface extends EllipsoidSurface {
 			0.1,
 		)
 		return new V3(s, t, 0)
+	}
+
+	implicitFunction() {
+		return (pWC: V3) => {
+			const pLC = this.inverseMatrix.transformPoint(pWC)
+			return (pLC.length() - 1) * this.normalDir
+		}
+	}
+
+	// = this.inverseMatrix.transformPoint(this.inverseMatrix.transformPoint(pWC).unit())
+	didp(pWC: V3) {
+		// i(pWC) = this.inverseMatrix.transformPoint(pWC).length() - 1
+		// chain diff rule
+		const pLC = this.inverseMatrix.transformPoint(pWC)
+		return this.pLCNormalWCMatrix.transformVector(pLC.unit()) //.times(this.normalDir)
 	}
 }
 SemiEllipsoidSurface.prototype.uStep = PI / 16

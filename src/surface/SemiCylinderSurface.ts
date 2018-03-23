@@ -23,6 +23,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	readonly pLCNormalWCMatrix: M4
 	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number
+    // @ts-ignore
 	readonly baseCurve: SemiEllipseCurve
 
 	constructor(
@@ -162,13 +163,13 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 	containsPoint(pWC: V3): boolean {
 		const pLC = this.inverseMatrix.transformPoint(pWC)
-		return SemiEllipseCurve.XYLCValid(pLC)
+		return this.baseCurve.isValidT(SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax))
 	}
 
 	stP(pWC: V3): V3 {
 		assert(arguments.length == 1)
 		const pLC = this.inverseMatrix.transformPoint(pWC)
-		const u = SemiEllipseCurve.XYLCPointT(pLC)
+		const u = SemiEllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
 		return new V3(u, pLC.z, 0)
 	}
 

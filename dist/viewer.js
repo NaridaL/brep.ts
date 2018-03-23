@@ -4388,14 +4388,14 @@ function arithmeticGeometricMean(x, y) {
  * EllipticF(phi, k2) = INT[0; phi] 1 / sqrt(1 - k2 * sin²(phi)) dphi
  */
 function EllipticF(phi, k2) {
-    return gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
+    return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
 }
 /**
  * incomplete elliptic integral of the second kind
  * EllipticE(phi, k2) = INT[0; phi] sqrt(1 - k2 * sin²(phi)) dphi
  */
 function EllipticE(phi, k2) {
-    return gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
+    return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
 }
 const DEG = .017453292519943295;
 function rad2deg(rad) {
@@ -5072,7 +5072,7 @@ const gaussLegendre24Weights = [
     0.0123412297999871995468056670700372915759,
     0.0123412297999871995468056670700372915759,
 ];
-function gaussLegendreQuadrature24$1(f, startT, endT) {
+function gaussLegendreQuadrature24(f, startT, endT) {
     //let result = 0
     //for (let i = 0; i < gaussLegendre24Xs.length; i++) {
     //	// gauss-legendre goes from -1 to 1, so we need to scale
@@ -7293,7 +7293,7 @@ var ts3dutils = Object.freeze({
 	newtonIterate2dWithDerivatives: newtonIterate2dWithDerivatives,
 	gaussLegendre24Xs: gaussLegendre24Xs,
 	gaussLegendre24Weights: gaussLegendre24Weights,
-	gaussLegendreQuadrature24: gaussLegendreQuadrature24$1,
+	gaussLegendreQuadrature24: gaussLegendreQuadrature24,
 	glq24_11: glq24_11,
 	glqInSteps: glqInSteps,
 	midpointRuleQuadrature: midpointRuleQuadrature,
@@ -12923,6 +12923,7 @@ class Curve$$1 extends Transformable {
             this.at(t)
                 .minus(p)
                 .dot(this.ddt(t));
+        //checkDerivate(f, df, tMin, tMax)
         const STEPS = 32;
         if (undefined === tStart) {
             tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / (STEPS - 1)).withMax(t => -this.at(t).distanceTo(p));
@@ -13366,7 +13367,7 @@ class XiEtaCurve$$1 extends Curve$$1 {
             return [];
         }
         const n = plane.normal1, w = plane.w, center = this.center, f1 = this.f1, f2 = this.f2, g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center);
-        return this.constructor.intersectionUnitLine(g1, g2, g3);
+        return this.constructor.intersectionUnitLine(g1, g2, g3, this.tMin, this.tMax);
     }
     pointT(p) {
         assertVectors(p);
@@ -13375,16 +13376,16 @@ class XiEtaCurve$$1 extends Curve$$1 {
     }
     containsPoint(p) {
         const pLC = this.inverseMatrix.transformPoint(p);
-        return eq0(pLC.z) && this.constructor.XYLCValid(pLC);
+        return eq0(pLC.z) && this.isValidT(this.constructor.XYLCPointT(pLC, this.tMin, this.tMax));
     }
-    isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin = -100000, lineMax = 100000) {
+    isInfosWithLine(anchorWC, dirWC, tMin = this.tMin, tMax = this.tMax, lineMin = -100000, lineMax = 100000) {
         const anchorLC = this.inverseMatrix.transformPoint(anchorWC);
         const dirLC = this.inverseMatrix.transformVector(dirWC);
         if (eq0(dirLC.z)) {
             // local line parallel to XY-plane
             if (eq0(anchorLC.z)) {
                 // local line lies in XY-plane
-                return this.constructor.unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC);
+                return this.constructor.unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC, tMin, tMax);
             }
         }
         else {
@@ -13410,14 +13411,14 @@ class XiEtaCurve$$1 extends Curve$$1 {
             return this.isTsWithPlane(surface.plane);
         }
         else if (surface instanceof SemiEllipsoidSurface$$1) {
-            const isEllipse = surface.asEllipsoidSurface().isCurvesWithSurface(new PlaneSurface$$1(this.getPlane()));
-            if (isEllipse.length < 1)
-                return [];
-            const possibleInfos = this.isInfosWithCurve(isEllipse[0]);
-            return possibleInfos.filter(info => surface.containsPoint(info.p)).map(info => info.tThis);
+            const isEllipses = surface.isCurvesWithPlane(this.getPlane());
+            return isEllipses
+                .flatMap(isEllipse => this.isInfosWithCurve(isEllipse))
+                .filter(info => surface.containsPoint(info.p))
+                .map(info => info.tThis);
         }
         else if (surface instanceof ProjectedCurveSurface$$1 ||
-            surface instanceof EllipsoidSurface$$1 ||
+            surface instanceof EllipsoidSurface ||
             surface instanceof ConicSurface$$1) {
             return surface
                 .isCurvesWithPlane(this.getPlane())
@@ -13444,11 +13445,7 @@ class XiEtaCurve$$1 extends Curve$$1 {
             return infos;
         }
     }
-    isInfosWithBezier2D(bezierWC, sMin, sMax) {
-        sMin = isFinite(sMin) ? sMin : bezierWC.tMin;
-        sMax = isFinite(sMax) ? sMax : bezierWC.tMax;
-        assertf(() => 0 < Math.PI);
-        assertf(() => sMin < sMax);
+    isInfosWithBezier2D(bezierWC, sMin = bezierWC.tMin, sMax = bezierWC.tMax) {
         return Curve$$1.ispsRecursive(this, this.tMin, this.tMax, bezierWC, sMin, sMax);
     }
     isOrthogonal() {
@@ -13724,7 +13721,7 @@ class BezierCurve$$1 extends Curve$$1 {
             const projEllipse = surface.baseCurve.project(projPlane);
             return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther);
         }
-        if (surface instanceof EllipsoidSurface$$1) {
+        if (surface instanceof SemiEllipsoidSurface$$1) {
             const thisOC = this.transform(surface.inverseMatrix);
             const f = (t) => thisOC.at(t).length() - 1;
             const df = (t) => thisOC
@@ -13752,10 +13749,7 @@ class BezierCurve$$1 extends Curve$$1 {
                     }
                 }
             }
-            return result;
-        }
-        if (surface instanceof SemiEllipsoidSurface$$1) {
-            return this.isTsWithSurface(surface.asEllipsoidSurface()).filter(t => surface.containsPoint(this.at(t)));
+            return result.filter(t => surface.containsPoint(this.at(t)));
         }
         throw new Error();
     }
@@ -13854,10 +13848,12 @@ class BezierCurve$$1 extends Curve$$1 {
         const c = p01.times(3);
         return [V3.O, a, b, c];
     }
-    pointT(p, tMin = this.tMin, tMax = this.tMax) {
-        return this.closestTToPoint(p, undefined, tMin, tMax);
+    pointT2(p, tMin = this.tMin, tMax = this.tMax) {
+        const t = this.closestTToPoint(p, undefined, tMin, tMax);
+        assert(this.at(t).like(p));
+        return t;
     }
-    pointT3(p) {
+    pointT(p) {
         const { p0, p1, p2, p3 } = this;
         // calculate cubic equation coefficients
         // a t³ + b t² + c t + d = 0
@@ -13890,7 +13886,7 @@ class BezierCurve$$1 extends Curve$$1 {
             return results[0];
         throw new Error('multiple intersection ' + this.toString() + p.sce);
     }
-    pointT2(p) {
+    pointT3(p) {
         const { p0, p1, p2, p3 } = this;
         // calculate cubic equation coefficients
         // a t³ + b t² + c t + d = 0
@@ -14241,7 +14237,7 @@ class BezierCurve$$1 extends Curve$$1 {
             const j = i + 1;
             const li = ls2[i], lj = ls2[j];
             const isInfo = li.infoClosestToLine(lj);
-            return EllipseCurve$$1.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s);
+            return EllipseCurveOld.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s);
         });
         return curves;
     }
@@ -14259,7 +14255,7 @@ class BezierCurve$$1 extends Curve$$1 {
             const testT2 = lerp(t0, t1, 2 / 3), testP2 = this.at(testT2);
             const radius = (isInfo.s + isInfo.t) / 2;
             if (eq(centerPoint.distanceTo(testP1), radius, eps)) {
-                const newCurve = EllipseCurve$$1.circleForCenter2P(centerPoint, a, b, radius);
+                const newCurve = EllipseCurveOld.circleForCenter2P(centerPoint, a, b, radius);
                 result.push(newCurve);
                 return result;
             }
@@ -14278,318 +14274,6 @@ BezierCurve$$1.EX3D = new BezierCurve$$1(V3.O, V(-0.1, -1, 1), V(1.1, 1, 1), V3.
 BezierCurve$$1.QUARTER_CIRCLE = BezierCurve$$1.approximateUnitArc(PI$3 / 2);
 BezierCurve$$1.prototype.hlol = Curve$$1.hlol++;
 BezierCurve$$1.prototype.tIncrement = 1 / 80;
-
-class EllipseCurve$$1 extends XiEtaCurve$$1 {
-    constructor(center, f1, f2, tMin = -PI$3, tMax = PI$3) {
-        super(center, f1, f2, tMin, tMax);
-        assert(EllipseCurve$$1.isValidT(tMin));
-        assert(EllipseCurve$$1.isValidT(tMax));
-    }
-    static isValidT(t) {
-        return -Math.PI <= t && t <= Math.PI;
-    }
-    static XYLCValid(pLC) {
-        return eq(1, pLC.lengthXY());
-    }
-    /**
-     * @param hint +-PI, whichever is correct
-     */
-    static XYLCPointT(pLC, hint) {
-        const angle = pLC.angleXY();
-        if (angle < -Math.PI + NLA_PRECISION || angle > Math.PI - NLA_PRECISION) {
-            assert(isFinite(hint));
-            return Math.sign(hint) * Math.PI;
-        }
-        return angle;
-    }
-    static intersectionUnitLine(a, b, c) {
-        const isLC = intersectionUnitCircleLine2$$1(a, b, c);
-        return isLC.map(([xi, eta]) => Math.atan2(eta, xi));
-    }
-    static unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC) {
-        // ell: x² + y² = 1 = p²
-        // line(t) = anchor + t dir
-        // anchor² - 1 + 2 t dir anchor + t² dir² = 0
-        const pqDiv = dirLC.dot(dirLC);
-        const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.dot(anchorLC) - 1) / pqDiv);
-        return lineTs.map(tOther => ({
-            tThis: Math.atan2(anchorLC.y + tOther * dirLC.y, anchorLC.x + tOther * dirLC.x),
-            tOther: tOther,
-            p: L3$$1.at(anchorWC, dirWC, tOther),
-        }));
-    }
-    /**
-     * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
-     */
-    static circle(radius, center = V3.O) {
-        return new EllipseCurve$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0));
-    }
-    static circleForCenter2P(center, a, b, radius) {
-        const f1 = center.to(a);
-        const normal = f1.cross(center.to(b));
-        const f2 = normal.cross(f1).toLength(f1.length());
-        const tMax = f1.angleTo(center.to(b));
-        return new EllipseCurve$$1(center, f1, f2, 0, tMax);
-    }
-    // TODO: there'S alsoa commented out test
-    getVolZAnd(dir1, tStart, tEnd) {
-        // f(t) = c + f1 cos + f2 sin
-        // p dot d1 = (cx + f1x cos + f2x sin) dx + (cy + f1y cos + f2y sin) dy + (cz + f1z cos + f2z sin) dz
-        function fp(p) {
-            const p0ToP = dir1.times(dir1.dot(p));
-            const area = p0ToP.lengthXY() * (p.z - p0ToP.z / 2);
-            return area;
-        }
-        const f = (t) => fp(this.at(t)) *
-            this.tangentAt(t)
-                .cross(this.normal)
-                .unit().z;
-        return { volume: glqInSteps(f, tStart, tEnd, 4), centroid: undefined };
-    }
-    getAreaInDir(right, up, tStart, tEnd) {
-        //assertf(() => tStart < tEnd)
-        assertf(() => right.isPerpendicularTo(this.normal));
-        assertf(() => up.isPerpendicularTo(this.normal));
-        //assertf(() => EllipseCurve.isValidT(tStart), tStart)
-        //assertf(() => EllipseCurve.isValidT(tEnd), tEnd)
-        const upLC = this.inverseMatrix.transformVector(up);
-        const rightLC = upLC.cross(V3.Z);
-        const normTStart = tStart - rightLC.angleXY();
-        const normTEnd = tEnd - rightLC.angleXY();
-        const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit());
-        // integral of sqrt(1 - x²) from 0 to cos(t)
-        // Basically, we want
-        // INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
-        // INTEGRAL[PI/2: cos(t)] -sqrt(1 - x²) dx
-        // = INTEGRAL[cos(0); cos(t)] -sqrt(1 - x²) dx
-        // = INTEGRAL[0; t] -sqrt(1 - cos²(t)) * -sin(t) dt
-        // = INTEGRAL[0; t] -sin(t) * -sin(t) dt
-        // = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
-        // = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
-        function fArea(t) {
-            return (t - Math.sin(t) * Math.cos(t)) / 2;
-        }
-        // for the centroid, we want
-        // cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
-        // cx = 1 / area * INTEGRAL[cos(t); PI/2] x * sqrt(1 - x²) dx
-        // cx = 1 / area * INTEGRAL[cos(0); cos(t)] x * -sqrt(1 - x²) dx
-        // ...
-        // cx = 1 / area * INTEGRAL[0; t] cos(t) * sin²(t) dt // WA
-        // cx = 1 / area * (sin^3(t) / 3)[0; t]
-        function cxTimesArea(t) {
-            return Math.pow(Math.sin(t), 3) / 3;
-        }
-        // cy = 1 / area * INTEGRAL[cos(t); PI/2] f²(x) / 2 dx
-        // cy = 1 / area * INTEGRAL[cos(0); cos(t)] -(1 - x²) / 2 dx
-        // cy = 1 / area * INTEGRAL[0; t] (cos²(t) - 1) * -sin(t) / 2 dt
-        // cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
-        function cyTimesArea(t) {
-            return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24;
-        }
-        const restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart));
-        const area = fArea(normTEnd) - fArea(normTStart) + restArea;
-        const cxt = (cxTimesArea(normTEnd) -
-            cxTimesArea(normTStart) +
-            -transformedOriginY * (-Math.cos(normTEnd) - Math.cos(normTStart)) / 2 * restArea) /
-            area;
-        const cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area;
-        const factor = this.matrix.xyAreaFactor(); // * upLC.length()
-        //console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
-        assert(!eq0(factor));
-        return {
-            area: area * factor,
-            centroid: this.matrix.transformPoint(M4.rotateZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0))),
-        };
-    }
-    at(t) {
-        // = center + f1 cos t + f2 sin t
-        return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)));
-    }
-    tangentAt(t) {
-        assertNumbers(t);
-        // f2 cos(t) - f1 sin(t)
-        return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t)));
-    }
-    ddt(t) {
-        assertNumbers(t);
-        return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)));
-    }
-    tangentAt2(xi, eta) {
-        return this.f2.times(xi).minus(this.f1.times(eta));
-    }
-    isCircular() {
-        return eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2);
-    }
-    reversed() {
-        return new this.constructor(this.center, this.f1, this.f2.negated(), -this.tMax, -this.tMin);
-    }
-    isColinearTo(curve) {
-        if (!hasConstructor(curve, EllipseCurve$$1))
-            return false;
-        if (!this.center.like(curve.center)) {
-            return false;
-        }
-        if (this == curve) {
-            return true;
-        }
-        if (this.isCircular()) {
-            return (curve.isCircular() && eq(this.f1.length(), curve.f1.length()) && this.normal.isParallelTo(curve.normal));
-        }
-        else {
-            let { f1: f1, f2: f2 } = this.rightAngled(), { f1: c1, f2: c2 } = curve.rightAngled();
-            if (f1.length() > f2.length()) {
-                [f1, f2] = [f2, f1];
-            }
-            if (c1.length() > c2.length()) {
-                [c1, c2] = [c2, c1];
-            }
-            return eq(f1.squared(), Math.abs(f1.dot(c1))) && eq(f2.squared(), Math.abs(f2.dot(c2)));
-        }
-    }
-    eccentricity() {
-        const mainAxes = this.rightAngled();
-        const f1length = mainAxes.f1.length(), f2length = mainAxes.f1.length();
-        const [a, b] = f1length > f2length ? [f1length, f2length] : [f2length, f1length];
-        return Math.sqrt(1 - b * b / a / a);
-    }
-    circumference() {
-        return this.arcLength(-Math.PI, Math.PI);
-    }
-    arcLength(startT, endT, steps) {
-        assert(startT < endT, 'startT < endT');
-        if (this.isCircular()) {
-            return this.f1.length() * (endT - startT);
-        }
-        return super.arcLength(startT, endT, steps);
-    }
-    circumferenceApproximate() {
-        // approximate circumference by Ramanujan
-        // https://en.wikipedia.org/wiki/Ellipse#Circumference
-        const { f1, f2 } = this.rightAngled(), a = f1.length(), b = f2.length();
-        const h = Math.pow((a - b), 2) / Math.pow((a + b), 2);
-        return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)));
-    }
-    rightAngled() {
-        const f1 = this.f1, f2 = this.f2, a = f1.dot(f2), b = f2.squared() - f1.squared();
-        if (eq0(a)) {
-            return this;
-        }
-        const g1 = 2 * a, g2 = b + Math.sqrt(b * b + 4 * a * a);
-        const { x1: xi, y1: eta } = intersectionUnitCircleLine$$1(g1, g2, 0);
-        return new EllipseCurve$$1(this.center, f1.times(xi).plus(f2.times(eta)), f1.times(-eta).plus(f2.times(xi)));
-    }
-    isInfosWithEllipse(ellipse) {
-        if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
-            // ellipses are coplanar
-            const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled();
-            const r1 = ellipseLCRA.f1.lengthXY(), r2 = ellipseLCRA.f2.lengthXY(), centerDist = ellipseLCRA.center.lengthXY();
-            const rMin = min$1(r1, r2), rMax = max$1(r1, r2);
-            if (lt(centerDist + rMax, 1) || // entirely inside unit circle
-                lt(1, centerDist - rMax) || // entirely outside unit circle
-                lt(1, rMin - centerDist) || // contains unit circle
-                (eq(1, r1) && eq(1, r2) && eq0(centerDist)) // also unit circle, return no IS
-            ) {
-                return [];
-            }
-            const f = (t) => ellipseLCRA.at(t).lengthXY() - 1;
-            const df = (t) => ellipseLCRA
-                .at(t)
-                .xy()
-                .dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY();
-            checkDerivate(f, df, -PI$3, PI$3, 1);
-            const ts = [];
-            for (let startT = -4 / 5 * PI$3; startT < PI$3; startT += PI$3 / 4) {
-                let t = newtonIterateSmart(f, startT, 16, df, 1e-4);
-                le(t, -PI$3) && (t += TAU);
-                assert(!isNaN(t));
-                if (ellipseLCRA.isValidT(t) && eq0(f(t)) && !ts.some(r => eq(t, r))) {
-                    ts.push(t);
-                }
-            }
-            return ts.map(raT => {
-                const p = this.matrix.transformPoint(ellipseLCRA.at(raT));
-                return { tThis: this.pointT(p), tOther: ellipse.pointT(p, PI$3), p };
-            });
-            //const angle = ellipseLCRA.f1.angleXY()
-            //const aSqr = ellipseLCRA.f1.squared(), bSqr = ellipseLCRA.f2.squared()
-            //const a = Math.sqrt(aSqr), b = Math.sqrt(bSqr)
-            //const {x: centerX, y: centerY} = ellipseLCRA.center
-            //const rotCenterX = centerX * Math.cos(-angle) + centerY * -Math.sin(-angle)
-            //const rotCenterY = centerX * Math.sin(-angle) + centerY * Math.cos(-angle)
-            //const rotCenter = V(rotCenterX, rotCenterY)
-            //const f = t => {
-            //	const lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY
-            //	return lex * lex / aSqr + ley * ley / bSqr - 1
-            //}
-            //const f2 = (x, y) => (x * x + y * y - 1)
-            //const f3 = (x, y) => ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) /
-            // bSqr - 1) const results = [] const resetMatrix = this.matrix.times(M4.rotateZ(angle)) for (let startT =
-            // Math.PI / 4; startT < 2 * Math.PI; startT += Math.PI / 2) { const startP = EllipseCurve.XY.at(startT)
-            // const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10) if (p && !results.some(r => r.like(p))) {
-            // results.push(p) } } const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0)) return
-            // results.map(pLC => { const p = resetMatrix.transformPoint(pLC) return {tThis: this.pointT(p, PI),
-            // tOther: ellipse.pointT(p, PI), p} })
-        }
-        else {
-            return this.isTsWithPlane(ellipse.getPlane()).mapFilter(t => {
-                const p = this.at(t);
-                if (ellipse.containsPoint(p)) {
-                    return { tThis: t, tOther: ellipse.pointT(p), p };
-                }
-            });
-        }
-    }
-    isInfosWithCurve(curve) {
-        if (curve instanceof EllipseCurve$$1) {
-            return this.isInfosWithEllipse(curve);
-        }
-        return super.isInfosWithCurve(curve);
-    }
-    roots() {
-        // tangent(t) = f2 cos t - f1 sin t
-        // solve for each dimension separately
-        // tangent(eta, xi) = f2 eta - f1 xi
-        return arrayFromFunction(3, dim => {
-            const a = this.f2.e(dim), b = -this.f1.e(dim);
-            const { x1, y1, x2, y2 } = intersectionUnitCircleLine$$1(a, b, 0);
-            return [Math.atan2(y1, x1), Math.atan2(y2, x2)];
-        });
-    }
-    closestTToPoint(p, tStart) {
-        // (at(t) - p) * tangentAt(t) = 0
-        // (xi f1 + eta f2 + q) * (xi f2 - eta f1) = 0
-        // xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
-        //  (xi² - eta²) f1 f2 + xi eta (f2^2-f1^2) + xi f2 q - eta f1 q = 0
-        // atan2 of p is a good first approximation for the searched t
-        const startT = this.inverseMatrix.transformPoint(p).angleXY();
-        const pRelCenter = p.minus(this.center);
-        const f = (t) => this.tangentAt(t).dot(this.f1
-            .times(Math.cos(t))
-            .plus(this.f2.times(Math.sin(t)))
-            .minus(pRelCenter));
-        return newtonIterate1d(f, startT);
-    }
-    area() {
-        // see
-        // https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Cross_product_parallelogram.svg/220px-Cross_product_parallelogram.svg.png
-        return Math.PI * this.f1.cross(this.f2).length();
-    }
-    angleToT(phi) {
-        // atan2(y, x) = phi
-        const phiDir = this.f1
-            .unit()
-            .times(Math.cos(phi))
-            .plus(this.f2
-            .rejectedFrom(this.f1)
-            .unit()
-            .times(Math.sin(phi)));
-        const dirLC = this.inverseMatrix.transformVector(phiDir);
-        return dirLC.angleXY();
-    }
-}
-EllipseCurve$$1.XY = new EllipseCurve$$1(V3.O, V3.X, V3.Y);
-EllipseCurve$$1.prototype.hlol = Curve$$1.hlol++;
-EllipseCurve$$1.prototype.tIncrement = 2 * Math.PI / (4 * 800);
 
 /**
  * x² - y² = 1
@@ -14698,7 +14382,7 @@ class HyperbolaCurve$$1 extends XiEtaCurve$$1 {
         // xi² - eta² = 1 (by def for hyperbola)
         return arrayFromFunction(3, dim => {
             const a = this.f2.e(dim), b = this.f1.e(dim);
-            return HyperbolaCurve$$1.magic(a, b, 0);
+            return HyperbolaCurve$$1.intersectionUnitLine(a, b, 0);
         });
     }
 }
@@ -15182,7 +14866,7 @@ class PICurve$$1 extends ImplicitCurve$$1 {
         if (surface instanceof PlaneSurface$$1) {
             return this.isTsWithPlane(surface.plane);
         }
-        else if (surface instanceof EllipsoidSurface$$1 || surface instanceof SemiEllipsoidSurface$$1) {
+        else if (surface instanceof SemiEllipsoidSurface$$1) {
             const ps = this.parametricSurface, is = this.implicitSurface;
             if (ps instanceof ProjectedCurveSurface$$1 && is instanceof SemiEllipsoidSurface$$1) {
                 const iscs = is.isCurvesWithSurface(surface);
@@ -15546,35 +15230,43 @@ ParabolaCurve$$1.prototype.tIncrement = 1 / 32;
 class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     constructor(center, f1, f2, tMin = 0, tMax = PI$3) {
         super(center, f1, f2, tMin, tMax);
-        assert(0 <= this.tMin && this.tMin < PI$3);
-        assert(0 < this.tMax && this.tMax <= PI$3);
+        assert(-PI$3 <= this.tMin && this.tMin < PI$3);
+        assert(-PI$3 < this.tMax && this.tMax <= PI$3);
     }
     static XYLCValid(pLC) {
         const { x, y } = pLC;
-        return le(0, y) && eq0(Math.pow(x, 2) + Math.pow(y, 2) - 1);
+        return eq0(Math.pow(x, 2) + Math.pow(y, 2) - 1);
     }
-    static XYLCPointT(pLC) {
-        // assert(le(0, pLC.y))
-        const angle = Math.atan2(pLC.y, pLC.x);
-        return angle < -PI$3 / 2 ? angle + TAU : angle; // 0 ? (assert(eq0(angle) || eq(PI, abs(angle))), abs(angle)) :
-        // angle
+    static XYLCPointT(pLC, tMin, tMax) {
+        assertNumbers(tMin, tMax);
+        const t = atan2(pLC.y, pLC.x);
+        const lowSplitter = lerp(tMin, tMax - TAU, 0.5);
+        if (t < lowSplitter) {
+            return t + TAU;
+        }
+        const highSplitter = lerp(tMax, tMin + TAU, 0.5);
+        if (t > highSplitter) {
+            return t - TAU;
+        }
+        return t;
     }
-    static intersectionUnitLine(a, b, c) {
+    static intersectionUnitLine(a, b, c, tMin, tMax) {
         const isLC = intersectionUnitCircleLine2$$1(a, b, c);
         const result = [];
         for (const [xi, eta] of isLC) {
-            le(0, eta) && result.push(SemiEllipseCurve$$1.XYLCPointT(new V3(xi, eta, 0)));
+            const t = SemiEllipseCurve$$1.XYLCPointT(new V3(xi, eta, 0), tMin, tMax);
+            fuzzyBetween(t, tMin, tMax) && result.push(t);
         }
         return result;
     }
-    static unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC) {
+    static unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC, tMin, tMax) {
         // ell: x² + y² = 1 = p²
         // line(t) = anchor + t dir
         // anchor² - 1 + 2 t dir anchor + t² dir² = 0
         const pqDiv = dirLC.squared();
         const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv);
         return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y)).map(tOther => ({
-            tThis: SemiEllipseCurve$$1.XYLCPointT(dirLC.times(tOther).plus(anchorLC)),
+            tThis: SemiEllipseCurve$$1.XYLCPointT(dirLC.times(tOther).plus(anchorLC), tMin, tMax),
             tOther: tOther,
             p: L3$$1.at(anchorWC, dirWC, tOther),
         }));
@@ -15585,35 +15277,90 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     static semicircle(radius, center = V3.O) {
         return new SemiEllipseCurve$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0));
     }
-    static fromEllipse(curve, tMin, tMax) {
+    split(tMin = this.tMin, tMax = this.tMax) {
         const result = [];
         tMin < 0 &&
-            result.push(new SemiEllipseCurve$$1(curve.center, curve.f1.negated(), curve.f2.negated(), tMin + PI$3, min$1(0, tMax) + PI$3));
-        tMax > 0 && result.push(new SemiEllipseCurve$$1(curve.center, curve.f1, curve.f2, max$1(0, tMin), tMax));
+            result.push(new SemiEllipseCurve$$1(this.center, this.f1.negated(), this.f2.negated(), tMin + PI$3, min$1(0, tMax) + PI$3));
+        tMax > 0 && result.push(new SemiEllipseCurve$$1(this.center, this.f1, this.f2, max$1(0, tMin), tMax));
         return result;
     }
     static forAB(a, b, center = V3.O) {
         return super.forAB(a, b, center);
     }
     getAreaInDir(right, up, tStart, tEnd) {
-        return EllipseCurve$$1.prototype.getAreaInDir.call(this, right, up, tStart, tEnd);
+        //assertf(() => tStart < tEnd)
+        assertf(() => right.isPerpendicularTo(this.normal));
+        assertf(() => up.isPerpendicularTo(this.normal));
+        //assertf(() => EllipseCurve.isValidT(tStart), tStart)
+        //assertf(() => EllipseCurve.isValidT(tEnd), tEnd)
+        const upLC = this.inverseMatrix.transformVector(up);
+        const rightLC = upLC.cross(V3.Z);
+        const normTStart = tStart - rightLC.angleXY();
+        const normTEnd = tEnd - rightLC.angleXY();
+        const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit());
+        // integral of sqrt(1 - x²) from 0 to cos(t)
+        // Basically, we want
+        // INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
+        // INTEGRAL[PI/2: cos(t)] -sqrt(1 - x²) dx
+        // = INTEGRAL[cos(0); cos(t)] -sqrt(1 - x²) dx
+        // = INTEGRAL[0; t] -sqrt(1 - cos²(t)) * -sin(t) dt
+        // = INTEGRAL[0; t] -sin(t) * -sin(t) dt
+        // = INTEGRAL[0; t] sin²(t) dt (partial integration / wolfram alpha)
+        // = (1/2 * (t - sin(t) * cos(t)))[0; t] (this form has the distinct advantage of being defined everywhere)
+        function fArea(t) {
+            return (t - Math.sin(t) * Math.cos(t)) / 2;
+        }
+        // for the centroid, we want
+        // cx = 1 / area * INTEGRAL[cos(t); PI/2] x * f(x) dx
+        // cx = 1 / area * INTEGRAL[cos(t); PI/2] x * sqrt(1 - x²) dx
+        // cx = 1 / area * INTEGRAL[cos(0); cos(t)] x * -sqrt(1 - x²) dx
+        // ...
+        // cx = 1 / area * INTEGRAL[0; t] cos(t) * sin²(t) dt // WA
+        // cx = 1 / area * (sin^3(t) / 3)[0; t]
+        function cxTimesArea(t) {
+            return Math.pow(Math.sin(t), 3) / 3;
+        }
+        // cy = 1 / area * INTEGRAL[cos(t); PI/2] f²(x) / 2 dx
+        // cy = 1 / area * INTEGRAL[cos(0); cos(t)] -(1 - x²) / 2 dx
+        // cy = 1 / area * INTEGRAL[0; t] (cos²(t) - 1) * -sin(t) / 2 dt
+        // cy = 1 / area * (cos (3 * t) - 9 * cos(t)) / 24 )[0; t]
+        function cyTimesArea(t) {
+            return (Math.cos(3 * t) - 9 * Math.cos(t)) / 24;
+        }
+        const restArea = -transformedOriginY * (-Math.cos(normTEnd) + Math.cos(normTStart));
+        const area = fArea(normTEnd) - fArea(normTStart) + restArea;
+        const cxt = (cxTimesArea(normTEnd) -
+            cxTimesArea(normTStart) +
+            -transformedOriginY * (-Math.cos(normTEnd) - Math.cos(normTStart)) / 2 * restArea) /
+            area;
+        const cyt = (cyTimesArea(normTEnd) - cyTimesArea(normTStart) - -transformedOriginY / 2 * restArea) / area;
+        const factor = this.matrix.xyAreaFactor(); // * upLC.length()
+        //console.log('fctor', factor, 'area', area, 'resultarea', area* factor)
+        assert(!eq0(factor));
+        return {
+            area: area * factor,
+            centroid: this.matrix.transformPoint(M4.rotateZ(rightLC.angleXY()).transformPoint(new V3(cxt, cyt, 0))),
+        };
     }
     at(t) {
         assertNumbers(t);
         //assert(this.isValidT(t))
-        // center + f1 cos t + f2 sin t
+        // = center + f1 cos t + f2 sin t
         return this.center.plus(this.f1.times(Math.cos(t))).plus(this.f2.times(Math.sin(t)));
     }
     tangentAt(t) {
         assertNumbers(t);
         //assert(this.isValidT(t))
-        // f2 cos(t) - f1 sin(t)
+        // ) f2 cos(t) - f1 sin(t)
         return this.f2.times(Math.cos(t)).minus(this.f1.times(Math.sin(t)));
     }
     ddt(t) {
         assertNumbers(t);
         assert(this.isValidT(t));
         return this.f2.times(-Math.sin(t)).minus(this.f1.times(Math.cos(t)));
+    }
+    tangentAt2(xi, eta) {
+        return this.f2.times(xi).minus(this.f1.times(eta));
     }
     isCircular() {
         return eq(this.f1.length(), this.f2.length()) && this.f1.isPerpendicularTo(this.f2);
@@ -15641,14 +15388,11 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
             return eq(f1.squared(), Math.abs(f1.dot(c1))) && eq(f2.squared(), Math.abs(f2.dot(c2)));
         }
     }
-    isValidT(t) {
-        return le(0, t) && le(t, PI$3);
-    }
     pointT(pWC) {
         assertVectors(pWC);
         assert(this.containsPoint(pWC));
         const pLC = this.inverseMatrix.transformPoint(pWC);
-        const t = SemiEllipseCurve$$1.XYLCPointT(pLC);
+        const t = SemiEllipseCurve$$1.XYLCPointT(pLC, this.tMin, this.tMax);
         assert(this.isValidT(t));
         return t;
     }
@@ -15664,19 +15408,19 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     circumference() {
         return this.arcLength(-Math.PI, Math.PI);
     }
-    arcLength(startT, endT, steps = 2) {
-        assert(startT < endT, 'startT < endT');
+    arcLength(tStart = this.tMin, tEnd = this.tMax, steps = 2) {
+        assert(tStart < tEnd, 'startT < endT');
         const f1Length = this.f1.length();
         if (eq(f1Length, this.f2.length())) {
-            return f1Length * (endT - startT);
+            return f1Length * (tEnd - tStart);
         }
-        return super.arcLength(startT, endT, steps);
+        return super.arcLength(tStart, tEnd, steps);
     }
     circumferenceApproximate() {
         // approximate circumference by Ramanujan
         // https://en.wikipedia.org/wiki/Ellipse#Circumference
         const { f1, f2 } = this.rightAngled(), a = f1.length(), b = f2.length();
-        const h = Math.pow((a - b), 2) / Math.pow((a + b), 2); // (a - b)² / (a + b)²
+        const h = Math.pow((a - b), 2) / Math.pow((a + b), 2);
         return Math.PI * (a + b) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h)));
     }
     /**
@@ -15710,17 +15454,63 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
         const { x1: xi, y1: eta } = intersectionUnitCircleLine$$1(g1, g2, 0);
         const f1RA = f1.times(xi).plus(f2.times(eta));
         const f2RA = f1.times(-eta).plus(f2.times(xi));
-        return new SemiEllipseCurve$$1(this.center, f1RA, f2RA);
-    }
-    asEllipse() {
-        return new EllipseCurve$$1(this.center, this.f1, this.f2, this.tMin, this.tMax);
+        return new SemiEllipseCurve$$1(this.center, f1RA, f2RA, -PI$3, PI$3);
     }
     isInfosWithEllipse(ellipse) {
         if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
-            ellipse instanceof SemiEllipseCurve$$1 && (ellipse = ellipse.asEllipse());
-            return this.asEllipse()
-                .isInfosWithCurve(ellipse)
-                .filter(info => this.isValidT(info.tThis) && ellipse.isValidT(info.tOther));
+            // ellipses are coplanar
+            const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled();
+            const r1 = ellipseLCRA.f1.lengthXY(), r2 = ellipseLCRA.f2.lengthXY(), centerDist = ellipseLCRA.center.lengthXY();
+            const rMin = min$1(r1, r2), rMax = max$1(r1, r2);
+            if (lt(centerDist + rMax, 1) || // entirely inside unit circle
+                lt(1, centerDist - rMax) || // entirely outside unit circle
+                lt(1, rMin - centerDist) || // contains unit circle
+                (eq(1, r1) && eq(1, r2) && eq0(centerDist)) // also unit circle, return no IS
+            ) {
+                return [];
+            }
+            const f = (t) => ellipseLCRA.at(t).lengthXY() - 1;
+            const df = (t) => ellipseLCRA
+                .at(t)
+                .xy()
+                .dot(ellipseLCRA.tangentAt(t)) / ellipseLCRA.at(t).lengthXY();
+            checkDerivate(f, df, -PI$3, PI$3, 1);
+            const ellipseLCRATs = [];
+            for (let startT = -4 / 5 * PI$3; startT < PI$3; startT += PI$3 / 4) {
+                let t = newtonIterateSmart(f, startT, 16, df, 1e-4);
+                le(t, -PI$3) && (t += TAU);
+                assert(!isNaN(t));
+                if (between(t, -PI$3, PI$3) && eq0(f(t)) && !ellipseLCRATs.some(r => eq(t, r))) {
+                    ellipseLCRATs.push(t);
+                }
+            }
+            const result = [];
+            for (const ellipseLCRAT of ellipseLCRATs) {
+                const p = this.matrix.transformPoint(ellipseLCRA.at(ellipseLCRAT));
+                if (this.containsPoint(p) && ellipse.containsPoint(p)) {
+                    result.push({ tThis: this.pointT(p), tOther: ellipse.pointT(p), p });
+                }
+            }
+            return result;
+            //const angle = ellipseLCRA.f1.angleXY()
+            //const aSqr = ellipseLCRA.f1.squared(), bSqr = ellipseLCRA.f2.squared()
+            //const a = Math.sqrt(aSqr), b = Math.sqrt(bSqr)
+            //const {x: centerX, y: centerY} = ellipseLCRA.center
+            //const rotCenterX = centerX * Math.cos(-angle) + centerY * -Math.sin(-angle)
+            //const rotCenterY = centerX * Math.sin(-angle) + centerY * Math.cos(-angle)
+            //const rotCenter = V(rotCenterX, rotCenterY)
+            //const f = t => {
+            //	const lex = Math.cos(t) - rotCenterX, ley = Math.sin(t) - rotCenterY
+            //	return lex * lex / aSqr + ley * ley / bSqr - 1
+            //}
+            //const f2 = (x, y) => (x * x + y * y - 1)
+            //const f3 = (x, y) => ((x - rotCenterX) * (x - rotCenterX) / aSqr + (y - rotCenterY) * (y - rotCenterY) /
+            // bSqr - 1) const results = [] const resetMatrix = this.matrix.times(M4.rotateZ(angle)) for (let startT =
+            // Math.PI / 4; startT < 2 * Math.PI; startT += Math.PI / 2) { const startP = EllipseCurve.XY.at(startT)
+            // const p = newtonIterate2d(f3, f2, startP.x, startP.y, 10) if (p && !results.some(r => r.like(p))) {
+            // results.push(p) } } const rotEl = new EllipseCurve(rotCenter, V(a, 0, 0), V(0, b, 0)) return
+            // results.map(pLC => { const p = resetMatrix.transformPoint(pLC) return {tThis: this.pointT(p, PI),
+            // tOther: ellipse.pointT(p, PI), p} })
         }
         else {
             return this.isTsWithPlane(P3$$1.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter(t => {
@@ -15733,7 +15523,7 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
         }
     }
     isInfosWithCurve(curve) {
-        if (curve instanceof SemiEllipseCurve$$1 || curve instanceof EllipseCurve$$1) {
+        if (curve instanceof SemiEllipseCurve$$1) {
             return this.isInfosWithEllipse(curve);
         }
         return super.isInfosWithCurve(curve);
@@ -15748,19 +15538,19 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
             return [Math.atan2(y1, x1), Math.atan2(y2, x2)];
         });
     }
-    closestTToPoint(p) {
+    closestTToPoint(p, tStart) {
         // (at(t) - p) * tangentAt(t) = 0
         // (xi f1 + eta f2 + q) * (xi f2 - eta f1) = 0
         // xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
         //  (xi² - eta²) f1 f2 + xi eta (f2^2-f1^2) + xi f2 q - eta f1 q = 0
         // atan2 of p is a good first approximation for the searched t
-        const startT = this.inverseMatrix.transformPoint(p).angleXY();
+        tStart = tStart || this.inverseMatrix.transformPoint(p).angleXY();
         const pRelCenter = p.minus(this.center);
         const f = (t) => this.tangentAt(t).dot(this.f1
             .times(Math.cos(t))
             .plus(this.f2.times(Math.sin(t)))
             .minus(pRelCenter));
-        return newtonIterate1d(f, startT, 8);
+        return newtonIterate1d(f, tStart, 8);
     }
     area() {
         // see
@@ -15776,8 +15566,8 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
             .rejectedFrom(this.f1)
             .unit()
             .times(Math.sin(phi)));
-        const localDir = this.inverseMatrix.transformVector(phiDir);
-        return localDir.angleXY();
+        const dirLC = this.inverseMatrix.transformVector(phiDir);
+        return dirLC.angleXY();
     }
 }
 SemiEllipseCurve$$1.UNIT = new SemiEllipseCurve$$1(V3.O, V3.X, V3.Y);
@@ -15975,7 +15765,6 @@ class P3$$1 extends Transformable {
             return this.containsLine(curve);
         }
         else if (curve instanceof SemiEllipseCurve$$1 ||
-            curve instanceof EllipseCurve$$1 ||
             curve instanceof HyperbolaCurve$$1 ||
             curve instanceof ParabolaCurve$$1) {
             return this.containsPoint(curve.center) && this.normal1.isParallelTo(curve.normal);
@@ -16066,6 +15855,12 @@ class Surface$$1 extends Transformable {
     }
     toSource(rounder = x => x) {
         return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters());
+    }
+    /**
+     * Return points which would touch AABB. Doesnt include borders due to paramtetric bounds, for example.
+     */
+    getExtremePoints() {
+        return [];
     }
     isCurvesWithSurface(surface) {
         return surface.isCurvesWithSurface(this); //.map(curve => curve.reversed())
@@ -16244,7 +16039,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         }
         const f = ([s, t]) => {
             const pSTToPWC = this.pST(s, t).to(pWC);
-            return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s, t).dot(pSTToPWC)];
+            return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)];
         };
         const { 0: x, 1: y } = newtonIterate(f, [ss, st]);
         return new V3(x, y, 0);
@@ -16331,7 +16126,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
                     }
                     const p1 = new V3(d / (a - c), 0, -d / (a - c));
                     const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa));
-                    return [new EllipseCurve$$1(center, center.to(p1), center.to(p2))];
+                    return [new SemiEllipseCurve$$1(center, center.to(p1), center.to(p2), -PI$3, PI$3)];
                 }
                 else if (aa > cc) {
                     // hyperbola
@@ -16343,6 +16138,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
                 }
             }
         }
+        throw new Error('???');
     }
     equals(obj) {
         return (this == obj ||
@@ -16460,10 +16256,6 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     transform(m4) {
         return new ConicSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1), m4.transformVector(this.f2), m4.transformVector(this.dir));
     }
-    rightAngled() {
-        // TODO
-        throw new Error('not implemented');
-    }
     flipped() {
         return new ConicSurface$$1(this.center, this.f1.negated(), this.f2, this.dir);
     }
@@ -16542,11 +16334,11 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         const wcMatrix = eq0(planeNormal.lengthXY()) ? this.matrix : this.matrix.times(rotationMatrix);
         return ConicSurface$$1.unitISPlane(a, c, d).flatMap(curve => {
             const curveWC = curve.transform(wcMatrix);
-            if (curve instanceof EllipseCurve$$1) {
+            if (curve instanceof SemiEllipseCurve$$1) {
                 const curveLC = curve.transform(rotationMatrix);
                 const ts = curveLC.isTsWithPlane(P3$$1.ZX);
                 const intervals = getIntervals(ts, -PI$3, PI$3).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0);
-                return intervals.flatMap(([a, b]) => SemiEllipseCurve$$1.fromEllipse(curveWC, a, b));
+                return intervals.flatMap(([a, b]) => curveWC.split(a, b));
             }
             const p = curveWC.at(0.2);
             return this.normalP(p)
@@ -16563,514 +16355,6 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
 ConicSurface$$1.UNIT = new ConicSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
 ConicSurface$$1.prototype.uStep = PI$3 / 16;
 ConicSurface$$1.prototype.vStep = 256;
-
-class EllipsoidSurface$$1 extends ParametricSurface$$1 {
-    constructor(center, f1, f2, f3, sMin = -PI$3, sMax = PI$3, tMin = -PI$3 / 2, tMax = PI$3 / 2) {
-        super(sMin, sMax, tMin, tMax);
-        this.center = center;
-        this.f1 = f1;
-        this.f2 = f2;
-        this.f3 = f3;
-        assert(-PI$3 <= sMin);
-        assertVectors(center, f1, f2, f3);
-        this.matrix = M4.forSys(f1, f2, f3, center);
-        this.inverseMatrix = this.matrix.inversed();
-        this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.f3));
-        this.pLCNormalWCMatrix = this.matrix
-            .as3x3()
-            .inversed()
-            .transposed()
-            .scale(this.normalDir);
-        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix);
-    }
-    /**
-     * unit sphere: x² + y² + z² = 1
-     * line: p = anchor + t * dir |^2
-     * p² = (anchor + t * dir)^2
-     * 1 == (anchor + t * dir)^2
-     * 1 == anchor DOT anchor + 2 * anchor * t * dir + t² * dir DOT dir
-     */
-    static unitISTsWithLine(anchor, dir) {
-        // for 0 = a t² + b t + c
-        const a = dir.dot(dir);
-        const b = 2 * anchor.dot(dir);
-        const c = anchor.dot(anchor) - 1;
-        return pqFormula(b / a, c / a);
-    }
-    /**
-     * unit sphere: x² + y² + z² = 1
-     * plane: normal1 DOT p = w
-     */
-    static unitISCurvesWithPlane(plane) {
-        assertInst(P3$$1, plane);
-        const distPlaneCenter = Math.abs(plane.w);
-        if (lt(distPlaneCenter, 1)) {
-            // result is a circle
-            // radius of circle: imagine right angled triangle (origin -> center of intersection circle -> point on
-            // intersection circle) pythagoras: 1² == distPlaneCenter² + isCircleRadius² => isCircleRadius == sqrt(1 -
-            // distPlaneCenter²)
-            const isCircleRadius = Math.sqrt(1 - distPlaneCenter * distPlaneCenter);
-            const center = plane.anchor;
-            const f1 = plane.normal1.getPerpendicular().toLength(isCircleRadius);
-            const f2 = plane.normal1.cross(f1);
-            return [new EllipseCurve$$1(center, f1, f2)];
-        }
-        else {
-            return [];
-        }
-    }
-    static sphere(radius, center) {
-        assertNumbers(radius);
-        center && assertVectors(center);
-        return new EllipsoidSurface$$1(center || V3.O, new V3(radius, 0, 0), new V3(0, radius, 0), new V3(0, 0, radius));
-    }
-    /**
-     * x²/a² + y²/b² + z²/c² = 1
-     */
-    static forABC(a, b, c, center) {
-        return new EllipsoidSurface$$1(center || V3.O, new V3(a, 0, 0), new V3(0, b, 0), new V3(0, 0, c));
-    }
-    static calculateAreaSpheroid(a, b, c, edges) {
-        assertf(() => a.isPerpendicularTo(b));
-        assertf(() => b.isPerpendicularTo(c));
-        assertf(() => c.isPerpendicularTo(a));
-        // handling discontinuities:
-        // option 1: check for intersections with baseline, if there are any integrate parts separetely
-        // "rotate" the edge so that there are no overlaps
-        const matrix = M4.forSys(a, b, c), inverseMatrix = matrix.inversed();
-        const circleRadius = a.length();
-        const c1 = c.unit();
-        const totalArea = edges
-            .map(edge => {
-            if (edge.curve instanceof EllipseCurve$$1) {
-                const f = (t) => {
-                    const at = edge.curve.at(t), tangent = edge.tangentAt(t);
-                    const localAt = inverseMatrix.transformPoint(at);
-                    const angleXY = localAt.angleXY();
-                    const arcLength = angleXY * circleRadius * Math.sqrt(1 + Math.pow(localAt.z, 2));
-                    const scaling = Math.sqrt(1 + Math.pow(c1.dot(tangent), 2));
-                    return arcLength * scaling;
-                };
-                const val = glqInSteps(f, edge.aT, edge.bT, 1);
-                console.log('edge', edge, val);
-                return val;
-            }
-            else {
-                throw new Error();
-            }
-        })
-            .sum();
-        return totalArea;
-    }
-    like(obj) {
-        return this.isCoplanarTo(obj) && this.isInsideOut() == obj.isInsideOut();
-    }
-    edgeLoopCCW(loop) {
-        throw new Error();
-    }
-    rootPoints() { }
-    getConstructorParameters() {
-        return [this.center, this.f1, this.f2, this.f3, this.sMin, this.sMax, this.tMin, this.tMax];
-    }
-    equals(obj) {
-        return (this == obj || (Object.getPrototypeOf(obj) == this.constructor.prototype && this.matrix.equals(obj.matrix)));
-    }
-    isCurvesWithPlane(plane) {
-        const planeLC = plane.transform(this.inverseMatrix);
-        return EllipsoidSurface$$1.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix));
-    }
-    isCurvesWithSurface(surface) {
-        if (surface instanceof PlaneSurface$$1) {
-            return this.isCurvesWithPlane(surface.plane);
-        }
-        else if (surface instanceof CylinderSurface$$1) {
-            if (surface.dir.isParallelTo(this.dir1)) {
-                const ellipseProjected = surface.baseCurve.transform(M4.project(this.baseEllipse.getPlane(), this.dir1));
-                return this.baseEllipse.isInfosWithEllipse(ellipseProjected).map(info => new L3$$1(info.p, this.dir1));
-            }
-            else if (eq0(this.getCenterLine().distanceToLine(surface.getCenterLine()))) {
-                assert(false);
-            }
-            else {
-                assert(false);
-            }
-        }
-        else if (surface instanceof ProjectedCurveSurface$$1) {
-            const surfaceLC = surface.transform(this.inverseMatrix);
-            const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
-            const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface$$1.UNIT);
-            const insideIntervals = iii(ists, EllipsoidSurface$$1.UNIT, baseCurveLC);
-            const curves = insideIntervals.flatMap(ii => {
-                const aLine = new L3$$1(baseCurveLC.at(ii[0]), surfaceLC.dir);
-                const a = EllipsoidSurface$$1.UNIT.isTsForLine(aLine).map(t => aLine.at(t));
-                const bLine = new L3$$1(baseCurveLC.at(ii[1]), surfaceLC.dir);
-                const b = EllipsoidSurface$$1.UNIT.isTsForLine(bLine).map(t => bLine.at(t));
-                return [0, 1].map(i => {
-                    let aP = a[i] || a[0], bP = b[i] || b[0];
-                    0 !== i && ([aP, bP] = [bP, aP]);
-                    assert(EllipsoidSurface$$1.UNIT.containsPoint(aP));
-                    assert(EllipsoidSurface$$1.UNIT.containsPoint(bP));
-                    return PICurve.forStartEnd(surface, this.asEllipsoidSurface(), aP, bP);
-                });
-            });
-            return curves;
-        }
-    }
-    isTsForLine(line) {
-        assertInst(L3$$1, line);
-        // transforming line manually has advantage that dir1 will not be renormalized,
-        // meaning that calculated values t for localLine are directly transferable to line
-        const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
-        const dirLC = this.inverseMatrix.transformVector(line.dir1);
-        return EllipsoidSurface$$1.unitISTsWithLine(anchorLC, dirLC);
-    }
-    isCoplanarTo(surface) {
-        if (this === surface)
-            return true;
-        if (!hasConstructor(surface, EllipsoidSurface$$1))
-            return false;
-        if (!this.center.like(surface.center))
-            return false;
-        if (this.isSphere())
-            return surface.isSphere() && eq(this.f1.length(), this.f2.length());
-        const otherMatrixLC = this.inverseMatrix.times(surface.matrix);
-        // Ellipsoid with matrix otherMatrixLC is unit sphere iff otherMatrixLC is orthogonal
-        return otherMatrixLC.like3x3() && otherMatrixLC.isOrthogonal();
-    }
-    containsEllipse(ellipse) {
-        const localEllipse = ellipse.transform(this.inverseMatrix);
-        const distLocalEllipseCenter = localEllipse.center.length();
-        const correctRadius = Math.sqrt(1 - distLocalEllipseCenter * distLocalEllipseCenter);
-        return lt(distLocalEllipseCenter, 1) && localEllipse.isCircular() && localEllipse.f1.hasLength(correctRadius);
-    }
-    containsCurve(curve) {
-        if (curve instanceof EllipseCurve$$1) {
-            return this.containsEllipse(curve);
-        }
-        else {
-            return super.containsCurve(curve);
-        }
-    }
-    transform(m4) {
-        return new EllipsoidSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2), m4.transformVector(this.f3));
-    }
-    isInsideOut() {
-        return this.f1.cross(this.f2).dot(this.f3) < 0;
-    }
-    flipped() {
-        return new EllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3.negated());
-    }
-    toMesh(subdivisions = 3) {
-        return Mesh.sphere(subdivisions).transform(this.matrix);
-    }
-    normalSTFunc() {
-        // ugh
-        // paramtric ellipsoid point q(a, b)
-        // normal1 == (dq(a, b) / da) X (dq(a, b) / db) (Cross product of partial derivatives
-        // normal1 == cos b * (f2 X f3 * cos b * cos a + f3 X f1 * cos b * sin a + f1 X f2 * sin b)
-        return (a, b) => {
-            const { f1, f2, f3 } = this;
-            const normal = f2
-                .cross(f3)
-                .times(Math.cos(b) * Math.cos(a))
-                .plus(f3.cross(f1).times(Math.cos(b) * Math.sin(a)))
-                .plus(f1.cross(f2).times(Math.sin(b)))
-                .unit();
-            return normal;
-        };
-    }
-    normalP(p) {
-        return this.normalMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit();
-    }
-    normalST(s, t) {
-        return this.normalMatrix.transformVector(V3.sphere(s, t));
-    }
-    pST(s, t) {
-        return this.matrix.transformPoint(new V3(cos$1(t) * cos$1(s), cos$1(t) * sin$1(s), sin$1(t)));
-    }
-    //   d/dp (this.implicitFunction(p)) =
-    // = d/dp (this.inverseMatrix.transformPoint(p).length() - 1)
-    // = d/dp (this.inverseMatrix.transformPoint(p) * this.inverseMatrix.transformPoint(pWC).unit()
-    dpds() {
-        // dp(s, t) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
-        return (s, t) => this.matrix.transformVector(new V3(cos$1(t) * -sin$1(s), cos$1(t) * cos$1(s), 0));
-    }
-    dpdt() {
-        return (s, t) => this.matrix.transformVector(new V3(-sin$1(t) * cos$1(s), -sin$1(t) * sin$1(s), cos$1(t)));
-    }
-    stPFunc() {
-        return (pWC, hint) => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
-            let alpha = pLC.angleXY();
-            if (abs$2(alpha) > Math.PI - NLA_PRECISION) {
-                assert(hint == -PI$3 || hint == PI$3);
-                alpha = hint;
-            }
-            const beta = Math.asin(pLC.z);
-            return new V3(alpha, beta, 0);
-        };
-    }
-    isSphere() {
-        return (eq(this.f1.length(), this.f2.length()) &&
-            eq(this.f2.length(), this.f3.length()) &&
-            eq(this.f3.length(), this.f1.length()) &&
-            this.f1.isPerpendicularTo(this.f2) &&
-            this.f2.isPerpendicularTo(this.f3) &&
-            this.f3.isPerpendicularTo(this.f1));
-    }
-    isVerticalSpheroid() {
-        return (eq(this.f1.length(), this.f2.length()) &&
-            this.f1.isPerpendicularTo(this.f2) &&
-            this.f2.isPerpendicularTo(this.f3) &&
-            this.f3.isPerpendicularTo(this.f1));
-    }
-    implicitFunction() {
-        return (pWC) => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
-            return (pLC.length() - 1) * this.normalDir;
-        };
-    }
-    // = this.inverseMatrix.transformPoint(this.inverseMatrix.transformPoint(pWC).unit())
-    didp(pWC) {
-        // i(pWC) = this.inverseMatrix.transformPoint(pWC).length() - 1
-        // chain diff rule
-        const pLC = this.inverseMatrix.transformPoint(pWC);
-        return this.pLCNormalWCMatrix.transformVector(pLC.unit()); //.times(this.normalDir)
-    }
-    mainAxes() {
-        // q(a, b) = f1 cos a cos b + f2 sin a cos b + f3 sin b
-        // q(s, t, u) = s * f1 + t * f2 + u * f3 with s² + t² + u² = 1
-        // (del q(a, b) / del a) = f1 (-sin a) cos b  + f2 cos a cos b
-        // (del q(a, b) / del b) = f1 cos a (-sin b) + f2 sin a (-sin b) + f2 cos b
-        // del q(s, t, u) / del a = -t f1 + s f2
-        // (del q(a, b) / del a) DOT q(a, b) == 0
-        // (f1 (-sin a) cos b  + f2 cos a cos b) DOT (f1 cos a cos b + f2 sin a cos b + f2 sin b) == 0
-        // (del q(a, b) / del b) DOT q(a, b) == 0
-        // (f1 cos a (-sin b) + f2 sin a (-sin b) + f2 cos b) DOT (f1 cos a cos b + f2 sin a cos b + f2 sin b) == 0
-        // Solve[
-        // (f1 (-sin a) cos b  + f2 cos a cos b) * (f1 cos a cos b + f2 sin a cos b + f2 sin b) = 0,
-        // (f1 cos a (-sin b) + f2 sin a (-sin b) + f2 cos b) * (f1 cos a cos b + f2 sin a cos b + f2 sin b) = 0}, a, b]
-        const { f1, f2, f3 } = this;
-        if (eq0(f1.dot(f2)) && eq0(f2.dot(f3)) && eq0(f3.dot(f1))) {
-            return this;
-        }
-        //const f = ([a, b], x?) => {
-        //    const sinA = Math.sin(a), cosA = Math.cos(a), sinB = Math.sin(b), cosB = Math.cos(b)
-        //    const centerToP = V3.add(f1.times(cosA * cosB), f2.times(sinA * cosB), f3.times(sinB))
-        //    const centerToPdelA = f1.times(-sinA * cosB).plus(f2.times(cosA * cosB))
-        //    const centerToPdelB = V3.add(f1.times(cosA * -sinB), f2.times(sinA * -sinB), f3.times(cosB))
-        //    x && console.log(centerToP.sce, centerToPdelA.sce, centerToPdelB.sce)
-        //    return [centerToP.dot(centerToPdelA), centerToP.dot(centerToPdelB)]
-        //}
-        //const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.pSTFunc()(mainF1Params[0], mainF1Params[1])
-        //console.log(f(mainF1Params, 1).sce)
-        //const mainF2Params = newtonIterate(f, this.stPFunc()(f2.rejectedFrom(mainF1)).toArray(2), 8),
-        //   mainF2 = this.pSTFunc()(mainF2Params[0], mainF2Params[1])
-        //console.log(this.normalSTFunc()(mainF2Params[0], mainF2Params[1]).sce)
-        //assert(mainF1.isPerpendicularTo(mainF2), mainF1, mainF2, mainF1.dot(mainF2), mainF1Params)
-        //const mainF3Params = this.stPFunc()(mainF1.cross(mainF2)), mainF3 = this.pSTFunc()(mainF3Params[0],
-        // mainF3Params[1]) return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
-        const { U, SIGMA } = this.matrix.svd3();
-        assert(SIGMA.isDiagonal());
-        assert(U.isOrthogonal());
-        const U_SIGMA = U.times(SIGMA);
-        // column vectors of U_SIGMA
-        const [mainF1, mainF2, mainF3] = arrayFromFunction(3, i => new V3(U_SIGMA.m[i], U_SIGMA.m[i + 4], U_SIGMA.m[i + 8]));
-        return new EllipsoidSurface$$1(this.center, mainF1, mainF2, mainF3);
-    }
-    containsPoint(p) {
-        return eq0(this.implicitFunction()(p));
-    }
-    boundsFunction() {
-        return (a, b) => between(b, -PI$3, PI$3);
-    }
-    volume() {
-        return 4 / 3 * Math.PI * this.f1.dot(this.f2.cross(this.f3));
-    }
-    // TODO: also a commented out test
-    //static splitOnPlaneLoop(loop: Edge[], ccw: boolean): [Edge[], Edge[]] {
-    //const seamPlane = P3.ZX, seamSurface = new PlaneSurface(seamPlane)
-    //const frontParts = [], backParts = [], iss = []
-    //const colinearEdges = loop.map((edge) => seamSurface.containsCurve(edge.curve))
-    //// a colinear edge is in front when
-    //// ccw is true
-    //// the edge curve is CCW on the seamPlane
-    //// the edge is the same dir as the curve (bT > aT)
-    //const colinearEdgesSide = loop.map((edge, i) => colinearEdges[i] &&
-    //		(ccw ? 1 : -1) * seamPlane.normal1.dot(edge.curve.normal1) * (edge.bT - edge.aT))
-    //
-    //for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-    //	const edge = loop[edgeIndex]
-    //	const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex]
-    //	//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-    //	if (colinearEdges[edgeIndex]) {
-    //		const nextSide = colinearEdges[nextEdgeIndex] ? colinearEdgesSide[nextEdgeIndex]
-    //			: dotCurve2(nextEdge.curve, nextEdge.aT, seamPlane.normal1, nextEdge.bT - nextEdge.aT)
-    //		if (nextSide * colinearEdgesSide[edgeIndex] < 0) {
-    //			iss.push({p: edge.b, t: 0, out: nextSide > 0})
-    //		}
-    //		(colinearEdgesSide[edgeIndex] > 0 ? frontParts : backParts).push(edge)
-    //	} else {
-    //		const f = sign(edge.bT - edge.aT)
-    //		const ists = edge.edgeISTsWithPlane(seamPlane).sort((a, b) => f * (a - b))
-    //		let prevT = edge.aT,
-    //			prevP = edge.a,
-    //			prevDir = edge.aDir,
-    //			prevSide = snap0(seamPlane.distanceToPointSigned(edge.a)) || dotCurve2(edge.curve, edge.aT, V3.Y,
-    // f) for (let i = 0; i < ists.length; i++) { const t = ists[i] if (edge.aT == t || edge.bT == t) { edge.bT ==
-    // t && iss.push({p: edge.b, t: 0, out: true}) continue } const nextSide = dotCurve2(edge.curve, t, V3.Y, 1) if
-    // (prevSide * nextSide < 0) { // switches sides, so: const newP = edge.curve.at(t) const newDir =
-    // edge.tangentAt(t) const newEdge = Edge.create(edge.curve, prevP, newP, prevT, t, undefined, prevDir, newDir)
-    // ;(prevSide > 0 ? frontParts : backParts).push(newEdge) iss.push({p: newP, t: 0, out: nextSide > 0}) prevP =
-    // newP prevDir = newDir prevT = t prevSide = nextSide } } const lastEdge = Edge.create(edge.curve, prevP,
-    // edge.b, prevT, edge.bT, undefined, prevDir, edge.bDir) ;(prevSide > 0 ? frontParts :
-    // backParts).push(lastEdge) } } iss.forEach(is => is.t = V3.X.negated().angleRelativeNormal(is.p, V3.Y))
-    // iss.sort((a, b) => a.t - b.t) let i = ccw == iss[0].out ? 1 : 0 const curve = new EllipseCurve(V3.O,
-    // V3.X.negated(), V3.Z) //if (1 == i) {
-    //    	//frontParts.push(
-    //    	//	Edge.create(curve, V3.Y.negated(), iss[0].p, -PI, iss[0].t, undefined, V3.Z.negated(),
-    // curve.tangentAt(iss[0].t)),
-    ////        Edge.create(curve, iss.last.p, V3.Y.negated(), iss.last.t, PI, undefined,
-    // curve.tangentAt(iss.last.t), V3.Z.negated())) //} for (let i = ccw == iss[0].out ? 1 : 0; i < iss.length; i
-    // += 2) {
-    //    	let is0 = iss[i], is1 = iss[(i + 1) % iss.length]
-    //	if (lt(is0.t, -PI) && lt(-PI, is1.t)) {
-    //    		iss.splice(i + 1, 0, is1 = {p: V3.Y.negated(), t: -PI, out: true}, {p: V3.Y.negated(), t: -PI, out:
-    // true})
-    //	} else if (lt(is0.t, PI) && lt(PI, is1.t)) {
-    //		iss.splice(i + 1, 0, is1 = {p: V3.Y, t: -PI, out: true}, {p: V3.Y, t: PI, out: true})
-    //	}
-    //	const edge = Edge.create(curve, is0.p, is1.p, is0.t, is1.t, undefined,
-    //		curve.tangentAt(is0.t).times(sign(is1.t - is0.t)),
-    //		curve.tangentAt(is1.t).times(sign(is1.t - is0.t)))
-    //	frontParts.push(edge)
-    //	backParts.push(edge.flipped())
-    //}
-    //return [frontParts, backParts]
-    //}
-    loopContainsPoint(loop, p) {
-        assertVectors(p);
-        const testLine = new EllipseCurve$$1(this.center, this.matrix.transformVector(this.inverseMatrix
-            .transformPoint(p)
-            .withElement('z', 0)
-            .unit()), this.f3);
-        const pT = testLine.pointT(p);
-        const lineOut = testLine.normal;
-        const testPlane = P3$$1.normalOnAnchor(testLine.normal, p);
-        const colinearEdges = loop.map(edge => edge.curve.isColinearTo(testLine));
-        let inside = false;
-        function logIS(isP) {
-            const isT = testLine.pointT(isP);
-            if (eq(pT, isT)) {
-                return true;
-            }
-            else if (pT < isT && le(isT, PI$3)) {
-                inside = !inside;
-            }
-        }
-        for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-            const edge = loop[edgeIndex];
-            const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex];
-            //console.log(edge.toSource()) {p:V(2, -2.102, 0),
-            if (colinearEdges[edgeIndex]) {
-                const lineAT = testLine.pointT(edge.a), lineBT = testLine.pointT(edge.b);
-                if (le(Math.min(lineAT, lineBT), pT) && ge(pT, Math.max(lineAT, lineBT))) {
-                    return PointVsFace$$1.ON_EDGE;
-                }
-                // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
-                if (nextInside) {
-                    if (logIS(edge.b))
-                        return PointVsFace$$1.ON_EDGE;
-                }
-            }
-            else {
-                for (const edgeT of edge.edgeISTsWithPlane(testPlane)) {
-                    if (edgeT == edge.bT) {
-                        if (!testLine.containsPoint(edge.b))
-                            continue;
-                        // endpoint lies on intersection testLine
-                        const edgeInside = dotCurve$$1(lineOut, edge.bDir, edge.bDDT) < 0;
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
-                        if (edgeInside != nextInside) {
-                            if (logIS(edge.b))
-                                return PointVsFace$$1.ON_EDGE;
-                        }
-                    }
-                    else if (edgeT != edge.aT) {
-                        const p = edge.curve.at(edgeT);
-                        if (!testLine.containsPoint(p))
-                            continue;
-                        // edge crosses testLine, neither starts nor ends on it
-                        if (logIS(p))
-                            return PointVsFace$$1.ON_EDGE;
-                        // TODO: tangents?
-                    }
-                }
-            }
-        }
-        return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
-    }
-    surfaceAreaApprox() {
-        // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
-        const mainAxes = this.mainAxes(), a = mainAxes.f1.length(), b = mainAxes.f2.length(), c = mainAxes.f3.length();
-        const p = 1.6075;
-        return 4 * PI$3 * Math.pow((Math.pow(a * b, p) + Math.pow(b * c, p) + Math.pow(c * a, p)) / 3, 1 / p);
-    }
-    surfaceArea() {
-        // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
-        const mainAxes = this.mainAxes(), f1l = mainAxes.f1.length(), f2l = mainAxes.f2.length(), f3l = mainAxes.f3.length(), [c, b, a] = [f1l, f2l, f3l].sort(MINUS);
-        // https://en.wikipedia.org/w/index.php?title=Spheroid&oldid=761246800#Area
-        function spheroidArea(a, c) {
-            if (c < a) {
-                const eccentricity2 = 1 - Math.pow(c, 2) / Math.pow(a, 2);
-                const eccentricity = Math.sqrt(eccentricity2);
-                return 2 * PI$3 * Math.pow(a, 2) * (1 + (1 - eccentricity2) / Math.sqrt(eccentricity) * Math.atanh(eccentricity));
-            }
-            else {
-                const eccentricity = Math.sqrt(1 - Math.pow(a, 2) / Math.pow(c, 2));
-                return 2 * PI$3 * Math.pow(a, 2) * (1 + c / a / eccentricity * Math.asin(eccentricity));
-            }
-        }
-        if (eq(a, b)) {
-            return spheroidArea(a, c);
-        }
-        else if (eq(b, c)) {
-            return spheroidArea(b, a);
-        }
-        else if (eq(c, a)) {
-            return spheroidArea(c, b);
-        }
-        const phi = Math.acos(c / a);
-        const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
-        const incompleteEllipticInt1 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
-        const incompleteEllipticInt2 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
-        return ((2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi)) *
-            (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2)));
-    }
-    getSeamPlane() {
-        return P3$$1.forAnchorAndPlaneVectors(this.center, this.f1, this.f3);
-    }
-    pointFoot(pWC, startS, startT) {
-        console.log(pWC.sce);
-        if (undefined === startS || undefined === startT) {
-            const pLC1 = this.inverseMatrix.transformPoint(pWC).unit();
-            ({ x: startS, y: startT } = this.constructor.UNIT.stP(pLC1));
-        }
-        const dpds = this.dpds();
-        const dpdt = this.dpdt();
-        const [s, t] = newtonIterate(([s, t]) => {
-            const p = this.pST(s, t);
-            console.log([p, p.plus(dpds(s, t)), p, p.plus(dpdt(s, t))].map(SCE).join() + ',');
-            const pSTToPWC = this.pST(s, t).to(pWC);
-            return [pSTToPWC.dot(dpds(s, t)), pSTToPWC.dot(dpdt(s, t))];
-        }, [startS, startT], 8, undefined, 0.5);
-        return new V3(s, t, 0);
-    }
-}
-EllipsoidSurface$$1.UNIT = new EllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
-EllipsoidSurface$$1.prototype.uStep = PI$3 / 32;
-EllipsoidSurface$$1.prototype.vStep = PI$3 / 32;
 
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
@@ -17253,152 +16537,6 @@ class ProjectedCurveSurface$$1 extends ParametricSurface$$1 {
 }
 ProjectedCurveSurface$$1.prototype.uStep = 1 / 128;
 ProjectedCurveSurface$$1.prototype.vStep = 256;
-
-class CylinderSurface$$1 extends ProjectedCurveSurface$$1 {
-    constructor(baseEllipse, dir1, sMin = baseEllipse.tMin, sMax = baseEllipse.tMax, zMin = -Infinity, zMax = Infinity) {
-        super(baseEllipse, dir1, undefined, undefined, zMin, zMax);
-        assert(2 == arguments.length);
-        assertVectors(dir1);
-        assertInst(EllipseCurve$$1, baseEllipse);
-        //assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
-        assert(dir1.hasLength(1));
-        this.matrix = M4.forSys(baseEllipse.f1, baseEllipse.f2, dir1, baseEllipse.center);
-        this.inverseMatrix = this.matrix.inversed();
-    }
-    static cylinder(radius) {
-        return new CylinderSurface$$1(new EllipseCurve$$1(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z);
-    }
-    /**
-     *
-     * @param anchor
-     * @param dir not necessarily unit
-     */
-    static unitISLineTs(anchor, dir) {
-        const { x: ax, y: ay } = anchor;
-        const { x: dx, y: dy } = dir;
-        // this cylinder: x² + y² = 1
-        // line: p = anchor + t * dir
-        // split line equation into 3 component equations, insert into cylinder equation
-        // x = ax + t * dx
-        // y = ay + t * dy
-        // (ax² + 2 ax t dx + t²dx²) + (ay² + 2 ay t dy + t²dy²) = 1
-        // transform to form (a t² + b t + c = 0) and solve with pqFormula
-        const a = Math.pow(dx, 2) + Math.pow(dy, 2);
-        const b = 2 * (ax * dx + ay * dy);
-        const c = Math.pow(ax, 2) + Math.pow(ay, 2) - 1;
-        return pqFormula(b / a, c / a);
-    }
-    loopContainsPoint(loop, p) {
-        assertVectors(p);
-        // create plane that goes through cylinder seam
-        const line = new L3$$1(p, this.dir);
-        const seamBase = this.baseCurve.at(PI$3);
-        const lineOut = this.dir.cross(this.normalP(p));
-        return Surface$$1.loopContainsPointGeneral(loop, p, line, lineOut);
-    }
-    isTsForLine(line) {
-        assertInst(L3$$1, line);
-        // transforming line manually has advantage that dir1 will not be renormalized,
-        // meaning that calculated values t for localLine are directly transferable to line
-        const localDir = this.inverseMatrix.transformVector(line.dir1);
-        if (localDir.isParallelTo(V3.Z)) {
-            // line is parallel to this.dir
-            return [];
-        }
-        const localAnchor = this.inverseMatrix.transformPoint(line.anchor);
-        assert(!CylinderSurface$$1.unitISLineTs(localAnchor, localDir).length ||
-            !isNaN(CylinderSurface$$1.unitISLineTs(localAnchor, localDir)[0]), 'sad ' + localDir);
-        return CylinderSurface$$1.unitISLineTs(localAnchor, localDir);
-    }
-    isCoplanarTo(surface) {
-        return (this == surface ||
-            (surface instanceof CylinderSurface$$1 &&
-                this.dir.isParallelTo(surface.dir) &&
-                this.containsEllipse(surface.baseCurve)));
-    }
-    like(object) {
-        if (!this.isCoplanarTo(object))
-            return false;
-        // normals need to point in the same direction (outwards or inwards) for both
-        const thisFacesOut = 0 < this.baseCurve.normal.dot(this.dir);
-        const objectFacesOut = 0 < object.baseCurve.normal.dot(object.dir);
-        return thisFacesOut == objectFacesOut;
-    }
-    containsEllipse(ellipse) {
-        const ellipseProjected = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir));
-        return this.baseCurve == ellipse || this.baseCurve.isColinearTo(ellipseProjected);
-    }
-    containsCurve(curve) {
-        if (curve instanceof EllipseCurve$$1) {
-            return this.containsEllipse(curve);
-        }
-        else if (curve instanceof L3$$1) {
-            return this.containsLine(curve);
-        }
-        else if (curve instanceof SemiEllipseCurve$$1) {
-            return this.containsEllipse(curve);
-        }
-        else {
-            assert(false);
-        }
-    }
-    normalP(p) {
-        const pLC = this.inverseMatrix.transformPoint(p);
-        return this.normalSTFunc()(pLC.angleXY(), pLC.z);
-    }
-    implicitFunction() {
-        return (pWC) => {
-            const p = this.inverseMatrix.transformPoint(pWC);
-            const radiusLC = p.lengthXY();
-            const normalDir = Math.sign(this.baseCurve.normal.dot(this.dir));
-            return normalDir * (1 - radiusLC);
-        };
-    }
-    containsPoint(p) {
-        return eq0(this.implicitFunction()(p));
-    }
-    pointToParameterFunction() {
-        return (pWC, hint) => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
-            let angle = pLC.angleXY();
-            if (abs$2(angle) > Math.PI - NLA_PRECISION) {
-                assert(hint == -PI$3 || hint == PI$3);
-                angle = hint;
-            }
-            return new V3(angle, pLC.z, 0);
-        };
-    }
-    isCurvesWithSurface(surface) {
-        return SemiCylinderSurface$$1.prototype.isCurvesWithSurface.apply(this, surface);
-    }
-    getCenterLine() {
-        return new L3$$1(this.baseCurve.center, this.dir);
-    }
-    edgeLoopCCW(loop) {
-        if (loop.length < 56) {
-            let totalAngle = 0;
-            for (let i = 0; i < loop.length; i++) {
-                const ipp = (i + 1) % loop.length;
-                const edge = loop[i], nextEdge = loop[ipp];
-                totalAngle += edge.bDir.angleRelativeNormal(nextEdge.aDir, this.normalP(edge.b));
-            }
-            return totalAngle > 0;
-        }
-        else {
-            const ptpF = this.stPFunc();
-            return isCCW(loop.map(e => ptpF(e.a)), V3.Z);
-        }
-    }
-    facesOutwards() {
-        return this.baseCurve.normal.dot(this.dir) > 0;
-    }
-    getSeamPlane() {
-        return P3$$1.forAnchorAndPlaneVectors(this.baseCurve.center, this.baseCurve.f1, this.dir);
-    }
-}
-CylinderSurface$$1.UNIT = new CylinderSurface$$1(EllipseCurve$$1.XY, V3.Z);
-CylinderSurface$$1.prototype.uStep = TAU / 128;
-CylinderSurface$$1.prototype.vStep = 256;
 
 /**
  * Rotation surface with r = f(z)
@@ -17696,12 +16834,12 @@ class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     }
     containsPoint(pWC) {
         const pLC = this.inverseMatrix.transformPoint(pWC);
-        return SemiEllipseCurve$$1.XYLCValid(pLC);
+        return this.baseCurve.isValidT(SemiEllipseCurve$$1.XYLCPointT(pLC, this.sMin, this.sMax));
     }
     stP(pWC) {
         assert(arguments.length == 1);
         const pLC = this.inverseMatrix.transformPoint(pWC);
-        const u = SemiEllipseCurve$$1.XYLCPointT(pLC);
+        const u = SemiEllipseCurve$$1.XYLCPointT(pLC, this.tMin, this.tMax);
         return new V3(u, pLC.z, 0);
     }
     isCurvesWithSurface(surface2) {
@@ -17742,9 +16880,9 @@ SemiCylinderSurface$$1.UNIT = new SemiCylinderSurface$$1(SemiEllipseCurve$$1.UNI
 SemiCylinderSurface$$1.prototype.uStep = TAU / 32;
 SemiCylinderSurface$$1.prototype.vStep = 256;
 
-class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
+class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
     constructor(center, f1, f2, f3, sMin = 0, sMax = PI$3, tMin = -PI$3 / 2, tMax = PI$3 / 2) {
-        super(center, f1, f2, f3, sMin, sMax, tMin, tMax);
+        super(sMin, sMax, tMin, tMax);
         this.center = center;
         this.f1 = f1;
         this.f2 = f2;
@@ -17927,6 +17065,9 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
             .sum();
         return totalArea;
     }
+    getConstructorParameters() {
+        return [this.center, this.f1, this.f2, this.f3, this.sMin, this.sMax, this.tMin, this.tMax];
+    }
     equals(obj) {
         return (this == obj || (Object.getPrototypeOf(obj) == this.constructor.prototype && this.matrix.equals(obj.matrix)));
     }
@@ -17953,6 +17094,13 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
     clipCurves(curves) {
         return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()));
     }
+    dpds() {
+        // dp(s, t) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
+        return (s, t) => this.matrix.transformVector(new V3(cos$1(t) * -sin$1(s), cos$1(t) * cos$1(s), 0));
+    }
+    dpdt() {
+        return (s, t) => this.matrix.transformVector(new V3(-sin$1(t) * cos$1(s), -sin$1(t) * sin$1(s), cos$1(t)));
+    }
     isCurvesWithPCS(surface) {
         let curves2 = ParametricSurface$$1.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.05);
         curves2 = this.clipCurves(curves2);
@@ -17961,7 +17109,7 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
         const surfaceLC = surface.transform(this.inverseMatrix);
         //const lcMinZ0RelO =
         const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
-        const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface$$1.UNIT);
+        const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT);
         const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax).filter(([a, b]) => baseCurveLC.at((a + b) / 2).length() < 1);
         const projectedCurves = [0, 1].map(id => {
             return (t) => {
@@ -18004,8 +17152,8 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
                 for (const [aT2, bT2] of ii2) {
                     let aP = projectedCurves[i](aT2), bP = projectedCurves[i](bT2);
                     0 === i && ([aP, bP] = [bP, aP]);
-                    assert(EllipsoidSurface$$1.UNIT.containsPoint(aP));
-                    assert(EllipsoidSurface$$1.UNIT.containsPoint(bP));
+                    assert(SemiEllipsoidSurface$$1.UNIT.containsPoint(aP));
+                    assert(SemiEllipsoidSurface$$1.UNIT.containsPoint(bP));
                     curves.push(PICurve$$1.forStartEnd(surface, this, this.matrix.transformPoint(bP), this.matrix.transformPoint(aP), undefined));
                 }
             }
@@ -18323,17 +17471,14 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
         }
         const phi = Math.acos(c / a);
         const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
-        const incompleteEllipticInt1 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
-        const incompleteEllipticInt2 = gaussLegendreQuadrature24$1(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
+        const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
+        const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
         return ((2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi)) *
             (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2)));
     }
     getSeamPlane() {
         const plane = P3$$1.forAnchorAndPlaneVectors(this.center, this.f1, this.f3);
         return plane.normal1.dot(this.f2) < 0 ? plane : plane.flipped();
-    }
-    asEllipsoidSurface() {
-        return new EllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3);
     }
     getExtremePoints() {
         assert(this.isSphere());
@@ -18350,7 +17495,7 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
             let pLC1 = this.inverseMatrix.transformPoint(pWC).unit();
             if (pLC1.y < 0)
                 pLC1 = pLC1.negated();
-            ({ x: startS, y: startT } = this.constructor.UNIT.stP(pLC1));
+            ({ x: startS, y: startT } = SemiEllipsoidSurface$$1.UNIT.stP(pLC1));
         }
         const dpds = this.dpds();
         const dpdt = this.dpdt();
@@ -18361,6 +17506,19 @@ class SemiEllipsoidSurface$$1 extends EllipsoidSurface$$1 {
             return [pSTToPWC.dot(dpds(s, t)), pSTToPWC.dot(dpdt(s, t))];
         }, [startS, startT], 8, undefined, 0.1);
         return new V3(s, t, 0);
+    }
+    implicitFunction() {
+        return (pWC) => {
+            const pLC = this.inverseMatrix.transformPoint(pWC);
+            return (pLC.length() - 1) * this.normalDir;
+        };
+    }
+    // = this.inverseMatrix.transformPoint(this.inverseMatrix.transformPoint(pWC).unit())
+    didp(pWC) {
+        // i(pWC) = this.inverseMatrix.transformPoint(pWC).length() - 1
+        // chain diff rule
+        const pLC = this.inverseMatrix.transformPoint(pWC);
+        return this.pLCNormalWCMatrix.transformVector(pLC.unit()); //.times(this.normalDir)
     }
 }
 SemiEllipsoidSurface$$1.UNIT = new SemiEllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
@@ -18781,7 +17939,7 @@ const ZDirVolumeVisitor$$1 = {
                 const result = sliceIntegral0ToPWCS * dt;
                 return result;
             };
-            return gaussLegendreQuadrature24$1(f, edgeWC.aT, edgeWC.bT);
+            return gaussLegendreQuadrature24(f, edgeWC.aT, edgeWC.bT);
         })
             .sum();
         // calc centroid:
@@ -18845,7 +18003,7 @@ const ZDirVolumeVisitor$$1 = {
                         (localBasePlane.normal1.dot(p) - localBasePlane.w) * // height
                         localBasePlane.normal1.dot(p));
                 }
-                const testValue = gaussLegendreQuadrature24$1(slice, 0, atLCST.x);
+                const testValue = gaussLegendreQuadrature24(slice, 0, atLCST.x);
                 // scaling = sqrt(1 - tangent.z ** 2)
                 const scaling = SemiEllipsoidSurface$$1.UNIT.dpdt()(atLCST.x, atLCST.y).dot(tangent); // atLC.getPerpendicular().cross(atLC).unit().dot(tangent)
                 console.log('scaling', scaling);
@@ -18853,7 +18011,7 @@ const ZDirVolumeVisitor$$1 = {
                 // edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
                 return result;
             }
-            return gaussLegendreQuadrature24$1(f, edgeLC.aT, edgeLC.bT);
+            return gaussLegendreQuadrature24(f, edgeLC.aT, edgeLC.bT);
         })
             .sum();
         const volumeScalingFactor = this.f1.dot(this.f2.cross(this.f3));
@@ -18947,7 +18105,7 @@ const CalculateAreaVisitor$$1 = {
                 }
                 return sum * Math.sign(edgeWC.deltaT());
             }
-            else if (curveWC instanceof EllipseCurve$$1 || curveWC instanceof SemiEllipseCurve$$1) {
+            else if (curveWC instanceof SemiEllipseCurve$$1) {
                 if (this.isVerticalSpheroid()) {
                     const circleRadius = this.f1.length();
                     const f = (t) => {
@@ -31781,7 +30939,7 @@ var B2T$$1;
     function fixEdges(edges) {
         return edges.flatMap(edge => {
             const c = edge.curve;
-            if (c instanceof EllipseCurve$$1) {
+            if (c instanceof SemiEllipseCurve$$1 && c.tMin === -PI$3 && c.tmax === PI$3) {
                 const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge];
                 return splitEdges.map(edge => {
                     if (edge.minT >= 0) {
@@ -33760,14 +32918,9 @@ class RotationFace$$1 extends Face$$1 {
     getAABB() {
         if (this.aabb)
             return this.aabb;
-        if (this.surface instanceof SemiEllipsoidSurface$$1 || this.surface instanceof EllipsoidSurface$$1) {
-            this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()));
-            this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)));
-            return this.aabb;
-        }
-        else {
-            return super.getAABB();
-        }
+        this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()));
+        this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)));
+        return this.aabb;
     }
     getCanonSeamU() {
         const stPFunc = this.surface.stPFunc();
@@ -33789,7 +32942,7 @@ class RotationFace$$1 extends Face$$1 {
             const insideVector = localEdge.a.cross(localEdge.aDir);
             return sign$1(insideVector.dot(V3.Y)) * PI$3;
         }
-        assert(false, "Couldn't find canon seam u");
+        assert(false, 'Couldn\'t find canon seam u');
     }
     unrollLoop(edgeLoop) {
         const vs = [];
@@ -33868,7 +33021,7 @@ class RotationFace$$1 extends Face$$1 {
             }
         }
         let normals;
-        if (this.surface instanceof EllipsoidSurface$$1) {
+        if (this.surface instanceof SemiEllipsoidSurface$$1) {
             normals = vertices.map(v => ellipsoid.normalP(v));
         }
         else {
@@ -33946,6 +33099,7 @@ class RotationFace$$1 extends Face$$1 {
                 mesh.LINES.push(base + i, base + (i + 1) % vertexLoopLength);
             }
         }
+        //console.log(zip(vertices.map(v => v.map(x => round10(x, -5))), verticesUV.map(v => v.map(x => round10(x, -5)))).sce)
         disableConsole();
         let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
         //console.log('surface', this.surface.str)
@@ -45342,7 +44496,6 @@ function conicPainter(mode, gl, ellipse, color, startT, endT, width = 2) {
 }
 const CURVE_PAINTERS$$1 = {
     [SemiEllipseCurve$$1.name]: conicPainter.bind(undefined, 0),
-    [EllipseCurve$$1.name]: conicPainter.bind(undefined, 0),
     [ParabolaCurve$$1.name]: conicPainter.bind(undefined, 1),
     [HyperbolaCurve$$1.name]: conicPainter.bind(undefined, 2),
     [ImplicitCurve$$1.name](gl, curve, color, startT, endT, width = 2) {
@@ -45582,7 +44735,6 @@ var brepts = Object.freeze({
 	XiEtaCurve: XiEtaCurve$$1,
 	ImplicitCurve: ImplicitCurve$$1,
 	BezierCurve: BezierCurve$$1,
-	EllipseCurve: EllipseCurve$$1,
 	HyperbolaCurve: HyperbolaCurve$$1,
 	L3: L3$$1,
 	PICurve: PICurve$$1,
@@ -45595,9 +44747,7 @@ var brepts = Object.freeze({
 	ImplicitSurface: ImplicitSurface$$1,
 	ParametricSurface: ParametricSurface$$1,
 	ConicSurface: ConicSurface$$1,
-	EllipsoidSurface: EllipsoidSurface$$1,
 	ProjectedCurveSurface: ProjectedCurveSurface$$1,
-	CylinderSurface: CylinderSurface$$1,
 	RotatedCurveSurface: RotatedCurveSurface$$1,
 	SemiCylinderSurface: SemiCylinderSurface$$1,
 	SemiEllipsoidSurface: SemiEllipsoidSurface$$1,

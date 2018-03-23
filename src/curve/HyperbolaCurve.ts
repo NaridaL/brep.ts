@@ -132,7 +132,7 @@ export class HyperbolaCurve extends XiEtaCurve {
 		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim),
 				b = this.f1.e(dim)
-			return HyperbolaCurve.magic(a, b, 0)
+			return HyperbolaCurve.intersectionUnitLine(a, b, 0)
 		})
 	}
 }
