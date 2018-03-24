@@ -352,7 +352,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		const surfaceLC = surface.transform(this.inverseMatrix)
 		//const lcMinZ0RelO =
 		const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir, 0))
-		const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT)
+		const ists = baseCurveLC.isTsWithSurface(SemiEllipsoidSurface.UNIT)
 		const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax).filter(
 			([a, b]) => baseCurveLC.at((a + b) / 2).length() < 1,
 		)
@@ -437,7 +437,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 			curves2 = surface.clipCurves(curves2)
 			return curves2
 		} else {
-			assert(false)
+			throw new Error()
 		}
 	}
 
@@ -852,5 +852,5 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		return this.pLCNormalWCMatrix.transformVector(pLC.unit()) //.times(this.normalDir)
 	}
 }
-SemiEllipsoidSurface.prototype.uStep = PI / 16
-SemiEllipsoidSurface.prototype.vStep = PI / 16
+SemiEllipsoidSurface.prototype.uStep = PI / 32
+SemiEllipsoidSurface.prototype.vStep = PI / 32

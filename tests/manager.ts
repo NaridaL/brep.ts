@@ -88,7 +88,14 @@ export function testBRepAnd(assert: Assert, a: BRep, b: BRep, expected: BRep, me
 	return testBRepOp(assert, a, b, () => a.and(b), expected, message)
 }
 
-export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: () => BRep, expected: BRep, message?: string) {
+export function testBRepOp(
+	assert: Assert,
+	a: BRep,
+	b: BRep,
+	calculateActual: () => BRep,
+	expected: BRep,
+	message?: string,
+) {
 	let actual
 	try {
 		actual = calculateActual()
@@ -98,12 +105,16 @@ export function testBRepOp(assert: Assert, a: BRep, b: BRep, calculateActual: ()
 				.getAABB()
 				.addAABB(b.getAABB())
 				.size().x
-			outputLink(assert, {
-				a,
-				b,
-				c: actual.translate(abWidth + 1).toSource(false),
-				d: expected.translate(2 * (abWidth + 1)).toSource(false),
-			}, message)
+			outputLink(
+				assert,
+				{
+					a,
+					b,
+					c: actual.translate(abWidth + 1).toSource(false),
+					d: expected.translate(2 * (abWidth + 1)).toSource(false),
+				},
+				message,
+			)
 			b2equals(assert, actual, expected)
 		} else {
 			outputLink(assert, { a, b })
@@ -387,23 +398,23 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 			assert.ok(eq0(surf.implicitFunction()(p)))
 		}
 		const pm2 = surf.stP(p)
-        const pNormal = surf.normalP(p)
-        const psFlippedST = psFlipped.stP(p)
-        const psFlippedNormal = psFlipped.normalP(p)
+		const pNormal = surf.normalP(p)
+		const psFlippedST = psFlipped.stP(p)
+		const psFlippedNormal = psFlipped.normalP(p)
 		if (!dpds.likeO() && !dpdt.likeO()) {
 			assert.v3like(pm2, pm, 'pm == stP(pST(pm))')
-            assert.v3like(
-                psFlipped.pST(psFlippedST.x, psFlippedST.y),
-                p,
-                'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p',
-            )
+			assert.v3like(
+				psFlipped.pST(psFlippedST.x, psFlippedST.y),
+				p,
+				'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p',
+			)
 
-            assert.v3like(pmNormal, pNormal)
+			assert.v3like(pmNormal, pNormal)
 
-            const computedNormal = dpdsXdpdt.unit()
-            assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)
+			const computedNormal = dpdsXdpdt.unit()
+			assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)
 
-            assert.v3like(psFlippedNormal, pNormal.negated(), 'pNormal == -psFlippedNormal')
+			assert.v3like(psFlippedNormal, pNormal.negated(), 'pNormal == -psFlippedNormal')
 		}
 
 		// test pointFoot:
@@ -424,8 +435,8 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 	for (let mI = 0; mI < matrices.length; mI++) {
 		const m = matrices[mI]
 		for (let i = 0; i < points.length; i++) {
-		    const dpds = surf.dpds()(params[i].x, params[i].y)
-		    const dpdt = surf.dpdt()(params[i].x, params[i].y)
+			const dpds = surf.dpds()(params[i].x, params[i].y)
+			const dpdt = surf.dpdt()(params[i].x, params[i].y)
 			const p = points[i],
 				pNormal = surf.normalP(p)
 			const normalMatrix = m
@@ -436,9 +447,9 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 			const mP = m.transformPoint(p)
 			const mSurface = surf.transform(m)
 
-            if (!dpds.likeO() && !dpdt.likeO()) {
-                assert.v3like(mSurface.normalP(mP), mNormal)
-            }
+			if (!dpds.likeO() && !dpdt.likeO()) {
+				assert.v3like(mSurface.normalP(mP), mNormal)
+			}
 
 			assert.ok(mSurface.containsPoint(mP))
 
@@ -447,6 +458,14 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 			//assert(mPSFlipped.normalP(mP).negated().like(mNormal))
 		}
 	}
+}
+
+export function testContainsCurve(assert: Assert, surface: Surface, curve: Curve) {
+	outputLink(assert, {
+		mesh: surface.sce + '.toMesh()',
+		edges: [Edge.forCurveAndTs(curve)],
+	})
+	assert.ok(surface.containsCurve(curve), 'surface contains curve')
 }
 
 export function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {

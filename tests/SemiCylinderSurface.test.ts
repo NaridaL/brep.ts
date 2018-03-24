@@ -1,15 +1,20 @@
-import { V, V3, DEG } from 'ts3dutils'
 import {
 	suite,
+	surfaceVolumeAndAreaTests,
 	test,
+	testContainsCurve,
+	testImplicitSurface,
 	testISCurves,
 	testISTs,
 	testLoopContainsPoint,
 	testParametricSurface,
-	testImplicitSurface,
-	surfaceVolumeAndAreaTests,
 } from './manager'
+
+import { DEG, V, V3 } from 'ts3dutils'
 import {
+	B2T,
+	Edge,
+	Face,
 	L3,
 	P3,
 	PCurveEdge,
@@ -20,11 +25,7 @@ import {
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	StraightEdge,
-	B2T,
-	Edge,
-	Face,
 } from '..'
-
 import { PI, sin } from '../src/math'
 
 suite('SemiCylinderSurface', () => {
@@ -37,28 +38,53 @@ suite('SemiCylinderSurface', () => {
 			-1,
 			0,
 		)
-        //console.log(testISCurves(assert, new SemiCylinderSurface(
-        //    new SemiEllipseCurve(V(0.5, 0, -2), V(0.05, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793),
-        //    V(0, 0, -4),
-        //    0,
-        //    3.141592653589793,
-        //    -1,
-        //    0,
-        //), new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), 2)[0].sce)
-        const loop = [
-            new PCurveEdge(
-                PICurve.forParametricStartEnd(new SemiCylinderSurface(new SemiEllipseCurve(V(0.5, 0, -2), V(0.05, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793), V(0, 0, -4), 0, 3.141592653589793, -1, 0), new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z, 0, 3.141592653589793, -1.5707963267948966, 1.5707963267948966), V(0, -0.7087911636061258, 0), V(3.141592653589793, -0.7232571387436469, 0), 0.05, V(0.05, 0, 0), 0, 63),
-                V(0.5500000000000002, 0, 0.8351646544245032),
-                V(0.4499999999999999, 0, 0.8930285549745877),
-                0,
-                63,
-                undefined,
-                V(-3.42237988979182e-11, 0.0049999958882951, -3.007402222491174e-12),
-                V(4.834393140838787e-9, -0.004999126576363996, -5.523525999743552e-9),
-                'genseg2',
-            ),
-            new StraightEdge(
-                new L3(V(0.45, 1.2246467991473533e-17, -2), V3.Z),
+		//console.log(testISCurves(assert, new SemiCylinderSurface(
+		//    new SemiEllipseCurve(V(0.5, 0, -2), V(0.05, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793),
+		//    V(0, 0, -4),
+		//    0,
+		//    3.141592653589793,
+		//    -1,
+		//    0,
+		//), new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), 2)[0].sce)
+		const loop = [
+			new PCurveEdge(
+				PICurve.forParametricStartEnd(
+					new SemiCylinderSurface(
+						new SemiEllipseCurve(V(0.5, 0, -2), V(0.05, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793),
+						V(0, 0, -4),
+						0,
+						3.141592653589793,
+						-1,
+						0,
+					),
+					new SemiEllipsoidSurface(
+						V3.O,
+						V3.X,
+						V3.Y,
+						V3.Z,
+						0,
+						3.141592653589793,
+						-1.5707963267948966,
+						1.5707963267948966,
+					),
+					V(0, -0.7087911636061258, 0),
+					V(3.141592653589793, -0.7232571387436469, 0),
+					0.05,
+					V(0.05, 0, 0),
+					0,
+					63,
+				),
+				V(0.5500000000000002, 0, 0.8351646544245032),
+				V(0.4499999999999999, 0, 0.8930285549745877),
+				0,
+				63,
+				undefined,
+				V(-3.42237988979182e-11, 0.0049999958882951, -3.007402222491174e-12),
+				V(4.834393140838787e-9, -0.004999126576363996, -5.523525999743552e-9),
+				'genseg2',
+			),
+			new StraightEdge(
+				new L3(V(0.45, 1.2246467991473533e-17, -2), V3.Z),
 				V(0.4499999999999999, 0, 0.8930285549745877),
 				V(0.44999999999999996, 0, -0.8930285549745877),
 				2.8930285549745878,
@@ -284,5 +310,23 @@ suite('SemiCylinderSurface', () => {
 		]
 		testLoopContainsPoint(assert, surface, loop, V(8, 0, 0), PointVsFace.OUTSIDE)
 		testLoopContainsPoint(assert, surface, loop, V(1, 7.937253933193773, 3), PointVsFace.ON_EDGE)
+	})
+	test('containsCurve', assert => {
+		const surface = new SemiCylinderSurface(
+			new SemiEllipseCurve(V3.O, V3.X, V3.Y, 0, 3.141592653589793),
+			V3.Z,
+			0,
+			3.141592653589793,
+			0,
+			2,
+		)
+		const curve = new SemiEllipseCurve(
+			V(0, 0, 2),
+			V(-6.123233995736766e-17, -1, 0),
+			V(-1, 6.123233995736766e-17, 0),
+			0,
+			3.141592653589793,
+		)
+		testContainsCurve(assert, surface, curve)
 	})
 })

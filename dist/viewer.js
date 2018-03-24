@@ -13246,7 +13246,7 @@ class XiEtaCurve$$1 extends Curve$$1 {
     /**
      * Intersection of the unit curve with the line ax + by = c.
      */
-    static intersectionUnitLine(a, b, c) {
+    static intersectionUnitLine(a, b, c, tMin, tMax) {
         throw new Error('abstract');
     }
     /**
@@ -13263,10 +13263,10 @@ class XiEtaCurve$$1 extends Curve$$1 {
     static XYLCValid(pLC) {
         throw new Error('abstract');
     }
-    static XYLCPointT(pLC) {
+    static XYLCPointT(pLC, tMin, tMax) {
         throw new Error('abstract');
     }
-    static unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC) {
+    static unitIsInfosWithLine(anchorLC, dirLC, anchorWC, dirWC, tMin, tMax) {
         throw new Error('abstract');
     }
     addToMesh(mesh, res = 4, radius = 0, pointStep = 1) {
@@ -13417,9 +13417,7 @@ class XiEtaCurve$$1 extends Curve$$1 {
                 .filter(info => surface.containsPoint(info.p))
                 .map(info => info.tThis);
         }
-        else if (surface instanceof ProjectedCurveSurface$$1 ||
-            surface instanceof EllipsoidSurface ||
-            surface instanceof ConicSurface$$1) {
+        else if (surface instanceof ProjectedCurveSurface$$1 || surface instanceof ConicSurface$$1) {
             return surface
                 .isCurvesWithPlane(this.getPlane())
                 .flatMap(curve => this.isInfosWithCurve(curve))
@@ -16300,6 +16298,9 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
             return this.normalDir * (radiusLC - pLC.z);
         };
     }
+    didp(pWC) {
+        // return this.normalDir * (pLC.xy().unit().minus())
+    }
     containsPoint(p) {
         return eq0(this.implicitFunction()(p));
     }
@@ -16724,8 +16725,11 @@ RotatedCurveSurface$$1.prototype.uStep = PI$3 / 16;
 RotatedCurveSurface$$1.prototype.vStep = 1 / 4;
 
 class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
+    // @ts-ignore
+    // readonly baseCurve: SemiEllipseCurve
     constructor(baseCurve, dir1, sMin = baseCurve.tMin, sMax = baseCurve.tMax, zMin = -Infinity, zMax = Infinity) {
         super(baseCurve, dir1, sMin, sMax, zMin, zMax);
+        this.baseCurve = baseCurve;
         assertInst(SemiEllipseCurve$$1, baseCurve);
         //assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
         this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center);
@@ -16802,9 +16806,7 @@ class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     }
     containsSemiEllipse(ellipse, checkAABB = true) {
         const projEllipse = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir));
-        return (this.baseCurve == ellipse ||
-            (this.baseCurve.isColinearTo(projEllipse) &&
-                (!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y))));
+        return this.baseCurve == ellipse || this.baseCurve.isColinearTo(projEllipse);
     }
     containsCurve(curve) {
         if (curve instanceof L3$$1) {
@@ -17109,7 +17111,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         const surfaceLC = surface.transform(this.inverseMatrix);
         //const lcMinZ0RelO =
         const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
-        const ists = baseCurveLC.isTsWithSurface(EllipsoidSurface.UNIT);
+        const ists = baseCurveLC.isTsWithSurface(SemiEllipsoidSurface$$1.UNIT);
         const insideIntervals = getIntervals(ists, baseCurveLC.tMin, baseCurveLC.tMax).filter(([a, b]) => baseCurveLC.at((a + b) / 2).length() < 1);
         const projectedCurves = [0, 1].map(id => {
             return (t) => {
@@ -17182,7 +17184,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
             return curves2;
         }
         else {
-            assert(false);
+            throw new Error();
         }
     }
     isCurvesWithPlane(plane) {
@@ -17522,8 +17524,8 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
     }
 }
 SemiEllipsoidSurface$$1.UNIT = new SemiEllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
-SemiEllipsoidSurface$$1.prototype.uStep = PI$3 / 16;
-SemiEllipsoidSurface$$1.prototype.vStep = PI$3 / 16;
+SemiEllipsoidSurface$$1.prototype.uStep = PI$3 / 32;
+SemiEllipsoidSurface$$1.prototype.vStep = PI$3 / 32;
 
 class PlaneSurface$$1 extends ParametricSurface$$1 {
     constructor(plane, right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right).unit(), sMin = -100, sMax = 100, tMin = -100, tMax = 100) {
@@ -31983,6 +31985,7 @@ class Face$$1 extends Transformable {
                             .like(newEdge.aDir)
                             ? newEdge
                             : newEdge.flipped();
+                        console.log(newEdge.sce);
                         assert(faceInfo.edge.tangentAt(faceInfo.edge.curve.pointT(pushEdge.a)).like(pushEdge.aDir));
                         edgeInside && mapPush(faceMap, faceInfo.face, pushEdge);
                     });
@@ -32104,7 +32107,10 @@ class Face$$1 extends Transformable {
                             // assert(!testVector.likeO())
                             const sVEF1 = splitsVolumeEnclosingFacesP2$$1(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
                             const sVEF2 = splitsVolumeEnclosingFacesP2$$1(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p));
-                            if (INSIDE$$1 == sVEF1 || INSIDE$$1 == sVEF2) {
+                            if (INSIDE$$1 == sVEF1 ||
+                                (first && COPLANAR_SAME$$1 == sVEF1) ||
+                                INSIDE$$1 == sVEF2 ||
+                                (first && COPLANAR_SAME$$1 == sVEF2)) {
                                 mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                 assert(a.edge.isValidT(a.edgeT));
                             }
@@ -32119,6 +32125,9 @@ class Face$$1 extends Transformable {
         assertInst(Face$$1, face2);
         const face = this;
         const surface = face.surface, surface2 = face2.surface;
+        if (face2.surface.plane && face2.surface.plane.w == -1 && face instanceof RotationFace$$1) {
+            console.log('foo');
+        }
         if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
             return;
         }
@@ -32170,7 +32179,7 @@ class Face$$1 extends Transformable {
             //assert(!in1 || !in2)
             let col1, col2;
             let i = 0, j = 0, last;
-            let startP = in1 && in2 && isCurve.at(isCurve.tMin), startDir, startT = isCurve.tMin, startA, startB;
+            let startP = in1 && in2 ? isCurve.at(isCurve.tMin) : undefined, startDir, startT = isCurve.tMin, startA, startB;
             while (i < ps1.length || j < ps2.length) {
                 assert(i <= ps1.length);
                 assert(j <= ps2.length);
@@ -32180,14 +32189,14 @@ class Face$$1 extends Transformable {
                     last = a;
                     in1 = !in1;
                     a.used = true;
-                    in1 && (col1 = a.colinear && a);
+                    col1 = a.colinear ? a : undefined;
                     i++;
                 }
                 else if (i == ps1.length || gt(a.t, b.t)) {
                     last = b;
                     b.used = true;
                     in2 = !in2;
-                    in2 && (col2 = b.colinear && b);
+                    col2 = b.colinear ? b : undefined;
                     j++;
                 }
                 else {
@@ -32197,8 +32206,8 @@ class Face$$1 extends Transformable {
                     in1 = !in1;
                     in2 = !in2;
                     //if (in1 == in2) {
-                    in1 && (col1 = a.colinear && a);
-                    in2 && (col2 = b.colinear && b);
+                    col1 = a.colinear ? a : undefined;
+                    col2 = b.colinear ? b : undefined;
                     //}
                     i++;
                     j++;
@@ -32942,7 +32951,7 @@ class RotationFace$$1 extends Face$$1 {
             const insideVector = localEdge.a.cross(localEdge.aDir);
             return sign$1(insideVector.dot(V3.Y)) * PI$3;
         }
-        assert(false, 'Couldn\'t find canon seam u');
+        assert(false, "Couldn't find canon seam u");
     }
     unrollLoop(edgeLoop) {
         const vs = [];
@@ -43363,7 +43372,7 @@ function splitsVolumeEnclosingFaces$$1(brep, canonEdge, dirAtEdgeA, faceNormal) 
         return nearestFaceInfo.reversed ? INSIDE$$1 : OUTSIDE$$1;
     }
 }
-function splitsVolumeEnclosingFacesP$$1(brep, canonEdge, p, pInside, faceNormal) {
+function splitsVolumeEnclosingFacesP$$1(brep, canonEdge, p, pInside, pFaceNormal) {
     assert(arguments.length == 5);
     assert(canonEdge == canonEdge.getCanon());
     //assert(p.equals(canonEdge.a))
@@ -43380,7 +43389,7 @@ function splitsVolumeEnclosingFacesP$$1(brep, canonEdge, p, pInside, faceNormal)
     const nearestFaceInfo = edgeFaceInfos.withMax(faceInfoAngleFromPInsideNeg);
     if (eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
         //assert(false) todo
-        const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0;
+        const coplanarSame = nearestFaceInfo.face.surface.normalP(p).dot(pFaceNormal) > 0;
         return coplanarSame ? COPLANAR_SAME$$1 : COPLANAR_OPPOSITE$$1;
     }
     else {

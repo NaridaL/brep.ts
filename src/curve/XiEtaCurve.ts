@@ -1,6 +1,5 @@
 import {
 	arrayFromFunction,
-	assertf,
 	assertInst,
 	assertNumbers,
 	assertVectors,
@@ -65,7 +64,7 @@ export abstract class XiEtaCurve extends Curve {
 	/**
 	 * Intersection of the unit curve with the line ax + by = c.
 	 */
-	static intersectionUnitLine(a: number, b: number, c: number): number[] {
+	static intersectionUnitLine(a: number, b: number, c: number, tMin?: number, tMax?: number): number[] {
 		throw new Error('abstract')
 	}
 
@@ -85,11 +84,18 @@ export abstract class XiEtaCurve extends Curve {
 		throw new Error('abstract')
 	}
 
-	static XYLCPointT(pLC: V3): number {
+	static XYLCPointT(pLC: V3, tMin?: number, tMax?: number): number {
 		throw new Error('abstract')
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3): ISInfo[] {
+	static unitIsInfosWithLine(
+		anchorLC: V3,
+		dirLC: V3,
+		anchorWC: V3,
+		dirWC: V3,
+		tMin?: number,
+		tMax?: number,
+	): ISInfo[] {
 		throw new Error('abstract')
 	}
 
@@ -284,11 +290,7 @@ export abstract class XiEtaCurve extends Curve {
 				.flatMap(isEllipse => this.isInfosWithCurve(isEllipse))
 				.filter(info => surface.containsPoint(info.p))
 				.map(info => info.tThis)
-		} else if (
-			surface instanceof ProjectedCurveSurface ||
-			surface instanceof EllipsoidSurface ||
-			surface instanceof ConicSurface
-		) {
+		} else if (surface instanceof ProjectedCurveSurface || surface instanceof ConicSurface) {
 			return surface
 				.isCurvesWithPlane(this.getPlane())
 				.flatMap(curve => this.isInfosWithCurve(curve))

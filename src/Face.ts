@@ -29,9 +29,8 @@ import {
 	TAU,
 	Transformable,
 	V3,
-    round10,
 } from 'ts3dutils'
-import { Mesh, pushQuad } from 'tsgl'
+import { Mesh, MeshWith, pushQuad } from 'tsgl'
 
 import {
 	BRep,
@@ -41,7 +40,6 @@ import {
 	dotCurve,
 	dotCurve2,
 	Edge,
-	EllipsoidSurface,
 	EPS,
 	fff,
 	getGlobalId,
@@ -293,7 +291,7 @@ export abstract class Face extends Transformable {
 					// NB: a new edge is inserted even though it may be the same as an old one
 					// however it indicates that it intersects the other volume here, i.e. the old edge cannot
 					// be counted as 'inside' for purposes of reconstitution
-					thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => {
+					thisBrep.edgeFaces!.get(col1.getCanon())!.forEach(faceInfo => {
 						//const dot = snap0(surface2.normal1.dot(faceInfo.inside))
 						//if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
 						const pointsInsideFace = fff(faceInfo, face2.surface)
@@ -304,6 +302,7 @@ export abstract class Face extends Transformable {
 							.like(newEdge.aDir)
 							? newEdge
 							: newEdge.flipped()
+						console.log(newEdge.sce)
 						assert(faceInfo.edge.tangentAt(faceInfo.edge.curve.pointT(pushEdge.a)).like(pushEdge.aDir))
 						edgeInside && mapPush(faceMap, faceInfo.face, pushEdge)
 					})
@@ -521,7 +520,12 @@ export abstract class Face extends Transformable {
 								-1,
 								thisPlane.normalP(a.p),
 							)
-							if (INSIDE == sVEF1 || INSIDE == sVEF2) {
+							if (
+								INSIDE == sVEF1 ||
+								(first && COPLANAR_SAME == sVEF1) ||
+								INSIDE == sVEF2 ||
+								(first && COPLANAR_SAME == sVEF2)
+							) {
 								mapPush(thisEdgePoints, a.edge.getCanon(), a)
 								assert(a.edge.isValidT(a.edgeT))
 							}
@@ -540,6 +544,9 @@ export abstract class Face extends Transformable {
 		const face = this
 		const surface = face.surface,
 			surface2 = face2.surface
+		if (face2.surface.plane && face2.surface.plane.w == -1 && face instanceof RotationFace) {
+			console.log('foo')
+		}
 		if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
 			return
 		}
@@ -601,11 +608,11 @@ export abstract class Face extends Transformable {
 				continue
 			}
 			//assert(!in1 || !in2)
-			let col1: IntersectionPointInfo | false, col2: IntersectionPointInfo | false
+			let col1: IntersectionPointInfo | undefined, col2: IntersectionPointInfo | undefined
 			let i = 0,
 				j = 0,
 				last
-			let startP = in1 && in2 && isCurve.at(isCurve.tMin),
+			let startP = in1 && in2 ? isCurve.at(isCurve.tMin) : undefined,
 				startDir,
 				startT = isCurve.tMin,
 				startA,
@@ -620,13 +627,13 @@ export abstract class Face extends Transformable {
 					last = a
 					in1 = !in1
 					a.used = true
-					in1 && (col1 = a.colinear && a)
+					col1 = a.colinear ? a : undefined
 					i++
 				} else if (i == ps1.length || gt(a.t, b.t)) {
 					last = b
 					b.used = true
 					in2 = !in2
-					in2 && (col2 = b.colinear && b)
+					col2 = b.colinear ? b : undefined
 					j++
 				} else {
 					last = a
@@ -635,8 +642,8 @@ export abstract class Face extends Transformable {
 					in1 = !in1
 					in2 = !in2
 					//if (in1 == in2) {
-					in1 && (col1 = a.colinear && a)
-					in2 && (col2 = b.colinear && b)
+					col1 = a.colinear ? a : undefined
+					col2 = b.colinear ? b : undefined
 					//}
 					i++
 					j++
@@ -1440,9 +1447,9 @@ export class RotationFace extends Face {
 
 	getAABB() {
 		if (this.aabb) return this.aabb
-			this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()))
-			this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)))
-			return this.aabb
+		this.aabb = AABB.forAABBs(this.contour.map(e => e.getAABB()))
+		this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)))
+		return this.aabb
 	}
 
 	getCanonSeamU(): number {
@@ -1465,7 +1472,7 @@ export class RotationFace extends Face {
 			const insideVector = localEdge.a.cross(localEdge.aDir)
 			return sign(insideVector.dot(V3.Y)) * PI
 		}
-		assert(false, 'Couldn\'t find canon seam u')
+		assert(false, "Couldn't find canon seam u")
 	}
 
 	unrollLoop(this: this & { surface: ParametricSurface }, edgeLoop: Edge[]) {
@@ -1641,9 +1648,10 @@ export class RotationFace extends Face {
 			}
 		}
 
-		const zip = (a, b) => a.map(function(e, i) {
-            return [e, b[i]];
-        });
+		const zip = (a, b) =>
+			a.map(function(e, i) {
+				return [e, b[i]]
+			})
 		//console.log(zip(vertices.map(v => v.map(x => round10(x, -5))), verticesUV.map(v => v.map(x => round10(x, -5)))).sce)
 
 		disableConsole()
@@ -1809,8 +1817,6 @@ export class RotationFace extends Face {
 					const pos = row * uRes + col
 					const fieldU = uOffset + col,
 						fieldV = vOffset + row
-					const fieldCU = uOffset + col + 0.5,
-						fieldCV = vOffset + row + 0.5
 					const parts = partss[pos]
 					if (!parts) {
 						if (inside) {
@@ -1848,8 +1854,7 @@ export class RotationFace extends Face {
 						}
 
 						while (parts.length) {
-							const outline: int[] = [],
-								outlineVertexIndices = []
+							const outline: int[] = []
 							const startPart = parts[0]
 							assert(startPart.length > 0)
 							let currentPart = startPart
@@ -1919,7 +1924,7 @@ export class RotationFace extends Face {
 		enableConsole()
 	}
 
-	addToMesh2(this: this & { surface: ParametricSurface }, mesh: Mesh) {
+	addToMesh2(this: this & { surface: ParametricSurface }, mesh: MeshWith<'TRIANGLES'>) {
 		const closed = false
 		const hSplit = 12800,
 			zSplit = 8

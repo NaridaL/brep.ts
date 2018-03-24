@@ -1047,7 +1047,7 @@ export function splitsVolumeEnclosingFaces(brep: BRep, canonEdge: Edge, dirAtEdg
 	}
 }
 
-export function splitsVolumeEnclosingFacesP(brep: BRep, canonEdge: Edge, p: V3, pInside: V3, faceNormal: V3): int {
+export function splitsVolumeEnclosingFacesP(brep: BRep, canonEdge: Edge, p: V3, pInside: V3, pFaceNormal: V3): int {
 	assert(arguments.length == 5)
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
@@ -1064,7 +1064,7 @@ export function splitsVolumeEnclosingFacesP(brep: BRep, canonEdge: Edge, p: V3, 
 	const nearestFaceInfo = edgeFaceInfos.withMax(faceInfoAngleFromPInsideNeg)
 	if (eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
 		//assert(false) todo
-		const coplanarSame = nearestFaceInfo.normalAtCanonA.dot(faceNormal) > 0
+		const coplanarSame = nearestFaceInfo.face.surface.normalP(p).dot(pFaceNormal) > 0
 		return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE
 	} else {
 		return nearestFaceInfo.reversed ? OUTSIDE : INSIDE

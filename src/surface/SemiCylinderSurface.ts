@@ -1,4 +1,4 @@
-import { assert, assertInst, assertVectors, eq0, hasConstructor, le, M4, pqFormula, TAU, V3 } from 'ts3dutils'
+import { assert, assertInst, assertVectors, eq0, hasConstructor, M4, pqFormula, TAU, V3 } from 'ts3dutils'
 
 import {
 	BezierCurve,
@@ -23,11 +23,11 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	readonly pLCNormalWCMatrix: M4
 	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number
-    // @ts-ignore
-	readonly baseCurve: SemiEllipseCurve
+	// @ts-ignore
+	// readonly baseCurve: SemiEllipseCurve
 
 	constructor(
-		baseCurve: SemiEllipseCurve,
+		readonly baseCurve: SemiEllipseCurve,
 		dir1: V3,
 		sMin: number = baseCurve.tMin,
 		sMax: number = baseCurve.tMax,
@@ -128,11 +128,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 	containsSemiEllipse(ellipse: SemiEllipseCurve, checkAABB: boolean = true) {
 		const projEllipse = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir))
-		return (
-			this.baseCurve == ellipse ||
-			(this.baseCurve.isColinearTo(projEllipse) &&
-				(!checkAABB || le(0, ellipse.transform(this.inverseMatrix).getAABB().min.y)))
-		)
+		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(projEllipse)
 	}
 
 	containsCurve(curve: Curve) {

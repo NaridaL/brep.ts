@@ -380,6 +380,10 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		}
 	}
 
+	didp(pWC: V3): V3 {
+		// return this.normalDir * (pLC.xy().unit().minus())
+	}
+
 	containsPoint(p: V3) {
 		return eq0(this.implicitFunction()(p))
 	}
