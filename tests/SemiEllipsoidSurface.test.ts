@@ -1,13 +1,13 @@
 import {
 	outputLink,
 	suite,
+	suiteSurface,
 	surfaceVolumeAndAreaTests,
 	test,
 	testCurve,
 	testImplicitSurface,
 	testISCurves,
 	testLoopContainsPoint,
-	testParametricSurface,
 } from './manager'
 
 import { assertf, DEG, M4, V, V3 } from 'ts3dutils'
@@ -34,18 +34,11 @@ suite('SemiEllipsoidSurface', () => {
 	const ses3 = SemiEllipsoidSurface.UNIT.scale(2)
 		.translate(1, 2, 3)
 		.shearX(2, 3)
-	suite('is a parametric surface', () => {
-		test('UNIT', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT))
-		test('UNIT.scale(2)', assert => testParametricSurface(assert, ses2))
-		test('UNIT.shearX(2, 3)', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.shearX(2, 3)))
-		test('UNIT.foo()', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.foo()))
-		test('UNIT.foo().flipped()', assert => testParametricSurface(assert, SemiEllipsoidSurface.UNIT.foo().flipped()))
-	})
-	suite('is an im implicit surface', () => {
-		test('UNIT', assert => testImplicitSurface(assert, SemiEllipsoidSurface.UNIT))
-		test('UNIT.scale(2)', assert => testImplicitSurface(assert, ses2))
-		test('UNIT.shearX(2, 3)', assert => testImplicitSurface(assert, SemiEllipsoidSurface.UNIT.shearX(2, 3)))
-	})
+	suite('UNIT', () => suiteSurface(SemiEllipsoidSurface.UNIT))
+	suite('UNIT.scale(2)', () => suiteSurface(ses2))
+	suite('UNIT.shearX(2, 3)', () => suiteSurface(SemiEllipsoidSurface.UNIT.shearX(2, 3)))
+	suite('UNIT.foo()', () => suiteSurface(SemiEllipsoidSurface.UNIT.foo()))
+	suite('UNIT.foo().flipped()', () => suiteSurface(SemiEllipsoidSurface.UNIT.foo().flipped()))
 	test('testSurface', assert => {
 		testISCurves(
 			assert,

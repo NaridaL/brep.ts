@@ -1,12 +1,4 @@
-import {
-	outputLink,
-	suite,
-	test,
-	testISCurves,
-	testISTs,
-	testLoopContainsPoint,
-	testParametricSurface,
-} from './manager'
+import { outputLink, suite, suiteSurface, test, testISCurves, testISTs, testLoopContainsPoint } from './manager'
 
 import { DEG, M4, TAU, V, V3 } from 'ts3dutils'
 import {
@@ -31,11 +23,10 @@ suite('RotatedCurveSurface', () => {
 		.rotateX(90 * DEG)
 	const torusSurface = rotateCurve(baseCurve, undefined, undefined, 100 * DEG, false) as RotatedCurveSurface
 
-	test('testSurface', assert => {
-		testParametricSurface(assert, torusSurface)
-		testParametricSurface(assert, torusSurface.scale(2))
-		testParametricSurface(assert, torusSurface.shearX(2, 2))
-	})
+	suite('torusSurface', () => suiteSurface(torusSurface))
+	suite('torusSurface.scale(2)', () => suiteSurface(torusSurface.scale(2)))
+	suite('torusSurface.shearX(2, 2)', () => suiteSurface(torusSurface.shearX(2, 2)))
+
 	test('coplanar with curve translated up, surface down', assert => {
 		const torusSurface2 = rotateCurve(
 			baseCurve.translate(0, 0, 2),
@@ -66,9 +57,9 @@ suite('RotatedCurveSurface', () => {
 		const plane = new PlaneSurface(new P3(V3.Y, 2.5), V(-1, 0, 0), V3.Z)
 		testISCurves(assert, torus, plane, 1)
 	})
-    test('aabb', () => {
-        // TODO
-    })
+	test('aabb', () => {
+		// TODO
+	})
 
 	suite('isTsWithLine', () => {
 		test('vertical', assert => testISTs(assert, new L3(V(4, 4, 0), V3.Z), torusSurface, 1))

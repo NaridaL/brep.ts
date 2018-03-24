@@ -42,7 +42,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				st = pLC.z + (pLC.lengthXY() - pLC.z) * sqrt(2) / 2
 			}
 		}
-		const f = ([s, t]: [number, number]) => {
+		const f = ([s, t]: number[]) => {
 			const pSTToPWC = this.pST(s, t).to(pWC)
 			return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)]
 		}
@@ -55,7 +55,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
 	readonly matrix: M4
 	readonly inverseMatrix: M4
-	readonly normalMatrix: M4
+	readonly pLCNormalWCMatrix: M4
 	readonly normalDir: number // -1 | 1
 
 	/**
@@ -80,7 +80,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		this.matrix = M4.forSys(f1, f2, dir, center)
 		this.inverseMatrix = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
-		this.normalMatrix = this.matrix
+		this.pLCNormalWCMatrix = this.matrix
 			.as3x3()
 			.inversed()
 			.transposed()
@@ -381,7 +381,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	didp(pWC: V3): V3 {
-		// return this.normalDir * (pLC.xy().unit().minus())
+		const pLC = this.inverseMatrix.transformPoint(pWC)
+		return this.pLCNormalWCMatrix.transformVector(
+			pLC
+				.xy()
+				.unit()
+				.withElement('z', -1)
+				.times(this.normalDir),
+		)
 	}
 
 	containsPoint(p: V3) {

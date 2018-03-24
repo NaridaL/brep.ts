@@ -16017,7 +16017,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         this.matrix = M4.forSys(f1, f2, dir, center);
         this.inverseMatrix = this.matrix.inversed();
         this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.dir));
-        this.normalMatrix = this.matrix
+        this.pLCNormalWCMatrix = this.matrix
             .as3x3()
             .inversed()
             .transposed()
@@ -16299,7 +16299,12 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         };
     }
     didp(pWC) {
-        // return this.normalDir * (pLC.xy().unit().minus())
+        const pLC = this.inverseMatrix.transformPoint(pWC);
+        return this.pLCNormalWCMatrix.transformVector(pLC
+            .xy()
+            .unit()
+            .withElement('z', -1)
+            .times(this.normalDir));
     }
     containsPoint(p) {
         return eq0(this.implicitFunction()(p));

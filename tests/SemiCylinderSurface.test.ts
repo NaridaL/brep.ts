@@ -1,5 +1,6 @@
 import {
 	suite,
+	suiteSurface,
 	surfaceVolumeAndAreaTests,
 	test,
 	testContainsCurve,
@@ -7,7 +8,6 @@ import {
 	testISCurves,
 	testISTs,
 	testLoopContainsPoint,
-	testParametricSurface,
 } from './manager'
 
 import { DEG, V, V3 } from 'ts3dutils'
@@ -38,14 +38,7 @@ suite('SemiCylinderSurface', () => {
 			-1,
 			0,
 		)
-		//console.log(testISCurves(assert, new SemiCylinderSurface(
-		//    new SemiEllipseCurve(V(0.5, 0, -2), V(0.05, 0, 0), V(0, 0.1, 0), 0, 3.141592653589793),
-		//    V(0, 0, -4),
-		//    0,
-		//    3.141592653589793,
-		//    -1,
-		//    0,
-		//), new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z), 2)[0].sce)
+
 		const loop = [
 			new PCurveEdge(
 				PICurve.forParametricStartEnd(
@@ -128,16 +121,9 @@ suite('SemiCylinderSurface', () => {
 		const p = V(0.55, 0, 2)
 		testLoopContainsPoint(assert, surface, loop, p, PointVsFace.OUTSIDE)
 	})
-	test('is parametric surface', assert => {
-		const ps = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
-		testParametricSurface(assert, ps)
-		testParametricSurface(assert, ps.rotateZ(PI))
-	})
-	test('is an implicit surface', assert => {
-		const ps = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
-		testImplicitSurface(assert, ps)
-		testImplicitSurface(assert, ps.rotateZ(PI))
-	})
+	const simpleCyl = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
+	suite('simpleCyl', () => suiteSurface(simpleCyl))
+	suite('simpleCyl.rotateZ(PI)', () => suiteSurface(simpleCyl.rotateZ(PI)))
 	test('is curves w/ SemiCylinderSurface', assert => {
 		const cyl = SemiCylinderSurface.UNIT.scale(5, 5, 1)
 		const ell = new SemiCylinderSurface(

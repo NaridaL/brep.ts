@@ -1,13 +1,14 @@
 import {
 	linkBRep,
 	suite,
+	suiteSurface,
+	surfaceVolumeAndAreaTests,
 	test,
 	testISCurves,
 	testLoopCCW,
 	testLoopContainsPoint,
-	testParametricSurface,
-	surfaceVolumeAndAreaTests,
 } from './manager'
+
 import { DEG, V, V3 } from 'ts3dutils'
 import {
 	B2T,
@@ -16,25 +17,23 @@ import {
 	HyperbolaCurve,
 	L3,
 	P3,
+	ParabolaCurve,
 	PCurveEdge,
 	PointVsFace,
+	RotationFace,
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	StraightEdge,
-	ParabolaCurve,
-	RotationFace,
 } from '..'
-
 import { PI } from '../src/math'
 
 suite('ConicSurface', () => {
 	const UCS = ConicSurface.UNIT
 
-	test('testSurface', assert => {
-		testParametricSurface(assert, UCS)
-		testParametricSurface(assert, ConicSurface.UNIT.scale(2, 2, 1))
-		testParametricSurface(assert, new ConicSurface(V(2, 0.2, 1.1), V(0, 0.6, 0), V(0, 0, -2.4), V(-12, 0, 0)))
-	})
+	suite('UNIT', () => suiteSurface(ConicSurface.UNIT))
+	suite('UNIT.scale(2, 2, 1)', () => suiteSurface(ConicSurface.UNIT.scale(2, 2, 1)))
+	suite('weird', () => suiteSurface(new ConicSurface(V(2, 0.2, 1.1), V(0, 0.6, 0), V(0, 0, -2.4), V(-12, 0, 0))))
+
 	const testFace = new RotationFace(
 		new ConicSurface(V3.Z, V(-1, 0, 0), V3.Y, V(0, 0, -1)),
 		[
@@ -86,8 +85,7 @@ suite('ConicSurface', () => {
 		],
 		[],
 	)
-	test('testFace surface is parametric surface', assert =>
-		testParametricSurface(assert, testFace.surface as ConicSurface))
+	suite('testFace surface', () => suiteSurface(testFace.surface as ConicSurface))
 	suite('testFace', () => surfaceVolumeAndAreaTests(testFace))
 	suite('testFace.scale(2)', () => surfaceVolumeAndAreaTests(testFace.scale(2)))
 	suite('testFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))

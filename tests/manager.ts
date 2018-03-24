@@ -356,6 +356,14 @@ export function testCurve(assert: Assert, curve: Curve, checkTangents = true, ms
 	}
 }
 
+export function suiteSurface(surface: Surface) {
+	if (ParametricSurface.is(surface)) {
+		test('ParametricSurface', assert => testParametricSurface(assert, surface))
+	}
+	if (ImplicitSurface.is(surface)) {
+		test('ImplicitSurface', assert => testImplicitSurface(assert, surface))
+	}
+}
 export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 	outputLink(
 		assert,
@@ -468,7 +476,7 @@ export function testContainsCurve(assert: Assert, surface: Surface, curve: Curve
 	assert.ok(surface.containsCurve(curve), 'surface contains curve')
 }
 
-export function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {
+function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {
 	const EPS = 1e-8
 	const testPoints = [
 		V3.O.plus(V(0.2, 0, 0)), // V3.O fails on ellipsoidSurface
