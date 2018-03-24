@@ -1,9 +1,9 @@
 import {
-	linkBRep,
 	suite,
 	suiteSurface,
 	surfaceVolumeAndAreaTests,
 	test,
+	testContainsCurve,
 	testISCurves,
 	testLoopCCW,
 	testLoopContainsPoint,
@@ -219,11 +219,13 @@ suite('ConicSurface', () => {
 	})
 	test('containsParabola', assert => {
 		const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0] as ParabolaCurve
-		assert.ok(UCS.containsParabola(pb))
+		assert.ok(pb instanceof ParabolaCurve)
+		testContainsCurve(assert, UCS, pb)
 
 		const c2 = UCS.shearX(2, 3)
 		const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearX(2, 3))[0] as ParabolaCurve
-		assert.ok(c2.containsParabola(pb2))
+		assert.ok(pb2 instanceof ParabolaCurve)
+		testContainsCurve(assert, c2, pb2)
 	})
 	test('containsHyperbola', assert => {
 		const s = new ConicSurface(
@@ -238,8 +240,7 @@ suite('ConicSurface', () => {
 			V(-99.70524711843181, 7.672268051394617, -1.8369701987210304e-14),
 		)
 
-		linkBRep(assert, `mesh=[${s.sce}.toMesh()]&edges=[Edge.forCurveAndTs(${c.sce})]`)
-		assert.ok(s.containsCurve(c))
+		testContainsCurve(assert, s, c)
 	})
 	test('containsPoint', assert => {
 		const face = B2T.cone(1, 1, PI).faces.find(face => face.surface instanceof ConicSurface)

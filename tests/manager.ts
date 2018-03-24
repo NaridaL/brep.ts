@@ -161,7 +161,6 @@ export function outputLink(assert: Assert, values, msg = 'view') {
 		'}'
 	const o = sanitizeFilename(assert.getTestName() + '_' + msg) + '.html'
 	fs.writeFileSync(__dirname + '/results/' + o, demoFile.replace('/*INSERT*/', script), 'utf8')
-	// linkBRep(assert, makeLink(values), msg)
 	assert.link('http://localhost:10001/tests/results/' + o, msg)
 }
 
@@ -565,7 +564,10 @@ export function linkBRep(assert: Assert, hash: string, message = 'view') {
 
 export function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Edge[], p: V3, result: PointVsFace) {
 	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
-	linkBRep(assert, `mesh=[${Face.create(surface, loop).sce}.toMesh()];points=[${p.sce}]`)
+	outputLink(assert, {
+		mesh: Face.create(surface, loop).sce + '.toMesh()',
+		points: [p.sce],
+	})
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }
 

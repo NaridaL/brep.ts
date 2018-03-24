@@ -1,13 +1,15 @@
-import { inDifferentSystems, suite, test, testLoopContainsPoint, testBRepOp, b2equals, linkBRep } from './manager'
+import { b2equals, inDifferentSystems, suite, test, testBRepOp, testLoopContainsPoint } from './manager'
 
 import { JavaSet as CustomSet } from 'javasetmap.ts'
-import { DEG, M4, P3XY, V, V3, eq } from 'ts3dutils'
+import { DEG, eq, M4, P3XY, V, V3 } from 'ts3dutils'
 import * as ts3dutils from 'ts3dutils'
 import * as brepts from '..'
 import {
+	B2T,
 	BezierCurve,
 	ClassSerializer,
 	Edge,
+	Face,
 	intersectionCircleLine,
 	intersectionUnitCircleLine,
 	L3,
@@ -15,14 +17,12 @@ import {
 	PCurveEdge,
 	PlaneSurface,
 	PointVsFace,
+	SemiCylinderSurface,
 	SemiEllipseCurve,
 	StraightEdge,
-	B2T,
-	SemiCylinderSurface,
-	Face,
 } from '..'
 
-import { sqrt, cos, sin, PI } from '../src/math'
+import { cos, PI, sin, sqrt } from '../src/math'
 
 suite('NLA', () => {
 	suite(
@@ -45,46 +45,6 @@ suite('NLA', () => {
 				assert.ok(ell.containsPoint(p), `ell.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`)
 				assert.ok(bez.containsPoint(p), `bez.distanceToPoint(${p}) = ${bez.distanceToPoint(p)}`)
 			})
-		}),
-	)
-
-	suite(
-		'SemiCylinderSurface.calculateArea',
-		inDifferentSystems(function(assert, m4) {
-			const surface = SemiCylinderSurface.UNIT.transform(m4)
-			// loop which is 1 high and goes around a quarter of the cylinder
-			const loop = [
-				StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
-				Edge.forCurveAndTs(SemiEllipseCurve.UNIT, 0, PI / 2),
-				StraightEdge.throughPoints(V(0, 1, 0), V(0, 1, 1)),
-				Edge.forCurveAndTs(SemiEllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0),
-			].map(edge => edge.transform(m4))
-			const face = Face.create(surface, loop)
-			linkBRep(assert, `mesh=${face.sce}.toMesh()`)
-			const area = face.calcArea()
-			if (m4.isOrthogonal()) {
-				assert.push(eq(area, PI / 2), area, PI / 2)
-			} else {
-				const expectedArea = face.toMesh().calcVolume().area
-				assert.push(eq(area, expectedArea, 0.1), area, expectedArea)
-			}
-
-			const loopReverse = Edge.reversePath(loop)
-			const holeArea = surface.calculateArea(loopReverse)
-			if (m4.isOrthogonal()) {
-				assert.push(eq(holeArea, -PI / 2), area, -PI / 2)
-			} else {
-				const expectedArea = face.toMesh().calcVolume().area
-				assert.push(eq(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
-			}
-
-			const flippedSurfaceArea = surface.flipped().calculateArea(loop)
-			if (m4.isOrthogonal()) {
-				assert.push(eq(holeArea, -PI / 2), area, -PI / 2)
-			} else {
-				const expectedArea = face.toMesh().calcVolume().area
-				assert.push(eq(holeArea, -expectedArea, 0.1), holeArea, -expectedArea)
-			}
 		}),
 	)
 
@@ -211,37 +171,6 @@ suite('NLA', () => {
 	// text-decoration: underline' target='blank' href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1,
 	// -1)]&edges=${back.sce}'>view</a>`) console.log(front, back) const expectedFront = [] const expectedBack =
 	// [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)] },
-
-	//test('SemiCylinderSurface Face containsPoint', assert => {
-	//	let face = new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(73.03583314037537,
-	// -69.86032483338774, 0), V(-24.176861672352132, -146.16681457389276, 0), V(146.16681457389276,
-	// -24.176861672352132, 0)), V(0, 0, 1)), [ new PCurveEdge(new SemiEllipseCurve(V(73.03583314037537,
-	// -69.86032483338774, 0), V(-24.176861672352132, -146.16681457389276, 0), V(146.16681457389276,
-	// -24.176861672352132, 0)), V(219.75148278474705, -90.44615667066816, 0), V(97.2126948127275, 76.30648974050503,
-	// 0), 1.5953170840348225, -3.141592653589793, null, V(-20.58583183728038, -146.71564964437164, 0),
-	// V(146.16681457389276, -24.176861672352114, 0)), StraightEdge.throughPoints(V(97.2126948127275,
-	// 76.30648974050503, 0), V(97.2126948127275, 76.30648974050503, -100)), new PCurveEdge(new
-	// SemiEllipseCurve(V(73.03583314037537, -69.86032483338774, -100), V(-24.176861672352132, -146.16681457389276, 0),
-	// V(146.16681457389276, -24.176861672352132, 0)), V(97.2126948127275, 76.30648974050503, -100),
-	// V(219.75148278474705, -90.44615667066816, -100), -3.141592653589793, 1.5953170840348225, null,
-	// V(-146.16681457389276, 24.176861672352114, 0), V(20.58583183728038, 146.71564964437164, 0)),
-	// StraightEdge.throughPoints(V(219.75148278474705, -90.44615667066816, -100), V(219.75148278474705,
-	// -90.44615667066816, 0))], []) // let line = new L3(V(-1344.04574670165, 826.5930889273866, 720.915318266099),
-	// V(0.776732950940391, -0.43614824442447003, -0.45437939192802856)) let line = new L3(V(-1560.8950828838565,
-	// 716.07295580975, 249.61382611323648), V(0.9130103135570956, -0.36545647611595106, -0.18125598308272678)) let
-	// face2 = new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 100)), [ new PCurveEdge(new
-	// SemiEllipseCurve(V(73.03583314037537, -69.86032483338774, -100), V(-24.176861672352132, -146.16681457389276, 0),
-	// V(146.16681457389276, -24.176861672352132, 0)), V(219.75148278474705, -90.44615667066816, -100),
-	// V(97.2126948127275, 76.30648974050503, -100), 1.5953170840348225, -3.141592653589793, null,
-	// V(-20.58583183728038, -146.71564964437164, 0), V(146.16681457389276, -24.176861672352114, 0)),
-	// StraightEdge.throughPoints(V(97.2126948127275, 76.30648974050503, -100), V(275.99999999999966,
-	// 255.99999999999972, -100)), new PCurveEdge(new BezierCurve(V(219.75148278474705, -90.44615667066816, -100),
-	// V(-82.00000000000018, -138.00000000000023, -100), V(539.9999999999997, 225.9999999999997, -100),
-	// V(275.99999999999966, 255.99999999999972, -100), -0.1, 1.1), V(275.99999999999966, 255.99999999999972, -100),
-	// V(219.75148278474705, -90.44615667066816, -100), 1, 0, null, V(792, -90.00000000000009, 0), V(905.2544483542417,
-	// 142.6615299879962, 0))], []) console.log(face.intersectsLine(line), face.surface.isTsForLine(line),
-	// face.surface.isTsForLine(line)) const t = line.isTWithPlane(face2.surface.plane)
-	// console.log(face2.intersectsLine(line), t, line.at(t).sce) assert.ok(face.intersectsLine(line)) },
 
 	//test('SemiEllipseCurve.getVolZAnd', assert => {
 	//
