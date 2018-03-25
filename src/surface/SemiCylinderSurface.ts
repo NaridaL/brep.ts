@@ -19,7 +19,7 @@ import { sign } from '../math'
 export class SemiCylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 	readonly matrix: M4
-	readonly inverseMatrix: M4
+	readonly matrixInverse: M4
 	readonly pLCNormalWCMatrix: M4
 	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number
@@ -38,14 +38,14 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		assertInst(SemiEllipseCurve, baseCurve)
 		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
-		this.inverseMatrix = this.matrix.inversed()
+		this.matrixInverse = this.matrix.inversed()
 		this.normalDir = sign(this.baseCurve.normal.dot(this.dir))
 		this.pLCNormalWCMatrix = this.matrix
 			.as3x3()
 			.inversed()
 			.transposed()
 			.scale(this.normalDir)
-		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
+		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse)
 	}
 
 	static semicylinder(radius: number): SemiCylinderSurface {
@@ -80,7 +80,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	}
 
 	normalP(p: V3): V3 {
-		return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit()
+		return this.pLCNormalWCMatrix.transformVector(this.matrixInverse.transformPoint(p).xy()).unit()
 	}
 
 	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
@@ -95,12 +95,12 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
-		const dirLC = this.inverseMatrix.transformVector(line.dir1)
+		const dirLC = this.matrixInverse.transformVector(line.dir1)
 		if (dirLC.isParallelTo(V3.Z)) {
 			// line is parallel to this.dir
 			return []
 		}
-		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
+		const anchorLC = this.matrixInverse.transformPoint(line.anchor)
 		assert(
 			!SemiCylinderSurface.unitISLineTs(anchorLC, dirLC).length ||
 				!isNaN(SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)[0]),
@@ -145,26 +145,26 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 	implicitFunction() {
 		return (pWC: V3) => {
-			const pLC = this.inverseMatrix.transformPoint(pWC)
+			const pLC = this.matrixInverse.transformPoint(pWC)
 			return (pLC.lengthXY() - 1) * this.normalDir
 		}
 	}
 
 	didp(pWC: V3) {
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		const pLCLengthXY = pLC.lengthXY()
 		const didpLC = new V3(pLC.x / pLCLengthXY, pLC.y / pLCLengthXY, 0)
 		return this.pLCNormalWCMatrix.transformVector(didpLC)
 	}
 
 	containsPoint(pWC: V3): boolean {
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		return this.baseCurve.isValidT(SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax))
 	}
 
 	stP(pWC: V3): V3 {
 		assert(arguments.length == 1)
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		const u = SemiEllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
 		return new V3(u, pLC.z, 0)
 	}

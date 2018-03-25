@@ -400,13 +400,13 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 			.schur(new V3(1, 1, 0.5))
 			.div(totalVolume)
 		return { volume: totalVolume, centroid: centroid }
-		const localBasePlane = P3.XY.transform(this.inverseMatrix)
+		const localBasePlane = P3.XY.transform(this.matrixInverse)
 		console.log(this)
 		console.log(localBasePlane)
 		//const zDistanceFactor = toT.transformVector(V3.Z).length()
 		const localVolume = edges
 			.map((edgeWC, edgeIndex, edges) => {
-				const edgeLC = edgeWC.transform(this.inverseMatrix)
+				const edgeLC = edgeWC.transform(this.matrixInverse)
 				// const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
 
 				// at(t) = edge.curve.at(t)

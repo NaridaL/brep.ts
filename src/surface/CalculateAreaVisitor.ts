@@ -107,7 +107,7 @@ export const CalculateAreaVisitor = {
 					const f = (t: number) => {
 						const pWC = curveWC.at(t),
 							tangent = curveWC.tangentAt(t)
-						const pLC = this.inverseMatrix.transformPoint(pWC)
+						const pLC = this.matrixInverse.transformPoint(pWC)
 						const angleXY = pLC.angleXY()
 						const arcLength = angleXY * circleRadius * Math.sqrt(1 - pLC.z ** 2)
 						const dotter = this.matrix

@@ -105,11 +105,11 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		//assertf(() => EllipseCurve.isValidT(tStart), tStart)
 		//assertf(() => EllipseCurve.isValidT(tEnd), tEnd)
 
-		const upLC = this.inverseMatrix.transformVector(up)
+		const upLC = this.matrixInverse.transformVector(up)
 		const rightLC = upLC.cross(V3.Z)
 		const normTStart = tStart - rightLC.angleXY()
 		const normTEnd = tEnd - rightLC.angleXY()
-		const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit())
+		const transformedOriginY = this.matrixInverse.getTranslation().dot(upLC.unit())
 		// integral of sqrt(1 - x²) from 0 to cos(t)
 		// Basically, we want
 		// INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
@@ -215,7 +215,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	pointT(pWC: V3) {
 		assertVectors(pWC)
 		assert(this.containsPoint(pWC))
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		const t = SemiEllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
 		assert(this.isValidT(t))
 		return t
@@ -297,7 +297,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	isInfosWithEllipse(ellipse: SemiEllipseCurve): ISInfo[] {
 		if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 			// ellipses are coplanar
-			const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled()
+			const ellipseLCRA = ellipse.transform(this.matrixInverse).rightAngled()
 
 			const r1 = ellipseLCRA.f1.lengthXY(),
 				r2 = ellipseLCRA.f2.lengthXY(),
@@ -396,7 +396,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		//  (xi² - eta²) f1 f2 + xi eta (f2^2-f1^2) + xi f2 q - eta f1 q = 0
 
 		// atan2 of p is a good first approximation for the searched t
-		tStart = tStart || this.inverseMatrix.transformPoint(p).angleXY()
+		tStart = tStart || this.matrixInverse.transformPoint(p).angleXY()
 		const pRelCenter = p.minus(this.center)
 		const f = (t: number) =>
 			this.tangentAt(t).dot(
@@ -425,7 +425,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 					.unit()
 					.times(Math.sin(phi)),
 			)
-		const dirLC = this.inverseMatrix.transformVector(phiDir)
+		const dirLC = this.matrixInverse.transformVector(phiDir)
 		return dirLC.angleXY()
 	}
 }

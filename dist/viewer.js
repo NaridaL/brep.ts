@@ -13234,13 +13234,13 @@ class XiEtaCurve$$1 extends Curve$$1 {
         if (!this.normal.likeO()) {
             this.normal = this.normal.unit();
             this.matrix = M4.forSys(f1, f2, this.normal, center);
-            this.inverseMatrix = this.matrix.inversed();
+            this.matrixInverse = this.matrix.inversed();
         }
         else {
             this.matrix = M4.forSys(f1, f2, f1.unit(), center);
             const f1p = f1.getPerpendicular();
             // prettier-ignore
-            this.inverseMatrix = new M4(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).times(M4.forSys(f1, f1p, f1.cross(f1p), center).inversed());
+            this.matrixInverse = new M4(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1).times(M4.forSys(f1, f1p, f1.cross(f1p), center).inversed());
         }
     }
     /**
@@ -13371,16 +13371,16 @@ class XiEtaCurve$$1 extends Curve$$1 {
     }
     pointT(p) {
         assertVectors(p);
-        const pLC = this.inverseMatrix.transformPoint(p);
+        const pLC = this.matrixInverse.transformPoint(p);
         return this.constructor.XYLCPointT(pLC);
     }
     containsPoint(p) {
-        const pLC = this.inverseMatrix.transformPoint(p);
+        const pLC = this.matrixInverse.transformPoint(p);
         return eq0(pLC.z) && this.isValidT(this.constructor.XYLCPointT(pLC, this.tMin, this.tMax));
     }
     isInfosWithLine(anchorWC, dirWC, tMin = this.tMin, tMax = this.tMax, lineMin = -100000, lineMax = 100000) {
-        const anchorLC = this.inverseMatrix.transformPoint(anchorWC);
-        const dirLC = this.inverseMatrix.transformVector(dirWC);
+        const anchorLC = this.matrixInverse.transformPoint(anchorWC);
+        const dirLC = this.matrixInverse.transformVector(dirWC);
         if (eq0(dirLC.z)) {
             // local line parallel to XY-plane
             if (eq0(anchorLC.z)) {
@@ -13428,7 +13428,7 @@ class XiEtaCurve$$1 extends Curve$$1 {
         }
     }
     isInfosWithBezier(bezierWC) {
-        const bezierLC = bezierWC.transform(this.inverseMatrix);
+        const bezierLC = bezierWC.transform(this.matrixInverse);
         if (new PlaneSurface$$1(P3$$1.XY).containsCurve(bezierLC)) {
             return this.isInfosWithBezier2D(bezierWC);
         }
@@ -13720,7 +13720,7 @@ class BezierCurve$$1 extends Curve$$1 {
             return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther);
         }
         if (surface instanceof SemiEllipsoidSurface$$1) {
-            const thisOC = this.transform(surface.inverseMatrix);
+            const thisOC = this.transform(surface.matrixInverse);
             const f = (t) => thisOC.at(t).length() - 1;
             const df = (t) => thisOC
                 .at(t)
@@ -15291,11 +15291,11 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
         assertf(() => up.isPerpendicularTo(this.normal));
         //assertf(() => EllipseCurve.isValidT(tStart), tStart)
         //assertf(() => EllipseCurve.isValidT(tEnd), tEnd)
-        const upLC = this.inverseMatrix.transformVector(up);
+        const upLC = this.matrixInverse.transformVector(up);
         const rightLC = upLC.cross(V3.Z);
         const normTStart = tStart - rightLC.angleXY();
         const normTEnd = tEnd - rightLC.angleXY();
-        const transformedOriginY = this.inverseMatrix.getTranslation().dot(upLC.unit());
+        const transformedOriginY = this.matrixInverse.getTranslation().dot(upLC.unit());
         // integral of sqrt(1 - x²) from 0 to cos(t)
         // Basically, we want
         // INTEGRAL[cos(t); PI/2] sqrt(1 - x²) dx
@@ -15389,7 +15389,7 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     pointT(pWC) {
         assertVectors(pWC);
         assert(this.containsPoint(pWC));
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         const t = SemiEllipseCurve$$1.XYLCPointT(pLC, this.tMin, this.tMax);
         assert(this.isValidT(t));
         return t;
@@ -15457,7 +15457,7 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     isInfosWithEllipse(ellipse) {
         if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
             // ellipses are coplanar
-            const ellipseLCRA = ellipse.transform(this.inverseMatrix).rightAngled();
+            const ellipseLCRA = ellipse.transform(this.matrixInverse).rightAngled();
             const r1 = ellipseLCRA.f1.lengthXY(), r2 = ellipseLCRA.f2.lengthXY(), centerDist = ellipseLCRA.center.lengthXY();
             const rMin = min$1(r1, r2), rMax = max$1(r1, r2);
             if (lt(centerDist + rMax, 1) || // entirely inside unit circle
@@ -15543,7 +15543,7 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
         // xi eta (f2^2-f1^2) + xi f2 q - eta² f1 f2 + xi² f1 f2 - eta f1 q = 0
         //  (xi² - eta²) f1 f2 + xi eta (f2^2-f1^2) + xi f2 q - eta f1 q = 0
         // atan2 of p is a good first approximation for the searched t
-        tStart = tStart || this.inverseMatrix.transformPoint(p).angleXY();
+        tStart = tStart || this.matrixInverse.transformPoint(p).angleXY();
         const pRelCenter = p.minus(this.center);
         const f = (t) => this.tangentAt(t).dot(this.f1
             .times(Math.cos(t))
@@ -15565,7 +15565,7 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
             .rejectedFrom(this.f1)
             .unit()
             .times(Math.sin(phi)));
-        const dirLC = this.inverseMatrix.transformVector(phiDir);
+        const dirLC = this.matrixInverse.transformVector(phiDir);
         return dirLC.angleXY();
     }
 }
@@ -16082,7 +16082,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         assertVectors(center, f1, f2, dir);
         assert(0 <= tMin);
         this.matrix = M4.forSys(f1, f2, dir, center);
-        this.inverseMatrix = this.matrix.inversed();
+        this.matrixInverse = this.matrix.inversed();
         this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.dir));
         this.pLCNormalWCMatrix = this.matrix
             .as3x3()
@@ -16093,7 +16093,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     pointFoot(pWC, ss, st) {
         if (undefined === ss || undefined === st) {
             // similar to stP
-            const pLC = this.inverseMatrix.transformPoint(pWC);
+            const pLC = this.matrixInverse.transformPoint(pWC);
             const angle = pLC.angleXY();
             if (undefined === ss) {
                 ss = angle < -PI$3 / 2 ? angle + TAU : angle;
@@ -16243,8 +16243,8 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     isTsForLine(line) {
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for lineLC are directly transferable to line
-        const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
-        const dirLC = this.inverseMatrix.transformVector(line.dir1);
+        const anchorLC = this.matrixInverse.transformPoint(line.anchor);
+        const dirLC = this.matrixInverse.transformVector(line.dir1);
         return ConicSurface$$1.unitISLineTs(anchorLC, dirLC);
     }
     /**
@@ -16259,7 +16259,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         return this.containsEllipse(new SemiEllipseCurve$$1(surface.center.plus(surface.dir), surface.f1, surface.f2));
     }
     containsEllipse(ellipse) {
-        const ellipseLC = ellipse.transform(this.inverseMatrix);
+        const ellipseLC = ellipse.transform(this.matrixInverse);
         if (ellipseLC.center.z < 0) {
             return false;
         }
@@ -16270,13 +16270,13 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         return eq(Math.pow(p1.x, 2) + Math.pow(p1.y, 2), Math.pow(p1.z, 2)) && eq(Math.pow(p2.x, 2) + Math.pow(p2.y, 2), Math.pow(p2.z, 2)) && (eq0(f1.z) || eq0(f2.z));
     }
     containsLine(line) {
-        const lineLC = line.transform(this.inverseMatrix);
+        const lineLC = line.transform(this.matrixInverse);
         const d = lineLC.dir1;
         return lineLC.containsPoint(V3.O) && eq(d.x * d.x + d.y * d.y, d.z * d.z);
     }
     containsParabola(curve) {
         assertInst(ParabolaCurve$$1, curve);
-        const curveLC = curve.transform(this.inverseMatrix);
+        const curveLC = curve.transform(this.matrixInverse);
         if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
             return false;
         }
@@ -16291,7 +16291,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     containsHyperbola(curve) {
         assertInst(HyperbolaCurve$$1, curve);
         return true;
-        const curveLC = curve.transform(this.inverseMatrix);
+        const curveLC = curve.transform(this.matrixInverse);
         if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
             return false;
         }
@@ -16336,7 +16336,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     }
     normalP(p) {
         //TODO assert(!p.like(this.center))
-        const pLC = this.inverseMatrix.transformPoint(p);
+        const pLC = this.matrixInverse.transformPoint(p);
         return this.normalSTFunc()(pLC.angleXY(), pLC.z);
     }
     pSTFunc() {
@@ -16360,13 +16360,13 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     }
     implicitFunction() {
         return pWC => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
+            const pLC = this.matrixInverse.transformPoint(pWC);
             const radiusLC = pLC.lengthXY();
             return this.normalDir * (radiusLC - pLC.z);
         };
     }
     didp(pWC) {
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         return this.pLCNormalWCMatrix.transformVector(pLC
             .xy()
             .unit()
@@ -16377,7 +16377,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
         return eq0(this.implicitFunction()(p));
     }
     stP(pWC) {
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         const angle = pLC.angleXY();
         return new V3(angle < -PI$3 / 2 ? angle + TAU : angle, pLC.z, 0);
     }
@@ -16395,7 +16395,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     }
     isCurvesWithPlane(plane) {
         assertInst(P3$$1, plane);
-        const planeLC = plane.transform(this.inverseMatrix);
+        const planeLC = plane.transform(this.matrixInverse);
         const planeNormal = planeLC.normal1;
         const c = planeNormal.z;
         /** "rotate" plane normal1 when passing to {@link ConicSurface.unitISPlane} so that
@@ -16825,14 +16825,14 @@ class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
         assertInst(SemiEllipseCurve$$1, baseCurve);
         //assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
         this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center);
-        this.inverseMatrix = this.matrix.inversed();
+        this.matrixInverse = this.matrix.inversed();
         this.normalDir = sign$1(this.baseCurve.normal.dot(this.dir));
         this.pLCNormalWCMatrix = this.matrix
             .as3x3()
             .inversed()
             .transposed()
             .scale(this.normalDir);
-        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix);
+        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse);
     }
     static semicylinder(radius) {
         return new SemiCylinderSurface$$1(new SemiEllipseCurve$$1(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, undefined, undefined);
@@ -16858,7 +16858,7 @@ class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
         return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve$$1.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)));
     }
     normalP(p) {
-        return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p).xy()).unit();
+        return this.pLCNormalWCMatrix.transformVector(this.matrixInverse.transformPoint(p).xy()).unit();
     }
     loopContainsPoint(loop, p) {
         assertVectors(p);
@@ -16872,12 +16872,12 @@ class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
         assertInst(L3$$1, line);
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
-        const dirLC = this.inverseMatrix.transformVector(line.dir1);
+        const dirLC = this.matrixInverse.transformVector(line.dir1);
         if (dirLC.isParallelTo(V3.Z)) {
             // line is parallel to this.dir
             return [];
         }
-        const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
+        const anchorLC = this.matrixInverse.transformPoint(line.anchor);
         assert(!SemiCylinderSurface$$1.unitISLineTs(anchorLC, dirLC).length ||
             !isNaN(SemiCylinderSurface$$1.unitISLineTs(anchorLC, dirLC)[0]), 'sad ' + dirLC);
         return SemiCylinderSurface$$1.unitISLineTs(anchorLC, dirLC);
@@ -16916,23 +16916,23 @@ class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     }
     implicitFunction() {
         return (pWC) => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
+            const pLC = this.matrixInverse.transformPoint(pWC);
             return (pLC.lengthXY() - 1) * this.normalDir;
         };
     }
     didp(pWC) {
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         const pLCLengthXY = pLC.lengthXY();
         const didpLC = new V3(pLC.x / pLCLengthXY, pLC.y / pLCLengthXY, 0);
         return this.pLCNormalWCMatrix.transformVector(didpLC);
     }
     containsPoint(pWC) {
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         return this.baseCurve.isValidT(SemiEllipseCurve$$1.XYLCPointT(pLC, this.sMin, this.sMax));
     }
     stP(pWC) {
         assert(arguments.length == 1);
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         const u = SemiEllipseCurve$$1.XYLCPointT(pLC, this.tMin, this.tMax);
         return new V3(u, pLC.z, 0);
     }
@@ -16987,14 +16987,14 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         assert(-PI$3 / 2 <= tMax && tMax <= PI$3 / 2);
         assertVectors(center, f1, f2, f3);
         this.matrix = M4.forSys(f1, f2, f3, center);
-        this.inverseMatrix = this.matrix.inversed();
+        this.matrixInverse = this.matrix.inversed();
         this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.f3));
         this.pLCNormalWCMatrix = this.matrix
             .as3x3()
             .inversed()
             .transposed()
             .scale(this.normalDir);
-        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix);
+        this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse);
     }
     static unitArea(contour) {
         const totalArea = contour
@@ -17135,7 +17135,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         // handling discontinuities:
         // option 1: check for intersections with baseline, if there are any integrate parts separetely
         // "rotate" the edge so that there are no overlaps
-        const matrix = M4.forSys(a, b, c), inverseMatrix = matrix.inversed();
+        const matrix = M4.forSys(a, b, c), matrixInverse = matrix.inversed();
         const circleRadius = a.length();
         const c1 = c.unit();
         const totalArea = edges
@@ -17143,7 +17143,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
             if (edge.curve instanceof SemiEllipseCurve$$1) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
-                    const localAt = inverseMatrix.transformPoint(at);
+                    const localAt = matrixInverse.transformPoint(at);
                     const angleXY = localAt.angleXY();
                     const arcLength = angleXY * circleRadius * Math.sqrt(1 + Math.pow(localAt.z, 2));
                     const scaling = Math.sqrt(1 + Math.pow(c1.dot(tangent), 2));
@@ -17166,7 +17166,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         return (this == obj || (Object.getPrototypeOf(obj) == this.constructor.prototype && this.matrix.equals(obj.matrix)));
     }
     edgeLoopCCW(loop) {
-        return SemiEllipsoidSurface$$1.unitArea(loop.map(edge => edge.transform(this.inverseMatrix))) > 0;
+        return SemiEllipsoidSurface$$1.unitArea(loop.map(edge => edge.transform(this.matrixInverse))) > 0;
         //let totalAngle = 0
         //for (let i = 0; i < contour.length; i++) {
         //    const ipp = (i + 1) % contour.length
@@ -17200,7 +17200,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         curves2 = this.clipCurves(curves2);
         return curves2;
         //return []
-        const surfaceLC = surface.transform(this.inverseMatrix);
+        const surfaceLC = surface.transform(this.matrixInverse);
         //const lcMinZ0RelO =
         const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
         const ists = baseCurveLC.isTsWithSurface(SemiEllipsoidSurface$$1.UNIT);
@@ -17262,7 +17262,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
             return this.isCurvesWithSemiCylinderSurface(surface);
         }
         else if (surface instanceof SemiEllipsoidSurface$$1) {
-            const surfaceLC = surface.transform(this.inverseMatrix);
+            const surfaceLC = surface.transform(this.matrixInverse);
             const curves = SemiEllipsoidSurface$$1.unitISCurvesWithEllipsoidSurface(surfaceLC).map(c => c.transform(this.matrix));
             return surface.clipCurves(curves);
         }
@@ -17280,7 +17280,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         }
     }
     isCurvesWithPlane(plane) {
-        const planeLC = plane.transform(this.inverseMatrix);
+        const planeLC = plane.transform(this.matrixInverse);
         return SemiEllipsoidSurface$$1.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix));
     }
     isCurvesWithSemiCylinderSurface(surface) {
@@ -17299,8 +17299,8 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         assertInst(L3$$1, line);
         // transforming line manually has advantage that dir1 will not be renormalized,
         // meaning that calculated values t for localLine are directly transferable to line
-        const anchorLC = this.inverseMatrix.transformPoint(line.anchor);
-        const dirLC = this.inverseMatrix.transformVector(line.dir1);
+        const anchorLC = this.matrixInverse.transformPoint(line.anchor);
+        const dirLC = this.matrixInverse.transformVector(line.dir1);
         return SemiEllipsoidSurface$$1.unitISTsWithLine(anchorLC, dirLC);
     }
     isCoplanarTo(surface) {
@@ -17312,12 +17312,12 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
             return false;
         if (this.isSphere())
             return surface.isSphere() && eq(this.f1.length(), this.f2.length());
-        const otherMatrixLC = this.inverseMatrix.times(surface.matrix);
+        const otherMatrixLC = this.matrixInverse.times(surface.matrix);
         // Ellipsoid with matrix otherMatrixLC is unit sphere iff otherMatrixLC is orthogonal
         return otherMatrixLC.like3x3() && otherMatrixLC.isOrthogonal();
     }
     containsEllipse(ellipse) {
-        const ellipseLC = ellipse.transform(this.inverseMatrix);
+        const ellipseLC = ellipse.transform(this.matrixInverse);
         const distEllipseLCCenter = ellipseLC.center.length();
         const correctRadius = Math.sqrt(1 - Math.pow(distEllipseLCCenter, 2));
         return lt(distEllipseLCCenter, 1) && ellipseLC.isCircular() && ellipseLC.f1.hasLength(correctRadius);
@@ -17372,14 +17372,14 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         };
     }
     normalP(p) {
-        return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit();
+        return this.pLCNormalWCMatrix.transformVector(this.matrixInverse.transformPoint(p)).unit();
     }
     normalST(s, t) {
         return this.pLCNormalWCMatrix.transformVector(V3.sphere(s, t)).unit();
     }
     stPFunc() {
         return (pWC) => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
+            const pLC = this.matrixInverse.transformPoint(pWC);
             const alpha = abs$2(pLC.angleXY());
             const beta = Math.asin(clamp(pLC.z, -1, 1));
             assert(isFinite(alpha));
@@ -17462,7 +17462,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
             return PointVsFace$$1.OUTSIDE;
         assertVectors(pWC);
         assert(Edge$$1.isLoop(loop));
-        const pLCXY = this.inverseMatrix.transformPoint(pWC).xy();
+        const pLCXY = this.matrixInverse.transformPoint(pWC).xy();
         const testLine = new SemiEllipseCurve$$1(this.center, this.f3, pLCXY.likeO() ? this.f2 : this.matrix.transformVector(pLCXY.unit()));
         if (P3$$1.normalOnAnchor(this.f2.unit(), this.center).containsPoint(pWC)) {
             return loop.some(edge => edge.curve.containsPoint(pWC) && fuzzyBetween(edge.curve.pointT(pWC), edge.minT, edge.maxT))
@@ -17524,7 +17524,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
     pointFoot(pWC, startS, startT) {
         console.log(pWC.sce);
         if (undefined === startS || undefined === startT) {
-            let pLC1 = this.inverseMatrix.transformPoint(pWC).unit();
+            let pLC1 = this.matrixInverse.transformPoint(pWC).unit();
             if (pLC1.y < 0)
                 pLC1 = pLC1.negated();
             ({ x: startS, y: startT } = SemiEllipsoidSurface$$1.UNIT.stP(pLC1));
@@ -17541,7 +17541,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
     }
     implicitFunction() {
         return (pWC) => {
-            const pLC = this.inverseMatrix.transformPoint(pWC);
+            const pLC = this.matrixInverse.transformPoint(pWC);
             return (pLC.length() - 1) * this.normalDir;
         };
     }
@@ -17549,7 +17549,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
     didp(pWC) {
         // i(pWC) = this.inverseMatrix.transformPoint(pWC).length() - 1
         // chain diff rule
-        const pLC = this.inverseMatrix.transformPoint(pWC);
+        const pLC = this.matrixInverse.transformPoint(pWC);
         return this.pLCNormalWCMatrix.transformVector(pLC.unit()); //.times(this.normalDir)
     }
 }
@@ -17998,13 +17998,13 @@ const ZDirVolumeVisitor$$1 = {
             .schur(new V3(1, 1, 0.5))
             .div(totalVolume);
         return { volume: totalVolume, centroid: centroid };
-        const localBasePlane = P3$$1.XY.transform(this.inverseMatrix);
+        const localBasePlane = P3$$1.XY.transform(this.matrixInverse);
         console.log(this);
         console.log(localBasePlane);
         //const zDistanceFactor = toT.transformVector(V3.Z).length()
         const localVolume = edges
             .map((edgeWC, edgeIndex, edges) => {
-            const edgeLC = edgeWC.transform(this.inverseMatrix);
+            const edgeLC = edgeWC.transform(this.matrixInverse);
             // const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
             // at(t) = edge.curve.at(t)
             // INT[edge.aT; edge.bT] (
@@ -18142,7 +18142,7 @@ const CalculateAreaVisitor$$1 = {
                     const circleRadius = this.f1.length();
                     const f = (t) => {
                         const pWC = curveWC.at(t), tangent = curveWC.tangentAt(t);
-                        const pLC = this.inverseMatrix.transformPoint(pWC);
+                        const pLC = this.matrixInverse.transformPoint(pWC);
                         const angleXY = pLC.angleXY();
                         const arcLength = angleXY * circleRadius * Math.sqrt(1 - Math.pow(pLC.z, 2));
                         const dotter = this.matrix
@@ -32976,7 +32976,7 @@ class RotationFace$$1 extends Face$$1 {
                 return sign$1(u) * PI$3;
             }
         }
-        const localEdge = this.contour[0].transform(this.surface.inverseMatrix);
+        const localEdge = this.contour[0].transform(this.surface.matrixInverse);
         if (P3$$1.ZX.containsCurve(localEdge.curve)) {
             const insideVector = localEdge.a.cross(localEdge.aDir);
             return sign$1(insideVector.dot(V3.Y)) * PI$3;
@@ -33038,7 +33038,7 @@ class RotationFace$$1 extends Face$$1 {
                 const nextStart = edgeLoop[ipp].a;
                 //console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
                 if (testDegeneratePoint(nextStart)) {
-                    const bDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[ipp].aDir);
+                    const bDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[ipp].aDir);
                     let inAngle = Math.atan2(-bDirLC.y, -bDirLC.x);
                     if (abs$2(inAngle) > Math.PI - NLA_PRECISION) {
                         assert(hint == -PI$3 || hint == PI$3);

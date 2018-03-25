@@ -1467,7 +1467,7 @@ export class RotationFace extends Face {
 				return sign(u) * PI
 			}
 		}
-		const localEdge = this.contour[0].transform(this.surface.inverseMatrix)
+		const localEdge = this.contour[0].transform(this.surface.matrixInverse)
 		if (P3.ZX.containsCurve(localEdge.curve)) {
 			const insideVector = localEdge.a.cross(localEdge.aDir)
 			return sign(insideVector.dot(V3.Y)) * PI
@@ -1536,8 +1536,8 @@ export class RotationFace extends Face {
 				//console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
 
 				if (testDegeneratePoint(nextStart)) {
-					const bDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[i].bDir),
-						aDirLC = ellipsoid.inverseMatrix.transformVector(edgeLoop[ipp].aDir)
+					const bDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[i].bDir),
+						aDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[ipp].aDir)
 					let inAngle = Math.atan2(-bDirLC.y, -bDirLC.x)
 					if (abs(inAngle) > Math.PI - NLA_PRECISION) {
 						assert(hint == -PI || hint == PI)

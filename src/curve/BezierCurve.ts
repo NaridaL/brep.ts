@@ -256,7 +256,7 @@ export class BezierCurve extends Curve {
 			return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther)
 		}
 		if (surface instanceof SemiEllipsoidSurface) {
-			const thisOC = this.transform(surface.inverseMatrix)
+			const thisOC = this.transform(surface.matrixInverse)
 			const f = (t: number) => thisOC.at(t).length() - 1
 			const df = (t: number) =>
 				thisOC

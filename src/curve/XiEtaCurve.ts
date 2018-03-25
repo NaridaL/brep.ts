@@ -32,7 +32,7 @@ import { PI } from '../math'
 export abstract class XiEtaCurve extends Curve {
 	readonly normal: V3
 	readonly matrix: M4
-	readonly inverseMatrix: M4;
+	readonly matrixInverse: M4;
 	readonly ['constructor']: typeof XiEtaCurve & (new (center: V3, f1: V3, f2: V3, tMin: number, tMax: number) => this)
 
 	constructor(
@@ -48,12 +48,12 @@ export abstract class XiEtaCurve extends Curve {
 		if (!this.normal.likeO()) {
 			this.normal = this.normal.unit()
 			this.matrix = M4.forSys(f1, f2, this.normal, center)
-			this.inverseMatrix = this.matrix.inversed()
+			this.matrixInverse = this.matrix.inversed()
 		} else {
 			this.matrix = M4.forSys(f1, f2, f1.unit(), center)
 			const f1p = f1.getPerpendicular()
 			// prettier-ignore
-			this.inverseMatrix = new M4(
+			this.matrixInverse = new M4(
 				1, 0, 0, 0,
 				0, 0, 0, 0,
 				0, 0, 0, 0,
@@ -237,12 +237,12 @@ export abstract class XiEtaCurve extends Curve {
 
 	pointT(p: V3): number {
 		assertVectors(p)
-		const pLC = this.inverseMatrix.transformPoint(p)
+		const pLC = this.matrixInverse.transformPoint(p)
 		return this.constructor.XYLCPointT(pLC)
 	}
 
 	containsPoint(p: V3): boolean {
-		const pLC = this.inverseMatrix.transformPoint(p)
+		const pLC = this.matrixInverse.transformPoint(p)
 		return eq0(pLC.z) && this.isValidT(this.constructor.XYLCPointT(pLC, this.tMin, this.tMax))
 	}
 
@@ -254,8 +254,8 @@ export abstract class XiEtaCurve extends Curve {
 		lineMin = -100000,
 		lineMax = 100000,
 	): ISInfo[] {
-		const anchorLC = this.inverseMatrix.transformPoint(anchorWC)
-		const dirLC = this.inverseMatrix.transformVector(dirWC)
+		const anchorLC = this.matrixInverse.transformPoint(anchorWC)
+		const dirLC = this.matrixInverse.transformVector(dirWC)
 		if (eq0(dirLC.z)) {
 			// local line parallel to XY-plane
 			if (eq0(anchorLC.z)) {
@@ -301,7 +301,7 @@ export abstract class XiEtaCurve extends Curve {
 	}
 
 	isInfosWithBezier(bezierWC: BezierCurve): ISInfo[] {
-		const bezierLC = bezierWC.transform(this.inverseMatrix)
+		const bezierLC = bezierWC.transform(this.matrixInverse)
 		if (new PlaneSurface(P3.XY).containsCurve(bezierLC)) {
 			return this.isInfosWithBezier2D(bezierWC)
 		} else {

@@ -51,7 +51,7 @@ import { abs, cos, max, min, PI, sign, sin, sqrt } from '../math'
 export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitSurface {
 	static readonly UNIT = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z)
 	readonly matrix: M4
-	readonly inverseMatrix: M4
+	readonly matrixInverse: M4
 	readonly pLCNormalWCMatrix: M4
 	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number // -1 | 1
@@ -73,14 +73,14 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		assert(-PI / 2 <= tMax && tMax <= PI / 2)
 		assertVectors(center, f1, f2, f3)
 		this.matrix = M4.forSys(f1, f2, f3, center)
-		this.inverseMatrix = this.matrix.inversed()
+		this.matrixInverse = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.f3))
 		this.pLCNormalWCMatrix = this.matrix
 			.as3x3()
 			.inversed()
 			.transposed()
 			.scale(this.normalDir)
-		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.inverseMatrix)
+		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse)
 	}
 
 	static unitArea(contour: Edge[]) {
@@ -241,7 +241,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		// option 1: check for intersections with baseline, if there are any integrate parts separetely
 		// "rotate" the edge so that there are no overlaps
 		const matrix = M4.forSys(a, b, c),
-			inverseMatrix = matrix.inversed()
+			matrixInverse = matrix.inversed()
 		const circleRadius = a.length()
 		const c1 = c.unit()
 		const totalArea = edges
@@ -250,7 +250,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 					const f = (t: number) => {
 						const at = edge.curve.at(t),
 							tangent = edge.tangentAt(t)
-						const localAt = inverseMatrix.transformPoint(at)
+						const localAt = matrixInverse.transformPoint(at)
 						const angleXY = localAt.angleXY()
 						const arcLength = angleXY * circleRadius * Math.sqrt(1 + localAt.z ** 2)
 						const scaling = Math.sqrt(1 + c1.dot(tangent) ** 2)
@@ -278,7 +278,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	}
 
 	edgeLoopCCW(loop: Edge[]): boolean {
-		return SemiEllipsoidSurface.unitArea(loop.map(edge => edge.transform(this.inverseMatrix))) > 0
+		return SemiEllipsoidSurface.unitArea(loop.map(edge => edge.transform(this.matrixInverse))) > 0
 		//let totalAngle = 0
 		//for (let i = 0; i < contour.length; i++) {
 		//    const ipp = (i + 1) % contour.length
@@ -350,7 +350,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		}
 
 		//return []
-		const surfaceLC = surface.transform(this.inverseMatrix)
+		const surfaceLC = surface.transform(this.matrixInverse)
 		//const lcMinZ0RelO =
 		const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir, 0))
 		const ists = baseCurveLC.isTsWithSurface(SemiEllipsoidSurface.UNIT)
@@ -425,7 +425,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		} else if (surface instanceof SemiCylinderSurface) {
 			return this.isCurvesWithSemiCylinderSurface(surface)
 		} else if (surface instanceof SemiEllipsoidSurface) {
-			const surfaceLC = surface.transform(this.inverseMatrix)
+			const surfaceLC = surface.transform(this.matrixInverse)
 			const curves = SemiEllipsoidSurface.unitISCurvesWithEllipsoidSurface(surfaceLC).map(c =>
 				c.transform(this.matrix),
 			)
@@ -443,7 +443,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	}
 
 	isCurvesWithPlane(plane: P3) {
-		const planeLC = plane.transform(this.inverseMatrix)
+		const planeLC = plane.transform(this.matrixInverse)
 		return SemiEllipsoidSurface.unitISCurvesWithPlane(planeLC).map(c => c.transform(this.matrix))
 	}
 
@@ -469,8 +469,8 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		assertInst(L3, line)
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for localLine are directly transferable to line
-		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
-		const dirLC = this.inverseMatrix.transformVector(line.dir1)
+		const anchorLC = this.matrixInverse.transformPoint(line.anchor)
+		const dirLC = this.matrixInverse.transformVector(line.dir1)
 		return SemiEllipsoidSurface.unitISTsWithLine(anchorLC, dirLC)
 	}
 
@@ -480,13 +480,13 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		if (!this.center.like(surface.center)) return false
 		if (this.isSphere()) return surface.isSphere() && eq(this.f1.length(), this.f2.length())
 
-		const otherMatrixLC = this.inverseMatrix.times(surface.matrix)
+		const otherMatrixLC = this.matrixInverse.times(surface.matrix)
 		// Ellipsoid with matrix otherMatrixLC is unit sphere iff otherMatrixLC is orthogonal
 		return otherMatrixLC.like3x3() && otherMatrixLC.isOrthogonal()
 	}
 
 	containsEllipse(ellipse: SemiEllipseCurve): boolean {
-		const ellipseLC = ellipse.transform(this.inverseMatrix)
+		const ellipseLC = ellipse.transform(this.matrixInverse)
 		const distEllipseLCCenter = ellipseLC.center.length()
 		const correctRadius = Math.sqrt(1 - distEllipseLCCenter ** 2)
 		return lt(distEllipseLCCenter, 1) && ellipseLC.isCircular() && ellipseLC.f1.hasLength(correctRadius)
@@ -553,7 +553,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	}
 
 	normalP(p: V3): V3 {
-		return this.pLCNormalWCMatrix.transformVector(this.inverseMatrix.transformPoint(p)).unit()
+		return this.pLCNormalWCMatrix.transformVector(this.matrixInverse.transformPoint(p)).unit()
 	}
 
 	normalST(s: number, t: number): V3 {
@@ -562,7 +562,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 
 	stPFunc() {
 		return (pWC: V3) => {
-			const pLC = this.inverseMatrix.transformPoint(pWC)
+			const pLC = this.matrixInverse.transformPoint(pWC)
 			const alpha = abs(pLC.angleXY())
 			const beta = Math.asin(clamp(pLC.z, -1, 1))
 			assert(isFinite(alpha))
@@ -663,7 +663,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		if (!this.containsPoint(pWC)) return PointVsFace.OUTSIDE
 		assertVectors(pWC)
 		assert(Edge.isLoop(loop))
-		const pLCXY = this.inverseMatrix.transformPoint(pWC).xy()
+		const pLCXY = this.matrixInverse.transformPoint(pWC).xy()
 		const testLine = new SemiEllipseCurve(
 			this.center,
 			this.f3,
@@ -756,7 +756,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	pointFoot(pWC: V3, startS?: number, startT?: number): V3 {
 		console.log(pWC.sce)
 		if (undefined === startS || undefined === startT) {
-			let pLC1 = this.inverseMatrix.transformPoint(pWC).unit()
+			let pLC1 = this.matrixInverse.transformPoint(pWC).unit()
 			if (pLC1.y < 0) pLC1 = pLC1.negated()
 			;({ x: startS, y: startT } = SemiEllipsoidSurface.UNIT.stP(pLC1))
 		}
@@ -779,7 +779,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 
 	implicitFunction() {
 		return (pWC: V3) => {
-			const pLC = this.inverseMatrix.transformPoint(pWC)
+			const pLC = this.matrixInverse.transformPoint(pWC)
 			return (pLC.length() - 1) * this.normalDir
 		}
 	}
@@ -788,7 +788,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	didp(pWC: V3) {
 		// i(pWC) = this.inverseMatrix.transformPoint(pWC).length() - 1
 		// chain diff rule
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		return this.pLCNormalWCMatrix.transformVector(pLC.unit()) //.times(this.normalDir)
 	}
 }

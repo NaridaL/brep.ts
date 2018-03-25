@@ -33,7 +33,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
 		if (undefined === ss || undefined === st) {
 			// similar to stP
-			const pLC = this.inverseMatrix.transformPoint(pWC)
+			const pLC = this.matrixInverse.transformPoint(pWC)
 			const angle = pLC.angleXY()
 			if (undefined === ss) {
 				ss = angle < -PI / 2 ? angle + TAU : angle
@@ -54,7 +54,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	 */
 	static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
 	readonly matrix: M4
-	readonly inverseMatrix: M4
+	readonly matrixInverse: M4
 	readonly pLCNormalWCMatrix: M4
 	readonly normalDir: number // -1 | 1
 
@@ -78,7 +78,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		assertVectors(center, f1, f2, dir)
 		assert(0 <= tMin)
 		this.matrix = M4.forSys(f1, f2, dir, center)
-		this.inverseMatrix = this.matrix.inversed()
+		this.matrixInverse = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
 		this.pLCNormalWCMatrix = this.matrix
 			.as3x3()
@@ -240,8 +240,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	isTsForLine(line: L3): number[] {
 		// transforming line manually has advantage that dir1 will not be renormalized,
 		// meaning that calculated values t for lineLC are directly transferable to line
-		const anchorLC = this.inverseMatrix.transformPoint(line.anchor)
-		const dirLC = this.inverseMatrix.transformVector(line.dir1)
+		const anchorLC = this.matrixInverse.transformPoint(line.anchor)
+		const dirLC = this.matrixInverse.transformVector(line.dir1)
 		return ConicSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
@@ -256,7 +256,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	containsEllipse(ellipse: SemiEllipseCurve): boolean {
-		const ellipseLC = ellipse.transform(this.inverseMatrix)
+		const ellipseLC = ellipse.transform(this.matrixInverse)
 		if (ellipseLC.center.z < 0) {
 			return false
 		}
@@ -269,14 +269,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	containsLine(line: L3): boolean {
-		const lineLC = line.transform(this.inverseMatrix)
+		const lineLC = line.transform(this.matrixInverse)
 		const d = lineLC.dir1
 		return lineLC.containsPoint(V3.O) && eq(d.x * d.x + d.y * d.y, d.z * d.z)
 	}
 
 	containsParabola(curve: ParabolaCurve): boolean {
 		assertInst(ParabolaCurve, curve)
-		const curveLC = curve.transform(this.inverseMatrix)
+		const curveLC = curve.transform(this.matrixInverse)
 		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
 			return false
 		}
@@ -294,7 +294,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	containsHyperbola(curve: HyperbolaCurve): boolean {
 		assertInst(HyperbolaCurve, curve)
 		return true
-		const curveLC = curve.transform(this.inverseMatrix)
+		const curveLC = curve.transform(this.matrixInverse)
 		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
 			return false
 		}
@@ -346,7 +346,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 	normalP(p: V3): V3 {
 		//TODO assert(!p.like(this.center))
-		const pLC = this.inverseMatrix.transformPoint(p)
+		const pLC = this.matrixInverse.transformPoint(p)
 		return this.normalSTFunc()(pLC.angleXY(), pLC.z)
 	}
 
@@ -374,14 +374,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 	implicitFunction(): (pWC: V3) => number {
 		return pWC => {
-			const pLC = this.inverseMatrix.transformPoint(pWC)
+			const pLC = this.matrixInverse.transformPoint(pWC)
 			const radiusLC = pLC.lengthXY()
 			return this.normalDir * (radiusLC - pLC.z)
 		}
 	}
 
 	didp(pWC: V3): V3 {
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		return this.pLCNormalWCMatrix.transformVector(
 			pLC
 				.xy()
@@ -396,7 +396,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	stP(pWC: V3) {
-		const pLC = this.inverseMatrix.transformPoint(pWC)
+		const pLC = this.matrixInverse.transformPoint(pWC)
 		const angle = pLC.angleXY()
 		return new V3(angle < -PI / 2 ? angle + TAU : angle, pLC.z, 0)
 	}
@@ -422,7 +422,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 	isCurvesWithPlane(plane: P3): Curve[] {
 		assertInst(P3, plane)
-		const planeLC = plane.transform(this.inverseMatrix)
+		const planeLC = plane.transform(this.matrixInverse)
 		const planeNormal = planeLC.normal1
 		const c = planeNormal.z
 		/** "rotate" plane normal1 when passing to {@link ConicSurface.unitISPlane} so that

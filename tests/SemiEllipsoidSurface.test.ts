@@ -358,7 +358,7 @@ suite('EllipsoidSurface', () => {
 		assert.ok(esn.f1.isPerpendicularTo(esn.f2))
 		assert.ok(esn.f2.isPerpendicularTo(esn.f3))
 		assert.ok(esn.f3.isPerpendicularTo(esn.f1))
-		assert.ok(es.inverseMatrix.times(esn.matrix).isOrthogonal())
+		assert.ok(es.matrixInverse.times(esn.matrix).isOrthogonal())
 	})
 
 	test('loopContainsPoint', assert => {
