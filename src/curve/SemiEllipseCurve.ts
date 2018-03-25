@@ -4,27 +4,27 @@ import {
 	assertf,
 	assertNumbers,
 	assertVectors,
+	between,
 	checkDerivate,
 	eq,
 	eq0,
+	fuzzyBetween,
 	hasConstructor,
 	int,
 	le,
+	lerp,
+	lt,
 	M4,
 	newtonIterate1d,
 	newtonIterateSmart,
 	pqFormula,
 	TAU,
 	V3,
-	lt,
-	between,
-	fuzzyBetween,
-	lerp,
 } from 'ts3dutils'
 
 import { Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo, L3, P3, XiEtaCurve } from '../index'
 
-import { max, min, PI, atan2 } from '../math'
+import { atan2, max, min, PI } from '../math'
 
 export class SemiEllipseCurve extends XiEtaCurve {
 	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
@@ -41,30 +41,30 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	static XYLCPointT(pLC: V3, tMin: number, tMax: number): number {
-assertNumbers(tMin, tMax)
-            const t = atan2(pLC.y, pLC.x)
-            const lowSplitter = lerp(tMin, tMax - TAU, 0.5)
-            if (t < lowSplitter) {
-                return t + TAU
-            }
-            const highSplitter = lerp(tMax, tMin + TAU, 0.5)
-            if (t > highSplitter) {
-                return t - TAU
-            }
-            return t
+		assertNumbers(tMin, tMax)
+		const t = atan2(pLC.y, pLC.x)
+		const lowSplitter = lerp(tMin, tMax - TAU, 0.5)
+		if (t < lowSplitter) {
+			return t + TAU
+		}
+		const highSplitter = lerp(tMax, tMin + TAU, 0.5)
+		if (t > highSplitter) {
+			return t - TAU
+		}
+		return t
 	}
 
 	static intersectionUnitLine(a: number, b: number, c: number, tMin: number, tMax: number): number[] {
 		const isLC = intersectionUnitCircleLine2(a, b, c)
 		const result = []
 		for (const [xi, eta] of isLC) {
-		    const t = SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0), tMin, tMax)
+			const t = SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0), tMin, tMax)
 			fuzzyBetween(t, tMin, tMax) && result.push(t)
 		}
 		return result
 	}
 
-	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3, tMin:number, tMax:number): ISInfo[] {
+	static unitIsInfosWithLine(anchorLC: V3, dirLC: V3, anchorWC: V3, dirWC: V3, tMin: number, tMax: number): ISInfo[] {
 		// ell: x² + y² = 1 = p²
 		// line(t) = anchor + t dir
 		// anchor² - 1 + 2 t dir anchor + t² dir² = 0
@@ -80,8 +80,8 @@ assertNumbers(tMin, tMax)
 	/**
 	 * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
 	 */
-	static semicircle(radius: number, center: V3 = V3.O): SemiEllipseCurve {
-		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0))
+	static semicircle(radius: number, center: V3 = V3.O, tMin?: number, tMax?: number): SemiEllipseCurve {
+		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0), tMin, tMax)
 	}
 
 	split(tMin = this.tMin, tMax = this.tMax): SemiEllipseCurve[] {
@@ -383,8 +383,9 @@ assertNumbers(tMin, tMax)
 		return arrayFromFunction(3, dim => {
 			const a = this.f2.e(dim),
 				b = -this.f1.e(dim)
-			const { x1, y1, x2, y2 } = intersectionUnitCircleLine(a, b, 0)
-			return [Math.atan2(y1, x1), Math.atan2(y2, x2)]
+			return intersectionUnitCircleLine2(a, b, 0)
+				.map(([xi, eta]) => Math.atan2(eta, xi))
+				.filter(t => this.isValidT(t))
 		})
 	}
 

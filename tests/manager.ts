@@ -17,6 +17,7 @@ import {
 	lerp,
 	M4,
 	NLA_PRECISION,
+	raddd,
 	toSource,
 	V,
 	V3,
@@ -41,6 +42,8 @@ import {
 	ParametricSurface,
 	PlaneSurface,
 	PointVsFace,
+	rotateCurve,
+	SemiEllipseCurve,
 	Surface,
 } from '..'
 
@@ -254,7 +257,8 @@ export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
 
 export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolume?: number) {
 	const flippedFace = face.flipped()
-	const faceMeshVol = face.toMesh().calcVolume()
+	const faceMesh = face.toMesh()
+	const faceMeshVol = faceMesh.calcVolume()
 
 	test(msg + ' area', assert => {
 		outputLink(assert, { mesh: face.toSource() + '.toMesh()', face: face })
@@ -309,6 +313,12 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 			// centroid doesn't make sense when volume is 0
 			assert.v3like(actual.centroid, expected, undefined, 0.05)
 		}
+	})
+	test(msg + ' aabb', assert => {
+		const expected = faceMesh.getAABB()
+		const actual = face.getAABB()
+		assert.v3like(actual.min, expected.min, 'aabb.min', 0.1)
+		assert.v3like(actual.max, expected.max, 'aabb.max', 0.1)
 	})
 }
 
@@ -473,6 +483,17 @@ export function testContainsCurve(assert: Assert, surface: Surface, curve: Curve
 		edges: [Edge.forCurveAndTs(curve)],
 	})
 	assert.ok(surface.containsCurve(curve), 'surface contains curve')
+}
+
+export function rotateEdge(edge: Edge, angle: raddd) {
+	const surface = rotateCurve(edge.curve, undefined, undefined, angle, edge.deltaT() > 0)
+	const edges = [
+		edge,
+		Edge.forCurveAndTs(SemiEllipseCurve.semicircle(edge.b.lengthXY(), V(0, 0, edge.b.z), 0, angle)),
+		edge.rotateZ(angle).flipped(),
+		Edge.forCurveAndTs(SemiEllipseCurve.semicircle(edge.a.lengthXY(), V(0, 0, edge.a.z), 0, angle)).flipped(),
+	]
+	return Face.create(surface, edges)
 }
 
 function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {

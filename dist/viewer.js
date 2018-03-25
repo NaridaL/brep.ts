@@ -15272,8 +15272,8 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     /**
      * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
      */
-    static semicircle(radius, center = V3.O) {
-        return new SemiEllipseCurve$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0));
+    static semicircle(radius, center = V3.O, tMin, tMax) {
+        return new SemiEllipseCurve$$1(center, new V3(radius, 0, 0), new V3(0, radius, 0), tMin, tMax);
     }
     split(tMin = this.tMin, tMax = this.tMax) {
         const result = [];
@@ -15532,8 +15532,9 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
         // tangent(eta, xi) = f2 eta - f1 xi
         return arrayFromFunction(3, dim => {
             const a = this.f2.e(dim), b = -this.f1.e(dim);
-            const { x1, y1, x2, y2 } = intersectionUnitCircleLine$$1(a, b, 0);
-            return [Math.atan2(y1, x1), Math.atan2(y2, x2)];
+            return intersectionUnitCircleLine2$$1(a, b, 0)
+                .map(([xi, eta]) => Math.atan2(eta, xi))
+                .filter(t => this.isValidT(t));
         });
     }
     closestTToPoint(p, tStart) {
@@ -15786,8 +15787,8 @@ P3$$1.ZX = new P3$$1(V3.Y, 0);
 P3$$1.XY = new P3$$1(V3.Z, 0);
 
 class Surface$$1 extends Transformable {
-    static loopContainsPointGeneral(loop, p, testLine, lineOut) {
-        const testPlane = P3$$1.normalOnAnchor(lineOut, p);
+    static loopContainsPointGeneral(loop, pWC, testLine, lineOut) {
+        const testPlane = P3$$1.normalOnAnchor(lineOut, pWC);
         // edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
         const colinearEdges = loop.map(edge => edge.colinearToLine(testLine));
         let inside = false;
@@ -15823,7 +15824,7 @@ class Surface$$1 extends Transformable {
                         if (!testLine.containsPoint(edge.b))
                             continue;
                         // endpoint lies on intersection line
-                        if (edge.b.like(p)) {
+                        if (edge.b.like(pWC)) {
                             // TODO: refactor, dont check for different sides, just logIs everything
                             return PointVsFace$$1.ON_EDGE;
                         }
@@ -15839,6 +15840,72 @@ class Surface$$1 extends Transformable {
                         if (!testLine.containsPoint(p))
                             continue;
                         // edge crosses line, neither starts nor ends on it
+                        if (logIS(p))
+                            return PointVsFace$$1.ON_EDGE;
+                        // TODO: tangents?
+                    }
+                }
+            }
+        }
+        return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
+    }
+    static loopContainsPointEllipse(loop, pWC, testLine, pWCT) {
+        const lineOut = testLine.normal;
+        const testPlane = P3$$1.normalOnAnchor(testLine.normal, pWC);
+        const colinearEdges = loop.map(edge => testLine.isColinearTo(edge.curve));
+        let inside = false;
+        if (undefined === pWCT) {
+            pWCT = testLine.pointT(pWC);
+        }
+        const pT = pWCT;
+        function logIS(isP) {
+            const isT = testLine.pointT(isP);
+            if (eq(pT, isT)) {
+                return true;
+            }
+            else if (pT < isT && le(isT, PI$3)) {
+                inside = !inside;
+            }
+            return false;
+        }
+        for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
+            const edge = loop[edgeIndex];
+            const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex];
+            //console.log(edge.toSource()) {p:V(2, -2.102, 0),
+            if (colinearEdges[edgeIndex]) {
+                let edgeT;
+                if (edge.curve.containsPoint(pWC) &&
+                    le(edge.minT, (edgeT = edge.curve.pointT(pWC))) &&
+                    le(edgeT, edge.maxT)) {
+                    return PointVsFace$$1.ON_EDGE;
+                }
+                // edge colinear to intersection
+                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                if (!nextInside && testLine.containsPoint(edge.b)) {
+                    if (logIS(edge.b))
+                        return PointVsFace$$1.ON_EDGE;
+                }
+            }
+            else {
+                for (const edgeT of edge.edgeISTsWithPlane(testPlane)) {
+                    if (edgeT == edge.bT) {
+                        if (!testLine.containsPoint(edge.b))
+                            continue;
+                        // endpoint lies on intersection testLine
+                        const edgeInside = dotCurve2$$1(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0; // TODO:
+                        // bDDT
+                        // negated?
+                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                        if (edgeInside != nextInside) {
+                            if (logIS(edge.b))
+                                return PointVsFace$$1.ON_EDGE;
+                        }
+                    }
+                    else if (edgeT != edge.aT) {
+                        const p = edge.curve.at(edgeT);
+                        if (!testLine.containsPoint(p))
+                            continue;
+                        // edge crosses testLine, neither starts nor ends on it
                         if (logIS(p))
                             return PointVsFace$$1.ON_EDGE;
                         // TODO: tangents?
@@ -16605,7 +16672,7 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
     stPFunc() {
         return pWC => {
             const pLC = this.matrixInverse.transformPoint(pWC);
-            const angle = abs$2(pLC.angleXY());
+            const angle = SemiEllipseCurve$$1.XYLCPointT(pLC, this.sMin, this.sMax);
             const radius = pLC.lengthXY();
             return new V3(angle, this.curve.pointT(new V3(radius, 0, pLC.z)), 0);
         };
@@ -16637,11 +16704,10 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
                 .filter(t => fuzzyBetween(L3$$1.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax));
         }
         else if (dirLC.isPerpendicularTo(V3.Z)) {
-            const sec = this.isCurvesWithPlaneLC(new P3$$1(V3.Z, anchorLC.z))[0];
-            if (!sec)
+            const secs = this.isCurvesWithPlaneLC(new P3$$1(V3.Z, anchorLC.z));
+            if (!secs)
                 return [];
-            assertInst(SemiEllipseCurve$$1, sec);
-            return sec.isInfosWithLine(anchorLC, dirLC).map(info => info.tOther);
+            return secs.flatMap(sec => sec.isInfosWithLine(anchorLC, dirLC).map(info => info.tOther));
         }
         else {
             // transform into hyperbola
@@ -16686,7 +16752,12 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
             return ParametricSurface$$1.isCurvesParametricImplicitSurface(this, new PlaneSurface$$1(plane), 0.05, 0.05, 0.02);
         }
     }
-    loopContainsPoint(contour, point) {
+    loopContainsPoint(loop, pWC) {
+        const pLC = this.matrixInverse.transformPoint(pWC);
+        const angle = SemiEllipseCurve$$1.XYLCPointT(pLC, this.sMin, this.sMax);
+        const testCurveLC = SemiEllipseCurve$$1.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z));
+        const testCurveWC = testCurveLC.transform(this.matrix);
+        return Surface$$1.loopContainsPointEllipse(loop, pWC, testCurveWC, angle);
         throw new Error('Method not implemented.');
     }
     isCoplanarTo(surface) {
@@ -16724,6 +16795,22 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
             return false;
         }
         return super.containsCurve(curve);
+    }
+    getExtremePoints() {
+        // this logic comes from EllipseCurve.roots
+        const f1 = this.matrix.X;
+        const f2 = this.matrix.Y;
+        return [0, 1, 2].flatMap(dim => {
+            const a = f2.e(dim), b = -f1.e(dim);
+            const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2$$1(a, b, 0);
+            return xiEtas.flatMap(([xi, eta]) => {
+                const s = Math.atan2(eta, xi);
+                if (!fuzzyBetween(s, this.sMin, this.sMax))
+                    return [];
+                const testCurve = this.curve.transform(this.matrix.times(M4.rotateZ(s)));
+                return testCurve.roots()[dim].map(t => this.pST(s, t));
+            });
+        });
     }
 }
 RotatedCurveSurface$$1.prototype.uStep = PI$3 / 16;
@@ -17370,81 +17457,19 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
     volume() {
         return 4 / 3 * Math.PI * this.f1.dot(this.f2.cross(this.f3));
     }
-    loopContainsPoint(loop, p) {
-        if (!this.containsPoint(p))
+    loopContainsPoint(loop, pWC) {
+        if (!this.containsPoint(pWC))
             return PointVsFace$$1.OUTSIDE;
-        assertVectors(p);
-        const pLCXY = this.inverseMatrix.transformPoint(p).withElement('z', 0);
+        assertVectors(pWC);
+        assert(Edge$$1.isLoop(loop));
+        const pLCXY = this.inverseMatrix.transformPoint(pWC).xy();
         const testLine = new SemiEllipseCurve$$1(this.center, this.f3, pLCXY.likeO() ? this.f2 : this.matrix.transformVector(pLCXY.unit()));
-        const pT = testLine.pointT(p);
-        if (P3$$1.normalOnAnchor(this.f2.unit(), this.center).containsPoint(p)) {
-            let edgeT;
-            return loop.some(edge => edge.curve.containsPoint(p) &&
-                le(edge.minT, (edgeT = edge.curve.pointT(p))) &&
-                le(edgeT, edge.maxT))
+        if (P3$$1.normalOnAnchor(this.f2.unit(), this.center).containsPoint(pWC)) {
+            return loop.some(edge => edge.curve.containsPoint(pWC) && fuzzyBetween(edge.curve.pointT(pWC), edge.minT, edge.maxT))
                 ? PointVsFace$$1.ON_EDGE
                 : PointVsFace$$1.OUTSIDE;
         }
-        const lineOut = testLine.normal;
-        const testPlane = P3$$1.normalOnAnchor(testLine.normal, p);
-        const colinearEdges = loop.map(edge => testLine.isColinearTo(edge.curve));
-        let inside = false;
-        function logIS(isP) {
-            const isT = testLine.pointT(isP);
-            if (eq(pT, isT)) {
-                return true;
-            }
-            else if (pT < isT && le(isT, PI$3)) {
-                inside = !inside;
-            }
-            return false;
-        }
-        for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-            const edge = loop[edgeIndex];
-            const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex];
-            //console.log(edge.toSource()) {p:V(2, -2.102, 0),
-            if (colinearEdges[edgeIndex]) {
-                let edgeT;
-                if (edge.curve.containsPoint(p) &&
-                    le(edge.minT, (edgeT = edge.curve.pointT(p))) &&
-                    le(edgeT, edge.maxT)) {
-                    return PointVsFace$$1.ON_EDGE;
-                }
-                // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
-                if (!nextInside && testLine.containsPoint(edge.b)) {
-                    if (logIS(edge.b))
-                        return PointVsFace$$1.ON_EDGE;
-                }
-            }
-            else {
-                for (const edgeT of edge.edgeISTsWithPlane(testPlane)) {
-                    if (edgeT == edge.bT) {
-                        if (!testLine.containsPoint(edge.b))
-                            continue;
-                        // endpoint lies on intersection testLine
-                        const edgeInside = dotCurve2$$1(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0; // TODO:
-                        // bDDT
-                        // negated?
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
-                        if (edgeInside != nextInside) {
-                            if (logIS(edge.b))
-                                return PointVsFace$$1.ON_EDGE;
-                        }
-                    }
-                    else if (edgeT != edge.aT) {
-                        const p = edge.curve.at(edgeT);
-                        if (!testLine.containsPoint(p))
-                            continue;
-                        // edge crosses testLine, neither starts nor ends on it
-                        if (logIS(p))
-                            return PointVsFace$$1.ON_EDGE;
-                        // TODO: tangents?
-                    }
-                }
-            }
-        }
-        return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
+        return Surface$$1.loopContainsPointEllipse(loop, pWC, testLine);
     }
     surfaceAreaApprox() {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
@@ -30946,7 +30971,7 @@ var B2T$$1;
     function fixEdges(edges) {
         return edges.flatMap(edge => {
             const c = edge.curve;
-            if (c instanceof SemiEllipseCurve$$1 && c.tMin === -PI$3 && c.tmax === PI$3) {
+            if (c instanceof SemiEllipseCurve$$1 && c.tMin === -PI$3 && c.tMax === PI$3) {
                 const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge];
                 return splitEdges.map(edge => {
                     if (edge.minT >= 0) {
@@ -43316,11 +43341,13 @@ function dotCurve2$$1(curve, t, normal, sign) {
     if (!eq0(tangentDot)) {
         return sign * tangentDot;
     }
-    const ddtDot = curve.ddt(t).dot(normal);
-    // tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure
-    // and must do a numeric test
-    if (!eq0(ddtDot)) {
-        return ddtDot;
+    if (curve.ddt) {
+        const ddtDot = curve.ddt(t).dot(normal);
+        // tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure
+        // and must do a numeric test
+        if (!eq0(ddtDot)) {
+            return ddtDot;
+        }
     }
     const numericDot = curve
         .at(t)

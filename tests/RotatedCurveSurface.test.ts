@@ -1,9 +1,20 @@
-import { outputLink, suite, suiteSurface, test, testISCurves, testISTs, testLoopContainsPoint } from './manager'
+import {
+	outputLink,
+	rotateEdge,
+	suite,
+	suiteSurface,
+	surfaceVolumeAndAreaTests,
+	test,
+	testISCurves,
+	testISTs,
+	testLoopContainsPoint,
+} from './manager'
 
-import { DEG, M4, TAU, V, V3 } from 'ts3dutils'
+import { DEG, M4, raddd, TAU, V, V3 } from 'ts3dutils'
 import {
 	B2T,
 	Edge,
+	Face,
 	HyperbolaCurve,
 	L3,
 	P3,
@@ -13,7 +24,6 @@ import {
 	SemiEllipseCurve,
 	StraightEdge,
 } from '..'
-
 import { cos, PI, sin } from '../src/math'
 
 suite('RotatedCurveSurface', () => {
@@ -23,9 +33,24 @@ suite('RotatedCurveSurface', () => {
 		.rotateX(90 * DEG)
 	const torusSurface = rotateCurve(baseCurve, undefined, undefined, 100 * DEG, false) as RotatedCurveSurface
 
+	const torusFace = rotateEdge(Edge.forCurveAndTs(baseCurve).flipped(), 100 * DEG)
+
 	suite('torusSurface', () => suiteSurface(torusSurface))
 	suite('torusSurface.scale(2)', () => suiteSurface(torusSurface.scale(2)))
 	suite('torusSurface.shearX(2, 2)', () => suiteSurface(torusSurface.shearX(2, 2)))
+
+	test('getExtremePoints', assert => {
+		outputLink(assert, {
+			mesh: torusSurface.sce + '.toMesh()',
+			drPs: torusSurface.getExtremePoints(),
+		})
+	})
+	test('getExtremePoints2', assert => {
+		outputLink(assert, {
+			mesh: torusSurface.shearX(2, 2).sce + '.toMesh()',
+			drPs: torusSurface.shearX(2, 2).getExtremePoints(),
+		})
+	})
 
 	test('coplanar with curve translated up, surface down', assert => {
 		const torusSurface2 = rotateCurve(
@@ -57,9 +82,9 @@ suite('RotatedCurveSurface', () => {
 		const plane = new PlaneSurface(new P3(V3.Y, 2.5), V(-1, 0, 0), V3.Z)
 		testISCurves(assert, torus, plane, 1)
 	})
-	test('aabb', () => {
-		// TODO
-	})
+
+	suite('torusFace', () => surfaceVolumeAndAreaTests(torusFace))
+	suite('torusFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(torusFace.shearX(2, 2)))
 
 	suite('isTsWithLine', () => {
 		test('vertical', assert => testISTs(assert, new L3(V(4, 4, 0), V3.Z), torusSurface, 1))

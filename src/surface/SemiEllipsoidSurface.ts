@@ -10,6 +10,7 @@ import {
 	clamp,
 	eq,
 	eq0,
+	fuzzyBetween,
 	gaussLegendreQuadrature24,
 	getIntervals,
 	getRoots,
@@ -658,87 +659,26 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		return 4 / 3 * Math.PI * this.f1.dot(this.f2.cross(this.f3))
 	}
 
-	loopContainsPoint(loop: Edge[], p: V3): PointVsFace {
-		if (!this.containsPoint(p)) return PointVsFace.OUTSIDE
-		assertVectors(p)
-		const pLCXY = this.inverseMatrix.transformPoint(p).withElement('z', 0)
+	loopContainsPoint(loop: Edge[], pWC: V3): PointVsFace {
+		if (!this.containsPoint(pWC)) return PointVsFace.OUTSIDE
+		assertVectors(pWC)
+		assert(Edge.isLoop(loop))
+		const pLCXY = this.inverseMatrix.transformPoint(pWC).xy()
 		const testLine = new SemiEllipseCurve(
 			this.center,
 			this.f3,
 			pLCXY.likeO() ? this.f2 : this.matrix.transformVector(pLCXY.unit()),
 		)
-		const pT = testLine.pointT(p)
 
-		if (P3.normalOnAnchor(this.f2.unit(), this.center).containsPoint(p)) {
-			let edgeT
+		if (P3.normalOnAnchor(this.f2.unit(), this.center).containsPoint(pWC)) {
 			return loop.some(
-				edge =>
-					edge.curve.containsPoint(p) &&
-					le(edge.minT, (edgeT = edge.curve.pointT(p))) &&
-					le(edgeT, edge.maxT),
+				edge => edge.curve.containsPoint(pWC) && fuzzyBetween(edge.curve.pointT(pWC), edge.minT, edge.maxT),
 			)
 				? PointVsFace.ON_EDGE
 				: PointVsFace.OUTSIDE
 		}
 
-		const lineOut = testLine.normal
-		const testPlane = P3.normalOnAnchor(testLine.normal, p)
-		const colinearEdges = loop.map(edge => testLine.isColinearTo(edge.curve))
-		let inside = false
-
-		function logIS(isP: V3) {
-			const isT = testLine.pointT(isP)
-			if (eq(pT, isT)) {
-				return true
-			} else if (pT < isT && le(isT, PI)) {
-				inside = !inside
-			}
-			return false
-		}
-
-		for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
-			const edge = loop[edgeIndex]
-			const nextEdgeIndex = (edgeIndex + 1) % loop.length,
-				nextEdge = loop[nextEdgeIndex]
-			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
-			if (colinearEdges[edgeIndex]) {
-				let edgeT
-				if (
-					edge.curve.containsPoint(p) &&
-					le(edge.minT, (edgeT = edge.curve.pointT(p))) &&
-					le(edgeT, edge.maxT)
-				) {
-					return PointVsFace.ON_EDGE
-				}
-				// edge colinear to intersection
-				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
-				if (!nextInside && testLine.containsPoint(edge.b)) {
-					if (logIS(edge.b)) return PointVsFace.ON_EDGE
-				}
-			} else {
-				for (const edgeT of edge.edgeISTsWithPlane(testPlane)) {
-					if (edgeT == edge.bT) {
-						if (!testLine.containsPoint(edge.b)) continue
-						// endpoint lies on intersection testLine
-						const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign(edge.deltaT())) < 0 // TODO:
-						// bDDT
-						// negated?
-						const nextInside =
-							colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
-						if (edgeInside != nextInside) {
-							if (logIS(edge.b)) return PointVsFace.ON_EDGE
-						}
-					} else if (edgeT != edge.aT) {
-						const p = edge.curve.at(edgeT)
-						if (!testLine.containsPoint(p)) continue
-						// edge crosses testLine, neither starts nor ends on it
-						if (logIS(p)) return PointVsFace.ON_EDGE
-						// TODO: tangents?
-					}
-				}
-			}
-		}
-		return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
+		return Surface.loopContainsPointEllipse(loop, pWC, testLine)
 	}
 
 	surfaceAreaApprox(): number {

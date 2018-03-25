@@ -1,25 +1,27 @@
 import { Equalable } from 'javasetmap.ts'
-import { callsce, eq0, int, NLA_PRECISION, Transformable, V3 } from 'ts3dutils'
+import { callsce, eq, eq0, int, le, NLA_PRECISION, Transformable, V3 } from 'ts3dutils'
 
 import {
 	CalculateAreaVisitor,
 	Curve,
 	dotCurve,
+	dotCurve2,
 	Edge,
 	ImplicitCurve,
 	L3,
 	P3,
 	PICurve,
 	PPCurve,
+	SemiEllipseCurve,
 	ZDirVolumeVisitor,
 } from '../index'
 
-import { ceil, floor } from '../math'
+import { ceil, floor, PI, sign } from '../math'
 
 export abstract class Surface extends Transformable implements Equalable {
 	readonly ['constructor']: new (...args: any[]) => this
-	static loopContainsPointGeneral(loop: Edge[], p: V3, testLine: L3, lineOut: V3): PointVsFace {
-		const testPlane = P3.normalOnAnchor(lineOut, p)
+	static loopContainsPointGeneral(loop: Edge[], pWC: V3, testLine: L3, lineOut: V3): PointVsFace {
+		const testPlane = P3.normalOnAnchor(lineOut, pWC)
 		// edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
 		const colinearEdges = loop.map(edge => edge.colinearToLine(testLine))
 		let inside = false
@@ -55,7 +57,7 @@ export abstract class Surface extends Transformable implements Equalable {
 					if (edgeT == edge.bT) {
 						if (!testLine.containsPoint(edge.b)) continue
 						// endpoint lies on intersection line
-						if (edge.b.like(p)) {
+						if (edge.b.like(pWC)) {
 							// TODO: refactor, dont check for different sides, just logIs everything
 							return PointVsFace.ON_EDGE
 						}
@@ -69,6 +71,71 @@ export abstract class Surface extends Transformable implements Equalable {
 						const p = edge.curve.at(edgeT)
 						if (!testLine.containsPoint(p)) continue
 						// edge crosses line, neither starts nor ends on it
+						if (logIS(p)) return PointVsFace.ON_EDGE
+						// TODO: tangents?
+					}
+				}
+			}
+		}
+		return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
+	}
+
+	static loopContainsPointEllipse(loop: Edge[], pWC: V3, testLine: SemiEllipseCurve, pWCT?: number): PointVsFace {
+		const lineOut = testLine.normal
+		const testPlane = P3.normalOnAnchor(testLine.normal, pWC)
+		const colinearEdges = loop.map(edge => testLine.isColinearTo(edge.curve))
+		let inside = false
+		if (undefined === pWCT) {
+			pWCT = testLine.pointT(pWC)
+		}
+		const pT = pWCT!
+
+		function logIS(isP: V3) {
+			const isT = testLine.pointT(isP)
+			if (eq(pT, isT)) {
+				return true
+			} else if (pT < isT && le(isT, PI)) {
+				inside = !inside
+			}
+			return false
+		}
+
+		for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
+			const edge = loop[edgeIndex]
+			const nextEdgeIndex = (edgeIndex + 1) % loop.length,
+				nextEdge = loop[nextEdgeIndex]
+			//console.log(edge.toSource()) {p:V(2, -2.102, 0),
+			if (colinearEdges[edgeIndex]) {
+				let edgeT
+				if (
+					edge.curve.containsPoint(pWC) &&
+					le(edge.minT, (edgeT = edge.curve.pointT(pWC))) &&
+					le(edgeT, edge.maxT)
+				) {
+					return PointVsFace.ON_EDGE
+				}
+				// edge colinear to intersection
+				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+				if (!nextInside && testLine.containsPoint(edge.b)) {
+					if (logIS(edge.b)) return PointVsFace.ON_EDGE
+				}
+			} else {
+				for (const edgeT of edge.edgeISTsWithPlane(testPlane)) {
+					if (edgeT == edge.bT) {
+						if (!testLine.containsPoint(edge.b)) continue
+						// endpoint lies on intersection testLine
+						const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign(edge.deltaT())) < 0 // TODO:
+						// bDDT
+						// negated?
+						const nextInside =
+							colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+						if (edgeInside != nextInside) {
+							if (logIS(edge.b)) return PointVsFace.ON_EDGE
+						}
+					} else if (edgeT != edge.aT) {
+						const p = edge.curve.at(edgeT)
+						if (!testLine.containsPoint(p)) continue
+						// edge crosses testLine, neither starts nor ends on it
 						if (logIS(p)) return PointVsFace.ON_EDGE
 						// TODO: tangents?
 					}

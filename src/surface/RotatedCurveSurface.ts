@@ -4,6 +4,7 @@ import {
 	Curve,
 	Edge,
 	HyperbolaCurve,
+	intersectionUnitCircleLine2,
 	L3,
 	P3,
 	ParametricSurface,
@@ -106,7 +107,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 	stPFunc(): (pWC: V3) => V3 {
 		return pWC => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
-			const angle = abs(pLC.angleXY())
+			const angle = SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
 			const radius = pLC.lengthXY()
 			return new V3(angle, this.curve.pointT(new V3(radius, 0, pLC.z)), 0)
 		}
@@ -143,10 +144,9 @@ export class RotatedCurveSurface extends ParametricSurface {
 				.map(info => info.tOther)
 				.filter(t => fuzzyBetween(L3.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax))
 		} else if (dirLC.isPerpendicularTo(V3.Z)) {
-			const sec = this.isCurvesWithPlaneLC(new P3(V3.Z, anchorLC.z))[0] as SemiEllipseCurve | undefined
-			if (!sec) return []
-			assertInst(SemiEllipseCurve, sec)
-			return sec.isInfosWithLine(anchorLC, dirLC).map(info => info.tOther)
+			const secs = this.isCurvesWithPlaneLC(new P3(V3.Z, anchorLC.z))
+			if (!secs) return []
+			return secs.flatMap(sec => sec.isInfosWithLine(anchorLC, dirLC).map(info => info.tOther))
 		} else {
 			// transform into hyperbola
 			// f(t) = V(((ax + t dx)² + (ay + t dy)²) ** 1/2, 0, az + t dz)
@@ -201,7 +201,12 @@ export class RotatedCurveSurface extends ParametricSurface {
 		}
 	}
 
-	loopContainsPoint(contour: Edge[], point: V3): PointVsFace {
+	loopContainsPoint(loop: Edge[], pWC: V3): PointVsFace {
+		const pLC = this.matrixInverse.transformPoint(pWC)
+		const angle = SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
+		const testCurveLC = SemiEllipseCurve.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z))
+		const testCurveWC = testCurveLC.transform(this.matrix)
+		return Surface.loopContainsPointEllipse(loop, pWC, testCurveWC, angle)
 		throw new Error('Method not implemented.')
 	}
 
@@ -242,6 +247,23 @@ export class RotatedCurveSurface extends ParametricSurface {
 			return false
 		}
 		return super.containsCurve(curve)
+	}
+
+	getExtremePoints(): V3[] {
+		// this logic comes from EllipseCurve.roots
+		const f1 = this.matrix.X
+		const f2 = this.matrix.Y
+		return [0, 1, 2].flatMap(dim => {
+			const a = f2.e(dim),
+				b = -f1.e(dim)
+			const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2(a, b, 0)
+			return xiEtas.flatMap(([xi, eta]) => {
+				const s = Math.atan2(eta, xi)
+				if (!fuzzyBetween(s, this.sMin, this.sMax)) return []
+				const testCurve = this.curve.transform(this.matrix.times(M4.rotateZ(s)))
+				return testCurve.roots()[dim].map(t => this.pST(s, t))
+			})
+		})
 	}
 }
 

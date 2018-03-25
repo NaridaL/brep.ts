@@ -978,11 +978,13 @@ export function dotCurve2(curve: Curve, t: number, normal: V3, sign: number): nu
 	if (!eq0(tangentDot)) {
 		return sign * tangentDot
 	}
-	const ddtDot = curve.ddt(t).dot(normal)
-	// tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure
-	// and must do a numeric test
-	if (!eq0(ddtDot)) {
-		return ddtDot
+	if (curve.ddt) {
+		const ddtDot = curve.ddt(t).dot(normal)
+		// tangentDot == 0 ==> critical point at t, if ddtDot != 0, then it is a turning point, otherwise we can't be sure
+		// and must do a numeric test
+		if (!eq0(ddtDot)) {
+			return ddtDot
+		}
 	}
 	const numericDot = curve
 		.at(t)
