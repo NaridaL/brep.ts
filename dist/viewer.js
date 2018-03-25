@@ -16624,6 +16624,7 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
         assert(matrix.isNoProj());
         assert(eq0(curve.at(tMin).y));
         this.matrixInverse = matrix.inversed();
+        this.vStep = this.curve.tIncrement;
     }
     getConstructorParameters() {
         return [this.curve, this.matrix, this.sMin, this.sMax, this.tMin, this.tMax];
@@ -16813,8 +16814,7 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
         });
     }
 }
-RotatedCurveSurface$$1.prototype.uStep = PI$3 / 16;
-RotatedCurveSurface$$1.prototype.vStep = 1 / 4;
+RotatedCurveSurface$$1.prototype.uStep = SemiEllipseCurve$$1.prototype.tIncrement;
 
 class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     // @ts-ignore
@@ -18105,7 +18105,12 @@ const CalculateAreaVisitor$$1 = {
     [PlaneSurface$$1.name](edges) {
         return planeSurfaceAreaAndCentroid$$1(this, edges);
     },
-    [SemiEllipsoidSurface$$1.name](edges, canApproximate = true) {
+    [RotatedCurveSurface$$1.name](edges, canApproximate = true) {
+        const f1 = this.matrix.X, f2 = this.matrix.Y, f3 = this.matrix.Z;
+        const likeVerticalSpheroid = eq(f1.length(), f2.length()) &&
+            f1.isPerpendicularTo(f2) &&
+            f2.isPerpendicularTo(f3) &&
+            f3.isPerpendicularTo(f1);
         const areaParts = edges.map((edgeWC, ei) => {
             console.log('edge', ei, edgeWC.sce);
             const curveWC = edgeWC.curve;
@@ -18138,17 +18143,15 @@ const CalculateAreaVisitor$$1 = {
                 return sum * Math.sign(edgeWC.deltaT());
             }
             else if (curveWC instanceof SemiEllipseCurve$$1) {
-                if (this.isVerticalSpheroid()) {
-                    const circleRadius = this.f1.length();
-                    const f = (t) => {
-                        const pWC = curveWC.at(t), tangent = curveWC.tangentAt(t);
+                if (likeVerticalSpheroid) {
+                    const f = (curveT) => {
+                        const pWC = curveWC.at(curveT), tangent = curveWC.tangentAt(curveT);
                         const pLC = this.matrixInverse.transformPoint(pWC);
-                        const angleXY = pLC.angleXY();
-                        const arcLength = angleXY * circleRadius * Math.sqrt(1 - Math.pow(pLC.z, 2));
-                        const dotter = this.matrix
-                            .transformVector(new V3(-pLC.z * pLC.x / pLC.lengthXY(), -pLC.z * pLC.y / pLC.lengthXY(), pLC.lengthXY()))
-                            .unit();
-                        const scaling = dotter.dot(tangent);
+                        const { x: angleXY, y: t } = this.stP(pWC);
+                        const arcRadius = this.matrix.transformVector(pLC.xy()).length();
+                        const arcLength = angleXY * arcRadius;
+                        const dpdt = this.dpdt()(angleXY, t).unit();
+                        const scaling = dpdt.dot(tangent);
                         return arcLength * scaling;
                     };
                     return glqInSteps(f, edgeWC.aT, edgeWC.bT, 1);
@@ -18233,6 +18236,7 @@ const CalculateAreaVisitor$$1 = {
         return totalArea;
     },
 };
+CalculateAreaVisitor$$1[SemiEllipsoidSurface$$1.name] = CalculateAreaVisitor$$1[RotatedCurveSurface$$1.name];
 function planeSurfaceAreaAndCentroid$$1(surface, edges) {
     let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0;
     const r1 = surface.right, u1 = surface.up;

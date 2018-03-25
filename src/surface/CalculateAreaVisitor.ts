@@ -1,4 +1,4 @@
-import { assert, assertf, gaussLegendreQuadrature24, glqInSteps, M4, NLA_PRECISION, V3 } from 'ts3dutils'
+import { assert, assertf, eq, gaussLegendreQuadrature24, glqInSteps, M4, NLA_PRECISION, V3 } from 'ts3dutils'
 
 import {
 	BezierCurve,
@@ -11,6 +11,7 @@ import {
 	ParabolaCurve,
 	PlaneSurface,
 	ProjectedCurveSurface,
+	RotatedCurveSurface,
 	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	StraightEdge,
@@ -68,7 +69,16 @@ export const CalculateAreaVisitor = {
 		return planeSurfaceAreaAndCentroid(this, edges)
 	},
 
-	[SemiEllipsoidSurface.name](this: SemiEllipsoidSurface, edges: Edge[], canApproximate = true): number {
+	[RotatedCurveSurface.name](this: RotatedCurveSurface, edges: Edge[], canApproximate = true): number {
+		const f1 = this.matrix.X,
+			f2 = this.matrix.Y,
+			f3 = this.matrix.Z
+		const likeVerticalSpheroid =
+			eq(f1.length(), f2.length()) &&
+			f1.isPerpendicularTo(f2) &&
+			f2.isPerpendicularTo(f3) &&
+			f3.isPerpendicularTo(f1)
+
 		const areaParts = edges.map((edgeWC, ei) => {
 			console.log('edge', ei, edgeWC.sce)
 			const curveWC = edgeWC.curve
@@ -102,24 +112,16 @@ export const CalculateAreaVisitor = {
 				}
 				return sum * Math.sign(edgeWC.deltaT())
 			} else if (curveWC instanceof SemiEllipseCurve) {
-				if (this.isVerticalSpheroid()) {
-					const circleRadius = this.f1.length()
-					const f = (t: number) => {
-						const pWC = curveWC.at(t),
-							tangent = curveWC.tangentAt(t)
+				if (likeVerticalSpheroid) {
+					const f = (curveT: number) => {
+						const pWC = curveWC.at(curveT),
+							tangent = curveWC.tangentAt(curveT)
 						const pLC = this.matrixInverse.transformPoint(pWC)
-						const angleXY = pLC.angleXY()
-						const arcLength = angleXY * circleRadius * Math.sqrt(1 - pLC.z ** 2)
-						const dotter = this.matrix
-							.transformVector(
-								new V3(
-									-pLC.z * pLC.x / pLC.lengthXY(),
-									-pLC.z * pLC.y / pLC.lengthXY(),
-									pLC.lengthXY(),
-								),
-							)
-							.unit()
-						const scaling = dotter.dot(tangent)
+						const { x: angleXY, y: t } = this.stP(pWC)
+						const arcRadius = this.matrix.transformVector(pLC.xy()).length()
+						const arcLength = angleXY * arcRadius
+						const dpdt = this.dpdt()(angleXY, t).unit()
+						const scaling = dpdt.dot(tangent)
 						return arcLength * scaling
 					}
 					return glqInSteps(f, edgeWC.aT, edgeWC.bT, 1)
@@ -222,6 +224,7 @@ export const CalculateAreaVisitor = {
 	// // if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here // Math.abs is
 	// not an option as "holes" may also be passed return totalArea * Math.sign(this.baseCurve.normal.dot(this.dir)) },
 }
+CalculateAreaVisitor[SemiEllipsoidSurface.name] = CalculateAreaVisitor[RotatedCurveSurface.name]
 
 export function planeSurfaceAreaAndCentroid(surface: PlaneSurface, edges: Edge[]) {
 	let centroid = V3.O,

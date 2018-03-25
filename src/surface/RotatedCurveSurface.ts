@@ -36,6 +36,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 		assert(matrix.isNoProj())
 		assert(eq0(curve.at(tMin).y))
 		this.matrixInverse = matrix.inversed()
+        this.vStep = this.curve.tIncrement
 	}
 
 	getConstructorParameters(): any[] {
@@ -267,5 +268,4 @@ export class RotatedCurveSurface extends ParametricSurface {
 	}
 }
 
-RotatedCurveSurface.prototype.uStep = PI / 16
-RotatedCurveSurface.prototype.vStep = 1 / 4
+RotatedCurveSurface.prototype.uStep = SemiEllipseCurve.prototype.tIncrement
