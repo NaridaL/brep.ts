@@ -10399,7 +10399,7 @@ class Mesh extends Transformable {
                 mesh[name] = this[name];
             }
         }
-        mesh.compile();
+        this.hasBeenCompiled && mesh.compile();
         return mesh;
     }
     /**
@@ -16759,7 +16759,6 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
         const testCurveLC = SemiEllipseCurve$$1.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z));
         const testCurveWC = testCurveLC.transform(this.matrix);
         return Surface$$1.loopContainsPointEllipse(loop, pWC, testCurveWC, angle);
-        throw new Error('Method not implemented.');
     }
     isCoplanarTo(surface) {
         if (this === surface)
@@ -16798,23 +16797,26 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
         return super.containsCurve(curve);
     }
     getExtremePoints() {
-        // this logic comes from EllipseCurve.roots
-        const f1 = this.matrix.X;
-        const f2 = this.matrix.Y;
-        return [0, 1, 2].flatMap(dim => {
-            const a = f2.e(dim), b = -f1.e(dim);
-            const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2$$1(a, b, 0);
-            return xiEtas.flatMap(([xi, eta]) => {
-                const s = Math.atan2(eta, xi);
-                if (!fuzzyBetween(s, this.sMin, this.sMax))
-                    return [];
-                const testCurve = this.curve.transform(this.matrix.times(M4.rotateZ(s)));
-                return testCurve.roots()[dim].map(t => this.pST(s, t));
-            });
-        });
+        return getExtremePointsHelper$$1.call(this, this.curve);
     }
 }
 RotatedCurveSurface$$1.prototype.uStep = SemiEllipseCurve$$1.prototype.tIncrement;
+function getExtremePointsHelper$$1(curve) {
+    // this logic comes from EllipseCurve.roots
+    const f1 = this.matrix.X;
+    const f2 = this.matrix.Y;
+    return [0, 1, 2].flatMap(dim => {
+        const a = f2.e(dim), b = -f1.e(dim);
+        const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2$$1(a, b, 0);
+        return xiEtas.flatMap(([xi, eta]) => {
+            const s = Math.atan2(eta, xi);
+            if (!(lt(this.sMin, s) && lt(s, this.sMax)))
+                return [];
+            const testCurve = curve.transform(this.matrix.times(M4.rotateZ(s)));
+            return testCurve.roots()[dim].map(t => this.pST(s, t));
+        });
+    });
+}
 
 class SemiCylinderSurface$$1 extends ProjectedCurveSurface$$1 {
     // @ts-ignore
@@ -17513,13 +17515,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         return plane.normal1.dot(this.f2) < 0 ? plane : plane.flipped();
     }
     getExtremePoints() {
-        assert(this.isSphere());
-        const thisRadius = this.f1.length();
-        // points on the edge of the hemisphere don't need to be included, because if they can at most be on the edge
-        // of a face hemisphere can be orientated anyway, so dot with this.f2 to make sure they are "inside"
-        return [V3.X, V3.X.negated(), V3.Y, V3.Y.negated(), V3.Z, V3.Z.negated()]
-            .filter(p => lt(0, p.dot(this.f2)))
-            .map(p => p.times(thisRadius).plus(this.center));
+        return getExtremePointsHelper$$1.call(this, new SemiEllipseCurve$$1(V3.O, V3.X, V3.Z, -PI$3 / 2, PI$3 / 2));
     }
     pointFoot(pWC, startS, startT) {
         console.log(pWC.sce);
@@ -17936,8 +17932,6 @@ const ZDirVolumeVisitor$$1 = {
                 // const normalz = dpdsx * dpdty - dpdsy * dpdtx
                 // result = pz * normalz
                 const r = pLC.lengthXY(), z = pLC.z;
-                console.log('r', r, cos$1(stOfPWC.y));
-                console.log('z', z, sin$1(stOfPWC.y));
                 const dr = dpdtAtS0.x;
                 const dz = dpdtAtS0.z;
                 const a = this.matrix.X.z * r, b = this.matrix.Y.z * r, c = this.matrix.Z.z * z + this.matrix.O.z;
@@ -44787,6 +44781,7 @@ var brepts = Object.freeze({
 	ParametricSurface: ParametricSurface$$1,
 	ConicSurface: ConicSurface$$1,
 	ProjectedCurveSurface: ProjectedCurveSurface$$1,
+	getExtremePointsHelper: getExtremePointsHelper$$1,
 	RotatedCurveSurface: RotatedCurveSurface$$1,
 	SemiCylinderSurface: SemiCylinderSurface$$1,
 	SemiEllipsoidSurface: SemiEllipsoidSurface$$1,

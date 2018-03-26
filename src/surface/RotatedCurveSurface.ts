@@ -1,4 +1,4 @@
-import { assert, assertInst, DEG, eq0, fuzzyBetween, hasConstructor, lerp, M4, V3 } from 'ts3dutils'
+import { assert, assertInst, DEG, eq0, fuzzyBetween, hasConstructor, lerp, lt, M4, V3 } from 'ts3dutils'
 
 import {
 	Curve,
@@ -36,7 +36,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 		assert(matrix.isNoProj())
 		assert(eq0(curve.at(tMin).y))
 		this.matrixInverse = matrix.inversed()
-        this.vStep = this.curve.tIncrement
+		this.vStep = this.curve.tIncrement
 	}
 
 	getConstructorParameters(): any[] {
@@ -208,7 +208,6 @@ export class RotatedCurveSurface extends ParametricSurface {
 		const testCurveLC = SemiEllipseCurve.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z))
 		const testCurveWC = testCurveLC.transform(this.matrix)
 		return Surface.loopContainsPointEllipse(loop, pWC, testCurveWC, angle)
-		throw new Error('Method not implemented.')
 	}
 
 	isCoplanarTo(surface: Surface): boolean {
@@ -251,21 +250,25 @@ export class RotatedCurveSurface extends ParametricSurface {
 	}
 
 	getExtremePoints(): V3[] {
-		// this logic comes from EllipseCurve.roots
-		const f1 = this.matrix.X
-		const f2 = this.matrix.Y
-		return [0, 1, 2].flatMap(dim => {
-			const a = f2.e(dim),
-				b = -f1.e(dim)
-			const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2(a, b, 0)
-			return xiEtas.flatMap(([xi, eta]) => {
-				const s = Math.atan2(eta, xi)
-				if (!fuzzyBetween(s, this.sMin, this.sMax)) return []
-				const testCurve = this.curve.transform(this.matrix.times(M4.rotateZ(s)))
-				return testCurve.roots()[dim].map(t => this.pST(s, t))
-			})
-		})
+		return getExtremePointsHelper.call(this, this.curve)
 	}
 }
 
 RotatedCurveSurface.prototype.uStep = SemiEllipseCurve.prototype.tIncrement
+
+export function getExtremePointsHelper(this: RotatedCurveSurface & { matrix: M4 }, curve: Curve) {
+	// this logic comes from EllipseCurve.roots
+	const f1 = this.matrix.X
+	const f2 = this.matrix.Y
+	return [0, 1, 2].flatMap(dim => {
+		const a = f2.e(dim),
+			b = -f1.e(dim)
+		const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2(a, b, 0)
+		return xiEtas.flatMap(([xi, eta]) => {
+			const s = Math.atan2(eta, xi)
+			if (!(lt(this.sMin, s) && lt(s, this.sMax))) return []
+			const testCurve = curve.transform(this.matrix.times(M4.rotateZ(s)))
+			return testCurve.roots()[dim].map(t => this.pST(s, t))
+		})
+	})
+}

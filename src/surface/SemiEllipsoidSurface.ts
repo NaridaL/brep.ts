@@ -33,6 +33,7 @@ import {
 	dotCurve,
 	dotCurve2,
 	Edge,
+	getExtremePointsHelper,
 	ImplicitSurface,
 	L3,
 	P3,
@@ -744,13 +745,7 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	}
 
 	getExtremePoints(): V3[] {
-		assert(this.isSphere())
-		const thisRadius = this.f1.length()
-		// points on the edge of the hemisphere don't need to be included, because if they can at most be on the edge
-		// of a face hemisphere can be orientated anyway, so dot with this.f2 to make sure they are "inside"
-		return [V3.X, V3.X.negated(), V3.Y, V3.Y.negated(), V3.Z, V3.Z.negated()]
-			.filter(p => lt(0, p.dot(this.f2)))
-			.map(p => p.times(thisRadius).plus(this.center))
+		return getExtremePointsHelper.call(this, new SemiEllipseCurve(V3.O, V3.X, V3.Z, -PI / 2, PI / 2))
 	}
 
 	pointFoot(pWC: V3, startS?: number, startT?: number): V3 {

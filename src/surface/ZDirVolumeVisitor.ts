@@ -334,8 +334,6 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 					// result = pz * normalz
 					const r = pLC.lengthXY(),
 						z = pLC.z
-					console.log('r', r, cos(stOfPWC.y))
-					console.log('z', z, sin(stOfPWC.y))
 					const dr = dpdtAtS0.x
 					const dz = dpdtAtS0.z
 					const a = this.matrix.X.z * r,

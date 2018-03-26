@@ -267,9 +267,13 @@ suite('serialization', () => {
 
 suite('tsgl', () => {
 	test('centroid of tetrahedron O X Y Z', assert => {
-		const centroid = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z)
+		const centroidMesh = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z)
 			.toMesh()
-			.calcVolume().centroid
+			const centroid = centroidMesh.calcVolume().centroid
 		assert.v3like(centroid, V(0.25, 0.25, 0.25))
+
+        const centroid2 = centroidMesh.translate(2, 2).calcVolume().centroid
+        assert.v3like(centroid2, V(2.25, 2.25, 0.25))
+
 	})
 })
