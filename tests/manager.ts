@@ -247,7 +247,7 @@ export function testLoopCCW(assert: Assert, surface: Surface, loop: Edge[]) {
 		{
 			mesh: surface.sce + '.toMesh()',
 			edges: loop,
-			points: points,
+			drPs: points,
 		},
 		'testLoopCCW',
 	)
@@ -528,7 +528,7 @@ export function testCurveISInfos(
 	f = 'isInfosWithCurve',
 ) {
 	const intersections = c1[f](c2).map(info => info.p)
-	outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), points: intersections }, msg)
+	outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), drPs: intersections }, msg)
 	assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
 	intersections.forEach((is, i) => {
 		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
@@ -587,7 +587,7 @@ export function testLoopContainsPoint(assert: Assert, surface: Surface, loop: Ed
 	const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
 	outputLink(assert, {
 		mesh: Face.create(surface, loop).sce + '.toMesh()',
-		points: [p.sce],
+		drPs: [p],
 	})
 	assert.equal(surface.loopContainsPoint(loop, p), result)
 }

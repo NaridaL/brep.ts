@@ -15812,7 +15812,8 @@ class Surface$$1 extends Transformable {
                     return PointVsFace$$1.ON_EDGE;
                 }
                 // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                const nextInside = colinearEdges[nextEdgeIndex] ||
+                    dotCurve2$$1(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
                 if (!nextInside) {
                     if (logIS(edge.b))
                         return PointVsFace$$1.ON_EDGE;
@@ -15828,8 +15829,9 @@ class Surface$$1 extends Transformable {
                             // TODO: refactor, dont check for different sides, just logIs everything
                             return PointVsFace$$1.ON_EDGE;
                         }
-                        const edgeInside = dotCurve$$1(lineOut, edge.bDir, edge.bDDT) > 0;
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                        const edgeInside = dotCurve2$$1(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0;
+                        const nextInside = colinearEdges[nextEdgeIndex] ||
+                            dotCurve2$$1(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
                         if (edgeInside != nextInside) {
                             if (logIS(edge.b))
                                 return PointVsFace$$1.ON_EDGE;
@@ -15880,7 +15882,8 @@ class Surface$$1 extends Transformable {
                     return PointVsFace$$1.ON_EDGE;
                 }
                 // edge colinear to intersection
-                const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                const nextInside = colinearEdges[nextEdgeIndex] ||
+                    dotCurve2$$1(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
                 if (!nextInside && testLine.containsPoint(edge.b)) {
                     if (logIS(edge.b))
                         return PointVsFace$$1.ON_EDGE;
@@ -15892,10 +15895,9 @@ class Surface$$1 extends Transformable {
                         if (!testLine.containsPoint(edge.b))
                             continue;
                         // endpoint lies on intersection testLine
-                        const edgeInside = dotCurve2$$1(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0; // TODO:
-                        // bDDT
-                        // negated?
-                        const nextInside = colinearEdges[nextEdgeIndex] || dotCurve$$1(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0;
+                        const edgeInside = dotCurve2$$1(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0;
+                        const nextInside = colinearEdges[nextEdgeIndex] ||
+                            dotCurve2$$1(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
                         if (edgeInside != nextInside) {
                             if (logIS(edge.b))
                                 return PointVsFace$$1.ON_EDGE;

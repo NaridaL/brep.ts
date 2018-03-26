@@ -4,7 +4,6 @@ import { callsce, eq, eq0, int, le, NLA_PRECISION, Transformable, V3 } from 'ts3
 import {
 	CalculateAreaVisitor,
 	Curve,
-	dotCurve,
 	dotCurve2,
 	Edge,
 	ImplicitCurve,
@@ -48,7 +47,9 @@ export abstract class Surface extends Transformable implements Equalable {
 					return PointVsFace.ON_EDGE
 				}
 				// edge colinear to intersection
-				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+				const nextInside =
+					colinearEdges[nextEdgeIndex] ||
+					dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign(nextEdge.deltaT())) < 0
 				if (!nextInside) {
 					if (logIS(edge.b)) return PointVsFace.ON_EDGE
 				}
@@ -61,9 +62,10 @@ export abstract class Surface extends Transformable implements Equalable {
 							// TODO: refactor, dont check for different sides, just logIs everything
 							return PointVsFace.ON_EDGE
 						}
-						const edgeInside = dotCurve(lineOut, edge.bDir, edge.bDDT) > 0
+						const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign(edge.deltaT())) < 0
 						const nextInside =
-							colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+							colinearEdges[nextEdgeIndex] ||
+							dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign(nextEdge.deltaT())) < 0
 						if (edgeInside != nextInside) {
 							if (logIS(edge.b)) return PointVsFace.ON_EDGE
 						}
@@ -115,7 +117,9 @@ export abstract class Surface extends Transformable implements Equalable {
 					return PointVsFace.ON_EDGE
 				}
 				// edge colinear to intersection
-				const nextInside = colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+				const nextInside =
+					colinearEdges[nextEdgeIndex] ||
+					dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign(nextEdge.deltaT())) < 0
 				if (!nextInside && testLine.containsPoint(edge.b)) {
 					if (logIS(edge.b)) return PointVsFace.ON_EDGE
 				}
@@ -124,11 +128,10 @@ export abstract class Surface extends Transformable implements Equalable {
 					if (edgeT == edge.bT) {
 						if (!testLine.containsPoint(edge.b)) continue
 						// endpoint lies on intersection testLine
-						const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign(edge.deltaT())) < 0 // TODO:
-						// bDDT
-						// negated?
+						const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign(edge.deltaT())) < 0
 						const nextInside =
-							colinearEdges[nextEdgeIndex] || dotCurve(lineOut, nextEdge.aDir, nextEdge.aDDT) < 0
+							colinearEdges[nextEdgeIndex] ||
+							dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign(nextEdge.deltaT())) < 0
 						if (edgeInside != nextInside) {
 							if (logIS(edge.b)) return PointVsFace.ON_EDGE
 						}

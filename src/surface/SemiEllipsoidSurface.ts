@@ -30,7 +30,6 @@ import {
 
 import {
 	Curve,
-	dotCurve,
 	dotCurve2,
 	Edge,
 	getExtremePointsHelper,
