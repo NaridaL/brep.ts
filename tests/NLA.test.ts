@@ -20,9 +20,11 @@ import {
 	SemiCylinderSurface,
 	SemiEllipseCurve,
 	StraightEdge,
+    SemiEllipsoidSurface,
 } from '..'
 
 import { cos, PI, sin, sqrt } from '../src/math'
+import {Mesh} from 'tsgl'
 
 suite('NLA', () => {
 	suite(
@@ -274,6 +276,5 @@ suite('tsgl', () => {
 
         const centroid2 = centroidMesh.translate(2, 2).calcVolume().centroid
         assert.v3like(centroid2, V(2.25, 2.25, 0.25))
-
 	})
 })

@@ -84,6 +84,7 @@ suite('RotatedCurveSurface', () => {
 	})
 
 	suite('torusFace', () => surfaceVolumeAndAreaTests(torusFace))
+    console.log('shearX22 centroid', torusFace.toMesh().shearX(2, 2).calcVolume().centroid)
 	suite('torusFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(torusFace.shearX(2, 2)))
 
 	suite('isTsWithLine', () => {

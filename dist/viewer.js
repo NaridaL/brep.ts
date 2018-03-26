@@ -12705,7 +12705,7 @@ function pushQuad(triangles, flipped, a, b, c, d) {
 function hexIntToGLColor(color) {
     return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
 }
-//# sourceMappingURL=bundle.module.js.map
+
 
 
 var tsgl = Object.freeze({
