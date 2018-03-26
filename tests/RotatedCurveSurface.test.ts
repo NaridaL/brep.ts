@@ -33,7 +33,7 @@ suite('RotatedCurveSurface', () => {
 		.rotateX(90 * DEG)
 	const torusSurface = rotateCurve(baseCurve, undefined, undefined, 100 * DEG, false) as RotatedCurveSurface
 
-	const torusFace = rotateEdge(Edge.forCurveAndTs(baseCurve).flipped(), 100 * DEG)
+	const torusFace = rotateEdge(Edge.forCurveAndTs(baseCurve).flipped(), 40 * DEG)
 
 	suite('torusSurface', () => suiteSurface(torusSurface))
 	suite('torusSurface.scale(2)', () => suiteSurface(torusSurface.scale(2)))
@@ -112,3 +112,4 @@ suite('RotatedCurveSurface', () => {
 		100 * DEG,
 	).faces.filter(x => x.surface instanceof RotatedCurveSurface)
 })
+// 122.96083177519078
