@@ -1,8 +1,8 @@
-import { test, suite, testLoopContainsPoint } from './manager'
+import { suite, surfaceVolumeAndAreaTests, test, testLoopContainsPoint } from './manager'
 
-import { StraightEdge, PointVsFace, PlaneSurface, P3, L3 } from '..'
+import { Edge, Face, L3, P3, PlaneSurface, PointVsFace, SemiEllipseCurve, StraightEdge } from '..'
 
-import { V, V3 } from 'ts3dutils'
+import { DEG, V, V3 } from 'ts3dutils'
 
 suite('PlaneSurface', () => {
 	test('loopContainsPoint', assert => {
@@ -23,4 +23,20 @@ suite('PlaneSurface', () => {
 		const p = V(6, 10, 3)
 		testLoopContainsPoint(assert, new PlaneSurface(new P3(V(0, -1, 0), -10)), loop, p, PointVsFace.ON_EDGE)
 	})
+
+	const triangleFace = Face.create(new PlaneSurface(P3.XY), StraightEdge.chain([V(1, 1), V(3, 2), V(2, 3)]))
+     //   .rotateX(
+	//	10 * DEG,
+	//)
+	suite('triangleFace', () => surfaceVolumeAndAreaTests(triangleFace))
+	suite('triangleFace.translate(2, 2, 2)', () => surfaceVolumeAndAreaTests(triangleFace.translate(2, 2, 2)))
+	suite('triangleFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(triangleFace.shearX(2,2 )))
+	suite('triangleFace.foo()', () => surfaceVolumeAndAreaTests(triangleFace.foo()))
+
+	const faceWithEllipses = Face.create(new PlaneSurface(P3.XY), [
+		Edge.forCurveAndTs(SemiEllipseCurve.UNIT),
+		Edge.forCurveAndTs(SemiEllipseCurve.circleThroughPoints(V3.X.negated(), V(0, -0.5), V3.X)),
+	])
+	suite('faceWithEllipses', () => surfaceVolumeAndAreaTests(faceWithEllipses))
+	suite('faceWithEllipses.foo()', () => surfaceVolumeAndAreaTests(faceWithEllipses.foo()))
 })

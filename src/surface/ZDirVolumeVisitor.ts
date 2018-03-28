@@ -16,11 +16,9 @@ import {
 	HyperbolaCurve,
 	ImplicitCurve,
 	L3,
-	P3,
 	ParabolaCurve,
 	ParametricSurface,
 	PlaneSurface,
-	planeSurfaceAreaAndCentroid,
 	ProjectedCurveSurface,
 	RotatedCurveSurface,
 	SemiEllipseCurve,
@@ -139,10 +137,143 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 	},
 
 	[PlaneSurface.name](this: PlaneSurface, edges: Edge[]): { centroid: V3; volume: number } {
-		const { centroid, area } = planeSurfaceAreaAndCentroid(this, edges)
+		const r1 = this.right
+		const u1 = this.up
+		const c = this.plane.anchor
+		assert(r1.hasLength(1))
+		assert(u1.hasLength(1))
+		assert(r1.isPerpendicularTo(u1))
+		const totalVolume = edges
+			.map(edgeWC => {
+				const curveWC = edgeWC.curve
+				if (curveWC instanceof L3) {
+					//INTEGRATE[0, p * u1] c.z + s * r1.z + t * u1.z dt
+					// = (p * u1) c.z + s (p u1) r1.z + 1/2 (p u1)² u1.z
+					// p(curveT) = a + curveT * d
+					//INTEGRATE[aT;bT] (p u1) c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+					//INTEGRATE[aT;bT] (a + curveT d) u1 c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+					const f = (curveT: number) => {
+						const p = curveWC.at(curveT)
+						const s = p.dot(r1)
+						return p.dot(u1) * c.z + s * p.dot(u1) * r1.z + 1 / 2 * p.dot(u1) ** 2 * u1.z
+					}
+					const a_1 = curveWC.anchor.dot(u1),
+						a_2 = curveWC.anchor.dot(r1),
+						c_3 = this.plane.anchor.z,
+						d_1 = curveWC.dir1.dot(u1),
+						d_2 = curveWC.dir1.dot(r1),
+						r_3 = r1.z,
+						u_3 = u1.z
+
+					function sliceIntegrated(t: number) {
+						return (
+							t *
+							(3 * a_1 * (r_3 * (2 * a_2 + d_2 * t) + 2 * c_3 + d_1 * t * u_3) +
+								d_1 * t * (r_3 * (3 * a_2 + 2 * d_2 * t) + 3 * c_3 + d_1 * t * u_3) +
+								3 * a_1 ** 2 * u_3) /
+							6
+						)
+					}
+					const actual = sliceIntegrated(edgeWC.bT) - sliceIntegrated(edgeWC.aT)
+					const expected = glqInSteps(f, edgeWC.aT, edgeWC.bT, 1)
+					console.log(actual, expected)
+					const val = actual * -curveWC.dir1.dot(r1) * this.plane.normal1.z
+					return val
+				} else if (curveWC instanceof ImplicitCurve) {
+					throw new Error()
+				} else {
+					const f = (curveT: number) => {
+						const p = curveWC.at(curveT)
+						const s = p.dot(r1)
+						const t = p.dot(u1)
+						const area = t * c.z + s * t * r1.z + 1 / 2 * t ** 2 * u1.z
+						const ds = -curveWC.tangentAt(curveT).dot(r1)
+						return area * ds
+					}
+					return glqInSteps(f, edgeWC.aT, edgeWC.bT, 1) * this.plane.normal1.z
+				}
+			})
+			.sum()
+		const centroidZX2Parts = edges.map(edgeWC => {
+			const curveWC = edgeWC.curve
+			if (curveWC instanceof L3) {
+				const a_1 = curveWC.anchor.dot(u1),
+					a_2 = curveWC.anchor.dot(r1),
+					c_3 = this.plane.anchor.z,
+					d_1 = curveWC.dir1.dot(u1),
+					d_2 = curveWC.dir1.dot(r1),
+					r_3 = r1.z,
+					u_3 = u1.z,
+					g = d_2 / d_1,
+					a = a_2 - g * a_1
+				const c = this.plane.anchor
+				const f = (curveT: number) => {
+					const p = curveWC.at(curveT)
+					const s = p.dot(r1)
+					return p.dot(u1) * c.z + s * p.dot(u1) * r1.z + 1 / 2 * p.dot(u1) ** 2 * u1.z
+				}
+				// centroid
+
+				// INTEGRATE[0, p * u1] (c.z + s * r1.z + t * u1.z) (c + s r1 +t u1) dt
+				// = 1/2 t^2 (c_3 u + c u_3 + r_3 s u + r s u_3) + t (c + r s) (c_3 + r_3 s) + 1/3 t^3 u u_3
+				// p(curveT) = a + curveT * d
+				//INTEGRATE[aT;bT] (p u1) c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+				//INTEGRATE[aT;bT] (a + curveT d) u1 c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+				function cc(t: number) {
+					const curveT = (t - a_1) / d_1
+					const p = curveWC.at(curveT)
+					const s = a + t * g
+					// assert(eq(s, p.dot(r1)))
+					// console.log(t)
+					// const t = u1.dot(p) // t = (a_1 + x * d_1) => x = (t - a_1) / d_1
+					// const s = r1.dot(p) // t = (a_1 + x * d_1) => x = (t - a_1) / d_1
+					return V3.add(
+						c.times(c_3 * t + r_3 * s * t + 1 / 2 * t ** 2 * u_3),
+						r1.times(c_3 * s * t + r_3 * s ** 2 * t + 1 / 2 * s * t ** 2 * u_3),
+						u1.times(1 / 2 * c_3 * t ** 2 + 1 / 2 * r_3 * s * t ** 2 + 1 / 3 * t ** 3 * u_3),
+					)
+				}
+				const centroid = glqV3(cc, edgeWC.a.dot(u1), edgeWC.b.dot(u1)).times(-g * this.plane.normal1.z)
+				// const centroid = glqV3(cc, edgeWC.aT, edgeWC.bT).times(-r1.dot(curveWC.dir1) * this.plane.normal1.z)
+				function sliceCentroidIntegrated(t: number) {
+					return V3.add(
+						c.times(4 * (3 * a * r_3 + 3 * c_3 + t * (2 * g * r_3 + u_3))),
+						r1.times(
+							12 * a ** 2 * r_3 +
+								4 * a * (3 * c_3 + t * (4 * g * r_3 + u_3)) +
+								g * t * (8 * c_3 + 3 * t * (2 * g * r_3 + u_3)),
+						),
+						u1.times(t * (r_3 * (4 * a + 3 * g * t) + 4 * c_3 + 2 * t * u_3)),
+					).times(t ** 2)
+				}
+				const centroid2 = sliceCentroidIntegrated(edgeWC.b.dot(u1))
+					.minus(sliceCentroidIntegrated(edgeWC.a.dot(u1)))
+					.times(-g * this.plane.normal1.z / 24)
+				return centroid2
+			} else if (curveWC instanceof ImplicitCurve) {
+				throw new Error()
+			} else {
+				function sliceCentroidTimesDs(curveT: number) {
+					const p = curveWC.at(curveT)
+					const t = u1.dot(p)
+					const s = r1.dot(p)
+					const ds = -curveWC.tangentAt(curveT).dot(r1)
+					return V3.add(
+						c.times(c.z * t + r1.z * s * t + 1 / 2 * t ** 2 * u1.z),
+						r1.times(c.z * s * t + r1.z * s ** 2 * t + 1 / 2 * s * t ** 2 * u1.z),
+						u1.times(1 / 2 * c.z * t ** 2 + 1 / 2 * r1.z * s * t ** 2 + 1 / 3 * t ** 3 * u1.z),
+					).times(ds)
+				}
+				return glqV3(sliceCentroidTimesDs, edgeWC.aT, edgeWC.bT).times(this.plane.normal1.z)
+			}
+		})
+
+		const centroid = V3.add(...centroidZX2Parts)
+			.schur(new V3(1, 1, 0.5))
+			.div(totalVolume)
 		return {
-			volume: this.plane.normal1.z * centroid.z * area,
-			centroid: new V3(centroid.x, centroid.y, centroid.z / 2),
+			volume: totalVolume,
+			centroid,
 		}
 	},
 
@@ -395,65 +526,6 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 			.schur(new V3(1, 1, 0.5))
 			.div(totalVolume)
 		return { volume: totalVolume, centroid: centroid }
-		const localBasePlane = P3.XY.transform(this.matrixInverse)
-		console.log(this)
-		console.log(localBasePlane)
-		//const zDistanceFactor = toT.transformVector(V3.Z).length()
-		const localVolume = edges
-			.map((edgeWC, edgeIndex, edges) => {
-				const edgeLC = edgeWC.transform(this.matrixInverse)
-				// const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
-
-				// at(t) = edge.curve.at(t)
-				// INT[edge.aT; edge.bT] (
-				// 	INT[0; at(t).angleXY()] (
-				// 		(V3.polar(phi, at(t).lengthXY()) + ()) dot (surface.normalAt(edge.curve.at(t)))
-				// 	) dphi
-				// ) dt
-
-				// a horizontal slice of the surface at z:
-				// Slice(phi) => {
-				// 	const p = (r * cos phi, r * sin phi, z)hi, radiusAtZ) + V(0, 0, z) // also the surface normal in
-				// LC return = (localBasePlane.normal1.dot(p) - localBasePlane.w) * localBasePlane.normal1.dot(p)
-				// return = localBasePlane.normal1.dot(p) ** 2 - localBasePlane.w * localBasePlane.normal1.dot(p) }
-				// integral(((r cos(ϕ)) n_1 + r sin(ϕ) n_2 + z n_3)^2 - w ((r cos(ϕ)) n_1 + r sin(ϕ) n_2 + z n_3)) dϕ =
-				// 1/4 (n_1^2 r^2 (2 ϕ + sin(2 ϕ)) + 2 n_2^2 r^2 (ϕ - sin(ϕ) cos(ϕ)) + 4 n_2 r cos(ϕ) (w - 2 n_3 z) - 2
-				// n_1 r (n_2 r cos(2 ϕ) + 2 sin(ϕ) (w - 2 n_3 z)) + 4 n_3 z ϕ (n_3 z - w)) + constant
-				function f(t: number) {
-					const atLC = edgeLC.curve.at(t),
-						tangent = edgeLC.curve.tangentAt(t)
-					const atLCST = SemiEllipsoidSurface.UNIT.stP(atLC)
-					const { x: nx, y: ny, z: nz } = localBasePlane.normal1,
-						w = localBasePlane.w
-					const r = atLC.lengthXY(),
-						z = atLC.z
-					// slice = normal(s, t).length() * (plane.normal.dot(at(s, t)) - w)
-					function slice(phi: number) {
-						const p = V(r * cos(phi), r * sin(phi), z)
-						// return (localBasePlane.normal1.dot(p) - localBasePlane.w) *localBasePlane.normal1.dot(p) * dpdt.cross(localBasePlane.normal1).length()
-						return (
-							SemiEllipsoidSurface.UNIT.dpds()(phi, atLCST.y)
-								.cross(SemiEllipsoidSurface.UNIT.dpdt()(phi, atLCST.y))
-								.length() *
-							(localBasePlane.normal1.dot(p) - localBasePlane.w) * // height
-							localBasePlane.normal1.dot(p)
-						)
-					}
-					const testValue = gaussLegendreQuadrature24(slice, 0, atLCST.x)
-					// scaling = sqrt(1 - tangent.z ** 2)
-					const scaling = SemiEllipsoidSurface.UNIT.dpdt()(atLCST.x, atLCST.y).dot(tangent) // atLC.getPerpendicular().cross(atLC).unit().dot(tangent)
-					console.log('scaling', scaling)
-					const result = testValue * scaling
-					// edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
-					return result
-				}
-
-				return gaussLegendreQuadrature24(f, edgeLC.aT, edgeLC.bT)
-			})
-			.sum()
-		const volumeScalingFactor = this.f1.dot(this.f2.cross(this.f3))
-		console.log('localVolume', localVolume, 'volumeScalingFactor', volumeScalingFactor)
-		return { volume: localVolume * volumeScalingFactor, centroid: undefined }
 	},
 }
 ZDirVolumeVisitor[SemiEllipsoidSurface.name] = ZDirVolumeVisitor[RotatedCurveSurface.name]
@@ -465,4 +537,18 @@ export function glqV3(f: (x: number) => V3, startT: number, endT: number) {
 			return val.plus(f(x).times(gaussLegendre24Weights[index]))
 		}, V3.O)
 		.times((endT - startT) / 2)
+}
+export function glqArray(f: (x: number) => number[], startT: number, endT: number, numEls = 3) {
+	const result = new Array(numEls).fill(0)
+	for (let i = 0; i < 24; i++) {
+		const x = startT + (gaussLegendre24Xs[i] + 1) / 2 * (endT - startT)
+		const fx = f(x)
+		for (let j = 0; j < numEls; j++) {
+			result[j] += fx[j] * gaussLegendre24Weights[i]
+		}
+	}
+	for (let j = 0; j < numEls; j++) {
+		result[j] /= (endT - startT) / 2
+	}
+	return result
 }

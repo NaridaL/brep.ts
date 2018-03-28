@@ -720,15 +720,14 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		}
 
 		const phi = Math.acos(c / a)
-		const k2 = a ** 2 * (b ** 2 - c ** 2) / (b ** 2 * (a ** 2 - c ** 2)),
-			k = Math.sqrt(k2)
+		const kk = a ** 2 * (b ** 2 - c ** 2) / (b ** 2 * (a ** 2 - c ** 2))
 		const incompleteEllipticInt1 = gaussLegendreQuadrature24(
-			phi => Math.pow(1 - k2 * Math.sin(phi) ** 2, -0.5),
+			phi => Math.pow(1 - kk * Math.sin(phi) ** 2, -0.5),
 			0,
 			phi,
 		)
 		const incompleteEllipticInt2 = gaussLegendreQuadrature24(
-			phi => Math.pow(1 - k2 * Math.sin(phi) ** 2, 0.5),
+			phi => Math.pow(1 - kk * Math.sin(phi) ** 2, 0.5),
 			0,
 			phi,
 		)

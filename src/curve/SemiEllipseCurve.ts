@@ -98,6 +98,26 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return super.forAB(a, b, center) as SemiEllipseCurve
 	}
 
+	/**
+	 * Create a circle curve which has a, b and c on it. a, b, c can't be on a straight line.
+	 * tMin defaults to 0, tMax defaults to the value for c
+	 */
+	static circleThroughPoints(a: V3, b: V3, c: V3, tMin = 0, tMax?: number) {
+		assertf(() => !L3.throughPoints(a, c).containsPoint(b))
+		const normal = a.to(b).cross(b.to(c))
+		const center = new L3(a.lerp(b, 0.5), normal.cross(a.to(b)).unit()).isInfoWithLine(
+			new L3(b.lerp(c, 0.5), normal.cross(b.to(c)).unit()),
+		)!
+		const f1 = center.to(a)
+		return new SemiEllipseCurve(
+			center,
+			f1,
+			normal.unit().cross(f1),
+			0,
+			undefined === tMax ? f1.angleRelativeNormal(center.to(c), normal.unit()) : tMax,
+		)
+	}
+
 	getAreaInDir(right: V3, up: V3, tStart: number, tEnd: number): { area: number; centroid: V3 } {
 		//assertf(() => tStart < tEnd)
 		assertf(() => right.isPerpendicularTo(this.normal))

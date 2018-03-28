@@ -12705,7 +12705,7 @@ function pushQuad(triangles, flipped, a, b, c, d) {
 function hexIntToGLColor(color) {
     return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
 }
-
+//# sourceMappingURL=bundle.module.js.map
 
 
 var tsgl = Object.freeze({
@@ -15285,6 +15285,17 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
     static forAB(a, b, center = V3.O) {
         return super.forAB(a, b, center);
     }
+    /**
+     * Create a circle curve which has a, b and c on it. a, b, c can't be on a straight line.
+     * tMin defaults to 0, tMax defaults to the value for c
+     */
+    static circleThroughPoints(a, b, c, tMin = 0, tMax) {
+        assertf(() => !L3$$1.throughPoints(a, c).containsPoint(b));
+        const normal = a.to(b).cross(b.to(c));
+        const center = new L3$$1(a.lerp(b, 0.5), normal.cross(a.to(b)).unit()).isInfoWithLine(new L3$$1(b.lerp(c, 0.5), normal.cross(b.to(c)).unit()));
+        const f1 = center.to(a);
+        return new SemiEllipseCurve$$1(center, f1, normal.unit().cross(f1), 0, undefined === tMax ? f1.angleRelativeNormal(center.to(c), normal.unit()) : tMax);
+    }
     getAreaInDir(right, up, tStart, tEnd) {
         //assertf(() => tStart < tEnd)
         assertf(() => right.isPerpendicularTo(this.normal));
@@ -17212,7 +17223,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         const projectedCurves = [0, 1].map(id => {
             return (t) => {
                 const atSqr = snap(baseCurveLC.at(t).squared(), 1);
-                const lineISTs = sqrt(1 - atSqr);
+                const lineISTs = /* +- */ sqrt(1 - atSqr);
                 //assert(!isNaN(lineISTs))
                 return eq0(lineISTs)
                     ? baseCurveLC.at(t)
@@ -17224,7 +17235,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
                 // d/dt sqrt(1 - baseCurveLC.at(t).squared())
                 // = -1/2 * 1/sqrt(1 - baseCurveLC.at(t).squared()) * -2*baseCurveLC.at(t) * baseCurveLC.tangentAt(t)
                 const atSqr = snap(baseCurveLC.at(t).squared(), 1);
-                const lineISTs = baseCurveLC
+                const lineISTs = /* +- */ baseCurveLC
                     .at(t)
                     .times(-1 / sqrt(1 - atSqr))
                     .dot(baseCurveLC.tangentAt(t));
@@ -17371,6 +17382,7 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
                 .times(Math.cos(b) * Math.cos(a))
                 .plus(f3.cross(f1).times(Math.cos(b) * Math.sin(a)))
                 .plus(f1.cross(f2).times(Math.sin(b)))
+                //.times(Math.cos(b))
                 .unit();
             return normal;
         };
@@ -17506,9 +17518,9 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
             return spheroidArea(c, b);
         }
         const phi = Math.acos(c / a);
-        const k2 = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
-        const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
-        const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
+        const kk = Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2)) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
+        const incompleteEllipticInt1 = gaussLegendreQuadrature24(phi => Math.pow(1 - kk * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
+        const incompleteEllipticInt2 = gaussLegendreQuadrature24(phi => Math.pow(1 - kk * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
         return ((2 * PI$3 * Math.pow(c, 2) + 2 * PI$3 * a * b / Math.sin(phi)) *
             (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) + incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2)));
     }
@@ -17752,10 +17764,109 @@ const ZDirVolumeVisitor$$1 = {
         return { volume: totalVolume, centroid: centroid };
     },
     [PlaneSurface$$1.name](edges) {
-        const { centroid, area } = planeSurfaceAreaAndCentroid$$1(this, edges);
+        const r1 = this.right;
+        const u1 = this.up;
+        const c = this.plane.anchor;
+        assert(r1.hasLength(1));
+        assert(u1.hasLength(1));
+        assert(r1.isPerpendicularTo(u1));
+        const totalVolume = edges
+            .map(edgeWC => {
+            const curveWC = edgeWC.curve;
+            if (curveWC instanceof L3$$1) {
+                //INTEGRATE[0, p * u1] c.z + s * r1.z + t * u1.z dt
+                // = (p * u1) c.z + s (p u1) r1.z + 1/2 (p u1)² u1.z
+                // p(curveT) = a + curveT * d
+                //INTEGRATE[aT;bT] (p u1) c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+                //INTEGRATE[aT;bT] (a + curveT d) u1 c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+                const f = (curveT) => {
+                    const p = curveWC.at(curveT);
+                    const s = p.dot(r1);
+                    return p.dot(u1) * c.z + s * p.dot(u1) * r1.z + 1 / 2 * Math.pow(p.dot(u1), 2) * u1.z;
+                };
+                const a_1 = curveWC.anchor.dot(u1), a_2 = curveWC.anchor.dot(r1), c_3 = this.plane.anchor.z, d_1 = curveWC.dir1.dot(u1), d_2 = curveWC.dir1.dot(r1), r_3 = r1.z, u_3 = u1.z;
+                function sliceIntegrated(t) {
+                    return (t *
+                        (3 * a_1 * (r_3 * (2 * a_2 + d_2 * t) + 2 * c_3 + d_1 * t * u_3) +
+                            d_1 * t * (r_3 * (3 * a_2 + 2 * d_2 * t) + 3 * c_3 + d_1 * t * u_3) +
+                            3 * Math.pow(a_1, 2) * u_3) /
+                        6);
+                }
+                const actual = sliceIntegrated(edgeWC.bT) - sliceIntegrated(edgeWC.aT);
+                const expected = glqInSteps(f, edgeWC.aT, edgeWC.bT, 1);
+                console.log(actual, expected);
+                const val = actual * -curveWC.dir1.dot(r1) * this.plane.normal1.z;
+                return val;
+            }
+            else if (curveWC instanceof ImplicitCurve$$1) {
+                throw new Error();
+            }
+            else {
+                const f = (curveT) => {
+                    const p = curveWC.at(curveT);
+                    const s = p.dot(r1);
+                    const t = p.dot(u1);
+                    const area = t * c.z + s * t * r1.z + 1 / 2 * Math.pow(t, 2) * u1.z;
+                    const ds = -curveWC.tangentAt(curveT).dot(r1);
+                    return area * ds;
+                };
+                return glqInSteps(f, edgeWC.aT, edgeWC.bT, 1) * this.plane.normal1.z;
+            }
+        })
+            .sum();
+        const centroidZX2Parts = edges.map(edgeWC => {
+            const curveWC = edgeWC.curve;
+            if (curveWC instanceof L3$$1) {
+                const a_1 = curveWC.anchor.dot(u1), a_2 = curveWC.anchor.dot(r1), c_3 = this.plane.anchor.z, d_1 = curveWC.dir1.dot(u1), d_2 = curveWC.dir1.dot(r1), r_3 = r1.z, u_3 = u1.z, g = d_2 / d_1, a = a_2 - g * a_1;
+                const c = this.plane.anchor;
+                // centroid
+                // INTEGRATE[0, p * u1] (c.z + s * r1.z + t * u1.z) (c + s r1 +t u1) dt
+                // = 1/2 t^2 (c_3 u + c u_3 + r_3 s u + r s u_3) + t (c + r s) (c_3 + r_3 s) + 1/3 t^3 u u_3
+                // p(curveT) = a + curveT * d
+                //INTEGRATE[aT;bT] (p u1) c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+                //INTEGRATE[aT;bT] (a + curveT d) u1 c.z + (p r1) (p u1) r1.z + 1/2 (p u1)² u1.z dCurveT
+                function cc(t) {
+                    const curveT = (t - a_1) / d_1;
+                    const p = curveWC.at(curveT);
+                    const s = a + t * g;
+                    // assert(eq(s, p.dot(r1)))
+                    // console.log(t)
+                    // const t = u1.dot(p) // t = (a_1 + x * d_1) => x = (t - a_1) / d_1
+                    // const s = r1.dot(p) // t = (a_1 + x * d_1) => x = (t - a_1) / d_1
+                    return V3.add(c.times(c_3 * t + r_3 * s * t + 1 / 2 * Math.pow(t, 2) * u_3), r1.times(c_3 * s * t + r_3 * Math.pow(s, 2) * t + 1 / 2 * s * Math.pow(t, 2) * u_3), u1.times(1 / 2 * c_3 * Math.pow(t, 2) + 1 / 2 * r_3 * s * Math.pow(t, 2) + 1 / 3 * Math.pow(t, 3) * u_3));
+                }
+                const centroid = glqV3$$1(cc, edgeWC.a.dot(u1), edgeWC.b.dot(u1)).times(-g * this.plane.normal1.z);
+                // const centroid = glqV3(cc, edgeWC.aT, edgeWC.bT).times(-r1.dot(curveWC.dir1) * this.plane.normal1.z)
+                function sliceCentroidIntegrated(t) {
+                    return V3.add(c.times(4 * (3 * a * r_3 + 3 * c_3 + t * (2 * g * r_3 + u_3))), r1.times(12 * Math.pow(a, 2) * r_3 +
+                        4 * a * (3 * c_3 + t * (4 * g * r_3 + u_3)) +
+                        g * t * (8 * c_3 + 3 * t * (2 * g * r_3 + u_3))), u1.times(t * (r_3 * (4 * a + 3 * g * t) + 4 * c_3 + 2 * t * u_3))).times(Math.pow(t, 2));
+                }
+                const centroid2 = sliceCentroidIntegrated(edgeWC.b.dot(u1))
+                    .minus(sliceCentroidIntegrated(edgeWC.a.dot(u1)))
+                    .times(-g * this.plane.normal1.z / 24);
+                return centroid2;
+            }
+            else if (curveWC instanceof ImplicitCurve$$1) {
+                throw new Error();
+            }
+            else {
+                function sliceCentroidTimesDs(curveT) {
+                    const p = curveWC.at(curveT);
+                    const t = u1.dot(p);
+                    const s = r1.dot(p);
+                    const ds = -curveWC.tangentAt(curveT).dot(r1);
+                    return V3.add(c.times(c.z * t + r1.z * s * t + 1 / 2 * Math.pow(t, 2) * u1.z), r1.times(c.z * s * t + r1.z * Math.pow(s, 2) * t + 1 / 2 * s * Math.pow(t, 2) * u1.z), u1.times(1 / 2 * c.z * Math.pow(t, 2) + 1 / 2 * r1.z * s * Math.pow(t, 2) + 1 / 3 * Math.pow(t, 3) * u1.z)).times(ds);
+                }
+                return glqV3$$1(sliceCentroidTimesDs, edgeWC.aT, edgeWC.bT).times(this.plane.normal1.z);
+            }
+        });
+        const centroid = V3.add(...centroidZX2Parts)
+            .schur(new V3(1, 1, 0.5))
+            .div(totalVolume);
         return {
-            volume: this.plane.normal1.z * centroid.z * area,
-            centroid: new V3(centroid.x, centroid.y, centroid.z / 2),
+            volume: totalVolume,
+            centroid,
         };
     },
     /**
@@ -17987,57 +18098,6 @@ const ZDirVolumeVisitor$$1 = {
             .schur(new V3(1, 1, 0.5))
             .div(totalVolume);
         return { volume: totalVolume, centroid: centroid };
-        const localBasePlane = P3$$1.XY.transform(this.matrixInverse);
-        console.log(this);
-        console.log(localBasePlane);
-        //const zDistanceFactor = toT.transformVector(V3.Z).length()
-        const localVolume = edges
-            .map((edgeWC, edgeIndex, edges) => {
-            const edgeLC = edgeWC.transform(this.matrixInverse);
-            // const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex]
-            // at(t) = edge.curve.at(t)
-            // INT[edge.aT; edge.bT] (
-            // 	INT[0; at(t).angleXY()] (
-            // 		(V3.polar(phi, at(t).lengthXY()) + ()) dot (surface.normalAt(edge.curve.at(t)))
-            // 	) dphi
-            // ) dt
-            // a horizontal slice of the surface at z:
-            // Slice(phi) => {
-            // 	const p = (r * cos phi, r * sin phi, z)hi, radiusAtZ) + V(0, 0, z) // also the surface normal in
-            // LC return = (localBasePlane.normal1.dot(p) - localBasePlane.w) * localBasePlane.normal1.dot(p)
-            // return = localBasePlane.normal1.dot(p) ** 2 - localBasePlane.w * localBasePlane.normal1.dot(p) }
-            // integral(((r cos(ϕ)) n_1 + r sin(ϕ) n_2 + z n_3)^2 - w ((r cos(ϕ)) n_1 + r sin(ϕ) n_2 + z n_3)) dϕ =
-            // 1/4 (n_1^2 r^2 (2 ϕ + sin(2 ϕ)) + 2 n_2^2 r^2 (ϕ - sin(ϕ) cos(ϕ)) + 4 n_2 r cos(ϕ) (w - 2 n_3 z) - 2
-            // n_1 r (n_2 r cos(2 ϕ) + 2 sin(ϕ) (w - 2 n_3 z)) + 4 n_3 z ϕ (n_3 z - w)) + constant
-            function f(t) {
-                const atLC = edgeLC.curve.at(t), tangent = edgeLC.curve.tangentAt(t);
-                const atLCST = SemiEllipsoidSurface$$1.UNIT.stP(atLC);
-                const { x: nx, y: ny, z: nz } = localBasePlane.normal1, w = localBasePlane.w;
-                const r = atLC.lengthXY(), z = atLC.z;
-                // slice = normal(s, t).length() * (plane.normal.dot(at(s, t)) - w)
-                function slice(phi) {
-                    const p = V(r * cos$1(phi), r * sin$1(phi), z);
-                    // return (localBasePlane.normal1.dot(p) - localBasePlane.w) *localBasePlane.normal1.dot(p) * dpdt.cross(localBasePlane.normal1).length()
-                    return (SemiEllipsoidSurface$$1.UNIT.dpds()(phi, atLCST.y)
-                        .cross(SemiEllipsoidSurface$$1.UNIT.dpdt()(phi, atLCST.y))
-                        .length() *
-                        (localBasePlane.normal1.dot(p) - localBasePlane.w) * // height
-                        localBasePlane.normal1.dot(p));
-                }
-                const testValue = gaussLegendreQuadrature24(slice, 0, atLCST.x);
-                // scaling = sqrt(1 - tangent.z ** 2)
-                const scaling = SemiEllipsoidSurface$$1.UNIT.dpdt()(atLCST.x, atLCST.y).dot(tangent); // atLC.getPerpendicular().cross(atLC).unit().dot(tangent)
-                console.log('scaling', scaling);
-                const result = testValue * scaling;
-                // edge.tangentAt(t).dot(at2d.unit())', edge.tangentAt(t).dot(at2d.unit()))
-                return result;
-            }
-            return gaussLegendreQuadrature24(f, edgeLC.aT, edgeLC.bT);
-        })
-            .sum();
-        const volumeScalingFactor = this.f1.dot(this.f2.cross(this.f3));
-        console.log('localVolume', localVolume, 'volumeScalingFactor', volumeScalingFactor);
-        return { volume: localVolume * volumeScalingFactor, centroid: undefined };
     },
 };
 ZDirVolumeVisitor$$1[SemiEllipsoidSurface$$1.name] = ZDirVolumeVisitor$$1[RotatedCurveSurface$$1.name];
@@ -18048,6 +18108,20 @@ function glqV3$$1(f, startT, endT) {
         return val.plus(f(x).times(gaussLegendre24Weights[index]));
     }, V3.O)
         .times((endT - startT) / 2);
+}
+function glqArray$$1(f, startT, endT, numEls = 3) {
+    const result = new Array(numEls).fill(0);
+    for (let i = 0; i < 24; i++) {
+        const x = startT + (gaussLegendre24Xs[i] + 1) / 2 * (endT - startT);
+        const fx = f(x);
+        for (let j = 0; j < numEls; j++) {
+            result[j] += fx[j] * gaussLegendre24Weights[i];
+        }
+    }
+    for (let j = 0; j < numEls; j++) {
+        result[j] /= (endT - startT) / 2;
+    }
+    return result;
 }
 
 const CalculateAreaVisitor$$1 = {
@@ -18088,12 +18162,52 @@ const CalculateAreaVisitor$$1 = {
             }
         })
             .sum();
-        // if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here
-        // Math.abs is not an option as "holes" may also be passed
         return totalArea * this.normalDir;
     },
     [PlaneSurface$$1.name](edges) {
-        return planeSurfaceAreaAndCentroid$$1(this, edges);
+        let totalArea = 0;
+        const r1 = this.right, u1 = this.up;
+        for (const edge of edges) {
+            let edgeArea;
+            const curve = edge.curve;
+            if (curve instanceof L3$$1) {
+                edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1);
+            }
+            else if (curve instanceof SemiEllipseCurve$$1) {
+                // INTEGRATE[aT; bT] (curve.at(t) * u1) * (tangent(t) * r1) dt
+                // INTEGRATE[aT; bT] (u1 f1 cos t + u1 f2 sin t + u1 c) * (r1 f1 (-sin t) + r1 f2 cos t) dt
+                const { f1, f2, center } = curve;
+                const a = u1.dot(f1), b = u1.dot(f2), c = u1.dot(center), d = r1.dot(f1), e = r1.dot(f2);
+                function fArea(t) {
+                    return (0.25 *
+                        (2 * (-b * d + a * e) * t +
+                            4 * c * d * cos$1(t) +
+                            4 * c * e * sin$1(t) +
+                            (a * d - b * e) * cos$1(2 * t) +
+                            (b * d + a * e) * sin$1(2 * t)));
+                }
+                edgeArea = -(fArea(edge.bT) - fArea(edge.aT));
+            }
+            else if (curve instanceof ImplicitCurve$$1) {
+                throw new Error('implement for implicitCurve');
+            }
+            else {
+                const dir1 = u1;
+                assertf(() => dir1.hasLength(1));
+                // INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
+                const f = (curveT) => {
+                    const at = curve.at(curveT);
+                    const tangent = curve.tangentAt(curveT);
+                    const ds = r1.dot(tangent);
+                    const t = u1.dot(at);
+                    return ds * t;
+                };
+                edgeArea = glqInSteps(f, edge.aT, edge.bT, 3);
+            }
+            totalArea += edgeArea;
+        }
+        assert(isFinite(totalArea));
+        return totalArea;
     },
     [RotatedCurveSurface$$1.name](edges, canApproximate = true) {
         const f1 = this.matrix.X, f2 = this.matrix.Y, f3 = this.matrix.Z;
@@ -18105,34 +18219,9 @@ const CalculateAreaVisitor$$1 = {
             console.log('edge', ei, edgeWC.sce);
             const curveWC = edgeWC.curve;
             if (edgeWC.curve instanceof ImplicitCurve$$1) {
-                const { points, tangents } = edgeWC.curve;
-                const minT = edgeWC.minT, maxT = edgeWC.maxT;
-                let sum = 0;
-                const start = Math.ceil(minT + NLA_PRECISION);
-                const end = Math.floor(maxT - NLA_PRECISION);
-                for (let i = start; i <= end; i++) {
-                    const at = points[i], tangent = tangents[i].toLength(edgeWC.curve.stepSize);
-                    // console.log(
-                    // 	'at',
-                    // 	at.sce,
-                    // 	'tangent',
-                    // 	tangent.sce,
-                    // 	'tangent.length()',
-                    // 	tangent.length(),
-                    // 	this.normalP(at)
-                    // 		.cross(thisDir1)
-                    // 		.unit().sce,
-                    // )
-                    const scaling = this.normalP(at)
-                        .cross(thisDir1)
-                        .unit()
-                        .dot(tangent);
-                    console.log('partsum', at.dot(thisDir1) * scaling);
-                    sum += at.dot(thisDir1) * scaling;
-                }
-                return sum * Math.sign(edgeWC.deltaT());
+                throw new Error();
             }
-            else if (curveWC instanceof SemiEllipseCurve$$1) {
+            else {
                 if (likeVerticalSpheroid) {
                     const f = (curveT) => {
                         const pWC = curveWC.at(curveT), tangent = curveWC.tangentAt(curveT);
@@ -18166,9 +18255,6 @@ const CalculateAreaVisitor$$1 = {
                     return glqInSteps(f2, edgeWC.aT, edgeWC.bT, 1);
                 }
             }
-            else {
-                throw new Error();
-            }
         });
         return areaParts.sum();
     },
@@ -18184,8 +18270,8 @@ const CalculateAreaVisitor$$1 = {
                 const { points, tangents } = edge.curve;
                 const minT = edge.minT, maxT = edge.maxT;
                 let sum = 0;
-                const start = Math.ceil(minT + NLA_PRECISION);
-                const end = Math.floor(maxT - NLA_PRECISION);
+                const start = ceil(minT + NLA_PRECISION);
+                const end = floor(maxT - NLA_PRECISION);
                 for (let i = start; i <= end; i++) {
                     const at = points[i], tangent = tangents[i].toLength(edge.curve.stepSize);
                     const scaling = this.normalP(at)
@@ -18204,7 +18290,7 @@ const CalculateAreaVisitor$$1 = {
                 };
                 sum += f(minT) * (start - minT - 0.5);
                 sum += f(maxT) * (maxT - end - 0.5);
-                return sum * Math.sign(edge.deltaT());
+                return sum * sign$1(edge.deltaT());
             }
             else {
                 const f = (t) => {
@@ -18227,64 +18313,6 @@ const CalculateAreaVisitor$$1 = {
     },
 };
 CalculateAreaVisitor$$1[SemiEllipsoidSurface$$1.name] = CalculateAreaVisitor$$1[RotatedCurveSurface$$1.name];
-function planeSurfaceAreaAndCentroid$$1(surface, edges) {
-    let centroid = V3.O, tcs = 0, tct = 0, totalArea = 0;
-    const r1 = surface.right, u1 = surface.up;
-    for (const edge of edges) {
-        let edgeArea, centroidS, centroidT;
-        if (edge instanceof StraightEdge$$1) {
-            const midPoint = edge.a.lerp(edge.b, 0.5);
-            edgeCentroid = new V3(midPoint.x, centroid.y, centroid.z / 2);
-            centroidS = midPoint.dot(r1) / 2;
-            centroidT = midPoint.dot(u1);
-            const edgeLength = edge.a.distanceTo(edge.b);
-            edgeArea = edgeLength * edge.curve.dir1.dot(r1);
-            edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1);
-        }
-        else {
-            const curve = edge.curve;
-            if (curve instanceof SemiEllipseCurve$$1) {
-                const info = curve.getAreaInDir(r1, u1, edge.aT, edge.bT);
-                edgeArea = info.area;
-                const parametricCentroid = surface.stPFunc()(info.centroid);
-                centroidS = parametricCentroid.x;
-                centroidT = parametricCentroid.y;
-            }
-            else if (curve instanceof BezierCurve$$1) {
-                const { aT, bT } = edge;
-                const dir1 = u1;
-                assertf(() => dir1.hasLength(1));
-                // INT[aT; bT] at(t) * dir1 * tangentAt(t).rejectedFrom(dir1) dt
-                const f = (t) => {
-                    const tangent = curve.tangentAt(t);
-                    const at = curve.at(t);
-                    const outsideVector = tangent.cross(surface.normalP(at));
-                    const sign = Math.sign(outsideVector.dot(dir1));
-                    return at.dot(dir1) * tangent.rejected1Length(dir1) * sign;
-                    //return curve.at(t).dot(dir1) * tangent.minus(dir1.times(tangent.dot(dir1))).length()
-                };
-                const cx = (t) => {
-                    const height = curve.at(t).dot(dir1);
-                    //console.log(t, curve.at(t).minus(dir1.times(height / 2)).sce, f(t))
-                    return curve.at(t).minus(dir1.times(height / 2));
-                };
-                const area = gaussLegendreQuadrature24(f, aT, bT);
-                const x = glqV3$$1(cx, aT, bT).div(2 * (bT - aT) * area);
-                return { area: area, centroid: x };
-                edgeArea = curve.getAreaInDirSurface(u1, surface, edge.aT, edge.bT).area;
-            }
-            else {
-                throw new Error();
-            }
-        }
-        tcs += edgeArea * centroidS;
-        tct += edgeArea * centroidT;
-        totalArea += edgeArea;
-    }
-    centroid = r1.times(tcs).plus(u1.times(tct));
-    assert(isFinite(totalArea));
-    return { area: totalArea, centroid: centroid };
-}
 
 var TINF_OK = 0;
 var TINF_DATA_ERROR = -3;
@@ -44790,8 +44818,8 @@ var brepts = Object.freeze({
 	PlaneSurface: PlaneSurface$$1,
 	ZDirVolumeVisitor: ZDirVolumeVisitor$$1,
 	glqV3: glqV3$$1,
+	glqArray: glqArray$$1,
 	CalculateAreaVisitor: CalculateAreaVisitor$$1,
-	planeSurfaceAreaAndCentroid: planeSurfaceAreaAndCentroid$$1,
 	projectCurve: projectCurve$$1,
 	projectPointCurve: projectPointCurve$$1,
 	rotateCurve: rotateCurve$$1,

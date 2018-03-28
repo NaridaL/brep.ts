@@ -280,14 +280,14 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 		const actual = face.zDirVolume().volume,
 			expected = undefined === expectedVolume ? faceMeshVol.volume : expectedVolume
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
-		console.log('OK! actual = ' + actual + ', expected = ' + expected)
+        console.log('OK! actual = ' + actual + ', expected = ' + expected + ', |dv| = ' + (actual - expected))
 	})
 	test(msg + ' flipped() volume', assert => {
 		outputLink(assert, { mesh: flippedFace.toSource() + '.toMesh()', edges: flippedFace.allEdges })
 		const actual = flippedFace.zDirVolume().volume
 		const expected = undefined === expectedVolume ? -faceMeshVol.volume : -expectedVolume
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
-		console.log('OK! actual = ' + actual + ', expected = ' + expected)
+		console.log('OK! actual = ' + actual + ', expected = ' + expected + ', |dv| = ' + (actual - expected))
 	})
 	test(msg + ' centroid', assert => {
 		const actual = flippedFace.zDirVolume()
@@ -300,7 +300,7 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 		if (!eq0(actual.volume)) {
 			// centroid doesn't make sense when volume is 0
 			assert.v3like(actual.centroid, expected, undefined, expected.length() / 100)
-			console.log('OK! actual = ' + actual.centroid + ', expected = ' + expected)
+			console.log('OK! actual = ' + actual.centroid + ', expected = ' + expected + ', |dv| = ' + (actual.centroid.distanceTo(expected)))
 		}
 	})
 	test(msg + ' flipped() centroid', assert => {
