@@ -65,15 +65,20 @@ export class L3 extends Curve {
 		return anchor.plus(dir.times(t))
 	}
 
-	static fromPlanes(p1: P3, p2: P3): L3 {
-		assertInst(P3, p1, p2)
-		const dir = p1.normal1.cross(p2.normal1)
+	/**
+	 * Create new line which is the intersection of two planes. Throws error if planes are parallel.
+	 * @param plane1
+	 * @param plane2
+	 */
+	static fromPlanes(plane1: P3, plane2: P3): L3 {
+		assertInst(P3, plane1, plane2)
+		const dir = plane1.normal1.cross(plane2.normal1)
 		const length = dir.length()
 		if (length < 1e-10) {
 			throw new Error('Parallel planes')
 		}
 
-		return p1.intersectionWithPlane(p2)!
+		return plane1.intersectionWithPlane(plane2)!
 	}
 
 	static containsPoint(anchor: V3, dir: V3, p: V3) {

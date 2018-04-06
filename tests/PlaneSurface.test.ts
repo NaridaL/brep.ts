@@ -24,13 +24,12 @@ suite('PlaneSurface', () => {
 		testLoopContainsPoint(assert, new PlaneSurface(new P3(V(0, -1, 0), -10)), loop, p, PointVsFace.ON_EDGE)
 	})
 
-	const triangleFace = Face.create(new PlaneSurface(P3.XY), StraightEdge.chain([V(1, 1), V(3, 2), V(2, 3)]))
-     //   .rotateX(
-	//	10 * DEG,
-	//)
+	const triangleFace = Face.create(new PlaneSurface(P3.XY), StraightEdge.chain([V(1, 1), V(3, 2), V(2, 3)])).rotateX(
+		10 * DEG,
+	)
 	suite('triangleFace', () => surfaceVolumeAndAreaTests(triangleFace))
 	suite('triangleFace.translate(2, 2, 2)', () => surfaceVolumeAndAreaTests(triangleFace.translate(2, 2, 2)))
-	suite('triangleFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(triangleFace.shearX(2,2 )))
+	suite('triangleFace.shearX(2, 2)', () => surfaceVolumeAndAreaTests(triangleFace.shearX(2, 2)))
 	suite('triangleFace.foo()', () => surfaceVolumeAndAreaTests(triangleFace.foo()))
 
 	const faceWithEllipses = Face.create(new PlaneSurface(P3.XY), [
