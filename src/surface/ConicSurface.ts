@@ -186,8 +186,10 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
 					const p1 = new V3(d / (a - c), 0, -d / (a - c))
 					const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
-					const f1 = center.to(p1)
-					return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), center.to(p2))]
+					// const f1 = center.to(p1)
+					const f1 = new V3(d * c / (aa - cc), 0, -d * a / (aa - cc))
+					const f2 = new V3(0, d / sqrt(aa - cc), 0)
+					return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), f2)]
 				}
 			}
 		}
@@ -292,17 +294,39 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	containsHyperbola(curve: HyperbolaCurve): boolean {
+		// calculate intersection of plane ax + cz = 1 and cone x² + y² = z²
+		// const center = new V3(-a / (cc - aa), 0, 1 / (cc - aa))
+		// const p1 = new V3(1 / (a - c), 0, -1 / (a - c))
+		// const p2 = new V3(-a / (cc - aa), 1 / sqrt(aa - cc), 1 / (cc - aa))
+		// const f1 = new V3(1 * c / (aa - cc), 0, -a / (aa - cc) )
+		// const f2 = new V3(0, 1 / sqrt(aa - cc), 0)
 		assertInst(HyperbolaCurve, curve)
-		return true
-		const curveLC = curve.transform(this.matrixInverse)
-		if (curveLC.center.z < 0 || curveLC.f2.z < 0) {
+		const curveLC = curve.transform(this.matrixInverse).rightAngled()
+		const centerXY = curveLC.center.xy()
+		if (centerXY.likeO()) {
 			return false
 		}
-		const { center, f1, f2 } = curveLC.rightAngled()
+		const rot = centerXY.angleXY()
+		const { center, f1, f2 } = curveLC.rotateZ(-rot)
+
+		// s = a / (aa - cc)
+		// t = -c / (aa - cc)
+		// s + t = 1 / (a + c)
+		// s - t = 1 / (a - c)
+		// (s + t)(s - t) = (ss - tt) = 1 / (aa - cc)
+		// u = 1 / sqrt(aa - cc) = sqrt(ss - tt)
 		// check if center is on the surface,
 		// that tangent is perpendicular to the Z-axis
-		return true
-		return eq(center.x * center.x + center.y * center.y, center.z * center.z) && eq0(f1.z)
+		return (
+			f1.z > 0 &&
+			eq(center.x, f1.z) &&
+			eq(center.z, f1.x) &&
+			eq0(center.y) &&
+			eq0(f1.y) &&
+			eq(sqrt(abs(center.x ** 2 - center.z ** 2)), abs(f2.y)) &&
+			eq0(f2.x) &&
+			eq0(f2.z)
+		)
 	}
 
 	containsCurve(curve: Curve): boolean {

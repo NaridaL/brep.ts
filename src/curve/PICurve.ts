@@ -15,7 +15,6 @@ import {
 import {
 	Curve,
 	curvePoint,
-	EllipsoidSurface,
 	followAlgorithm2d,
 	ImplicitCurve,
 	ImplicitSurface,

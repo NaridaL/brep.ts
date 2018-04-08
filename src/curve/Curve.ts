@@ -19,7 +19,7 @@ import {
 	NLA_PRECISION,
 	Transformable,
 	V,
-	V3,checkDerivate
+	V3,
 } from 'ts3dutils'
 
 import {
@@ -40,10 +40,16 @@ export type ISInfo = { tThis: number; tOther: number; p: V3 }
 
 let insideIsInfosWithCurve = false
 
+export interface Curve {
+	/**
+	 * Derivative of tangentAt for parameter t at t.
+	 */
+	ddt?(t: number): V3
+}
 export abstract class Curve extends Transformable implements Equalable {
 	static hlol = 0
-	tIncrement: number
-	hlol: number;
+	tIncrement!: number
+	hlol!: number;
 	readonly ['constructor']: new (...args: any[]) => this
 
 	constructor(readonly tMin: number, readonly tMax: number) {
@@ -84,7 +90,7 @@ export abstract class Curve extends Transformable implements Equalable {
 				const f2 = (t: number, s: number) => curve2.tangentAt(s).dot(curve1.at(t).minus(curve2.at(s)))
 				// f = (b1, b2, t1, t2) = b1.tangentAt(t1).dot(b1.at(t1).minus(b2.at(t2)))
 				const dfdt1 = (b1: Curve, b2: Curve, t1: number, t2: number) =>
-					b1.ddt(t1).dot(b1.at(t1).minus(b2.at(t2))) + b1.tangentAt(t1).squared()
+					b1.ddt!(t1).dot(b1.at(t1).minus(b2.at(t2))) + b1.tangentAt(t1).squared()
 				const dfdt2 = (b1: Curve, b2: Curve, t1: number, t2: number) => -b1.tangentAt(t1).dot(b2.tangentAt(t2))
 				const ni = newtonIterate2dWithDerivatives(
 					f1,
@@ -96,7 +102,7 @@ export abstract class Curve extends Transformable implements Equalable {
 					dfdt2.bind(undefined, curve1, curve2),
 					(t, s) => -dfdt2(curve2, curve1, s, t),
 					(t, s) => -dfdt1(curve2, curve1, s, t),
-				)
+				)!
 				assert(isFinite(ni.x))
 				assert(isFinite(ni.y))
 				if (ni == undefined) console.log(startT, startS, curve1.sce, curve2.sce)
@@ -174,7 +180,6 @@ export abstract class Curve extends Transformable implements Equalable {
 		stepSize: number,
 		validST: R2<boolean>,
 	): { points: V3[]; tangents: V3[] }[] {
-		const EPS = 1 / (1 << 20)
 		//undefined == dids && (dids = (s, t) => (implicitCurve(s + EPS, t) - implicitCurve(s, t)) / EPS)
 		//undefined == didt && (didt = (s, t) => (implicitCurve(s, t + EPS) - implicitCurve(s, t)) / EPS)
 
@@ -184,15 +189,15 @@ export abstract class Curve extends Transformable implements Equalable {
 		const sRes = ceil(deltaS / sStep),
 			tRes = ceil(deltaT / tStep)
 		const grid = new Array(sRes * tRes).fill(0)
-		const printGrid = () =>
-			console.log(
-				arrayFromFunction(tRes, i =>
-					grid
-						.slice(sRes * i, sRes * (i + 1))
-						.map(v => (v ? 'X' : '_'))
-						.join(''),
-				).join('\n'),
-			)
+		// const printGrid = () =>
+		// 	console.log(
+		// 		arrayFromFunction(tRes, i =>
+		// 			grid
+		// 				.slice(sRes * i, sRes * (i + 1))
+		// 				.map(v => (v ? 'X' : '_'))
+		// 				.join(''),
+		// 		).join('\n'),
+		// 	)
 		const get = (i: int, j: int) => grid[j * sRes + i]
 		const set = (i: int, j: int) => 0 <= i && i < sRes && 0 <= j && j < tRes && (grid[j * sRes + i] = 1)
 		const result: { points: V3[]; tangents: V3[] }[] = []
@@ -317,7 +322,7 @@ export abstract class Curve extends Transformable implements Equalable {
 			this.at(t)
 				.minus(p)
 				.dot(this.ddt!(t))
-        //checkDerivate(f, df, tMin, tMax)
+		//checkDerivate(f, df, tMin, tMax)
 
 		const STEPS = 32
 		if (undefined === tStart) {
@@ -428,11 +433,6 @@ export abstract class Curve extends Transformable implements Equalable {
 	 * Tangent of curve at parameter t. This is also the first derivative of {@see at}
 	 */
 	abstract tangentAt(t: number): V3
-
-	/**
-	 * Derivative of tangentAt for parameter t at t.
-	 */
-	abstract ddt?(t: number): V3
 
 	abstract containsPoint(p: V3): boolean
 
@@ -716,7 +716,6 @@ export function stInAABB2(aabb2: AABB2, s: number, t: number) {
 }
 
 export function curvePoint(implicitCurve: R2_R, startPoint: V3, dids: R2_R, didt: R2_R) {
-	const eps = 1 / (1 << 20)
 	let p = startPoint
 	for (let i = 0; i < 8; i++) {
 		const fp = implicitCurve(p.x, p.y)

@@ -84,6 +84,19 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0), tMin, tMax)
 	}
 
+	static circleForCenter2P(center: V3, a: V3, b: V3, radius: number, tMin?: number, tMax?: number) {
+		const f1 = center.to(a)
+		const normal = f1.cross(center.to(b))
+		const f2 = normal.cross(f1).toLength(f1.length())
+		return new SemiEllipseCurve(
+			center,
+			f1,
+			f2,
+			undefined !== tMin ? tMin : 0,
+			undefined !== tMax ? tMax : f1.angleTo(center.to(b)),
+		)
+	}
+
 	split(tMin = this.tMin, tMax = this.tMax): SemiEllipseCurve[] {
 		const result: SemiEllipseCurve[] = []
 		tMin < 0 &&

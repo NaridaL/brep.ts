@@ -41,6 +41,7 @@ import {
 	ProjectedCurveSurface,
 	R2_R,
 	SemiCylinderSurface,
+	SemiEllipseCurve,
 	SemiEllipsoidSurface,
 	Surface,
 } from '../index'
@@ -129,14 +130,6 @@ export class BezierCurve extends Curve {
 			0,
 			1,
 		)
-	}
-
-	static testEdges() {
-		const curve2 = BezierCurve.graphXY(2, -3, -3, 2, 0.6, 2)
-		const items = curve2.magic().map(c => Edge.forCurveAndTs(c).translate(3))
-		console.log(items.length)
-
-		return [Edge.forCurveAndTs(curve2)].concat(items)
 	}
 
 	getConstructorParameters(): any[] {
@@ -400,8 +393,8 @@ export class BezierCurve extends Curve {
 	}
 
 	pointT2(p: V3, tMin = this.tMin, tMax = this.tMax): number {
-	    const t =this.closestTToPoint(p, undefined, tMin, tMax)
-       assert(this.at(t).like(p))
+		const t = this.closestTToPoint(p, undefined, tMin, tMax)
+		assert(this.at(t).like(p))
 		return t
 	}
 
@@ -627,18 +620,19 @@ export class BezierCurve extends Curve {
 		const z =
 			(d.e(coord0) - anchorWC.e(coord0)) * dirWC.e(coord1) - (d.e(coord1) - anchorWC.e(coord1)) * dirWC.e(coord0)
 
-		tMin = isFinite(tMin) ? tMin : this.tMin
-		tMax = isFinite(tMax) ? tMax : this.tMax
+		tMin = undefined !== tMin ? tMin : this.tMin
+		tMax = undefined !== tMax ? tMax : this.tMax
 
 		// we ignored a dimension in the previous step, so we need to check it too
 		return solveCubicReal2(w, x, y, z).mapFilter(tThis => {
-			if (tMin <= tThis && tThis <= tMax) {
+			if (tMin! <= tThis && tThis <= tMax!) {
 				const p = this.at(tThis)
 				// console.log(t*t*t*w+t*t*x+t*y+z, dirWC.length())
 				const s = p.minus(anchorWC).dot(dirWC) / dirWC.dot(dirWC)
 				const lineAtS = dirWC.times(s).plus(anchorWC)
 				if (lineAtS.like(p)) return { tThis: tThis, tOther: s, p: p }
 			}
+			return undefined
 		})
 	}
 
@@ -696,15 +690,15 @@ export class BezierCurve extends Curve {
 					fdt2.bind(undefined, this, bezier),
 					(t, s) => -fdt2(bezier, this, s, t),
 					(t, s) => -fdt1(bezier, this, s, t),
-				)
+				)!
 				result.push({ tThis: ni.x, tOther: ni.y, p: this.at(ni.x) })
 			}
 		}
 
-		tMin = 'number' == typeof tMin && isFinite(tMin) ? tMin : this.tMin
-		tMax = 'number' == typeof tMax && isFinite(tMax) ? tMax : this.tMax
-		sMin = 'number' == typeof sMin && isFinite(sMin) ? sMin : bezier.tMin
-		sMax = 'number' == typeof sMax && isFinite(sMax) ? sMax : bezier.tMax
+		tMin = undefined !== tMin ? tMin : this.tMin
+		tMax = undefined !== tMax ? tMax : this.tMax
+		sMin = undefined !== sMin ? sMin : bezier.tMin
+		sMax = undefined !== sMax ? sMax : bezier.tMax
 
 		// stack of indices:
 		const indices = [tMin, tMax, sMin, sMax]
@@ -738,8 +732,7 @@ export class BezierCurve extends Curve {
 					console.log(tMid, sMid)
 					handleStartTS(tMid, sMid)
 				} else {
-					Array.prototype.push.call(
-						indices,
+					indices.push(
 						tMin,
 						tMid,
 						sMin,
@@ -765,13 +758,13 @@ export class BezierCurve extends Curve {
 	}
 
 	isInfosWithBezier(bezier: BezierCurve, tMin?: number, tMax?: number, sMin?: number, sMax?: number): ISInfo[] {
-		tMin = 'number' == typeof tMin && isFinite(tMin) ? tMin : this.tMin
-		tMax = 'number' == typeof tMax && isFinite(tMax) ? tMax : this.tMax
-		sMin = 'number' == typeof sMin && isFinite(sMin) ? sMin : bezier.tMin
-		sMax = 'number' == typeof sMax && isFinite(sMax) ? sMax : bezier.tMax
+		tMin = undefined !== tMin ? tMin : this.tMin
+		tMax = undefined !== tMax ? tMax : this.tMax
+		sMin = undefined !== sMin ? sMin : bezier.tMin
+		sMax = undefined !== sMax ? sMax : bezier.tMax
 
-		assertf(() => tMin < tMax)
-		assertf(() => sMin < sMax)
+		assertf(() => tMin! < tMax!)
+		assertf(() => sMin! < sMax!)
 		const result: ISInfo[] = []
 
 		const likeCurves = this.likeCurve(bezier),
@@ -823,7 +816,7 @@ export class BezierCurve extends Curve {
 		return curve.isInfosWithCurve(this).map(({ tThis, tOther, p }) => ({ tThis: tOther, tOther: tThis, p }))
 	}
 
-	magic(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurveOld[] = []): EllipseCurveOld[] {
+	magic(t0: number = this.tMin, t1: number = this.tMax, result: SemiEllipseCurve[] = []): SemiEllipseCurve[] {
 		const max3d = 0.01,
 			eps = 0.01
 		const splits = 20
@@ -838,8 +831,8 @@ export class BezierCurve extends Curve {
 					lj = ls[j]
 				return li.infoClosestToLine(lj)
 			})
-			const a = isInfos.map(isInfo => isInfo.s - isInfo.t)
-			const centers = isInfos.map(isInfo => V3.lerp(isInfo.closest, isInfo.closest2, 0.5))
+			const a = isInfos.map(isInfo => isInfo.s! - isInfo.t)
+			const centers = isInfos.map(isInfo => V3.lerp(isInfo.closest!, isInfo.closest2!, 0.5))
 			const b = arrayFromFunction(splits - 1, i => {
 				const tMid = lerp(ts[i], ts[i + 1], 0.5)
 				const pMid = this.at(tMid)
@@ -851,7 +844,7 @@ export class BezierCurve extends Curve {
 		const ff = (xs: FloatArray) => {
 			return f(V3.unpackXY(xs))
 		}
-		const x = new Vector(new Float64Array(startX))
+		let x = new Vector(new Float64Array(startX))
 		for (let i = 0; i < 2; i++) {
 			const Fx = new Vector(new Float64Array(ff(x.v)))
 			console.log(Fx.v)
@@ -877,12 +870,12 @@ export class BezierCurve extends Curve {
 			const li = ls2[i],
 				lj = ls2[j]
 			const isInfo = li.infoClosestToLine(lj)
-			return EllipseCurveOld.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s)
+			return SemiEllipseCurve.circleForCenter2P(isInfo.closest!, ps[i], ps[j], isInfo.s!)
 		})
 		return curves
 	}
 
-	magic2(t0: number = this.tMin, t1: number = this.tMax, result: EllipseCurveOld[] = []): EllipseCurveOld[] {
+	magic2(t0: number = this.tMin, t1: number = this.tMax, result: SemiEllipseCurve[] = []): SemiEllipseCurve[] {
 		const max3d = 0.01,
 			eps = 0.01
 		const a = this.at(t0),
@@ -892,16 +885,16 @@ export class BezierCurve extends Curve {
 		const aL = new L3(a, aN),
 			bL = new L3(b, bN)
 		const isInfo = aL.infoClosestToLine(bL)
-		if (isInfo.s < 0 || isInfo.t < 0 || isInfo.distance > max3d || !eq(isInfo.s, isInfo.t, eps)) {
+		if (isInfo.s! < 0 || isInfo.t < 0 || isInfo.distance > max3d || !eq(isInfo.s!, isInfo.t, eps)) {
 		} else {
-			const centerPoint = V3.lerp(isInfo.closest, isInfo.closest2, 0.5)
+			const centerPoint = V3.lerp(isInfo.closest!, isInfo.closest2!, 0.5)
 			const testT1 = lerp(t0, t1, 1 / 2),
 				testP1 = this.at(testT1)
 			const testT2 = lerp(t0, t1, 2 / 3),
 				testP2 = this.at(testT2)
-			const radius = (isInfo.s + isInfo.t) / 2
+			const radius = (isInfo.s! + isInfo.t) / 2
 			if (eq(centerPoint.distanceTo(testP1), radius, eps)) {
-				const newCurve = EllipseCurveOld.circleForCenter2P(centerPoint, a, b, radius)
+				const newCurve = SemiEllipseCurve.circleForCenter2P(centerPoint, a, b, radius)
 				result.push(newCurve)
 				return result
 			}

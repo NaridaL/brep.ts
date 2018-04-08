@@ -277,7 +277,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		gl.drawEdge(hovering, GL_COLOR_BLACK, 2 / eye.zoomFactor)
 		gl.projectionMatrix.m[11] += 1 / (1 << 20)
 	}
-	g.edges && g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 0.01))
+	g.edges && g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 2.5 / eye.zoomFactor))
 
 	g.drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor))
 	drawPlanes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))

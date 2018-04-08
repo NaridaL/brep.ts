@@ -221,7 +221,8 @@ suite('ConicSurface', () => {
 		const pb = UCS.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4))[0] as ParabolaCurve
 		assert.ok(pb instanceof ParabolaCurve)
 		testContainsCurve(assert, UCS, pb)
-
+	})
+	test('containsParabola 2', assert => {
 		const c2 = UCS.shearX(2, 3)
 		const pb2 = c2.isCurvesWithPlane(new P3(V(1, 0, 1).unit(), 4).shearX(2, 3))[0] as ParabolaCurve
 		assert.ok(pb2 instanceof ParabolaCurve)
@@ -242,6 +243,33 @@ suite('ConicSurface', () => {
 
 		testContainsCurve(assert, s, c)
 	})
+    test('containsHyperbola 2', assert => {
+        const pb = UCS.isCurvesWithPlane(new P3(V3.Y, 2))[0] as HyperbolaCurve
+        testContainsCurve(assert, UCS, pb)
+        testContainsCurve(assert, UCS, pb.translate(0, 2, 0), false, '.translate(0, 2, 0)')
+        testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, '.scale(1, 2, 1)')
+        testContainsCurve(
+            assert,
+            UCS,
+            pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
+            false,
+            '.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)',
+        )
+    })
+    test('containsHyperbola 3', assert => {
+        const pb = UCS.isCurvesWithPlane(new P3(V(0, 1, -0.1).unit(), 2))[0] as HyperbolaCurve
+        console.log(pb)
+        testContainsCurve(assert, UCS, pb)
+        testContainsCurve(assert, UCS, pb.translate(0, 2, 0), false, '.translate(0, 2, 0)')
+        testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, '.scale(1, 2, 1)')
+        testContainsCurve(
+            assert,
+            UCS,
+            pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
+            false,
+            '.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)',
+        )
+    })
 	test('containsPoint', assert => {
 		const face = B2T.cone(1, 1, PI).faces.find(face => face.surface instanceof ConicSurface)
 		testLoopContainsPoint(assert, face.surface, face.contour, V(-0.2, 0, 0.2), PointVsFace.ON_EDGE)

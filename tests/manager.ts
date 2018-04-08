@@ -478,12 +478,12 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 	}
 }
 
-export function testContainsCurve(assert: Assert, surface: Surface, curve: Curve) {
+export function testContainsCurve(assert: Assert, surface: Surface, curve: Curve, expected = true, msg?: string) {
 	outputLink(assert, {
 		mesh: surface.sce + '.toMesh()',
 		edges: [Edge.forCurveAndTs(curve)],
-	})
-	assert.ok(surface.containsCurve(curve), 'surface contains curve')
+	}, msg)
+	assert.equal(surface.containsCurve(curve), expected, 'surface contains curve')
 }
 
 export function rotateEdge(edge: Edge, angle: raddd) {

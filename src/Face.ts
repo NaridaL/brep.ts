@@ -88,9 +88,9 @@ export abstract class Face extends Transformable {
 		assert(contour.every(f => f instanceof Edge), () => 'contour.every(f => f instanceof Edge)' + contour)
 		// contour.forEach(e => !surface.containsCurve(e.curve) &&
 		// console.log('FAIL:'+surface.distanceToPoint(e.curve.anchor)))
-		contour.forEach(e => {
-			assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
-		})
+		//contour.forEach(e => {
+		//	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
+		//})
 		assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
 		holes && holes.forEach(hole => Edge.assertLoop(hole))
 		holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)))

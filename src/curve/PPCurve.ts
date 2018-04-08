@@ -1,4 +1,4 @@
-import { assert, assertVectors, callsce, M4, newtonIterate, Tuple3, Tuple4, V3 } from 'ts3dutils'
+import { assert, assertVectors, callsce, M4, newtonIterate, Tuple3, V3 } from 'ts3dutils'
 import { Curve, curvePointPP, followAlgorithmPP, ImplicitCurve, ParametricSurface } from '../index'
 
 import { ceil, floor } from '../math'
