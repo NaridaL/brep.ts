@@ -17975,7 +17975,7 @@ const ZDirVolumeVisitor$$1 = {
         const dpds = this.dpds();
         const dpdt = this.dpdt();
         const totalVolume = edges
-            .map((edgeWC, edgeIndex, edges) => {
+            .map(edgeWC => {
             const curveWC = edgeWC.curve;
             const f = (curveT) => {
                 const pWC = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
@@ -18082,8 +18082,8 @@ function glqArray$$1(f, startT, endT, numEls = 3) {
     return result;
 }
 function mergeVolumeAndCentroidZX2Parts(volumeAndCentroidZX2Parts) {
-    const volume = volumeAndCentroidZX2Parts.reduce((result, [volume, _]) => result + volume, 0);
-    const weightedCentroid = V3.add(...volumeAndCentroidZX2Parts.map(([volume, centroidZX2]) => centroidZX2)).schur(new V3(1, 1, 0.5));
+    const volume = volumeAndCentroidZX2Parts.reduce((result, [volume]) => result + volume, 0);
+    const weightedCentroid = V3.add(...volumeAndCentroidZX2Parts.map(([, centroidZX2]) => centroidZX2)).schur(new V3(1, 1, 0.5));
     return { volume, centroid: weightedCentroid.div(volume) };
 }
 
@@ -31403,7 +31403,7 @@ class Edge$$1 extends Transformable {
             }
         });
         const result = edges.flatMap((edge, i) => {
-            const h = (i + edges.length - 1) % edges.length, j = (i + 1) % edges.length;
+            const h = (i + edges.length - 1) % edges.length;
             const prevCorner = corners[h], nextCorner = corners[i];
             if (!prevCorner && !nextCorner) {
                 return edge;
@@ -31435,8 +31435,6 @@ class Edge$$1 extends Transformable {
             if (!eq0(p1p2.dot(virtualPlaneNormal))) {
                 assert(false);
             }
-            const l1 = new L3$$1(p1, normal1), l2 = new L3$$1(p2, normal2);
-            const uh = l1.infoClosestToLine(l2), uh2 = l1.isInfoWithLine(l2);
             const dist1 = p1p2.cross(normal2).dot(dirCross) / dirCross.squared();
             const dist2 = p1p2.cross(normal1).dot(dirCross) / dirCross.squared();
             const g1 = p1.plus(normal1.times(dist1));
@@ -31580,8 +31578,8 @@ class Edge$$1 extends Transformable {
         if (false === edgeAT && false === edgeBT) {
             return noback ? false : edge.overlaps(this, true);
         }
-        const flipped = false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edgeBT).dot(edge.bDir);
-        return !(le(edgeMaxT, this.minT) || le(this.maxT, edgeMinT));
+        const flipped = false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edge.bT).dot(edge.bDir);
+        return !(le(edge.maxT, this.minT) || le(this.maxT, edge.minT));
     }
     getAABB() {
         const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
@@ -31604,8 +31602,20 @@ class Edge$$1 extends Transformable {
     deltaT() {
         return this.bT - this.aT;
     }
+    deltaTSign() {
+        return sign$1(this.bT - this.aT);
+    }
     atAvgT() {
         return this.curve.at((this.minT + this.maxT) / 2);
+    }
+    /**
+     * Whether two edge loops are equal. Takes into account that two loops need not start with the same edge.
+     * @param loop1
+     * @param loop2
+     */
+    static loopsEqual(loop1, loop2) {
+        return (loop1.length == loop2.length &&
+            arrayRange(0, loop1.length, 1).some(offset => loop1.every((edge, i) => edge.equals(loop2[(offset + i) % loop1.length]))));
     }
 }
 class PCurveEdge$$1 extends Edge$$1 {
@@ -31659,20 +31669,6 @@ class PCurveEdge$$1 extends Edge$$1 {
     }
     points() {
         return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, true);
-    }
-    rotViaPlane(normal, reversed) {
-        let rot = this.aDir.angleRelativeNormal(this.bDir, normal);
-        const counterClockWise = normal.dot(this.curve.normal) > 0 === !this.reversed;
-        if (counterClockWise) {
-            // counterclockwise rotation, i.e. rot > 0
-            if (rot < 0)
-                rot += 2 * Math.PI;
-        }
-        else {
-            if (rot > 0)
-                rot -= 2 * Math.PI;
-        }
-        return rot;
     }
     edgeISTsWithSurface(surface) {
         return this.curve
@@ -32022,6 +32018,7 @@ class Face$$1 extends Transformable {
                         return true;
                     }
                 }
+                return false;
             }
             const c1 = handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, false, hasPair, addPair);
             const c2 = handleEdgeInFace(col2, col1, face2, face, face2Brep, thisBrep, true, (a, b) => hasPair(b, a), (a, b) => addPair(b, a));
@@ -32097,7 +32094,7 @@ class Face$$1 extends Transformable {
                 assert(a.colinear || b.colinear || eq(a.t, b.t));
                 // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
                 // segment starts/ends on edge/edge intersection
-                function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
+                function handleAB(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
                     if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                         //if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
                         addPair(a.edge.getCanon(), b.edge.getCanon());
@@ -32133,16 +32130,13 @@ class Face$$1 extends Transformable {
                         //}
                     }
                 }
-                foo(a, b, face, face2, surface, surface2, thisBrep, face2Brep, true, thisEdgePoints);
-                foo(b, a, face2, face, surface2, surface, face2Brep, thisBrep, false, otherEdgePoints);
+                handleAB(a, b, face, face2, surface, surface2, thisBrep, face2Brep, true, thisEdgePoints);
+                handleAB(b, a, face2, face, surface2, surface, face2Brep, thisBrep, false, otherEdgePoints);
             }
         }
         assertInst(Face$$1, face2);
         const face = this;
         const surface = face.surface, surface2 = face2.surface;
-        if (face2.surface.plane && face2.surface.plane.w == -1 && face instanceof RotationFace$$1) {
-            console.log('foo');
-        }
         if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
             return;
         }
@@ -32348,8 +32342,6 @@ class Face$$1 extends Transformable {
                             .cross(surface.normalP(p))
                             .negated();
                         const isTangent = isCurve.tangentAt(curveT);
-                        const dirFactor = sign$1(isTangent.dot(edge.curve.tangentAt(edgeT)));
-                        const normVector = surface2.normalP(p);
                         //if(!eq0(insideDir.dot(isTangent))) {
                         // Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
                         if (edgeT == edge.bT) {
@@ -32490,22 +32482,22 @@ class Face$$1 extends Transformable {
             ')');
     }
     toSource() {
-        return `new ${this.constructor.name}(${this.surface.toSource()}, [${this.contour
-            .map(e => '\n\t' + e.toSource())
-            .join(',')}], [${this.holes
-            .map(hole => '[' + hole.map(e => '\n\t' + e.toSource()).join(',') + ']')
-            .join(',')}])`;
+        return ('new ' +
+            this.constructor.name +
+            '(' +
+            this.surface.toSource() +
+            ', [' +
+            this.contour.map(e => '\n\t' + e.toSource() + ',').join('') +
+            '], [' +
+            this.holes.map(hole => '[' + hole.map(e => '\n\t' + e.toSource() + ',').join('') + ']').join(',') +
+            '])');
     }
     equals(obj) {
-        function loopsEqual(a, b) {
-            return (a.length == b.length &&
-                arrayRange(0, a.length, 1).some(offset => a.every((edge, i) => edge.equals(b[(offset + i) % a.length]))));
-        }
         return (this == obj ||
             (Object.getPrototypeOf(this) == Object.getPrototypeOf(obj) &&
                 this.holes.length == obj.holes.length &&
-                loopsEqual(this.contour, obj.contour) &&
-                this.holes.every(hole => obj.holes.some(hole2 => loopsEqual(hole, hole2)))));
+                Edge$$1.loopsEqual(this.contour, obj.contour) &&
+                this.holes.every(hole => obj.holes.some(hole2 => Edge$$1.loopsEqual(hole, hole2)))));
     }
     hashCode() {
         function arrayHashCode(array) {
@@ -32827,9 +32819,9 @@ class PlaneFace$$1 extends Face$$1 {
             const colinearEdges = loop.map(edge => edge.colinearToLine(isLine) && -sign$1(edge.aDir.dot(isLine.dir1)));
             const isLineOut = isLine.dir1.cross(plane.normal1);
             loop.forEach((edge, edgeIndex, edges) => {
-                const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex];
+                const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex], colinearEdge = colinearEdges[edgeIndex];
                 //console.log(edge.toSource()) {p:V3(2, -2.102, 0),
-                if (colinearEdges[edgeIndex]) {
+                if (colinearEdge) {
                     // edge colinear to intersection line
                     const curveAT = isLine.pointT(edge.a), curveBT = isLine.pointT(edge.b);
                     // add interval for colinear segment
@@ -32842,8 +32834,9 @@ class PlaneFace$$1 extends Face$$1 {
                         colinear: true,
                     });
                     // open next interval if necessary
-                    const nextSide = colinearEdges[nextEdgeIndex] || dotCurve$$1(isLineOut, nextEdge.aDir, nextEdge.aDDT);
-                    if (colinearEdges[edgeIndex] * nextSide < 0) {
+                    const nextSide = colinearEdges[nextEdgeIndex] ||
+                        dotCurve2$$1(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign());
+                    if (colinearEdge * nextSide < 0) {
                         // side changes
                         ps.push({
                             p: nextEdge.a,
@@ -32862,8 +32855,9 @@ class PlaneFace$$1 extends Face$$1 {
                     for (const edgeT of edgeTs) {
                         if (edgeT == edge.bT) {
                             // endpoint lies on intersection line
-                            const side = -dotCurve$$1(isLineOut, edge.bDir, edge.bDDT);
-                            const nextSide = colinearEdges[nextEdgeIndex] || dotCurve$$1(isLineOut, nextEdge.aDir, nextEdge.aDDT);
+                            const side = dotCurve2$$1(edge.curve, edge.bT, isLineOut, -edge.deltaTSign());
+                            const nextSide = colinearEdges[nextEdgeIndex] ||
+                                dotCurve2$$1(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign());
                             if (side * nextSide < 0) {
                                 // next segment is not colinear and ends on different side
                                 ps.push({
@@ -32915,6 +32909,7 @@ class RotationFace$$1 extends Face$$1 {
             else {
                 return !side || side * d < 0;
             }
+            return false;
         }
         for (const edge of loop) {
             const ts = edge.edgeISTsWithPlane(seamPlane);
@@ -32927,11 +32922,11 @@ class RotationFace$$1 extends Face$$1 {
                     // TODO: this part probably should be in a separate function
                     // check 'backwards' only if if aT != t
                     if (edge.aT != t) {
-                        if (checkSide(dotCurve2$$1(edge.curve, t, seamPlane.normal1, -sign$1(edge.bT - edge.aT))))
+                        if (checkSide(dotCurve2$$1(edge.curve, t, seamPlane.normal1, -edge.deltaTSign())))
                             return false;
                     }
                     if (edge.bT != t) {
-                        if (checkSide(dotCurve2$$1(edge.curve, t, seamPlane.normal1, sign$1(edge.bT - edge.aT))))
+                        if (checkSide(dotCurve2$$1(edge.curve, t, seamPlane.normal1, edge.deltaTSign())))
                             return false;
                     }
                 }
@@ -32946,51 +32941,25 @@ class RotationFace$$1 extends Face$$1 {
         this.aabb.addPoints(this.surface.getExtremePoints().filter(p => this.containsPoint(p)));
         return this.aabb;
     }
-    getCanonSeamU() {
-        const stPFunc = this.surface.stPFunc();
-        for (const edge of this.contour) {
-            // check edge.a
-            let u = stPFunc(edge.a, PI$3).x;
-            // if u is not PI, or ~0, return its sign
-            if (u != PI$3 && !eq0(u)) {
-                return sign$1(u) * PI$3;
-            }
-            // check midpoint between edge.a and edge.b
-            u = stPFunc(edge.curve.at((edge.aT + edge.bT) / 2), PI$3).x;
-            if (u != PI$3 && !eq0(u)) {
-                return sign$1(u) * PI$3;
-            }
-        }
-        const localEdge = this.contour[0].transform(this.surface.matrixInverse);
-        if (P3$$1.ZX.containsCurve(localEdge.curve)) {
-            const insideVector = localEdge.a.cross(localEdge.aDir);
-            return sign$1(insideVector.dot(V3.Y)) * PI$3;
-        }
-        assert(false, "Couldn't find canon seam u");
-    }
     unrollLoop(edgeLoop) {
         const vs = [];
-        const reverseFunc = this.surface.stPFunc();
+        const stP = this.surface.stPFunc();
         const verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0());
-        const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(reverseFunc(edgeVertices[0]).x, Math.PI));
+        const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(stP(edgeVertices[0]).x, Math.PI));
         assert(-1 != startEdgeIndex);
         // console.log(startEdgeIndex)
         for (let i = 0; i < edgeLoop.length; i++) {
             const edgeIndex = (i + startEdgeIndex) % edgeLoop.length;
             for (let j = 0; j < verticesNo0s[edgeIndex].length; j++) {
                 const p = verticesNo0s[edgeIndex][j];
-                const localP = reverseFunc(p);
+                const localP = stP(p);
                 // console.log(hint, p.sce, localP.sce)
                 vs.push(localP);
             }
         }
         edgeLoop.forEach((edge, e) => {
-            let hint = edge.bDir;
-            if (edge instanceof StraightEdge$$1 && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
-                hint = this.surface.normalP(edge.b).cross(edge.bDir);
-            }
             edge.getVerticesNo0().forEach(p => {
-                vs.push(reverseFunc(p));
+                vs.push(stP(p));
             });
         });
         console.log('vs\n', vs.join('\n'), vs.length);
@@ -33014,7 +32983,6 @@ class RotationFace$$1 extends Face$$1 {
         for (const edgeLoop of edgeLoops) {
             loopStarts.push(verticesST.length);
             // console.log(startEdgeIndex)
-            const hint = this.getCanonSeamU();
             for (let i = 0; i < edgeLoop.length; i++) {
                 const ipp = (i + 1) % edgeLoop.length;
                 const verticesNo0 = edgeLoop[i].getVerticesNo0();
@@ -33024,16 +32992,8 @@ class RotationFace$$1 extends Face$$1 {
                 //console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
                 if (testDegeneratePoint(nextStart)) {
                     const bDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[ipp].aDir);
-                    let inAngle = Math.atan2(-bDirLC.y, -bDirLC.x);
-                    if (abs$2(inAngle) > Math.PI - NLA_PRECISION) {
-                        assert(hint == -PI$3 || hint == PI$3);
-                        inAngle = hint;
-                    }
-                    let outAngle = Math.atan2(aDirLC.y, aDirLC.x);
-                    if (abs$2(outAngle) > Math.PI - NLA_PRECISION) {
-                        assert(hint == -PI$3 || hint == PI$3);
-                        outAngle = hint;
-                    }
+                    const inAngle = Math.atan2(-bDirLC.y, -bDirLC.x);
+                    const outAngle = Math.atan2(aDirLC.y, aDirLC.x);
                     const stLast = verticesST.pop();
                     verticesST.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0));
                     vertices.push(vertices.last);
@@ -33123,7 +33083,6 @@ class RotationFace$$1 extends Face$$1 {
                 mesh.LINES.push(base + i, base + (i + 1) % vertexLoopLength);
             }
         }
-        //console.log(zip(vertices.map(v => v.map(x => round10(x, -5))), verticesUV.map(v => v.map(x => round10(x, -5)))).sce)
         disableConsole();
         let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
         //console.log('surface', this.surface.str)
@@ -42625,13 +42584,13 @@ function addLikeSurfaceFaces$$1(likeSurfaceFaces, face1, face2) {
     // nothing found, add a new group
     likeSurfaceFaces.push([face1, face2]);
 }
-function assembleFaceFromLooseEdges$$1(edges, surface, faceConstructor) {
+function assembleFaceFromLooseEdges$$1(edges, surface, originalFace) {
     const visited = new Set();
     function nextStart() {
         return edges.find(edge => !visited.has(edge));
     }
     const loops = [];
-    let startEdge, currentEdge;
+    let startEdge, currentEdge = undefined;
     while ((startEdge = nextStart())) {
         currentEdge = startEdge;
         const loop = [];
@@ -42641,13 +42600,13 @@ function assembleFaceFromLooseEdges$$1(edges, surface, faceConstructor) {
             loop.push(currentEdge);
             const possibleEdges = edges.filter(edge => currentEdge.b.like(edge.a));
             const normalAtCurrentB = surface.normalP(currentEdge.b);
-            const nextEdgeIndex = possibleEdges.indexWithMax((edge, index) => currentEdge.bDir.angleRelativeNormal(edge.aDir, normalAtCurrentB));
+            const nextEdgeIndex = possibleEdges.indexWithMax(edge => currentEdge.bDir.angleRelativeNormal(edge.aDir, normalAtCurrentB));
             currentEdge = possibleEdges[nextEdgeIndex];
         } while (startEdge != currentEdge && total++ < 200);
         assert(total != 201);
         loops.push(loop);
     }
-    const assembledFaces = BRep$$1.assembleFacesFromLoops(loops, surface, faceConstructor);
+    const assembledFaces = BRep$$1.assembleFacesFromLoops(loops, surface, originalFace);
     assertf(() => 1 == assembledFaces.length);
     return assembledFaces[0];
 }
@@ -42855,7 +42814,7 @@ class BRep$$1 extends Transformable {
                         }
                     }
                 }
-                const newFace = assembleFaceFromLooseEdges$$1(allEdges, faceGroup[0].surface, faceGroup[0].constructor);
+                const newFace = assembleFaceFromLooseEdges$$1(allEdges, faceGroup[0].surface, faceGroup[0]);
                 newFaces.push(newFace);
             }
         }
@@ -42897,7 +42856,7 @@ class BRep$$1 extends Transformable {
     }
     xor(other, infoFactory) {
         const generator = this.generator && other.generator && this.generator + '.xor(' + other.generator + ')';
-        return new BRep$$1(this.minus(other).faces.concat(other.minus(this).faces), this.infiniteVolume != other.infiniteVolume, generator);
+        return new BRep$$1(this.minus(other, infoFactory).faces.concat(other.minus(this, infoFactory).faces), this.infiniteVolume != other.infiniteVolume, generator);
     }
     equals(obj) {
         return (this.faces.length == obj.faces.length &&
@@ -42999,7 +42958,7 @@ class BRep$$1 extends Transformable {
                             break;
                         assert(0 < possibleEdges.length, () => face.sce);
                         const faceNormalAtCurrentB = face.surface.normalP(currentEdge.b);
-                        const correct = possibleEdges.indexWithMax((edge, index) => (currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) +
+                        const correct = possibleEdges.indexWithMax(edge => (currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) +
                             NLA_PRECISION +
                             PI$3) %
                             TAU);
@@ -43045,15 +43004,12 @@ class BRep$$1 extends Transformable {
             if (0 == pointInfos.length)
                 continue;
             const allFaces = edgeFaces.get(canonEdge);
-            pointInfos.sort((a, b) => snap0(a.edgeT - b.edgeT) || +!!a.faces);
+            pointInfos.sort((a, b) => snap0(a.edgeT - b.edgeT) || +!!undefined);
             let startP = canonEdge.a, startDir = canonEdge.aDir, startT = canonEdge.aT, startInfo;
             function addNewEdge(startInfo, endInfo, newEdge) {
                 for (let i = 0; i < allFaces.length; i++) {
                     const faceInfo = allFaces[i];
-                    const startYes = !startInfo || !startInfo.faces || startInfo.faces[i];
-                    const endYes = !endInfo || !endInfo.faces;
-                    endYes &&
-                        mapPush(result, !faceInfo.reversed ? canonEdge : canonEdge.flipped(), !faceInfo.reversed ? newEdge : newEdge.flipped());
+                    mapPush(result, !faceInfo.reversed ? canonEdge : canonEdge.flipped(), !faceInfo.reversed ? newEdge : newEdge.flipped());
                 }
             }
             for (let i = 0; i < pointInfos.length; i++) {
@@ -43077,12 +43033,12 @@ class BRep$$1 extends Transformable {
     }
     getIntersectionEdges(brep2) {
         const faceMap = new Map(), thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
-        const likeSurfaceFaces = [];
+        const checkedPairs = new JavaSet();
         this.faces.forEach(face => {
             //console.log('face', face.toString())
             brep2.faces.forEach(face2 => {
                 //console.log('face2', face2.toString())
-                face.intersectFace(face2, this, brep2, faceMap, thisEdgePoints, otherEdgePoints, likeSurfaceFaces);
+                face.intersectFace(face2, this, brep2, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs);
             });
         });
         return Array.from(faceMap.values()).concatenated();
@@ -43112,15 +43068,21 @@ class BRep$$1 extends Transformable {
     assertSanity() {
         if (!NLA_DEBUG)
             return;
-        const allFaceEdges = this.faces.flatMap(face => face.getAllEdges());
-        for (const { i, j } of combinations(allFaceEdges.length)) {
-            const a = allFaceEdges[i], b = allFaceEdges[j];
-            //assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
-            //assert(i == j
-            //	|| !a.curve.isColinearTo(b.curve)
-            //	|| (a.curve.equals(b.curve) && a.isCoEdge(b))
-            //   || !a.overlaps(b), 'colinear edges overlap', a, b)
-        }
+        // const allFaceEdges = this.faces.flatMap(face => face.getAllEdges())
+        // for (const { i, j } of combinations(allFaceEdges.length)) {
+        // const a = allFaceEdges[i],
+        // 	b = allFaceEdges[j]
+        // assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
+        // assert(
+        // 	i == j ||
+        // 		!a.curve.isColinearTo(b.curve) ||
+        // 		(a.curve.equals(b.curve) && a.isCoEdge(b)) ||
+        // 		!a.overlaps(b),
+        // 	'colinear edges overlap',
+        // 	a,
+        // 	b,
+        // )
+        // }
         this.buildAdjacencies();
         for (const [canonEdge, edgeFaceInfos] of this.edgeFaces) {
             // TODO handle curved faces
@@ -43272,9 +43234,7 @@ class BRep$$1 extends Transformable {
                 //noinspection JSUnusedLocalSymbols
                 const els = this.faces.map(face => [
                     face,
-                    Array.from(edgeLooseSegments.entries())
-                        .filter(([edge, subs]) => face.getAllEdges().some(e => e.equals(edge)))
-                        .concatenated(),
+                    Array.from(edgeLooseSegments.entries()).flatMap(([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : [])),
                 ]);
                 this.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces, infoFactory);
             }
@@ -43283,9 +43243,7 @@ class BRep$$1 extends Transformable {
                 //noinspection JSUnusedLocalSymbols
                 const els = other.faces.map(face => [
                     face,
-                    Array.from(edgeLooseSegments.entries())
-                        .filter(([edge, subs]) => face.getAllEdges().some(e => e.equals(edge)))
-                        .flatMap(([edge, subs]) => subs),
+                    Array.from(edgeLooseSegments.entries()).flatMap(([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : [])),
                 ]);
                 other.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces, infoFactory);
             }
@@ -43397,7 +43355,7 @@ function splitsVolumeEnclosingFacesP$$1(brep, canonEdge, p, pInside, pFaceNormal
     const edgeFaceInfos = brep.edgeFaces.get(canonEdge);
     assertf(() => edgeFaceInfos.length % 2 == 0);
     const pDir1 = canonEdge.tangentAt(canonEdge.curve.pointT(p)).unit();
-    const faceInfoAngleFromPInsideNeg = faceInfo => {
+    const faceInfoAngleFromPInsideNeg = (faceInfo) => {
         const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated();
         const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir);
         const faceInfoAngleAtP = pInside.angleRelativeNormal(faceInfoInsideAtP, pDir1);
@@ -43908,7 +43866,7 @@ function intersectionICurveICurve2$$1(iCurve1, loopPoints1, iCurve2) {
     for (let i = 0; i < loopPoints1.length; i++) {
         lastVal = val;
         p = loopPoints1[i];
-        val = iCurve2(p);
+        val = iCurve2(p.x, p.y);
         if (val * lastVal <= 0) {
             // TODO < ?
             iss.push(newtonIterate2d(iCurve1, iCurve2, p.x, p.y));
@@ -43916,28 +43874,26 @@ function intersectionICurveICurve2$$1(iCurve1, loopPoints1, iCurve2) {
     }
     return iss;
 }
-//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number,
-// searchStep: number, implicitSurface) { assertNumbers(searchStart, searchEnd, searchStep) const iss = [] let val =
-// implicitSurface(parametricCurve(searchStart)), lastVal for (let t = searchStart + searchStep; t <= searchEnd; t +=
-// searchStep) { lastVal = val val = implicitSurface(parametricCurve(t)) if (val * lastVal <= 0) {
-// iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t)) } } return iss }
-function intersectionICurvePSurface$$1(f0, f1, parametricSurface) { }
-//
-//function test2() {
-//    const ic: R2_R = (x, y) => sin(x+y)-cos(x*y)+1
-//    const dids: R2_R = (x, y) => y * sin(x * y) + cos(x + y)
-//    const didt: R2_R = (x, y) => x * sin(x * y) + cos(x + y)
-//    const ic2: R2_R = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
-//    const di2ds: R2_R = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
-//    const di2dt: R2_R = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y
-// ** 2 - 3 * x ** 2)) const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-// assert(eq02(ic(start.x, start.y), 0.1)) const bounds = (s: number, t: number) => -5 <= s && s <= 5 && -5 <= t && t
-// <= 5 //const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt) const curves =
-// Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt) //const curves =
-// Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02) //const curves = mkcurves(ic, start.x, start.y,
-// 0.05, dids, didt, bounds) .map(({points, tangents}, i) => { const curve = new ImplicitCurve(ic, points, tangents)
-// return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i)) }) //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5,
-// 0) //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0) console.log(curves.length) return curves  }
+// export function intersectionPCurveISurface(
+// 	parametricCurve: Curve,
+// 	searchStart: number,
+// 	searchEnd: number,
+// 	searchStep: number,
+// 	implicitSurface: ImplicitSurface,
+// ) {
+// 	assertNumbers(searchStart, searchEnd, searchStep)
+// 	const iss = []
+// 	let val = implicitSurface(parametricCurve(searchStart)),
+// 		lastVal
+// 	for (let t = searchStart + searchStep; t <= searchEnd; t += searchStep) {
+// 		lastVal = val
+// 		val = implicitSurface(parametricCurve(t))
+// 		if (val * lastVal <= 0) {
+// 			iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t))
+// 		}
+// 	}
+// 	return iss
+// }
 function cassini$$1(a, c) {
     return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (Math.pow(a, 4) - Math.pow(c, 4));
 }
@@ -44824,7 +44780,6 @@ var brepts = Object.freeze({
 	followAlgorithm2dAdjustable: followAlgorithm2dAdjustable$$1,
 	intersectionICurveICurve: intersectionICurveICurve$$1,
 	intersectionICurveICurve2: intersectionICurveICurve2$$1,
-	intersectionICurvePSurface: intersectionICurvePSurface$$1,
 	cassini: cassini$$1,
 	get MathFunctionR2R () { return MathFunctionR2R$$1; },
 	cas2: cas2$$1,

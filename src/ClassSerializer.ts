@@ -9,7 +9,7 @@ export function doNotSerialize(target: any, key: PropertyKey) {
 export class ClassSerializer {
 	CLASS_NAMES = new Map<any, string>()
 	NAME_CLASSES = new Map<string, any>()
-	private updater: (v: any) => void
+	private updater: ((v: any) => void) | undefined
 
 	constructor() {
 		this.addClass('Object', Object)

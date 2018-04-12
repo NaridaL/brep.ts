@@ -1,12 +1,10 @@
 import {
 	assert,
-	eq,
 	gaussLegendre24Weights,
 	gaussLegendre24Xs,
 	gaussLegendreQuadrature24,
 	glqInSteps,
 	M4,
-	NLA_PRECISION,
 	V,
 	V3,
 } from 'ts3dutils'
@@ -261,69 +259,57 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 		// the length of the base of the trapezoid is calculated by dotting with the baseVector
 		const baseVector = upDir1.rejectedFrom(V3.Z).unit()
 		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-		const volume = edges
-			.map(edgeWC => {
-				if (edgeWC.curve instanceof L3) {
-					return 0
-				} else if (edgeWC.curve instanceof ImplicitCurve) {
-					const { points, tangents } = edgeWC.curve
-					const minT = edgeWC.minT,
-						maxT = edgeWC.maxT
-					let sum = 0
-					const start = Math.ceil(minT + NLA_PRECISION)
-					const end = Math.floor(maxT - NLA_PRECISION)
-					for (let i = start; i <= end; i++) {
-						const at = points[i],
-							tangent = tangents[i]
-						const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
-						const scale = tangent.dot(scalingVector)
-						sum += area * scale
-					}
-					const f = (t: number) => {
-						const at = edgeWC.curve.at(t),
-							tangent = edgeWC.curve.tangentAt(t)
-						const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
-						const scale = tangent.dot(scalingVector)
-						return area * scale
-					}
-					sum += f(minT) * (start - minT - 0.5)
-					sum += f(maxT) * (maxT - end - 0.5)
-					return sum * Math.sign(edgeWC.deltaT())
-				} else {
-					const f = (curveT: number) => {
-						// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-						const at = edgeWC.curve.at(curveT),
-							tangent = edgeWC.curve.tangentAt(curveT)
-						const b = at.rejectedFrom1(upDir1)
-						const area = at.z * b.to(at).dot(baseVector) / 2 + b.z * b.to(at).dot(baseVector) / 2
-						const area2 = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
-						assert(eq(area, area2), area, area2)
-						const scale = tangent.dot(scalingVector)
-						return area * scale
-					}
-					const val = glqInSteps(f, edgeWC.aT, edgeWC.bT, 4)
-					return val
+		const volume = edges.map((edgeWC): [number, V3] => {
+			if (edgeWC.curve instanceof L3) {
+				return [0, V3.O]
+			} else if (edgeWC.curve instanceof ImplicitCurve) {
+				return [0, V3.O]
+				// 	const { points, tangents } = edgeWC.curve
+				// 	const minT = edgeWC.minT,
+				// 		maxT = edgeWC.maxT
+				// 	let sum = 0
+				// 	const start = Math.ceil(minT + NLA_PRECISION)
+				// 	const end = Math.floor(maxT - NLA_PRECISION)
+				// 	for (let i = start; i <= end; i++) {
+				// 		const at = points[i],
+				// 			tangent = tangents[i]
+				// 		const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
+				// 		const scale = tangent.dot(scalingVector)
+				// 		sum += area * scale
+				// 	}
+				// 	const f = (t: number) => {
+				// 		const at = edgeWC.curve.at(t),
+				// 			tangent = edgeWC.curve.tangentAt(t)
+				// 		const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
+				// 		const scale = tangent.dot(scalingVector)
+				// 		return area * scale
+				// 	}
+				// 	sum += f(minT) * (start - minT - 0.5)
+				// 	sum += f(maxT) * (maxT - end - 0.5)
+				// 	return sum * Math.sign(edgeWC.deltaT())
+			} else {
+				const f = (curveT: number) => {
+					// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
+					const at = edgeWC.curve.at(curveT),
+						tangent = edgeWC.curve.tangentAt(curveT)
+					const b = at.rejectedFrom1(upDir1)
+					const area = at.z * b.to(at).dot(baseVector) / 2 + b.z * b.to(at).dot(baseVector) / 2
+					const areaCentroidA = V3.add(at.xy(), b, at).times(at.z * b.to(at).dot(baseVector) / 2 / 3)
+					const areaCentroidB = V3.add(at.xy(), b, b.xy()).times(b.z * b.to(at).dot(baseVector) / 2 / 3)
+					const scale = tangent.dot(scalingVector)
+					return [
+						area * scale,
+						...areaCentroidA
+							.plus(areaCentroidB)
+							.times(scale)
+							.schur(V(1, 1, 2)),
+					]
 				}
-			})
-			.sum()
-		// calc centroid:
-		const centroidParts = edges.map(edgeWC => {
-			const fCentroid = (curveT: number) => {
-				// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-				const at = edgeWC.curve.at(curveT),
-					tangent = edgeWC.curve.tangentAt(curveT)
-				const b = at.rejectedFrom1(upDir1)
-				const areaCentroidA = V3.add(at.xy(), b, at).times(at.z * b.to(at).dot(baseVector) / 2 / 3)
-				const areaCentroidB = V3.add(at.xy(), b, b.xy()).times(b.z * b.to(at).dot(baseVector) / 2 / 3)
-				const scale = tangent.dot(scalingVector)
-
-				return areaCentroidA.plus(areaCentroidB).times(scale)
+				const [vol, cx, cy, cz] = glqArray(f, edgeWC.aT, edgeWC.bT, 4)
+				return [vol, new V3(cx, cy, cz)]
 			}
-
-			return glqV3(fCentroid, edgeWC.aT, edgeWC.bT)
 		})
-		const centroid = V3.add(...centroidParts).div(volume)
-		return { volume, centroid }
+		return mergeVolumeAndCentroidZX2Parts(volume)
 	},
 
 	// volume does scale linearly, so this could be done in the local coordinate system
@@ -333,7 +319,7 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 		const dpds = this.dpds()
 		const dpdt = this.dpdt()
 		const totalVolume = edges
-			.map((edgeWC, edgeIndex, edges) => {
+			.map(edgeWC => {
 				const curveWC = edgeWC.curve
 
 				const f = (curveT: number) => {
@@ -454,8 +440,8 @@ export function glqArray(f: (x: number) => number[], startT: number, endT: numbe
 }
 
 function mergeVolumeAndCentroidZX2Parts(volumeAndCentroidZX2Parts: [number, V3][]) {
-	const volume = volumeAndCentroidZX2Parts.reduce((result, [volume, _]) => result + volume, 0)
-	const weightedCentroid = V3.add(...volumeAndCentroidZX2Parts.map(([volume, centroidZX2]) => centroidZX2)).schur(
+	const volume = volumeAndCentroidZX2Parts.reduce((result, [volume]) => result + volume, 0)
+	const weightedCentroid = V3.add(...volumeAndCentroidZX2Parts.map(([, centroidZX2]) => centroidZX2)).schur(
 		new V3(1, 1, 0.5),
 	)
 	return { volume, centroid: weightedCentroid.div(volume) }

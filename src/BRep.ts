@@ -1,5 +1,5 @@
 import earcut from 'earcut'
-import { JavaMap, JavaSet as CustomSet, Pair } from 'javasetmap.ts'
+import { JavaMap, JavaSet, JavaSet as CustomSet, Pair } from 'javasetmap.ts'
 import nerdamer from 'nerdamer'
 import {
 	AABB,
@@ -9,7 +9,6 @@ import {
 	assertNever,
 	assertNumbers,
 	assertVectors,
-	combinations,
 	eq,
 	eq0,
 	gt,
@@ -34,7 +33,6 @@ import { Mesh } from 'tsgl'
 import {
 	AABB2,
 	Curve,
-	curvePoint,
 	curvePointMF,
 	Edge,
 	Face,
@@ -50,7 +48,7 @@ import {
 	Surface,
 } from './index'
 
-import { abs, PI, sign, sqrt } from './math'
+import { abs, sign, sqrt } from './math'
 
 export const EPS = 1e-5
 
@@ -88,11 +86,7 @@ export function addLikeSurfaceFaces(likeSurfaceFaces: Face[][], face1: Face, fac
 	likeSurfaceFaces.push([face1, face2])
 }
 
-export function assembleFaceFromLooseEdges(
-	edges: Edge[],
-	surface: Surface,
-	faceConstructor: typeof Face.constructor,
-): Face {
+export function assembleFaceFromLooseEdges(edges: Edge[], surface: Surface, originalFace: Face): Face {
 	const visited = new Set()
 
 	function nextStart() {
@@ -100,7 +94,8 @@ export function assembleFaceFromLooseEdges(
 	}
 
 	const loops = []
-	let startEdge, currentEdge: Edge | undefined
+	let startEdge,
+		currentEdge: Edge = undefined!
 	while ((startEdge = nextStart())) {
 		currentEdge = startEdge
 		const loop = []
@@ -110,7 +105,7 @@ export function assembleFaceFromLooseEdges(
 			loop.push(currentEdge)
 			const possibleEdges = edges.filter(edge => currentEdge.b.like(edge.a))
 			const normalAtCurrentB = surface.normalP(currentEdge.b)
-			const nextEdgeIndex = possibleEdges.indexWithMax((edge, index) =>
+			const nextEdgeIndex = possibleEdges.indexWithMax(edge =>
 				currentEdge.bDir.angleRelativeNormal(edge.aDir, normalAtCurrentB),
 			)
 			currentEdge = possibleEdges[nextEdgeIndex]
@@ -119,7 +114,7 @@ export function assembleFaceFromLooseEdges(
 		loops.push(loop)
 	}
 
-	const assembledFaces = BRep.assembleFacesFromLoops(loops, surface, faceConstructor)
+	const assembledFaces = BRep.assembleFacesFromLoops(loops, surface, originalFace)
 	assertf(() => 1 == assembledFaces.length)
 	return assembledFaces[0]
 }
@@ -165,20 +160,17 @@ export function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], face
 	}
 	return result == Number.MAX_SAFE_INTEGER ? 0 : result
 }
-
+export type FaceInfo = { face: Face; edge: Edge; normalAtCanonA: V3; inside: V3; reversed: boolean; angle: number }
 export class BRep extends Transformable {
 	static EMPTY = new BRep([], false, 'BRep.EMPTY', new Map()).buildAdjacencies()
 	static R3 = new BRep([], true, 'BRep.R3', new Map()).buildAdjacencies()
 	faces: Face[]
 	infiniteVolume: boolean
 	generator: string | undefined
-	vertexNames: Map<V3, string>
-	edgeFaces:
-		| JavaMap<Edge, { face: Face; edge: Edge; normalAtCanonA: V3; inside: V3; reversed: boolean; angle: number }[]>
-		| undefined
-	vertFaces: JavaMap<V3, Edge[]>
+	vertexNames: Map<V3, string> | undefined
+	edgeFaces: JavaMap<Edge, FaceInfo[]> | undefined
 
-	constructor(faces: Face[], infiniteVolume: boolean, generator?: string, vertexNames?) {
+	constructor(faces: Face[], infiniteVolume: boolean, generator?: string, vertexNames?: Map<V3, string>) {
 		super()
 		this.faces = faces
 		assertInst(Face, ...faces)
@@ -210,7 +202,7 @@ export class BRep extends Transformable {
 		loops: Edge[][],
 		surface: Surface,
 		originalFace: Face,
-		infoFactory: FaceInfoFactory<any>,
+		infoFactory?: FaceInfoFactory<any>,
 	): Face[] {
 		type LoopInfo = { loop: Edge[]; ccw: boolean; subloops: LoopInfo[] }
 
@@ -375,7 +367,7 @@ export class BRep extends Transformable {
 						}
 					}
 				}
-				const newFace = assembleFaceFromLooseEdges(allEdges, faceGroup[0].surface, faceGroup[0].constructor)
+				const newFace = assembleFaceFromLooseEdges(allEdges, faceGroup[0].surface, faceGroup[0])
 				newFaces.push(newFace)
 			}
 		}
@@ -435,7 +427,7 @@ export class BRep extends Transformable {
 	xor(other: BRep, infoFactory?: FaceInfoFactory<any>): BRep {
 		const generator = this.generator && other.generator && this.generator + '.xor(' + other.generator + ')'
 		return new BRep(
-			this.minus(other).faces.concat(other.minus(this).faces),
+			this.minus(other, infoFactory).faces.concat(other.minus(this, infoFactory).faces),
 			this.infiniteVolume != other.infiniteVolume,
 			generator,
 		)
@@ -516,7 +508,7 @@ export class BRep extends Transformable {
 		edgeSubEdges: Map<Edge, Edge[]>,
 		faceMap: Map<Face, Edge[]>,
 		newFaces: Face[],
-		infoFactory: FaceInfoFactory<any>,
+		infoFactory?: FaceInfoFactory<any>,
 	): void {
 		const oldFaceStatuses: Map<Face, string> = new Map()
 		// reconstitute faces
@@ -556,20 +548,13 @@ export class BRep extends Transformable {
 						visitedEdges.add(currentEdge)
 						edges.push(currentEdge)
 						// find next edge
-						const possibleOldEdges = usableOldEdges.filter(edge => currentEdge.b.like(edge.a))
-						const possibleSubEdges = subEdges.filter(edge => currentEdge.b.like(edge.a))
-						const possibleNewEdges = newEdges.filter(edge => currentEdge.b.like(edge.a))
+						const possibleOldEdges = usableOldEdges.filter(edge => currentEdge!.b.like(edge.a))
+						const possibleSubEdges = subEdges.filter(edge => currentEdge!.b.like(edge.a))
+						const possibleNewEdges = newEdges.filter(edge => currentEdge!.b.like(edge.a))
 						const possibleEdges = possibleOldEdges.concat(possibleSubEdges, possibleNewEdges)
 						if (0 == possibleEdges.length) break
 						assert(0 < possibleEdges.length, () => face.sce)
 						const faceNormalAtCurrentB = face.surface.normalP(currentEdge.b)
-						const correct = possibleEdges.indexWithMax(
-							(edge, index) =>
-								(currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) +
-									NLA_PRECISION +
-									PI) %
-								TAU,
-						)
 						const nextEdgeIndex = calcNextEdgeIndex(currentEdge, possibleEdges, faceNormalAtCurrentB)
 						currentEdge = possibleEdges[nextEdgeIndex]
 						if (visitedEdges.has(currentEdge)) {
@@ -593,8 +578,8 @@ export class BRep extends Transformable {
 			}
 		}
 		while (insideEdges.length != 0) {
-			const insideEdge = insideEdges.pop()
-			const adjacentFaces = this.edgeFaces.get(insideEdge.getCanon())
+			const insideEdge = insideEdges.pop()!
+			const adjacentFaces = this.edgeFaces!.get(insideEdge.getCanon())!
 			adjacentFaces.forEach(info => {
 				if (!oldFaceStatuses.has(info.face)) {
 					oldFaceStatuses.set(info.face, 'inside')
@@ -607,7 +592,7 @@ export class BRep extends Transformable {
 
 	static getLooseEdgeSegments(
 		edgePointInfoss: JavaMap<Edge, IntersectionPointInfo[]>,
-		edgeFaces: JavaMap<Edge, any[]>,
+		edgeFaces: JavaMap<Edge, FaceInfo[]>,
 	): Map<Edge, Edge[]> {
 		const result = new JavaMap<Edge, Edge[]>()
 		// if there are no point info, the original edge will be kept, so we should return nothing
@@ -615,23 +600,24 @@ export class BRep extends Transformable {
 		for (const [canonEdge, pointInfos] of edgePointInfoss) {
 			if (0 == pointInfos.length) continue
 			const allFaces = edgeFaces.get(canonEdge)!
-			pointInfos.sort((a, b) => snap0(a.edgeT - b.edgeT) || +!!a.faces)
+			pointInfos.sort((a, b) => snap0(a.edgeT - b.edgeT) || +!!undefined)
 			let startP = canonEdge.a,
 				startDir = canonEdge.aDir,
 				startT = canonEdge.aT,
 				startInfo
 
-			function addNewEdge(startInfo, endInfo, newEdge: Edge) {
+			function addNewEdge(
+				startInfo: IntersectionPointInfo | undefined,
+				endInfo: IntersectionPointInfo | undefined,
+				newEdge: Edge,
+			) {
 				for (let i = 0; i < allFaces.length; i++) {
 					const faceInfo = allFaces[i]
-					const startYes = !startInfo || !startInfo.faces || startInfo.faces[i]
-					const endYes = !endInfo || !endInfo.faces
-					endYes &&
-						mapPush(
-							result,
-							!faceInfo.reversed ? canonEdge : canonEdge.flipped(),
-							!faceInfo.reversed ? newEdge : newEdge.flipped(),
-						)
+					mapPush(
+						result,
+						!faceInfo.reversed ? canonEdge : canonEdge.flipped(),
+						!faceInfo.reversed ? newEdge : newEdge.flipped(),
+					)
 				}
 			}
 
@@ -677,16 +663,16 @@ export class BRep extends Transformable {
 
 	getIntersectionEdges(brep2: BRep) {
 		const faceMap = new Map(),
-			thisEdgePoints = new JavaMap(),
-			otherEdgePoints = new JavaMap()
+			thisEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>(),
+			otherEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>()
 
-		const likeSurfaceFaces: Map<Edge, IntersectionPointInfo[]> = []
+		const checkedPairs = new JavaSet<Pair<any, any>>()
 
 		this.faces.forEach(face => {
 			//console.log('face', face.toString())
 			brep2.faces.forEach(face2 => {
 				//console.log('face2', face2.toString())
-				face.intersectFace(face2, this, brep2, faceMap, thisEdgePoints, otherEdgePoints, likeSurfaceFaces)
+				face.intersectFace(face2, this, brep2, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs)
 			})
 		})
 
@@ -695,14 +681,16 @@ export class BRep extends Transformable {
 
 	shellCount(): int {
 		const foundFaces = new Set<Face>()
-		let face,
+		let face: Face | undefined,
 			result = 0
 		while ((face = this.faces.find(face => !foundFaces.has(face)))) {
 			result++
 			const stack = [face]
 			while ((face = stack.pop())) {
+				// @ts-ignore
 				for (const edge of face.getAllEdges()) {
-					for (const { face: face2 } of this.edgeFaces.get(edge.getCanon())) {
+					// @ts-ignore
+					for (const { face: face2 } of this.edgeFaces!.get(edge.getCanon())!) {
 						if (face !== face2 && !foundFaces.has(face2)) {
 							foundFaces.add(face2)
 							stack.push(face2)
@@ -720,20 +708,24 @@ export class BRep extends Transformable {
 
 	assertSanity(): void {
 		if (!NLA_DEBUG) return
-		const allFaceEdges = this.faces.flatMap(face => face.getAllEdges())
-		for (const { i, j } of combinations(allFaceEdges.length)) {
-			const a = allFaceEdges[i],
-				b = allFaceEdges[j]
-			//assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
-
-			//assert(i == j
-			//	|| !a.curve.isColinearTo(b.curve)
-			//	|| (a.curve.equals(b.curve) && a.isCoEdge(b))
-			//   || !a.overlaps(b), 'colinear edges overlap', a, b)
-		}
+		// const allFaceEdges = this.faces.flatMap(face => face.getAllEdges())
+		// for (const { i, j } of combinations(allFaceEdges.length)) {
+		// const a = allFaceEdges[i],
+		// 	b = allFaceEdges[j]
+		// assert(i == j || !a.isCoEdge(b) || a == b || a.flippedOf == b, 'coedges not linked properly', a, b)
+		// assert(
+		// 	i == j ||
+		// 		!a.curve.isColinearTo(b.curve) ||
+		// 		(a.curve.equals(b.curve) && a.isCoEdge(b)) ||
+		// 		!a.overlaps(b),
+		// 	'colinear edges overlap',
+		// 	a,
+		// 	b,
+		// )
+		// }
 
 		this.buildAdjacencies()
-		for (const [canonEdge, edgeFaceInfos] of this.edgeFaces) {
+		for (const [canonEdge, edgeFaceInfos] of this.edgeFaces!) {
 			// TODO handle curved faces
 			assert(edgeFaceInfos.length % 2 == 0, () => canonEdge + edgeFaceInfos.sce)
 		}
@@ -803,15 +795,15 @@ export class BRep extends Transformable {
 			{ face: Face; edge: Edge; normalAtCanonA: V3; inside: V3; reversed: boolean; angle: number }[]
 		>
 	} {
-		if (this.edgeFaces) return this
+		if (this.edgeFaces) return this as any
 
-		this.edgeFaces = new JavaMap() as any
+		this.edgeFaces = new JavaMap()
 		for (const face of this.faces) {
 			for (const edge of face.getAllEdges()) {
 				const canon = edge.getCanon()
 				const normalAtCanonA = face.surface.normalP(canon.a)
 				const inside = normalAtCanonA.cross(canon == edge ? edge.aDir : edge.bDir)
-				mapPush(this.edgeFaces, canon, {
+				mapPush(this.edgeFaces!, canon, {
 					face: face,
 					edge: edge,
 					normalAtCanonA: normalAtCanonA,
@@ -822,7 +814,7 @@ export class BRep extends Transformable {
 			}
 		}
 
-		for (const [canonEdge, edgeFaceInfos] of this.edgeFaces) {
+		for (const [canonEdge, edgeFaceInfos] of this.edgeFaces!) {
 			// TODO handle curved faces
 			//assert(edgeFaceInfos.length % 2 == 0, () => canonEdge + edgeFaceInfos.sce)
 			const faceInfo0 = edgeFaceInfos.find(faceInfo => faceInfo.reversed)
@@ -839,7 +831,7 @@ export class BRep extends Transformable {
 			edgeFaceInfos.sort((a, b) => snap(a.angle - b.angle, 0)) // TODO  || assertNever()
 		}
 
-		return this
+		return this as any
 	}
 
 	/**
@@ -885,10 +877,10 @@ export class BRep extends Transformable {
 			}
 		}
 		for (const edge of thisEdgePoints.keys()) {
-			assert(this.edgeFaces.get(edge))
+			assert(this.edgeFaces!.get(edge))
 		}
 		for (const edge of otherEdgePoints.keys()) {
-			assert(other.edgeFaces.get(edge))
+			assert(other.edgeFaces!.get(edge))
 		}
 		const newFaces: Face[] = []
 
@@ -898,24 +890,24 @@ export class BRep extends Transformable {
 			return this
 		} else {
 			if (buildThis) {
-				const edgeLooseSegments = BRep.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces)
-				//noinspection JSUnusedLocalSymbols
+				const edgeLooseSegments = BRep.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces!)
+				// @ts-ignore
 				const els = this.faces.map(face => [
 					face,
-					Array.from(edgeLooseSegments.entries())
-						.filter(([edge, subs]) => face.getAllEdges().some(e => e.equals(edge)))
-						.concatenated(),
+					Array.from(edgeLooseSegments.entries()).flatMap(
+						([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : []),
+					),
 				])
 				this.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
 			}
 			if (buildOther) {
-				const edgeLooseSegments = BRep.getLooseEdgeSegments(otherEdgePoints, other.edgeFaces)
-				//noinspection JSUnusedLocalSymbols
+				const edgeLooseSegments = BRep.getLooseEdgeSegments(otherEdgePoints, other.edgeFaces!)
+				// @ts-ignore
 				const els = other.faces.map(face => [
 					face,
-					Array.from(edgeLooseSegments.entries())
-						.filter(([edge, subs]) => face.getAllEdges().some(e => e.equals(edge)))
-						.flatMap(([edge, subs]) => subs),
+					Array.from(edgeLooseSegments.entries()).flatMap(
+						([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : []),
+					),
 				])
 				other.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
 			}
@@ -929,10 +921,10 @@ export class BRep extends Transformable {
 	}
 
 	transform(m4: M4, desc?: string) {
-		let vertexNames: Map<V3, string>
+		let vertexNames: Map<V3, string> | undefined
 		if (this.vertexNames) {
 			vertexNames = new Map()
-			this.vertexNames.forEach((name, vertex) => vertexNames.set(m4.transformPoint(vertex), name + desc))
+			this.vertexNames.forEach((name, vertex) => vertexNames!.set(m4.transformPoint(vertex), name + desc))
 		}
 		return new BRep(
 			this.faces.map(f => f.transform(m4)),
@@ -1029,7 +1021,7 @@ export function splitsVolumeEnclosingFaces(brep: BRep, canonEdge: Edge, dirAtEdg
 	assert(arguments.length == 4)
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
-	const edgeFaceInfos = brep.edgeFaces.get(canonEdge) as any[]
+	const edgeFaceInfos = brep.edgeFaces!.get(canonEdge) as any[]
 	assertf(() => edgeFaceInfos.length % 2 == 0)
 	assertf(() => brep.edgeFaces)
 	const faceInfo0 = edgeFaceInfos[0]
@@ -1054,10 +1046,10 @@ export function splitsVolumeEnclosingFacesP(brep: BRep, canonEdge: Edge, p: V3, 
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
 	assertf(() => brep.edgeFaces)
-	const edgeFaceInfos = brep.edgeFaces.get(canonEdge) as any[]
+	const edgeFaceInfos = brep.edgeFaces!.get(canonEdge)!
 	assertf(() => edgeFaceInfos.length % 2 == 0)
 	const pDir1 = canonEdge.tangentAt(canonEdge.curve.pointT(p)).unit()
-	const faceInfoAngleFromPInsideNeg = faceInfo => {
+	const faceInfoAngleFromPInsideNeg = (faceInfo: FaceInfo) => {
 		const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated()
 		const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir)
 		const faceInfoAngleAtP = pInside.angleRelativeNormal(faceInfoInsideAtP, pDir1)
@@ -1085,7 +1077,7 @@ export function splitsVolumeEnclosingFacesP2(
 	assert(canonEdge == canonEdge.getCanon())
 	//assert(p.equals(canonEdge.a))
 	assertf(() => brep.edgeFaces)
-	const edgeFaceInfos = brep.edgeFaces.get(canonEdge) as any[]
+	const edgeFaceInfos = brep.edgeFaces!.get(canonEdge) as any[]
 	assertf(() => edgeFaceInfos.length % 2 == 0)
 	const pDir1 = canonEdge.tangentAt(canonEdge.curve.pointT(p)).unit()
 	let pInside = testCurve.tangentAt(curveT).times(dir)
@@ -1179,9 +1171,6 @@ export function splitsVolumeEnclosingCone(brep: BRep, p: V3, dir: V3) {
 
 export function splitsVolumeEnclosingCone2(brep: BRep, p: V3, curve: Curve, curveT: number, fb: 1 | -1) {
 	assert(curve.containsPoint(p))
-	const dir = curve.tangentAt(curveT).times(fb)
-	const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular())
-	const rays = []
 	const pFaces = brep.faces.filter(face => face.getAllEdges().some(edge => edge.a.like(p)))
 	for (let k = 0; k < pFaces.length; k++) {
 		const face = pFaces[k]
@@ -1419,7 +1408,7 @@ export function followAlgorithmPP(
 	assert(ps2.pST(st2.x, st2.y).like(Q))
 	for (let i = 0; i < 1000; i++) {
 		{
-			;({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q))
+			;({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q)!)
 		}
 		assert(ps1.containsPoint(Q), Q, ps1)
 		assert(ps2.containsPoint(Q))
@@ -1471,7 +1460,6 @@ export function followAlgorithm2d(
 	const points: V3[] = []
 	const tangents: V3[] = []
 	assert(eq0(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
-	const eps = stepLength / 32
 	let i = 0,
 		p = startP,
 		tangent = startTangent,
@@ -1489,7 +1477,7 @@ export function followAlgorithm2d(
 		assert(!p.equals(newP))
 		// check if we passed a singularity
 		if (tangent.dot(newTangent) < 0) {
-			const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y)
+			const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y)!
 			if (eq0(ic(singularity.x, singularity.y)) && singularity.distanceTo(p) < abs(stepLength)) {
 				// end on this point
 				points.push(singularity)
@@ -1586,9 +1574,9 @@ export function followAlgorithm2dAdjustable(
 	do {
 		const dfpdx = ic.x(p.x, p.y),
 			dfpdy = ic.y(p.x, p.y)
-		const dfpdxx = ic.xx(p.x, p.y),
-			dfpdyy = ic.yy(p.x, p.y),
-			dfpdxy = ic.xy(p.x, p.y)
+		const dfpdxx = ic.xx!(p.x, p.y),
+			dfpdyy = ic.yy!(p.x, p.y),
+			dfpdxy = ic.xy!(p.x, p.y)
 		const c2factor = abs(
 			(dfpdy ** 2 * dfpdxx - 2 * dfpdx * dfpdy * dfpdxy + dfpdx ** 2 * dfpdyy) / (dfpdx ** 2 + dfpdy ** 2) ** 2,
 		)
@@ -1623,12 +1611,12 @@ export function followAlgorithm2dAdjustable(
 
 // both curves must be in the same s-t coordinates for this to make sense
 export function intersectionICurveICurve(
-	iCurve1: (s: number, t: number) => number,
+	iCurve1: MathFunctionR2R,
 	startParams1: V3,
 	endParams1: V3,
 	startDir: V3,
 	stepLength: number,
-	iCurve2: (s: number, t: number) => number,
+	iCurve2: MathFunctionR2R,
 ) {
 	assertNumbers(stepLength, iCurve1(0, 0), iCurve2(0, 0))
 	assertVectors(startParams1, endParams1)
@@ -1647,14 +1635,14 @@ export function intersectionICurveICurve(
 		let tangent = new V3(-dfpdy, dfpdx, 0).toLength(stepLength)
 		if (p.minus(prevp).dot(tangent) < 0) tangent = tangent.negated()
 		prevp = p
-		p = curvePoint(iCurve1, p.plus(tangent))
+		p = curvePointMF(iCurve1, p.plus(tangent))
 		vertices.push(p)
 	}
 	// TODO gleichmäßige Verteilung der Punkte
 	return vertices
 }
 
-export function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
+export function intersectionICurveICurve2(iCurve1: R2_R, loopPoints1: V3[], iCurve2: R2_R) {
 	let p = loopPoints1[0],
 		val = iCurve2(p.x, p.y),
 		lastVal
@@ -1662,7 +1650,7 @@ export function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
 	for (let i = 0; i < loopPoints1.length; i++) {
 		lastVal = val
 		p = loopPoints1[i]
-		val = iCurve2(p)
+		val = iCurve2(p.x, p.y)
 		if (val * lastVal <= 0) {
 			// TODO < ?
 			iss.push(newtonIterate2d(iCurve1, iCurve2, p.x, p.y))
@@ -1671,30 +1659,27 @@ export function intersectionICurveICurve2(iCurve1, loopPoints1, iCurve2) {
 	return iss
 }
 
-//export function intersectionPCurveISurface(parametricCurve: ParametricCurve, searchStart: number, searchEnd: number,
-// searchStep: number, implicitSurface) { assertNumbers(searchStart, searchEnd, searchStep) const iss = [] let val =
-// implicitSurface(parametricCurve(searchStart)), lastVal for (let t = searchStart + searchStep; t <= searchEnd; t +=
-// searchStep) { lastVal = val val = implicitSurface(parametricCurve(t)) if (val * lastVal <= 0) {
-// iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t)) } } return iss }
+// export function intersectionPCurveISurface(
+// 	parametricCurve: Curve,
+// 	searchStart: number,
+// 	searchEnd: number,
+// 	searchStep: number,
+// 	implicitSurface: ImplicitSurface,
+// ) {
+// 	assertNumbers(searchStart, searchEnd, searchStep)
+// 	const iss = []
+// 	let val = implicitSurface(parametricCurve(searchStart)),
+// 		lastVal
+// 	for (let t = searchStart + searchStep; t <= searchEnd; t += searchStep) {
+// 		lastVal = val
+// 		val = implicitSurface(parametricCurve(t))
+// 		if (val * lastVal <= 0) {
+// 			iss.push(newtonIterate1d(t => implicitSurface(parametricCurve(t)), t))
+// 		}
+// 	}
+// 	return iss
+// }
 
-export function intersectionICurvePSurface(f0, f1, parametricSurface) {}
-
-//
-//function test2() {
-//    const ic: R2_R = (x, y) => sin(x+y)-cos(x*y)+1
-//    const dids: R2_R = (x, y) => y * sin(x * y) + cos(x + y)
-//    const didt: R2_R = (x, y) => x * sin(x * y) + cos(x + y)
-//    const ic2: R2_R = (x, y) => (3 * x ** 2 - y ** 2) ** 2 * y ** 2 - (x ** 2 + y ** 2) ** 4
-//    const di2ds: R2_R = (x, y) => 4* x* (9* x**2* y**2 - 3* y**4 - 2* (x**2 + y**2)**3)
-//    const di2dt: R2_R = (x, y) => 2 * y * (-4 * (x ** 2 + y ** 2) ** 3 + (3 * x ** 2 - y ** 2) ** 2 + 2 * y ** 2 * (y
-// ** 2 - 3 * x ** 2)) const start = V(-3.6339970071165784, 3.5625834844534974, 0) // curvePoint(ic, V(-4, 4))
-// assert(eq02(ic(start.x, start.y), 0.1)) const bounds = (s: number, t: number) => -5 <= s && s <= 5 && -5 <= t && t
-// <= 5 //const curves =  Curve.breakDownIC(ic, -5, 5, -5, 5, 0.1, 0.1, 0.05, dids, didt) const curves =
-// Curve.breakDownIC(ic2, {sMin: -5, sMax: 5, tMin: -5, tMax: 5}, 0.1, 0.1, 0.02, di2ds, di2dt) //const curves =
-// Curve.breakDownIC(cassini(1, 1.02), -5, 5, -5, 5, 0.1, 0.1, 0.02) //const curves = mkcurves(ic, start.x, start.y,
-// 0.05, dids, didt, bounds) .map(({points, tangents}, i) => { const curve = new ImplicitCurve(ic, points, tangents)
-// return Edge.forCurveAndTs(curve.translate(5, 0, 0.1 * i)) }) //checkDerivate(s => ic(s, 0), s => dids(s, 0), -5, 5,
-// 0) //checkDerivate(t => ic(0, t), t => dids(0, t), -5, 5, 0) console.log(curves.length) return curves  }
 export function cassini(a: number, c: number): (x: number, y: number) => number {
 	return (x, y) => (x * x + y * y) * (x * x + y * y) - 2 * c * c * (x * x - y * y) - (a ** 4 - c ** 4)
 }

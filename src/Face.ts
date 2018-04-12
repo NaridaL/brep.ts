@@ -37,7 +37,6 @@ import {
 	ConicSurface,
 	COPLANAR_SAME,
 	Curve,
-	dotCurve,
 	dotCurve2,
 	Edge,
 	EPS,
@@ -60,7 +59,7 @@ import {
 	triangulateVertices,
 } from './index'
 
-import { abs, ceil, floor, max, min, PI, sign } from './math'
+import { abs, ceil, floor, max, min, sign } from './math'
 
 export type FaceMesh = Mesh & { LINES: int[]; TRIANGLES: int[]; normals: V3[] }
 
@@ -225,7 +224,7 @@ export abstract class Face extends Transformable {
 		 * @param col2 same for face2
 		 * @return whether new edge was added.
 		 */
-		function handleNewEdge(newEdge: Edge, col1: Edge, col2: Edge): boolean {
+		function handleNewEdge(newEdge: Edge, col1: Edge | undefined, col2: Edge | undefined): boolean {
 			if (!col1 && !col2) {
 				let correctDir = face.surface.normalP(newEdge.a).cross(face2.surface.normalP(newEdge.a))
 				if (correctDir.likeO()) {
@@ -339,6 +338,7 @@ export abstract class Face extends Transformable {
 						return true
 					}
 				}
+				return false
 			}
 
 			const c1 = handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, false, hasPair, addPair)
@@ -375,7 +375,7 @@ export abstract class Face extends Transformable {
 					// splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE const
 					// bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
 					// splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
-					for (const faceInfo of thisBrep.edgeFaces.get(col1.getCanon())) {
+					for (const faceInfo of thisBrep.edgeFaces!.get(col1.getCanon())!) {
 						const sVEF = splitsVolumeEnclosingFaces(
 							face2Brep,
 							col2.getCanon(),
@@ -447,7 +447,11 @@ export abstract class Face extends Transformable {
 		// points on ends of edges where the edge will be an edge in the new volume where it goes from A to B
 		//         you don't want those to be marked as 'inside', otherwise invalid faces will be added
 		// if a face cuts a corner, nothing needs to be done, as that alone does not limit what adjacent faces will be
-		function handleEndPoint(a: IntersectionPointInfo | false, b: IntersectionPointInfo | false, newEdge: Edge) {
+		function handleEndPoint(
+			a: IntersectionPointInfo | undefined,
+			b: IntersectionPointInfo | undefined,
+			newEdge: Edge,
+		) {
 			// ends in the middle of b's face
 			if (a && !b) {
 				if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
@@ -468,9 +472,9 @@ export abstract class Face extends Transformable {
 				assert(a.colinear || b.colinear || eq(a.t, b.t))
 				// if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
 				// segment starts/ends on edge/edge intersection
-				function foo(
-					a,
-					b,
+				function handleAB(
+					a: IntersectionPointInfo,
+					b: IntersectionPointInfo,
 					face: Face,
 					face2: Face,
 					thisPlane: Surface,
@@ -478,7 +482,7 @@ export abstract class Face extends Transformable {
 					thisBrep: BRep,
 					face2Brep: BRep,
 					first: boolean,
-					thisEdgePoints,
+					thisEdgePoints: Map<Edge, IntersectionPointInfo[]>,
 				) {
 					if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
 						//if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
@@ -534,8 +538,8 @@ export abstract class Face extends Transformable {
 					}
 				}
 
-				foo(a, b, face, face2, surface, surface2, thisBrep, face2Brep, true, thisEdgePoints)
-				foo(b, a, face2, face, surface2, surface, face2Brep, thisBrep, false, otherEdgePoints)
+				handleAB(a, b, face, face2, surface, surface2, thisBrep, face2Brep, true, thisEdgePoints)
+				handleAB(b, a, face2, face, surface2, surface, face2Brep, thisBrep, false, otherEdgePoints)
 			}
 		}
 
@@ -544,9 +548,6 @@ export abstract class Face extends Transformable {
 		const face = this
 		const surface = face.surface,
 			surface2 = face2.surface
-		if (face2.surface.plane && face2.surface.plane.w == -1 && face instanceof RotationFace) {
-			console.log('foo')
-		}
 		if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
 			return
 		}
@@ -558,18 +559,8 @@ export abstract class Face extends Transformable {
 			return
 		}
 		for (const isCurve of isCurves) {
-			const t = (isCurve.tMin + isCurve.tMax) / 2,
-				p = isCurve.at(t),
-				dp = isCurve.tangentAt(t)
-			const normal1 = surface.normalP(p),
-				normal2 = surface2.normalP(p),
-				dp2 = normal1.cross(normal2)
 			assert(surface.containsCurve(isCurve))
 			assert(surface2.containsCurve(isCurve))
-			if (!dp2.likeO()) {
-				//assert(dp2.dot(dp) > 0)
-				// TODO assert(dp2.isParallelTo(dp))
-			}
 		}
 
 		for (let isCurveIndex = 0; isCurveIndex < isCurves.length; isCurveIndex++) {
@@ -615,8 +606,8 @@ export abstract class Face extends Transformable {
 			let startP = in1 && in2 ? isCurve.at(isCurve.tMin) : undefined,
 				startDir,
 				startT = isCurve.tMin,
-				startA,
-				startB
+				startA: IntersectionPointInfo | undefined,
+				startB: IntersectionPointInfo | undefined
 			while (i < ps1.length || j < ps2.length) {
 				assert(i <= ps1.length)
 				assert(j <= ps2.length)
@@ -680,8 +671,8 @@ export abstract class Face extends Transformable {
 					startP = last.p
 					startDir = last.insideDir
 					startT = last.t
-					startA = a && a.used && a
-					startB = b && b.used && b
+					startA = a && a.used ? a : undefined
+					startB = b && b.used ? b : undefined
 				}
 			}
 			if (in1 && in2 && startT !== isCurve.tMax) {
@@ -692,7 +683,7 @@ export abstract class Face extends Transformable {
 				startT > endT && (endDir = endDir.negated())
 				const newEdge = Edge.create(
 					isCurve,
-					startP,
+					startP!,
 					isCurve.at(endT),
 					startT,
 					endT,
@@ -794,9 +785,6 @@ export abstract class Face extends Transformable {
 							.negated()
 
 						const isTangent = isCurve.tangentAt(curveT)
-						const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
-						const eps = 1e-4
-						const normVector = surface2.normalP(p)
 						//if(!eq0(insideDir.dot(isTangent))) {
 						// Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
 						if (edgeT == edge.bT) {
@@ -915,7 +903,7 @@ export abstract class Face extends Transformable {
 		return ps
 	}
 
-	transform(m4: M4): Face {
+	transform(m4: M4): this {
 		const mirroring = m4.isMirroring()
 		const newEdges = Edge.reversePath(this.contour.map(e => e.transform(m4)), mirroring)
 		const newHoles = this.holes.map(hole => Edge.reversePath(hole.map(e => e.transform(m4)), mirroring))
@@ -943,27 +931,26 @@ export abstract class Face extends Transformable {
 	}
 
 	toSource() {
-		return `new ${this.constructor.name}(${this.surface.toSource()}, [${this.contour
-			.map(e => '\n\t' + e.toSource())
-			.join(',')}], [${this.holes
-			.map(hole => '[' + hole.map(e => '\n\t' + e.toSource()).join(',') + ']')
-			.join(',')}])`
+		return (
+			'new ' +
+			this.constructor.name +
+			'(' +
+			this.surface.toSource() +
+			', [' +
+			this.contour.map(e => '\n\t' + e.toSource() + ',').join('') +
+			'], [' +
+			this.holes.map(hole => '[' + hole.map(e => '\n\t' + e.toSource() + ',').join('') + ']').join(',') +
+			'])'
+		)
 	}
 
 	equals(obj: any): boolean {
-		function loopsEqual(a: Edge[], b: Edge[]) {
-			return (
-				a.length == b.length &&
-				arrayRange(0, a.length, 1).some(offset => a.every((edge, i) => edge.equals(b[(offset + i) % a.length])))
-			)
-		}
-
 		return (
 			this == obj ||
 			(Object.getPrototypeOf(this) == Object.getPrototypeOf(obj) &&
 				this.holes.length == obj.holes.length &&
-				loopsEqual(this.contour, obj.contour) &&
-				this.holes.every(hole => (obj as Face).holes.some(hole2 => loopsEqual(hole, hole2))))
+				Edge.loopsEqual(this.contour, obj.contour) &&
+				this.holes.every(hole => (obj as Face).holes.some(hole2 => Edge.loopsEqual(hole, hole2))))
 		)
 	}
 
@@ -1152,7 +1139,7 @@ export abstract class Face extends Transformable {
 }
 
 export class PlaneFace extends Face {
-	surface: PlaneSurface
+	surface!: PlaneSurface
 
 	constructor(p: P3 | PlaneSurface, contour: Edge[], holes?: Edge[][], name?: string, info?: any) {
 		assert(p instanceof P3 || p instanceof PlaneSurface)
@@ -1328,9 +1315,10 @@ export class PlaneFace extends Face {
 
 			loop.forEach((edge, edgeIndex, edges) => {
 				const nextEdgeIndex = (edgeIndex + 1) % edges.length,
-					nextEdge = edges[nextEdgeIndex]
+					nextEdge = edges[nextEdgeIndex],
+					colinearEdge = colinearEdges[edgeIndex]
 				//console.log(edge.toSource()) {p:V3(2, -2.102, 0),
-				if (colinearEdges[edgeIndex]) {
+				if (colinearEdge) {
 					// edge colinear to intersection line
 					const curveAT = isLine.pointT(edge.a),
 						curveBT = isLine.pointT(edge.b)
@@ -1347,8 +1335,10 @@ export class PlaneFace extends Face {
 						},
 					)
 					// open next interval if necessary
-					const nextSide = colinearEdges[nextEdgeIndex] || dotCurve(isLineOut, nextEdge.aDir, nextEdge.aDDT)
-					if (colinearEdges[edgeIndex] * nextSide < 0) {
+					const nextSide =
+						colinearEdges[nextEdgeIndex] ||
+						dotCurve2(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign())
+					if (colinearEdge * nextSide < 0) {
 						// side changes
 						ps.push({
 							p: nextEdge.a,
@@ -1366,9 +1356,10 @@ export class PlaneFace extends Face {
 					for (const edgeT of edgeTs) {
 						if (edgeT == edge.bT) {
 							// endpoint lies on intersection line
-							const side = -dotCurve(isLineOut, edge.bDir, edge.bDDT)
+							const side = dotCurve2(edge.curve, edge.bT, isLineOut, -edge.deltaTSign())
 							const nextSide =
-								colinearEdges[nextEdgeIndex] || dotCurve(isLineOut, nextEdge.aDir, nextEdge.aDDT)
+								colinearEdges[nextEdgeIndex] ||
+								dotCurve2(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign())
 							if (side * nextSide < 0) {
 								// next segment is not colinear and ends on different side
 								ps.push({
@@ -1415,12 +1406,13 @@ export class RotationFace extends Face {
 		let side = 0
 
 		// returns true if d is on the other side as previous calls
-		function checkSide(d) {
+		function checkSide(d: number) {
 			if (side == 0) {
 				side = d
 			} else {
 				return !side || side * d < 0
 			}
+			return false
 		}
 
 		for (const edge of loop) {
@@ -1432,12 +1424,10 @@ export class RotationFace extends Face {
 					// TODO: this part probably should be in a separate function
 					// check 'backwards' only if if aT != t
 					if (edge.aT != t) {
-						if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, -sign(edge.bT - edge.aT))))
-							return false
+						if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, -edge.deltaTSign()))) return false
 					}
 					if (edge.bT != t) {
-						if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, sign(edge.bT - edge.aT))))
-							return false
+						if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, edge.deltaTSign()))) return false
 					}
 				}
 			}
@@ -1452,52 +1442,25 @@ export class RotationFace extends Face {
 		return this.aabb
 	}
 
-	getCanonSeamU(): number {
-		const stPFunc = this.surface.stPFunc()
-		for (const edge of this.contour) {
-			// check edge.a
-			let u = stPFunc(edge.a, PI).x
-			// if u is not PI, or ~0, return its sign
-			if (u != PI && !eq0(u)) {
-				return sign(u) * PI
-			}
-			// check midpoint between edge.a and edge.b
-			u = stPFunc(edge.curve.at((edge.aT + edge.bT) / 2), PI).x
-			if (u != PI && !eq0(u)) {
-				return sign(u) * PI
-			}
-		}
-		const localEdge = this.contour[0].transform(this.surface.matrixInverse)
-		if (P3.ZX.containsCurve(localEdge.curve)) {
-			const insideVector = localEdge.a.cross(localEdge.aDir)
-			return sign(insideVector.dot(V3.Y)) * PI
-		}
-		assert(false, "Couldn't find canon seam u")
-	}
-
 	unrollLoop(this: this & { surface: ParametricSurface }, edgeLoop: Edge[]) {
 		const vs: V3[] = []
-		const reverseFunc = this.surface.stPFunc()
+		const stP = this.surface.stPFunc()
 		const verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0())
-		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(reverseFunc(edgeVertices[0]).x, Math.PI))
+		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(stP(edgeVertices[0]).x, Math.PI))
 		assert(-1 != startEdgeIndex)
 		// console.log(startEdgeIndex)
 		for (let i = 0; i < edgeLoop.length; i++) {
 			const edgeIndex = (i + startEdgeIndex) % edgeLoop.length
 			for (let j = 0; j < verticesNo0s[edgeIndex].length; j++) {
 				const p = verticesNo0s[edgeIndex][j]
-				const localP = reverseFunc(p)
+				const localP = stP(p)
 				// console.log(hint, p.sce, localP.sce)
 				vs.push(localP)
 			}
 		}
-		edgeLoop.forEach((edge, e) => {
-			let hint = edge.bDir
-			if (edge instanceof StraightEdge && edge.curve.dir1.isParallelTo(this.surface.dir || this.surface.dir1)) {
-				hint = this.surface.normalP(edge.b).cross(edge.bDir)
-			}
+		edgeLoop.forEach(edge => {
 			edge.getVerticesNo0().forEach(p => {
-				vs.push(reverseFunc(p))
+				vs.push(stP(p))
 			})
 		})
 		console.log('vs\n', vs.join('\n'), vs.length)
@@ -1526,7 +1489,6 @@ export class RotationFace extends Face {
 		for (const edgeLoop of edgeLoops) {
 			loopStarts.push(verticesST.length)
 			// console.log(startEdgeIndex)
-			const hint = this.getCanonSeamU()
 			for (let i = 0; i < edgeLoop.length; i++) {
 				const ipp = (i + 1) % edgeLoop.length
 				const verticesNo0 = edgeLoop[i].getVerticesNo0()
@@ -1538,16 +1500,8 @@ export class RotationFace extends Face {
 				if (testDegeneratePoint(nextStart)) {
 					const bDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[i].bDir),
 						aDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[ipp].aDir)
-					let inAngle = Math.atan2(-bDirLC.y, -bDirLC.x)
-					if (abs(inAngle) > Math.PI - NLA_PRECISION) {
-						assert(hint == -PI || hint == PI)
-						inAngle = hint
-					}
-					let outAngle = Math.atan2(aDirLC.y, aDirLC.x)
-					if (abs(outAngle) > Math.PI - NLA_PRECISION) {
-						assert(hint == -PI || hint == PI)
-						outAngle = hint
-					}
+					const inAngle = Math.atan2(-bDirLC.y, -bDirLC.x)
+					const outAngle = Math.atan2(aDirLC.y, aDirLC.x)
 
 					const stLast = verticesST.pop()!
 					verticesST.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0))
@@ -1621,7 +1575,6 @@ export class RotationFace extends Face {
 	 *
 	 *
 	 */
-
 	addToMesh(
 		this: this & { surface: ParametricSurface },
 		mesh: FaceMesh,
@@ -1647,12 +1600,6 @@ export class RotationFace extends Face {
 				mesh.LINES.push(base + i, base + (i + 1) % vertexLoopLength)
 			}
 		}
-
-		const zip = (a, b) =>
-			a.map(function(e, i) {
-				return [e, b[i]]
-			})
-		//console.log(zip(vertices.map(v => v.map(x => round10(x, -5))), verticesUV.map(v => v.map(x => round10(x, -5)))).sce)
 
 		disableConsole()
 		let minU = Infinity,
@@ -1711,7 +1658,7 @@ export class RotationFace extends Face {
 			// and
 			for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
 				let part: int[] | undefined = undefined,
-					firstPart,
+					firstPart: int[] | undefined,
 					firstPartBaseU: int = -1,
 					firstPartBaseV: int = -1
 				let lastBaseV = -1,
@@ -1926,8 +1873,7 @@ export class RotationFace extends Face {
 
 	addToMesh2(this: this & { surface: ParametricSurface }, mesh: MeshWith<'TRIANGLES'>) {
 		const closed = false
-		const hSplit = 12800,
-			zSplit = 8
+		const zSplit = 8
 		const ribs: { value: number; left: number[]; right: number[] }[] = []
 		let minZ = Infinity,
 			maxZ = -Infinity

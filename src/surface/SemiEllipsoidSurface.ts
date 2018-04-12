@@ -322,7 +322,9 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 		)
 		curves2 = this.clipCurves(curves2)
 		return curves2
+	}
 
+	isCurvesWithPCSSmart(surface: ProjectedCurveSurface): Curve[] {
 		function iii(ists: number[], surface: Surface, curve: Curve, min: number, max: number) {
 			ists.sort((a, b) => a - b)
 			if (!eq(ists[0], min)) {
@@ -413,8 +415,6 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 				}
 			}
 		}
-		const f = (t: number) => baseCurveLC.at(t).length() - 1
-		const fRoots = undefined
 
 		return surface.clipCurves(curves)
 	}

@@ -26,6 +26,7 @@ import {
 	snap2,
 	TAU,
 	Transformable,
+	Tuple3,
 	V,
 	V3,
 } from 'ts3dutils'
@@ -34,9 +35,11 @@ import { BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, PlaneSurface, SemiE
 
 import { abs, ceil, floor, PI, sign } from './math'
 
-export abstract class Edge extends Transformable {
+export interface Edge {
 	readonly aDir: V3
 	readonly bDir: V3
+}
+export abstract class Edge extends Transformable {
 	readonly reversed: boolean
 
 	constructor(
@@ -221,8 +224,7 @@ export abstract class Edge extends Transformable {
 			}
 		})
 		const result = edges.flatMap((edge, i) => {
-			const h = (i + edges.length - 1) % edges.length,
-				j = (i + 1) % edges.length
+			const h = (i + edges.length - 1) % edges.length
 			const prevCorner = corners[h],
 				nextCorner = corners[i]
 			if (!prevCorner && !nextCorner) {
@@ -244,7 +246,7 @@ export abstract class Edge extends Transformable {
 		const c1 = e1.curve,
 			c2 = e2.curve
 
-		function f([t1, t2]: [number, number]) {
+		function f([t1, t2]: number[]) {
 			const p1 = c1.at(t1),
 				p2 = c2.at(t2)
 			const dp1 = c1.tangentAt(t1),
@@ -261,10 +263,6 @@ export abstract class Edge extends Transformable {
 			if (!eq0(p1p2.dot(virtualPlaneNormal))) {
 				assert(false)
 			}
-			const l1 = new L3(p1, normal1),
-				l2 = new L3(p2, normal2)
-			const uh = l1.infoClosestToLine(l2),
-				uh2 = l1.isInfoWithLine(l2)
 			const dist1 = p1p2.cross(normal2).dot(dirCross) / dirCross.squared()
 			const dist2 = p1p2.cross(normal1).dot(dirCross) / dirCross.squared()
 			const g1 = p1.plus(normal1.times(dist1))
@@ -278,13 +276,10 @@ export abstract class Edge extends Transformable {
 		const [t1, t2] = newtonIterate(f, [startT1, startT2])
 		const cornerA = e1.curve.at(t1)
 		const cornerB = e2.curve.at(t2)
-		const p1 = c1.at(t1),
-			p2 = c2.at(t2)
 		const dp1 = c1.tangentAt(t1),
 			dp2 = c2.tangentAt(t2)
 		const virtualPlaneNormal = dp1.cross(dp2)
-		const normal1 = virtualPlaneNormal.cross(dp1).unit(),
-			normal2 = virtualPlaneNormal.cross(dp2).unit()
+		const normal1 = virtualPlaneNormal.cross(dp1).unit()
 		const f1 = normal1.toLength(-radius)
 		const center = cornerA.minus(f1)
 		const curve = new SemiEllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius))
@@ -465,6 +460,9 @@ export abstract class Edge extends Transformable {
 		)
 	}
 
+	/**
+	 * Get edge points, excluding the first one.
+	 */
 	abstract getVerticesNo0(): V3[]
 
 	abstract pointsCount(): int
@@ -484,13 +482,14 @@ export abstract class Edge extends Transformable {
 		if (false === edgeAT && false === edgeBT) {
 			return noback ? false : edge.overlaps(this, true)
 		}
-		const flipped = false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edgeBT).dot(edge.bDir)
-		return !(le(edgeMaxT, this.minT) || le(this.maxT, edgeMinT))
+		const flipped =
+			false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edge.bT).dot(edge.bDir)
+		return !(le(edge.maxT, this.minT) || le(this.maxT, edge.minT))
 	}
 
 	getAABB(): AABB {
-		const min = [Infinity, Infinity, Infinity],
-			max = [-Infinity, -Infinity, -Infinity]
+		const min: Tuple3<number> = [Infinity, Infinity, Infinity],
+			max: Tuple3<number> = [-Infinity, -Infinity, -Infinity]
 		this.curve.roots().forEach((ts, dim) => {
 			ts.forEach(t => {
 				if (lt(this.minT, t) && lt(t, this.maxT)) {
@@ -517,8 +516,26 @@ export abstract class Edge extends Transformable {
 		return this.bT - this.aT
 	}
 
+	deltaTSign() {
+		return sign(this.bT - this.aT) as -1 | 1
+	}
+
 	atAvgT() {
 		return this.curve.at((this.minT + this.maxT) / 2)
+	}
+
+	/**
+	 * Whether two edge loops are equal. Takes into account that two loops need not start with the same edge.
+	 * @param loop1
+	 * @param loop2
+	 */
+	static loopsEqual(loop1: Edge[], loop2: Edge[]): boolean {
+		return (
+			loop1.length == loop2.length &&
+			arrayRange(0, loop1.length, 1).some(offset =>
+				loop1.every((edge, i) => edge.equals(loop2[(offset + i) % loop1.length])),
+			)
+		)
 	}
 }
 
@@ -614,18 +631,6 @@ export class PCurveEdge extends Edge {
 		return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, true)
 	}
 
-	rotViaPlane(normal: V3, reversed: boolean) {
-		let rot = this.aDir.angleRelativeNormal(this.bDir, normal)
-		const counterClockWise = normal.dot(this.curve.normal) > 0 === !this.reversed
-		if (counterClockWise) {
-			// counterclockwise rotation, i.e. rot > 0
-			if (rot < 0) rot += 2 * Math.PI
-		} else {
-			if (rot > 0) rot -= 2 * Math.PI
-		}
-		return rot
-	}
-
 	edgeISTsWithSurface(surface: Surface): number[] {
 		return this.curve
 			.isTsWithSurface(surface)
@@ -661,7 +666,7 @@ export class PCurveEdge extends Edge {
 		)
 	}
 
-	transform(m4: M4, desc?: string): PCurveEdge {
+	transform(m4: M4, desc?: string): this {
 		return new PCurveEdge(
 			this.curve.transform(m4),
 			m4.transformPoint(this.a),
@@ -687,7 +692,7 @@ export class PCurveEdge extends Edge {
 
 export class StraightEdge extends Edge {
 	readonly tangent: V3
-	readonly curve: L3
+	readonly curve!: L3
 
 	constructor(line: L3, a: V3, b: V3, aT: number, bT: number, public flippedOf?: StraightEdge, name?: string) {
 		super(line, a, b, aT, bT, flippedOf, name)
@@ -766,7 +771,7 @@ export class StraightEdge extends Edge {
 		)
 	}
 
-	transform(m4: M4, desc?: string): StraightEdge {
+	transform(m4: M4, desc?: string): this {
 		const lineDir1TransLength = m4.transformVector(this.curve.dir1).length()
 		return new StraightEdge(
 			this.curve.transform(m4),
