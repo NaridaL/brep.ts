@@ -14386,23 +14386,6 @@ class L3$$1 extends Curve$$1 {
         const distance = L3$$1.at(anchor, dir, closestT).distanceTo(p);
         return eq0(distance);
     }
-    addToMesh(mesh, res = 4, radius = 0, pointStep = 1, tMin = this.tMin, tMax = this.tMax) {
-        const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res));
-        const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res));
-        for (let i = 0; i <= 1; i += this.tIncrement) {
-            const start = mesh.vertices.length;
-            if (0 !== i) {
-                for (let j = 0; j < res; j++) {
-                    pushQuad(mesh.TRIANGLES, true, start - res + j, start + j, start - res + (j + 1) % res, start + (j + 1) % res);
-                }
-            }
-            const t = 0 == i ? tMin : tMax;
-            const point = this.at(t), x = this.dir1.getPerpendicular();
-            const matrix = M4.forSys(x, this.dir1.cross(x), this.dir1, point);
-            mesh.normals.push(...matrix.transformedVectors(baseNormals));
-            mesh.vertices.push(...matrix.transformedPoints(baseVertices));
-        }
-    }
     roots() {
         return [[], [], []];
     }
