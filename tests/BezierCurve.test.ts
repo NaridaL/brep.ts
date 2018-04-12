@@ -1,7 +1,16 @@
-import { inDifferentSystems, suite, test, testCurve, testCurveISInfos, testISTs, testPointT } from './manager'
+import {
+	inDifferentSystems,
+	suite,
+	test,
+	testCurve,
+	testCurveISInfos,
+	testISTs,
+	testPointT,
+	outputLink,
+} from './manager'
 
 import { DEG, eq, eq0, M4, NLA_PRECISION, V, V3 } from 'ts3dutils'
-import { BezierCurve, L3, P3, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface } from '..'
+import { BezierCurve, L3, P3, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface, Edge } from '..'
 
 import { PI } from '../src/math'
 
@@ -48,7 +57,7 @@ suite('BezierCurve', () => {
 		)
 		const t = 56.58829486216517
 		const p = curve.at(t)
-        testPointT(assert, curve, p, t)
+		testPointT(assert, curve, p, t)
 	})
 	test('pointT 3', assert => {
 		const curve = new BezierCurve(
@@ -200,4 +209,20 @@ suite('BezierCurve', () => {
 		//const curve = ParabolaCurve.XY.asBezier().scale(5).translate(0, 1)
 		testCurveISInfos(assert, bc, sec, 2)
 	})
+
+    test('circleApprox', assert => {
+        const bezier = BezierCurve.graphXY(2, -3, -3, 2, -1, 2)
+        const arcs = bezier.circleApprox()
+        outputLink(assert, {
+            edges: [bezier.translate(0, 0, 1), ...arcs].map(arc => Edge.forCurveAndTs(arc)),
+        })
+    })
+
+    test('circleApprox 2', assert => {
+        const bezier = new BezierCurve(V(120, 160), V(35, 200), V(220, 260), V(220, 40))
+        const arcs = bezier.circleApprox()
+        outputLink(assert, {
+            edges: [bezier.translate(200, 0, 1), ...arcs].map(arc => Edge.forCurveAndTs(arc)),
+        })
+    })
 })

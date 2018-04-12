@@ -14189,82 +14189,28 @@ class BezierCurve$$1 extends Curve$$1 {
         }
         return curve.isInfosWithCurve(this).map(({ tThis, tOther, p }) => ({ tThis: tOther, tOther: tThis, p }));
     }
-    magic(t0 = this.tMin, t1 = this.tMax, result = []) {
-        const splits = 20;
-        const ts = arrayFromFunction(splits, i => lerp(t0, t1, i / (splits - 1)));
-        const ps = ts.map(t => this.at(t));
-        const ns = ts.map(t => this.normalP(t).unit());
-        const f = (ns) => {
-            const ls = ts.map((t, i) => new L3$$1(ps[i], ns[i].unit()));
-            const isInfos = arrayFromFunction(splits - 1, i => {
-                const j = i + 1;
-                const li = ls[i], lj = ls[j];
-                return li.infoClosestToLine(lj);
-            });
-            const a = isInfos.map(isInfo => isInfo.s - isInfo.t);
-            const centers = isInfos.map(isInfo => V3.lerp(isInfo.closest, isInfo.closest2, 0.5));
-            const b = arrayFromFunction(splits - 1, i => {
-                const tMid = lerp(ts[i], ts[i + 1], 0.5);
-                const pMid = this.at(tMid);
-                return Math.pow(pMid.distanceTo(centers[i]), 0.5);
-            });
-            return a.concat(b);
-        };
-        const startX = V3.packXY(ns);
-        const ff = (xs) => {
-            return f(V3.unpackXY(xs));
-        };
-        let x = new Vector(new Float64Array(startX));
-        for (let i = 0; i < 2; i++) {
-            const Fx = new Vector(new Float64Array(ff(x.v)));
-            console.log(Fx.v);
-            const jacobi = Matrix.jacobi(ff, x.v);
-            console.log('jacobi\n', jacobi.toString(x => '' + x));
-            const jacobiDependentRowIndexes = jacobi.getDependentRowIndexes();
-            //if (0 != jacobiDependentRowIndexes.length) {
-            //	const error:any = new Error()
-            //	error.jacobiDependentRowIndexes = jacobiDependentRowIndexes
-            //	throw error
-            //}
-            const jacobiTranspose = jacobi.transposed();
-            console.log(jacobi.times(jacobiTranspose).str);
-            console.log(jacobi.times(jacobiTranspose).inversed().str);
-            const matrix = jacobiTranspose.times(jacobi.times(jacobiTranspose).inversed());
-            const xDiff = matrix.timesVector(Fx);
-            x = x.minus(xDiff);
-        }
-        const ns2 = V3.unpackXY(x.v);
-        const ls2 = arrayFromFunction(splits, i => new L3$$1(ps[i], ns2[i].unit()));
-        const curves = arrayFromFunction(splits - 1, i => {
-            const j = i + 1;
-            const li = ls2[i], lj = ls2[j];
-            const isInfo = li.infoClosestToLine(lj);
-            return SemiEllipseCurve$$1.circleForCenter2P(isInfo.closest, ps[i], ps[j], isInfo.s);
-        });
-        return curves;
-    }
-    magic2(t0 = this.tMin, t1 = this.tMax, result = []) {
-        const max3d = 0.01, eps = 0.01;
-        const a = this.at(t0), b = this.at(t1);
-        const aN = this.normalP(t0).unit(), bN = this.normalP(t1).unit();
-        const aL = new L3$$1(a, aN), bL = new L3$$1(b, bN);
-        const isInfo = aL.infoClosestToLine(bL);
-        if (isInfo.s < 0 || isInfo.t < 0 || isInfo.distance > max3d || !eq(isInfo.s, isInfo.t, eps)) {
-        }
-        else {
-            const centerPoint = V3.lerp(isInfo.closest, isInfo.closest2, 0.5);
-            const testT1 = lerp(t0, t1, 1 / 2), testP1 = this.at(testT1);
-            const testT2 = lerp(t0, t1, 2 / 3), testP2 = this.at(testT2);
-            const radius = (isInfo.s + isInfo.t) / 2;
-            if (eq(centerPoint.distanceTo(testP1), radius, eps)) {
-                const newCurve = SemiEllipseCurve$$1.circleForCenter2P(centerPoint, a, b, radius);
-                result.push(newCurve);
+    /**
+     * Approximate this bezier curve with a number of circular segments. This curve is recursively split in half until
+     * segments are close enough (relative error < REL_ERR in two test points) to an arc which goes through the start,
+     * end and mid points of the segment.
+     * @returns each SemiEllipseCurve is circular and their tMin and tMax respectively define their start and end points.
+     * @param t0 Start parameter of segment which should be approximated.
+     * @param t1 End parameter of segment which should be approximated.
+     * @param REL_ERROR max allowable relative error.
+     * @param result Resulting circle arcs are stored in this array. Mainly used by the recursion.
+     */
+    circleApprox(t0 = this.tMin, t1 = this.tMax, REL_ERR = 1 / 1024, result = []) {
+        const a = this.at(t0), b = this.at(t1), tMid = (t0 + t1) / 2, pMid = this.at(tMid), abLine = L3$$1.throughPoints(a, b);
+        if (!abLine.containsPoint(pMid) && between(abLine.pointT(pMid), 0, abLine.pointT(b))) {
+            const arc = SemiEllipseCurve$$1.circleThroughPoints(a, pMid, b), arcRadius = arc.f1.length(), pTest1 = this.at(lerp(t0, t1, 0.25)), pTest2 = this.at(lerp(t0, t1, 0.75));
+            if (abs$2(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERR &&
+                abs$2(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERR) {
+                result.push(arc);
                 return result;
             }
         }
-        const tMid = (t0 + t1) / 2;
-        this.magic(t0, tMid, result);
-        this.magic(tMid, t1, result);
+        this.circleApprox(t0, tMid, REL_ERR, result);
+        this.circleApprox(tMid, t1, REL_ERR, result);
         return result;
     }
 }
@@ -15308,8 +15254,8 @@ class SemiEllipseCurve$$1 extends XiEtaCurve$$1 {
         assertf(() => !L3$$1.throughPoints(a, c).containsPoint(b));
         const normal = a.to(b).cross(b.to(c));
         const center = new L3$$1(a.lerp(b, 0.5), normal.cross(a.to(b)).unit()).isInfoWithLine(new L3$$1(b.lerp(c, 0.5), normal.cross(b.to(c)).unit()));
-        const f1 = center.to(a);
-        return new SemiEllipseCurve$$1(center, f1, normal.unit().cross(f1), 0, undefined === tMax ? f1.angleRelativeNormal(center.to(c), normal.unit()) : tMax);
+        const f1 = center.to(a).negated();
+        return new SemiEllipseCurve$$1(center, f1, normal.unit().cross(f1), -PI$3, undefined === tMax ? f1.angleRelativeNormal(center.to(c), normal.unit()) : tMax);
     }
     getAreaInDir(right, up, tStart, tEnd) {
         //assertf(() => tStart < tEnd)
@@ -17250,6 +17196,8 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         let curves2 = ParametricSurface$$1.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.05);
         curves2 = this.clipCurves(curves2);
         return curves2;
+    }
+    isCurvesWithPCSSmart(surface) {
         //return []
         const surfaceLC = surface.transform(this.matrixInverse);
         //const lcMinZ0RelO =
@@ -31447,10 +31395,9 @@ class Edge$$1 extends Transformable {
         const [t1, t2] = newtonIterate(f, [startT1, startT2]);
         const cornerA = e1.curve.at(t1);
         const cornerB = e2.curve.at(t2);
-        const p1 = c1.at(t1), p2 = c2.at(t2);
         const dp1 = c1.tangentAt(t1), dp2 = c2.tangentAt(t2);
         const virtualPlaneNormal = dp1.cross(dp2);
-        const normal1 = virtualPlaneNormal.cross(dp1).unit(), normal2 = virtualPlaneNormal.cross(dp2).unit();
+        const normal1 = virtualPlaneNormal.cross(dp1).unit();
         const f1 = normal1.toLength(-radius);
         const center = cornerA.minus(f1);
         const curve = new SemiEllipseCurve$$1(center, f1, virtualPlaneNormal.cross(f1).toLength(radius));
@@ -32148,14 +32095,8 @@ class Face$$1 extends Transformable {
             return;
         }
         for (const isCurve of isCurves) {
-            const t = (isCurve.tMin + isCurve.tMax) / 2, p = isCurve.at(t), dp = isCurve.tangentAt(t);
-            const normal1 = surface.normalP(p), normal2 = surface2.normalP(p), dp2 = normal1.cross(normal2);
             assert(surface.containsCurve(isCurve));
             assert(surface2.containsCurve(isCurve));
-            if (!dp2.likeO()) {
-                //assert(dp2.dot(dp) > 0)
-                // TODO assert(dp2.isParallelTo(dp))
-            }
         }
         for (let isCurveIndex = 0; isCurveIndex < isCurves.length; isCurveIndex++) {
             // get intersections of newCurve with other edges of face and face2
@@ -32244,8 +32185,8 @@ class Face$$1 extends Transformable {
                     startP = last.p;
                     startDir = last.insideDir;
                     startT = last.t;
-                    startA = a && a.used && a;
-                    startB = b && b.used && b;
+                    startA = a && a.used ? a : undefined;
+                    startB = b && b.used ? b : undefined;
                 }
             }
             if (in1 && in2 && startT !== isCurve.tMax) {
@@ -32957,7 +32898,7 @@ class RotationFace$$1 extends Face$$1 {
                 vs.push(localP);
             }
         }
-        edgeLoop.forEach((edge, e) => {
+        edgeLoop.forEach(edge => {
             edge.getVerticesNo0().forEach(p => {
                 vs.push(stP(p));
             });
@@ -42958,10 +42899,6 @@ class BRep$$1 extends Transformable {
                             break;
                         assert(0 < possibleEdges.length, () => face.sce);
                         const faceNormalAtCurrentB = face.surface.normalP(currentEdge.b);
-                        const correct = possibleEdges.indexWithMax(edge => (currentEdge.bDir.angleRelativeNormal(edge.aDir, faceNormalAtCurrentB) +
-                            NLA_PRECISION +
-                            PI$3) %
-                            TAU);
                         const nextEdgeIndex = calcNextEdgeIndex$$1(currentEdge, possibleEdges, faceNormalAtCurrentB);
                         currentEdge = possibleEdges[nextEdgeIndex];
                         if (visitedEdges.has(currentEdge)) {
@@ -43050,7 +42987,9 @@ class BRep$$1 extends Transformable {
             result++;
             const stack = [face];
             while ((face = stack.pop())) {
+                // @ts-ignore
                 for (const edge of face.getAllEdges()) {
+                    // @ts-ignore
                     for (const { face: face2 } of this.edgeFaces.get(edge.getCanon())) {
                         if (face !== face2 && !foundFaces.has(face2)) {
                             foundFaces.add(face2);
@@ -43231,7 +43170,7 @@ class BRep$$1 extends Transformable {
         else {
             if (buildThis) {
                 const edgeLooseSegments = BRep$$1.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces);
-                //noinspection JSUnusedLocalSymbols
+                // @ts-ignore
                 const els = this.faces.map(face => [
                     face,
                     Array.from(edgeLooseSegments.entries()).flatMap(([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : [])),
@@ -43240,7 +43179,7 @@ class BRep$$1 extends Transformable {
             }
             if (buildOther) {
                 const edgeLooseSegments = BRep$$1.getLooseEdgeSegments(otherEdgePoints, other.edgeFaces);
-                //noinspection JSUnusedLocalSymbols
+                // @ts-ignore
                 const els = other.faces.map(face => [
                     face,
                     Array.from(edgeLooseSegments.entries()).flatMap(([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : [])),
@@ -43465,8 +43404,6 @@ function splitsVolumeEnclosingCone$$1(brep, p, dir) {
 }
 function splitsVolumeEnclosingCone2$$1(brep, p, curve, curveT, fb) {
     assert(curve.containsPoint(p));
-    const dir = curve.tangentAt(curveT).times(fb);
-    const testPlane = P3$$1.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
     const pFaces = brep.faces.filter(face => face.getAllEdges().some(edge => edge.a.like(p)));
     for (let k = 0; k < pFaces.length; k++) {
         const face = pFaces[k];
@@ -43854,7 +43791,7 @@ function intersectionICurveICurve$$1(iCurve1, startParams1, endParams1, startDir
         if (p.minus(prevp).dot(tangent) < 0)
             tangent = tangent.negated();
         prevp = p;
-        p = curvePoint$$1(iCurve1, p.plus(tangent));
+        p = curvePointMF$$1(iCurve1, p.plus(tangent));
         vertices.push(p);
     }
     // TODO gleichmäßige Verteilung der Punkte
@@ -44804,7 +44741,7 @@ var brepts = Object.freeze({
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 };
 const drVs = [];
 const bReps = [];
-const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl());
+const edgeViewerColors = ['darkorange', 'darkgreen', 'cyan'].map(c => chroma(c).gl());
 let bRepMeshes = [];
 //bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 //cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},

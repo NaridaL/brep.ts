@@ -32,7 +32,7 @@ import {
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 }
 const drVs: any[] = []
 const bReps: BRep[] = []
-const edgeViewerColors = arrayFromFunction(20, i => chroma.random().gl())
+const edgeViewerColors = ['darkorange', 'darkgreen', 'cyan'].map(c => chroma(c).gl())
 let bRepMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int; count: int }>; TRIANGLES: int[]; normals: V3[] })[] = []
 //bMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},
 //cMesh: Mesh & {faceIndexes?: Map<Face, {start: int, count: int}>},

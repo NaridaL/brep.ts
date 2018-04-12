@@ -121,12 +121,12 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const center = new L3(a.lerp(b, 0.5), normal.cross(a.to(b)).unit()).isInfoWithLine(
 			new L3(b.lerp(c, 0.5), normal.cross(b.to(c)).unit()),
 		)!
-		const f1 = center.to(a)
+		const f1 = center.to(a).negated()
 		return new SemiEllipseCurve(
 			center,
 			f1,
 			normal.unit().cross(f1),
-			0,
+			-PI,
 			undefined === tMax ? f1.angleRelativeNormal(center.to(c), normal.unit()) : tMax,
 		)
 	}
