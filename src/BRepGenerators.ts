@@ -107,12 +107,13 @@ export function rotateCurve(
 	tMax = curve.tMax,
 	degrees: raddd,
 	flipped: boolean,
-): Surface {
+): Surface | undefined {
 	assertf(() => new PlaneSurface(P3.ZX).containsCurve(curve))
 	if (curve instanceof L3) {
 		if (curve.dir1.isParallelTo(V3.Z)) {
 			if (eq0(curve.anchor.x)) {
-				return undefined
+			    return undefined
+				//throw new Error('Cannot rotate curve colinear to Z axis.')
 			}
 			const baseEllipse = new SemiEllipseCurve(
 				V3.O,
@@ -487,7 +488,7 @@ export namespace B2T {
 						stepEndEdges[edgeIndex],
 						!eq0(edge.b.x) && ribs[ipp]!.flipped(),
 					].filter((x: any): x is Edge => x)
-					const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot)
+					const surface = (0 === rot ? baseSurfaces[edgeIndex]! : baseSurfaces[edgeIndex]!.rotateZ(rot))
 					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
 					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
 				}

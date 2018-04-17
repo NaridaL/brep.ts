@@ -67,10 +67,8 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	isCurvesWithPlane(plane: P3): L3[] {
-		if (this.plane.isParallelToPlane(plane)) {
-			return []
-		}
-		return [this.plane.intersectionWithPlane(plane)]
+		const result = this.plane.intersectionWithPlane(plane)
+		return result ? [result] : []
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {

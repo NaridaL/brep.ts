@@ -30,7 +30,6 @@ import {
 
 import {
 	Curve,
-	dotCurve2,
 	Edge,
 	getExtremePointsHelper,
 	ImplicitSurface,
@@ -325,33 +324,6 @@ export class SemiEllipsoidSurface extends ParametricSurface implements ImplicitS
 	}
 
 	isCurvesWithPCSSmart(surface: ProjectedCurveSurface): Curve[] {
-		function iii(ists: number[], surface: Surface, curve: Curve, min: number, max: number) {
-			ists.sort((a, b) => a - b)
-			if (!eq(ists[0], min)) {
-				ists.splice(0, 0, min)
-			}
-			if (!eq(ists.last, max)) {
-				ists.push(max)
-			}
-			const result = []
-			for (let i = 0; i < ists.length - 1; i++) {
-				const aT = ists[i],
-					bT = ists[i + 1]
-				const a = curve.at(aT),
-					b = curve.at(bT)
-				const aNormal = surface.normalP(a),
-					bNormal = surface.normalP(b)
-				const aInside = dotCurve2(curve, aT, aNormal, 1) < 0
-				const bInside = dotCurve2(curve, bT, bNormal, -1) < 0
-				//assert(bInside == aInside)
-				if (surface.containsPoint(a) ? aInside : bInside) {
-					result.push([aT, ists[i + 1]])
-				}
-			}
-			return result
-		}
-
-		//return []
 		const surfaceLC = surface.transform(this.matrixInverse)
 		//const lcMinZ0RelO =
 		const baseCurveLC = surfaceLC.baseCurve.project(new P3(surfaceLC.dir, 0))

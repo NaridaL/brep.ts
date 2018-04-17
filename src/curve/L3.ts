@@ -1,5 +1,4 @@
 import {
-	arrayFromFunction,
 	assert,
 	assertf,
 	assertInst,
@@ -11,27 +10,15 @@ import {
 	hasConstructor,
 	int,
 	M4,
-	TAU,
 	V3,
 } from 'ts3dutils'
-import { pushQuad } from 'tsgl'
 
-import { Curve, FaceMesh, ISInfo, P3, Surface } from '../index'
+import { Curve, ISInfo, P3, Surface } from '../index'
 
 /**
  * A 3-dimensional line. Defined by an anchor and a normalized direction vector.
  */
 export class L3 extends Curve {
-	isInfosWithLine(
-		anchorWC: V3,
-		dirWC: V3,
-		tMin?: number,
-		tMax?: number,
-		lineMin?: number,
-		lineMax?: number,
-	): ISInfo[] {
-		throw new Error('Method not implemented.')
-	}
 	isTsWithSurface(surface: Surface): number[] {
 		return surface.isTsForLine(this)
 	}
@@ -207,22 +194,26 @@ export class L3 extends Curve {
 
 	isInfosWithCurve(curve: Curve): ISInfo[] {
 		if (curve instanceof L3) {
-			const dirCross = this.dir1.cross(curve.dir1)
-			const div = dirCross.squared()
-			if (eq0(div)) {
-				// lines are parallel
-				return []
-			}
-			const anchorDiff = curve.anchor.minus(this.anchor)
-			if (eq0(anchorDiff.dot(dirCross))) {
-				const tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div
-				const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
-				const p = this.at(tThis)
-				return [{ tThis: tThis, tOther: tOther, p: p }]
-			}
-			return []
+			return this.isInfosWithLine(curve.anchor, curve.dir1)
 		}
 		return super.isInfosWithCurve(curve)
+	}
+
+	isInfosWithLine(anchorWC: V3, dirWC: V3): ISInfo[] {
+		const dirCross = this.dir1.cross(dirWC)
+		const div = dirCross.squared()
+		if (eq0(div)) {
+			// lines are parallel
+			return []
+		}
+		const anchorDiff = anchorWC.minus(this.anchor)
+		if (eq0(anchorDiff.dot(dirCross))) {
+			const tThis = anchorDiff.cross(dirWC).dot(dirCross) / div
+			const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div
+			const p = this.at(tThis)
+			return [{ tThis: tThis, tOther: tOther, p: p }]
+		}
+		return []
 	}
 
 	isInfoWithLine(line: L3): V3 | undefined {
@@ -261,7 +252,7 @@ export class L3 extends Curve {
 		// "s", s, "t", t, "div", div)
 	}
 
-	ddt(t: number): V3 {
+	ddt(): V3 {
 		return V3.O
 	}
 
@@ -275,7 +266,7 @@ export class L3 extends Curve {
 		return nearestT
 	}
 
-	infoClosestToLine(line: L3): { t: number; s?: number; closest?: V3; closest2?: V3; distance: number } {
+	infoClosestToLine(line: L3): { t: number; s: number; closest?: V3; closest2?: V3; distance: number } {
 		/*
 		 line = a + s*b
 		 this = c + t*d
@@ -333,7 +324,7 @@ export class L3 extends Curve {
 		return point
 	}
 
-	tangentAt(t: number): V3 {
+	tangentAt(): V3 {
 		return this.dir1
 	}
 
@@ -350,8 +341,8 @@ export class L3 extends Curve {
 		return new L3(this.anchor, this.dir1.negated(), -this.tMax, -this.tMin)
 	}
 
-	isTsWithPlane(plane: P3) {
-		return [this.isTWithPlane(plane)]
+	isTsWithPlane(planeWC: P3) {
+		return [this.isTWithPlane(planeWC)]
 	}
 
 	flipped() {

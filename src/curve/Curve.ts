@@ -36,7 +36,17 @@ import {
 
 import { abs, ceil, floor } from '../math'
 
-export type ISInfo = { tThis: number; tOther: number; p: V3 }
+/**
+ * Information about the intersection of two curves.
+ */
+export interface ISInfo {
+	/** curve parameter of the "this" curve */
+	tThis: number
+	/** curve parameter of the "other" curve */
+	tOther: number
+	/** intersection point */
+	p: V3
+}
 
 let insideIsInfosWithCurve = false
 
@@ -121,7 +131,7 @@ export abstract class Curve extends Transformable implements Equalable {
 			depth = 0,
 		) {
 			const EPS = NLA_PRECISION
-			if (curve1AABB.fuzzyTouchesAABB(curve2AABB)) {
+			if (curve1AABB.touchesAABBfuzzy(curve2AABB)) {
 				const tMid = (tMin + tMax) / 2
 				const sMid = (sMin + sMax) / 2
 				if (Math.abs(tMax - tMin) < EPS || Math.abs(sMax - sMin) < EPS) {
@@ -449,7 +459,7 @@ export abstract class Curve extends Transformable implements Equalable {
 
 	abstract isTsWithSurface(surface: Surface): number[]
 
-	abstract isTsWithPlane(plane: P3): number[]
+	abstract isTsWithPlane(planeWC: P3): number[]
 
 	arcLength(startT: number, endT: number, steps: int = 1): number {
 		assert(startT < endT, 'startT < endT')

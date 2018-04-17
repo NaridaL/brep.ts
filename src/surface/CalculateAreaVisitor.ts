@@ -183,7 +183,7 @@ export const CalculateAreaVisitor = {
 					const end = floor(maxT - NLA_PRECISION)
 					for (let i = start; i <= end; i++) {
 						const at = points[i],
-							tangent = tangents[i].toLength(edge.curve.stepSize)
+							tangent = tangents[i] //.toLength(edge.curve.stepSize)
 						const scaling = this.normalP(at)
 							.cross(thisDir1)
 							.unit()

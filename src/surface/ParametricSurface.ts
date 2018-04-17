@@ -6,8 +6,8 @@ import { breakDownPPCurves, Curve, Edge, ImplicitSurface, MathFunctionR2R, PICur
 import { ceil, min } from '../math'
 
 export abstract class ParametricSurface extends Surface {
-	uStep: number
-	vStep: number
+	uStep!: number
+	vStep!: number
 
 	constructor(readonly sMin: number, readonly sMax: number, readonly tMin: number, readonly tMax: number) {
 		super()

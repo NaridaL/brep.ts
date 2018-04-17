@@ -1,7 +1,19 @@
 import { assert, assertVectors, callsce, M4, newtonIterate, Tuple3, V3 } from 'ts3dutils'
-import { Curve, curvePointPP, followAlgorithmPP, ImplicitCurve, ParametricSurface } from '../index'
 
-import { ceil, floor } from '../math'
+import {
+	Curve,
+	curvePointPP,
+	followAlgorithmPP,
+	ImplicitCurve,
+	ImplicitSurface,
+	ISInfo,
+	P3,
+	ParametricSurface,
+	PlaneSurface,
+	Surface,
+	surfaceIsICurveIsInfosWithLine,
+} from '../index'
+import { abs, ceil, floor } from '../math'
 
 export class PPCurve extends ImplicitCurve {
 	constructor(
@@ -107,7 +119,7 @@ export class PPCurve extends ImplicitCurve {
 		return n1.cross(n2)
 	}
 
-	transform(m4: M4, desc?: string) {
+	transform(m4: M4) {
 		return new PPCurve(
 			m4.transformedPoints(this.points),
 			m4.transformedVectors(this.tangents),
@@ -121,8 +133,8 @@ export class PPCurve extends ImplicitCurve {
 		) as this
 	}
 
-	toSource(rounder: (x: number) => number = x => x): string {
-		const result = callsce(
+	toSource(): string {
+		return callsce(
 			'PPCurve.forStartEnd',
 			this.parametricSurface1,
 			this.parametricSurface2,
@@ -130,11 +142,57 @@ export class PPCurve extends ImplicitCurve {
 			this.points.last,
 			this.stepSize,
 		)
-		return result
 	}
 
 	static forStartEnd(ps1: ParametricSurface, ps2: ParametricSurface, startPoint: V3, end: V3, stepSize = 0.02) {
 		const { points, tangents, st1s } = followAlgorithmPP(ps1, ps2, startPoint, stepSize)
 		return new PPCurve(points, tangents, ps1, ps2, st1s, undefined, stepSize, 1)
+	}
+
+	isInfosWithLine(
+		anchorWC: V3,
+		dirWC: V3,
+		tMin?: number | undefined,
+		tMax?: number | undefined,
+		lineMin?: number | undefined,
+		lineMax?: number | undefined,
+	): ISInfo[] {
+		return surfaceIsICurveIsInfosWithLine.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax)
+	}
+
+	isTsWithSurface(surface: Surface): number[] {
+		if (ImplicitSurface.is(surface)) {
+			const result: number[] = []
+			const iF = surface.implicitFunction()
+			const pST1 = this.parametricSurface1.pSTFunc()
+			const pST2 = this.parametricSurface2.pSTFunc()
+			let prevSignedDistance = iF(this.points[0])
+			for (let i = 1; i < this.points.length; i++) {
+				const point = this.points[i]
+				const signedDistance = iF(point)
+				if (prevSignedDistance * signedDistance <= 0) {
+					const startIndex = abs(prevSignedDistance) < abs(signedDistance) ? i - 1 : i
+					const startPoint = this.points[startIndex]
+					const startST = this.st1s[startIndex]
+					const startUV = this.parametricSurface2.stP(startPoint)
+					const isSTUV = newtonIterate(
+						([s, t, u, v]: number[]) => {
+							const ps1p = pST1(s, t)
+							const ps2p = pST2(u, v)
+							return [...ps1p.to(ps2p), iF(ps1p)]
+						},
+						[startST.x, startST.y, startUV.x, startUV.y],
+					)
+					result.push(this.pointT(this.parametricSurface1.pST(isSTUV[0], isSTUV[1])))
+				}
+				prevSignedDistance = signedDistance
+			}
+			return result
+		}
+		throw new Error('Method not implemented.')
+	}
+
+	isTsWithPlane(planeWC: P3): number[] {
+		return this.isTsWithSurface(new PlaneSurface(planeWC))
 	}
 }

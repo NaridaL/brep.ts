@@ -6685,11 +6685,11 @@ class M4 extends Matrix {
     transformPoint(v) {
         assertVectors(v);
         const m = this.m;
-        const vx = v.x, vy = v.y, vz = v.z, vw = 1;
-        const x = vx * m[0] + vy * m[1] + vz * m[2] + vw * m[3];
-        const y = vx * m[4] + vy * m[5] + vz * m[6] + vw * m[7];
-        const z = vx * m[8] + vy * m[9] + vz * m[10] + vw * m[11];
-        const w = vx * m[12] + vy * m[13] + vz * m[14] + vw * m[15];
+        const vx = v.x, vy = v.y, vz = v.z;
+        const x = vx * m[0] + vy * m[1] + vz * m[2] + m[3];
+        const y = vx * m[4] + vy * m[5] + vz * m[6] + m[7];
+        const z = vx * m[8] + vy * m[9] + vz * m[10] + m[11];
+        const w = vx * m[12] + vy * m[13] + vz * m[14] + m[15];
         // scale such that fourth element becomes 1:
         return new V3(x / w, y / w, z / w);
     }
@@ -6704,6 +6704,10 @@ class M4 extends Matrix {
         const w = v.x * m[12] + v.y * m[13] + v.z * m[14];
         assert(w === 0, () => 'w === 0 needs to be true for this to make sense (w =' + w + this.str);
         return new V3(m[0] * v.x + m[1] * v.y + m[2] * v.z, m[4] * v.x + m[5] * v.y + m[6] * v.z, m[8] * v.x + m[9] * v.y + m[10] * v.z);
+    }
+    transformVector2(v, anchor) {
+        assertVectors(v, anchor);
+        return this.transformPoint(anchor).to(this.transformPoint(anchor.plus(v)));
     }
     transformedPoints(vs) {
         return vs.map(v => this.transformPoint(v));
@@ -7094,11 +7098,11 @@ class AABB extends Transformable {
             || this.min.y > aabb.max.y || this.max.y < aabb.min.y
             || this.min.z > aabb.max.z || this.max.z < aabb.min.z);
     }
-    fuzzyTouchesAABB(aabb) {
+    touchesAABBfuzzy(aabb, precisision = NLA_PRECISION) {
         assertInst(AABB, aabb);
-        return !(lt(aabb.max.x, this.min.x) || lt(this.max.x, aabb.min.x)
-            || lt(aabb.max.y, this.min.y) || lt(this.max.y, aabb.min.y)
-            || lt(aabb.max.z, this.min.z) || lt(this.max.z, aabb.min.z));
+        return !(lt(aabb.max.x, this.min.x, precisision) || lt(this.max.x, aabb.min.x, precisision)
+            || lt(aabb.max.y, this.min.y, precisision) || lt(this.max.y, aabb.min.y, precisision)
+            || lt(aabb.max.z, this.min.z, precisision) || lt(this.max.z, aabb.min.z, precisision));
     }
     intersectsAABB(aabb) {
         assertInst(AABB, aabb);
@@ -12778,7 +12782,7 @@ class Curve$$1 extends Transformable {
         // returns whether an intersection was immediately found (i.e. without further recursion)
         function findRecursive(tMin, tMax, sMin, sMax, curve1AABB, curve2AABB, depth = 0) {
             const EPS$$1 = NLA_PRECISION;
-            if (curve1AABB.fuzzyTouchesAABB(curve2AABB)) {
+            if (curve1AABB.touchesAABBfuzzy(curve2AABB)) {
                 const tMid = (tMin + tMax) / 2;
                 const sMid = (sMin + sMax) / 2;
                 if (Math.abs(tMax - tMin) < EPS$$1 || Math.abs(sMax - sMin) < EPS$$1) {
@@ -13351,8 +13355,8 @@ class XiEtaCurve$$1 extends Curve$$1 {
     getPlane() {
         return P3$$1.normalOnAnchor(this.normal, this.center);
     }
-    isTsWithPlane(plane) {
-        assertInst(P3$$1, plane);
+    isTsWithPlane(planeWC) {
+        assertInst(P3$$1, planeWC);
         /*
          this: x = center + f1 * cos t + f2 * sin t  (1)
          plane:
@@ -13372,10 +13376,10 @@ class XiEtaCurve$$1 extends Curve$$1 {
          solve system (5)/(6)
          g1 * xi + g2 * eta = g3 (6)
          */
-        if (plane.normal1.isParallelTo(this.normal)) {
+        if (planeWC.normal1.isParallelTo(this.normal)) {
             return [];
         }
-        const n = plane.normal1, w = plane.w, center = this.center, f1 = this.f1, f2 = this.f2, g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center);
+        const n = planeWC.normal1, w = planeWC.w, center = this.center, f1 = this.f1, f2 = this.f2, g1 = n.dot(f1), g2 = n.dot(f2), g3 = w - n.dot(center);
         return this.constructor.intersectionUnitLine(g1, g2, g3, this.tMin, this.tMax);
     }
     pointT(p) {
@@ -13589,6 +13593,18 @@ class ImplicitCurve$$1 extends Curve$$1 {
     }
 }
 ImplicitCurve$$1.prototype.tIncrement = 1;
+/**
+ * isInfosWithLine for an ImplicitCurve defined as the intersection of two surfaces.
+ */
+function surfaceIsICurveIsInfosWithLine$$1(surface1, surface2, anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
+    const line = new L3$$1(anchorWC, dirWC.unit());
+    const psTs = surface1.isTsForLine(line);
+    const isTs = surface2.isTsForLine(line);
+    const commonTs = psTs.filter(psT => isTs.some(isT => eq(psT, isT)));
+    const commonTInfos = commonTs.map(t => ({ tThis: 0, tOther: t / dirWC.length(), p: line.at(t) }));
+    const result = commonTInfos.filter(info => this.containsPoint(info.p));
+    result.forEach(info => (info.tThis = this.pointT(info.p)));
+}
 
 class BezierCurve$$1 extends Curve$$1 {
     constructor(p0, p1, p2, p3, tMin = -0.1, tMax = 1.1) {
@@ -13682,8 +13698,8 @@ class BezierCurve$$1 extends Curve$$1 {
         const rot = tangent.cross(this.ddt(t));
         return rot.cross(tangent);
     }
-    isTsWithPlane(plane) {
-        assertInst(P3$$1, plane);
+    isTsWithPlane(planeWC) {
+        assertInst(P3$$1, planeWC);
         /*
          We are solving for t:
          n := plane.normal1
@@ -13692,7 +13708,7 @@ class BezierCurve$$1 extends Curve$$1 {
          (a DOT n) t³ + (b DOT n) t³ + (c DOT n) t + d DOT n - plane.w == 0 // multiply out DOT n, minus plane.w
          */
         const { p0, p1, p2, p3 } = this;
-        const n = plane.normal1;
+        const n = planeWC.normal1;
         const a = p1
             .minus(p2)
             .times(3)
@@ -13704,7 +13720,7 @@ class BezierCurve$$1 extends Curve$$1 {
             .minus(p1.times(6));
         const c = p1.minus(p0).times(3);
         const d = p0;
-        return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - plane.w).filter(t => between(t, this.tMin, this.tMax));
+        return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - planeWC.w).filter(t => between(t, this.tMin, this.tMax));
     }
     isTsWithSurface(surface) {
         if (surface instanceof PlaneSurface$$1) {
@@ -13724,13 +13740,15 @@ class BezierCurve$$1 extends Curve$$1 {
         }
         if (surface instanceof SemiEllipsoidSurface$$1) {
             const thisOC = this.transform(surface.matrixInverse);
+            if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
+                return [];
+            }
             const f = (t) => thisOC.at(t).length() - 1;
             const df = (t) => thisOC
                 .at(t)
                 .unit()
                 .dot(thisOC.tangentAt(t));
             const stepSize = 1 / (1 << 11);
-            const STEPS = (this.tMax - this.tMin) / stepSize;
             const result = [];
             for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
                 const dt = stepSize * thisOC.tangentAt(startT).length();
@@ -14007,12 +14025,12 @@ class BezierCurve$$1 extends Curve$$1 {
         return arrayFromFunction(3, dim => solveCubicReal2(0, a.e(dim), b.e(dim), c.e(dim)));
     }
     isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin = -100000, lineMax = 100000) {
-        const dirLength = dirWC.length();
-        // TODO: no:
-        let result = Curve$$1.ispsRecursive(this, this.tMin, this.tMax, new L3$$1(anchorWC, dirWC.unit()), lineMin, lineMax);
-        result = fuzzyUniquesF(result, info => info.tOther);
-        result.forEach(info => (info.tOther /= dirLength));
-        return result;
+        // const dirLength = dirWC.length()
+        // // TODO: no:
+        // let result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchorWC, dirWC.unit()), lineMin, lineMax)
+        // result = fuzzyUniquesF(result, info => info.tOther)
+        // result.forEach(info => (info.tOther /= dirLength))
+        // return result
         // looking for this.at(t) == line.at(s)
         // this.at(t).x == anchorWC.x + dirWC.x * s
         // (this.at(t).x - anchorWC.x) / dirWC.x == s (analogue for y and z) (1x, 1y, 1z)
@@ -14026,38 +14044,14 @@ class BezierCurve$$1 extends Curve$$1 {
             .times(3)
             .minus(p0)
             .plus(p3);
-        const b = p0
-            .plus(p2)
-            .times(3)
-            .minus(p1.times(6));
-        const c = p1.minus(p0).times(3);
-        const d = p0;
-        // modifier cubic equation stP to get (1)
-        // const w = a.x * dirWC.y - a.y * dirWC.x
-        // const x = b.x * dirWC.y - b.y * dirWC.x
-        // const y = c.x * dirWC.y - c.y * dirWC.x
-        // const z = (d.x - anchorWC.x) * dirWC.y - (d.y - anchorWC.y) * dirWC.x
-        // the above version doesn't work for dirWC.x == dirWC.y == 0, so:
-        const absMinDim = dirWC.minAbsDim();
-        const [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim];
-        const w = a.e(coord0) * dirWC.e(coord1) - a.e(coord1) * dirWC.e(coord0);
-        const x = b.e(coord0) * dirWC.e(coord1) - b.e(coord1) * dirWC.e(coord0);
-        const y = c.e(coord0) * dirWC.e(coord1) - c.e(coord1) * dirWC.e(coord0);
-        const z = (d.e(coord0) - anchorWC.e(coord0)) * dirWC.e(coord1) - (d.e(coord1) - anchorWC.e(coord1)) * dirWC.e(coord0);
-        tMin = undefined !== tMin ? tMin : this.tMin;
-        tMax = undefined !== tMax ? tMax : this.tMax;
-        // we ignored a dimension in the previous step, so we need to check it too
-        return solveCubicReal2(w, x, y, z).mapFilter(tThis => {
-            if (tMin <= tThis && tThis <= tMax) {
-                const p = this.at(tThis);
-                // console.log(t*t*t*w+t*t*x+t*y+z, dirWC.length())
-                const s = p.minus(anchorWC).dot(dirWC) / dirWC.dot(dirWC);
-                const lineAtS = dirWC.times(s).plus(anchorWC);
-                if (lineAtS.like(p))
-                    return { tThis: tThis, tOther: s, p: p };
-            }
-            return undefined;
-        });
+        const v1 = V3.UNITS[a.minAbsDim()];
+        const testPlane = P3$$1.forAnchorAndPlaneVectors(anchorWC, dirWC, v1.isParallelTo(dirWC) ? a : v1);
+        return this.isTsWithPlane(testPlane)
+            .map(tThis => {
+            const p = this.at(tThis);
+            return { tThis, tOther: L3$$1.pointT(anchorWC, dirWC, p), p };
+        })
+            .filter(info => L3$$1.containsPoint(anchorWC, dirWC, info.p));
     }
     closestPointToLine(line, tMin, tMax) {
         // (this(t)-line(s)) * line.dir == 0 (1)
@@ -14106,14 +14100,6 @@ class BezierCurve$$1 extends Curve$$1 {
         sMax = undefined !== sMax ? sMax : bezier.tMax;
         // stack of indices:
         const indices = [tMin, tMax, sMin, sMax];
-        const tMid = (tMin + tMax) / 2;
-        const sMid = (sMin + sMax) / 2;
-        const aabbs = [
-            this.getAABB(tMin, tMid),
-            this.getAABB(tMid, tMax),
-            bezier.getAABB(sMin, sMin),
-            bezier.getAABB(sMid, sMax),
-        ];
         const result = [];
         while (indices.length) {
             const i = indices.length - 4;
@@ -14199,18 +14185,18 @@ class BezierCurve$$1 extends Curve$$1 {
      * @param REL_ERROR max allowable relative error.
      * @param result Resulting circle arcs are stored in this array. Mainly used by the recursion.
      */
-    circleApprox(t0 = this.tMin, t1 = this.tMax, REL_ERR = 1 / 1024, result = []) {
+    circleApprox(t0 = this.tMin, t1 = this.tMax, REL_ERROR = 1 / 1024, result = []) {
         const a = this.at(t0), b = this.at(t1), tMid = (t0 + t1) / 2, pMid = this.at(tMid), abLine = L3$$1.throughPoints(a, b);
         if (!abLine.containsPoint(pMid) && between(abLine.pointT(pMid), 0, abLine.pointT(b))) {
             const arc = SemiEllipseCurve$$1.circleThroughPoints(a, pMid, b), arcRadius = arc.f1.length(), pTest1 = this.at(lerp(t0, t1, 0.25)), pTest2 = this.at(lerp(t0, t1, 0.75));
-            if (abs$2(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERR &&
-                abs$2(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERR) {
+            if (abs$2(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERROR &&
+                abs$2(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERROR) {
                 result.push(arc);
                 return result;
             }
         }
-        this.circleApprox(t0, tMid, REL_ERR, result);
-        this.circleApprox(tMid, t1, REL_ERR, result);
+        this.circleApprox(t0, tMid, REL_ERROR, result);
+        this.circleApprox(tMid, t1, REL_ERROR, result);
         return result;
     }
 }
@@ -14351,9 +14337,6 @@ class L3$$1 extends Curve$$1 {
         assert(dir1.hasLength(1), 'dir must be unit' + dir1);
         assertf(() => !Number.isNaN(anchor.x));
     }
-    isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
-        throw new Error('Method not implemented.');
-    }
     isTsWithSurface(surface) {
         return surface.isTsForLine(this);
     }
@@ -14487,22 +14470,25 @@ class L3$$1 extends Curve$$1 {
     }
     isInfosWithCurve(curve) {
         if (curve instanceof L3$$1) {
-            const dirCross = this.dir1.cross(curve.dir1);
-            const div = dirCross.squared();
-            if (eq0(div)) {
-                // lines are parallel
-                return [];
-            }
-            const anchorDiff = curve.anchor.minus(this.anchor);
-            if (eq0(anchorDiff.dot(dirCross))) {
-                const tThis = anchorDiff.cross(curve.dir1).dot(dirCross) / div;
-                const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div;
-                const p = this.at(tThis);
-                return [{ tThis: tThis, tOther: tOther, p: p }];
-            }
-            return [];
+            return this.isInfosWithLine(curve.anchor, curve.dir1);
         }
         return super.isInfosWithCurve(curve);
+    }
+    isInfosWithLine(anchorWC, dirWC) {
+        const dirCross = this.dir1.cross(dirWC);
+        const div = dirCross.squared();
+        if (eq0(div)) {
+            // lines are parallel
+            return [];
+        }
+        const anchorDiff = anchorWC.minus(this.anchor);
+        if (eq0(anchorDiff.dot(dirCross))) {
+            const tThis = anchorDiff.cross(dirWC).dot(dirCross) / div;
+            const tOther = anchorDiff.cross(this.dir1).dot(dirCross) / div;
+            const p = this.at(tThis);
+            return [{ tThis: tThis, tOther: tOther, p: p }];
+        }
+        return [];
     }
     isInfoWithLine(line) {
         // todo infos?
@@ -14538,7 +14524,7 @@ class L3$$1 extends Curve$$1 {
         //console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1,
         // "s", s, "t", t, "div", div)
     }
-    ddt(t) {
+    ddt() {
         return V3.O;
     }
     getConstructorParameters() {
@@ -14598,7 +14584,7 @@ class L3$$1 extends Curve$$1 {
         const point = this.anchor.plus(this.dir1.times(lambda));
         return point;
     }
-    tangentAt(t) {
+    tangentAt() {
         return this.dir1;
     }
     isTWithPlane(plane) {
@@ -14613,8 +14599,8 @@ class L3$$1 extends Curve$$1 {
     reversed() {
         return new L3$$1(this.anchor, this.dir1.negated(), -this.tMax, -this.tMin);
     }
-    isTsWithPlane(plane) {
-        return [this.isTWithPlane(plane)];
+    isTsWithPlane(planeWC) {
+        return [this.isTWithPlane(planeWC)];
     }
     flipped() {
         return new L3$$1(this.anchor, this.dir1.negated());
@@ -14792,6 +14778,7 @@ class PICurve$$1 extends ImplicitCurve$$1 {
         return curvePoint$$1(this.implicitCurve(), startParams, this.dids, this.didt);
     }
     closestTToPoint(p, tStart) {
+        // TODO
         return 0;
     }
     closestPointToParams(startParams) {
@@ -14799,37 +14786,38 @@ class PICurve$$1 extends ImplicitCurve$$1 {
         return this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y);
     }
     isTsWithSurface(surface) {
-        if (surface instanceof PlaneSurface$$1) {
-            return this.isTsWithPlane(surface.plane);
-        }
-        else if (surface instanceof SemiEllipsoidSurface$$1) {
-            const ps = this.parametricSurface, is = this.implicitSurface;
-            if (ps instanceof ProjectedCurveSurface$$1 && is instanceof SemiEllipsoidSurface$$1) {
-                const iscs = is.isCurvesWithSurface(surface);
-                const points = iscs.flatMap(isc => isc.isTsWithSurface(ps).map(t => isc.at(t)));
+        if (surface instanceof SemiEllipsoidSurface$$1) {
+            const pS = this.parametricSurface, iS = this.implicitSurface;
+            if (pS instanceof ProjectedCurveSurface$$1 && iS instanceof SemiEllipsoidSurface$$1) {
+                const iscs = iS.isCurvesWithSurface(surface);
+                const points = iscs.flatMap(isc => isc.isTsWithSurface(pS).map(t => isc.at(t)));
                 const ts = fuzzyUniques(points.map(p => this.pointT(p)));
                 return ts.filter(t => !isNaN(t) && this.isValidT(t));
             }
         }
+        else if (ImplicitSurface$$1.is(surface)) {
+            const result = [];
+            const iF = surface.implicitFunction();
+            let prevSignedDistance = iF(this.points[0]);
+            for (let i = 1; i < this.points.length; i++) {
+                const point = this.points[i];
+                const signedDistance = iF(point);
+                if (prevSignedDistance * signedDistance <= 0) {
+                    const pF = this.parametricSurface.pSTFunc();
+                    const dpds = this.parametricSurface.dpds();
+                    const dpdt = this.parametricSurface.dpdt();
+                    const startST = this.pmPoints[abs$2(prevSignedDistance) < abs$2(signedDistance) ? i - 1 : i];
+                    const isST = newtonIterate2dWithDerivatives(this.implicitCurve(), (s, t) => iF(pF(s, t)), startST.x, startST.y, 4, this.dids, this.didt, (s, t) => dpds(s, t).dot(surface.didp(pF(s, t))), (s, t) => dpdt(s, t).dot(surface.didp(pF(s, t))));
+                    result.push(this.pointT(this.parametricSurface.pST(isST.x, isST.y)));
+                }
+                prevSignedDistance = signedDistance;
+            }
+            return result;
+        }
         throw new Error();
     }
     isTsWithPlane(planeWC) {
-        const result = [];
-        let prevSignedDistance = planeWC.distanceToPointSigned(this.points[0]);
-        for (let i = 1; i < this.points.length; i++) {
-            const point = this.points[i];
-            const signedDistance = planeWC.distanceToPointSigned(point);
-            if (prevSignedDistance * signedDistance <= 0) {
-                const pF = this.parametricSurface.pSTFunc();
-                const dpds = this.parametricSurface.dpds();
-                const dpdt = this.parametricSurface.dpdt();
-                const startST = this.pmPoints[abs$2(prevSignedDistance) < abs$2(signedDistance) ? i - 1 : i];
-                const isST = newtonIterate2dWithDerivatives(this.implicitCurve(), (s, t) => planeWC.distanceToPointSigned(pF(s, t)), startST.x, startST.y, 4, this.dids, this.didt, (s, t) => dpds(s, t).dot(planeWC.normal1), (s, t) => dpdt(s, t).dot(planeWC.normal1));
-                result.push(this.pointT(this.parametricSurface.pST(isST.x, isST.y)));
-            }
-            prevSignedDistance = signedDistance;
-        }
-        return result;
+        return this.isTsWithSurface(new PlaneSurface$$1(planeWC));
         // version which intersects the plane with the defining surfaces of this PICurve, but this causes
         // issues when they are PICurves too:
         // assertInst(P3, planeWC)
@@ -14925,7 +14913,7 @@ class PICurve$$1 extends ImplicitCurve$$1 {
         return [allTs, allTs, allTs];
     }
     isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
-        throw new Error('Method not implemented.');
+        return surfaceIsICurveIsInfosWithLine$$1.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
     }
     toSource(rounder = x => x) {
         const result = callsce('PICurve.forParametricStartEnd', this.parametricSurface, this.implicitSurface, this.pmPoints[0], this.pmPoints.last, this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
@@ -15019,16 +15007,49 @@ class PPCurve$$1 extends ImplicitCurve$$1 {
         const n2 = this.parametricSurface2.normalP(pWC);
         return n1.cross(n2);
     }
-    transform(m4, desc) {
+    transform(m4) {
         return new PPCurve$$1(m4.transformedPoints(this.points), m4.transformedVectors(this.tangents), this.parametricSurface1.transform(m4), this.parametricSurface2.transform(m4), this.st1s, undefined, this.stepSize, this.dir, undefined);
     }
-    toSource(rounder = x => x) {
-        const result = callsce('PPCurve.forStartEnd', this.parametricSurface1, this.parametricSurface2, this.points[0], this.points.last, this.stepSize);
-        return result;
+    toSource() {
+        return callsce('PPCurve.forStartEnd', this.parametricSurface1, this.parametricSurface2, this.points[0], this.points.last, this.stepSize);
     }
     static forStartEnd(ps1, ps2, startPoint, end, stepSize = 0.02) {
         const { points, tangents, st1s } = followAlgorithmPP$$1(ps1, ps2, startPoint, stepSize);
         return new PPCurve$$1(points, tangents, ps1, ps2, st1s, undefined, stepSize, 1);
+    }
+    isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
+        return surfaceIsICurveIsInfosWithLine$$1.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
+    }
+    isTsWithSurface(surface) {
+        if (ImplicitSurface$$1.is(surface)) {
+            const result = [];
+            const iF = surface.implicitFunction();
+            const pST1 = this.parametricSurface1.pSTFunc();
+            const pST2 = this.parametricSurface2.pSTFunc();
+            let prevSignedDistance = iF(this.points[0]);
+            for (let i = 1; i < this.points.length; i++) {
+                const point = this.points[i];
+                const signedDistance = iF(point);
+                if (prevSignedDistance * signedDistance <= 0) {
+                    const startIndex = abs$2(prevSignedDistance) < abs$2(signedDistance) ? i - 1 : i;
+                    const startPoint = this.points[startIndex];
+                    const startST = this.st1s[startIndex];
+                    const startUV = this.parametricSurface2.stP(startPoint);
+                    const isSTUV = newtonIterate(([s, t, u, v]) => {
+                        const ps1p = pST1(s, t);
+                        const ps2p = pST2(u, v);
+                        return [...ps1p.to(ps2p), iF(ps1p)];
+                    }, [startST.x, startST.y, startUV.x, startUV.y]);
+                    result.push(this.pointT(this.parametricSurface1.pST(isSTUV[0], isSTUV[1])));
+                }
+                prevSignedDistance = signedDistance;
+            }
+            return result;
+        }
+        throw new Error('Method not implemented.');
+    }
+    isTsWithPlane(planeWC) {
+        return this.isTsWithSurface(new PlaneSurface$$1(planeWC));
     }
 }
 
@@ -15674,6 +15695,7 @@ class P3$$1 extends Transformable {
         return line.intersectionWithPlane(this);
     }
     intersectionWithPlane(plane) {
+        assertInst(P3$$1, plane);
         /*
 
          this: n0 * x = w0
@@ -15682,8 +15704,9 @@ class P3$$1 extends Transformable {
          n2 := n0 X x1
          n2 * x = 0
          */
-        assertInst(P3$$1, plane);
-        assert(!this.isParallelToPlane(plane), '!this.isParallelToPlane(plane)');
+        if (this.isParallelToPlane(plane)) {
+            return undefined;
+        }
         /*
          var n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit(), m = M4.forSys(n0, n1, n2)
          var x0 = this.anchor, x1 = plane.anchor, x2 = V3.O
@@ -16153,8 +16176,8 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
                 else if (aa > cc) {
                     // hyperbola
                     const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa));
-                    const p1 = new V3(d / (a - c), 0, -d / (a - c));
-                    const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa));
+                    // const p1 = new V3(d / (a - c), 0, -d / (a - c))
+                    // const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
                     // const f1 = center.to(p1)
                     const f1 = new V3(d * c / (aa - cc), 0, -d * a / (aa - cc));
                     const f2 = new V3(0, d / sqrt(aa - cc), 0);
@@ -16304,7 +16327,7 @@ class ConicSurface$$1 extends ParametricSurface$$1 {
     }
     normalSTFunc() {
         const { f1, f2 } = this, f3 = this.dir;
-        return (d, z) => {
+        return (d, _z) => {
             return f2
                 .cross(f1)
                 .plus(f2.cross(f3.times(Math.cos(d))))
@@ -17181,7 +17204,6 @@ class SemiEllipsoidSurface$$1 extends ParametricSurface$$1 {
         return curves2;
     }
     isCurvesWithPCSSmart(surface) {
-        //return []
         const surfaceLC = surface.transform(this.matrixInverse);
         //const lcMinZ0RelO =
         const baseCurveLC = surfaceLC.baseCurve.project(new P3$$1(surfaceLC.dir, 0));
@@ -17575,10 +17597,8 @@ class PlaneSurface$$1 extends ParametricSurface$$1 {
         return super.isCurvesWithSurface(surface2);
     }
     isCurvesWithPlane(plane) {
-        if (this.plane.isParallelToPlane(plane)) {
-            return [];
-        }
-        return [this.plane.intersectionWithPlane(plane)];
+        const result = this.plane.intersectionWithPlane(plane);
+        return result ? [result] : [];
     }
     edgeLoopCCW(contour) {
         assert(Edge$$1.isLoop(contour), 'isLoop');
@@ -18167,7 +18187,7 @@ const CalculateAreaVisitor$$1 = {
                 const start = ceil(minT + NLA_PRECISION);
                 const end = floor(maxT - NLA_PRECISION);
                 for (let i = start; i <= end; i++) {
-                    const at = points[i], tangent = tangents[i].toLength(edge.curve.stepSize);
+                    const at = points[i], tangent = tangents[i]; //.toLength(edge.curve.stepSize)
                     const scaling = this.normalP(at)
                         .cross(thisDir1)
                         .unit()
@@ -30315,6 +30335,7 @@ function rotateCurve$$1(curve, tMin = curve.tMin, tMax = curve.tMax, degrees, fl
         if (curve.dir1.isParallelTo(V3.Z)) {
             if (eq0(curve.anchor.x)) {
                 return undefined;
+                //throw new Error('Cannot rotate curve colinear to Z axis.')
             }
             const baseEllipse = new SemiEllipseCurve$$1(V3.O, curve.anchor.xy(), curve.anchor.xy().getPerpendicular(), 0, degrees);
             // if curve.dir1 is going up (+Z), it the cylinder surface should face inwards
@@ -30593,7 +30614,7 @@ var B2T$$1;
                         stepEndEdges[edgeIndex],
                         !eq0(edge.b.x) && ribs[ipp].flipped(),
                     ].filter((x) => x);
-                    const surface = 0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot);
+                    const surface = (0 === rot ? baseSurfaces[edgeIndex] : baseSurfaces[edgeIndex].rotateZ(rot));
                     const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined);
                     faces.push(Face$$1.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info));
                 }
@@ -31508,7 +31529,6 @@ class Edge$$1 extends Transformable {
         if (false === edgeAT && false === edgeBT) {
             return noback ? false : edge.overlaps(this, true);
         }
-        const flipped = false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edge.bT).dot(edge.bDir);
         return !(le(edge.maxT, this.minT) || le(this.maxT, edge.minT));
     }
     getAABB() {
@@ -32067,7 +32087,7 @@ class Face$$1 extends Transformable {
         assertInst(Face$$1, face2);
         const face = this;
         const surface = face.surface, surface2 = face2.surface;
-        if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
+        if (!this.getAABB().touchesAABBfuzzy(face2.getAABB())) {
             return;
         }
         if (surface.isCoplanarTo(surface2)) {
@@ -43146,9 +43166,45 @@ class BRep$$1 extends Transformable {
         }
         const newFaces = [];
         if (0 == faceMap.size && 0 == thisEdgePoints.size && 0 == otherEdgePoints.size) {
-            const thisInOther = other.containsPoint(this.faces[0].contour[0].a, true);
-            const otherInThis = !thisInOther && this.containsPoint(other.faces[0].contour[0].a);
-            return this;
+            const thisInOther = other.containsPoint(this.faces[0].contour[0].a, true) !== other.infiniteVolume;
+            const otherInThis = !thisInOther && this.containsPoint(other.faces[0].contour[0].a) !== this.infiniteVolume;
+            if (thisInOther || otherInThis) {
+                const [inside, outside] = thisInOther ? [this, other] : [other, this];
+                if (inside.infiniteVolume) {
+                    if (outside.infiniteVolume) {
+                        return outside;
+                    }
+                    else {
+                        return BRep$$1.join([inside, outside]);
+                    }
+                }
+                else {
+                    if (outside.infiniteVolume) {
+                        return BRep$$1.EMPTY;
+                    }
+                    else {
+                        return inside;
+                    }
+                }
+            }
+            else {
+                if (this.infiniteVolume) {
+                    if (other.infiniteVolume) {
+                        return BRep$$1.join([this, other]);
+                    }
+                    else {
+                    }
+                }
+                else {
+                    if (other.infiniteVolume) {
+                        return this;
+                    }
+                    else {
+                        return BRep$$1.EMPTY;
+                    }
+                }
+            }
+            return BRep$$1.EMPTY;
         }
         else {
             if (buildThis) {
@@ -43587,9 +43643,7 @@ function followAlgorithmPP$$1(ps1, ps2, startPoint, curveStepSize, bounds1 = stI
     assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)));
     assert(ps2.pST(st2.x, st2.y).like(Q));
     for (let i = 0; i < 1000; i++) {
-        {
-            ({ p: Q, st1, st2 } = curvePointPP$$1(ps1, ps2, Q));
-        }
+        ({ p: Q, st1, st2 } = curvePointPP$$1(ps1, ps2, Q));
         assert(ps1.containsPoint(Q), Q, ps1);
         assert(ps2.containsPoint(Q));
         const aNormal = ps1.normalST(st1.x, st1.y);
@@ -43659,7 +43713,7 @@ function followAlgorithm2d$$1(ic, startP, stepLength = 0.5, bounds, validST, end
         // check if loop
         if (fullLoop) {
             if (p.distanceTo(startP) > abs$2(stepLength)) {
-                const p = points.pop();
+                points.pop();
                 tangents.pop();
                 assert(points.last.distanceTo(startP) <= abs$2(stepLength));
                 break;
@@ -43733,7 +43787,6 @@ function followAlgorithm2dAdjustable$$1(ic, start, stepLength = 0.5, bounds, end
         const c2 = new V3(dfpdx, dfpdy, 0).times(c2factor);
         const s = 1 / 16 / c2.length();
         const tangent = new V3(-dfpdy, dfpdx, 0).unit();
-        const reversedDir = p.minus(prevp).dot(tangent) < 0;
         const newPStart = p.plus(tangent.times(s).plus(c2.times(Math.pow(s, 2) / 2)));
         points.push(p);
         tangents.push(tangent);
@@ -44635,6 +44688,7 @@ var brepts = Object.freeze({
 	curvePointMF: curvePointMF$$1,
 	Curve: Curve$$1,
 	XiEtaCurve: XiEtaCurve$$1,
+	surfaceIsICurveIsInfosWithLine: surfaceIsICurveIsInfosWithLine$$1,
 	ImplicitCurve: ImplicitCurve$$1,
 	BezierCurve: BezierCurve$$1,
 	HyperbolaCurve: HyperbolaCurve$$1,

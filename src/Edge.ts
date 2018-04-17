@@ -482,8 +482,6 @@ export abstract class Edge extends Transformable {
 		if (false === edgeAT && false === edgeBT) {
 			return noback ? false : edge.overlaps(this, true)
 		}
-		const flipped =
-			false !== edgeAT ? this.tangentAt(edgeAT).dot(edge.aDir) : this.tangentAt(edge.bT).dot(edge.bDir)
 		return !(le(edge.maxT, this.minT) || le(this.maxT, edge.minT))
 	}
 

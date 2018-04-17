@@ -1,4 +1,5 @@
 import {
+	AABB,
 	arrayFromFunction,
 	assert,
 	assertf,
@@ -11,7 +12,6 @@ import {
 	eq,
 	eq0,
 	fuzzyUniques,
-	fuzzyUniquesF,
 	hasConstructor,
 	int,
 	lerp,
@@ -199,8 +199,8 @@ export class BezierCurve extends Curve {
 		return rot.cross(tangent)
 	}
 
-	isTsWithPlane(plane: P3) {
-		assertInst(P3, plane)
+	isTsWithPlane(planeWC: P3) {
+		assertInst(P3, planeWC)
 		/*
 		 We are solving for t:
 		 n := plane.normal1
@@ -210,7 +210,7 @@ export class BezierCurve extends Curve {
 		 */
 
 		const { p0, p1, p2, p3 } = this
-		const n = plane.normal1
+		const n = planeWC.normal1
 		const a = p1
 			.minus(p2)
 			.times(3)
@@ -223,7 +223,7 @@ export class BezierCurve extends Curve {
 		const c = p1.minus(p0).times(3)
 		const d = p0
 
-		return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - plane.w).filter(t =>
+		return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - planeWC.w).filter(t =>
 			between(t, this.tMin, this.tMax),
 		)
 	}
@@ -246,6 +246,9 @@ export class BezierCurve extends Curve {
 		}
 		if (surface instanceof SemiEllipsoidSurface) {
 			const thisOC = this.transform(surface.matrixInverse)
+			if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
+				return []
+			}
 			const f = (t: number) => thisOC.at(t).length() - 1
 			const df = (t: number) =>
 				thisOC
@@ -254,7 +257,6 @@ export class BezierCurve extends Curve {
 					.dot(thisOC.tangentAt(t))
 
 			const stepSize = 1 / (1 << 11)
-			const STEPS = (this.tMax - this.tMin) / stepSize
 			const result: number[] = []
 			for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
 				const dt = stepSize * thisOC.tangentAt(startT).length()
@@ -262,8 +264,6 @@ export class BezierCurve extends Curve {
 					//const t = newtonIterate1d(f, startT, 16)
 					let t = newtonIterateWithDerivative(f, startT, 16, df)
 					if (!eq0(f(t)) || eq0(df(t))) {
-						const a = startT - dt,
-							b = startT + dt
 						t = newtonIterate1d(df, startT, 16)
 						//if (f(a) * f(b) < 0) {
 						//    t = bisect(f, a, b, 16)
@@ -573,12 +573,12 @@ export class BezierCurve extends Curve {
 		lineMin = -100000,
 		lineMax = 100000,
 	): ISInfo[] {
-		const dirLength = dirWC.length()
-		// TODO: no:
-		let result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchorWC, dirWC.unit()), lineMin, lineMax)
-		result = fuzzyUniquesF(result, info => info.tOther)
-		result.forEach(info => (info.tOther /= dirLength))
-		return result
+		// const dirLength = dirWC.length()
+		// // TODO: no:
+		// let result = Curve.ispsRecursive(this, this.tMin, this.tMax, new L3(anchorWC, dirWC.unit()), lineMin, lineMax)
+		// result = fuzzyUniquesF(result, info => info.tOther)
+		// result.forEach(info => (info.tOther /= dirLength))
+		// return result
 		// looking for this.at(t) == line.at(s)
 		// this.at(t).x == anchorWC.x + dirWC.x * s
 		// (this.at(t).x - anchorWC.x) / dirWC.x == s (analogue for y and z) (1x, 1y, 1z)
@@ -593,43 +593,16 @@ export class BezierCurve extends Curve {
 			.times(3)
 			.minus(p0)
 			.plus(p3)
-		const b = p0
-			.plus(p2)
-			.times(3)
-			.minus(p1.times(6))
-		const c = p1.minus(p0).times(3)
-		const d = p0
 
-		// modifier cubic equation stP to get (1)
-		// const w = a.x * dirWC.y - a.y * dirWC.x
-		// const x = b.x * dirWC.y - b.y * dirWC.x
-		// const y = c.x * dirWC.y - c.y * dirWC.x
-		// const z = (d.x - anchorWC.x) * dirWC.y - (d.y - anchorWC.y) * dirWC.x
+		const v1 = V3.UNITS[a.minAbsDim()]
+		const testPlane = P3.forAnchorAndPlaneVectors(anchorWC, dirWC, v1.isParallelTo(dirWC) ? a : v1)
 
-		// the above version doesn't work for dirWC.x == dirWC.y == 0, so:
-		const absMinDim = dirWC.minAbsDim()
-		const [coord0, coord1] = [[1, 2], [2, 0], [0, 1]][absMinDim]
-
-		const w = a.e(coord0) * dirWC.e(coord1) - a.e(coord1) * dirWC.e(coord0)
-		const x = b.e(coord0) * dirWC.e(coord1) - b.e(coord1) * dirWC.e(coord0)
-		const y = c.e(coord0) * dirWC.e(coord1) - c.e(coord1) * dirWC.e(coord0)
-		const z =
-			(d.e(coord0) - anchorWC.e(coord0)) * dirWC.e(coord1) - (d.e(coord1) - anchorWC.e(coord1)) * dirWC.e(coord0)
-
-		tMin = undefined !== tMin ? tMin : this.tMin
-		tMax = undefined !== tMax ? tMax : this.tMax
-
-		// we ignored a dimension in the previous step, so we need to check it too
-		return solveCubicReal2(w, x, y, z).mapFilter(tThis => {
-			if (tMin! <= tThis && tThis <= tMax!) {
+		return this.isTsWithPlane(testPlane)
+			.map(tThis => {
 				const p = this.at(tThis)
-				// console.log(t*t*t*w+t*t*x+t*y+z, dirWC.length())
-				const s = p.minus(anchorWC).dot(dirWC) / dirWC.dot(dirWC)
-				const lineAtS = dirWC.times(s).plus(anchorWC)
-				if (lineAtS.like(p)) return { tThis: tThis, tOther: s, p: p }
-			}
-			return undefined
-		})
+				return { tThis, tOther: L3.pointT(anchorWC, dirWC, p), p }
+			})
+			.filter(info => L3.containsPoint(anchorWC, dirWC, info.p))
 	}
 
 	closestPointToLine(line: L3, tMin: number, tMax: number) {
@@ -698,14 +671,6 @@ export class BezierCurve extends Curve {
 
 		// stack of indices:
 		const indices = [tMin, tMax, sMin, sMax]
-		const tMid = (tMin + tMax) / 2
-		const sMid = (sMin + sMax) / 2
-		const aabbs = [
-			this.getAABB(tMin, tMid),
-			this.getAABB(tMid, tMax),
-			bezier.getAABB(sMin, sMin),
-			bezier.getAABB(sMid, sMax),
-		]
 		const result: ISInfo[] = []
 		while (indices.length) {
 			const i = indices.length - 4
@@ -825,7 +790,7 @@ export class BezierCurve extends Curve {
 	circleApprox(
 		t0: number = this.tMin,
 		t1: number = this.tMax,
-		REL_ERR = 1 / 1024,
+		REL_ERROR = 1 / 1024,
 		result: SemiEllipseCurve[] = [],
 	): SemiEllipseCurve[] {
 		const a = this.at(t0),
@@ -839,15 +804,15 @@ export class BezierCurve extends Curve {
 				pTest1 = this.at(lerp(t0, t1, 0.25)),
 				pTest2 = this.at(lerp(t0, t1, 0.75))
 			if (
-				abs(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERR &&
-				abs(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERR
+				abs(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERROR &&
+				abs(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERROR
 			) {
 				result.push(arc)
 				return result
 			}
 		}
-		this.circleApprox(t0, tMid, REL_ERR, result)
-		this.circleApprox(tMid, t1, REL_ERR, result)
+		this.circleApprox(t0, tMid, REL_ERROR, result)
+		this.circleApprox(tMid, t1, REL_ERROR, result)
 		return result
 	}
 }

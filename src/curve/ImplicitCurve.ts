@@ -5,6 +5,7 @@ import {
 	assertVectors,
 	bisect,
 	clamp,
+	eq,
 	eq0,
 	int,
 	M4,
@@ -14,8 +15,7 @@ import {
 } from 'ts3dutils'
 import { MeshWith, pushQuad } from 'tsgl'
 
-import { Curve, PICurve } from '../index'
-
+import { Curve, L3, PICurve, Surface } from '../index'
 import { ceil, floor, max, min } from '../math'
 
 export abstract class ImplicitCurve extends Curve {
@@ -159,3 +159,26 @@ export abstract class ImplicitCurve extends Curve {
 }
 
 ImplicitCurve.prototype.tIncrement = 1
+
+/**
+ * isInfosWithLine for an ImplicitCurve defined as the intersection of two surfaces.
+ */
+export function surfaceIsICurveIsInfosWithLine(
+	this: ImplicitCurve,
+	surface1: Surface,
+	surface2: Surface,
+	anchorWC: V3,
+	dirWC: V3,
+	tMin?: number | undefined,
+	tMax?: number | undefined,
+	lineMin?: number | undefined,
+	lineMax?: number | undefined,
+) {
+	const line = new L3(anchorWC, dirWC.unit())
+	const psTs = surface1.isTsForLine(line)
+	const isTs = surface2.isTsForLine(line)
+	const commonTs = psTs.filter(psT => isTs.some(isT => eq(psT, isT)))
+	const commonTInfos = commonTs.map(t => ({ tThis: 0, tOther: t / dirWC.length(), p: line.at(t) }))
+	const result = commonTInfos.filter(info => this.containsPoint(info.p))
+	result.forEach(info => (info.tThis = this.pointT(info.p)))
+}

@@ -885,9 +885,40 @@ export class BRep extends Transformable {
 		const newFaces: Face[] = []
 
 		if (0 == faceMap.size && 0 == thisEdgePoints.size && 0 == otherEdgePoints.size) {
-			const thisInOther = other.containsPoint(this.faces[0].contour[0].a, true)
-			const otherInThis = !thisInOther && this.containsPoint(other.faces[0].contour[0].a)
-			return this
+			const thisInOther = other.containsPoint(this.faces[0].contour[0].a, true) !== other.infiniteVolume
+			const otherInThis = !thisInOther && this.containsPoint(other.faces[0].contour[0].a) !== this.infiniteVolume
+			if (thisInOther || otherInThis) {
+				const [inside, outside] = thisInOther ? [this, other] : [other, this]
+				if (inside.infiniteVolume) {
+					if (outside.infiniteVolume) {
+						return outside
+					} else {
+						return BRep.join([inside, outside])
+					}
+				} else {
+					if (outside.infiniteVolume) {
+						return BRep.EMPTY
+					} else {
+						return inside
+					}
+				}
+			} else {
+				if (this.infiniteVolume) {
+					if (other.infiniteVolume) {
+						return BRep.join([this, other])
+					} else {
+						other
+					}
+				} else {
+					if (other.infiniteVolume) {
+						return this
+					} else {
+						return BRep.EMPTY
+					}
+				}
+			}
+
+			return BRep.EMPTY
 		} else {
 			if (buildThis) {
 				const edgeLooseSegments = BRep.getLooseEdgeSegments(thisEdgePoints, this.edgeFaces!)
@@ -1407,9 +1438,7 @@ export function followAlgorithmPP(
 	assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)))
 	assert(ps2.pST(st2.x, st2.y).like(Q))
 	for (let i = 0; i < 1000; i++) {
-		{
-			;({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q)!)
-		}
+		;({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q)!)
 		assert(ps1.containsPoint(Q), Q, ps1)
 		assert(ps2.containsPoint(Q))
 		const aNormal = ps1.normalST(st1.x, st1.y)
@@ -1494,7 +1523,7 @@ export function followAlgorithm2d(
 		// check if loop
 		if (fullLoop) {
 			if (p.distanceTo(startP) > abs(stepLength)) {
-				const p = points.pop()
+				points.pop()
 				tangents.pop()
 				assert(points.last.distanceTo(startP) <= abs(stepLength))
 				break
@@ -1567,7 +1596,6 @@ export function followAlgorithm2dAdjustable(
 	const points = []
 	const tangents = []
 	assert(eq0(ic(start.x, start.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
-	const eps = stepLength / 32
 	let p = start,
 		prevp = p
 	let i = 0
@@ -1583,7 +1611,6 @@ export function followAlgorithm2dAdjustable(
 		const c2 = new V3(dfpdx, dfpdy, 0).times(c2factor)
 		const s = 1 / 16 / c2.length()
 		const tangent = new V3(-dfpdy, dfpdx, 0).unit()
-		const reversedDir = p.minus(prevp).dot(tangent) < 0
 		const newPStart = p.plus(tangent.times(s).plus(c2.times(s ** 2 / 2)))
 		points.push(p)
 		tangents.push(tangent)

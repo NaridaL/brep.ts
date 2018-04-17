@@ -190,6 +190,7 @@ export class P3 extends Transformable {
 	}
 
 	intersectionWithPlane(plane: P3): L3 | undefined {
+		assertInst(P3, plane)
 		/*
 
 		 this: n0 * x = w0
@@ -198,8 +199,9 @@ export class P3 extends Transformable {
 		 n2 := n0 X x1
 		 n2 * x = 0
 		 */
-		assertInst(P3, plane)
-		assert(!this.isParallelToPlane(plane), '!this.isParallelToPlane(plane)')
+		if (this.isParallelToPlane(plane)) {
+			return undefined
+		}
 		/*
 		 var n0 = this.normal1, n1 = plane.normal1, n2 = n0.cross(n1).unit(), m = M4.forSys(n0, n1, n2)
 		 var x0 = this.anchor, x1 = plane.anchor, x2 = V3.O

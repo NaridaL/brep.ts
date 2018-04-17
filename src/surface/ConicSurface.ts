@@ -184,8 +184,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				} else if (aa > cc) {
 					// hyperbola
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
-					const p1 = new V3(d / (a - c), 0, -d / (a - c))
-					const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
+					// const p1 = new V3(d / (a - c), 0, -d / (a - c))
+					// const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
 					// const f1 = center.to(p1)
 					const f1 = new V3(d * c / (aa - cc), 0, -d * a / (aa - cc))
 					const f2 = new V3(0, d / sqrt(aa - cc), 0)
@@ -359,7 +359,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	normalSTFunc(): (s: number, t: number) => V3 {
 		const { f1, f2 } = this,
 			f3 = this.dir
-		return (d, z) => {
+		return (d, _z) => {
 			return f2
 				.cross(f1)
 				.plus(f2.cross(f3.times(Math.cos(d))))

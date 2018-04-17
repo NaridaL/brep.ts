@@ -18,6 +18,7 @@ import {
 	followAlgorithm2d,
 	ImplicitCurve,
 	ImplicitSurface,
+	ISInfo,
 	MathFunctionR2R,
 	P3,
 	ParametricSurface,
@@ -26,6 +27,7 @@ import {
 	R2_R,
 	SemiEllipsoidSurface,
 	Surface,
+	surfaceIsICurveIsInfosWithLine,
 } from '../index'
 
 import { abs, ceil, floor, max, min } from '../math'
@@ -276,6 +278,7 @@ export class PICurve extends ImplicitCurve {
 	}
 
 	closestTToPoint(p: V3, tStart?: number): number {
+		// TODO
 		return 0
 	}
 
@@ -285,48 +288,49 @@ export class PICurve extends ImplicitCurve {
 	}
 
 	isTsWithSurface(surface: Surface): number[] {
-		if (surface instanceof PlaneSurface) {
-			return this.isTsWithPlane(surface.plane)
-		} else if (surface instanceof SemiEllipsoidSurface) {
-			const ps = this.parametricSurface,
-				is = this.implicitSurface
-			if (ps instanceof ProjectedCurveSurface && is instanceof SemiEllipsoidSurface) {
-				const iscs = is.isCurvesWithSurface(surface)
-				const points = iscs.flatMap(isc => isc.isTsWithSurface(ps).map(t => isc.at(t)))
+		if (surface instanceof SemiEllipsoidSurface) {
+			const pS = this.parametricSurface,
+				iS = this.implicitSurface
+			if (pS instanceof ProjectedCurveSurface && iS instanceof SemiEllipsoidSurface) {
+				const iscs = iS.isCurvesWithSurface(surface)
+				const points = iscs.flatMap(isc => isc.isTsWithSurface(pS).map(t => isc.at(t)))
 				const ts = fuzzyUniques(points.map(p => this.pointT(p)))
 				return ts.filter(t => !isNaN(t) && this.isValidT(t))
 			}
+		} else if (ImplicitSurface.is(surface)) {
+			const result: number[] = []
+			const iF = surface.implicitFunction()
+			let prevSignedDistance = iF(this.points[0])
+			for (let i = 1; i < this.points.length; i++) {
+				const point = this.points[i]
+				const signedDistance = iF(point)
+				if (prevSignedDistance * signedDistance <= 0) {
+					const pF = this.parametricSurface.pSTFunc()
+					const dpds = this.parametricSurface.dpds()
+					const dpdt = this.parametricSurface.dpdt()
+					const startST = this.pmPoints[abs(prevSignedDistance) < abs(signedDistance) ? i - 1 : i]
+					const isST = newtonIterate2dWithDerivatives(
+						this.implicitCurve(),
+						(s, t) => iF(pF(s, t)),
+						startST.x,
+						startST.y,
+						4,
+						this.dids,
+						this.didt,
+						(s, t) => dpds(s, t).dot(surface.didp(pF(s, t))),
+						(s, t) => dpdt(s, t).dot(surface.didp(pF(s, t))),
+					)!
+					result.push(this.pointT(this.parametricSurface.pST(isST.x, isST.y)))
+				}
+				prevSignedDistance = signedDistance
+			}
+			return result
 		}
 		throw new Error()
 	}
 
 	isTsWithPlane(planeWC: P3): number[] {
-		const result: number[] = []
-		let prevSignedDistance = planeWC.distanceToPointSigned(this.points[0])
-		for (let i = 1; i < this.points.length; i++) {
-			const point = this.points[i]
-			const signedDistance = planeWC.distanceToPointSigned(point)
-			if (prevSignedDistance * signedDistance <= 0) {
-				const pF = this.parametricSurface.pSTFunc()
-				const dpds = this.parametricSurface.dpds()
-				const dpdt = this.parametricSurface.dpdt()
-				const startST = this.pmPoints[abs(prevSignedDistance) < abs(signedDistance) ? i - 1 : i]
-				const isST = newtonIterate2dWithDerivatives(
-					this.implicitCurve(),
-					(s, t) => planeWC.distanceToPointSigned(pF(s, t)),
-					startST.x,
-					startST.y,
-					4,
-					this.dids,
-					this.didt,
-					(s, t) => dpds(s, t).dot(planeWC.normal1),
-					(s, t) => dpdt(s, t).dot(planeWC.normal1),
-				)!
-				result.push(this.pointT(this.parametricSurface.pST(isST.x, isST.y)))
-			}
-			prevSignedDistance = signedDistance
-		}
-		return result
+		return this.isTsWithSurface(new PlaneSurface(planeWC))
 		// version which intersects the plane with the defining surfaces of this PICurve, but this causes
 		// issues when they are PICurves too:
 		// assertInst(P3, planeWC)
@@ -441,8 +445,8 @@ export class PICurve extends ImplicitCurve {
 		tMax?: number | undefined,
 		lineMin?: number | undefined,
 		lineMax?: number | undefined,
-	): { tThis: number; tOther: number; p: V3 }[] {
-		throw new Error('Method not implemented.')
+	): ISInfo[] {
+		return surfaceIsICurveIsInfosWithLine.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax)
 	}
 
 	toSource(rounder: (x: number) => number = x => x): string {

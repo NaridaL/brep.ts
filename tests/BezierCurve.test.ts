@@ -158,13 +158,16 @@ suite('BezierCurve', () => {
 	test('isInfosWithLine', assert => {
 		const curve = BezierCurve.graphXY(2, -3, -3, 2, -3, 4)
 		const line = new L3(V3.Y, V3.X)
-		testCurveISInfos(assert, curve, line, 3)
+		testCurveISInfos(assert, curve, line, 3, 'L3(V3.Y, V3.X)')
 
 		const line2 = new L3(V(0, 2, 1), V3.Z)
-		testCurveISInfos(assert, curve, line2, 1)
+		testCurveISInfos(assert, curve, line2, 1, 'L3(V(0, 2, 1), V3.Z)')
 
 		const line3 = new L3(V3.Z, V3.X)
-		testCurveISInfos(assert, curve, line3, 0)
+		testCurveISInfos(assert, curve, line3, 0, 'new L3(V3.Z, V3.X)')
+
+		const line4 = new L3(V3.O, V3.Y)
+		testCurveISInfos(assert, curve, line4, 1, 'L3(V3.O, V3.Y)')
 	})
 	test('isInfosWithLine 2', assert => {
 		const curve = new BezierCurve(

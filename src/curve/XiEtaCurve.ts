@@ -199,8 +199,8 @@ export abstract class XiEtaCurve extends Curve {
 		return P3.normalOnAnchor(this.normal, this.center)
 	}
 
-	isTsWithPlane(plane: P3): number[] {
-		assertInst(P3, plane)
+	isTsWithPlane(planeWC: P3): number[] {
+		assertInst(P3, planeWC)
 		/*
 		 this: x = center + f1 * cos t + f2 * sin t  (1)
 		 plane:
@@ -220,11 +220,11 @@ export abstract class XiEtaCurve extends Curve {
 		 solve system (5)/(6)
 		 g1 * xi + g2 * eta = g3 (6)
 		 */
-		if (plane.normal1.isParallelTo(this.normal)) {
+		if (planeWC.normal1.isParallelTo(this.normal)) {
 			return []
 		}
-		const n = plane.normal1,
-			w = plane.w,
+		const n = planeWC.normal1,
+			w = planeWC.w,
 			center = this.center,
 			f1 = this.f1,
 			f2 = this.f2,

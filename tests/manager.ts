@@ -524,18 +524,25 @@ export function testCurveISInfos(
 	assert: Assert,
 	c1: Curve,
 	c2: Curve,
-	count: int,
+	expectedCount: int,
 	msg: string = 'view',
 	f = 'isInfosWithCurve',
 ) {
-	const intersections = c1[f](c2).map(info => info.p)
-	outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), drPs: intersections }, msg)
-	assert.equal(intersections.length, count, `intersections.length == count: ${intersections.length} == ${count}`)
+    let intersections
+    try {
+
+    intersections = c1[f](c2).map(info => info.p)
+    outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), drPs: intersections }, msg)
+    assert.equal(intersections.length, expectedCount, `intersections.length == count: ${intersections.length} == ${expectedCount}`)
 	intersections.forEach((is, i) => {
 		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
 		assert.ok(c1.containsPoint(is), `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
 		assert.ok(c2.containsPoint(is), `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
 	})
+
+    } finally {
+        !intersections && outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)) }, msg)
+    }
 }
 
 /**

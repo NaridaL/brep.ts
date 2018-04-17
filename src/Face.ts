@@ -359,7 +359,6 @@ export abstract class Face extends Transformable {
 				if (hasPair(col1.getCanon(), col2.getCanon())) return false
 
 				addPair(col1.getCanon(), col2.getCanon())
-				let added = false
 				function handleColinearEdgeFaces(
 					col1: Edge,
 					col2: Edge,
@@ -421,7 +420,6 @@ export abstract class Face extends Transformable {
 									})
 								}
 							}
-							added = true
 						}
 					}
 				}
@@ -548,7 +546,7 @@ export abstract class Face extends Transformable {
 		const face = this
 		const surface = face.surface,
 			surface2 = face2.surface
-		if (!this.getAABB().fuzzyTouchesAABB(face2.getAABB())) {
+		if (!this.getAABB().touchesAABBfuzzy(face2.getAABB())) {
 			return
 		}
 		if (surface.isCoplanarTo(surface2)) {
