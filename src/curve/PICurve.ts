@@ -15,6 +15,7 @@ import {
 import {
 	Curve,
 	curvePoint,
+	EllipsoidSurface,
 	followAlgorithm2d,
 	ImplicitCurve,
 	ImplicitSurface,
@@ -25,7 +26,6 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	R2_R,
-	SemiEllipsoidSurface,
 	Surface,
 	surfaceIsICurveIsInfosWithLine,
 } from '../index'
@@ -282,16 +282,16 @@ export class PICurve extends ImplicitCurve {
 		return 0
 	}
 
-	closestPointToParams(startParams: V3): V3 {
-		const pointParams = curvePoint(this.implicitCurve(), startParams, this.dids, this.didt)
+	closestPointToParams(startST: V3): V3 {
+		const pointParams = curvePoint(this.implicitCurve(), startST, this.dids, this.didt)
 		return this.parametricSurface.pSTFunc()(pointParams.x, pointParams.y)
 	}
 
 	isTsWithSurface(surface: Surface): number[] {
-		if (surface instanceof SemiEllipsoidSurface) {
+		if (surface instanceof EllipsoidSurface) {
 			const pS = this.parametricSurface,
 				iS = this.implicitSurface
-			if (pS instanceof ProjectedCurveSurface && iS instanceof SemiEllipsoidSurface) {
+			if (pS instanceof ProjectedCurveSurface && iS instanceof EllipsoidSurface) {
 				const iscs = iS.isCurvesWithSurface(surface)
 				const points = iscs.flatMap(isc => isc.isTsWithSurface(pS).map(t => isc.at(t)))
 				const ts = fuzzyUniques(points.map(p => this.pointT(p)))

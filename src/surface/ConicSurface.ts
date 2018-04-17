@@ -15,6 +15,7 @@ import {
 import {
 	Curve,
 	Edge,
+	EllipseCurve,
 	HyperbolaCurve,
 	ImplicitSurface,
 	L3,
@@ -23,7 +24,6 @@ import {
 	ParametricSurface,
 	PlaneSurface,
 	PointVsFace,
-	SemiEllipseCurve,
 	Surface,
 } from '../index'
 
@@ -93,14 +93,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
 	static atApexThroughEllipse(
 		apex: V3,
-		ellipse: SemiEllipseCurve,
+		ellipse: EllipseCurve,
 		sMin?: number,
 		sMax?: number,
 		tMin?: number,
 		tMax?: number,
 	): ConicSurface {
 		assertVectors(apex)
-		assertInst(SemiEllipseCurve, ellipse)
+		assertInst(EllipseCurve, ellipse)
 		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center), sMin, sMax, tMin, tMax)
 	}
 
@@ -180,7 +180,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 					}
 					const p1 = new V3(d / (a - c), 0, -d / (a - c))
 					const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa))
-					return [new SemiEllipseCurve(center, center.to(p1), center.to(p2), -PI, PI)]
+					return [new EllipseCurve(center, center.to(p1), center.to(p2), -PI, PI)]
 				} else if (aa > cc) {
 					// hyperbola
 					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
@@ -254,10 +254,10 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		if (this === surface) return true
 		if (!(surface instanceof ConicSurface) || !this.apex.like(surface.apex)) return false
 		// at this point apexes are equal
-		return this.containsEllipse(new SemiEllipseCurve(surface.center.plus(surface.dir), surface.f1, surface.f2))
+		return this.containsEllipse(new EllipseCurve(surface.center.plus(surface.dir), surface.f1, surface.f2))
 	}
 
-	containsEllipse(ellipse: SemiEllipseCurve): boolean {
+	containsEllipse(ellipse: EllipseCurve): boolean {
 		const ellipseLC = ellipse.transform(this.matrixInverse)
 		if (ellipseLC.center.z < 0) {
 			return false
@@ -330,7 +330,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	containsCurve(curve: Curve): boolean {
-		if (curve instanceof SemiEllipseCurve) {
+		if (curve instanceof EllipseCurve) {
 			return this.containsEllipse(curve)
 		} else if (curve instanceof L3) {
 			return this.containsLine(curve)
@@ -458,11 +458,11 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		const wcMatrix = eq0(planeNormal.lengthXY()) ? this.matrix : this.matrix.times(rotationMatrix)
 		return ConicSurface.unitISPlane(a, c, d).flatMap<Curve>(curve => {
 			const curveWC = curve.transform(wcMatrix)
-			if (curve instanceof SemiEllipseCurve) {
+			if (curve instanceof EllipseCurve) {
 				const curveLC = curve.transform(rotationMatrix)
 				const ts = curveLC.isTsWithPlane(P3.ZX)
 				const intervals = getIntervals(ts, -PI, PI).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0)
-				return intervals.flatMap(([a, b]) => (curveWC as SemiEllipseCurve).split(a, b))
+				return intervals.flatMap(([a, b]) => (curveWC as EllipseCurve).split(a, b))
 			}
 			const p = curveWC.at(0.2)
 			return this.normalP(p)

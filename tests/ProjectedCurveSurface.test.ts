@@ -23,9 +23,9 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotationFace,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
+	CylinderSurface,
+	EllipseCurve,
+	EllipsoidSurface,
 	StraightEdge,
 } from '..'
 
@@ -75,7 +75,7 @@ suite('ProjectedCurveSurface', () => {
 		const pcs = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
 			.scale(0.2, 0.2, 1)
 			.rotateX(-90 * DEG)
-		const ses = SemiEllipsoidSurface.UNIT
+		const ses = EllipsoidSurface.UNIT
 		const pic = ses.isCurvesWithSurface(pcs)[0]
 		testISTs(assert, pic, new PlaneSurface(P3.XY), 1)
 	})
@@ -108,8 +108,8 @@ suite('ProjectedCurveSurface', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(1.2246467991473533e-17, 0, -0.2),
 						V(0, 0.2, 0),
@@ -155,8 +155,8 @@ suite('ProjectedCurveSurface', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(1.2246467991473533e-17, 0, -0.2),
 						V(0, 0.2, 0),
@@ -202,8 +202,8 @@ suite('ProjectedCurveSurface', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(-1.2246467991473533e-17, 2.4492935982947065e-17, 0.2),
 						V(-1.4997597826618578e-33, -0.2, 2.4492935982947065e-17),
@@ -249,8 +249,8 @@ suite('ProjectedCurveSurface', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(-1.2246467991473533e-17, 2.4492935982947065e-17, 0.2),
 						V(-1.4997597826618578e-33, -0.2, 2.4492935982947065e-17),
@@ -288,7 +288,7 @@ suite('ProjectedCurveSurface', () => {
 		testISCurves(
 			assert,
 			a.faces.find(f => f.surface instanceof ProjectedCurveSurface).surface,
-			b.faces.find(f => f.surface instanceof SemiCylinderSurface).surface,
+			b.faces.find(f => f.surface instanceof CylinderSurface).surface,
 			1,
 		)
 	})

@@ -30,15 +30,15 @@ import { Mesh } from 'tsgl'
 
 import {
 	Curve,
+	CylinderSurface,
+	EllipseCurve,
+	EllipsoidSurface,
 	ISInfo,
 	L3,
 	P3,
 	PlaneSurface,
 	ProjectedCurveSurface,
 	R2_R,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
 	Surface,
 } from '../index'
 
@@ -232,7 +232,7 @@ export class BezierCurve extends Curve {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
 		}
-		if (surface instanceof SemiCylinderSurface) {
+		if (surface instanceof CylinderSurface) {
 			const projPlane = new P3(surface.dir.unit(), 0)
 			const projThis = this.project(projPlane)
 			const projEllipse = surface.baseCurve.project(projPlane)
@@ -244,7 +244,7 @@ export class BezierCurve extends Curve {
 			const projEllipse = surface.baseCurve.project(projPlane)
 			return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther)
 		}
-		if (surface instanceof SemiEllipsoidSurface) {
+		if (surface instanceof EllipsoidSurface) {
 			const thisOC = this.transform(surface.matrixInverse)
 			if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
 				return []
@@ -781,7 +781,7 @@ export class BezierCurve extends Curve {
 	 * Approximate this bezier curve with a number of circular segments. This curve is recursively split in half until
 	 * segments are close enough (relative error < REL_ERR in two test points) to an arc which goes through the start,
 	 * end and mid points of the segment.
-	 * @returns each SemiEllipseCurve is circular and their tMin and tMax respectively define their start and end points.
+	 * @returns each EllipseCurve is circular and their tMin and tMax respectively define their start and end points.
 	 * @param t0 Start parameter of segment which should be approximated.
 	 * @param t1 End parameter of segment which should be approximated.
 	 * @param REL_ERROR max allowable relative error.
@@ -791,15 +791,15 @@ export class BezierCurve extends Curve {
 		t0: number = this.tMin,
 		t1: number = this.tMax,
 		REL_ERROR = 1 / 1024,
-		result: SemiEllipseCurve[] = [],
-	): SemiEllipseCurve[] {
+		result: EllipseCurve[] = [],
+	): EllipseCurve[] {
 		const a = this.at(t0),
 			b = this.at(t1),
 			tMid = (t0 + t1) / 2,
 			pMid = this.at(tMid),
 			abLine = L3.throughPoints(a, b)
 		if (!abLine.containsPoint(pMid) && between(abLine.pointT(pMid), 0, abLine.pointT(b))) {
-			const arc = SemiEllipseCurve.circleThroughPoints(a, pMid, b),
+			const arc = EllipseCurve.circleThroughPoints(a, pMid, b),
 				arcRadius = arc.f1.length(),
 				pTest1 = this.at(lerp(t0, t1, 0.25)),
 				pTest2 = this.at(lerp(t0, t1, 0.75))

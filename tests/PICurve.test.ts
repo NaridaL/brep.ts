@@ -9,9 +9,9 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotatedCurveSurface,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
+	CylinderSurface,
+	EllipseCurve,
+	EllipsoidSurface,
 } from '..'
 
 suite('PICurve', () => {
@@ -33,7 +33,7 @@ suite('PICurve', () => {
 					-Infinity,
 					Infinity,
 				),
-				new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+				new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
 				V(0.010937499999999989, 0.2890625, -0.9572477433702835),
 				V(0.20296874999999998, 0.11703124999999998, -0.9721663299286162),
 				0.02,
@@ -58,8 +58,8 @@ suite('PICurve', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(1.2246467991473533e-17, 0, -0.2),
 						V(0, 0.2, 0),
@@ -99,7 +99,7 @@ suite('PICurve', () => {
 					0,
 					1,
 				),
-				new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+				new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
 				V(0, 0.2427341017251267, 0),
 				V(1, 0.24724084890251513, 0),
 				0.05,
@@ -127,8 +127,8 @@ suite('PICurve', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(2.5, 13.4, 11.65),
 						V(-0.2, -0.16000000000000003, -1.1),
 						V(0.2, 0.08000000000000002, 0.68),
@@ -168,7 +168,7 @@ suite('PICurve', () => {
 					-1,
 					0,
 				),
-				new SemiEllipsoidSurface(
+				new EllipsoidSurface(
 					V3.O,
 					V(0.9999999999999999, 0, 0),
 					V(0, 0.9999999999999999, 0),
@@ -201,8 +201,8 @@ suite('PICurve', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(1.2246467991473533e-17, 0, -0.2),
 						V(0, 0.2, 0),
@@ -242,8 +242,8 @@ suite('PICurve', () => {
 			-1,
 			0,
 		)
-		const ses = new SemiCylinderSurface(
-			new SemiEllipseCurve(
+		const ses = new CylinderSurface(
+			new EllipseCurve(
 				V(2.5, 13.4, 11.65),
 				V(-0.2, -0.16000000000000003, -1.1),
 				V(0.2, 0.08000000000000002, 0.68),
@@ -276,8 +276,8 @@ suite('PICurve', () => {
 						-1,
 						0,
 					),
-					new SemiCylinderSurface(
-						new SemiEllipseCurve(
+					new CylinderSurface(
+						new EllipseCurve(
 							V(0, 0, 0.5),
 							V(1.2246467991473533e-17, 0, -0.2),
 							V(0, 0.2, 0),
@@ -323,7 +323,7 @@ suite('PICurve', () => {
 				0,
 				1,
 			),
-			new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+			new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
 			V(0, 0.2427341017251267, 0),
 			V(1, 0.24724084890251513, 0),
 			0.05,
@@ -348,7 +348,7 @@ suite('PICurve', () => {
 					0,
 					1,
 				),
-				new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
+				new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
 				V(0, 0.2427341017251267, 0),
 				V(1, 0.24724084890251513, 0),
 				0.05,
@@ -382,8 +382,8 @@ suite('PICurve', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(1.2246467991473533e-17, 0, -0.2),
 						V(0, 0.2, 0),
@@ -419,8 +419,8 @@ suite('PICurve', () => {
 					-1,
 					0,
 				),
-				new SemiCylinderSurface(
-					new SemiEllipseCurve(
+				new CylinderSurface(
+					new EllipseCurve(
 						V(0, 0, 0.5),
 						V(1.2246467991473533e-17, 0, -0.2),
 						V(0, 0.2, 0),
@@ -446,14 +446,14 @@ suite('PICurve', () => {
 		const pcs = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
 			.scale(0.2, 0.2, 1)
 			.rotateX(-90 * DEG)
-		const ses = SemiEllipsoidSurface.UNIT
+		const ses = EllipsoidSurface.UNIT
 		const piCurve = ses.isCurvesWithSurface(pcs)[0]
 		console.log(piCurve)
 		testISTs(assert, piCurve, new PlaneSurface(P3.XY), 1)
 	})
 	test('isTsWithPlane', assert => {
 		const piCurve = PICurve.forParametricStartEnd(
-			new RotatedCurveSurface(new SemiEllipseCurve(V(3, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793), M4.forSys(
+			new RotatedCurveSurface(new EllipseCurve(V(3, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793), M4.forSys(
                 V(1, -1.2060416625018976e-16, -2.1265768495757713e-17),
                 V(-1.2246467991473532e-16, -0.984807753012208, -0.17364817766693033),
                 V(0, -0.17364817766693033, 0.984807753012208),
@@ -486,7 +486,7 @@ suite('PICurve', () => {
 				0,
 				1,
 			),
-			new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1)),
+			new EllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1)),
 			V(1.0013147208257906, 0.10500326852305793, 0),
 			V(-0.04846385366656537, 0.12648109268323876, 0),
 			0.05,
@@ -514,8 +514,8 @@ suite('PICurve', () => {
 				-1,
 				0,
 			),
-			new SemiCylinderSurface(
-				new SemiEllipseCurve(
+			new CylinderSurface(
+				new EllipseCurve(
 					V(0, 0, 0.5),
 					V(1.2246467991473533e-17, 0, -0.2),
 					V(0, 0.2, 0),

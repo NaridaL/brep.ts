@@ -11,6 +11,8 @@ import {
 import {
 	ConicSurface,
 	Edge,
+	EllipseCurve,
+	EllipsoidSurface,
 	HyperbolaCurve,
 	ImplicitCurve,
 	L3,
@@ -19,8 +21,6 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotatedCurveSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
 } from '../index'
 
 import { cos, sin } from '../math'
@@ -42,7 +42,7 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 			.map(edgeWC => {
 				const curveWC = edgeWC.curve
 				if (
-					curveWC instanceof SemiEllipseCurve ||
+					curveWC instanceof EllipseCurve ||
 					curveWC instanceof HyperbolaCurve ||
 					curveWC instanceof ParabolaCurve
 				) {
@@ -83,7 +83,7 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 		const centroidZX2Parts = edges.map(edgeWC => {
 			const curveWC = edgeWC.curve
 			if (
-				curveWC instanceof SemiEllipseCurve ||
+				curveWC instanceof EllipseCurve ||
 				curveWC instanceof HyperbolaCurve ||
 				curveWC instanceof ParabolaCurve
 			) {
@@ -414,7 +414,7 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 		return { volume: totalVolume, centroid: centroid }
 	},
 }
-ZDirVolumeVisitor[SemiEllipsoidSurface.name] = ZDirVolumeVisitor[RotatedCurveSurface.name]
+ZDirVolumeVisitor[EllipsoidSurface.name] = ZDirVolumeVisitor[RotatedCurveSurface.name]
 
 export function glqV3(f: (x: number) => V3, startT: number, endT: number) {
 	return gaussLegendre24Xs

@@ -24,8 +24,8 @@ import {
 	MathFunctionR2R,
 	P3,
 	PICurve,
-	SemiCylinderSurface,
-	SemiEllipsoidSurface,
+	CylinderSurface,
+	EllipsoidSurface,
 	setupCamera,
 } from './index'
 

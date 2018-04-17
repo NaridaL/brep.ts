@@ -31,7 +31,7 @@ import {
 	V3,
 } from 'ts3dutils'
 
-import { BezierCurve, Curve, L3, P3, ParabolaCurve, PICurve, PlaneSurface, SemiEllipseCurve, Surface } from './index'
+import { BezierCurve, Curve, EllipseCurve, L3, P3, ParabolaCurve, PICurve, PlaneSurface, Surface } from './index'
 
 import { abs, ceil, floor, PI, sign } from './math'
 
@@ -178,7 +178,7 @@ export abstract class Edge extends Transformable {
 				b = corners[bI]
 			const center = corners[i]
 			const f1 = center.to(a),
-				curve = new SemiEllipseCurve(center, f1, V3.Z.cross(f1))
+				curve = new EllipseCurve(center, f1, V3.Z.cross(f1))
 			return Edge.create(curve, a, b, 0, curve.pointT(b), undefined, V3.Z.cross(f1), V3.Z.cross(center.to(b)))
 		})
 	}
@@ -207,7 +207,7 @@ export abstract class Edge extends Transformable {
 				const cornerA = center.plus(l1inside.toLength(-radius))
 				const cornerB = center.plus(l2inside.toLength(-radius))
 				const f1 = l1inside.toLength(-radius)
-				const curve = new SemiEllipseCurve(center, f1, normal.cross(f1).toLength(radius))
+				const curve = new EllipseCurve(center, f1, normal.cross(f1).toLength(radius))
 				const cornerEdge = Edge.create(
 					curve,
 					cornerA,
@@ -282,7 +282,7 @@ export abstract class Edge extends Transformable {
 		const normal1 = virtualPlaneNormal.cross(dp1).unit()
 		const f1 = normal1.toLength(-radius)
 		const center = cornerA.minus(f1)
-		const curve = new SemiEllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius))
+		const curve = new EllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius))
 		const cornerEdge = Edge.create(
 			curve,
 			cornerA,
@@ -362,7 +362,7 @@ export abstract class Edge extends Transformable {
 						const gtPI = t1_ > PI || t2_ > PI
 						const aT = gtPI ? t1_ - PI : t1_
 						const bT = gtPI ? t2_ - PI : t2_
-						const curve = new SemiEllipseCurve(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2)
+						const curve = new EllipseCurve(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2)
 						const a = phi1 == t1 ? currentPos : phi2 == t1 ? endPos : curve.at(aT)
 						const b = phi1 == t2 ? currentPos : phi2 == t2 ? endPos : curve.at(bT)
 						return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT))

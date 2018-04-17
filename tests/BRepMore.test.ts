@@ -16,8 +16,8 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotationFace,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
+	CylinderSurface,
+	EllipseCurve,
 	StraightEdge,
 } from '..'
 
@@ -408,17 +408,17 @@ suite('BRep 2', () => {
 		const testBrep = B2T.box(10, 10, 10, 'box').translate(1, 2, 3).flipped()
 		doTestWithBrep(assert, face, sphere, testBrep, [
 			new PCurveEdge(
-				new SemiEllipseCurve(V(1, 0, 0), V(0, 0, 3.872983346207417), V(0, 3.872983346207417, 0), 0, 3.141592653589793),
+				new EllipseCurve(V(1, 0, 0), V(0, 0, 3.872983346207417), V(0, 3.872983346207417, 0), 0, 3.141592653589793),
 				V(1, 2, 3.3166247903554), V(1, 2.449489742783178, 3),
 				0.5426391022496527, 0.684719203002283, undefined,
 				V(0, 3.3166247903554003, -2), V(0, 3, -2.4494897427831783)),
 			new PCurveEdge(
-				new SemiEllipseCurve(V(0, 2, 0), V(0, 0, -3.4641016151377544), V(3.4641016151377544, 0, 0), 0, 3.141592653589793),
+				new EllipseCurve(V(0, 2, 0), V(0, 0, -3.4641016151377544), V(3.4641016151377544, 0, 0), 0, 3.141592653589793),
 				V(1.7320508075688767, 2, 3), V(1, 2, 3.3166247903554),
 				2.6179938779914944, 2.8487498818612176, undefined,
 				V(-3, 0, 1.732050807568877), V(-3.3166247903554, 0, 1)),
 			new PCurveEdge(
-				new SemiEllipseCurve(V(0, 0, 3), V(-2.6457513110645907, 0, 0), V(0, 2.6457513110645907, 0), 0, 3.141592653589793),
+				new EllipseCurve(V(0, 0, 3), V(-2.6457513110645907, 0, 0), V(0, 2.6457513110645907, 0), 0, 3.141592653589793),
 				V(1, 2.449489742783178, 3), V(1.7320508075688767, 2, 3),
 				1.9583930134500773, 2.284520705739662, undefined,
 				V(2.449489742783178, -1, 0), V(2, -1.7320508075688765, 0)),
@@ -595,7 +595,7 @@ suite('BRep 2', () => {
 		const result = B2T.extrudeEdges([
 				StraightEdge.throughPoints(V(8, 0, 0), V(1, 0, 0)),
 				StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
-				PCurveEdge.forCurveAndTs(SemiEllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
+				PCurveEdge.forCurveAndTs(EllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
 		testBRepAnd(assert, pie, boxKnife, result, '1')
 
@@ -610,15 +610,15 @@ suite('BRep 2', () => {
 		const pie = B2T.puckman(8, 180 * DEG, 5, 'pie/2')
 		const punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1).flipped()
 		const result = new BRep([
-			new RotationFace(new SemiCylinderSurface(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V3.Z, undefined, undefined), [
+			new RotationFace(new CylinderSurface(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V3.Z, undefined, undefined), [
 				new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 5), V(8, 0, 0), 5, 0),
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 0), V(-8, 0, 0), 0, 3.141592653589793, undefined, V(0, 8, 0), V(-0, -8, 0)),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 0), V(-8, 0, 0), 0, 3.141592653589793, undefined, V(0, 8, 0), V(-0, -8, 0)),
 				new StraightEdge(new L3(V(-8, 0, 0), V(0, 0, 1)), V(-8, 0, 0), V(-8, 0, 5), 0, 5),
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, 8, 0)), V(-8, 0, 5), V(8, 0, 5), 3.141592653589793, 0, undefined, V(0, 8, 0), V(0, -8, 0))], [[
+				new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, 8, 0)), V(-8, 0, 5), V(8, 0, 5), 3.141592653589793, 0, undefined, V(0, 8, 0), V(0, -8, 0))], [[
 				new StraightEdge(new L3(V(1, 7.937253933193772, 0), V(0, 0, -1)), V(1, 7.937253933193773, 4), V(1, 7.937253933193773, 1), -4, -1),
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), 1.696124157962962, 2.4188584057763776, undefined, V(7.937253933193772, -1, 0), V(5.291502622129181, -6, 0)),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 1), V(6, 5.291502622129181, 1), 1.696124157962962, 2.4188584057763776, undefined, V(7.937253933193772, -1, 0), V(5.291502622129181, -6, 0)),
 				new StraightEdge(new L3(V(6, 5.2915026221291805, 0), V(0, 0, 1)), V(6, 5.291502622129181, 1), V(6, 5.291502622129181, 4), 1, 4),
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), 0.7227342478134156, 1.4454684956268313, undefined, V(-5.2915026221291805, 6, 0), V(-7.937253933193772, 1, 0))]]),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 4), V(1, 7.937253933193773, 4), 0.7227342478134156, 1.4454684956268313, undefined, V(-5.2915026221291805, 6, 0), V(-7.937253933193772, 1, 0))]]),
 			new PlaneFace(new PlaneSurface(new P3(V(0, -1, 0), 0)), [
 				new StraightEdge(new L3(V(0, 0, 0), V(1, 0, 0)), V(0, 0, 0), V(8, 0, 0), 0, 8),
 				new StraightEdge(new L3(V(8, 0, 0), V(0, 0, 1)), V(8, 0, 0), V(8, 0, 5), 0, 5),
@@ -631,10 +631,10 @@ suite('BRep 2', () => {
 			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), 0)), [
 				new StraightEdge(new L3(V(0, 0, 0), V(1, 0, 0)), V(8, 0, 0), V(0, 0, 0), 8, 0),
 				new StraightEdge(new L3(V(0, 0, 0), V(-1, 0, 0)), V(0, 0, 0), V(-8, 0, 0), 0, 8),
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(-8, 0, 0), V(8, 0, 0), 3.141592653589793, 0, undefined, V(0, 8, 0), V(0, -8, 0))], []),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)), V(-8, 0, 0), V(8, 0, 0), 3.141592653589793, 0, undefined, V(0, 8, 0), V(0, -8, 0))], []),
 			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 5)), [
 				new StraightEdge(new L3(V(8, 0, 5), V(-1, 0, 0)), V(0, 0, 5), V(8, 0, 5), 8, 0),
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 5), V(-8, 0, 5), 0, 3.141592653589793, undefined, V(0, 8, 0), V(-0, -8, 0)),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 5), V(8, 0, 0), V(0, 8, 0)), V(8, 0, 5), V(-8, 0, 5), 0, 3.141592653589793, undefined, V(0, 8, 0), V(-0, -8, 0)),
 				new StraightEdge(new L3(V(-8, 0, 5), V(1, -0, 0)), V(-8, 0, 5), V(0, 0, 5), 0, 8)], []),
 			new PlaneFace(new PlaneSurface(new P3(V(-0, -1, 0), 0)), [
 				new StraightEdge(new L3(V(0, 0, 5), V(0, 0, -1)), V(0, 0, 0), V(0, 0, 5), 5, 0),
@@ -652,12 +652,12 @@ suite('BRep 2', () => {
 				new StraightEdge(new L3(V(6, 0, 0), V(0, 0, -1)), V(6, 0, 1), V(6, 0, 4), -1, -4),
 				new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 0, 4), V(6, 5.291502622129181, 4), 9, 3.7084973778708186)], []),
 			new PlaneFace(new PlaneSurface(new P3(V(0, 0, 1), 1)), [
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 1), V(1, 7.937253933193773, 1), 2.4188584057763776, 1.696124157962962, undefined, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 1, 0)),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 1), V(-8, 0, 0), V(0, 8, 0)), V(6, 5.291502622129181, 1), V(1, 7.937253933193773, 1), 2.4188584057763776, 1.696124157962962, undefined, V(-5.291502622129181, 6, 0), V(-7.937253933193772, 1, 0)),
 				new StraightEdge(new L3(V(1, -1, 1), V(0, 1, 0)), V(1, 7.937253933193773, 1), V(1, 0, 1), 8.937253933193773, 1),
 				new StraightEdge(new L3(V(0, 0, 1), V(-1, 0, 0)), V(1, 0, 1), V(6, 0, 1), -1, -6),
 				new StraightEdge(new L3(V(6, 9, 1), V(0, -1, 0)), V(6, 0, 1), V(6, 5.291502622129181, 1), 9, 3.7084973778708186)], []),
 			new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -4)), [
-				new PCurveEdge(new SemiEllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 4), V(6, 5.291502622129181, 4), 1.4454684956268313, 0.7227342478134156, undefined, V(7.937253933193772, -1, 0), V(5.2915026221291805, -6, 0)),
+				new PCurveEdge(new EllipseCurve(V(0, 0, 4), V(8, 0, 0), V(0, 8, 0)), V(1, 7.937253933193773, 4), V(6, 5.291502622129181, 4), 1.4454684956268313, 0.7227342478134156, undefined, V(7.937253933193772, -1, 0), V(5.2915026221291805, -6, 0)),
 				new StraightEdge(new L3(V(6, 9, 4), V(0, -1, 0)), V(6, 5.291502622129181, 4), V(6, 0, 4), 3.7084973778708186, 9),
 				new StraightEdge(new L3(V(0, 0, 4), V(1, 0, 0)), V(6, 0, 4), V(1, 0, 4), 6, 1),
 				new StraightEdge(new L3(V(1, -1, 4), V(0, 1, 0)), V(1, 0, 4), V(1, 7.937253933193773, 4), 1, 8.937253933193773)], [])], false)

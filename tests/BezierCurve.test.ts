@@ -10,20 +10,20 @@ import {
 } from './manager'
 
 import { DEG, eq, eq0, M4, NLA_PRECISION, V, V3 } from 'ts3dutils'
-import { BezierCurve, L3, P3, SemiCylinderSurface, SemiEllipseCurve, SemiEllipsoidSurface, Edge } from '..'
+import { BezierCurve, L3, P3, CylinderSurface, EllipseCurve, EllipsoidSurface, Edge } from '..'
 
 import { PI } from '../src/math'
 
 suite('BezierCurve', () => {
 	suite(
-		'isTsWithSurface(SemiCylinderSurface)',
+		'isTsWithSurface(CylinderSurface)',
 		inDifferentSystems((assert, m4) => {
 			const bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
 				.rotateX(15 * DEG)
 				.translate(0, 0, 100)
 				.transform(m4)
-			const cyl = new SemiCylinderSurface(
-				SemiEllipseCurve.forAB(4, 1).rotateY(10 * DEG),
+			const cyl = new CylinderSurface(
+				EllipseCurve.forAB(4, 1).rotateY(10 * DEG),
 				V3.Z,
 				undefined,
 				undefined,
@@ -190,7 +190,7 @@ suite('BezierCurve', () => {
 	test('isTsWithEllipsoidSurface', assert => {
 		//const curve = ParabolaCurve.XY.asBezier().scale(5).translate(0, 1)
 		const curve = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
-		const s = SemiEllipsoidSurface.UNIT
+		const s = EllipsoidSurface.UNIT
 
 		testISTs(assert, curve.translate(0.2), s, 4)
 		testISTs(assert, curve, s, 4)
@@ -208,7 +208,7 @@ suite('BezierCurve', () => {
 			-0.10000000000000009,
 			1.1,
 		)
-		const sec = new SemiEllipseCurve(V3.O, V3.X, V3.Z)
+		const sec = new EllipseCurve(V3.O, V3.X, V3.Z)
 		//const curve = ParabolaCurve.XY.asBezier().scale(5).translate(0, 1)
 		testCurveISInfos(assert, bc, sec, 2)
 	})

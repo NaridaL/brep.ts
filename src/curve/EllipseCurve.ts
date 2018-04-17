@@ -26,8 +26,8 @@ import { Curve, intersectionUnitCircleLine, intersectionUnitCircleLine2, ISInfo,
 
 import { atan2, max, min, PI } from '../math'
 
-export class SemiEllipseCurve extends XiEtaCurve {
-	static readonly UNIT = new SemiEllipseCurve(V3.O, V3.X, V3.Y)
+export class EllipseCurve extends XiEtaCurve {
+	static readonly UNIT = new EllipseCurve(V3.O, V3.X, V3.Y)
 
 	constructor(center: V3, f1: V3, f2: V3, tMin: number = 0, tMax: number = PI) {
 		super(center, f1, f2, tMin, tMax)
@@ -58,7 +58,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const isLC = intersectionUnitCircleLine2(a, b, c)
 		const result = []
 		for (const [xi, eta] of isLC) {
-			const t = SemiEllipseCurve.XYLCPointT(new V3(xi, eta, 0), tMin, tMax)
+			const t = EllipseCurve.XYLCPointT(new V3(xi, eta, 0), tMin, tMax)
 			fuzzyBetween(t, tMin, tMax) && result.push(t)
 		}
 		return result
@@ -71,24 +71,24 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const pqDiv = dirLC.squared()
 		const lineTs = pqFormula(2 * dirLC.dot(anchorLC) / pqDiv, (anchorLC.squared() - 1) / pqDiv)
 		return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y)).map(tOther => ({
-			tThis: SemiEllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC), tMin, tMax),
+			tThis: EllipseCurve.XYLCPointT(dirLC.times(tOther).plus(anchorLC), tMin, tMax),
 			tOther: tOther,
 			p: L3.at(anchorWC, dirWC, tOther),
 		}))
 	}
 
 	/**
-	 * Returns a new SemiEllipseCurve representing a circle parallel to the XY-plane.`
+	 * Returns a new EllipseCurve representing a circle parallel to the XY-plane.`
 	 */
-	static semicircle(radius: number, center: V3 = V3.O, tMin?: number, tMax?: number): SemiEllipseCurve {
-		return new SemiEllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0), tMin, tMax)
+	static semicircle(radius: number, center: V3 = V3.O, tMin?: number, tMax?: number): EllipseCurve {
+		return new EllipseCurve(center, new V3(radius, 0, 0), new V3(0, radius, 0), tMin, tMax)
 	}
 
 	static circleForCenter2P(center: V3, a: V3, b: V3, radius: number, tMin?: number, tMax?: number) {
 		const f1 = center.to(a)
 		const normal = f1.cross(center.to(b))
 		const f2 = normal.cross(f1).toLength(f1.length())
-		return new SemiEllipseCurve(
+		return new EllipseCurve(
 			center,
 			f1,
 			f2,
@@ -97,18 +97,18 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		)
 	}
 
-	split(tMin = this.tMin, tMax = this.tMax): SemiEllipseCurve[] {
-		const result: SemiEllipseCurve[] = []
+	split(tMin = this.tMin, tMax = this.tMax): EllipseCurve[] {
+		const result: EllipseCurve[] = []
 		tMin < 0 &&
 			result.push(
-				new SemiEllipseCurve(this.center, this.f1.negated(), this.f2.negated(), tMin + PI, min(0, tMax) + PI),
+				new EllipseCurve(this.center, this.f1.negated(), this.f2.negated(), tMin + PI, min(0, tMax) + PI),
 			)
-		tMax > 0 && result.push(new SemiEllipseCurve(this.center, this.f1, this.f2, max(0, tMin), tMax))
+		tMax > 0 && result.push(new EllipseCurve(this.center, this.f1, this.f2, max(0, tMin), tMax))
 		return result
 	}
 
-	static forAB(a: number, b: number, center: V3 = V3.O): SemiEllipseCurve {
-		return super.forAB(a, b, center) as SemiEllipseCurve
+	static forAB(a: number, b: number, center: V3 = V3.O): EllipseCurve {
+		return super.forAB(a, b, center) as EllipseCurve
 	}
 
 	/**
@@ -122,7 +122,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 			new L3(b.lerp(c, 0.5), normal.cross(b.to(c)).unit()),
 		)!
 		const f1 = center.to(a).negated()
-		return new SemiEllipseCurve(
+		return new EllipseCurve(
 			center,
 			f1,
 			normal.unit().cross(f1),
@@ -221,7 +221,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isColinearTo(curve: Curve): boolean {
-		if (!hasConstructor(curve, SemiEllipseCurve)) return false
+		if (!hasConstructor(curve, EllipseCurve)) return false
 		if (!this.center.like(curve.center)) {
 			return false
 		}
@@ -249,13 +249,13 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		assertVectors(pWC)
 		assert(this.containsPoint(pWC))
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		const t = SemiEllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
+		const t = EllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
 		assert(this.isValidT(t))
 		return t
 	}
 
-	reversed(): SemiEllipseCurve {
-		return new SemiEllipseCurve(this.center, this.f1.negated(), this.f2, PI - this.tMax, PI - this.tMin)
+	reversed(): EllipseCurve {
+		return new EllipseCurve(this.center, this.f1.negated(), this.f2, PI - this.tMax, PI - this.tMin)
 	}
 
 	eccentricity() {
@@ -311,7 +311,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	 * with g1 = 2 * a, g2 = b +- sqrt(b² - 4 * a²)
 	 * Solve (3), (2) with intersectionUnitCircleLine
 	 */
-	rightAngled(): SemiEllipseCurve {
+	rightAngled(): EllipseCurve {
 		const f1 = this.f1,
 			f2 = this.f2,
 			a = f1.dot(f2),
@@ -324,10 +324,10 @@ export class SemiEllipseCurve extends XiEtaCurve {
 		const { x1: xi, y1: eta } = intersectionUnitCircleLine(g1, g2, 0)
 		const f1RA = f1.times(xi).plus(f2.times(eta))
 		const f2RA = f1.times(-eta).plus(f2.times(xi))
-		return new SemiEllipseCurve(this.center, f1RA, f2RA, -PI, PI)
+		return new EllipseCurve(this.center, f1RA, f2RA, -PI, PI)
 	}
 
-	isInfosWithEllipse(ellipse: SemiEllipseCurve): ISInfo[] {
+	isInfosWithEllipse(ellipse: EllipseCurve): ISInfo[] {
 		if (this.normal.isParallelTo(ellipse.normal) && eq0(this.center.minus(ellipse.center).dot(ellipse.normal))) {
 			// ellipses are coplanar
 			const ellipseLCRA = ellipse.transform(this.matrixInverse).rightAngled()
@@ -402,7 +402,7 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 
 	isInfosWithCurve(curve: Curve): ISInfo[] {
-		if (curve instanceof SemiEllipseCurve) {
+		if (curve instanceof EllipseCurve) {
 			return this.isInfosWithEllipse(curve)
 		}
 		return super.isInfosWithCurve(curve)
@@ -463,5 +463,5 @@ export class SemiEllipseCurve extends XiEtaCurve {
 	}
 }
 
-SemiEllipseCurve.prototype.hlol = Curve.hlol++
-SemiEllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 32)
+EllipseCurve.prototype.hlol = Curve.hlol++
+EllipseCurve.prototype.tIncrement = 2 * Math.PI / (4 * 32)

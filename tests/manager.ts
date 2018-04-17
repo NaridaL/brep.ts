@@ -43,7 +43,7 @@ import {
 	PlaneSurface,
 	PointVsFace,
 	rotateCurve,
-	SemiEllipseCurve,
+	EllipseCurve,
 	Surface,
 } from '..'
 
@@ -490,9 +490,9 @@ export function rotateEdge(edge: Edge, angle: raddd) {
 	const surface = rotateCurve(edge.curve, undefined, undefined, angle, edge.deltaT() > 0)
 	const edges = [
 		edge,
-		Edge.forCurveAndTs(SemiEllipseCurve.semicircle(edge.b.lengthXY(), V(0, 0, edge.b.z), 0, angle)),
+		Edge.forCurveAndTs(EllipseCurve.semicircle(edge.b.lengthXY(), V(0, 0, edge.b.z), 0, angle)),
 		edge.rotateZ(angle).flipped(),
-		Edge.forCurveAndTs(SemiEllipseCurve.semicircle(edge.a.lengthXY(), V(0, 0, edge.a.z), 0, angle)).flipped(),
+		Edge.forCurveAndTs(EllipseCurve.semicircle(edge.a.lengthXY(), V(0, 0, edge.a.z), 0, angle)).flipped(),
 	]
 	return Face.create(surface, edges)
 }

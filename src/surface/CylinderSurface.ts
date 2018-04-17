@@ -4,30 +4,30 @@ import {
 	BezierCurve,
 	Curve,
 	Edge,
+	EllipseCurve,
 	ImplicitSurface,
 	L3,
 	OUTSIDE,
 	P3,
 	PointVsFace,
 	ProjectedCurveSurface,
-	SemiEllipseCurve,
 	Surface,
 } from '../index'
 
 import { sign } from '../math'
 
-export class SemiCylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
-	static readonly UNIT = new SemiCylinderSurface(SemiEllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
+export class CylinderSurface extends ProjectedCurveSurface implements ImplicitSurface {
+	static readonly UNIT = new CylinderSurface(EllipseCurve.UNIT, V3.Z, undefined, undefined, 0, 1)
 	readonly matrix: M4
 	readonly matrixInverse: M4
 	readonly pLCNormalWCMatrix: M4
 	readonly pWCNormalWCMatrix: M4
 	readonly normalDir: number
 	// @ts-ignore
-	// readonly baseCurve: SemiEllipseCurve
+	// readonly baseCurve: EllipseCurve
 
 	constructor(
-		readonly baseCurve: SemiEllipseCurve,
+		readonly baseCurve: EllipseCurve,
 		dir1: V3,
 		sMin: number = baseCurve.tMin,
 		sMax: number = baseCurve.tMax,
@@ -35,7 +35,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		zMax = Infinity,
 	) {
 		super(baseCurve, dir1, sMin, sMax, zMin, zMax)
-		assertInst(SemiEllipseCurve, baseCurve)
+		assertInst(EllipseCurve, baseCurve)
 		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
 		this.matrixInverse = this.matrix.inversed()
@@ -48,9 +48,9 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse)
 	}
 
-	static semicylinder(radius: number): SemiCylinderSurface {
-		return new SemiCylinderSurface(
-			new SemiEllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)),
+	static semicylinder(radius: number): CylinderSurface {
+		return new CylinderSurface(
+			new EllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)),
 			V3.Z,
 			undefined,
 			undefined,
@@ -76,7 +76,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		const a = dx ** 2 + dy ** 2
 		const b = 2 * (ax * dx + ay * dy)
 		const c = ax ** 2 + ay ** 2 - 1
-		return pqFormula(b / a, c / a).filter(t => SemiEllipseCurve.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)))
+		return pqFormula(b / a, c / a).filter(t => EllipseCurve.XYLCValid(new V3(ax + dx * t, ay + dy * t, 0)))
 	}
 
 	normalP(p: V3): V3 {
@@ -102,19 +102,19 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		}
 		const anchorLC = this.matrixInverse.transformPoint(line.anchor)
 		assert(
-			!SemiCylinderSurface.unitISLineTs(anchorLC, dirLC).length ||
-				!isNaN(SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)[0]),
+			!CylinderSurface.unitISLineTs(anchorLC, dirLC).length ||
+				!isNaN(CylinderSurface.unitISLineTs(anchorLC, dirLC)[0]),
 			'sad ' + dirLC,
 		)
-		return SemiCylinderSurface.unitISLineTs(anchorLC, dirLC)
+		return CylinderSurface.unitISLineTs(anchorLC, dirLC)
 	}
 
-	isCoplanarTo(surface: Surface): surface is SemiCylinderSurface {
+	isCoplanarTo(surface: Surface): surface is CylinderSurface {
 		return (
 			this == surface ||
-			(hasConstructor(surface, SemiCylinderSurface) &&
+			(hasConstructor(surface, CylinderSurface) &&
 				this.dir.isParallelTo(surface.dir) &&
-				this.containsSemiEllipse(surface.baseCurve, false))
+				this.containsEllipse(surface.baseCurve, false))
 		)
 	}
 
@@ -126,7 +126,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 		return thisFacesOut == objectFacesOut
 	}
 
-	containsSemiEllipse(ellipse: SemiEllipseCurve, checkAABB: boolean = true) {
+	containsEllipse(ellipse: EllipseCurve, checkAABB: boolean = true) {
 		const projEllipse = ellipse.transform(M4.project(this.baseCurve.getPlane(), this.dir))
 		return this.baseCurve == ellipse || this.baseCurve.isColinearTo(projEllipse)
 	}
@@ -134,8 +134,8 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	containsCurve(curve: Curve) {
 		if (curve instanceof L3) {
 			return this.containsLine(curve)
-		} else if (curve instanceof SemiEllipseCurve) {
-			return this.containsSemiEllipse(curve)
+		} else if (curve instanceof EllipseCurve) {
+			return this.containsEllipse(curve)
 		} else if (curve instanceof BezierCurve) {
 			return false
 		} else {
@@ -159,13 +159,13 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 
 	containsPoint(pWC: V3): boolean {
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		return this.baseCurve.isValidT(SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax))
+		return this.baseCurve.isValidT(EllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax))
 	}
 
 	stP(pWC: V3): V3 {
 		assert(arguments.length == 1)
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		const u = SemiEllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
+		const u = EllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
 		return new V3(u, pLC.z, 0)
 	}
 
@@ -184,7 +184,7 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 				})
 			}
 		}
-		if (surface2 instanceof SemiCylinderSurface) {
+		if (surface2 instanceof CylinderSurface) {
 			if (eq0(this.getCenterLine().distanceToLine(surface2.getCenterLine()))) {
 				throw new Error()
 			}
@@ -211,5 +211,5 @@ export class SemiCylinderSurface extends ProjectedCurveSurface implements Implic
 	}
 }
 
-SemiCylinderSurface.prototype.uStep = TAU / 32
-SemiCylinderSurface.prototype.vStep = 256
+CylinderSurface.prototype.uStep = TAU / 32
+CylinderSurface.prototype.vStep = 256

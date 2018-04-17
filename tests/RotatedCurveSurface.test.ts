@@ -21,13 +21,13 @@ import {
 	PlaneSurface,
 	rotateCurve,
 	RotatedCurveSurface,
-	SemiEllipseCurve,
+	EllipseCurve,
 	StraightEdge,
 } from '..'
 import { cos, PI, sin } from '../src/math'
 
 suite('RotatedCurveSurface', () => {
-	const baseCurve = SemiEllipseCurve.forAB(2, 2)
+	const baseCurve = EllipseCurve.forAB(2, 2)
 		.rotateZ(-20 * DEG)
 		.translate(4, 3)
 		.rotateX(90 * DEG)
@@ -64,17 +64,17 @@ suite('RotatedCurveSurface', () => {
 	})
 	test('is curves with plane perpendicular to rotation axis', assert => {
 		const cs = testISCurves(assert, torusSurface, new P3(V3.Z, 4), 2)
-		assert.ok(cs[0] instanceof SemiEllipseCurve, 'cs[0] instanceof SemiEllipseCurve')
-		assert.ok(cs[1] instanceof SemiEllipseCurve, 'cs[1] instanceof SemiEllipseCurve')
+		assert.ok(cs[0] instanceof EllipseCurve, 'cs[0] instanceof EllipseCurve')
+		assert.ok(cs[1] instanceof EllipseCurve, 'cs[1] instanceof EllipseCurve')
 	})
 	test('is curves with plane through rotation axis', assert => {
 		const cs = testISCurves(assert, torusSurface, P3.ZX.rotateZ(20 * DEG), 1)
-		assert.ok(cs[0] instanceof SemiEllipseCurve, 'cs[0] instanceof SemiEllipseCurve')
+		assert.ok(cs[0] instanceof EllipseCurve, 'cs[0] instanceof EllipseCurve')
 	})
 	test('is curves with plane ', assert => testISCurves(assert, torusSurface, new P3(V3.XYZ.unit(), 4), 1))
 	test('is curves with plane 2', assert => {
 		const torus = new RotatedCurveSurface(
-			new SemiEllipseCurve(V(2, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793),
+			new EllipseCurve(V(2, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793),
 			M4.scale(-1, 1, 1),
 			0,
 			3.141592653589793,

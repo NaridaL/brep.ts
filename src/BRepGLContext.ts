@@ -7,13 +7,13 @@ import {
 	Curve,
 	CustomPlane,
 	Edge,
+	EllipseCurve,
 	HyperbolaCurve,
 	ImplicitCurve,
 	L3,
 	ParabolaCurve,
 	PICurve,
 	PPCurve,
-	SemiEllipseCurve,
 } from './index'
 import { ceil, floor, pow, sign } from './math'
 import * as shaders from './shaders'
@@ -111,7 +111,7 @@ export class BREPGLContext {
 function conicPainter(
 	mode: 0 | 1 | 2,
 	gl: BREPGLContext,
-	ellipse: SemiEllipseCurve,
+	ellipse: EllipseCurve,
 	color: GL_COLOR,
 	startT: number,
 	endT: number,
@@ -141,7 +141,7 @@ export const CURVE_PAINTERS: {
 		width: number,
 	) => void
 } = {
-	[SemiEllipseCurve.name]: conicPainter.bind(undefined, 0),
+	[EllipseCurve.name]: conicPainter.bind(undefined, 0),
 	[ParabolaCurve.name]: conicPainter.bind(undefined, 1),
 	[HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
 	[ImplicitCurve.name](gl, curve: ImplicitCurve, color, startT, endT, width = 2) {

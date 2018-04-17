@@ -6,12 +6,12 @@ import {
 	Curve,
 	dotCurve2,
 	Edge,
+	EllipseCurve,
 	ImplicitCurve,
 	L3,
 	P3,
 	PICurve,
 	PPCurve,
-	SemiEllipseCurve,
 	ZDirVolumeVisitor,
 } from '../index'
 
@@ -82,7 +82,7 @@ export abstract class Surface extends Transformable implements Equalable {
 		return inside ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
 	}
 
-	static loopContainsPointEllipse(loop: Edge[], pWC: V3, testLine: SemiEllipseCurve, pWCT?: number): PointVsFace {
+	static loopContainsPointEllipse(loop: Edge[], pWC: V3, testLine: EllipseCurve, pWCT?: number): PointVsFace {
 		const lineOut = testLine.normal
 		const testPlane = P3.normalOnAnchor(testLine.normal, pWC)
 		const colinearEdges = loop.map(edge => testLine.isColinearTo(edge.curve))

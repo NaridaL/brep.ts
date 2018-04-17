@@ -28,7 +28,10 @@ import {
 	BRep,
 	ConicSurface,
 	Curve,
+	CylinderSurface,
 	Edge,
+	EllipseCurve,
+	EllipsoidSurface,
 	Face,
 	FaceInfoFactory,
 	getGlobalId,
@@ -39,9 +42,6 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotatedCurveSurface,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
 	StraightEdge,
 	Surface,
 	XiEtaCurve,
@@ -61,9 +61,9 @@ export function projectCurve(curve: Curve, offset: V3, flipped: boolean): Surfac
 		const surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1)
 		return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor))
 	}
-	if (curve instanceof SemiEllipseCurve) {
+	if (curve instanceof EllipseCurve) {
 		const curveDir = flipped ? offset : offset.negated()
-		return new SemiCylinderSurface(curve, curveDir.unit(), undefined, undefined)
+		return new CylinderSurface(curve, curveDir.unit(), undefined, undefined)
 	}
 	if (curve instanceof BezierCurve || curve instanceof XiEtaCurve) {
 		const curveDir = offset.times(flipped ? 1 : -1)
@@ -85,7 +85,7 @@ export function projectPointCurve(
 	if (curve instanceof L3) {
 		const up = curve.anchor.to(p).rejectedFrom(curve.dir1)
 		return PlaneSurface.forAnchorAndPlaneVectors(curve.anchor, curve.dir1, up.unit(), tMin, tMax, 0, up.length())
-	} else if (curve instanceof SemiEllipseCurve) {
+	} else if (curve instanceof EllipseCurve) {
 		// flip f2 by default
 		const factor = -1 * (flipped ? -1 : 1)
 		return new ConicSurface(p, curve.f1.times(factor), curve.f2, p.to(curve.center), tMin, tMax, 0, 1)
@@ -112,10 +112,10 @@ export function rotateCurve(
 	if (curve instanceof L3) {
 		if (curve.dir1.isParallelTo(V3.Z)) {
 			if (eq0(curve.anchor.x)) {
-			    return undefined
+				return undefined
 				//throw new Error('Cannot rotate curve colinear to Z axis.')
 			}
-			const baseEllipse = new SemiEllipseCurve(
+			const baseEllipse = new EllipseCurve(
 				V3.O,
 				curve.anchor.xy(),
 				curve.anchor.xy().getPerpendicular(),
@@ -125,7 +125,7 @@ export function rotateCurve(
 			// if curve.dir1 is going up (+Z), it the cylinder surface should face inwards
 			const factor = (curve.dir1.z > 0 ? -1 : 1) * (flipped ? -1 : 1)
 			const [zMin, zMax] = [curve.at(tMin).z * factor, curve.at(tMax).z * factor].sort(MINUS)
-			return new SemiCylinderSurface(baseEllipse, V3.Z.times(factor), 0, degrees, zMin, zMax)
+			return new CylinderSurface(baseEllipse, V3.Z.times(factor), 0, degrees, zMin, zMax)
 		}
 		if (
 			curve
@@ -166,7 +166,7 @@ export function rotateCurve(
 			return factor > 0 ? s : s.flipped()
 		}
 	}
-	if (curve instanceof SemiEllipseCurve) {
+	if (curve instanceof EllipseCurve) {
 		const a = curve.at(tMin),
 			b = curve.at(tMax)
 		const ell = curve.rightAngled()
@@ -179,7 +179,7 @@ export function rotateCurve(
 			if (ell.f1.isParallelTo(V3.Z)) {
 				;[width, height] = [height, width]
 			}
-			return SemiEllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
+			return EllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center)
 		} else {
 			const s = new RotatedCurveSurface(curve, M4.IDENTITY, tMin, tMax)
 			return s
@@ -315,7 +315,7 @@ export namespace B2T {
 
 	export function sphere(radius: number = 1, name: string = 'sphere' + getGlobalId(), rot: raddd = TAU): BRep {
 		const ee = PCurveEdge.create(
-			new SemiEllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
+			new EllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
 			new V3(0, 0, -radius),
 			new V3(0, 0, radius),
 			0,
@@ -401,8 +401,8 @@ export namespace B2T {
 		assertNumbers(rSmall, rLarge, rads)
 		assertf(() => rLarge > rSmall)
 		const curves = [
-			SemiEllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)),
-			SemiEllipseCurve.semicircle(-rSmall, new V3(rLarge, 0, 0)),
+			EllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)),
+			EllipseCurve.semicircle(-rSmall, new V3(rLarge, 0, 0)),
 		]
 		const baseEdges = curves.map(c => PCurveEdge.forCurveAndTs(c, 0, Math.PI).rotateX(PI / 2))
 		return B2T.rotateEdges(baseEdges, rads, name)
@@ -434,7 +434,7 @@ export namespace B2T {
 			const a = edge.a,
 				radius = a.lengthXY()
 			if (!eq0(radius)) {
-				return new SemiEllipseCurve(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0))
+				return new EllipseCurve(V(0, 0, a.z), V(radius, 0, 0), V(0, radius, 0))
 			}
 			return undefined
 		})
@@ -488,7 +488,7 @@ export namespace B2T {
 						stepEndEdges[edgeIndex],
 						!eq0(edge.b.x) && ribs[ipp]!.flipped(),
 					].filter((x: any): x is Edge => x)
-					const surface = (0 === rot ? baseSurfaces[edgeIndex]! : baseSurfaces[edgeIndex]!.rotateZ(rot))
+					const surface = 0 === rot ? baseSurfaces[edgeIndex]! : baseSurfaces[edgeIndex]!.rotateZ(rot)
 					const info = infoFactory && infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined)
 					faces.push(Face.create(surface, faceEdges, undefined, name + 'Wall' + edgeIndex, info))
 				}
@@ -522,26 +522,26 @@ export namespace B2T {
 	//		const a = loop[i].a, radius = a.lengthXY()
 	//		const b = endEdges[i].a
 	//		if (!eq0(radius)) {
-	//			const curve = new SemiEllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
+	//			const curve = new EllipseCurve(V(0, 0, a.z), V(-radius, 0, 0), V(0, -radius, 0))
 	//			const aT = -PI, bT = -PI + rads
 	//			return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name
 	// + 'rib' + i) } }) const faces = loop.map((edge, i) => { const ipp = (i + 1) % edgeCount console.log('ljl', i,
 	// ipp, ribs) const faceEdges = [ edge.flipped(), !eq0(edge.a.x) && ribs[i], endEdges[i], !eq0(edge.b.x) &&
 	// ribs[ipp].flipped()].filter(x => x) if (edge instanceof StraightEdge) { const line = edge.curve let surface if
 	// (line.dir1.isParallelTo(V3.Z)) { if (eq0(edge.a.x)) { return } let flipped = edge.a.z > edge.b.z surface = new
-	// SemiCylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated()) } else if
+	// CylinderSurface(ribs[i].curve, !flipped ? V3.Z : V3.Z.negated()) } else if
 	// (line.dir1.isPerpendicularTo(V3.Z)) { let flipped = edge.a.x > edge.b.x let surface = new PlaneSurface(new
 	// P3(V3.Z, edge.a.z)) if (!flipped) surface = surface.flipped() if (!open) { const hole = flipped ? !eq0(edge.b.x)
 	// && ribs[ipp].flipped() : !eq0(edge.a.x) && ribs[i] return new PlaneFace(surface, [flipped ? ribs[i] :
 	// ribs[ipp].flipped()], hole && [[hole]]) } return new PlaneFace(surface, faceEdges) } else { // apex is
 	// intersection of segment with Z-axis let a = edge.a, b = edge.b let apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
 	// let apex = new V3(0, 0, apexZ) let flipped = edge.a.z > edge.b.z surface =
-	// ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as SemiEllipseCurve, !flipped ? 1 : -1)
-	// } return Face.create(surface, faceEdges) } if (edge.curve instanceof SemiEllipseCurve) { let flipped = undefined
+	// ConicSurface.atApexThroughEllipse(apex, ribs[a.x > b.x ? i : ipp].curve as EllipseCurve, !flipped ? 1 : -1)
+	// } return Face.create(surface, faceEdges) } if (edge.curve instanceof EllipseCurve) { let flipped = undefined
 	// let ell = edge.curve.rightAngled() let f1Perp = ell.f1.isPerpendicularTo(V3.Z), f2Perp =
 	// ell.f2.isPerpendicularTo(V3.Z) if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) { let f3length = f1Perp
 	// ? ell.f1.length() : ell.f2.length() if (flipped) { f3length *= -1 } let surface = new
-	// SemiEllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length)) return new
+	// EllipsoidSurface(ell.center, ell.f1, ell.f2, ell.f1.cross(ell.f2).toLength(f3length)) return new
 	// RotationFace(surface, faceEdges) } } else { assert(false, edge) } }).filter(x => x) if (open) { const
 	// endFaceEdges = endEdges.map(edge => edge.flipped()).reverse() faces.push( new PlaneFace(new
 	// PlaneSurface(P3.ZX.flipped()), loop), new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(rads)), endFaceEdges)) }
@@ -826,12 +826,12 @@ export namespace B2T {
 	export function fixEdges(edges: Edge[]): Edge[] {
 		return edges.flatMap(edge => {
 			const c = edge.curve
-			if (c instanceof SemiEllipseCurve && c.tMin === -PI && c.tMax === PI) {
+			if (c instanceof EllipseCurve && c.tMin === -PI && c.tMax === PI) {
 				const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge]
 				return splitEdges.map(edge => {
 					if (edge.minT >= 0) {
 						return Edge.create(
-							new SemiEllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax),
+							new EllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax),
 							edge.a,
 							edge.b,
 							edge.aT,
@@ -844,7 +844,7 @@ export namespace B2T {
 					} else {
 						// "rotate" the curve
 						return Edge.create(
-							new SemiEllipseCurve(
+							new EllipseCurve(
 								c.center,
 								c.f1.negated(),
 								c.f2.negated(),

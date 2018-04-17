@@ -3,6 +3,7 @@ import { assert, assertInst, DEG, eq0, fuzzyBetween, hasConstructor, lerp, lt, M
 import {
 	Curve,
 	Edge,
+	EllipseCurve,
 	HyperbolaCurve,
 	intersectionUnitCircleLine2,
 	L3,
@@ -10,7 +11,6 @@ import {
 	ParametricSurface,
 	PlaneSurface,
 	PointVsFace,
-	SemiEllipseCurve,
 	Surface,
 } from '../index'
 
@@ -108,7 +108,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 	stPFunc(): (pWC: V3) => V3 {
 		return pWC => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
-			const angle = SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
+			const angle = EllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
 			const radius = pLC.lengthXY()
 			return new V3(angle, this.curve.pointT(new V3(radius, 0, pLC.z)), 0)
 		}
@@ -178,7 +178,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 		if (planeLC.normal1.isParallelTo(V3.Z)) {
 			return this.curve.isTsWithPlane(planeLC).map(t => {
 				const { x: radius } = this.curve.at(t)
-				return new SemiEllipseCurve(
+				return new EllipseCurve(
 					new V3(0, 0, planeLC.w),
 					new V3(radius, 0, 0),
 					new V3(0, radius, 0),
@@ -204,8 +204,8 @@ export class RotatedCurveSurface extends ParametricSurface {
 
 	loopContainsPoint(loop: Edge[], pWC: V3): PointVsFace {
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		const angle = SemiEllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
-		const testCurveLC = SemiEllipseCurve.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z))
+		const angle = EllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
+		const testCurveLC = EllipseCurve.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z))
 		const testCurveWC = testCurveLC.transform(this.matrix)
 		return Surface.loopContainsPointEllipse(loop, pWC, testCurveWC, angle)
 	}
@@ -237,7 +237,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 				return true
 			}
 		}
-		if (curve instanceof SemiEllipseCurve) {
+		if (curve instanceof EllipseCurve) {
 			const curveLC = curve.transform(this.matrixInverse)
 			if (curveLC.normal.isParallelTo(V3.Z)) {
 				return (
@@ -254,7 +254,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 	}
 }
 
-RotatedCurveSurface.prototype.uStep = SemiEllipseCurve.prototype.tIncrement
+RotatedCurveSurface.prototype.uStep = EllipseCurve.prototype.tIncrement
 
 export function getExtremePointsHelper(this: RotatedCurveSurface & { matrix: M4 }, curve: Curve) {
 	// this logic comes from EllipseCurve.roots

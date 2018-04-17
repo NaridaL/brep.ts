@@ -39,6 +39,7 @@ import {
 	Curve,
 	dotCurve2,
 	Edge,
+	EllipsoidSurface,
 	EPS,
 	fff,
 	getGlobalId,
@@ -49,7 +50,6 @@ import {
 	ParametricSurface,
 	PlaneSurface,
 	PointVsFace,
-	SemiEllipsoidSurface,
 	splitsVolumeEnclosingCone2,
 	splitsVolumeEnclosingFaces,
 	splitsVolumeEnclosingFacesP,
@@ -1476,10 +1476,10 @@ export class RotationFace extends Face {
 		const verticesST: V3[] = [],
 			vertices: V3[] = [],
 			loopStarts = []
-		const ellipsoid: SemiEllipsoidSurface = this.surface as SemiEllipsoidSurface
+		const ellipsoid: EllipsoidSurface = this.surface as EllipsoidSurface
 		const ptpf = ellipsoid.stPFunc()
 		const testDegeneratePoint =
-			ellipsoid instanceof SemiEllipsoidSurface
+			ellipsoid instanceof EllipsoidSurface
 				? (nextStart: V3) =>
 						nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) ||
 						nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
@@ -1512,7 +1512,7 @@ export class RotationFace extends Face {
 			}
 		}
 		let normals
-		if (this.surface instanceof SemiEllipsoidSurface) {
+		if (this.surface instanceof EllipsoidSurface) {
 			normals = vertices.map(v => ellipsoid.normalP(v))
 		} else {
 			const pN = ellipsoid.normalSTFunc()
@@ -1585,7 +1585,7 @@ export class RotationFace extends Face {
 		const normalIJFunc = (i: number, j: number) => this.surface.normalSTFunc()(i * uStep, j * vStep)
 		const loops = [this.contour].concat(this.holes)
 		const { vertices, verticesUV, normals, loopStarts } =
-			this.surface instanceof SemiEllipsoidSurface || this.surface instanceof ConicSurface
+			this.surface instanceof EllipsoidSurface || this.surface instanceof ConicSurface
 				? this.unrollEllipsoidLoops(loops, uStep, vStep)
 				: this.unrollCylinderLoops(loops, uStep, vStep)
 		loopStarts.push(vertices.length)

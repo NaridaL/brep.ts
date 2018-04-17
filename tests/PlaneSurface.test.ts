@@ -1,6 +1,6 @@
 import { suite, surfaceVolumeAndAreaTests, test, testLoopContainsPoint } from './manager'
 
-import { Edge, Face, L3, P3, PlaneSurface, PointVsFace, SemiEllipseCurve, StraightEdge } from '..'
+import { Edge, Face, L3, P3, PlaneSurface, PointVsFace, EllipseCurve, StraightEdge } from '..'
 
 import { DEG, V, V3 } from 'ts3dutils'
 
@@ -33,8 +33,8 @@ suite('PlaneSurface', () => {
 	suite('triangleFace.foo()', () => surfaceVolumeAndAreaTests(triangleFace.foo()))
 
 	const faceWithEllipses = Face.create(new PlaneSurface(P3.XY), [
-		Edge.forCurveAndTs(SemiEllipseCurve.UNIT),
-		Edge.forCurveAndTs(SemiEllipseCurve.circleThroughPoints(V3.X.negated(), V(0, -0.5), V3.X)),
+		Edge.forCurveAndTs(EllipseCurve.UNIT),
+		Edge.forCurveAndTs(EllipseCurve.circleThroughPoints(V3.X.negated(), V(0, -0.5), V3.X)),
 	])
 	suite('faceWithEllipses', () => surfaceVolumeAndAreaTests(faceWithEllipses))
 	suite('faceWithEllipses.foo()', () => surfaceVolumeAndAreaTests(faceWithEllipses.foo()))

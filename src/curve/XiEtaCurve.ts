@@ -18,12 +18,12 @@ import {
 	BezierCurve,
 	ConicSurface,
 	Curve,
+	EllipsoidSurface,
 	ISInfo,
 	L3,
 	P3,
 	PlaneSurface,
 	ProjectedCurveSurface,
-	SemiEllipsoidSurface,
 	Surface,
 } from '../index'
 
@@ -284,7 +284,7 @@ export abstract class XiEtaCurve extends Curve {
 	isTsWithSurface(surface: Surface): number[] {
 		if (surface instanceof PlaneSurface) {
 			return this.isTsWithPlane(surface.plane)
-		} else if (surface instanceof SemiEllipsoidSurface) {
+		} else if (surface instanceof EllipsoidSurface) {
 			const isEllipses = surface.isCurvesWithPlane(this.getPlane())
 			return isEllipses
 				.flatMap(isEllipse => this.isInfosWithCurve(isEllipse))

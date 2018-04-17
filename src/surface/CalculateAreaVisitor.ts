@@ -3,6 +3,8 @@ import { assert, assertf, eq, glqInSteps, M4, NLA_PRECISION } from 'ts3dutils'
 import {
 	ConicSurface,
 	Edge,
+	EllipseCurve,
+	EllipsoidSurface,
 	HyperbolaCurve,
 	ImplicitCurve,
 	L3,
@@ -10,8 +12,6 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotatedCurveSurface,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
 } from '../index'
 import { ceil, cos, floor, sign, sin } from '../math'
 
@@ -23,7 +23,7 @@ export const CalculateAreaVisitor = {
 		const totalArea = edges
 			.map(edge => {
 				if (
-					edge.curve instanceof SemiEllipseCurve ||
+					edge.curve instanceof EllipseCurve ||
 					edge.curve instanceof HyperbolaCurve ||
 					edge.curve instanceof ParabolaCurve
 				) {
@@ -70,7 +70,7 @@ export const CalculateAreaVisitor = {
 			const curve = edge.curve
 			if (curve instanceof L3) {
 				edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
-			} else if (curve instanceof SemiEllipseCurve) {
+			} else if (curve instanceof EllipseCurve) {
 				// INTEGRATE[aT; bT] (curve.at(t) * u1) * (tangent(t) * r1) dt
 				// INTEGRATE[aT; bT] (u1 f1 cos t + u1 f2 sin t + u1 c) * (r1 f1 (-sin t) + r1 f2 cos t) dt
 				const { f1, f2, center } = curve
@@ -224,10 +224,10 @@ export const CalculateAreaVisitor = {
 		return totalArea
 	},
 
-	//[SemiCylinderSurface.name](this: SemiCylinderSurface, edges: Edge[]): number {
+	//[CylinderSurface.name](this: CylinderSurface, edges: Edge[]): number {
 	//	// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 	//	const totalArea = edges.map(edge => {
-	//		if (edge.curve instanceof SemiEllipseCurve) {
+	//		if (edge.curve instanceof EllipseCurve) {
 	//			const f = (t: number) => {
 	//				const at = edge.curve.at(t), tangent = edge.tangentAt(t)
 	//				return at.dot(this.dir) * tangent.rejectedLength(this.dir)
@@ -238,4 +238,4 @@ export const CalculateAreaVisitor = {
 	// // if the cylinder faces inwards, CCW faces will have been CW, so we need to reverse that here //abs is
 	// not an option as "holes" may also be passed return totalArea *sign(this.baseCurve.normal.dot(this.dir)) },
 }
-CalculateAreaVisitor[SemiEllipsoidSurface.name] = CalculateAreaVisitor[RotatedCurveSurface.name]
+CalculateAreaVisitor[EllipsoidSurface.name] = CalculateAreaVisitor[RotatedCurveSurface.name]

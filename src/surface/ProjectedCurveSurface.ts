@@ -3,6 +3,7 @@ import { assert, assertInst, assertNumbers, assertVectors, hasConstructor, int, 
 import {
 	Curve,
 	Edge,
+	EllipsoidSurface,
 	ImplicitCurve,
 	ImplicitSurface,
 	L3,
@@ -10,7 +11,6 @@ import {
 	ParametricSurface,
 	PlaneSurface,
 	PointVsFace,
-	SemiEllipsoidSurface,
 	Surface,
 } from '../index'
 
@@ -162,7 +162,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 				return curves2
 			}
 		}
-		if (surface instanceof SemiEllipsoidSurface) {
+		if (surface instanceof EllipsoidSurface) {
 			return surface.isCurvesWithSurface(this)
 		}
 		return super.isCurvesWithSurface(surface)

@@ -17,10 +17,10 @@ import {
 	PCurveEdge,
 	PlaneSurface,
 	PointVsFace,
-	SemiCylinderSurface,
-	SemiEllipseCurve,
+	CylinderSurface,
+	EllipseCurve,
 	StraightEdge,
-    SemiEllipsoidSurface,
+    EllipsoidSurface,
 } from '..'
 
 import { cos, PI, sin, sqrt } from '../src/math'
@@ -30,7 +30,7 @@ suite('NLA', () => {
 	suite(
 		'isPointsWithBezier()',
 		inDifferentSystems((assert, m4) => {
-			const ell = new SemiEllipseCurve(
+			const ell = new EllipseCurve(
 				V(-223.34900663163222, -176.63214006755936, 0),
 				V(-169.5891804980124, -35.54247345835796, 0),
 				V(35.54247345835796, -169.5891804980124, 0),
@@ -51,7 +51,7 @@ suite('NLA', () => {
 	)
 
 	suite(
-		'SemiEllipseCurve.getAreaInDir',
+		'EllipseCurve.getAreaInDir',
 		inDifferentSystems(
 			(assert, m4) => {
 				const k = 1
@@ -71,7 +71,7 @@ suite('NLA', () => {
 							.cross(m4.transformVector(V3.Y))
 							.length()
 						console.log(areaFactor)
-						const ell = SemiEllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
+						const ell = EllipseCurve.UNIT.translate(0, yDiff, 0).transform(m4)
 						const up = m4.transformVector(test.up).unit()
 						const offsetArea = yDiff * (1 - cos(test.t) - (1 - cos(test.s))) * test.up.dot(V3.Y)
 						const totalArea = test.result + offsetArea
@@ -163,21 +163,21 @@ suite('NLA', () => {
 		assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), { x1: 2, x2: 0, y1: 0, y2: 2 })
 	})
 	//test('EllipsoidSurface.splitOnPlaneLoop', assert => {
-	//    //const es = SemiEllipsoidSurface.UNIT
+	//    //const es = EllipsoidSurface.UNIT
 	//    const a = V3.sphere(30 * DEG, 70 * DEG), z = a.z, xy = a.lengthXY(), center = V(0, 0, z), f1 = V(a.x, a.y,
-	// 0), f2 = V(-a.y, a.x) const curve = new SemiEllipseCurve(center, f1, f2) const seamCurve =
-	// SemiEllipseCurve.UNIT.rotateX(-PI / 2) const edge = Edge.forCurveAndTs(curve, -PI, PI) assert.ok(true, `<html><a
+	// 0), f2 = V(-a.y, a.x) const curve = new EllipseCurve(center, f1, f2) const seamCurve =
+	// EllipseCurve.UNIT.rotateX(-PI / 2) const edge = Edge.forCurveAndTs(curve, -PI, PI) assert.ok(true, `<html><a
 	// style='color: #0000ff text-decoration: underline' target='blank'
 	// href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[${edge.str}]'>view</a>`) const [front,
-	// back] = SemiEllipsoidSurface.splitOnPlaneLoop([edge], true)  assert.ok(true, `<html><a style='color: #0000ff
+	// back] = EllipsoidSurface.splitOnPlaneLoop([edge], true)  assert.ok(true, `<html><a style='color: #0000ff
 	// text-decoration: underline' target='blank' href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1,
 	// -1)]&edges=${back.sce}'>view</a>`) console.log(front, back) const expectedFront = [] const expectedBack =
 	// [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)] },
 
-	//test('SemiEllipseCurve.getVolZAnd', assert => {
+	//test('EllipseCurve.getVolZAnd', assert => {
 	//
-	//	assert.equal(SemiEllipseCurve.UNIT.getVolZAnd(V3.Z, -PI, PI).volume, 0)
-	//	assert.equal(SemiEllipseCurve.UNIT.rotateY(90 * DEG).translate(1, 0, 0).getVolZAnd(V3.Z, -PI, PI).volume, PI)
+	//	assert.equal(EllipseCurve.UNIT.getVolZAnd(V3.Z, -PI, PI).volume, 0)
+	//	assert.equal(EllipseCurve.UNIT.rotateY(90 * DEG).translate(1, 0, 0).getVolZAnd(V3.Z, -PI, PI).volume, PI)
 	//},
 })
 

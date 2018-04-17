@@ -21,8 +21,8 @@ import {
 	PCurveEdge,
 	PointVsFace,
 	RotationFace,
-	SemiEllipseCurve,
-	SemiEllipsoidSurface,
+	EllipseCurve,
+	EllipsoidSurface,
 	StraightEdge,
 } from '..'
 import { PI } from '../src/math'
@@ -72,7 +72,7 @@ suite('ConicSurface', () => {
 				'genseg18',
 			),
 			new PCurveEdge(
-				new SemiEllipseCurve(V(0, 0, 0.09999999999999998), V(0.9, 0, 0), V(0, 0.9, 0), 0, 3.141592653589793),
+				new EllipseCurve(V(0, 0, 0.09999999999999998), V(0.9, 0, 0), V(0, 0.9, 0), 0, 3.141592653589793),
 				V(0.6814525440390486, 0.5878966152502569, 0.1),
 				V(-0.4634542598189221, 0.7714986384017117, 0.1),
 				0.7118273326574678,
@@ -106,7 +106,7 @@ suite('ConicSurface', () => {
 				93.24438113642698,
 			),
 			new PCurveEdge(
-				new SemiEllipseCurve(
+				new EllipseCurve(
 					V(0, 0, 244.94352900661897),
 					V(198.46477746372744, 0, 0),
 					V(0, 198.46477746372744, 0),
@@ -132,7 +132,7 @@ suite('ConicSurface', () => {
 				0,
 			),
 			new PCurveEdge(
-				new SemiEllipseCurve(
+				new EllipseCurve(
 					V(0, 0, 180.2100595549249),
 					V(131.35224103228387, 0, 0),
 					V(0, 131.35224103228387, 0),
@@ -155,7 +155,7 @@ suite('ConicSurface', () => {
 		const unitCone = ConicSurface.UNIT
 		assert.ok(unitCone.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
 		assert.v3like(unitCone.pSTFunc()(0, 3), V(3, 0, 3))
-		const ellipseAtZ3 = SemiEllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
+		const ellipseAtZ3 = EllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
 		const planeAtZ3 = P3.XY.translate(0, 0, 3)
 		const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3)
 		assert.equal(issAtZ3.length, 1)
@@ -165,9 +165,9 @@ suite('ConicSurface', () => {
 		const scaledUnit = ConicSurface.UNIT.scale(2, 2, 1)
 		assert.notOk(scaledUnit.isCoplanarTo(unitCone))
 		assert.notOk(unitCone.isCoplanarTo(scaledUnit))
-		const ell1 = unitCone.isCurvesWithPlane(new P3(V(2, 3, 10).unit(), 10))[0] as SemiEllipseCurve
+		const ell1 = unitCone.isCurvesWithPlane(new P3(V(2, 3, 10).unit(), 10))[0] as EllipseCurve
 		assert.ok(unitCone.containsEllipse(ell1), 'UCS.containsEllipse(ell1)')
-		const ell2 = unitCone.isCurvesWithPlane(new P3(V(1, 1, 2).unit(), 4))[0] as SemiEllipseCurve
+		const ell2 = unitCone.isCurvesWithPlane(new P3(V(1, 1, 2).unit(), 4))[0] as EllipseCurve
 		const ell1Cone = ConicSurface.atApexThroughEllipse(V3.O, ell1)
 		const ell2Cone = ConicSurface.atApexThroughEllipse(V3.O, ell2)
 		console.log(ell1Cone)
@@ -201,8 +201,8 @@ suite('ConicSurface', () => {
 			.translate(2, 0.2, 1.1)
 			.flipped()
 		const cone = new ConicSurface(V(2, 0.2, 1.1), V(0, 0.6, 0), V(0, 0, -2.4), V(-12, 0, 0))
-		const sphere = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1))
-		const b = SemiEllipsoidSurface.UNIT
+		const sphere = new EllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1))
+		const b = EllipsoidSurface.UNIT
 		testISCurves(assert, a, b, 2)
 		testISCurves(assert, cone, sphere, 2)
 	})
@@ -213,7 +213,7 @@ suite('ConicSurface', () => {
 			V(-1.469576158976824e-16, 1.469576158976824e-16, -2.4000000000000004),
 			V(-12, 0, 7.347880794884119e-16),
 		)
-		const sphere = new SemiEllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1))
+		const sphere = new EllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1))
 
 		testISCurves(assert, cone, sphere, 2)
 	})
