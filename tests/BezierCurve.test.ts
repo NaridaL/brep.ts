@@ -17,7 +17,7 @@ import { PI } from '../src/math'
 suite('BezierCurve', () => {
 	suite(
 		'isTsWithSurface(CylinderSurface)',
-		inDifferentSystems((assert, m4) => {
+        () => inDifferentSystems((assert, m4) => {
 			const bez = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
 				.rotateX(15 * DEG)
 				.translate(0, 0, 100)

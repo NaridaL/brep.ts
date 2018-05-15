@@ -29,7 +29,7 @@ import {Mesh} from 'tsgl'
 suite('NLA', () => {
 	suite(
 		'isPointsWithBezier()',
-		inDifferentSystems((assert, m4) => {
+        () => inDifferentSystems((assert, m4) => {
 			const ell = new EllipseCurve(
 				V(-223.34900663163222, -176.63214006755936, 0),
 				V(-169.5891804980124, -35.54247345835796, 0),
@@ -52,7 +52,7 @@ suite('NLA', () => {
 
 	suite(
 		'EllipseCurve.getAreaInDir',
-		inDifferentSystems(
+        () => inDifferentSystems(
 			(assert, m4) => {
 				const k = 1
 				;[

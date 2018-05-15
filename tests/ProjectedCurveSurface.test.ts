@@ -63,7 +63,7 @@ suite('ProjectedCurveSurface', () => {
 	})
 	suite(
 		'Face line intersection test',
-		inDifferentSystems((assert, m4) => {
+        () => inDifferentSystems((assert, m4) => {
 			const line = new L3(V3.Z, V3.X).transform(m4)
 			const d = testFace.transform(m4).intersectsLine(line)
 			assert.ok(d)
