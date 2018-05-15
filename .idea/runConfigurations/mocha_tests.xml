@@ -6,6 +6,7 @@
     <pass-parent-env>true</pass-parent-env>
     <envs>
       <env name="TS_NODE_PROJECT" value="tests/tsconfig.json" />
+      <env name="TS_NODE_TRANSPILE_ONLY" value="true" />
     </envs>
     <ui>tdd</ui>
     <extra-mocha-options>--require ts-node/register</extra-mocha-options>

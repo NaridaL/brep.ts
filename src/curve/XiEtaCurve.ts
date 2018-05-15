@@ -330,7 +330,7 @@ export abstract class XiEtaCurve extends Curve {
 		return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta))
 	}
 
-	debugToMesh<T extends Record<string, V3[]>>(mesh: Mesh & T, bufferName: keyof T) {
+	debugToMesh<T extends Record<string, V3[]>>(mesh: Mesh & T, bufferName: keyof T & string) {
 		mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName)
 		for (let t = 0; t < Math.PI; t += 0.1) {
 			const p = this.at(t)
