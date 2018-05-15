@@ -129,7 +129,7 @@ export abstract class XiEtaCurve extends Curve {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.center, this.f1, this.f2, this.tMin, this.tMax]
+		return [this.center, this.f1, this.f2]
 	}
 
 	isInfosWithCurve(curve: Curve): ISInfo[] {

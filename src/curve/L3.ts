@@ -257,7 +257,7 @@ export class L3 extends Curve {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.anchor, this.dir1, this.tMin, this.tMax]
+		return [this.anchor, this.dir1]
 	}
 
 	closestTToPoint(p: V3): number {

@@ -44,6 +44,9 @@ import {
 
 import { abs, cos, PI, sin } from '../math'
 
+/**
+ * Bezier curve with degree 3.
+ */
 export class BezierCurve extends Curve {
 	/**
 	 * https://en.wikipedia.org/wiki/Cubic_function#/media/File:Graph_of_cubic_polynomial.svg
@@ -129,7 +132,7 @@ export class BezierCurve extends Curve {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.p0, this.p1, this.p2, this.p3, this.tMin, this.tMax]
+		return [this.p0, this.p1, this.p2, this.p3]
 	}
 
 	at(t: number): V3 {

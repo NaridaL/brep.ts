@@ -11,6 +11,7 @@ import {
 	fuzzyUniquesF,
 	getIntervals,
 	glqInSteps,
+	hasConstructor,
 	int,
 	le,
 	M4,
@@ -284,16 +285,24 @@ export abstract class Curve extends Transformable implements Equalable {
 	}
 
 	toSource(rounder: (x: number) => number = x => x): string {
-		return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters())
+		return callsce.call(
+			undefined,
+			'new ' + this.constructor.name,
+			...this.getConstructorParameters(),
+			this.tMin,
+			this.tMax,
+		)
 	}
 
+	/**
+	 * Excludes tMin, tMax.
+	 */
 	abstract getConstructorParameters(): any[]
 
 	withBounds<T extends Curve>(this: T, tMin = this.tMin, tMax = this.tMax): T {
 		assert(this.tMin <= tMin && tMin <= this.tMax)
 		assert(this.tMin <= tMax && tMax <= this.tMax)
-		assert(this.tMin <= tMax && tMax <= this.tMax)
-		return new this.constructor(...this.getConstructorParameters().slice(0, -2), tMin, tMax)
+		return new this.constructor(...this.getConstructorParameters(), tMin, tMax)
 	}
 
 	/**
@@ -471,9 +480,17 @@ export abstract class Curve extends Transformable implements Equalable {
 	 */
 	abstract likeCurve(curve: Curve): boolean
 
-	abstract equals(obj: any): boolean
+	equals(obj: any): boolean {
+		if (this === obj) return true
+		return (
+			hasConstructor(obj, this.constructor) &&
+			this.getConstructorParameters().equals(obj.getConstructorParameters())
+		)
+	}
 
-	abstract hashCode(): int
+	hashCode(): int {
+		return this.getConstructorParameters().hashCode()
+	}
 
 	/**
 	 * Return whether the curves occupy the same points in space. They do

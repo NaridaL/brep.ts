@@ -192,8 +192,6 @@ export class PICurve extends ImplicitCurve {
 			this.stepSize,
 			this.dir,
 			this.generator,
-			this.tMin,
-			this.tMax,
 		]
 	}
 
