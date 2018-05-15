@@ -12,10 +12,14 @@ import {
 	M4,
 	Transformable,
 	V3,
+	VV,
 } from 'ts3dutils'
 
 import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, ParabolaCurve } from './index'
 
+/**
+ * Plane x DOT this.normal1 = this.w
+ */
 export class P3 extends Transformable {
 	static readonly YZ = new P3(V3.X, 0)
 	static readonly ZX = new P3(V3.Y, 0)
@@ -89,6 +93,14 @@ export class P3 extends Transformable {
 		return this.forAnchorAndPlaneVectors(line.anchor, line.dir1, line.anchor.to(p))
 	}
 
+	/**
+	 * ax + by + cz + d = 0
+	 */
+	static forABCD(a: number, b: number, c: number, d: number) {
+		const normalLength = Math.hypot(a, b, c)
+		return new P3(new V3(a / normalLength, b / normalLength, c / normalLength), -d / normalLength)
+	}
+
 	axisIntercepts(): V3 {
 		const w = this.w,
 			n = this.normal1
@@ -144,16 +156,19 @@ export class P3 extends Transformable {
 	}
 
 	transform(m4: M4) {
-		const mirror = m4.isMirroring()
-		// get two vectors in the plane:
-		const u = this.normal1.getPerpendicular()
-		const v = u.cross(this.normal1)
-		// get 3 points in the plane:
-		const p1 = m4.transformPoint(this.anchor),
-			p2 = m4.transformPoint(this.anchor.plus(v)),
-			p3 = m4.transformPoint(this.anchor.plus(u))
-		// and create a new plane from the transformed points:
-		return P3.throughPoints(p1, !mirror ? p2 : p3, !mirror ? p3 : p2) as this
+		// See https://stackoverflow.com/questions/7685495/transforming-a-3d-plane-using-a-4x4-matrix
+		// See http://www.songho.ca/opengl/gl_normaltransform.html
+		// with homogeneous coordinates, the hessian normal form of this plane is
+		// (p, 1) * (normal1, -w) = 0
+		// transformation: (m4^-1 * (p, 1)) DOT (normal1, -w) = 0
+		// => (p, 1) DOT ((m4^-T) * (normal1, -w)) = 0
+		// (validity of the above transformation is easily seen by expanding the matrix multiplication and dot product)
+		// hence, (newNormal, newW) = (m4^-T) * (normal1, -w)
+		// we divide both newNormal and newW by newNormal.length() to normalize the normal vector
+		const m4InversedTransposed = M4.transpose(M4.inverse(m4, M4.temp0), M4.temp1)
+		const [nx, ny, nz] = this.normal1
+		const newNormal = m4InversedTransposed.timesVector(VV(nx, ny, nz, -this.w))
+		return P3.forABCD(newNormal.x, newNormal.y, newNormal.z, newNormal.w) as this
 	}
 
 	distanceToLine(line: L3): number {
@@ -241,11 +256,7 @@ export class P3 extends Transformable {
 	containsCurve(curve: Curve): boolean {
 		if (curve instanceof L3) {
 			return this.containsLine(curve)
-		} else if (
-			curve instanceof EllipseCurve ||
-			curve instanceof HyperbolaCurve ||
-			curve instanceof ParabolaCurve
-		) {
+		} else if (curve instanceof EllipseCurve || curve instanceof HyperbolaCurve || curve instanceof ParabolaCurve) {
 			return this.containsPoint(curve.center) && this.normal1.isParallelTo(curve.normal)
 		} else if (curve instanceof BezierCurve) {
 			return curve.points.every(p => this.containsPoint(p))

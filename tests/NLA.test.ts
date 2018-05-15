@@ -8,7 +8,10 @@ import {
 	B2T,
 	BezierCurve,
 	ClassSerializer,
+	CylinderSurface,
 	Edge,
+	EllipseCurve,
+	EllipsoidSurface,
 	Face,
 	intersectionCircleLine,
 	intersectionUnitCircleLine,
@@ -17,19 +20,14 @@ import {
 	PCurveEdge,
 	PlaneSurface,
 	PointVsFace,
-	CylinderSurface,
-	EllipseCurve,
 	StraightEdge,
-    EllipsoidSurface,
 } from '..'
 
 import { cos, PI, sin, sqrt } from '../src/math'
-import {Mesh} from 'tsgl'
 
 suite('NLA', () => {
-	suite(
-		'isPointsWithBezier()',
-        () => inDifferentSystems((assert, m4) => {
+	suite('isPointsWithBezier()', () =>
+		inDifferentSystems((assert, m4) => {
 			const ell = new EllipseCurve(
 				V(-223.34900663163222, -176.63214006755936, 0),
 				V(-169.5891804980124, -35.54247345835796, 0),
@@ -50,9 +48,8 @@ suite('NLA', () => {
 		}),
 	)
 
-	suite(
-		'EllipseCurve.getAreaInDir',
-        () => inDifferentSystems(
+	suite('EllipseCurve.getAreaInDir', () =>
+		inDifferentSystems(
 			(assert, m4) => {
 				const k = 1
 				;[
@@ -125,28 +122,6 @@ suite('NLA', () => {
 		assert.notOk(Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0)))
 		assert.notOk(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
 	})
-
-	test('Plane3.prototype.projectedVector', assert => {
-		const p = new P3(V(0, 0, 1), 2)
-		assert.ok(V(1, 1, 0).like(p.projectedVector(V(1, 1, 1))))
-	})
-	test('Line3.prototype.distanceToLine', assert => {
-		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.Y)), 1)
-		assert.equal(L3.X.distanceToLine(new L3(V3.Z, V3.X)), 1)
-	})
-	test('Plane3.prototype.transformed', assert => {
-		const p = new P3(V(0, 0, 1), 2)
-		assert.ok(P3.XY.like(P3.XY.transform(M4.identity())))
-	})
-	test('Plane3.prototype.intersectionWithPlane', assert => {
-		assert.ok(P3.XY.intersectionWithPlane(P3.ZX).isColinearTo(L3.X))
-		assert.ok(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.X))
-		assert.notOk(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.Y))
-	})
-	test('Line3.prototype.isTsForLine', assert => {
-		console.log(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).sce)
-		assert.ok(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y)).equals(V3.X))
-	})
 	test('V3.areDisjoint2', assert => {
 		const s = new CustomSet()
 		const a = V(0, 2.7499999999999996, -5),
@@ -181,63 +156,6 @@ suite('NLA', () => {
 	//},
 })
 
-suite('P3 projection tests', () => {
-	test('M4.projection', assert => {
-		const plane = new P3(V(1, 2, 3).unit(), 5)
-		const proj = M4.project(plane)
-		console.log(proj.transformPoint(V(2, 4, 6)))
-		assert.v3like(proj.transformPoint(V(2, 4, 6)), plane.anchor)
-		assert.v3like(proj.transformVector(V(2, 4, 6)), V3.O)
-		const p2 = V(3, 5, 22)
-		assert.ok(
-			proj
-				.transformPoint(p2)
-				.minus(p2)
-				.isParallelTo(plane.normal1),
-		)
-		assert.ok(plane.containsPoint(proj.transformPoint(p2)))
-		assert.ok(
-			proj
-				.transformVector(p2)
-				.minus(p2)
-				.isParallelTo(plane.normal1),
-		)
-		assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal1))
-	})
-	test('M4.projection 2', assert => {
-		;[V(1, 1, 1), V(0, 0, -1)].forEach(dir => {
-			const plane = new P3(V(1, 2, 3).unit(), 5)
-			const proj = M4.project(plane, dir)
-			const p2 = V(3, 5, 22)
-			assert.ok(
-				proj
-					.transformPoint(p2)
-					.minus(p2)
-					.isParallelTo(dir),
-			)
-			assert.ok(plane.containsPoint(proj.transformPoint(p2)))
-			assert.ok(
-				proj
-					.transformVector(p2)
-					.minus(p2)
-					.isParallelTo(dir),
-			)
-			assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal1))
-			console.log(proj.transformPoint(p2).sce)
-			console.log(proj.str)
-		})
-	})
-	test('M4.projectPlanePoint()', assert => {
-		const m4 = M4.projectPlanePoint(V3.Z.negated(), P3XY)
-		assert.v3like(m4.transformPoint(V(4, 0, 1)), V(2, 0, 0))
-		assert.v3like(m4.transformPoint(V(4, 8, 1)), V(2, 4, 0))
-		assert.v3like(m4.transformPoint(V(4, 8, 2)), V(4 / 3, 8 / 3, 0))
-		assert.m4equiv(
-			M4.projectPlanePoint(M4.FOO.transformPoint(V3.Z.negated()), P3.XY.transform(M4.FOO)),
-			M4.multiplyMultiple(M4.FOO, m4, M4.BAR),
-		)
-	})
-})
 suite('serialization', () => {
 	test('serialization', assert => {
 		const sz = new ClassSerializer(),
@@ -269,12 +187,11 @@ suite('serialization', () => {
 
 suite('tsgl', () => {
 	test('centroid of tetrahedron O X Y Z', assert => {
-		const centroidMesh = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z)
-			.toMesh()
-			const centroid = centroidMesh.calcVolume().centroid
+		const centroidMesh = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z).toMesh()
+		const centroid = centroidMesh.calcVolume().centroid
 		assert.v3like(centroid, V(0.25, 0.25, 0.25))
 
-        const centroid2 = centroidMesh.translate(2, 2).calcVolume().centroid
-        assert.v3like(centroid2, V(2.25, 2.25, 0.25))
+		const centroid2 = centroidMesh.translate(2, 2).calcVolume().centroid
+		assert.v3like(centroid2, V(2.25, 2.25, 0.25))
 	})
 })
