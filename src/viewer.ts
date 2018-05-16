@@ -1,7 +1,7 @@
 import chroma, { Color } from 'chroma-js'
 import deepmerge from 'deepmerge'
 import nerdamer from 'nerdamer'
-import { arrayFromFunction, assert, DEG, int, M4, round10, V, V3 } from 'ts3dutils'
+import { AABB, arrayFromFunction, assert, DEG, int, M4, round10, V, V3 } from 'ts3dutils'
 import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from 'tsgl'
 
 import {
@@ -13,7 +13,9 @@ import {
 	Curve,
 	curvePointMF,
 	CustomPlane,
+	CylinderSurface,
 	Edge,
+	EllipsoidSurface,
 	Face,
 	FaceMesh,
 	followAlgorithm2d,
@@ -24,13 +26,10 @@ import {
 	MathFunctionR2R,
 	P3,
 	PICurve,
-	CylinderSurface,
-	EllipsoidSurface,
 	setupCamera,
 } from './index'
 
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 }
-const drVs: any[] = []
 const bReps: BRep[] = []
 const edgeViewerColors = ['darkorange', 'darkgreen', 'cyan'].map(c => chroma(c).gl())
 let bRepMeshes: (Mesh & { faceIndexes?: Map<Face, { start: int; count: int }>; TRIANGLES: int[]; normals: V3[] })[] = []
@@ -46,6 +45,8 @@ let edgesMesh: Mesh & {
 let faceMesh: FaceMesh & { tangents: V3[] }
 let meshes: (Mesh & { TRIANGLES: int[]; normals: V3[] })[] = []
 let hovering: {}
+const edgeDebugPoints = [],
+	edgeDebugLines = []
 
 import * as ts3dutils from 'ts3dutils'
 import * as tsgl from 'tsgl'
@@ -64,11 +65,15 @@ export class RenderObjects {
 	normallines: boolean = false
 	i: any = undefined
 	hjk: any = undefined
-	drPs: (V3 | { info: string; p: V3 })[] = []
-	drVs: any = []
+	drPs: (V3 | { p: V3; info?: string; color?: string })[] = []
+	drVs: { v: V3; anchor: V3; color?: GL_COLOR }[] = []
+	drLines: V3[] = []
 	mesh: Mesh & { TRIANGLES: int[]; normals: V3[] } = undefined
+	aabbs: AABB[] = []
 	paintMeshNormals = false
 	paintWireframe = false
+	paintCurveDebug = false
+    planes = []
 }
 const renderObjectKeys = Object.keys(new RenderObjects()) as (keyof RenderObjects)[]
 
@@ -155,6 +160,12 @@ function initBRep() {
 				edgesMesh.curve1colors.push(color, color)
 			}
 			edge.curve instanceof PICurve && (edge.curve as PICurve).addToMesh(edgesMesh, 8, 0.02, 2)
+
+			if (edge.curve.debugInfo) {
+				const { points, lines } = edge.curve.debugInfo()
+				points && edgeDebugPoints.push(...points)
+				lines && edgeDebugLines.push(...lines)
+			}
 		})
 		//dMesh.computeWireframeFromFlatTriangles()
 		edgesMesh.compile()
@@ -199,7 +210,20 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 
 	setupCamera(eye, gl)
 
-	gl.drawVectors(drVs)
+	gl.drawVectors(g.drVs, 4 / eye.zoomFactor)
+
+	g.drPs.forEach(info =>
+		gl.drawPoint(
+			info instanceof V3 ? info : info.p,
+			info instanceof V3 || !info.color ? chroma('#cc0000').gl() : chroma(info.color).gl(),
+			6 / eye.zoomFactor,
+		),
+	)
+	drawPlanes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
+    g.planes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
+
+	g.aabbs.forEach(aabb => gl.drawAABB(aabb, chroma('black').gl()))
+
 	gl.shaders.lighting.uniforms({ camPos: eye.pos })
 	for (let i = 0; i < bRepMeshes.length; i++) {
 		const mesh = bRepMeshes[i]
@@ -277,15 +301,23 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		gl.drawEdge(hovering, GL_COLOR_BLACK, 2 / eye.zoomFactor)
 		gl.projectionMatrix.m[11] += 1 / (1 << 20)
 	}
-	g.edges && g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 2.5 / eye.zoomFactor))
+	g.edges.forEach((e, i) => gl.drawEdge(e, edgeViewerColors.emod(i), 3 / eye.zoomFactor))
 
-	g.drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, chroma('#cc0000').gl(), 5 / eye.zoomFactor))
-	drawPlanes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
-
-	// gl.begin(gl.LINES)
-	// gl.color('red')
-	// ;[].forEach(x => gl.vertex(x))
-	// gl.end()
+	if (g.paintCurveDebug) {
+		gl.begin(gl.LINES)
+		gl.color('red')
+		edgeDebugLines.forEach(x => gl.vertex(x))
+		gl.end()
+		edgeDebugPoints.forEach(p => gl.drawPoint(p, chroma('red').gl(), 6 / eye.zoomFactor))
+	}
+	if (0 !== g.drLines.length) {
+		gl.begin(gl.LINES)
+		g.drLines.forEach(x => {
+			gl.color((x as any).color || 'red')
+			gl.vertex(x)
+		})
+		gl.end()
+	}
 }
 
 function getHovering(
@@ -412,6 +444,12 @@ export async function viewerMain() {
 		paintScreen()
 	}
 
+	const paintDebugCheckbox = document.getElementById('paint-curvedebug')
+	paintDebugCheckbox.onclick = e => {
+		g.paintCurveDebug = !g.paintCurveDebug
+		paintScreen()
+	}
+
 	paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl))
 	B2T.defaultFont = await B2T.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff')
 	window.onerror = function(errorMsg, url, lineNumber, column, errorObj) {
@@ -475,7 +513,7 @@ export function alignY(dir: number) {
 export function alignZ(dir: number) {
 	eye.focus = V3.O
 	eye.pos = V(0, 0, 100 * dir)
-	eye.up = V3.Y
+	eye.up = eye.pos.cross(V3.X).unit()
 	paintScreen()
 }
 export function rot(angleInDeg: number) {
