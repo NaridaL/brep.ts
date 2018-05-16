@@ -9,8 +9,12 @@ import {
 	eq0,
 	hasConstructor,
 	int,
+	le,
+	lt,
 	M4,
+	snap0,
 	V3,
+	VV,
 } from 'ts3dutils'
 
 import { Curve, ISInfo, P3, Surface } from '../index'
@@ -22,7 +26,6 @@ export class L3 extends Curve {
 	isTsWithSurface(surface: Surface): number[] {
 		return surface.isTsForLine(this)
 	}
-	static anchorDirection = (anchor: V3, dir: V3): L3 => new L3(anchor, dir.unit())
 	static readonly X: L3 = new L3(V3.O, V3.X)
 	static readonly Y: L3 = new L3(V3.O, V3.Y)
 	static readonly Z: L3 = new L3(V3.O, V3.Z)
@@ -39,8 +42,19 @@ export class L3 extends Curve {
 		assertf(() => !Number.isNaN(anchor.x))
 	}
 
-	static throughPoints(anchor: V3, b: V3, tMin?: number, tMax?: number): L3 {
-		return new L3(anchor, b.minus(anchor).unit(), tMin, tMax)
+	static throughPoints(anchor: V3, b: V3, tMin: number = 0, tMax?: number): L3 {
+		const dir = b.minus(anchor)
+		return new L3(anchor, dir.unit(), tMin, (tMax = dir.length()))
+	}
+
+	static anchorDirection(anchor: V3, dir: V3, min: number | V3 = 0, max: number | V3 = dir.length()): L3 {
+		const dir1 = dir.unit()
+		return new L3(
+			anchor,
+			dir1,
+			'number' == typeof min ? min : min.minus(anchor).dot(dir1),
+			'number' == typeof max ? max : max.minus(anchor).dot(dir1),
+		)
 	}
 
 	static pointT(anchor: V3, dir: V3, x: V3) {
@@ -353,6 +367,27 @@ export class L3 extends Curve {
 		const newAnchor = m4.transformPoint(this.anchor)
 		const newDir = m4.transformVector(this.dir1)
 		return new L3(newAnchor, newDir.unit(), this.tMin * newDir.length(), this.tMax * newDir.length()) as this
+	}
+
+	transform4(m4: M4) {
+		const vanishingPlane = P3.vanishingPlane(m4)
+		if (!vanishingPlane) return this.transform(m4)
+		const pMin = this.at(this.tMin)
+		const pMax = this.at(this.tMax)
+		if (le(vanishingPlane.distanceToPointSigned(pMin), 0) || le(vanishingPlane.distanceToPointSigned(pMax), 0)) {
+			throw new Error('line must be in front of vanishingPlane in [tMin, tMax]')
+		}
+		const anchor = lt(0, vanishingPlane.distanceToPointSigned(this.anchor))
+			? this.anchor
+			: this.at((this.tMin + this.tMax) / 2)
+		const transformedAnchor = m4.timesVector(VV(anchor.x, anchor.y, anchor.z, 1))
+		const transformedVector = m4.timesVector(VV(this.dir1.x, this.dir1.y, this.dir1.z, 0))
+		const newDir = transformedVector
+			.times(transformedAnchor.w)
+			.minus(transformedAnchor.times(transformedVector.w))
+			.V3()
+		const newAnchor = transformedAnchor.p3()
+		return L3.anchorDirection(newAnchor, newDir, m4.transformPoint(pMin), m4.transformPoint(pMax)) as this
 	}
 
 	hashCode(): int {

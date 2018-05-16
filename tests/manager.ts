@@ -21,8 +21,10 @@ import {
 	toSource,
 	V,
 	V3,
+	arraySamples,
 } from 'ts3dutils'
 import { Assert, test } from 'ts3dutils/tests/manager'
+import { RenderObjects } from '../src/viewer'
 
 import slug from 'slug'
 
@@ -35,6 +37,7 @@ import {
 	ConicSurface,
 	Curve,
 	Edge,
+	EllipseCurve,
 	Face,
 	ImplicitSurface,
 	L3,
@@ -43,11 +46,35 @@ import {
 	PlaneSurface,
 	PointVsFace,
 	rotateCurve,
-	EllipseCurve,
+	StraightEdge,
 	Surface,
+	CustomPlane,
 } from '..'
 
 import * as fs from 'fs'
+
+export function testCurveCentralProjection(assert: Assert, curve: Curve) {
+	const m4 = M4.projectPlanePoint(V3.O, new P3(V3.Z, 1))
+	const pls = arraySamples(curve.tMin, curve.tMax, 16).flatMap(t => {
+		const p = curve.at(t)
+		return [p, m4.transformPoint(p)]
+	})
+	let curveTransformed
+	try {
+		curveTransformed = (curve as any).transform4(m4) as Curve
+	} catch (e) {}
+	outputLink(assert, {
+		edges: [Edge.forCurveAndTs(curve), ...(curveTransformed ? [Edge.forCurveAndTs(curveTransformed)] : [])],
+		drPs: pls,
+		drLines: pls,
+		planes: [new CustomPlane(V3.Z, V3.X, V3.Y, 'Z=1', [0, 0, 0, 1], -100, 100, -100, 100)],
+	})
+	if (curveTransformed) {
+		arraySamples(curve.tMin, curve.tMax, 4).forEach(t => {
+			assert.ok(curveTransformed.containsPoint(m4.transformPoint(curve.at(t))))
+		})
+	}
+}
 
 export function b2equals(assert: Assert, actual: BRep, expected: BRep, message = '') {
 	if (!(actual instanceof BRep)) {
@@ -147,7 +174,11 @@ export function makeLink(values: any) {
 		.join(';')
 }
 
-export function outputLink(assert: Assert, values, msg = 'view') {
+export function outputLink(
+	assert: Assert,
+	values: { [K in keyof RenderObjects]?: RenderObjects[K] | string },
+	msg = 'view',
+) {
 	const script =
 		'TEST_NAME = ' +
 		assert.getTestName().toSource() +
@@ -276,11 +307,11 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 	})
 	test(msg + ' volume', assert => {
 		outputLink(assert, { mesh: face.toSource() + '.toMesh()', edges: face.allEdges })
-        faceMesh.calcVolume()
+		faceMesh.calcVolume()
 		const actual = face.zDirVolume().volume,
 			expected = undefined === expectedVolume ? faceMeshVol.volume : expectedVolume
 		assert.fuzzyEqual(actual, expected, undefined, 0.05)
-        console.log('OK! actual = ' + actual + ', expected = ' + expected + ', |dv| = ' + (actual - expected))
+		console.log('OK! actual = ' + actual + ', expected = ' + expected + ', |dv| = ' + (actual - expected))
 	})
 	test(msg + ' flipped() volume', assert => {
 		outputLink(assert, { mesh: flippedFace.toSource() + '.toMesh()', edges: flippedFace.allEdges })
@@ -300,7 +331,14 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 		if (!eq0(actual.volume)) {
 			// centroid doesn't make sense when volume is 0
 			assert.v3like(actual.centroid, expected, undefined, expected.length() / 100)
-			console.log('OK! actual = ' + actual.centroid + ', expected = ' + expected + ', |dv| = ' + (actual.centroid.distanceTo(expected)))
+			console.log(
+				'OK! actual = ' +
+					actual.centroid +
+					', expected = ' +
+					expected +
+					', |dv| = ' +
+					actual.centroid.distanceTo(expected),
+			)
 		}
 	})
 	test(msg + ' flipped() centroid', assert => {
@@ -325,11 +363,21 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 
 export function testCurve(assert: Assert, curve: Curve, checkTangents = true, msg?: string) {
 	const edge = Edge.forCurveAndTs(curve)
+	const debugInfo = curve.debugInfo && curve.debugInfo()
 	outputLink(
 		assert,
 		{
-			edges: [edge],
-			drPs: [edge.a, edge.b],
+			edges: [
+				edge,
+				...(debugInfo && debugInfo.lines
+					? arrayFromFunction(debugInfo.lines.length / 2, i => {
+							const a = debugInfo.lines[i * 2],
+								b = debugInfo.lines[i * 2 + 1]
+							return !a.like(b) && StraightEdge.throughPoints(a, b)
+					  }).filter(x => x)
+					: []),
+			],
+			drPs: [edge.a, edge.b, ...((debugInfo && debugInfo.points) || [])],
 		},
 		msg,
 	)
@@ -361,7 +409,7 @@ export function testCurve(assert: Assert, curve: Curve, checkTangents = true, ms
 			eq(expected, actual, 1e-6),
 			expected,
 			actual,
-			'curve should have same length as the numericaly calculated value',
+			'curve should have same length as the numerically calculated value',
 		)
 	}
 }
@@ -375,10 +423,21 @@ export function suiteSurface(surface: Surface) {
 	}
 }
 export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
+	const debugInfo = surf.debugInfo && surf.debugInfo()
 	outputLink(
 		assert,
 		{
 			mesh: `[${surf}.toMesh()]`,
+			edges: [
+				...(debugInfo && debugInfo.lines
+					? arrayFromFunction(debugInfo.lines.length / 2, i => {
+							const a = debugInfo.lines[i * 2],
+								b = debugInfo.lines[i * 2 + 1]
+							return !a.like(b) && StraightEdge.throughPoints(a, b)
+					  }).filter(x => x)
+					: []),
+			],
+			drPs: [...((debugInfo && debugInfo.points) || [])],
 		},
 		'view',
 	)
@@ -479,10 +538,14 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 }
 
 export function testContainsCurve(assert: Assert, surface: Surface, curve: Curve, expected = true, msg?: string) {
-	outputLink(assert, {
-		mesh: surface.sce + '.toMesh()',
-		edges: [Edge.forCurveAndTs(curve)],
-	}, msg)
+	outputLink(
+		assert,
+		{
+			mesh: surface.sce + '.toMesh()',
+			edges: [Edge.forCurveAndTs(curve)],
+		},
+		msg,
+	)
 	assert.equal(surface.containsCurve(curve), expected, 'surface contains curve')
 }
 
@@ -528,21 +591,26 @@ export function testCurveISInfos(
 	msg: string = 'view',
 	f = 'isInfosWithCurve',
 ) {
-    let intersections
-    try {
-
-    intersections = c1[f](c2).map(info => info.p)
-    outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), drPs: intersections }, msg)
-    assert.equal(intersections.length, expectedCount, `intersections.length == count: ${intersections.length} == ${expectedCount}`)
-	intersections.forEach((is, i) => {
-		assert.ok(intersections.every((is2, j) => j == i || !is.like(is2)), is.sce + ' is not unique ' + intersections)
-		assert.ok(c1.containsPoint(is), `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
-		assert.ok(c2.containsPoint(is), `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
-	})
-
-    } finally {
-        !intersections && outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)) }, msg)
-    }
+	let intersections
+	try {
+		intersections = c1[f](c2).map(info => info.p)
+		outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)), drPs: intersections }, msg)
+		assert.equal(
+			intersections.length,
+			expectedCount,
+			`intersections.length == count: ${intersections.length} == ${expectedCount}`,
+		)
+		intersections.forEach((is, i) => {
+			assert.ok(
+				intersections.every((is2, j) => j == i || !is.like(is2)),
+				is.sce + ' is not unique ' + intersections,
+			)
+			assert.ok(c1.containsPoint(is), `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
+			assert.ok(c2.containsPoint(is), `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`)
+		})
+	} finally {
+		!intersections && outputLink(assert, { edges: [c1, c2].map(c => Edge.forCurveAndTs(c)) }, msg)
+	}
 }
 
 /**

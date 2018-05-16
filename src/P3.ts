@@ -101,6 +101,10 @@ export class P3 extends Transformable {
 		return new P3(new V3(a / normalLength, b / normalLength, c / normalLength), -d / normalLength)
 	}
 
+	static vanishingPlane(m4: M4) {
+		return P3.forABCD(m4.m[12], m4.m[13], m4.m[14], m4.m[15])
+	}
+
 	axisIntercepts(): V3 {
 		const w = this.w,
 			n = this.normal1
