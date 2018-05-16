@@ -228,4 +228,9 @@ suite('BezierCurve', () => {
             edges: [bezier.translate(200, 0, 1), ...arcs].map(arc => Edge.forCurveAndTs(arc)),
         })
     })
+
+	test('quadratic', assert => {
+		const b = BezierCurve.quadratic(V3.Y, V3.O, V3.X) as BezierCurve
+		assert.ok(b.isQuadratic())
+})
 })

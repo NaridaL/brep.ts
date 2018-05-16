@@ -350,6 +350,11 @@ export class BezierCurve extends Curve {
 		return curve.likeCurve(thisSplit)
 	}
 
+	selectPart(t0: number, t1: number) {
+		const t1Adjusted = (t1 - t0) / (1 - t0)
+		return this.split(t0)[1].split(t1Adjusted)[0]
+	}
+
 	reversed(): BezierCurve {
 		return new BezierCurve(this.p3, this.p2, this.p1, this.p0, 1 - this.tMax, 1 - this.tMin)
 	}
@@ -424,7 +429,9 @@ export class BezierCurve extends Curve {
 				? a.maxAbsDim()
 				: NLA_PRECISION < b.maxAbsElement()
 					? b.maxAbsDim()
-					: NLA_PRECISION < c.maxAbsElement() ? c.maxAbsDim() : assertNever()
+					: NLA_PRECISION < c.maxAbsElement()
+						? c.maxAbsDim()
+						: assertNever()
 
 		const results = solveCubicReal2(a.e(maxDim), b.e(maxDim), c.e(maxDim), d.e(maxDim)).filter(t =>
 			this.at(t).like(p),
@@ -490,6 +497,8 @@ export class BezierCurve extends Curve {
 	}
 
 	transform(m4: M4) {
+		// perspective projection turn bezier curve into rational spline
+		assert(m4.isNoProj(), m4.str)
 		return new BezierCurve(
 			m4.transformPoint(this.p0),
 			m4.transformPoint(this.p1),
@@ -505,7 +514,7 @@ export class BezierCurve extends Curve {
 	}
 
 	isQuadratic(): boolean {
-		return this.p1.like(this.p2)
+		return this.p0.lerp(this.p1, 1.5).like(this.p3.lerp(this.p2, 1.5))
 	}
 
 	debugToMesh<T extends string>(mesh: Mesh, bufferName: T) {
