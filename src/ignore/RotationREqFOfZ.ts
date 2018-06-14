@@ -13,13 +13,13 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 	constructor(
 		readonly matrix: M4,
 		readonly rt: (z: number) => number, // r(z)
-		readonly tMin: number,
-		readonly tMax: number,
+		readonly vMin: number,
+		readonly vMax: number,
 		readonly normalDir: number,
 		readonly drdz: (z: number) => number = z => (rt(z + EPS) - rt(z)) / EPS,
 	) {
 		// d/dz (r(z))
-		super(0, PI, tMin, tMax)
+		super(0, PI, vMin, vMax)
 		assertInst(M4, matrix)
 		assert(matrix.isNoProj())
 		assert(1 == normalDir || -1 == normalDir)
@@ -27,19 +27,19 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.matrix, this.rt, this.tMin, this.tMax, this.normalDir, this.drdz]
+		return [this.matrix, this.rt, this.vMin, this.vMax, this.normalDir, this.drdz]
 	}
 
 	flipped(): this {
-		return new RotationREqFOfZ(this.matrix, this.rt, this.tMin, this.tMax, -this.normalDir, this.drdz) as this
+		return new RotationREqFOfZ(this.matrix, this.rt, this.vMin, this.vMax, -this.normalDir, this.drdz) as this
 	}
 
 	transform(m4: M4): this {
 		return new RotationREqFOfZ(
 			m4.times(this.matrix),
 			this.rt,
-			this.tMin,
-			this.tMax,
+			this.vMin,
+			this.vMax,
 			this.normalDir,
 			this.drdz,
 		) as this
@@ -49,15 +49,15 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 		return eq0(this.implicitFunction()(p))
 	}
 
-	pSTFunc(): (s: number, t: number) => V3 {
+	pUVFunc(): (u: number, v: number) => V3 {
 		return (d, z) => {
 			const radius = this.rt(z)
 			return this.matrix.transformPoint(V3.polar(radius, d, z))
 		}
 	}
 
-	dpds(): (s: number, t: number) => V3 {
-		return (s, t) => {
+	dpdu(): (u: number, v: number) => V3 {
+		return (u, v) => {
 			const radius = this.rt(t)
 			return this.matrix.transformVector(new V3(radius * -sin(s), radius * cos(s), 0))
 		}
@@ -67,14 +67,14 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 	 * new V3(f(z) * cos d, f(z) * sin d, z)
 	 */
 
-	dpdt(): (s: number, t: number) => V3 {
-		return (s, t) => {
+	dpdv(): (u: number, v: number) => V3 {
+		return (u, v) => {
 			const drdt = this.drdz(t)
 			return this.matrix.transformVector(new V3(drdt * cos(s), drdt * sin(s), 1))
 		}
 	}
 
-	normalSTFunc(): (s: number, t: number) => V3 {
+	normalUVFunc(): (u: number, v: number) => V3 {
 		/**
 		 * (radius * -sin(s), radius * cos(s), 0) X (drds * cos(s), drds * sin(s), 1)
 		 * =(radius * cos(s)*1,
@@ -98,18 +98,18 @@ export class RotationREqFOfZ extends ParametricSurface implements ImplicitSurfac
 		}
 	}
 
-	stPFunc(): (pWC: V3) => V3 {
+	uvPFunc(): (pWC: V3) => V3 {
 		return pWC => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
 			return new V3(atan2(pLC.y, pLC.x), pLC.z, 0)
 		}
 	}
 
-	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
+	pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
 		const pLC = this.matrixInverse.transformPoint(pWC)
 		return new V3(
 			pLC.angleXY(),
-			closestXToP(this.rt, this.drdz, this.tMin, this.tMax, new V3(pLC.z, pLC.lengthXY(), 0), st),
+			closestXToP(this.rt, this.drdz, this.vMin, this.vMax, new V3(pLC.z, pLC.lengthXY(), 0), startV),
 			0,
 		)
 	}

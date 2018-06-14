@@ -72,10 +72,10 @@ export class PPCurve extends ImplicitCurve {
 	}
 
 	rootPoints() {
-		const pF1 = this.parametricSurface1.pSTFunc()
-		const pF2 = this.parametricSurface2.pSTFunc()
-		const pN1 = this.parametricSurface1.normalSTFunc()
-		const pN2 = this.parametricSurface2.normalSTFunc()
+		const pF1 = this.parametricSurface1.pUVFunc()
+		const pF2 = this.parametricSurface2.pUVFunc()
+		const pN1 = this.parametricSurface1.normalUVFunc()
+		const pN2 = this.parametricSurface2.normalUVFunc()
 
 		const rootsApprox = this.rootsApprox()
 		const results: Tuple3<V3[]> = [[], [], []]
@@ -84,15 +84,15 @@ export class PPCurve extends ImplicitCurve {
 				const lambda = rootsApprox[dim][i]
 				const p = this.at(lambda)
 				assert(this.parametricSurface1.containsPoint(p))
-				const pp1 = this.parametricSurface1.stP(p)
-				const { x: u, y: v } = this.parametricSurface2.stP(p)
+				const pp1 = this.parametricSurface1.uvP(p)
+				const { x: u, y: v } = this.parametricSurface2.uvP(p)
 				const startValues = [pp1.x, pp1.y, u, v]
 
 				function f(vals: number[]) {
-					const [s, t, u, v] = vals
-					const diff = pF1(s, t).minus(pF2(u, v))
-					const n1 = pN1(s, t)
-					const n2 = pN2(u, v)
+					const [u1, v1, u2, v2] = vals
+					const diff = pF1(u1, v1).minus(pF2(u2, v2))
+					const n1 = pN1(u1, v1)
+					const n2 = pN2(u2, v2)
 					const tangent = n1.cross(n2)
 					return [diff.x, diff.y, diff.z, tangent.e(dim)]
 				}
@@ -164,8 +164,8 @@ export class PPCurve extends ImplicitCurve {
 		if (ImplicitSurface.is(surface)) {
 			const result: number[] = []
 			const iF = surface.implicitFunction()
-			const pST1 = this.parametricSurface1.pSTFunc()
-			const pST2 = this.parametricSurface2.pSTFunc()
+			const pUV1 = this.parametricSurface1.pUVFunc()
+			const pUV2 = this.parametricSurface2.pUVFunc()
 			let prevSignedDistance = iF(this.points[0])
 			for (let i = 1; i < this.points.length; i++) {
 				const point = this.points[i]
@@ -173,17 +173,17 @@ export class PPCurve extends ImplicitCurve {
 				if (prevSignedDistance * signedDistance <= 0) {
 					const startIndex = abs(prevSignedDistance) < abs(signedDistance) ? i - 1 : i
 					const startPoint = this.points[startIndex]
-					const startST = this.st1s[startIndex]
-					const startUV = this.parametricSurface2.stP(startPoint)
+					const startUV1 = this.st1s[startIndex]
+					const startUV2 = this.parametricSurface2.uvP(startPoint)
 					const isSTUV = newtonIterate(
-						([s, t, u, v]: number[]) => {
-							const ps1p = pST1(s, t)
-							const ps2p = pST2(u, v)
+						([u1, v1, u2, v2]: number[]) => {
+							const ps1p = pUV1(u1, v1)
+							const ps2p = pUV2(u2, v2)
 							return [...ps1p.to(ps2p), iF(ps1p)]
 						},
-						[startST.x, startST.y, startUV.x, startUV.y],
+						[startUV1.x, startUV1.y, startUV2.x, startUV2.y],
 					)
-					result.push(this.pointT(this.parametricSurface1.pST(isSTUV[0], isSTUV[1])))
+					result.push(this.pointT(this.parametricSurface1.pUV(isSTUV[0], isSTUV[1])))
 				}
 				prevSignedDistance = signedDistance
 			}

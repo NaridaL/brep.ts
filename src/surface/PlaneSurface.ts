@@ -9,12 +9,12 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		readonly plane: P3,
 		readonly right: V3 = plane.normal1.getPerpendicular().unit(),
 		readonly up: V3 = plane.normal1.cross(right).unit(),
-		sMin: number = -100,
-		sMax: number = 100,
-		tMin: number = -100,
-		tMax: number = 100,
+		uMin: number = -100,
+		uMax: number = 100,
+		vMin: number = -100,
+		vMax: number = 100,
 	) {
-		super(sMin, sMax, tMin, tMax)
+		super(uMin, uMax, vMin, vMax)
 		assertInst(P3, plane)
 		assert(this.right.cross(this.up).like(this.plane.normal1))
 		this.matrix = M4.forSys(right, up, plane.normal1, plane.anchor)
@@ -32,12 +32,12 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		anchor: V3,
 		v0: V3,
 		v1: V3,
-		sMin?: number,
-		sMax?: number,
-		tMin?: number,
-		tMax?: number,
+		uMin?: number,
+		uMax?: number,
+		vMin?: number,
+		vMax?: number,
 	): PlaneSurface {
-		return new PlaneSurface(P3.forAnchorAndPlaneVectors(anchor, v0, v1), v0, v1, sMin, sMax, tMin, tMax)
+		return new PlaneSurface(P3.forAnchorAndPlaneVectors(anchor, v0, v1), v0, v1, uMin, uMax, vMin, vMax)
 	}
 	isCoplanarTo(surface: Surface): boolean {
 		return hasConstructor(surface, PlaneSurface) && this.plane.isCoplanarToPlane(surface.plane)
@@ -51,8 +51,8 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return hasConstructor(surface, PlaneSurface) && this.plane.like(surface.plane)
 	}
 
-	pST(s: number, t: number): V3 {
-		return this.matrix.transformPoint(new V3(s, t, 0))
+	pUV(u: number, v: number): V3 {
+		return this.matrix.transformPoint(new V3(u, v, 0))
 	}
 
 	implicitFunction(): (pWC: V3) => number {
@@ -83,7 +83,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return Surface.loopContainsPointGeneral(loop, p, line, lineOut)
 	}
 
-	stPFunc() {
+	uvPFunc() {
 		const matrixInverse = this.matrix.inversed()
 		return function(pWC: V3) {
 			return matrixInverse.transformPoint(pWC)
@@ -91,7 +91,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	pointFoot(pWC: V3): V3 {
-		return this.stP(pWC)
+		return this.uvP(pWC)
 	}
 
 	normalP(pWC: V3): V3 {
@@ -115,14 +115,14 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.plane, this.right, this.up, this.sMin, this.sMax, this.tMin, this.tMax]
+		return [this.plane, this.right, this.up, this.uMin, this.uMax, this.vMin, this.vMax]
 	}
 
-	dpds(): (s: number, t: number) => V3 {
+	dpdu(): (u: number, v: number) => V3 {
 		return () => this.right
 	}
 
-	dpdt(): (s: number, t: number) => V3 {
+	dpdv(): (u: number, v: number) => V3 {
 		return () => this.up
 	}
 
@@ -130,7 +130,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return this.plane.normal1
 	}
 
-	normalST() {
+	normalUV() {
 		return this.plane.normal1
 	}
 }

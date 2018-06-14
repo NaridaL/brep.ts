@@ -98,8 +98,8 @@ export class BREPGLContext {
 	drawPlane(customPlane: CustomPlane, color: GL_COLOR, dotted: boolean = false) {
 		this.pushMatrix()
 		this.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal1))
-		this.translate(customPlane.sMin, customPlane.tMin, customPlane.w)
-		this.scale(customPlane.sMax - customPlane.sMin, customPlane.tMax - customPlane.tMin, 1)
+		this.translate(customPlane.uMin, customPlane.vMin, customPlane.w)
+		this.scale(customPlane.uMax - customPlane.uMin, customPlane.vMax - customPlane.vMin, 1)
 
 		const mesh = dotted ? this.meshes.xyDottedLinePlane : this.meshes.xyLinePlane
 		this.shaders.singleColor.uniforms({ color: color }).draw(mesh, this.LINES)

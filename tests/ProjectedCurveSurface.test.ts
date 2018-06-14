@@ -14,7 +14,10 @@ import { DEG, M4, V, V3 } from 'ts3dutils'
 import {
 	B2T,
 	BezierCurve,
+	CylinderSurface,
 	Edge,
+	EllipseCurve,
+	EllipsoidSurface,
 	Face,
 	L3,
 	P3,
@@ -23,9 +26,6 @@ import {
 	PlaneSurface,
 	ProjectedCurveSurface,
 	RotationFace,
-	CylinderSurface,
-	EllipseCurve,
-	EllipsoidSurface,
 	StraightEdge,
 } from '..'
 
@@ -41,9 +41,9 @@ suite('ProjectedCurveSurface', () => {
 		StraightEdge.throughPoints(baseCurve.at(0).plus(V(0, 0, 2)), baseCurve.at(0)),
 	]
 	const testFace = new RotationFace(testSurface, edges)
-	suite('projectedBezierSurface', () =>suiteSurface(testSurface))
-	suite('projectedBezierSurface.shearX(2, 2)', () =>suiteSurface(testSurface.shearX(2, 2)))
-	suite('projectedBezierSurface.foo()', () =>suiteSurface(testSurface.foo()))
+	suite('projectedBezierSurface', () => suiteSurface(testSurface))
+	suite('projectedBezierSurface.shearX(2, 2)', () => suiteSurface(testSurface.shearX(2, 2)))
+	suite('projectedBezierSurface.foo()', () => suiteSurface(testSurface.foo()))
 	const curve = BezierCurve.graphXY(2, -3, -3, 2)
 	const surface = new ProjectedCurveSurface(curve, V3.Z)
 
@@ -55,15 +55,14 @@ suite('ProjectedCurveSurface', () => {
 	)
 	suite('(face w/ dir=V3.Z).shearX(2, 2)', () => surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))
 	suite('(face w/ dir=V3.Z).foo()', () => {
-		console.log('pST(0,0)', testSurface.foo().pST(0, 0))
-		const st = testSurface.foo().stP(V(-0.59566, 12.37799, 2.98851))
-		console.log(st)
-		console.log(testSurface.foo().pST(st.x, st.y))
+		console.log('pUV(0,0)', testSurface.foo().pUV(0, 0))
+		const { u, v } = testSurface.foo().uvP(V(-0.59566, 12.37799, 2.98851))
+		console.log(u, v)
+		console.log(testSurface.foo().pUV(u, v))
 		surfaceVolumeAndAreaTests(testFace.foo())
 	})
-	suite(
-		'Face line intersection test',
-        () => inDifferentSystems((assert, m4) => {
+	suite('Face line intersection test', () =>
+		inDifferentSystems((assert, m4) => {
 			const line = new L3(V3.Z, V3.X).transform(m4)
 			const d = testFace.transform(m4).intersectsLine(line)
 			assert.ok(d)

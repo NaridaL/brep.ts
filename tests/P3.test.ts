@@ -95,7 +95,7 @@ suite('P3', () => {
 		assert.v3like(m4.transformPoint(V(4, 8, 2)), V(4 / 3, 8 / 3, 0))
 		assert.m4equiv(
 			M4.projectPlanePoint(M4.FOO.transformPoint(V3.Z.negated()), P3.XY.transform(M4.FOO)),
-			M4.multiplyMultiple(M4.FOO, m4, M4.BAR),
+			M4.product(M4.FOO, m4, M4.BAR),
 		)
 	})
 })

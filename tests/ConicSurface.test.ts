@@ -154,7 +154,7 @@ suite('ConicSurface', () => {
 	test('isCoplanarTo', assert => {
 		const unitCone = ConicSurface.UNIT
 		assert.ok(unitCone.matrix.isIdentity(), 'UCS.matrix.isIdentity()')
-		assert.v3like(unitCone.pSTFunc()(0, 3), V(3, 0, 3))
+		assert.v3like(unitCone.pUVFunc()(0, 3), V(3, 0, 3))
 		const ellipseAtZ3 = EllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
 		const planeAtZ3 = P3.XY.translate(0, 0, 3)
 		const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3)

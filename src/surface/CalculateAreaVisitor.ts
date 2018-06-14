@@ -17,8 +17,8 @@ import { ceil, cos, floor, sign, sin } from '../math'
 
 export const CalculateAreaVisitor = {
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): number {
-		const dpds = this.dpds()
-		const dpdt = this.dpdt()
+		const dpdu = this.dpdu()
+		const dpdv = this.dpdv()
 		// calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
 		const totalArea = edges
 			.map(edge => {
@@ -30,24 +30,24 @@ export const CalculateAreaVisitor = {
 					const f = (t: number) => {
 						const at = edge.curve.at(t),
 							tangentWC = edge.tangentAt(t)
-						const stOfPWC = this.stP(at)
-						// INTEGRATE [0; atST.y]
-						//   dpds(atST.x, t) X dpdt(atST.x, t)
+						const uvOfPWC = this.uvP(at)
+						// INTEGRATE [0; atUV.y]
+						//   dpdu(atUV.x, t) X dpdv(atUV.x, t)
 						// dt
-						// dpdt is constant with respect to t
-						// => dpdt(atST.x, 0) X (INTEGRATE [0; atST.y] dpds(atST.x, t) dt)
-						// dpds(s, t) === t * dpds(s, 1)
-						// => dpdt(atST.x, 0) X (1/2 t² dpds(atST.x, 1))[0; atST.y]
-						// => dpdt(atST.x, 0) X dpds(atST.x, atST.y² / 2)
+						// dpdv is constant with respect to t
+						// => dpdv(atUV.x, 0) X (INTEGRATE [0; atUV.y] dpdu(atUV.x, t) dt)
+						// dpdu(u, v) === v * dpdu(u, 1)
+						// => dpdv(atUV.x, 0) X (1/2 t² dpdu(atUV.x, 1))[0; atUV.y]
+						// => dpdv(atUV.x, 0) X dpdu(atUV.x, atUV.y² / 2)
 
-						const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
+						const du = -M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x))
 							.inversed()
 							.transformVector(tangentWC).x
 
 						return (
-							dpds(stOfPWC.x, stOfPWC.y ** 2 / 2)
-								.cross(dpdt(stOfPWC.x))
-								.length() * ds
+							dpdu(uvOfPWC.x, uvOfPWC.y ** 2 / 2)
+								.cross(dpdv(uvOfPWC.x))
+								.length() * du
 						)
 					}
 					return glqInSteps(f, edge.aT, edge.bT, 1)
@@ -133,32 +133,32 @@ export const CalculateAreaVisitor = {
 						const pWC = curveWC.at(curveT),
 							tangent = curveWC.tangentAt(curveT)
 						const pLC = this.matrixInverse.transformPoint(pWC)
-						const { x: angleXY, y: t } = this.stP(pWC)
+						const { x: angleXY, y: t } = this.uvP(pWC)
 						const arcRadius = this.matrix.transformVector(pLC.xy()).length()
 						const arcLength = angleXY * arcRadius
-						const dpdt = this.dpdt()(angleXY, t).unit()
-						const scaling = dpdt.dot(tangent)
+						const dpdv = this.dpdv()(angleXY, t).unit()
+						const scaling = dpdv.dot(tangent)
 						return arcLength * scaling
 					}
 					return glqInSteps(f, edgeWC.aT, edgeWC.bT, 1)
 				} else {
-					const dpds = this.dpds(),
-						dpdt = this.dpdt()
+					const dpdu = this.dpdu(),
+						dpdv = this.dpdv()
 					const f2 = (curveT: number) => {
 						const pWC = curveWC.at(curveT),
 							tangentWC = curveWC.tangentAt(curveT)
-						const stPWC = this.stP(pWC)
+						const uvPWC = this.uvP(pWC)
 						const slice = (phi: number) => {
-							//return this.dpds()(phi, st.y).length() * this.dpdt()(phi, st.y).length()
-							return dpds(phi, stPWC.y)
-								.cross(dpdt(phi, stPWC.y))
+							//return this.dpdu()(phi, st.y).length() * this.dpdv()(phi, st.y).length()
+							return dpdu(phi, uvPWC.y)
+								.cross(dpdv(phi, uvPWC.y))
 								.length()
 						}
 						// we need to do a coordinate transform from curveT to dt, as that is what we are integrating
-						const dt = M4.forSys(dpds(stPWC.x, stPWC.y), dpdt(stPWC.x, stPWC.y))
+						const dt = M4.forSys(dpdu(uvPWC.x, uvPWC.y), dpdv(uvPWC.x, uvPWC.y))
 							.inversed()
 							.transformVector(tangentWC).y
-						return glqInSteps(slice, 0, stPWC.x, 1) * dt
+						return glqInSteps(slice, 0, uvPWC.x, 1) * dt
 					}
 					return glqInSteps(f2, edgeWC.aT, edgeWC.bT, 1)
 				}

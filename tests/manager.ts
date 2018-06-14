@@ -451,44 +451,44 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 	assert.ok(clone.like(surf), 'clone.like(surf)')
 
 	const params = [V(0, 0), V(0, 1), V(1, 0), V(1, 1), V(0.25, 0.25), V(0.6, 0.25), V(0.25, 0.6), V(0.6, 0.7)].map(
-		pm => new V3(lerp(surf.sMin, surf.sMax, pm.x), lerp(surf.tMin, surf.tMax, pm.y), 0),
+		pm => new V3(lerp(surf.uMin, surf.uMax, pm.x), lerp(surf.vMin, surf.vMax, pm.y), 0),
 	)
-	const points = params.map(({ x, y }) => surf.pST(x, y))
+	const points = params.map(({ x, y }) => surf.pUV(x, y))
 	const psFlipped = surf.flipped()
 	for (let i = 0; i < points.length; i++) {
 		const p = points[i]
 		const pm = params[i]
 		assert.ok(surf.containsPoint(p))
 
-		// test dpds and dpdt
+		// test dpdu and dpdv
 		const eps = 0.0001
-		const dpds = surf.dpds()(pm.x, pm.y)
-		const dpdt = surf.dpdt()(pm.x, pm.y)
-		const dpdsNumeric = p.to(surf.pST(pm.x + eps, pm.y)).div(eps)
-		const dpdtNumeric = p.to(surf.pST(pm.x, pm.y + eps)).div(eps)
-		assert.v3like(dpdsNumeric, dpds, 'dpds', 0.01)
-		assert.v3like(dpdtNumeric, dpdt, 'dpdt', 0.01)
-		const pmNormal = surf.normalST(pm.x, pm.y)
+		const dpdu = surf.dpdu()(pm.x, pm.y)
+		const dpdv = surf.dpdv()(pm.x, pm.y)
+		const dpduNumeric = p.to(surf.pUV(pm.x + eps, pm.y)).div(eps)
+		const dpdvNumeric = p.to(surf.pUV(pm.x, pm.y + eps)).div(eps)
+		assert.v3like(dpduNumeric, dpdu, 'dpdu', 0.01)
+		assert.v3like(dpdvNumeric, dpdv, 'dpdv', 0.01)
+		const pmNormal = surf.normalUV(pm.x, pm.y)
 		assert.ok(pmNormal.hasLength(1), 'pmNormal.hasLength(1)')
-		const dpdsXdpdt = dpds.cross(dpdt)
+		const dpduXdpdv = dpdu.cross(dpdv)
 		if (ImplicitSurface.is(surf)) {
 			assert.ok(eq0(surf.implicitFunction()(p)))
 		}
-		const pm2 = surf.stP(p)
+		const pm2 = surf.uvP(p)
 		const pNormal = surf.normalP(p)
-		const psFlippedST = psFlipped.stP(p)
+		const psFlippedUV = psFlipped.uvP(p)
 		const psFlippedNormal = psFlipped.normalP(p)
-		if (!dpds.likeO() && !dpdt.likeO()) {
-			assert.v3like(pm2, pm, 'pm == stP(pST(pm))')
+		if (!dpdu.likeO() && !dpdv.likeO()) {
+			assert.v3like(pm2, pm, 'pm == uvP(pUV(pm))')
 			assert.v3like(
-				psFlipped.pST(psFlippedST.x, psFlippedST.y),
+				psFlipped.pUV(psFlippedUV.x, psFlippedUV.y),
 				p,
-				'psFlipped.pST(psFlippedST.x, psFlippedST.y) == p',
+				'psFlipped.pUV(psFlippedUV.x, psFlippedUV.y) == p',
 			)
 
 			assert.v3like(pmNormal, pNormal)
 
-			const computedNormal = dpdsXdpdt.unit()
+			const computedNormal = dpduXdpdv.unit()
 			assert.ok(computedNormal.angleTo(pNormal) < 5 * DEG)
 
 			assert.v3like(psFlippedNormal, pNormal.negated(), 'pNormal == -psFlippedNormal')
@@ -498,22 +498,22 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 		const offsetPoint = p.plus(pNormal.toLength(0.5))
 		const actualFoot = surf.pointFoot(offsetPoint)
 		// the original params may not actually be the closest.
-		//if (!actualFoot.like(pm) && surf.pST(actualFoot.x, actualFoot.y).distanceTo(p) > 0.5) {
-		//    assert.v3like(actualFoot, pm, 'distance to foot ' + surf.pST(actualFoot.x, actualFoot.y).distanceTo(p))
+		//if (!actualFoot.like(pm) && surf.pUV(actualFoot.x, actualFoot.y).distanceTo(p) > 0.5) {
+		//    assert.v3like(actualFoot, pm, 'distance to foot ' + surf.pUV(actualFoot.x, actualFoot.y).distanceTo(p))
 		//}
 		const offsetPoint2 = p.plus(pNormal.toLength(-0.5))
 		const actualFoot2 = surf.pointFoot(offsetPoint2)
 		// the original params may not actually be the closest.
-		//if (!actualFoot2.like(pm) && surf.pST(actualFoot2.x, actualFoot2.y).distanceTo(p) > 0.5) {
-		//    assert.v3like(actualFoot2, pm, 'distance to foot ' + surf.pST(actualFoot2.x, actualFoot2.y).distanceTo(p))
+		//if (!actualFoot2.like(pm) && surf.pUV(actualFoot2.x, actualFoot2.y).distanceTo(p) > 0.5) {
+		//    assert.v3like(actualFoot2, pm, 'distance to foot ' + surf.pUV(actualFoot2.x, actualFoot2.y).distanceTo(p))
 		//}
 	}
 	const matrices = [M4.mirror(P3.XY), M4.mirror(P3.YZ), M4.mirror(P3.ZX)]
 	for (let mI = 0; mI < matrices.length; mI++) {
 		const m = matrices[mI]
 		for (let i = 0; i < points.length; i++) {
-			const dpds = surf.dpds()(params[i].x, params[i].y)
-			const dpdt = surf.dpdt()(params[i].x, params[i].y)
+			const dpdu = surf.dpdu()(params[i].x, params[i].y)
+			const dpdv = surf.dpdv()(params[i].x, params[i].y)
 			const p = points[i],
 				pNormal = surf.normalP(p)
 			const normalMatrix = m
@@ -524,7 +524,7 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
 			const mP = m.transformPoint(p)
 			const mSurface = surf.transform(m)
 
-			if (!dpds.likeO() && !dpdt.likeO()) {
+			if (!dpdu.likeO() && !dpdv.likeO()) {
 				assert.v3like(mSurface.normalP(mP), mNormal)
 			}
 

@@ -44,8 +44,8 @@ import {
 	PointVsFace,
 	R2,
 	R2_R,
-	stInAABB2,
 	Surface,
+	uvInAABB2,
 } from './index'
 
 import { abs, sign, sqrt } from './math'
@@ -1375,13 +1375,13 @@ export function curvePointPP(ps1: ParametricSurface, ps2: ParametricSurface, sta
 	//console.log(Q.sce+ ',')
 	let i = 16
 	do {
-		a = ps1.pST(st1.x, st1.y)
-		b = ps2.pST(st2.x, st2.y)
+		a = ps1.pUV(st1.x, st1.y)
+		b = ps2.pUV(st2.x, st2.y)
 		if (eq0(a.distanceTo(b), EPS)) break
 		// drPs.push({p:a,text:'a'+j+' '+i})
 		// drPs.push({p:b,text:'b'+j+' '+i})
-		aNormal = ps1.normalST(st1.x, st1.y)
-		bNormal = ps2.normalST(st2.x, st2.y)
+		aNormal = ps1.normalUV(st1.x, st1.y)
+		bNormal = ps2.normalUV(st2.x, st2.y)
 		// next Q is the intersection of the planes
 		// (x - a) * aNormal,
 		// (x - b) * bNormal and
@@ -1423,26 +1423,26 @@ export function followAlgorithmPP(
 	ps2: ParametricSurface,
 	startPoint: V3,
 	curveStepSize: number,
-	bounds1: (s: number, t: number) => boolean = stInAABB2.bind(undefined, ps1),
-	bounds2: (s: number, t: number) => boolean = stInAABB2.bind(undefined, ps2),
+	bounds1: (u: number, v: number) => boolean = uvInAABB2.bind(undefined, ps1),
+	bounds2: (u: number, v: number) => boolean = uvInAABB2.bind(undefined, ps2),
 ): { points: V3[]; tangents: V3[]; st1s: V3[]; st2s: V3[] } {
 	const points: V3[] = []
 	const tangents: V3[] = []
 	const st1s: V3[] = []
 	const st2s: V3[] = []
 	let Q = startPoint
-	let st1 = ps1.stP(Q)
-	let st2 = ps2.stP(Q)
-	assert(ps1.pST(st1.x, st1.y).like(Q))
+	let st1 = ps1.uvP(Q)
+	let st2 = ps2.uvP(Q)
+	assert(ps1.pUV(st1.x, st1.y).like(Q))
 	assert(st1.like(ps1.pointFoot(Q, st1.x, st1.y)))
 	assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)))
-	assert(ps2.pST(st2.x, st2.y).like(Q))
+	assert(ps2.pUV(st2.x, st2.y).like(Q))
 	for (let i = 0; i < 1000; i++) {
 		;({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q)!)
 		assert(ps1.containsPoint(Q), Q, ps1)
 		assert(ps2.containsPoint(Q))
-		const aNormal = ps1.normalST(st1.x, st1.y)
-		const bNormal = ps2.normalST(st2.x, st2.y)
+		const aNormal = ps1.normalUV(st1.x, st1.y)
+		const bNormal = ps2.normalUV(st2.x, st2.y)
 		const tangent = aNormal.cross(bNormal).toLength(curveStepSize)
 		tangents.push(tangent)
 		points.push(Q)
@@ -1473,7 +1473,7 @@ export function followAlgorithm2d(
 	startP: V3,
 	stepLength: number = 0.5,
 	bounds: AABB2,
-	validST: R2<boolean>,
+	validUV: R2<boolean>,
 	endP?: V3,
 	startTangent?: V3,
 ): {
@@ -1534,7 +1534,7 @@ export function followAlgorithm2d(
 			}
 		}
 		// check if out of bounds
-		if (i > 1 && !stInAABB2(bounds, p.x, p.y)) {
+		if (i > 1 && !uvInAABB2(bounds, p.x, p.y)) {
 			const endP = figureOutBorderPoint(bounds, p, ic)
 			points.pop()
 			tangents.pop()
@@ -1547,7 +1547,7 @@ export function followAlgorithm2d(
 			tangents.push(endTangent)
 			break
 		}
-		if (i > 4 && !validST(p.x, p.y)) {
+		if (i > 4 && !validUV(p.x, p.y)) {
 			break
 		}
 		assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)
@@ -1567,18 +1567,18 @@ export function followAlgorithm2d(
  * @param ic
  */
 function figureOutBorderPoint(bounds: AABB2, p: V3, ic: MathFunctionR2R): V3 {
-	if (p.x < bounds.sMin || bounds.sMax < p.x) {
-		const s = bounds.sMax < p.x ? bounds.sMax : bounds.sMin
-		const t = newtonIterateWithDerivative(t => ic(s, t), p.y, 4, t => ic.y(s, t))
-		if (stInAABB2(bounds, s, t)) {
-			return new V3(s, t, 0)
+	if (p.x < bounds.uMin || bounds.uMax < p.x) {
+		const u = bounds.uMax < p.x ? bounds.uMax : bounds.uMin
+		const v = newtonIterateWithDerivative(t => ic(u, t), p.y, 4, t => ic.y(u, t))
+		if (uvInAABB2(bounds, u, v)) {
+			return new V3(u, v, 0)
 		}
 	}
-	if (p.y < bounds.tMin || bounds.tMax < p.y) {
-		const t = bounds.tMax < p.y ? bounds.tMax : bounds.tMin
-		const s = newtonIterateWithDerivative(s => ic(s, t), p.x, 4, s => ic.x(s, t))
-		assert(stInAABB2(bounds, s, t))
-		return new V3(s, t, 0)
+	if (p.y < bounds.vMin || bounds.vMax < p.y) {
+		const v = bounds.vMax < p.y ? bounds.vMax : bounds.vMin
+		const u = newtonIterateWithDerivative(s => ic(s, v), p.x, 4, s => ic.x(s, v))
+		assert(uvInAABB2(bounds, u, v))
+		return new V3(u, v, 0)
 	}
 	throw new Error(p + ' ' + bounds)
 }
@@ -1587,7 +1587,7 @@ export function followAlgorithm2dAdjustable(
 	ic: MathFunctionR2R,
 	start: V3,
 	stepLength: number = 0.5,
-	bounds: (s: number, t: number) => boolean,
+	bounds: (u: number, v: number) => boolean,
 	endp: V3 = start,
 ): { points: V3[]; tangents: V3[] } {
 	assertNumbers(stepLength, ic(0, 0))
@@ -1721,7 +1721,7 @@ export interface MathFunctionR2R {
 	readonly xy?: R2_R
 	readonly yy?: R2_R
 
-	(s: number, t: number): number
+	(u: number, v: number): number
 }
 
 export namespace MathFunctionR2R {

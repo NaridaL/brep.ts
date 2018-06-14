@@ -30,23 +30,23 @@ import {
 import { abs, cos, PI, sign, sin, sqrt } from '../math'
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
-	pointFoot(pWC: V3, ss?: number, st?: number): V3 {
-		if (undefined === ss || undefined === st) {
-			// similar to stP
+	pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
+		if (undefined === startU || undefined === startV) {
+			// similar to uvP
 			const pLC = this.matrixInverse.transformPoint(pWC)
 			const angle = pLC.angleXY()
-			if (undefined === ss) {
-				ss = angle < -PI / 2 ? angle + TAU : angle
+			if (undefined === startU) {
+				startU = angle < -PI / 2 ? angle + TAU : angle
 			}
-			if (undefined === st) {
-				st = pLC.z + (pLC.lengthXY() - pLC.z) * sqrt(2) / 2
+			if (undefined === startV) {
+				startV = pLC.z + (pLC.lengthXY() - pLC.z) * sqrt(2) / 2
 			}
 		}
-		const f = ([s, t]: number[]) => {
-			const pSTToPWC = this.pST(s, t).to(pWC)
-			return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)]
+		const f = ([u, v]: number[]) => {
+			const pUVToPWC = this.pUV(u, v).to(pWC)
+			return [this.dpdu()(u, v).dot(pUVToPWC), this.dpdv()(u).dot(pUVToPWC)]
 		}
-		const { 0: x, 1: y } = newtonIterate(f, [ss, st])
+		const { 0: x, 1: y } = newtonIterate(f, [startU, startV])
 		return new V3(x, y, 0)
 	}
 	/**
@@ -69,14 +69,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		readonly f1: V3,
 		readonly f2: V3,
 		readonly dir: V3,
-		sMin: number = 0,
-		sMax: number = PI,
-		tMin: number = 0,
-		tMax: number = 16,
+		uMin: number = 0,
+		uMax: number = PI,
+		vMin: number = 0,
+		vMax: number = 16,
 	) {
-		super(sMin, sMax, tMin, tMax)
+		super(uMin, uMax, vMin, vMax)
 		assertVectors(center, f1, f2, dir)
-		assert(0 <= tMin)
+		assert(0 <= vMin)
 		this.matrix = M4.forSys(f1, f2, dir, center)
 		this.matrixInverse = this.matrix.inversed()
 		this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
@@ -94,14 +94,14 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	static atApexThroughEllipse(
 		apex: V3,
 		ellipse: EllipseCurve,
-		sMin?: number,
-		sMax?: number,
-		tMin?: number,
-		tMax?: number,
+		uMin?: number,
+		uMax?: number,
+		vMin?: number,
+		vMax?: number,
 	): ConicSurface {
 		assertVectors(apex)
 		assertInst(EllipseCurve, ellipse)
-		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center), sMin, sMax, tMin, tMax)
+		return new ConicSurface(apex, ellipse.f1, ellipse.f2, apex.to(ellipse.center), uMin, uMax, vMin, vMax)
 	}
 
 	static unitISLineTs(anchor: V3, dir: V3): number[] {
@@ -236,7 +236,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.center, this.f1, this.f2, this.dir, this.sMin, this.sMax, this.tMin, this.tMax]
+		return [this.center, this.f1, this.f2, this.dir, this.uMin, this.uMax, this.vMin, this.vMax]
 	}
 
 	isTsForLine(line: L3): number[] {
@@ -356,7 +356,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		return new ConicSurface(this.center, this.f1.negated(), this.f2, this.dir) as this
 	}
 
-	normalSTFunc(): (s: number, t: number) => V3 {
+	normalUVFunc(): (u: number, v: number) => V3 {
 		const { f1, f2 } = this,
 			f3 = this.dir
 		return (d, _z) => {
@@ -371,25 +371,25 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	normalP(p: V3): V3 {
 		//TODO assert(!p.like(this.center))
 		const pLC = this.matrixInverse.transformPoint(p)
-		return this.normalSTFunc()(pLC.angleXY(), pLC.z)
+		return this.normalUVFunc()(pLC.angleXY(), pLC.z)
 	}
 
-	pSTFunc(): (s: number, t: number) => V3 {
-		return (s, t) => {
-			// center + f1 t cos s + f2 t sin s + t dir
-			const resultLC = new V3(t * cos(s), t * sin(s), t)
+	pUVFunc(): (u: number, v: number) => V3 {
+		return (u, v) => {
+			// center + f1 v cos u + f2 v sin u + v dir
+			const resultLC = new V3(v * cos(u), v * sin(u), v)
 			return this.matrix.transformPoint(resultLC)
 		}
 	}
 
-	dpds(): (s: number, t: number) => V3 {
-		return (s, t) => {
-			const resultLC = new V3(t * -sin(s), t * cos(s), 0)
+	dpdu(): (u: number, v: number) => V3 {
+		return (u, v) => {
+			const resultLC = new V3(v * -sin(u), v * cos(u), 0)
 			return this.matrix.transformVector(resultLC)
 		}
 	}
 
-	dpdt(): (s: number) => V3 {
+	dpdv(): (s: number) => V3 {
 		return s => {
 			const resultLC = new V3(cos(s), sin(s), 1)
 			return this.matrix.transformVector(resultLC)
@@ -419,7 +419,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 		return eq0(this.implicitFunction()(p))
 	}
 
-	stP(pWC: V3) {
+	uvP(pWC: V3) {
 		const pLC = this.matrixInverse.transformPoint(pWC)
 		const angle = pLC.angleXY()
 		return new V3(angle < -PI / 2 ? angle + TAU : angle, pLC.z, 0)

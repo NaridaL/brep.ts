@@ -1059,7 +1059,7 @@ export abstract class Face extends Transformable {
 	}
 
 	getLoops(): Edge[][] {
-		return this.holes.concat(this.contour)
+		return [this.contour, ...this.holes]
 	}
 
 	getAABB(): AABB {
@@ -1442,23 +1442,23 @@ export class RotationFace extends Face {
 
 	unrollLoop(this: this & { surface: ParametricSurface }, edgeLoop: Edge[]) {
 		const vs: V3[] = []
-		const stP = this.surface.stPFunc()
+		const uvP = this.surface.uvPFunc()
 		const verticesNo0s = edgeLoop.map(edge => edge.getVerticesNo0())
-		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(stP(edgeVertices[0]).x, Math.PI))
+		const startEdgeIndex = verticesNo0s.findIndex(edgeVertices => !eq(uvP(edgeVertices[0]).x, Math.PI))
 		assert(-1 != startEdgeIndex)
 		// console.log(startEdgeIndex)
 		for (let i = 0; i < edgeLoop.length; i++) {
 			const edgeIndex = (i + startEdgeIndex) % edgeLoop.length
 			for (let j = 0; j < verticesNo0s[edgeIndex].length; j++) {
 				const p = verticesNo0s[edgeIndex][j]
-				const localP = stP(p)
+				const localP = uvP(p)
 				// console.log(hint, p.sce, localP.sce)
 				vs.push(localP)
 			}
 		}
 		edgeLoop.forEach(edge => {
 			edge.getVerticesNo0().forEach(p => {
-				vs.push(stP(p))
+				vs.push(uvP(p))
 			})
 		})
 		console.log('vs\n', vs.join('\n'), vs.length)
@@ -1472,12 +1472,12 @@ export class RotationFace extends Face {
 	 *
 	 *          = (-f1x sin t + f2x cos t) / (-f1y sin t + f2y cos t)
 	 */
-	unrollEllipsoidLoops(edgeLoops: Edge[][], uStep: number, vStep: number) {
-		const verticesST: V3[] = [],
+	unrollEllipsoidLoops(edgeLoops: Edge[][]) {
+		const verticesUV: V3[] = [],
 			vertices: V3[] = [],
 			loopStarts = []
 		const ellipsoid: EllipsoidSurface = this.surface as EllipsoidSurface
-		const ptpf = ellipsoid.stPFunc()
+		const ptpf = ellipsoid.uvPFunc()
 		const testDegeneratePoint =
 			ellipsoid instanceof EllipsoidSurface
 				? (nextStart: V3) =>
@@ -1485,13 +1485,13 @@ export class RotationFace extends Face {
 						nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
 				: (nextStart: V3) => nextStart.like((this.surface as ConicSurface).center)
 		for (const edgeLoop of edgeLoops) {
-			loopStarts.push(verticesST.length)
+			loopStarts.push(verticesUV.length)
 			// console.log(startEdgeIndex)
 			for (let i = 0; i < edgeLoop.length; i++) {
 				const ipp = (i + 1) % edgeLoop.length
 				const verticesNo0 = edgeLoop[i].getVerticesNo0()
 				vertices.push(...verticesNo0)
-				verticesST.push(...verticesNo0.map(v => ptpf(v)))
+				verticesUV.push(...verticesNo0.map(v => ptpf(v)))
 				const nextStart = edgeLoop[ipp].a
 				//console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
 
@@ -1501,11 +1501,11 @@ export class RotationFace extends Face {
 					const inAngle = Math.atan2(-bDirLC.y, -bDirLC.x)
 					const outAngle = Math.atan2(aDirLC.y, aDirLC.x)
 
-					const stLast = verticesST.pop()!
-					verticesST.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0))
+					const stLast = verticesUV.pop()!
+					verticesUV.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0))
 					vertices.push(vertices.last)
 				}
-				verticesST.forEach(({ x: u, y: v }) => {
+				verticesUV.forEach(({ u, v }) => {
 					assert(isFinite(u))
 					assert(isFinite(v))
 				})
@@ -1515,30 +1515,29 @@ export class RotationFace extends Face {
 		if (this.surface instanceof EllipsoidSurface) {
 			normals = vertices.map(v => ellipsoid.normalP(v))
 		} else {
-			const pN = ellipsoid.normalSTFunc()
-			normals = verticesST.map(({ x, y }) => pN(x, y))
+			const normalUV = ellipsoid.normalUVFunc()
+			normals = verticesUV.map(({ u, v }) => normalUV(u, v))
 		}
 		assert(vertices.length == vertices.length)
-		//console.log(verticesST.map(v => v.str).join('\n'))
+		//console.log(verticesUV.map(v => v.str).join('\n'))
 		return {
-			verticesUV: verticesST.map(vST => new V3(vST.x / uStep, vST.y / vStep, 0)),
+			verticesUV: verticesUV,
 			vertices: vertices,
 			normals: normals,
 			loopStarts: loopStarts,
 		}
 	}
 
-	unrollCylinderLoops(loops: Edge[][], uStep: number, vStep: number) {
+	unrollCylinderLoops(loops: Edge[][]) {
 		const vertexLoops = loops.map(loop => loop.flatMap(edge => edge.getVerticesNo0()))
 		const surface = this.surface as ParametricSurface
 		const vertices: V3[] = vertexLoops.concatenated()
 		// this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
 		const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last + loop.length), arr), [0])
-		const stPFunc = surface.stPFunc()
-		const verticesST = vertices.map(v => stPFunc(v))
-		const verticesUV = verticesST.map(st => new V3(st.x / uStep, st.y / vStep, 0))
-		const normalST = surface.normalSTFunc()
-		const normals: V3[] = verticesST.map(({ x, y }) => normalST(x, y))
+		const uvPFunc = surface.uvPFunc()
+		const verticesUV = vertices.map(v => uvPFunc(v))
+		const uvN = surface.normalUVFunc()
+		const normals: V3[] = verticesUV.map(({ u, v }) => uvN(u, v))
 		return { verticesUV: verticesUV, vertices: vertices, normals: normals, loopStarts: loopStarts }
 	}
 
@@ -1581,14 +1580,15 @@ export class RotationFace extends Face {
 	) {
 		assertf(() => uStep > 0 && vStep > 0, uStep, vStep, 'Surface: ' + this.surface)
 		const triangles: int[] = []
-		const pIJFunc = (i: number, j: number) => this.surface.pSTFunc()(i * uStep, j * vStep)
-		const normalIJFunc = (i: number, j: number) => this.surface.normalSTFunc()(i * uStep, j * vStep)
-		const loops = [this.contour].concat(this.holes)
+		const pMN = (m: number, n: number) => this.surface.pUVFunc()(m * uStep, n * vStep)
+		const normalMN = (m: number, n: number) => this.surface.normalUVFunc()(m * uStep, n * vStep)
+		const loops = this.getLoops()
 		const { vertices, verticesUV, normals, loopStarts } =
 			this.surface instanceof EllipsoidSurface || this.surface instanceof ConicSurface
-				? this.unrollEllipsoidLoops(loops, uStep, vStep)
-				: this.unrollCylinderLoops(loops, uStep, vStep)
+				? this.unrollEllipsoidLoops(loops)
+				: this.unrollCylinderLoops(loops)
 		loopStarts.push(vertices.length)
+        const verticesMN = verticesUV.map(({u, v}) => new V3(u / uStep, v/ vStep, 0))
 
 		for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
 			const vertexLoopStart = loopStarts[vertexLoopIndex]
@@ -1600,56 +1600,56 @@ export class RotationFace extends Face {
 		}
 
 		disableConsole()
-		let minU = Infinity,
-			maxU = -Infinity,
-			minV = Infinity,
-			maxV = -Infinity
+		let minM = Infinity,
+			maxM = -Infinity,
+			minN = Infinity,
+			maxN = -Infinity
 		//console.log('surface', this.surface.str)
-		//console.log(verticesUV)
-		//drPs.push(...verticesUV.map((v, i) => ({p: vertices[i], text: `${i} uv: ${v.toString(x => round10(x,
+		//console.log(verticesMN)
+		//drPs.push(...verticesMN.map((v, i) => ({p: vertices[i], text: `${i} uv: ${v.toString(x => round10(x,
 		// -4))}`})))
-		verticesUV.forEach(({ x: u, y: v }) => {
-			assert(isFinite(u))
-			assert(isFinite(v))
-			minU = min(minU, u)
-			maxU = max(maxU, u)
-			minV = min(minV, v)
-			maxV = max(maxV, v)
+		verticesMN.forEach(([m, n]) => {
+			assert(isFinite(m))
+			assert(isFinite(n))
+			minM = min(minM, m)
+			maxM = max(maxM, m)
+			minN = min(minN, n)
+			maxN = max(maxN, n)
 		})
 		if (ParametricSurface.is(this.surface)) {
-			//assert(this.surface.boundsSigned(minU * uStep, minV * vStep) > -NLA_PRECISION)
-			//assert(this.surface.boundsSigned(maxU * uStep, maxV * vStep) > -NLA_PRECISION)
+			//assert(this.surface.boundsSigned(minM * uStep, minN * vStep) > -NLA_PRECISION)
+			//assert(this.surface.boundsSigned(maxM * uStep, maxN * vStep) > -NLA_PRECISION)
 		}
-		const uOffset = floor(minU + NLA_PRECISION),
-			vOffset = floor(minV + NLA_PRECISION)
-		const uRes = ceil(maxU - NLA_PRECISION) - uOffset,
-			vRes = ceil(maxV - NLA_PRECISION) - vOffset
-		console.log(uStep, vStep, uRes, vRes)
-		if (uRes == 1 && vRes == 1) {
+		const mOffset = floor(minM + NLA_PRECISION),
+			nOffset = floor(minN + NLA_PRECISION)
+		const mRes = ceil(maxM - NLA_PRECISION) - mOffset,
+			nRes = ceil(maxN - NLA_PRECISION) - nOffset
+		console.log(uStep, vStep, mRes, nRes)
+		if (mRes == 1 && nRes == 1) {
 			// triangulate this face as if it were a plane
-			const polyTriangles = triangulateVertices(V3.Z, verticesUV, loopStarts.slice(1, 1 + this.holes.length))
+			const polyTriangles = triangulateVertices(V3.Z, verticesMN, loopStarts.slice(1, 1 + this.holes.length))
 			triangles.push(...polyTriangles)
 		} else {
-			const partss: int[][][] = new Array(uRes * vRes)
+			const partss: int[][][] = new Array(mRes * nRes)
 
-			function fixUpPart(part: number[], baseU: int, baseV: int) {
-				assert(baseU < uRes && baseV < vRes, `${baseU}, ${baseV}, ${uRes}, ${vRes}`)
-				console.log('complete part', part, baseU, baseV)
+			function fixUpPart(part: number[], baseM: int, baseN: int) {
+				assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`)
+				console.log('complete part', part, baseM, baseN)
 				//console.trace()
 				assert(part.length)
-				const cellU = baseU + uOffset,
-					cellV = baseV + vOffset
+				const cellM = baseM + mOffset,
+					cellN = baseN + nOffset
 				for (const index of part) {
 					assert(
-						le(cellU, verticesUV[index].x) && le(verticesUV[index].x, cellU + 1),
-						`${index} ${verticesUV[index].str} ${cellU} ${cellU}`,
+						le(cellM, verticesMN[index].x) && le(verticesMN[index].x, cellM + 1),
+						`${index} ${verticesMN[index].str} ${cellM} ${cellM}`,
 					)
-					assert(le(cellV, verticesUV[index].y) && le(verticesUV[index].y, cellV + 1))
+					assert(le(cellN, verticesMN[index].y) && le(verticesMN[index].y, cellN + 1))
 				}
-				const pos = baseV * uRes + baseU
+				const pos = baseN * mRes + baseM
 				;(partss[pos] || (partss[pos] = [])).push(part)
-				//const outline = partss[pos] || (partss[pos] = [minU + baseU * uStep, minV + baseV * vStep, minU +
-				// (baseU + 1) * uStep, minV + (baseV + 1) * vStep])
+				//const outline = partss[pos] || (partss[pos] = [minM + baseM * uStep, minN + baseN * vStep, minM +
+				// (baseM + 1) * uStep, minN + (baseN + 1) * vStep])
 			}
 
 			// 'some' instead of forEach so we can return out of the entire function if this.edges crosses no borders
@@ -1657,18 +1657,18 @@ export class RotationFace extends Face {
 			for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
 				let part: int[] | undefined = undefined,
 					firstPart: int[] | undefined,
-					firstPartBaseU: int = -1,
-					firstPartBaseV: int = -1
-				let lastBaseV = -1,
-					lastBaseU = -1
+					firstPartBaseM: int = -1,
+					firstPartBaseN: int = -1
+				let
+					lastBaseM = -1,lastBaseN = -1
 				let partCount = 0
 				const vertexLoopStart = loopStarts[vertexLoopIndex]
 				const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart
 				for (let vlvi = 0; vlvi < vertexLoopLength; vlvi++) {
 					const vx0index = vertexLoopStart + vlvi,
-						vx0 = verticesUV[vx0index]
+						vx0 = verticesMN[vx0index]
 					const vx1index = vertexLoopStart + (vlvi + 1) % vertexLoopLength,
-						vx1 = verticesUV[vx1index]
+						vx1 = verticesMN[vx1index]
 					//console.log('dask', vx0index, vx1index)
 					const vx01 = vx0.to(vx1)
 					assert(vx0)
@@ -1679,37 +1679,35 @@ export class RotationFace extends Face {
 						currentT = 0
 					let whileLimit = 400
 					while (--whileLimit) {
-						const vxu = vx.x,
-							vxv = vx.y
-						// points which are on a grid line are assigned to the cell into which they are going (+
+                        // points which are on a grid line are assigned to the cell into which they are going (+
 						// NLA_PRECISION * sign(di)) if they are parallel to the gridline (eq0(di)), they belong the
 						// the cell for which they are a CCW boundary
-						const baseU = floor(vxu + (!eq0(di) ? sign(di) : -sign(dj)) * NLA_PRECISION) - uOffset
-						const baseV = floor(vxv + (!eq0(dj) ? sign(dj) : sign(di)) * NLA_PRECISION) - vOffset
-						assert(baseU < uRes && baseV < vRes, `${baseU}, ${baseV}, ${uRes}, ${vRes}`)
+						const baseM = floor(vx.u + (!eq0(di) ? sign(di) : -sign(dj)) * NLA_PRECISION) - mOffset
+						const baseN = floor(vx.v + (!eq0(dj) ? sign(dj) : sign(di)) * NLA_PRECISION) - nOffset
+						assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`)
 						// figure out the next intersection with a gridline:
 						// iNext is the positive horizontal distance to the next vertical gridline
-						const iNext = ceil(sign(di) * vxu + NLA_PRECISION) - sign(di) * vxu
-						const jNext = ceil(sign(dj) * vxv + NLA_PRECISION) - sign(dj) * vxv
+						const iNext = ceil(sign(di) * vx.u + NLA_PRECISION) - sign(di) * vx.u
+						const jNext = ceil(sign(dj) * vx.v + NLA_PRECISION) - sign(dj) * vx.v
 						const iNextT = currentT + iNext / abs(di)
 						const jNextT = currentT + jNext / abs(dj)
-						//console.log(vxIndex, vx.str, 'vij', vxu, vxv, 'd', di, dj, 'ijNext', iNext, jNext, 'nextT',
+						//console.log(vxIndex, vx.str, 'vij', vx.u, vx.v, 'd', di, dj, 'ijNext', iNext, jNext, 'nextT',
 						// iNextT, jNextT)
-						if (lastBaseU != baseU || lastBaseV != baseV) {
+						if (lastBaseM != baseM || lastBaseN != baseN) {
 							if (part) {
 								if (!firstPart) {
 									firstPart = part
-									firstPartBaseU = lastBaseU
-									firstPartBaseV = lastBaseV
+									firstPartBaseM = lastBaseM
+									firstPartBaseN = lastBaseN
 								} else {
 									partCount++
-									fixUpPart(part, lastBaseU, lastBaseV)
+									fixUpPart(part, lastBaseM, lastBaseN)
 								}
 							}
 							part = [vxIndex]
 						}
-						lastBaseU = baseU
-						lastBaseV = baseV
+						lastBaseM = baseM
+						lastBaseN = baseN
 						currentT = min(iNextT, jNextT)
 						if (ge(currentT, 1)) {
 							//console.log('breaking ', vx1index)
@@ -1733,35 +1731,35 @@ export class RotationFace extends Face {
 				}
 				// at this point, the firstPart hasn't been added, and the last part also hasn't been added
 				// either they belong to the same cell, or not
-				if (firstPartBaseU == lastBaseU && firstPartBaseV == lastBaseV) {
+				if (firstPartBaseM == lastBaseM && firstPartBaseN == lastBaseN) {
 					part!.pop()
-					fixUpPart(part!.concat(firstPart!), lastBaseU, lastBaseV)
+					fixUpPart(part!.concat(firstPart!), lastBaseM, lastBaseN)
 				} else {
-					fixUpPart(firstPart!, firstPartBaseU!, firstPartBaseV!)
-					fixUpPart(part!, lastBaseU, lastBaseV)
+					fixUpPart(firstPart!, firstPartBaseM!, firstPartBaseN!)
+					fixUpPart(part!, lastBaseM, lastBaseN)
 				}
 				console.log('firstPart', firstPart)
 			}
 			console.log('calculated parts', partss)
-			const fieldVertexIndices = new Array((uRes + 1) * (vRes + 1))
+			const fieldVertexIndices = new Array((mRes + 1) * (nRes + 1))
 
-			function addVertex(u: number, v: number): int {
-				verticesUV.push(new V3(u, v, 0))
-				normals.push(normalIJFunc(u, v))
-				return vertices.push(pIJFunc(u, v)) - 1
+			function addVertex(m: number, n: number): int {
+				verticesMN.push(new V3(m, n, 0))
+				normals.push(normalMN(m, n))
+				return vertices.push(pMN(m, n)) - 1
 			}
 
 			function getGridVertexIndex(i: int, j: int): int {
-				const index = j * (uRes + 1) + i
-				return fieldVertexIndices[index] || (fieldVertexIndices[index] = addVertex(i + uOffset, j + vOffset))
+				const index = j * (mRes + 1) + i
+				return fieldVertexIndices[index] || (fieldVertexIndices[index] = addVertex(i + mOffset, j + nOffset))
 			}
 
-			for (let col = 0; col < uRes; col++) {
+			for (let col = 0; col < mRes; col++) {
 				let inside = false
-				for (let row = 0; row < vRes; row++) {
-					const pos = row * uRes + col
-					const fieldU = uOffset + col,
-						fieldV = vOffset + row
+				for (let row = 0; row < nRes; row++) {
+					const pos = row * mRes + col
+					const fieldU = mOffset + col,
+						fieldV = nOffset + row
 					const parts = partss[pos]
 					if (!parts) {
 						if (inside) {
@@ -1777,7 +1775,7 @@ export class RotationFace extends Face {
 					} else {
 						// assemble the field with segments in in
 						function opos(index: int) {
-							const p = verticesUV[index],
+							const p = verticesMN[index],
 								u1 = p.x - fieldU,
 								v1 = p.y - fieldV
 							assert(
@@ -1848,7 +1846,7 @@ export class RotationFace extends Face {
 							} else {
 								const polyTriangles = triangulateVertices(
 									V3.Z,
-									outline.map(i => verticesUV[i]),
+									outline.map(i => verticesMN[i]),
 									[],
 								).map(i => outline[i])
 								triangles.push(...polyTriangles)
@@ -1876,8 +1874,8 @@ export class RotationFace extends Face {
 		let minZ = Infinity,
 			maxZ = -Infinity
 		//let cmp = (a, b) => a.value - b.value
-		const f = this.surface.pSTFunc()
-		const normalF = this.surface.normalSTFunc()
+		const f = this.surface.pUVFunc()
+		const normalF = this.surface.normalUVFunc()
 		const vertexLoops = this.holes.concat([this.contour]).map(loop => this.unrollLoop(loop))
 		vertexLoops.forEach(vertexLoop => {
 			vertexLoop.forEach(({ x: d, y: z }) => {

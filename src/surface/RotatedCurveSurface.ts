@@ -25,32 +25,32 @@ export class RotatedCurveSurface extends ParametricSurface {
 	constructor(
 		readonly curve: Curve,
 		readonly matrix: M4 = M4.IDENTITY,
-		sMin: number = 0,
-		sMax: number = PI,
-		tMin: number = curve.tMin,
-		tMax: number = curve.tMax,
+		uMin: number = 0,
+		uMax: number = PI,
+		vMin: number = curve.tMin,
+		vMax: number = curve.tMax,
 	) {
 		// d/dz (r(z))
-		super(sMin, sMax, tMin, tMax)
+		super(uMin, uMax, vMin, vMax)
 		assertInst(M4, matrix)
 		assert(matrix.isNoProj())
-		assert(eq0(curve.at(tMin).y))
+		assert(eq0(curve.at(vMin).y))
 		this.matrixInverse = matrix.inversed()
 		this.vStep = this.curve.tIncrement
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.curve, this.matrix, this.sMin, this.sMax, this.tMin, this.tMax]
+		return [this.curve, this.matrix, this.uMin, this.uMax, this.vMin, this.vMax]
 	}
 
 	flipped(): this {
 		return new RotatedCurveSurface(
 			this.curve,
 			this.matrix.times(M4.mirror(P3.YZ)),
-			this.sMin,
-			this.sMax,
-			this.tMin,
-			this.tMax,
+			this.uMin,
+			this.uMax,
+			this.vMin,
+			this.vMax,
 		) as this
 	}
 
@@ -58,10 +58,10 @@ export class RotatedCurveSurface extends ParametricSurface {
 		return new RotatedCurveSurface(
 			this.curve,
 			m4.isMirroring() ? m4.times(this.matrix).times(M4.mirror(P3.YZ)) : m4.times(this.matrix),
-			this.sMin,
-			this.sMax,
-			this.tMin,
-			this.tMax,
+			this.uMin,
+			this.uMax,
+			this.vMin,
+			this.vMax,
 		) as this
 	}
 
@@ -71,44 +71,44 @@ export class RotatedCurveSurface extends ParametricSurface {
 		return this.curve.containsPoint(new V3(radius, 0, pLC.z))
 	}
 
-	pSTFunc(): (s: number, t: number) => V3 {
-		return (s, t) => {
-			const { x: radius, z: z } = this.curve.at(t)
-			return this.matrix.transformPoint(V3.polar(radius, s, z))
+	pUVFunc(): (u: number, v: number) => V3 {
+		return (u, v) => {
+			const { x: radius, z: z } = this.curve.at(v)
+			return this.matrix.transformPoint(V3.polar(radius, u, z))
 		}
 	}
 
-	dpds(): (s: number, t: number) => V3 {
-		return (s, t) => {
-			const radius = this.curve.at(t).x
-			const resultLC = new V3(radius * -sin(s), radius * cos(s), 0)
+	dpdu(): (u: number, v: number) => V3 {
+		return (u,v) => {
+			const radius = this.curve.at(v).x
+			const resultLC = new V3(radius * -sin(u), radius * cos(u), 0)
 			return this.matrix.transformVector(resultLC)
 		}
 	}
 
-	dpdt(): (s: number, t: number) => V3 {
-		return (s, t) => {
-			const { x: drdt, z: dzdt } = this.curve.tangentAt(t)
-			return this.matrix.transformVector(V3.polar(drdt, s, dzdt))
+	dpdv(): (u: number, v: number) => V3 {
+		return (u, v) => {
+			const { x: drdt, z: dzdt } = this.curve.tangentAt(v)
+			return this.matrix.transformVector(V3.polar(drdt, u, dzdt))
 		}
 	}
 
-	normalSTFunc(): (s: number, t: number) => V3 {
+	normalUVFunc(): (u: number, v: number) => V3 {
 		const matrix = this.matrix
 			.inversed()
 			.transposed()
 			.as3x3()
 		const normalLength = this.matrix.isMirroring() ? -1 : 1
-		return (s, t) => {
-			const { x: drdt, z: dzdt } = this.curve.tangentAt(t)
-			return matrix.transformVector(V3.polar(dzdt, s, -drdt)).toLength(normalLength)
+		return (u, v) => {
+			const { x: drdt, z: dzdt } = this.curve.tangentAt(v)
+			return matrix.transformVector(V3.polar(dzdt, u, -drdt)).toLength(normalLength)
 		}
 	}
 
-	stPFunc(): (pWC: V3) => V3 {
+	uvPFunc(): (pWC: V3) => V3 {
 		return pWC => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
-			const angle = EllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
+			const angle = EllipseCurve.XYLCPointT(pLC, this.uMin, this.uMax)
 			const radius = pLC.lengthXY()
 			return new V3(angle, this.curve.pointT(new V3(radius, 0, pLC.z)), 0)
 		}
@@ -125,7 +125,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 		const anchorLC = this.matrixInverse.transformPoint(line.anchor)
 		const dirLC = this.matrixInverse.transformVector(line.dir1)
 		if (dirLC.isParallelTo(V3.Z)) {
-			if (!fuzzyBetween(anchorLC.angleXY(), this.sMin, this.sMax)) return []
+			if (!fuzzyBetween(anchorLC.angleXY(), this.uMin, this.uMax)) return []
 			return this.curve
 				.isInfosWithLine(new V3(anchorLC.lengthXY(), 0, anchorLC.z), dirLC)
 				.map(info => info.tOther)
@@ -143,7 +143,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 				),
 			]
 				.map(info => info.tOther)
-				.filter(t => fuzzyBetween(L3.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax))
+				.filter(t => fuzzyBetween(L3.at(anchorLC, dirLC, t).angleXY(), this.uMin, this.uMax))
 		} else if (dirLC.isPerpendicularTo(V3.Z)) {
 			const secs = this.isCurvesWithPlaneLC(new P3(V3.Z, anchorLC.z))
 			if (!secs) return []
@@ -170,7 +170,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 			const infos = hc.isInfosWithCurve(this.curve)
 			return infos
 				.map(info => (info.p.z - anchorLC.z) / dirLC.z)
-				.filter(t => fuzzyBetween(L3.at(anchorLC, dirLC, t).angleXY(), this.sMin, this.sMax))
+				.filter(t => fuzzyBetween(L3.at(anchorLC, dirLC, t).angleXY(), this.uMin, this.uMax))
 		}
 	}
 
@@ -182,8 +182,8 @@ export class RotatedCurveSurface extends ParametricSurface {
 					new V3(0, 0, planeLC.w),
 					new V3(radius, 0, 0),
 					new V3(0, radius, 0),
-					this.sMin,
-					this.sMax,
+					this.uMin,
+					this.uMax,
 				).transform(this.matrix)
 			})
 		} else if (planeLC.normal1.isPerpendicularTo(V3.Z) && planeLC.containsPoint(V3.O)) {
@@ -204,7 +204,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 
 	loopContainsPoint(loop: Edge[], pWC: V3): PointVsFace {
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		const angle = EllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax)
+		const angle = EllipseCurve.XYLCPointT(pLC, this.uMin, this.uMax)
 		const testCurveLC = EllipseCurve.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z))
 		const testCurveWC = testCurveLC.transform(this.matrix)
 		return Surface.loopContainsPointEllipse(loop, pWC, testCurveWC, angle)
@@ -265,10 +265,10 @@ export function getExtremePointsHelper(this: RotatedCurveSurface & { matrix: M4 
 			b = -f1.e(dim)
 		const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2(a, b, 0)
 		return xiEtas.flatMap(([xi, eta]) => {
-			const s = Math.atan2(eta, xi)
-			if (!(lt(this.sMin, s) && lt(s, this.sMax))) return []
-			const testCurve = curve.transform(this.matrix.times(M4.rotateZ(s)))
-			return testCurve.roots()[dim].map(t => this.pST(s, t))
+			const u = Math.atan2(eta, xi)
+			if (!(lt(this.uMin, u) && lt(u, this.uMax))) return []
+			const testCurve = curve.transform(this.matrix.times(M4.rotateZ(u)))
+			return testCurve.roots()[dim].map(v => this.pUV(u, v))
 		})
 	})
 }

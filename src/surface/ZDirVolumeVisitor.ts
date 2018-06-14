@@ -35,8 +35,8 @@ import { cos, sin } from '../math'
 export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volume: number; centroid: V3 } } = {
 	[ConicSurface.name](this: ConicSurface, edges: Edge[]): { volume: number; centroid: V3 } {
 		console.log(this)
-		const dpds = this.dpds()
-		const dpdt = this.dpdt()
+		const dpdu = this.dpdu()
+		const dpdv = this.dpdv()
 		// INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z dt
 		const totalVolume = edges
 			.map(edgeWC => {
@@ -49,27 +49,27 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 					const f = (curveT: number) => {
 						const at = curveWC.at(curveT),
 							tangentWC = curveWC.tangentAt(curveT)
-						const stOfPWC = this.stP(at)
-						// INTEGRATE [0; atST.y] (dpds(atST.x, t) X dpdt(atST.x)).z * pST(atST.x, t).z dt
-						// dpds(s, t) === t * dpds(s, 1)
-						// => INTEGRATE [0; atST.y] (t * dpds(atST.x, 1) X dpdt(atST.x)).z * pST(atST.x, t).z dt
-						// => (dpds(atST.x, 1) X dpdt(atST.x)).z * INTEGRATE [0; atST.y] t * pST(atST.x, t).z dt
-						// pST(s, t) === t * (pST(s, 1) - center) + center
-						// => (dpds(atST.x, 1) X dpdt(atST.x)).z
-						//      * INTEGRATE [0; atST.y] t² * (pST(atST.x, t) - center).z + t * center.z dt
-						// => (dpds(atST.x, 1) X dpdt(atST.x)).z
-						//      * INTEGRATE [0; atST.y] t² * (pST(atST.x, t) - center).z + t * center.z dt
-						// => (dpds(atST.x, 1) X dpdt(atST.x)).z
-						//      * (1/3 t³ pST(atST.x, 1).z + 1/2 t² center.z)[0; atST.y]
+						const uvOfPWC = this.uvP(at)
+						// INTEGRATE [0; atUV.y] (dpdu(atUV.x, t) X dpdv(atUV.x)).z * pUV(atUV.x, t).z dt
+						// dpdu(u, v) === t * dpdu(s, 1)
+						// => INTEGRATE [0; atUV.y] (t * dpdu(atUV.x, 1) X dpdv(atUV.x)).z * pUV(atUV.x, t).z dt
+						// => (dpdu(atUV.x, 1) X dpdv(atUV.x)).z * INTEGRATE [0; atUV.y] t * pUV(atUV.x, t).z dt
+						// pUV(u, v) === t * (pUV(s, 1) - center) + center
+						// => (dpdu(atUV.x, 1) X dpdv(atUV.x)).z
+						//      * INTEGRATE [0; atUV.y] t² * (pUV(atUV.x, t) - center).z + t * center.z dt
+						// => (dpdu(atUV.x, 1) X dpdv(atUV.x)).z
+						//      * INTEGRATE [0; atUV.y] t² * (pUV(atUV.x, t) - center).z + t * center.z dt
+						// => (dpdu(atUV.x, 1) X dpdv(atUV.x)).z
+						//      * (1/3 t³ pUV(atUV.x, 1).z + 1/2 t² center.z)[0; atUV.y]
 
-						const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
+						const du = -M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x))
 							.inversed()
 							.transformVector(tangentWC).x
 						const factor =
-							stOfPWC.y ** 3 / 3 * (this.pST(stOfPWC.x, 1).z - this.center.z) +
-							stOfPWC.y ** 2 / 2 * this.center.z
-						const actual = dpds(stOfPWC.x, factor).cross(dpdt(stOfPWC.x)).z
-						return actual * ds
+							uvOfPWC.y ** 3 / 3 * (this.pUV(uvOfPWC.x, 1).z - this.center.z) +
+							uvOfPWC.y ** 2 / 2 * this.center.z
+						const actual = dpdu(uvOfPWC.x, factor).cross(dpdv(uvOfPWC.x)).z
+						return actual * du
 					}
 					const val = glqInSteps(f, edgeWC.aT, edgeWC.bT, 1)
 					return val
@@ -90,31 +90,31 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 				const f = (curveT: number) => {
 					const at = curveWC.at(curveT),
 						tangentWC = curveWC.tangentAt(curveT)
-					const stOfPWC = this.stP(at)
-					// INTEGRATE [0; atST.y] dpds(atST.x, t) X dpdt(atST.x, t) * pST(atST.x, t).z dt
-					// dpdt is constant with respect to t
-					// => (dpds(atST.x, t) X dpdt(atST.x, t)).z
-					//      * (INTEGRATE [0; atST.y] t * pST(atST.x, t) * pST(atST.x, t).z dt)
-					// dpds(s, t) === t * dpds(s, 1)
-					// pST(s, t) === t * (pST(s, 1) - center) + center
-					// INTEGRATE [0; atST.y] t * pST(atST.x, t) * pST(atST.x, t).z dt
-					// = INTEGRATE [0; atST.y] t *
-					//                         (t * (pST(s, 1) - center) + center) *
-					//                         (t (pST(s, 1) - center).z + center.z) dt
-					// = INTEGRATE [0; atST.y] t³ (pST(s, 1) - center) * (pST(s, 1) - center).z
-					//                       + t² ((pST(s, 1) - center) * center.z + (pST(s, 1) - center).z * center)
+					const uvOfPWC = this.uvP(at)
+					// INTEGRATE [0; atUV.y] dpdu(atUV.x, t) X dpdv(atUV.x, t) * pUV(atUV.x, t).z dt
+					// dpdv is constant with respect to t
+					// => (dpdu(atUV.x, t) X dpdv(atUV.x, t)).z
+					//      * (INTEGRATE [0; atUV.y] t * pUV(atUV.x, t) * pUV(atUV.x, t).z dt)
+					// dpdu(u, v) === t * dpdu(s, 1)
+					// pUV(u, v) === t * (pUV(s, 1) - center) + center
+					// INTEGRATE [0; atUV.y] t * pUV(atUV.x, t) * pUV(atUV.x, t).z dt
+					// = INTEGRATE [0; atUV.y] t *
+					//                         (t * (pUV(s, 1) - center) + center) *
+					//                         (t (pUV(s, 1) - center).z + center.z) dt
+					// = INTEGRATE [0; atUV.y] t³ (pUV(s, 1) - center) * (pUV(s, 1) - center).z
+					//                       + t² ((pUV(s, 1) - center) * center.z + (pUV(s, 1) - center).z * center)
 					//                       + t center center.z dt
-					// = (1/4 t^4 (pST(s, 1) - center) * (pST(s, 1) - center).z
-					//   (1/3 t³ ((pST(s, 1) - center) * center.z + (pST(s, 1) - center).z * center)
-					//   (1/2 t² center center.z dt)[0; atST.y]
-					const pSTS1V = this.pST(stOfPWC.x, 1).minus(this.center)
+					// = (1/4 t^4 (pUV(s, 1) - center) * (pUV(s, 1) - center).z
+					//   (1/3 t³ ((pUV(s, 1) - center) * center.z + (pUV(s, 1) - center).z * center)
+					//   (1/2 t² center center.z dt)[0; atUV.y]
+					const pUVS1V = this.pUV(uvOfPWC.x, 1).minus(this.center)
 					const factor = V3.add(
-						pSTS1V.times(1 / 4 * stOfPWC.y ** 4 * pSTS1V.z + 1 / 3 * stOfPWC.y ** 3 * this.center.z),
-						this.center.times(1 / 3 * stOfPWC.y ** 3 * pSTS1V.z + 1 / 2 * stOfPWC.y ** 2 * this.center.z),
+						pUVS1V.times(1 / 4 * uvOfPWC.y ** 4 * pUVS1V.z + 1 / 3 * uvOfPWC.y ** 3 * this.center.z),
+						this.center.times(1 / 3 * uvOfPWC.y ** 3 * pUVS1V.z + 1 / 2 * uvOfPWC.y ** 2 * this.center.z),
 					)
-					const partialCentroid = factor.times(dpds(stOfPWC.x, 1).cross(dpdt(stOfPWC.x)).z)
+					const partialCentroid = factor.times(dpdu(uvOfPWC.x, 1).cross(dpdv(uvOfPWC.x)).z)
 
-					const ds = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x))
+					const ds = -M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x))
 						.inversed()
 						.transformVector(tangentWC).x
 
@@ -163,8 +163,8 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 					b = edgeWC.b
 				const as = a.dot(r1)
 				const bs = b.dot(r1)
-				const aBase = this.pST(as, 0)
-				const bBase = this.pST(bs, 0)
+				const aBase = this.pUV(as, 0)
+				const bBase = this.pUV(bs, 0)
 				const [v1, c1] = triangleShadowVolumeAndCentroid(a, b, aBase)
 				const [v2, c2] = triangleShadowVolumeAndCentroid(bBase, aBase, b)
 				return [v1 + v2, c1.plus(c2).div(24)]
@@ -197,8 +197,8 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 	 * Generic implementation.
 	 */
 	[ParametricSurface.name](this: ParametricSurface, edges: Edge[]): { centroid: V3; volume: number } {
-		const dpds = this.dpds()
-		const dpdt = this.dpdt()
+		const dpdu = this.dpdu()
+		const dpdv = this.dpdv()
 		const volume = edges.map((edgeWC): [number, V3] => {
 			const curveWC = edgeWC.curve
 			if (curveWC instanceof ImplicitCurve) {
@@ -208,24 +208,24 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 					// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
 					const pWC = curveWC.at(curveT),
 						tangentWC = curveWC.tangentAt(curveT)
-					const stOfPWC = this.stP(pWC)
+					const uvOfPWC = this.uvP(pWC)
 					const slice = (t: number) => {
-						const p = this.pST(stOfPWC.x, t)
-						const normal = dpds(stOfPWC.x, t).cross(dpdt(stOfPWC.x, t))
+						const p = this.pUV(uvOfPWC.x, t)
+						const normal = dpdu(uvOfPWC.x, t).cross(dpdv(uvOfPWC.x, t))
 						return p.z * normal.z
 					}
-					const sliceIntegral0ToPWCT = glqInSteps(slice, 0, stOfPWC.y, 1)
+					const sliceIntegral0ToPWCT = glqInSteps(slice, 0, uvOfPWC.y, 1)
 					// const dt = tangentWC.dot(scalingVector)
-					const dt = -M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+					const dt = -M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x, uvOfPWC.y))
 						.inversed()
 						.transformVector(tangentWC).x
 					const sliceAreaTimesDs = sliceIntegral0ToPWCT * dt
 					const slice2 = (t: number) => {
-						const p = this.pST(stOfPWC.x, t)
-						const normal = dpds(stOfPWC.x, t).cross(dpdt(stOfPWC.x, t))
+						const p = this.pUV(uvOfPWC.x, t)
+						const normal = dpdu(uvOfPWC.x, t).cross(dpdv(uvOfPWC.x, t))
 						return p.times(p.z * normal.z)
 					}
-					const sliceIntegral0ToPWCT2 = glqV3(slice2, 0, stOfPWC.y)
+					const sliceIntegral0ToPWCT2 = glqV3(slice2, 0, uvOfPWC.y)
 					// const dt = tangentWC.dot(scalingVector)
 					const sliceCentroidZX2TimesDs = sliceIntegral0ToPWCT2.times(dt)
 					return [sliceAreaTimesDs, ...sliceCentroidZX2TimesDs.toArray()]
@@ -316,8 +316,8 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 	// however, shear matrices lead to point-to-plane distances having to be calculated along a vector other than
 	// the plane normal
 	[RotatedCurveSurface.name](this: RotatedCurveSurface, edges: Edge[]): { volume: number; centroid: V3 } {
-		const dpds = this.dpds()
-		const dpdt = this.dpdt()
+		const dpdu = this.dpdu()
+		const dpdv = this.dpdv()
 		const totalVolume = edges
 			.map(edgeWC => {
 				const curveWC = edgeWC.curve
@@ -325,34 +325,34 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 				const f = (curveT: number) => {
 					const pWC = curveWC.at(curveT),
 						tangentWC = curveWC.tangentAt(curveT)
-					const stOfPWC = this.stP(pWC)
+					const uvOfPWC = this.uvP(pWC)
 					const pLC = this.matrixInverse.transformPoint(pWC)
-					const dpdtAtS0 =
+					const dpdvAtS0 =
 						this instanceof RotatedCurveSurface
-							? this.curve.tangentAt(stOfPWC.y)
+							? this.curve.tangentAt(uvOfPWC.y)
 							: V(-pLC.z, 0, pLC.lengthXY())
 					// const slice = (phi: number) => {
-					// 	const p = this.pST(phi, stOfPWC.y)
-					// 	const normal = dpds(phi, stOfPWC.y).cross(dpdt(phi, stOfPWC.y))
+					// 	const p = this.pUV(phi, uvOfPWC.y)
+					// 	const normal = dpdu(phi, uvOfPWC.y).cross(dpdv(phi, uvOfPWC.y))
 					// 	return p.z * normal.z
 					// }
-					// const z = this.curve.at(stOfPWC.y).z
-					// const r = this.curve.at(stOfPWC.y).lengthXY()
+					// const z = this.curve.at(uvOfPWC.y).z
+					// const r = this.curve.at(uvOfPWC.y).lengthXY()
 					// const pz =
 					// 	this.f1.z * r * cos(s) +
 					// 	this.f2.z * r * sin(s) +
 					// 	this.f3.z * z +
 					// 	this.center.z
-					// const dpdsx = this.f1.x * r * -sin(s) + this.f2.x * r * cos(s)
-					// const dpdsy = this.f1.y * r * -sin(s) + this.f2.y * r * cos(s)
-					// const dpdtx = this.f1.x * dr * cos(s) + this.f2.x * dr * sin(s) + this.f3.x * dz
-					// const dpdty = this.f1.y * dr * cos(s) + this.f2.y * dr * sin(s) + this.f3.y * dz
-					// const normalz = dpdsx * dpdty - dpdsy * dpdtx
+					// const dpdux = this.f1.x * r * -sin(s) + this.f2.x * r * cos(s)
+					// const dpduy = this.f1.y * r * -sin(s) + this.f2.y * r * cos(s)
+					// const dpdvx = this.f1.x * dr * cos(s) + this.f2.x * dr * sin(s) + this.f3.x * dz
+					// const dpdvy = this.f1.y * dr * cos(s) + this.f2.y * dr * sin(s) + this.f3.y * dz
+					// const normalz = dpdux * dpdvy - dpduy * dpdvx
 					// result = pz * normalz
 					const r = pLC.lengthXY(),
 						z = pLC.z
-					const dr = dpdtAtS0.x
-					const dz = dpdtAtS0.z
+					const dr = dpdvAtS0.x
+					const dz = dpdvAtS0.z
 					const a = this.matrix.X.z * r,
 						b = this.matrix.Y.z * r,
 						c = this.matrix.Z.z * z + this.matrix.O.z
@@ -374,10 +374,10 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 							12
 						)
 					}
-					const dt = M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+					const dt = M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x, uvOfPWC.y))
 						.inversed()
 						.transformVector(tangentWC).y
-					const sliceIntegral0ToPWCS = sliceIntegral(stOfPWC.x) //- sliceIntegral(0) //(always 0)
+					const sliceIntegral0ToPWCS = sliceIntegral(uvOfPWC.x) //- sliceIntegral(0) //(always 0)
 					const result = sliceIntegral0ToPWCS * dt
 					return result
 				}
@@ -392,14 +392,14 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 				const curveWC = edgeWC.curve
 				const pWC = curveWC.at(curveT),
 					tangentWC = curveWC.tangentAt(curveT)
-				const stOfPWC = this.stP(pWC)
+				const uvOfPWC = this.uvP(pWC)
 				const slice = (phi: number) => {
-					const p = this.pST(phi, stOfPWC.y)
-					const normal = dpds(phi, stOfPWC.y).cross(dpdt(phi, stOfPWC.y))
+					const p = this.pUV(phi, uvOfPWC.y)
+					const normal = dpdu(phi, uvOfPWC.y).cross(dpdv(phi, uvOfPWC.y))
 					return p.times(p.z * normal.z)
 				}
-				const sliceIntegral0ToPWCS = glqV3(slice, 0, stOfPWC.x)
-				const dt = M4.forSys(dpds(stOfPWC.x, stOfPWC.y), dpdt(stOfPWC.x, stOfPWC.y))
+				const sliceIntegral0ToPWCS = glqV3(slice, 0, uvOfPWC.x)
+				const dt = M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x, uvOfPWC.y))
 					.inversed()
 					.transformVector(tangentWC).y
 				const result = sliceIntegral0ToPWCS.times(dt)

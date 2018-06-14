@@ -29,12 +29,12 @@ export class CylinderSurface extends ProjectedCurveSurface implements ImplicitSu
 	constructor(
 		readonly baseCurve: EllipseCurve,
 		dir1: V3,
-		sMin: number = baseCurve.tMin,
-		sMax: number = baseCurve.tMax,
+		uMin: number = baseCurve.tMin,
+		uMax: number = baseCurve.tMax,
 		zMin = -Infinity,
 		zMax = Infinity,
 	) {
-		super(baseCurve, dir1, sMin, sMax, zMin, zMax)
+		super(baseCurve, dir1, uMin, uMax, zMin, zMax)
 		assertInst(EllipseCurve, baseCurve)
 		//assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
 		this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center)
@@ -159,13 +159,13 @@ export class CylinderSurface extends ProjectedCurveSurface implements ImplicitSu
 
 	containsPoint(pWC: V3): boolean {
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		return this.baseCurve.isValidT(EllipseCurve.XYLCPointT(pLC, this.sMin, this.sMax))
+		return this.baseCurve.isValidT(EllipseCurve.XYLCPointT(pLC, this.uMin, this.uMax))
 	}
 
-	stP(pWC: V3): V3 {
+	uvP(pWC: V3): V3 {
 		assert(arguments.length == 1)
 		const pLC = this.matrixInverse.transformPoint(pWC)
-		const u = EllipseCurve.XYLCPointT(pLC, this.tMin, this.tMax)
+		const u = EllipseCurve.XYLCPointT(pLC, this.vMin, this.vMax)
 		return new V3(u, pLC.z, 0)
 	}
 

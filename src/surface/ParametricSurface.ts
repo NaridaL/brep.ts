@@ -9,35 +9,35 @@ export abstract class ParametricSurface extends Surface {
 	uStep!: number
 	vStep!: number
 
-	constructor(readonly sMin: number, readonly sMax: number, readonly tMin: number, readonly tMax: number) {
+	constructor(readonly uMin: number, readonly uMax: number, readonly vMin: number, readonly vMax: number) {
 		super()
-		assertNumbers(sMin, sMax, tMin, tMax)
-		assert(sMin < sMax)
-		assert(tMin < tMax)
+		assertNumbers(uMin, uMax, vMin, vMax)
+		assert(uMin < uMax)
+		assert(vMin < vMax)
 		assert(
-			(x => x[x.length - 4])(this.getConstructorParameters()) == this.sMin,
+			(x => x[x.length - 4])(this.getConstructorParameters()) == this.uMin,
 			this.getConstructorParameters(),
-			this.sMin,
+			this.uMin,
 		)
 	}
 
 	static isCurvesParametricImplicitSurface(
 		ps: ParametricSurface,
 		is: ImplicitSurface,
-		sStep: number,
-		tStep: number = sStep,
+		uStep: number,
+		vStep: number = uStep,
 		curveStepSize: number,
 	): Curve[] {
-		const pf = ps.pSTFunc(),
+		const pf = ps.pUVFunc(),
 			icc = is.implicitFunction()
-		const dpds = ps.dpds()
-		const dpdt = ps.dpdt()
+		const dpdu = ps.dpdu()
+		const dpdv = ps.dpdv()
 		const didp = is.didp.bind(is)
 		const ist = (x: number, y: number) => icc(pf(x, y))
-		const dids = (s: number, t: number) => didp(pf(s, t)).dot(dpds(s, t))
-		const didt = (s: number, t: number) => didp(pf(s, t)).dot(dpdt(s, t))
-		const mf = MathFunctionR2R.forFFxFy(ist, dids, didt)
-		const curves = Curve.breakDownIC(mf, ps, sStep, tStep, curveStepSize, (s, t) => is.containsPoint(pf(s, t))).map(
+		const didu = (u: number, v: number) => didp(pf(u, v)).dot(dpdu(u, v))
+		const didv = (u: number, v: number) => didp(pf(u, v)).dot(dpdv(u, v))
+		const mf = MathFunctionR2R.forFFxFy(ist, didu, didv)
+		const curves = Curve.breakDownIC(mf, ps, uStep, vStep, curveStepSize, (u, v) => is.containsPoint(pf(u, v))).map(
 			({ points, tangents }, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize),
 		)
 		return curves
@@ -54,88 +54,88 @@ export abstract class ParametricSurface extends Surface {
 	}
 
 	static is(obj: any): obj is ParametricSurface {
-		return obj.pSTFunc
+		return obj.pUVFunc
 	}
 
-	pST(s: number, t: number): V3 {
-		return this.pSTFunc()(s, t)
+	pUV(u: number, v: number): V3 {
+		return this.pUVFunc()(u, v)
 	}
 
-	pSTFunc(): (s: number, t: number) => V3 {
-		return this.pST.bind(this)
+	pUVFunc(): (u: number, v: number) => V3 {
+		return this.pUV.bind(this)
 	}
 
-	abstract dpds(): (s: number, t: number) => V3
+	abstract dpdu(): (u: number, v: number) => V3
 
-	abstract dpdt(): (s: number, t: number) => V3
+	abstract dpdv(): (u: number, v: number) => V3
 
-	stP(pWC: V3): V3 {
-		return this.stPFunc()(pWC)
+	uvP(pWC: V3): V3 {
+		return this.uvPFunc()(pWC)
 	}
 
-	stPFunc(): (pWC: V3) => V3 {
-		return this.stP.bind(this)
+	uvPFunc(): (pWC: V3) => V3 {
+		return this.uvP.bind(this)
 	}
 
-	bounds(s: number, t: number): boolean {
-		return this.sMin <= s && s <= this.sMax && this.tMin <= t && t <= this.tMax
+	bounds(u: number, v: number): boolean {
+		return this.uMin <= u && u <= this.uMax && this.vMin <= v && v <= this.vMax
 	}
 
 	/**
 	 * Positive values are inside bounds.
 	 */
-	boundsSigned(s: number, t: number): number {
-		return min(s - this.sMin, this.sMax - s, t - this.tMin, this.tMax - t)
+	boundsSigned(u: number, v: number): number {
+		return min(u - this.uMin, this.uMax - u, v - this.vMin, this.vMax - v)
 	}
 
 	normalP(p: V3): V3 {
-		const pmPoint = this.stPFunc()(p)
-		return this.normalST(pmPoint.x, pmPoint.y)
+		const pmPoint = this.uvPFunc()(p)
+		return this.normalUV(pmPoint.x, pmPoint.y)
 	}
 
-	normalSTFunc(): (s: number, t: number) => V3 {
-		return this.normalST.bind(this)
+	normalUVFunc(): (u: number, v: number) => V3 {
+		return this.normalUV.bind(this)
 	}
 
-	normalST(s: number, t: number): V3 {
-		return this.normalSTFunc()(s, t)
+	normalUV(u: number, v: number): V3 {
+		return this.normalUVFunc()(u, v)
 	}
 
-	parametersValid(s: number, t: number): boolean {
-		return between(s, this.sMin, this.sMax) && between(t, this.tMin, this.tMax)
+	parametersValid(u: number, v: number): boolean {
+		return between(u, this.uMin, this.uMax) && between(v, this.vMin, this.vMax)
 	}
 
-	abstract pointFoot(pWC: V3, ss?: number, st?: number): V3
+	abstract pointFoot(pWC: V3, startU?: number, startV?: number): V3
 
 	toMesh() {
-		assert(isFinite(this.tMin) && isFinite(this.tMax) && isFinite(this.sMin) && isFinite(this.sMax))
+		assert(isFinite(this.vMin) && isFinite(this.vMax) && isFinite(this.uMin) && isFinite(this.uMax))
 		assert(isFinite(this.uStep) && isFinite(this.vStep))
 		return Mesh.parametric(
-			this.pSTFunc(),
-			this.normalSTFunc(),
-			this.sMin,
-			this.sMax,
-			this.tMin,
-			this.tMax,
-			ceil((this.sMax - this.sMin) / this.uStep),
-			ceil((this.tMax - this.tMin) / this.vStep),
+			this.pUVFunc(),
+			this.normalUVFunc(),
+			this.uMin,
+			this.uMax,
+			this.vMin,
+			this.vMax,
+			ceil((this.uMax - this.uMin) / this.uStep),
+			ceil((this.vMax - this.vMin) / this.vStep),
 		)
 	}
 
-	isCurvesWithImplicitSurface(is: ImplicitSurface, sStep: number, tStep: number, stepSize: number): Curve[] {
-		return ParametricSurface.isCurvesParametricImplicitSurface(this, is, sStep, tStep, stepSize)
+	isCurvesWithImplicitSurface(is: ImplicitSurface, uStep: number, vStep: number, stepSize: number): Curve[] {
+		return ParametricSurface.isCurvesParametricImplicitSurface(this, is, uStep, vStep, stepSize)
 	}
 
 	edgeLoopCCW(contour: Edge[]): boolean {
-		const ptpF = this.stPFunc()
+		const ptpF = this.uvPFunc()
 		return isCCW(contour.flatMap(e => e.getVerticesNo0()).map(v => ptpF(v)), V3.Z)
 	}
 
 	like(object: any): boolean {
 		if (!this.isCoplanarTo(object)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
-		const pSMinTMin = this.pSTFunc()(this.sMin, this.tMin)
-		const thisNormal = this.normalSTFunc()(this.sMin, this.tMin)
+		const pSMinTMin = this.pUVFunc()(this.uMin, this.vMin)
+		const thisNormal = this.normalUVFunc()(this.uMin, this.vMin)
 		const otherNormal = object.normalP(pSMinTMin)
 		return 0 < thisNormal.dot(otherNormal)
 	}

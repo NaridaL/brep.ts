@@ -12,7 +12,6 @@ import {
 	le,
 	lt,
 	M4,
-	snap0,
 	V3,
 	VV,
 } from 'ts3dutils'

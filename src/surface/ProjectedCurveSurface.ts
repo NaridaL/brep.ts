@@ -25,30 +25,30 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		new <T extends ProjectedCurveSurface>(
 			baseCurve: Curve,
 			dir: V3,
-			sMin: number,
-			sMax: number,
-			tMin: number,
-			tMax: number,
+			uMin: number,
+			uMax: number,
+			vMin: number,
+			vMax: number,
 		): T
 	}
 
 	constructor(
 		readonly baseCurve: Curve,
 		readonly dir: V3,
-		sMin: number = baseCurve.tMin,
-		sMax: number = baseCurve.tMax,
-		tMin: number = -100,
-		tMax: number = 100,
+		uMin: number = baseCurve.tMin,
+		uMax: number = baseCurve.tMax,
+		vMin: number = -100,
+		vMax: number = 100,
 	) {
-		super(sMin, sMax, tMin, tMax)
+		super(uMin, uMax, vMin, vMax)
 		assertInst(Curve, baseCurve)
 		assertInst(V3, dir)
-		assert(sMin < sMax)
-		assert(tMin < tMax)
+		assert(uMin < uMax)
+		assert(vMin < vMax)
 	}
 
 	getConstructorParameters() {
-		return [this.baseCurve, this.dir, this.sMin, this.sMax, this.tMin, this.tMax]
+		return [this.baseCurve, this.dir, this.uMin, this.uMax, this.vMin, this.vMax]
 	}
 
 	equals(obj: any): boolean {
@@ -68,41 +68,41 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		return this.dir.isParallelTo(line.dir1) && this.containsPoint(line.anchor)
 	}
 
-	dpds(): (s: number, t: number) => V3 {
-		return (s, t) => this.baseCurve.tangentAt(s)
+	dpdu(): (u: number, v: number) => V3 {
+		return (u, v) => this.baseCurve.tangentAt(u)
 	}
 
-	dpdt(): (s: number, t: number) => V3 {
-		return (s, t) => this.dir
+	dpdv(): (u: number, v: number) => V3 {
+		return (u, v) => this.dir
 	}
 
-	normalST(s: number, t: number): V3 {
+	normalUV(u: number, v: number): V3 {
 		return this.baseCurve
-			.tangentAt(s)
+			.tangentAt(u)
 			.cross(this.dir)
 			.unit()
 	}
 
-	pST(s: number, t: number): V3 {
-		return this.baseCurve.at(s).plus(this.dir.times(t))
+	pUV(u: number, v: number): V3 {
+		return this.baseCurve.at(u).plus(this.dir.times(v))
 	}
 
 	pointFoot(pWC: V3, ss?: number): V3 {
 		const basePlane = new P3(this.dir.unit(), 0)
 		const projCurve = this.baseCurve.project(basePlane)
 		const projPoint = basePlane.projectedPoint(pWC)
-		const t = projCurve.closestTToPoint(projPoint, ss, this.sMin, this.sMax)
+		const t = projCurve.closestTToPoint(projPoint, ss, this.uMin, this.uMax)
 		const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
 		return new V3(t, z, 0)
 	}
 
-	stPFunc(): (pWC: V3) => V3 {
+	uvPFunc(): (pWC: V3) => V3 {
 		const projPlane = new P3(this.dir.unit(), 0)
 		const projBaseCurve = this.baseCurve.project(projPlane)
 		return pWC => {
 			const projPoint = projPlane.projectedPoint(pWC)
-			assertNumbers(this.sMin)
-			const t = projBaseCurve.pointT(projPoint, this.sMin, this.sMax)
+			assertNumbers(this.uMin)
+			const t = projBaseCurve.pointT(projPoint, this.uMin, this.uMax)
 			const z = L3.pointT(this.baseCurve.at(t), this.dir, pWC)
 			return new V3(t, z, 0)
 		}
@@ -169,8 +169,8 @@ export class ProjectedCurveSurface extends ParametricSurface {
 	}
 
 	containsPoint(pWC: V3): boolean {
-		const uv = this.stPFunc()(pWC)
-		return this.pSTFunc()(uv.x, uv.y).like(pWC)
+		const uv = this.uvPFunc()(pWC)
+		return this.pUVFunc()(uv.x, uv.y).like(pWC)
 	}
 
 	containsCurve(curve: Curve): boolean {
@@ -200,8 +200,8 @@ export class ProjectedCurveSurface extends ParametricSurface {
 	like(object: any): boolean {
 		if (!this.isCoplanarTo(object)) return false
 		// normals need to point in the same direction (outwards or inwards) for both
-		const p00 = this.pSTFunc()(0, 0)
-		const thisNormal = this.normalSTFunc()(0, 0)
+		const p00 = this.pUVFunc()(0, 0)
+		const thisNormal = this.normalUVFunc()(0, 0)
 		const otherNormal = object.normalP(p00)
 		return 0 < thisNormal.dot(otherNormal)
 	}
@@ -210,7 +210,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		assertVectors(p)
 		assert(isFinite(p.x), p.y, p.z)
 		const line = new L3(p, this.dir.unit())
-		const ptpf = this.stPFunc()
+		const ptpf = this.uvPFunc()
 		const pp = ptpf(p)
 		if (isNaN(pp.x)) {
 			console.log(this.sce, p.sce)
@@ -226,10 +226,10 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		return new this.constructor<this>(
 			this.baseCurve.transform(m4),
 			m4.transformVector(this.dir).times(f),
-			this.sMin,
-			this.sMax,
-			1 == f ? this.tMin : -this.tMax,
-			1 == f ? this.tMax : -this.tMin,
+			this.uMin,
+			this.uMax,
+			1 == f ? this.vMin : -this.vMax,
+			1 == f ? this.vMax : -this.vMin,
 		)
 	}
 
@@ -244,7 +244,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		const projAnchor = projPlane.projectedPoint(line.anchor)
 		const projBaseCurve = this.baseCurve.project(projPlane)
 		return projBaseCurve
-			.isInfosWithLine(projAnchor, projDir, this.sMin, this.sMax, line.tMin, line.tMax)
+			.isInfosWithLine(projAnchor, projDir, this.uMin, this.uMax, line.tMin, line.tMax)
 			.map(info => info.tOther)
 	}
 
@@ -252,10 +252,10 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		return new this.constructor<this>(
 			this.baseCurve,
 			this.dir.negated(),
-			this.sMin,
-			this.sMax,
-			-this.tMax,
-			-this.tMin,
+			this.uMin,
+			this.uMax,
+			-this.vMax,
+			-this.vMin,
 		)
 	}
 }

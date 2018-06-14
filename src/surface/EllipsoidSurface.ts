@@ -60,16 +60,16 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		readonly f1: V3,
 		readonly f2: V3,
 		readonly f3: V3,
-		sMin: number = 0,
-		sMax: number = PI,
-		tMin: number = -PI / 2,
-		tMax: number = PI / 2,
+		uMin: number = 0,
+		uMax: number = PI,
+		vMin: number = -PI / 2,
+		vMax: number = PI / 2,
 	) {
-		super(sMin, sMax, tMin, tMax)
-		assert(0 <= sMin && sMin <= PI)
-		assert(0 <= sMax && sMax <= PI)
-		assert(-PI / 2 <= tMin && tMin <= PI / 2)
-		assert(-PI / 2 <= tMax && tMax <= PI / 2)
+		super(uMin, uMax, vMin, vMax)
+		assert(0 <= uMin && uMin <= PI)
+		assert(0 <= uMax && uMax <= PI)
+		assert(-PI / 2 <= vMin && vMin <= PI / 2)
+		assert(-PI / 2 <= vMax && vMax <= PI / 2)
 		assertVectors(center, f1, f2, f3)
 		this.matrix = M4.forSys(f1, f2, f3, center)
 		this.matrixInverse = this.matrix.inversed()
@@ -267,7 +267,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 	}
 
 	getConstructorParameters(): any[] {
-		return [this.center, this.f1, this.f2, this.f3, this.sMin, this.sMax, this.tMin, this.tMax]
+		return [this.center, this.f1, this.f2, this.f3, this.uMin, this.uMax, this.vMin, this.vMax]
 	}
 
 	equals(obj: any): boolean {
@@ -302,13 +302,13 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 	clipCurves(curves: Curve[]): Curve[] {
 		return curves.flatMap(curve => curve.clipPlane(this.getSeamPlane()))
 	}
-	dpds(): (s: number, t: number) => V3 {
-		// dp(s, t) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
-		return (s: number, t: number) => this.matrix.transformVector(new V3(cos(t) * -sin(s), cos(t) * cos(s), 0))
+	dpdu(): (u: number, v: number) => V3 {
+		// dp(u, v) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
+		return (u: number, v: number) => this.matrix.transformVector(new V3(cos(v) * -sin(u), cos(v) * cos(u), 0))
 	}
 
-	dpdt(): (s: number, t: number) => V3 {
-		return (s: number, t: number) => this.matrix.transformVector(new V3(-sin(t) * cos(s), -sin(t) * sin(s), cos(t)))
+	dpdv(): (u: number, v: number) => V3 {
+		return (u: number, v: number) => this.matrix.transformVector(new V3(-sin(v) * cos(u), -sin(v) * sin(u), cos(v)))
 	}
 
 	isCurvesWithPCS(surface: ProjectedCurveSurface): Curve[] {
@@ -506,7 +506,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		return new EllipsoidSurface(this.center, this.f1, this.f2, this.f3.negated()) as this
 	}
 
-	normalSTFunc(): (s: number, t: number) => V3 {
+	normalUVFunc(): (u: number, v: number) => V3 {
 		// ugh
 		// paramtric ellipsoid point q(a, b)
 		// normal1 == (dq(a, b) / da) X (dq(a, b) / db) (cross product of partial derivatives)
@@ -528,11 +528,11 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		return this.pLCNormalWCMatrix.transformVector(this.matrixInverse.transformPoint(p)).unit()
 	}
 
-	normalST(s: number, t: number): V3 {
-		return this.pLCNormalWCMatrix.transformVector(V3.sphere(s, t)).unit()
+	normalUV(u: number, v: number): V3 {
+		return this.pLCNormalWCMatrix.transformVector(V3.sphere(u, v)).unit()
 	}
 
-	stPFunc() {
+	uvPFunc() {
 		return (pWC: V3) => {
 			const pLC = this.matrixInverse.transformPoint(pWC)
 			const alpha = abs(pLC.angleXY())
@@ -543,7 +543,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		}
 	}
 
-	pSTFunc() {
+	pUVFunc() {
 		// this(a, b) = f1 cos a cos b + f2 sin a cos b + f2 sin b
 		return (alpha: number, beta: number) => {
 			return this.matrix.transformPoint(V3.sphere(alpha, beta))
@@ -598,13 +598,13 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		//    x && console.log(centerToP.sce, centerToPdelA.sce, centerToPdelB.sce)
 		//    return [centerToP.dot(centerToPdelA), centerToP.dot(centerToPdelB)]
 		//}
-		//const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.pSTFunc()(mainF1Params[0], mainF1Params[1])
+		//const mainF1Params = newtonIterate(f, [0, 0], 8), mainF1 = this.pUVFunc()(mainF1Params[0], mainF1Params[1])
 		//console.log(f(mainF1Params, 1).sce)
-		//const mainF2Params = newtonIterate(f, this.stPFunc()(f2.rejectedFrom(mainF1)).toArray(2), 8),
-		//   mainF2 = this.pSTFunc()(mainF2Params[0], mainF2Params[1])
-		//console.log(this.normalSTFunc()(mainF2Params[0], mainF2Params[1]).sce)
+		//const mainF2Params = newtonIterate(f, this.uvPFunc()(f2.rejectedFrom(mainF1)).toArray(2), 8),
+		//   mainF2 = this.pUVFunc()(mainF2Params[0], mainF2Params[1])
+		//console.log(this.normalUVFunc()(mainF2Params[0], mainF2Params[1]).sce)
 		//assert(mainF1.isPerpendicularTo(mainF2), mainF1, mainF2, mainF1.dot(mainF2), mainF1Params)
-		//const mainF3Params = this.stPFunc()(mainF1.cross(mainF2)), mainF3 = this.pSTFunc()(mainF3Params[0],
+		//const mainF3Params = this.uvPFunc()(mainF1.cross(mainF2)), mainF3 = this.pUVFunc()(mainF3Params[0],
 		// mainF3Params[1]) return new EllipsoidSurface(this.center, mainF1, mainF2, mainF3)
 
 		const { U, SIGMA } = this.matrix.svd3()
@@ -723,23 +723,23 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		if (undefined === startS || undefined === startT) {
 			let pLC1 = this.matrixInverse.transformPoint(pWC).unit()
 			if (pLC1.y < 0) pLC1 = pLC1.negated()
-			;({ x: startS, y: startT } = EllipsoidSurface.UNIT.stP(pLC1))
+			;({ x: startS, y: startT } = EllipsoidSurface.UNIT.uvP(pLC1))
 		}
-		const dpds = this.dpds()
-		const dpdt = this.dpdt()
-		const [s, t] = newtonIterate(
-			([s, t]) => {
-				const p = this.pST(s, t)
-				console.log([p, p.plus(dpds(s, t)), p, p.plus(dpdt(s, t))].map(toSource).join() + ',')
-				const pSTToPWC = this.pST(s, t).to(pWC)
-				return [pSTToPWC.dot(dpds(s, t)), pSTToPWC.dot(dpdt(s, t))]
+		const dpdu = this.dpdu()
+		const dpdv = this.dpdv()
+		const [u, v] = newtonIterate(
+			([u, v]) => {
+				const p = this.pUV(u, v)
+				console.log([p, p.plus(dpdu(u, v)), p, p.plus(dpdv(u, v))].map(toSource).join() + ',')
+				const pUVToPWC = this.pUV(u, v).to(pWC)
+				return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))]
 			},
 			[startS, startT],
 			8,
 			undefined,
 			0.1,
 		)
-		return new V3(s, t, 0)
+		return new V3(u, v, 0)
 	}
 
 	implicitFunction() {
