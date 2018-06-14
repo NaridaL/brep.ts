@@ -6,7 +6,7 @@
     "javasetmap.ts": "file:../../javasetmap.ts",
     "nerdamer": "^0.7.16",
     "opentype.js": "^0.8.0",
-    "svg-pathdata": "^4.0.1",
+    "svg-pathdata": "^5.0.2",
     "ts3dutils": "file:../ts3dutils",
     "tsgl": "file:../tsgl",
     "tslib": "^1.9.1",

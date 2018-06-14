@@ -23,7 +23,7 @@ export default {
 			return x
 		},
 	},
-	external: ['svg-pathdata'],
+	external: [],
 	plugins: [
 		nodeResolve({
 			// use "module" field for ES6 module if possible

@@ -15,7 +15,7 @@ const config = merge(viewerConfig, {
 			'svg-pathdata': 'svgpathdata'
 		}
 	},
-	external: ['highlight.js', 'svg-pathdata'],
+	external: ['highlight.js'],
 	// plugins: [
 	// 	uglify({}, minify),
 	// ],
