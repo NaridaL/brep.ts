@@ -29,6 +29,7 @@ import {
 	Tuple3,
 	V,
 	V3,
+	snap,
 } from 'ts3dutils'
 
 import { BezierCurve, Curve, EllipseCurve, L3, P3, ParabolaCurve, PICurve, PlaneSurface, Surface } from './index'
@@ -556,7 +557,7 @@ export class PCurveEdge extends Edge {
 		if (!(curve instanceof PICurve)) {
 			// TODO
 			assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce)
-			assertf(() => curve.tangentAt(bT).likeOrReversed(bDir))
+			assertf(() => curve.tangentAt(bT).likeOrReversed(bDir), '' + bT + curve.tangentAt(bT).sce + ' ' + bDir.sce)
 		}
 		assert(
 			this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0,
@@ -678,6 +679,23 @@ export class PCurveEdge extends Edge {
 		) as this
 	}
 
+	transform4(m4: M4, desc?: string): this {
+		const a_ = m4.transformPoint(this.a)
+		const b_ = m4.transformPoint(this.b)
+		const curve_ = this.curve.transform4(m4)
+		return new PCurveEdge(
+			curve_,
+			a_,
+			b_,
+			snap(curve_.pointT(a_), this.aT),
+			snap(curve_.pointT(b_), this.bT),
+			undefined,
+			m4.transformVector(this.aDir),
+			m4.transformVector(this.bDir),
+			'' + this.name + desc,
+		) as this
+	}
+
 	isCoEdge(edge: Edge): boolean {
 		return (
 			this === edge ||
@@ -719,7 +737,7 @@ export class StraightEdge extends Edge {
 	 * @param closed Whether to connect the first and last vertices. Defaults to true.
 	 * @returns
 	 */
-	static chain(vertices: V3[], closed: boolean = true): StraightEdge[] {
+	static chain(vertices: ReadonlyArray<V3>, closed: boolean = true): StraightEdge[] {
 		const vc = vertices.length
 		return arrayFromFunction(closed ? vc : vc - 1, i =>
 			StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]),
@@ -770,13 +788,32 @@ export class StraightEdge extends Edge {
 	}
 
 	transform(m4: M4, desc?: string): this {
-		const lineDir1TransLength = m4.transformVector(this.curve.dir1).length()
+		const lineDir1TransLength = m4.transformVector2(this.curve.dir1, this.curve.anchor).length()
+		const curve = this.curve.transform(m4)
+		const a = m4.transformPoint(this.a)
+		const b = m4.transformPoint(this.b)
 		return new StraightEdge(
-			this.curve.transform(m4),
-			m4.transformPoint(this.a),
-			m4.transformPoint(this.b),
-			this.aT * lineDir1TransLength,
-			this.bT * lineDir1TransLength,
+			curve,
+			a,
+			b,
+			m4.isNoProj() ? this.aT * lineDir1TransLength : curve.pointT(a),
+			m4.isNoProj() ? this.bT * lineDir1TransLength : curve.pointT(b),
+			undefined,
+			'' + this.name + desc,
+		) as this
+	}
+
+	transform4(m4: M4, desc?: string): this {
+		const lineDir1TransLength = m4.transformVector2(this.curve.dir1, this.curve.anchor).length()
+		const curve = this.curve.transform4(m4)
+		const a = m4.transformPoint(this.a)
+		const b = m4.transformPoint(this.b)
+		return new StraightEdge(
+			curve,
+			a,
+			b,
+			m4.isNoProj() ? this.aT * lineDir1TransLength : curve.pointT(a),
+			m4.isNoProj() ? this.bT * lineDir1TransLength : curve.pointT(b),
 			undefined,
 			'' + this.name + desc,
 		) as this

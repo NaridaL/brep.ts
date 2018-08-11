@@ -99,11 +99,11 @@ export const vertexShaderBasic: ShaderType<{}> = `
 export const vertexShaderColor: ShaderType<{}> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	attribute vec4 ts_Vertex;
-	attribute vec4 color;
+	attribute vec4 ts_Color;
 	varying vec4 fragColor;
 	void main() {
 		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-		fragColor = color;
+		fragColor = ts_Color;
 	}
 `
 export const vertexShaderArc: ShaderType<{
@@ -153,7 +153,7 @@ export const vertexShaderConic3d: ShaderType<{
 		}
 		if (1 == mode) { // parabola
 			p = center + f1 * t + f2 * t * t;
-			tangent = f1 + f2 * t;
+			tangent = f1 + 2.0 * f2 * t;
 		}
 		if (2 == mode) { // hyperbola
 			p = center + f1 * cosh(t) + f2 * sinh(t);
@@ -164,6 +164,80 @@ export const vertexShaderConic3d: ShaderType<{
 		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
+
+export const vertexShaderNURBS: ShaderType<{}> = `#version 300 es
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	in vec4 ts_Vertex;
+	uniform float startT, endT, scale;
+	uniform vec4 points[32];
+	uniform int pointCount, degree;
+	uniform float knots[40];
+	uniform vec3 normal;
+	const int MIN_DEGREE = 1;
+	const int MAX_DEGREE = 6;
+	
+	int tInterval(float t) {
+		for (int s = degree; s < 40 - 1 - degree; s++) {
+			if (t >= knots[s] && t <= knots[s + 1]) {
+				return s;
+			}
+		}
+	}
+	
+	vec4 stepp(int k, int i, vec4 dkMinus1iMinus1, vec4 dkMinus1i) {
+	    return dkMinus1i - dkMinus1iMinus1 * float(k) / (knots[i + degree - k] - knots[i - 1]);
+	}
+	
+	void main() {
+		// ts_Vertex.x is in [0, 1]
+		float t = startT + ts_Vertex.x * (endT - startT);
+		
+		int s = tInterval(t);
+		
+		vec4 v[MAX_DEGREE + 1];
+		for (int i = 0; i < degree + 1; i++) {
+		    v[i] = points[s - degree + i];
+		}
+		
+		vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
+		for (int level = 0; level < degree; level++) {
+			if (level == degree - 2) {
+				// see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
+				vec4 a = v[degree];
+				vec4 b = v[degree - 1];
+				vec4 c = v[degree - 2];
+				ddt4 = stepp(degree, s + 1, stepp(degree - 1, s + 1, a, b), stepp(degree - 1, s, b, c));
+			}
+			if (level == degree - 1) {
+				vec4 a = v[degree];
+				vec4 b = v[degree - 1];
+				pTangent4 = (b - a) * (float(degree) / (knots[s] - knots[s + 1]));
+			}
+			for (int i = degree; i > level; i--) {
+				float alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+
+				// interpolate each component
+                v[i] = (1.0 - alpha) * v[i - 1] + alpha * v[i];
+			}
+		}
+		
+		vec4 p4 = v[degree];
+		
+		vec3 p = p4.xyz / p4.w;
+		vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
+		vec3 ddt = (
+		    p4.xyz * (-p4.w * ddt4.w + 2.0 * pow(pTangent4.w, 2.0))
+		    + pTangent4.xyz * (-2.0 * p4.w * pTangent4.w) 
+		    + ddt4.xyz * pow(p4.w, 2.0)
+        ) / pow(p4.w, 3.0);
+		
+		vec3 outDir = normalize(cross(ddt, pTangent));
+		vec3 correctNormal = normalize(cross(pTangent, outDir));
+		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+    }
+`
+
 export const vertexShaderBezier: ShaderType<{
 	width: 'FLOAT'
 	startT: 'FLOAT'
@@ -179,7 +253,7 @@ export const vertexShaderBezier: ShaderType<{
 	uniform float width, startT, endT;
 	uniform vec3 p0, p1, p2, p3;
 	void main() {
-		// ts_Vertex.y is in [0, 1]
+		// ts_Vertex.x is in [0, 1]
 		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
@@ -200,6 +274,7 @@ export const vertexShaderBezier3d: ShaderType<{
 	p3: 'FLOAT_VEC3'
 	normal: 'FLOAT_VEC3'
 }> = `
+    precision highp float;
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
 	uniform vec3 ps[4];
@@ -209,10 +284,14 @@ export const vertexShaderBezier3d: ShaderType<{
 	void main() {
 		// ts_Vertex.y is in [0, 1]
 		vec3 p5 = ps[0];
-		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
-		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
-		vec3 p = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
-		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
+		float t = startT * (1.0 - ts_Vertex.x) + endT * ts_Vertex.x, s = 1.0 - t;
+		float c0 = s * s * s, 
+		      c1 = 3.0 * s * s * t, 
+		      c2 = 3.0 * s * t * t, c3 = t * t * t;
+		vec3 p = (p0 * c0 + p1 * c1) + (p2 * c2 + p3 * c3);
+		float c01 = 3.0 * s * s, 
+		      c12 = 6.0 * s * t, 
+		      c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 outDir = normalize(cross(normal, pTangent));
 		vec3 correctNormal = normalize(cross(pTangent, outDir));
@@ -251,6 +330,14 @@ export const fragmentShaderColor: ShaderType<{ color: 'FLOAT_VEC4' }> = `
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
+	}
+`
+export const fragmentShaderColor3: ShaderType<{ color: 'FLOAT_VEC4' }> = `#version 300 es
+	precision highp float;
+	uniform vec4 color;
+	out vec4 fragColor;
+	void main() {
+		fragColor = color;
 	}
 `
 export const fragmentShaderVaryingColor: ShaderType<{}> = `

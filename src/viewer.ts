@@ -1,4 +1,5 @@
 import chroma, { Color } from 'chroma-js'
+import debounce from 'debounce'
 import deepmerge from 'deepmerge'
 import nerdamer from 'nerdamer'
 import { AABB, arrayFromFunction, assert, DEG, int, M4, round10, V, V3 } from 'ts3dutils'
@@ -68,12 +69,12 @@ export class RenderObjects {
 	drPs: (V3 | { p: V3; info?: string; color?: string })[] = []
 	drVs: { v: V3; anchor: V3; color?: GL_COLOR }[] = []
 	drLines: V3[] = []
-	mesh: Mesh & { TRIANGLES: int[]; normals: V3[] } = undefined
-	aabbs: AABB[] = []
+	mesh: (Mesh & { TRIANGLES: int[]; normals: V3[] })[] = []
+	boxes: M4[] = []
 	paintMeshNormals = false
 	paintWireframe = false
 	paintCurveDebug = false
-    planes = []
+	planes: CustomPlane[] = []
 }
 const renderObjectKeys = Object.keys(new RenderObjects()) as (keyof RenderObjects)[]
 
@@ -195,20 +196,20 @@ function initBRep() {
 	g.drPs.push()
 }
 
-const meshColors: Color[][] = [
+const brepMeshColors: Color[][] = [
 	chroma.scale(['#ff297f', '#6636FF']),
 	chroma.scale(['#ffe93a', '#ff6e35']),
 	chroma.scale(['#1eff33', '#4960ff']),
 	chroma.scale(['#31fff8', '#2dff2a']),
 ].map(scale => scale.mode('lab').colors(20, null as 'alpha'))
-
-const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()))
+const brepMeshColorssGL = brepMeshColors.map(cs => cs.map(c => c.gl()))
+const meshColorsGL: GL_COLOR[] = chroma.scale('GnBu').colors(16, 'gl')
 
 function viewerPaint(time: int, gl: BREPGLContext) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.loadIdentity()
 
-	setupCamera(eye, gl)
+	//setupCamera(eye, gl)
 
 	gl.drawVectors(g.drVs, 4 / eye.zoomFactor)
 
@@ -220,9 +221,9 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		),
 	)
 	drawPlanes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
-    g.planes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
+	g.planes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane))
 
-	g.aabbs.forEach(aabb => gl.drawAABB(aabb, chroma('black').gl()))
+	g.boxes.forEach(m4 => gl.drawBox(m4))
 
 	gl.shaders.lighting.uniforms({ camPos: eye.pos })
 	for (let i = 0; i < bRepMeshes.length; i++) {
@@ -253,12 +254,12 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 				.uniforms({
 					color:
 						hovering == face
-							? meshColors
+							? brepMeshColors
 									.emod(i)
 									.emod(faceIndex)
 									.darken(2)
 									.gl()
-							: meshColorssGL.emod(i).emod(faceIndex),
+							: brepMeshColorssGL.emod(i).emod(faceIndex),
 				})
 				.draw(mesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count)
 		}
@@ -272,7 +273,8 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 			.drawBuffers({ ts_Vertex: faceMesh.vertexBuffers.tangents }, undefined, gl.LINES)
 	}
 
-	for (const mesh of meshes) {
+	for (let i = 0; i < meshes.length; i++) {
+		const mesh = meshes[i]
 		gl.pushMatrix()
 		gl.projectionMatrix.m[11] -= 1 / (1 << 20) // prevent Z-fighting
 		g.paintWireframe &&
@@ -289,7 +291,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 		mesh.TRIANGLES &&
 			gl.shaders.lighting
 				.uniforms({
-					color: chroma('#ffFF00').gl(),
+					color: meshColorsGL.emod(i),
 					camPos: eye.pos,
 				})
 				.draw(mesh)
@@ -451,9 +453,20 @@ export async function viewerMain() {
 	}
 
 	paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl))
-	B2T.defaultFont = await B2T.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff')
+	// B2T.defaultFont = await B2T.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff')
 	window.onerror = function(errorMsg, url, lineNumber, column, errorObj) {
 		console.log(errorMsg, url, lineNumber, column, errorObj)
+	}
+	window.onpopstate = function(e) {
+		const hash = window.location.search.substr(1) || window.location.hash.substr(1) || ''
+		const command = decodeURIComponent(hash)
+		const hashContext = new Function(
+			`let ${renderObjectKeys.join(',')};${command};return{${renderObjectKeys.join(',')}}`,
+		)() as RenderObjects
+
+		Object.assign(eye, hashContext.i)
+		setupCamera(eye, gl, true)
+		paintScreen()
 	}
 	const gl = BREPGLContext.create(
 		TSGLContext.create({ canvas: document.getElementById('testcanvas') as HTMLCanvasElement }),
@@ -475,21 +488,24 @@ export async function viewerMain() {
 	gl.scale(10, 10, 10)
 
 	gl.loadIdentity()
+	;(window as any).gl = gl
 
 	initNavigationEvents(gl, eye, paintScreen)
-	cameraChangeListeners.push(function(eye) {
-		const round = (x: number) => round10(x, -3)
-		const roundedEye = {
-			pos: eye.pos.map(round),
-			focus: eye.focus.map(round),
-			up: eye.up.map(round),
-			zoomFactor: round(eye.zoomFactor),
-		}
-		const iSource = 'i=' + roundedEye.toSource().replace(/[\n\r\s]+|^\(|\)$/g, '')
-		const hash = window.location.hash.substr(1) || iSource
-		const result = hash.match(/i=\{[^}]*\}/) ? hash.replace(/i=\{[^}]*\}/, iSource) : hash + ';' + iSource
-		window.history.replaceState(undefined, undefined, '#' + result)
-	})
+	cameraChangeListeners.push(
+		debounce(function(eye) {
+			const round = (x: number) => round10(x, -3)
+			const roundedEye = {
+				pos: eye.pos.map(round),
+				focus: eye.focus.map(round),
+				up: eye.up.map(round),
+				zoomFactor: round(eye.zoomFactor),
+			}
+			const iSource = 'i=' + roundedEye.toSource().replace(/[\n\r\s]+|^\(|\)$/g, '')
+			const hash = window.location.hash.substr(1) || iSource
+			const result = hash.match(/i=\{[^}]*\}/) ? hash.replace(/i=\{[^}]*\}/, iSource) : hash + ';' + iSource
+			window.history.pushState(undefined, undefined, '#' + result)
+		}, 500),
+	)
 	// initInfoEvents(paintScreen, g l)
 	//initToolTips() // hide tooltip on mouseover
 	//initPointInfoEvents()
@@ -499,24 +515,25 @@ export async function viewerMain() {
 }
 
 export function alignX(dir: number) {
-	eye.focus = V3.O
-	eye.pos = V(100 * dir, 0, 0)
+	eye.pos = eye.focus.plus(V(100 * dir, 0, 0))
 	eye.up = V3.Z
+	setupCamera(eye, (window as any).gl)
 	paintScreen()
 }
 export function alignY(dir: number) {
-	eye.focus = V3.O
-	eye.pos = V(0, 100 * dir, 0)
+	eye.pos = eye.focus.plus(V(0, 100 * dir, 0))
 	eye.up = V3.Z
+	setupCamera(eye, (window as any).gl)
 	paintScreen()
 }
 export function alignZ(dir: number) {
-	eye.focus = V3.O
-	eye.pos = V(0, 0, 100 * dir)
+	eye.pos = eye.focus.plus(V(0, 0, 100 * dir))
 	eye.up = eye.pos.cross(V3.X).unit()
+	setupCamera(eye, (window as any).gl)
 	paintScreen()
 }
 export function rot(angleInDeg: number) {
 	eye.up = M4.rotateLine(eye.pos, eye.pos.to(eye.focus), angleInDeg * DEG).transformVector(eye.up)
+	setupCamera(eye, (window as any).gl)
 	paintScreen()
 }

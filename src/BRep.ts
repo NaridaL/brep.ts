@@ -964,6 +964,19 @@ export class BRep extends Transformable {
 			vertexNames,
 		) as this
 	}
+	transform4(m4: M4, desc?: string) {
+		let vertexNames: Map<V3, string> | undefined
+		if (this.vertexNames) {
+			vertexNames = new Map()
+			this.vertexNames.forEach((name, vertex) => vertexNames!.set(m4.transformPoint(vertex), name + desc))
+		}
+		return new BRep(
+			this.faces.map(f => f.transform4(m4)),
+			this.infiniteVolume,
+			this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
+			vertexNames,
+		) as this
+	}
 
 	flipped(): BRep {
 		return new BRep(
@@ -1488,7 +1501,11 @@ export function followAlgorithm2d(
 	assertVectors(startTangent)
 	const points: V3[] = []
 	const tangents: V3[] = []
-	assert(eq0(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))')
+	assert(
+		eq0(ic(startP.x, startP.y), 0.01),
+		'isZero(implicitCurve(startPoint.x, startPoint.y))',
+		ic(startP.x, startP.y),
+	)
 	let i = 0,
 		p = startP,
 		tangent = startTangent,
@@ -1550,7 +1567,7 @@ export function followAlgorithm2d(
 		if (i > 4 && !validUV(p.x, p.y)) {
 			break
 		}
-		assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart)
+		assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart, ic(newP.x, newP.y))
 		tangent = newTangent
 		p = newP
 	} while (++i < 1000)

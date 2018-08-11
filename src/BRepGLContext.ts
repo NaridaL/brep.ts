@@ -1,8 +1,9 @@
 import chroma from 'chroma-js'
-import { addOwnProperties, arrayFromFunction, DEG, int, M4, TAU, V, V3 } from 'ts3dutils'
+import { AABB, addOwnProperties, arrayFromFunction, DEG, int, M4, TAU, V, V3, Vector } from 'ts3dutils'
 import { GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext } from 'tsgl'
 
 import {
+	B2T,
 	BezierCurve,
 	Curve,
 	CustomPlane,
@@ -11,6 +12,7 @@ import {
 	HyperbolaCurve,
 	ImplicitCurve,
 	L3,
+	NURBS,
 	ParabolaCurve,
 	PICurve,
 	PPCurve,
@@ -59,7 +61,7 @@ export class BREPGLContext {
 	drawPoint(p: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 5) {
 		this.pushMatrix()
 		this.translate(p)
-		this.scale(size, size, size)
+		this.scale(size / 2, size / 2, size / 2)
 		this.shaders.singleColor.uniforms({ color: color }).draw(this.meshes.sphere1)
 		this.popMatrix()
 	}
@@ -73,26 +75,36 @@ export class BREPGLContext {
 	}
 
 	drawVector(vector: V3, anchor: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 1) {
+		if (vector.likeO()) return
 		this.pushMatrix()
 
+		const headLength = size * 4
+		if (headLength > vector.length()) return
+
 		const vT = vector.getPerpendicular().unit()
-		this.multMatrix(M4.forSys(vector, vT, vector.cross(vT).unit(), anchor))
-		1 != size && this.scale(size, size, size)
+		this.multMatrix(M4.forSys(vector.unit(), vT, vector.cross(vT).unit(), anchor))
+		this.scale(vector.length() - headLength, size / 2, size / 2)
+
 		this.shaders.singleColor
 			.uniforms({
 				color: color,
 			})
-			.draw(this.meshes.vector)
+			.draw(this.meshes.vectorShaft)
 
+		this.scale(1 / (vector.length() - headLength), 1, 1)
+		this.translate(vector.length() - headLength, 0, 0)
+		this.scale(headLength / 2, 1, 1)
+
+		this.shaders.singleColor.draw(this.meshes.vectorHead)
 		this.popMatrix()
 	}
 
-	drawVectors(drVs: { dir1: V3; anchor: V3; color: GL_COLOR }[]) {
-		this.drawVector(V3.X, V3.O, chroma('red').gl(), undefined)
-		this.drawVector(V3.Y, V3.O, chroma('green').gl(), undefined)
-		this.drawVector(V3.Z, V3.O, chroma('blue').gl(), undefined)
+	drawVectors(drVs: { v: V3; anchor: V3; color?: GL_COLOR }[], size: number | undefined = undefined) {
+		this.drawVector(V3.X, V3.O, chroma('red').gl(), size)
+		this.drawVector(V3.Y, V3.O, chroma('green').gl(), size)
+		this.drawVector(V3.Z, V3.O, chroma('blue').gl(), size)
 
-		drVs.forEach(vi => this.drawVector(vi.dir1, vi.anchor, vi.color, undefined))
+		drVs.forEach(vi => this.drawVector(vi.v, vi.anchor, vi.color, size))
 	}
 
 	drawPlane(customPlane: CustomPlane, color: GL_COLOR, dotted: boolean = false) {
@@ -104,6 +116,17 @@ export class BREPGLContext {
 		const mesh = dotted ? this.meshes.xyDottedLinePlane : this.meshes.xyLinePlane
 		this.shaders.singleColor.uniforms({ color: color }).draw(mesh, this.LINES)
 
+		this.popMatrix()
+	}
+
+	drawBox(m4: M4, color?: GL_COLOR) {
+		this.pushMatrix()
+		this.multMatrix(m4)
+		if (color) {
+			this.shaders.singleColor.uniforms({ color: color }).draw(this.meshes.cube, this.LINES)
+		} else {
+			this.shaders.multiColor.draw(this.meshes.cube, this.LINES)
+		}
 		this.popMatrix()
 	}
 }
@@ -221,6 +244,20 @@ export const CURVE_PAINTERS: {
 			})
 			.draw(gl.meshes.pipe)
 	},
+	[NURBS.name](gl, curve: NURBS, color, startT, endT, width = 2, normal = V3.Z) {
+		gl.shaders.nurbs
+			.uniforms({
+				'points[0]': Vector.pack(curve.points),
+				degree: curve.degree,
+				'knots[0]': curve.knots,
+				color: color,
+				startT: startT,
+				endT: endT,
+				scale: width,
+				normal: normal,
+			})
+			.draw(gl.meshes.pipe)
+	},
 	[L3.name](gl, curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
 		gl.pushMatrix()
 		const a = curve.at(startT),
@@ -244,11 +281,21 @@ CURVE_PAINTERS[PPCurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BREPGLContext) {
 	_gl.makeCurrent()
+	_meshes.cube = (() => {
+		const cube = B2T.box()
+			.toMesh()
+			.addVertexBuffer('colors', 'ts_Color')
+		cube.colors = cube.vertices.map(p => [p.x, p.y, p.z, 1].map(x => x * 0.9))
+		cube.compile()
+		return cube
+	})()
 	_meshes.sphere1 = Mesh.sphere(2)
 	_meshes.segment = Mesh.plane({ startY: -0.5, height: 1, detailX: 128 })
 	_meshes.text = Mesh.plane()
 	_meshes.vector = Mesh.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3.X, TAU, 16, true)
-	_meshes.pipe = Mesh.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3.X, TAU, 8, true)
+	_meshes.vectorShaft = Mesh.rotation([V3.O, V3.Y, V3.XY], L3.X, TAU, 8, true)
+	_meshes.vectorHead = Mesh.rotation([V3.Y, V(0, 2, 0), V(2, 0, 0)], L3.X, TAU, 8, true)
+	_meshes.pipe = Mesh.rotation(arrayFromFunction(512, (i, l) => new V3(i / (l - 1), -0.5, 0)), L3.X, TAU, 8, true)
 	_meshes.xyLinePlane = Mesh.plane()
 	_meshes.xyDottedLinePlane = makeDottedLinePlane()
 	_meshes.pipeSegmentForICurve = Mesh.offsetVertices(
@@ -270,6 +317,7 @@ export function initShaders(_gl: TSGLContext) {
 		ellipse3d: Shader.create(shaders.vertexShaderConic3d, shaders.fragmentShaderColor),
 		generic3d: Shader.create(shaders.vertexShaderGeneric, shaders.fragmentShaderColor),
 		bezier3d: Shader.create(shaders.vertexShaderBezier3d, shaders.fragmentShaderColor),
+		nurbs: Shader.create(shaders.vertexShaderNURBS, shaders.fragmentShaderColor3),
 		bezier: Shader.create(shaders.vertexShaderBezier, shaders.fragmentShaderColor),
 		lighting: Shader.create(shaders.vertexShaderLighting, shaders.fragmentShaderLighting),
 		waves: Shader.create(shaders.vertexShaderWaves, shaders.fragmentShaderLighting),
@@ -384,7 +432,7 @@ export function getPosOnTarget(e: MouseEvent) {
 	return mouseCoordsOnElement
 }
 
-export function setupCamera(_eye: Eye, _gl: TSGLContext) {
+export function setupCamera(_eye: Eye, _gl: TSGLContext, suppressEvents = false) {
 	const { pos, focus, up, zoomFactor } = _eye
 	//console.log("pos", pos.$, "focus", focus.$, "up", up.$)
 	_gl.matrixMode(_gl.PROJECTION)
@@ -395,7 +443,7 @@ export function setupCamera(_eye: Eye, _gl: TSGLContext) {
 	_gl.ortho(-lr, lr, -bt, bt, -1e4, 1e4)
 	_gl.lookAt(pos, focus, up)
 	_gl.matrixMode(_gl.MODELVIEW)
-	cameraChangeListeners.forEach(l => l(_eye))
+	!suppressEvents && cameraChangeListeners.forEach(l => l(_eye))
 }
 export const cameraChangeListeners: ((eye: Eye) => void)[] = []
 

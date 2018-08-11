@@ -25,6 +25,7 @@ import {
 	pqFormula,
 	snap,
 	toSource,
+	V,
 	V3,
 } from 'ts3dutils'
 
@@ -474,6 +475,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 	}
 
 	transform(m4: M4): this {
+		assert(m4.isNoProj(), () => m4.sce)
 		return new EllipsoidSurface(
 			m4.transformPoint(this.center),
 			m4.transformVector(this.f1),
@@ -482,28 +484,42 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		) as this
 	}
 
+	transform4(m4: M4): this {
+		console.log('transform4')
+		const resultMatrix = m4.times(this.matrix)
+		console.log(resultMatrix.toString())
+		const scaleDir = V(resultMatrix.m[12], resultMatrix.m[13], resultMatrix.m[14])
+		// need to find parameters where scaleDir is parallel to the normal
+		const pLC = this.pLCNormalWCMatrix.inversed().transformPoint(scaleDir)
+		const s = pLC.angleXY()
+		const t = Math.asin(clamp(pLC.z, -1, 1))
+		const fa = resultMatrix.transformPoint(scaleDir.unit())
+		const fb = resultMatrix.transformPoint(scaleDir.unit().negated())
+		const newCenter = V3.lerp(fa, fb, 0.5)
+		console.log(scaleDir.sce, s, t, fa, fb, 'newCenter', newCenter.sce)
+		return new EllipsoidSurface(
+			newCenter,
+			m4.transformVector2(this.f1, this.center),
+			m4.transformVector2(this.f2, this.center),
+			m4.transformVector2(this.f3, this.center).times(m4.isMirroring() ? -1 : 1),
+		) as this
+	}
+
 	isInsideOut(): boolean {
 		return this.f1.cross(this.f2).dot(this.f3) < 0
 	}
 
-	//implicitFunction() {
-	//    return (pWC) => {
-	//        const pLC = this.inverseMatrix.transformPoint(pWC)
-	//        return (pLC.y > 0
-	//            ? pLC.length() - 1
-	//            : (-pLC.y + Math.hypot(pLC.x, pLC.z) - 1)) * this.normalDir
-	//    }
-	//}
-	//didp(pWC) {
-	//    const pLC = this.inverseMatrix.transformPoint(pWC)
-	//    const didpLC = (pLC.y > 0
-	//                ? pLC.unit()
-	//                : V(pLC.x / Math.hypot(pLC.x, pLC.z), -1, pLC.z / Math.hypot(pLC.x, pLC.z))).times(this.normalDir)
-	//    return this.inverseMatrix.transformVector(didpLC)
-	//}
-
 	flipped(): this {
-		return new EllipsoidSurface(this.center, this.f1, this.f2, this.f3.negated()) as this
+		return new EllipsoidSurface(
+			this.center,
+			this.f1,
+			this.f2,
+			this.f3.negated(),
+			this.uMin,
+			this.uMax,
+			-this.vMax,
+			-this.vMin,
+		) as this
 	}
 
 	normalUVFunc(): (u: number, v: number) => V3 {
@@ -755,6 +771,42 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		// chain diff rule
 		const pLC = this.matrixInverse.transformPoint(pWC)
 		return this.pLCNormalWCMatrix.transformVector(pLC.unit()) //.times(this.normalDir)
+	}
+
+	/*+
+	 * An ellipsoid remains an ellipsoid after a perspective transform (as long as it does not intersect the vanishing
+	 * plane. This transforms a matrix with a perspective component into one which would return an identical ellipsoid,
+	 * but with no perspective component.
+	 */
+	static unitTransform4(m: M4): M4 {
+		m.m[15] !== 1 && (m = m.divScalar(m.m[15]))
+		// X * P = m => X = m * P^-1
+		// prettier-ignore
+		const Pinv = new M4(
+            1,        0,        0, 0,
+            0,        1,        0, 0,
+            0,        0,        1, 0,
+            -m.m[12], -m.m[13], -m.m[14], 1,
+        )
+		const pn = new V3(m.m[12], m.m[13], m.m[14]),
+			pw = m.m[15]
+		const pwSqrMinusPnSqr = pw ** 2 - pn.squared()
+		if (lt(pwSqrMinusPnSqr, 0)) {
+			throw new Error('vanishing plane intersects unit sphere')
+		}
+		const c = pn.div(-pwSqrMinusPnSqr)
+		const scale = pn.times(pw * pn.length() / (pn.squared() * -pwSqrMinusPnSqr))
+		const scale1 = pw / -pwSqrMinusPnSqr
+		const scale2 = 1 / sqrt(pwSqrMinusPnSqr)
+		const rotNX = M4.forSys(pn.unit(), pn.getPerpendicular().unit())
+		return M4.product(
+			m,
+			Pinv,
+			M4.translate(c),
+			rotNX,
+			M4.scale(scale1, scale2, scale2),
+			rotNX.transposed(),
+		)
 	}
 }
 EllipsoidSurface.prototype.uStep = PI / 32

@@ -1,4 +1,4 @@
-import { assert, assertInst, DEG, eq0, fuzzyBetween, hasConstructor, lerp, lt, M4, V3 } from 'ts3dutils'
+import { assert, assertInst, DEG, eq0, fuzzyBetween, hasConstructor, lerp, lt, M4, V3, VV } from 'ts3dutils'
 
 import {
 	Curve,
@@ -7,6 +7,8 @@ import {
 	HyperbolaCurve,
 	intersectionUnitCircleLine2,
 	L3,
+	NURBS,
+	NURBSSurface,
 	P3,
 	ParametricSurface,
 	PlaneSurface,
@@ -251,6 +253,25 @@ export class RotatedCurveSurface extends ParametricSurface {
 
 	getExtremePoints(): V3[] {
 		return getExtremePointsHelper.call(this, this.curve)
+	}
+
+	asNURBSSurface() {
+		// y = 0 for baseNURBS
+		const baseNURBS = NURBS.fromEllipse(this.curve as EllipseCurve)
+		const rotationNURBS = NURBS.UnitCircle(2, this.tMin, this.tMax)
+		return new NURBSSurface(
+			rotationNURBS.points.flatMap(rv =>
+				baseNURBS.points.map(b => this.matrix.timesVector(VV(rv.x * b.x, rv.y * b.x, b.z * rv.w, rv.w * b.w))),
+			),
+			baseNURBS.knots,
+			rotationNURBS.knots,
+			baseNURBS.degree,
+			rotationNURBS.degree,
+			baseNURBS.tMin,
+			baseNURBS.tMax,
+			rotationNURBS.tMin,
+			rotationNURBS.tMax,
+		)
 	}
 }
 

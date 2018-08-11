@@ -8,9 +8,9 @@ import {
 	testImplicitSurface,
 	testISCurves,
 	testLoopContainsPoint,
-} from './manager'
+} from './manager';
 
-import { assertf, DEG, M4, V, V3 } from 'ts3dutils'
+import { assertf, DEG, M4, V, V3, lt } from 'ts3dutils';
 import {
 	B2T,
 	BezierCurve,
@@ -25,34 +25,33 @@ import {
 	EllipseCurve,
 	EllipsoidSurface,
 	StraightEdge,
-} from '..'
+} from '..';
 
-import { PI, sin } from '../src/math'
-
+import { PI, sin, sqrt } from '../src/math';
 suite('EllipsoidSurface', () => {
-	const ses2 = EllipsoidSurface.UNIT.scale(2)
+	const ses2 = EllipsoidSurface.UNIT.scale(2);
 	const ses3 = EllipsoidSurface.UNIT.scale(2)
 		.translate(1, 2, 3)
-		.shearX(2, 3)
-	suite('UNIT', () => suiteSurface(EllipsoidSurface.UNIT))
-	suite('UNIT.scale(2)', () => suiteSurface(ses2))
-	suite('UNIT.shearX(2, 3)', () => suiteSurface(EllipsoidSurface.UNIT.shearX(2, 3)))
-	suite('UNIT.foo()', () => suiteSurface(EllipsoidSurface.UNIT.foo()))
-	suite('UNIT.foo().flipped()', () => suiteSurface(EllipsoidSurface.UNIT.foo().flipped()))
+		.shearX(2, 3);
+	suite('UNIT', () => suiteSurface(EllipsoidSurface.UNIT));
+	suite('UNIT.scale(2)', () => suiteSurface(ses2));
+	suite('UNIT.shearX(2, 3)', () => suiteSurface(EllipsoidSurface.UNIT.shearX(2, 3)));
+	suite('UNIT.foo()', () => suiteSurface(EllipsoidSurface.UNIT.foo()));
+	suite('UNIT.foo().flipped()', () => suiteSurface(EllipsoidSurface.UNIT.foo().flipped()));
 	test('testSurface', assert => {
 		testISCurves(
 			assert,
 			EllipsoidSurface.UNIT,
 			new PlaneSurface(new P3(V(-1.249000902703301e-16, 1, 0), 0.11006944444444443)),
 			2,
-		)
-	})
+		);
+	});
 	test('getAABB', assert => {
-		assert.v3ArraysLike(ses2.getExtremePoints(), [V(0, 2, 0)])
-		assert.v3ArraysLike(ses2.rotateZ(30 * DEG).getExtremePoints(), [V(-2, 0, 0), V(0, 2, 0)])
-	})
+		assert.v3ArraysLike(ses2.getExtremePoints(), [V(0, 2, 0)]);
+		assert.v3ArraysLike(ses2.rotateZ(30 * DEG).getExtremePoints(), [V(-2, 0, 0), V(0, 2, 0)]);
+	});
 	test('loopContainsPoint', assert => {
-		const s = new EllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5))
+		const s = new EllipsoidSurface(V3.O, V(5, 0, 0), V(0, 5, 0), V(0, 0, 5));
 		const loop = [
 			new PCurveEdge(
 				new EllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0)),
@@ -74,17 +73,17 @@ suite('EllipsoidSurface', () => {
 				V(-5, 0, 0),
 				V(5, 0, 0),
 			),
-		]
-		const p = V(5, 0, 0)
-		testLoopContainsPoint(assert, s, loop, p, PointVsFace.ON_EDGE)
-	})
+		];
+		const p = V(5, 0, 0);
+		testLoopContainsPoint(assert, s, loop, p, PointVsFace.ON_EDGE);
+	});
 	test('loopContainsPoint 3', assert => {
 		const s = new EllipsoidSurface(
 			V3.O,
 			V(-5, 6.123233995736766e-16, 0),
 			V(-6.123233995736766e-16, -5, 0),
 			V(0, 0, 5),
-		)
+		);
 		const loop = [
 			new PCurveEdge(
 				new EllipseCurve(V(0, 0, 0), V(0, 0, -5), V(5, 0, 0), 0, 3.141592653589793),
@@ -138,26 +137,26 @@ suite('EllipsoidSurface', () => {
 				V(4.870828693386971, 0, -1.1291713066130287),
 				V(5, 0, -6.123233995736766e-16),
 			),
-		]
-		const p = V(-4.999999999999999, 0, 0)
-		testLoopContainsPoint(assert, s, loop, p, PointVsFace.OUTSIDE)
-	})
+		];
+		const p = V(-4.999999999999999, 0, 0);
+		testLoopContainsPoint(assert, s, loop, p, PointVsFace.OUTSIDE);
+	});
 	test('intersect SES', assert => {
-		const a = EllipsoidSurface.sphere(5)
+		const a = EllipsoidSurface.sphere(5);
 		const b = EllipsoidSurface.sphere(1)
 			.rotateAB(V3.Y, V3.X.negated())
-			.translate(5, 2)
-		testISCurves(assert, a, b, 2)
-		testISCurves(assert, a, b.flipped(), 2)
-		testISCurves(assert, a.flipped(), b, 2)
-		testISCurves(assert, a.flipped(), b.flipped(), 2)
+			.translate(5, 2);
+		testISCurves(assert, a, b, 2);
+		testISCurves(assert, a, b.flipped(), 2);
+		testISCurves(assert, a.flipped(), b, 2);
+		testISCurves(assert, a.flipped(), b.flipped(), 2);
 
-		testISCurves(assert, b, a, 2)
-		testISCurves(assert, EllipsoidSurface.sphere(1), EllipsoidSurface.sphere(2).translate(-1.2), 1)
-	})
+		testISCurves(assert, b, a, 2);
+		testISCurves(assert, EllipsoidSurface.sphere(1), EllipsoidSurface.sphere(2).translate(-1.2), 1);
+	});
 	test('isCurvesWithProjectedCurveSurface is curves both y > 0', assert => {
-		const s1 = EllipsoidSurface.UNIT
-		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
+		const s1 = EllipsoidSurface.UNIT;
+		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2);
 		testISCurves(
 			assert,
 			s1,
@@ -166,21 +165,21 @@ suite('EllipsoidSurface', () => {
 				.rotateZ(90 * DEG)
 				.rotateX(10 * DEG),
 			2,
-		)
-	})
+		);
+	});
 	test('isCurvesWithProjectedCurveSurface is curves both cross y = 0', assert => {
-		const s1 = EllipsoidSurface.UNIT
-		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-		testISCurves(assert, s1, s2.translate(0.2), 2)
-	})
+		const s1 = EllipsoidSurface.UNIT;
+		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2);
+		testISCurves(assert, s1, s2.translate(0.2), 2);
+	});
 	test('isCurvesWithProjectedCurveSurface is curves both y < 0', assert => {
-		const s1 = EllipsoidSurface.UNIT
-		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
-		testISCurves(assert, s1, s2.translate(0.2).rotateZ(-90 * DEG), 0)
-	})
+		const s1 = EllipsoidSurface.UNIT;
+		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2);
+		testISCurves(assert, s1, s2.translate(0.2).rotateZ(-90 * DEG), 0);
+	});
 	test('isCurvesWithProjectedCurveSurface one isCurve cross y = 0 twice, one isCurve y > 0', assert => {
-		const s1 = EllipsoidSurface.UNIT
-		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2)
+		const s1 = EllipsoidSurface.UNIT;
+		const s2 = new ProjectedCurveSurface(BezierCurve.EX2D, V3.Z, undefined, undefined, -2, 2);
 		testISCurves(
 			assert,
 			s1,
@@ -189,17 +188,17 @@ suite('EllipsoidSurface', () => {
 				.rotateZ(90 * DEG)
 				.rotateX(80 * DEG),
 			2,
-		)
-	})
+		);
+	});
 	test('isCurvesWithProjectedCurveSurface', assert => {
-		const s1 = EllipsoidSurface.UNIT.rotateZ(PI).flipped()
+		const s1 = EllipsoidSurface.UNIT.rotateZ(PI).flipped();
 		const s2 = new ProjectedCurveSurface(BezierCurve.QUARTER_CIRCLE, V3.Z, undefined, undefined, -2, 2)
 			.scale(0.2, 0.2, 2)
-			.translate(0.1, -0.1, 1.2)
-		testISCurves(assert, s1, s2, 2)
-	})
+			.translate(0.1, -0.1, 1.2);
+		testISCurves(assert, s1, s2, 2);
+	});
 	test('isCurvesWithProjectedCurveSurface 2', assert => {
-		const s1 = EllipsoidSurface.UNIT
+		const s1 = EllipsoidSurface.UNIT;
 		const s2 = new ProjectedCurveSurface(
 			new BezierCurve(
 				V(0.30000000000000004, -0.1, 1.2),
@@ -214,11 +213,11 @@ suite('EllipsoidSurface', () => {
 			1,
 			-1,
 			0,
-		)
-		testISCurves(assert, s1, s2, 1)
-	})
+		);
+		testISCurves(assert, s1, s2, 1);
+	});
 	test('loopCCW', assert => {
-		const s1 = EllipsoidSurface.UNIT
+		const s1 = EllipsoidSurface.UNIT;
 		const loop = [
 			new PCurveEdge(
 				PICurve.forParametricStartEnd(
@@ -302,26 +301,26 @@ suite('EllipsoidSurface', () => {
 				V(-0.9937770731375071, 0, 0.11093749999999983),
 				V(-0.9987987780446257, 0, 0.0479687500000002),
 			),
-		]
-		assertf(() => Edge.isLoop(loop))
-		outputLink(assert, { edges: loop })
-		assert.ok(s1.edgeLoopCCW(loop))
-	})
+		];
+		assertf(() => Edge.isLoop(loop));
+		outputLink(assert, { edges: loop });
+		assert.ok(s1.edgeLoopCCW(loop));
+	});
 
 	suite('triangular face from P3.XY to V3.Z', () => {
-		const surface = EllipsoidSurface.UNIT
+		const surface = EllipsoidSurface.UNIT;
 		const loop = [
 			Edge.forCurveAndTs(EllipseCurve.UNIT, 10 * DEG, 40 * DEG),
 			Edge.forCurveAndTs(new EllipseCurve(V3.O, V3.sphere(40 * DEG, 0), V3.Z), 0, PI / 2),
 			Edge.forCurveAndTs(new EllipseCurve(V3.O, V3.sphere(10 * DEG, 0), V3.Z), PI / 2, 0),
-		]
-		const face = Face.create(surface, loop)
+		];
+		const face = Face.create(surface, loop);
 
-		surfaceVolumeAndAreaTests(face, undefined, 4 / 3 * PI * (30 / 360) / 2)
-		surfaceVolumeAndAreaTests(face.scale(1, 1, 2), '.scale(1, 1, 2)', 4 / 3 * PI * (30 / 360) / 2 * 2)
-		surfaceVolumeAndAreaTests(face.shearX(2, 2), '.shearX(2, 2)')
-		surfaceVolumeAndAreaTests(face.foo(), '.foo()')
-	})
+		surfaceVolumeAndAreaTests(face, undefined, 4 / 3 * PI * (30 / 360) / 2);
+		surfaceVolumeAndAreaTests(face.scale(1, 1, 2), '.scale(1, 1, 2)', 4 / 3 * PI * (30 / 360) / 2 * 2);
+		surfaceVolumeAndAreaTests(face.shearX(2, 2), '.shearX(2, 2)');
+		surfaceVolumeAndAreaTests(face.foo(), '.foo()');
+	});
 	//suite('triangular face from P3.XY to V3.Z', () => {
 	//
 	//    const surface = EllipsoidSurface.UNIT
@@ -335,11 +334,9 @@ suite('EllipsoidSurface', () => {
 	//    surfaceVolumeAndAreaTests(face)
 	//    surfaceVolumeAndAreaTests(face.transform(M4.FOO), '.transform(M4.foo)')
 	//})
-})
 
-suite('EllipsoidSurface', () => {
 	test('mainAxes', assert => {
-		const es = new EllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1))
+		const es = new EllipsoidSurface(V3.O, V(5, 0, -1), V(5, 1, 1), V(5, -1, 1));
 		outputLink(assert, {
 			mesh: `${es.sce}.toMesh()`,
 			drPs: [V(-5, 1, -1)],
@@ -353,13 +350,13 @@ suite('EllipsoidSurface', () => {
 					V(-5, 1, -1).plus(V(0.14427746420619014, -0.6925318281897137, -1.413919149220665).times(100)),
 				),
 			],
-		})
-		const esn = es.mainAxes()
-		assert.ok(esn.f1.isPerpendicularTo(esn.f2))
-		assert.ok(esn.f2.isPerpendicularTo(esn.f3))
-		assert.ok(esn.f3.isPerpendicularTo(esn.f1))
-		assert.ok(es.matrixInverse.times(esn.matrix).isOrthogonal())
-	})
+		});
+		const esn = es.mainAxes();
+		assert.ok(esn.f1.isPerpendicularTo(esn.f2));
+		assert.ok(esn.f2.isPerpendicularTo(esn.f3));
+		assert.ok(esn.f3.isPerpendicularTo(esn.f1));
+		assert.ok(es.matrixInverse.times(esn.matrix).isOrthogonal());
+	});
 
 	test('loopContainsPoint', assert => {
 		const testFace = B2T.rotateEdges(
@@ -369,45 +366,63 @@ suite('EllipsoidSurface', () => {
 			],
 			45 * DEG,
 			'blah',
-		).faces.find(face => face.surface instanceof EllipsoidSurface)
+		).faces.find(face => face.surface instanceof EllipsoidSurface);
 
-		const p1 = V3.sphere(10 * DEG, 10 * DEG)
-		testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE)
-		const p2 = V3.sphere(10 * DEG, -10 * DEG)
-		testLoopContainsPoint(assert, testFace.surface, testFace.contour, p2, PointVsFace.OUTSIDE)
+		const p1 = V3.sphere(10 * DEG, 10 * DEG);
+		testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE);
+		const p2 = V3.sphere(10 * DEG, -10 * DEG);
+		testLoopContainsPoint(assert, testFace.surface, testFace.contour, p2, PointVsFace.OUTSIDE);
 		testLoopContainsPoint(
 			assert,
 			testFace.surface.foo(),
 			testFace.contour.map(edge => edge.foo()),
 			M4.FOO.transformPoint(p1),
 			PointVsFace.INSIDE,
-		)
-	})
+		);
+	});
 	test('loopContainsPoint 2', assert => {
-		const testFace = B2T.sphere(1).faces[0]
+		const testFace = B2T.sphere(1).faces[0];
 
-		const p1 = new V3(0, 1, 0)
-		testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE)
-	})
+		const p1 = new V3(0, 1, 0);
+		testLoopContainsPoint(assert, testFace.surface, testFace.contour, p1, PointVsFace.INSIDE);
+	});
 	test('isCurvesWithPlane', assert => {
-		const es = EllipsoidSurface.sphere(5)
-		testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)), 0)
-		testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)).flipped(), 0)
-		testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI / 2, sin(3 / 5)), 4)), 0)
-		testISCurves(assert, es, new PlaneSurface(new P3(V(0, -0.1, 1).unit(), 4)), 1)
-		testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0, 1), 4)), 1)
-		testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0.1, 1).unit(), 4)), 2)
-		testISCurves(assert, es, new PlaneSurface(new P3(V(0, 1, 0.1).unit(), 4)), 2)
-		testISCurves(assert, es, new PlaneSurface(P3.XY), 1)
-		testISCurves(assert, es, new PlaneSurface(P3.XY.flipped()), 1)
+		const es = EllipsoidSurface.sphere(5);
+		testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)), 0);
+		testISCurves(assert, es, new PlaneSurface(new P3(V(0, -1, 0.1).unit(), 4)).flipped(), 0);
+		testISCurves(assert, es, new PlaneSurface(new P3(V3.sphere(-PI / 2, sin(3 / 5)), 4)), 0);
+		testISCurves(assert, es, new PlaneSurface(new P3(V(0, -0.1, 1).unit(), 4)), 1);
+		testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0, 1), 4)), 1);
+		testISCurves(assert, es, new PlaneSurface(new P3(V(0, 0.1, 1).unit(), 4)), 2);
+		testISCurves(assert, es, new PlaneSurface(new P3(V(0, 1, 0.1).unit(), 4)), 2);
+		testISCurves(assert, es, new PlaneSurface(P3.XY), 1);
+		testISCurves(assert, es, new PlaneSurface(P3.XY.flipped()), 1);
 
 		// slices perpendicular to V3.Y
-		testISCurves(assert, es, new PlaneSurface(P3.ZX), 2)
-		testISCurves(assert, es, new PlaneSurface(P3.ZX.flipped()), 2)
-		testISCurves(assert, es, new PlaneSurface(P3.ZX).translate(0, 2, 0), 2)
-		testISCurves(assert, es, new PlaneSurface(P3.ZX).translate(0, -2, 0), 0)
+		testISCurves(assert, es, new PlaneSurface(P3.ZX), 2);
+		testISCurves(assert, es, new PlaneSurface(P3.ZX.flipped()), 2);
+		testISCurves(assert, es, new PlaneSurface(P3.ZX).translate(0, 2, 0), 2);
+		testISCurves(assert, es, new PlaneSurface(P3.ZX).translate(0, -2, 0), 0);
 
 		// slices perpendicular to V3.X
-		testISCurves(assert, es, new PlaneSurface(P3.YZ), 1)
-	})
-})
+		testISCurves(assert, es, new PlaneSurface(P3.YZ), 1);
+	});
+
+    test('transform4', assert => {
+        const s = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z, -PI, PI).flipped();
+        // prettier-ignore
+        const m4 = new M4(
+            1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            1,2,3,4,
+        ).translate(2, 3)
+        const m5 = EllipsoidSurface.unitTransform4(m4)
+        const s2 = s.transform(m5);
+        outputLink(assert, {
+            mesh: '[' + s.toSource() + '.toMesh(), ' + s2.toSource() + '.toMesh(), ' + s.toSource() + '.toMesh().transform(' + m4.toSource() + ')]',
+            drPs: [m5.getTranslation()],
+            boxes: [m5]
+        });
+    });
+});

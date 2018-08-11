@@ -15,6 +15,7 @@ import {
 	int,
 	le,
 	M4,
+	newtonIterate1d,
 	newtonIterate2dWithDerivatives,
 	newtonIterateWithDerivative,
 	NLA_PRECISION,
@@ -25,13 +26,17 @@ import {
 
 import {
 	curvePointPP,
+	CylinderSurface,
+	EllipsoidSurface,
 	followAlgorithm2d,
 	followAlgorithmPP,
 	ISInfo,
 	MathFunctionR2R,
 	P3,
 	ParametricSurface,
+	PlaneSurface,
 	PPCurve,
+	ProjectedCurveSurface,
 	Surface,
 } from '../index'
 
@@ -68,7 +73,7 @@ export abstract class Curve extends Transformable implements Equalable {
 		assertNumbers(tMin, tMax)
 		assert('number' == typeof tMin && !isNaN(tMin))
 		assert('number' == typeof tMax && !isNaN(tMax))
-		assert(tMin < tMax)
+		assert(tMin < tMax, 'tMin < tMax ' + tMin + ' < ' + tMax)
 	}
 
 	static integrate(curve: Curve, startT: number, endT: number, steps: int): number {
@@ -300,8 +305,8 @@ export abstract class Curve extends Transformable implements Equalable {
 	abstract getConstructorParameters(): any[]
 
 	withBounds<T extends Curve>(this: T, tMin = this.tMin, tMax = this.tMax): T {
-		assert(this.tMin <= tMin && tMin <= this.tMax)
-		assert(this.tMin <= tMax && tMax <= this.tMax)
+		//assert(this.tMin <= tMin && tMin <= this.tMax)
+		//assert(this.tMin <= tMax && tMax <= this.tMax)
 		return new this.constructor(...this.getConstructorParameters(), tMin, tMax)
 	}
 
@@ -443,6 +448,8 @@ export abstract class Curve extends Transformable implements Equalable {
 		}
 	}
 
+	abstract transform4(m4: M4): Curve
+
 	/**
 	 * Curve point at parameter t.
 	 */
@@ -466,7 +473,52 @@ export abstract class Curve extends Transformable implements Equalable {
 
 	abstract transform(m4: M4, desc?: string): this
 
-	abstract isTsWithSurface(surface: Surface): number[]
+	isTsWithSurface(surface: Surface): number[] {
+		if (surface instanceof PlaneSurface) {
+			return this.isTsWithPlane(surface.plane)
+		}
+		if (surface instanceof ProjectedCurveSurface) {
+			const projPlane = new P3(surface.dir.unit(), 0)
+			const projThis = this.project(projPlane)
+			const projEllipse = surface.baseCurve.project(projPlane)
+			return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther)
+		}
+		if (surface instanceof EllipsoidSurface) {
+			const thisOC = this.transform(surface.matrixInverse)
+			if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
+				return []
+			}
+			const f = (t: number) => thisOC.at(t).length() - 1
+			const df = (t: number) =>
+				thisOC
+					.at(t)
+					.unit()
+					.dot(thisOC.tangentAt(t))
+
+			const stepSize = 1 / (1 << 11)
+			const result: number[] = []
+			for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
+				const dt = stepSize * thisOC.tangentAt(startT).length()
+				if (abs(f(startT)) <= dt) {
+					//const t = newtonIterate1d(f, startT, 16)
+					let t = newtonIterateWithDerivative(f, startT, 16, df)
+					if (!eq0(f(t)) || eq0(df(t))) {
+						t = newtonIterate1d(df, startT, 16)
+						//if (f(a) * f(b) < 0) {
+						//    t = bisect(f, a, b, 16)
+						//} else if (df(a) * df(b) < 0) {
+						//    t = bisect(df, a, b, 16)
+						//}
+					}
+					if (eq0(f(t)) && !result.some(r => eq(r, t))) {
+						result.push(t)
+					}
+				}
+			}
+			return result.filter(t => surface.containsPoint(this.at(t)))
+		}
+		throw new Error()
+	}
 
 	abstract isTsWithPlane(planeWC: P3): number[]
 

@@ -110,6 +110,10 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
 		return new PlaneSurface(this.plane.transform(m4)) as this
 	}
 
+	transform4(m4: M4) {
+		return new PlaneSurface(this.plane.transform(m4)) as this
+	}
+
 	flipped() {
 		return new PlaneSurface(this.plane.flipped(), this.right, this.up.negated()) as this
 	}

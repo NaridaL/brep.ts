@@ -1,4 +1,5 @@
 import {
+	AABB,
 	assert,
 	assertInst,
 	assertNumbers,
@@ -98,11 +99,95 @@ export class P3 extends Transformable {
 	 */
 	static forABCD(a: number, b: number, c: number, d: number) {
 		const normalLength = Math.hypot(a, b, c)
+		if (eq0(normalLength)) return undefined
 		return new P3(new V3(a / normalLength, b / normalLength, c / normalLength), -d / normalLength)
 	}
 
 	static vanishingPlane(m4: M4) {
 		return P3.forABCD(m4.m[12], m4.m[13], m4.m[14], m4.m[15])
+	}
+
+	static forAABB(aabb: AABB, distance = 0) {
+		return [
+			new P3(V3.X, aabb.max.x + distance),
+			new P3(V3.X.negated(), -aabb.min.x - distance),
+			new P3(V3.Y, aabb.max.y + distance),
+			new P3(V3.Y.negated(), -aabb.min.y - distance),
+			new P3(V3.Z, aabb.max.z + distance),
+			new P3(V3.Z.negated(), -aabb.min.z - distance),
+		]
+	}
+
+	// Fit a plane to a collection of points.
+	// Fast, and accurate to within a few degrees.
+	// Returns None if the points do not span a plane.
+	static fromPoints(points: V3[]): P3 | undefined {
+		const n = points.length
+		if (n < 3) {
+			return undefined
+		}
+
+		const centroid = V3.add(...points).div(n)
+
+		// Calculate full 3x3 covariance matrix, excluding symmetries:
+		let xx = 0.0
+		let xy = 0.0
+		let xz = 0.0
+		let yy = 0.0
+		let yz = 0.0
+		let zz = 0.0
+
+		for (const p of points) {
+			const r = p.minus(centroid)
+			xx += r.x * r.x
+			xy += r.x * r.y
+			xz += r.x * r.z
+			yy += r.y * r.y
+			yz += r.y * r.z
+			zz += r.z * r.z
+		}
+
+		xx /= n
+		xy /= n
+		xz /= n
+		yy /= n
+		yz /= n
+		zz /= n
+
+		let weighted_dir = V3.O
+
+		{
+			const det_x = yy * zz - yz * yz
+			const axis_dir = new V3(det_x, xz * yz - xy * zz, xy * yz - xz * yy)
+			let weight = det_x * det_x
+			if (weighted_dir.dot(axis_dir) < 0.0) {
+				weight = -weight
+			}
+			weighted_dir = weighted_dir.plus(axis_dir.times(weight))
+		}
+
+		{
+			const det_y = xx * zz - xz * xz
+			const axis_dir = new V3(xz * yz - xy * zz, det_y, xy * xz - yz * xx)
+			let weight = det_y * det_y
+			if (weighted_dir.dot(axis_dir) < 0.0) {
+				weight = -weight
+			}
+			weighted_dir = weighted_dir.plus(axis_dir.times(weight))
+		}
+
+		{
+			const det_z = xx * yy - xy * xy
+			const axis_dir = new V3(xy * yz - xz * yy, xy * xz - yz * xx, det_z)
+			let weight = det_z * det_z
+			if (weighted_dir.dot(axis_dir) < 0.0) {
+				weight = -weight
+			}
+			weighted_dir = weighted_dir.plus(axis_dir.times(weight))
+		}
+
+		const normal = weighted_dir.unit()
+		return P3.normalOnAnchor(normal, centroid)
 	}
 
 	axisIntercepts(): V3 {

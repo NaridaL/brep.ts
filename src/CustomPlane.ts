@@ -1,7 +1,7 @@
-import { V3 } from 'ts3dutils'
+import { callsce, V3 } from 'ts3dutils'
 
 import chroma from 'chroma-js'
-import { GL_COLOR } from 'tsgl'
+import { GL_COLOR, GL_COLOR_BLACK } from 'tsgl'
 import { getGlobalId, L3, P3, PlaneSurface } from './index'
 
 export class CustomPlane extends P3 {
@@ -45,7 +45,22 @@ export class CustomPlane extends P3 {
 		return new PlaneSurface(this, this.right, this.up)
 	}
 
-	static forPlane(plane: P3, color: GL_COLOR, name?: string) {
+	toSource() {
+		return callsce(
+			'new CustomPlane',
+			this.anchor,
+			this.right,
+			this.up,
+			this.name,
+			this.color,
+			this.sMin,
+			this.sMax,
+			this.tMin,
+			this.tMax,
+		)
+	}
+
+	static forPlane(plane: P3, color: GL_COLOR = GL_COLOR_BLACK, name?: string) {
 		//assert(!name)
 		const up = plane.normal1.getPerpendicular().unit(),
 			right = up.cross(plane.normal1)

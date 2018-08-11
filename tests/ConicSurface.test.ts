@@ -1,4 +1,5 @@
 import {
+	outputLink,
 	suite,
 	suiteSurface,
 	surfaceVolumeAndAreaTests,
@@ -7,13 +8,16 @@ import {
 	testISCurves,
 	testLoopCCW,
 	testLoopContainsPoint,
+	testSurfaceTransform,
 } from './manager'
 
-import { DEG, V, V3 } from 'ts3dutils'
+import { DEG, M4, V, V3 } from 'ts3dutils'
 import {
 	B2T,
 	ConicSurface,
 	Edge,
+	EllipseCurve,
+	EllipsoidSurface,
 	HyperbolaCurve,
 	L3,
 	P3,
@@ -21,8 +25,6 @@ import {
 	PCurveEdge,
 	PointVsFace,
 	RotationFace,
-	EllipseCurve,
-	EllipsoidSurface,
 	StraightEdge,
 } from '..'
 import { PI } from '../src/math'
@@ -243,35 +245,70 @@ suite('ConicSurface', () => {
 
 		testContainsCurve(assert, s, c)
 	})
-    test('containsHyperbola 2', assert => {
-        const pb = UCS.isCurvesWithPlane(new P3(V3.Y, 2))[0] as HyperbolaCurve
-        testContainsCurve(assert, UCS, pb)
-        testContainsCurve(assert, UCS, pb.translate(0, 2, 0), false, '.translate(0, 2, 0)')
-        testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, '.scale(1, 2, 1)')
-        testContainsCurve(
-            assert,
-            UCS,
-            pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
-            false,
-            '.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)',
-        )
-    })
-    test('containsHyperbola 3', assert => {
-        const pb = UCS.isCurvesWithPlane(new P3(V(0, 1, -0.1).unit(), 2))[0] as HyperbolaCurve
-        console.log(pb)
-        testContainsCurve(assert, UCS, pb)
-        testContainsCurve(assert, UCS, pb.translate(0, 2, 0), false, '.translate(0, 2, 0)')
-        testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, '.scale(1, 2, 1)')
-        testContainsCurve(
-            assert,
-            UCS,
-            pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
-            false,
-            '.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)',
-        )
-    })
+	test('containsHyperbola 2', assert => {
+		const pb = UCS.isCurvesWithPlane(new P3(V3.Y, 2))[0] as HyperbolaCurve
+		testContainsCurve(assert, UCS, pb)
+		testContainsCurve(assert, UCS, pb.translate(0, 2, 0), false, '.translate(0, 2, 0)')
+		testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, '.scale(1, 2, 1)')
+		testContainsCurve(
+			assert,
+			UCS,
+			pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
+			false,
+			'.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)',
+		)
+	})
+	test('containsHyperbola 3', assert => {
+		const pb = UCS.isCurvesWithPlane(new P3(V(0, 1, -0.1).unit(), 2))[0] as HyperbolaCurve
+		console.log(pb)
+		testContainsCurve(assert, UCS, pb)
+		testContainsCurve(assert, UCS, pb.translate(0, 2, 0), false, '.translate(0, 2, 0)')
+		testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, '.scale(1, 2, 1)')
+		testContainsCurve(
+			assert,
+			UCS,
+			pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
+			false,
+			'.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)',
+		)
+	})
 	test('containsPoint', assert => {
 		const face = B2T.cone(1, 1, PI).faces.find(face => face.surface instanceof ConicSurface)
 		testLoopContainsPoint(assert, face.surface, face.contour, V(-0.2, 0, 0.2), PointVsFace.ON_EDGE)
+	})
+
+	test('atApexThroughEllipse', assert => {
+		const apex = V(0, 0, 3)
+		const ellipse = new EllipseCurve(
+			V(0.8047378541243649, 0, 0.3333333333333333),
+			V(2.414213562373095, 0, 0),
+			V(0, 2.414213562373095, 0),
+			0,
+			3.141592653589793,
+		)
+		const cone = ConicSurface.atApexThroughEllipse(apex, ellipse)
+		assert.ok(cone.containsPoint(ellipse.at(0)))
+		outputLink(assert, { mesh: cone.sce + '.toMesh()', drPs: [ellipse.at(0)] })
+	})
+
+	test('transform4', assert => {
+		const c = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z, 0, PI, 1, 2)
+            .rotateZ(20 *DEG)
+			.scale(1, 0.8, -2)
+			.rotateY(10 * DEG)
+			.translate(1, 0, -1)
+		console.log(c.sce)
+		const m = M4.perspective(45, 1, 2, 6)
+		testSurfaceTransform(assert, c, m)
+	})
+
+	test('transform4 2', assert => {
+		const c = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z, 0, PI, 1, 2)
+			.scale(1, 1, -2)
+			.rotateY(10 * DEG)
+			.translate(1, 0, 0)
+		console.log(c.sce)
+		const m = M4.perspective(45, 1, 2, 6)
+		testSurfaceTransform(assert, c, m)
 	})
 })

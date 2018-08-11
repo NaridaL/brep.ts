@@ -8,6 +8,7 @@ try {
 export * from 'ts3dutils/tests/manager'
 import {
 	arrayFromFunction,
+	arraySamples,
 	assert,
 	DEG,
 	eq,
@@ -21,7 +22,6 @@ import {
 	toSource,
 	V,
 	V3,
-	arraySamples,
 } from 'ts3dutils'
 import { Assert, test } from 'ts3dutils/tests/manager'
 import { RenderObjects } from '../src/viewer'
@@ -36,6 +36,7 @@ import {
 	BRep,
 	ConicSurface,
 	Curve,
+	CustomPlane,
 	Edge,
 	EllipseCurve,
 	Face,
@@ -48,9 +49,9 @@ import {
 	rotateCurve,
 	StraightEdge,
 	Surface,
-	CustomPlane,
 } from '..'
 
+import chroma from 'chroma-js'
 import * as fs from 'fs'
 
 export function testCurveCentralProjection(assert: Assert, curve: Curve) {
@@ -364,20 +365,13 @@ export function surfaceVolumeAndAreaTests(face: Face, msg = 'face', expectedVolu
 export function testCurve(assert: Assert, curve: Curve, checkTangents = true, msg?: string) {
 	const edge = Edge.forCurveAndTs(curve)
 	const debugInfo = curve.debugInfo && curve.debugInfo()
+	const aabb = curve.getAABB()
 	outputLink(
 		assert,
 		{
-			edges: [
-				edge,
-				...(debugInfo && debugInfo.lines
-					? arrayFromFunction(debugInfo.lines.length / 2, i => {
-							const a = debugInfo.lines[i * 2],
-								b = debugInfo.lines[i * 2 + 1]
-							return !a.like(b) && StraightEdge.throughPoints(a, b)
-					  }).filter(x => x)
-					: []),
-			],
-			drPs: [edge.a, edge.b, ...((debugInfo && debugInfo.points) || [])],
+			edges: [edge],
+			drPs: [edge.a, edge.b],
+			aabbs: aabb ? [aabb] : [],
 		},
 		msg,
 	)
@@ -388,6 +382,8 @@ export function testCurve(assert: Assert, curve: Curve, checkTangents = true, ms
 		// check that pointT and containsPoint behave as expected
 		assert.push(eq(t, curve.pointT(p)), curve.pointT(p), t, 't eq pointT(at(t)) for ' + t)
 		assert.ok(curve.containsPoint(p), `containsPoint(at(t == ${t}) == ${p})`)
+
+		assert.ok(aabb.containsPoint(p), 'aabb.containsPoint(p)')
 
 		// check that tangentAt() behaves correctly
 		if (checkTangents) {
@@ -625,7 +621,7 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 	let ists
 	try {
 		ists = curve instanceof L3 ? surface.isTsForLine(curve) : curve.isTsWithSurface(surface)
-		assert.equal(ists.length, tCount, 'number of isps = ' + tCount)
+		assert.equal(ists.length, tCount, 'number of isps = ' + tCount + ' ' + ists.toSource())
 		for (const t of ists) {
 			const p = curve.at(t)
 			assert.ok(
@@ -647,7 +643,7 @@ export function testISTs(assert: Assert, curve: Curve, surface: Surface | P3, tC
 				edges: [Edge.forCurveAndTs(curve)],
 				drPs: ists ? ists.map(t => curve.at(t)) : [],
 			},
-			(ists && ists.join(', ')) || 'view',
+			'view',
 		)
 	}
 }
@@ -690,4 +686,93 @@ export function testCurvesColinear(test: Assert, curve1: Curve, curve2: Curve): 
 			test.ok(false)
 		}
 	}
+}
+
+export function testCurveTransform(assert: Assert, curve: Curve, m4: M4, allowFlipped = false, msg?: string) {
+	let curveT: Curve
+	try {
+		curveT = (curve.transform4 || curve.transform).call(curve, m4)
+        console.log(curveT.sce)
+	} finally {
+		const ss = arraySamples(curve.tMin, curve.tMax, 16).flatMap(t => [
+			{ p: curve.at(t), color: 'red' },
+			{ p: m4.transformPoint(curve.at(t)), color: 'green' },
+		])
+		outputLink(
+			assert,
+			{
+				edges: [curve, curveT].filter(x => x).map(c => Edge.forCurveAndTs(c)),
+				drPs: ss,
+				drLines: ss.map(x => x.p),
+				boxes: [curve.getAABB().getM4(), m4.times(curve.getAABB().getM4())],
+				planes: (x => (x ? [CustomPlane.forPlane(x)] : []))(P3.vanishingPlane(m4)),
+			},
+			msg,
+		)
+	}
+	const cPTMin = m4.transformPoint(curve.at(curve.tMin))
+	const cPTMax = m4.transformPoint(curve.at(curve.tMax))
+	const cTPMin = curveT.at(curveT.tMin)
+	const cTPMax = curveT.at(curveT.tMax)
+	if (!allowFlipped || cPTMin.like(cTPMin)) {
+		assert.v3like(cTPMin, cPTMin)
+		assert.v3like(cTPMax, cPTMax)
+	} else {
+		assert.v3like(cTPMin, cPTMax)
+		assert.v3like(cTPMax, cPTMin)
+	}
+	arraySamples(curve.tMin, curve.tMax, 8).forEach(t => {
+        const pT = m4.transformPoint(curve.at(t));
+        assert.ok(curveT.containsPoint(pT), pT.sce + curveT.distanceToPoint(pT))
+	})
+	return curveT
+}
+
+export function testSurfaceTransform(
+	assert: Assert,
+	surface: ParametricSurface,
+	m4: M4,
+	allowFlipped = false,
+	msg?: string,
+) {
+	const uvs = arraySamples(surface.uMin, surface.uMax, 4).flatMap(u =>
+		arraySamples(surface.vMin, surface.vMax, 4).map(v => new V3(u, v, 0)),
+	)
+	const normalT = m4.inversed().transposed()
+	let surfaceT
+	try {
+		surfaceT = (surface.transform4 || surface.transform).call(surface, m4)
+	} finally {
+		const ss = uvs.flatMap(uv => [
+			{ p: surface.pUV(uv.x, uv.y), color: 'orange' },
+			{ p: m4.transformPoint(surface.pUV(uv.x, uv.y)), color: 'darkgreen' },
+		])
+		const aabbM4 = surface.getApproxAABB().getM4()
+		outputLink(
+			assert,
+			{
+				mesh:
+					'[' +
+					[surface, surfaceT]
+						.filter(x => x)
+						.map(s => s.sce + '.toMesh()')
+						.join(',') +
+					']',
+				drPs: ss,
+				drLines: ss.map(x => x.p),
+				boxes: [aabbM4, m4.times(aabbM4)],
+			},
+			msg,
+		)
+	}
+	uvs.forEach(uv => {
+		const pUV = surface.pST(uv.x, uv.y)
+		const pUVT = m4.transformPoint(pUV)
+		const surfaceNT = P3.normalOnAnchor(surface.normalST(uv.x, uv.y), pUV).transform(m4).normal1
+		const surfaceTN = surfaceT.normalP(pUVT).unit()
+		assert.ok(surfaceT.containsPoint(m4.transformPoint(surface.pST(uv.x, uv.y))))
+		assert.ok(surfaceNT.isParallelTo(surfaceTN), 'uv' + uv.sce + ' ' + surfaceNT.sce + ' ' + surfaceTN.sce)
+		assert.ok(surfaceNT.dot(surfaceTN) > 0, 'normal same dir')
+	})
+	return surfaceT
 }

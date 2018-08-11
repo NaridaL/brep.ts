@@ -90,7 +90,7 @@ export abstract class Face extends Transformable {
 		//contour.forEach(e => {
 		//	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
 		//})
-		assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
+		//assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
 		holes && holes.forEach(hole => Edge.assertLoop(hole))
 		holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)))
 		assert(!holes || holes.constructor == Array, holes && holes.toString())
@@ -906,6 +906,12 @@ export abstract class Face extends Transformable {
 		const newEdges = Edge.reversePath(this.contour.map(e => e.transform(m4)), mirroring)
 		const newHoles = this.holes.map(hole => Edge.reversePath(hole.map(e => e.transform(m4)), mirroring))
 		return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info) as this
+	}
+	transform4(m4: M4): this {
+		const mirroring = m4.isMirroring()
+		const newEdges = Edge.reversePath(this.contour.map(e => e.transform4(m4)), mirroring)
+		const newHoles = this.holes.map(hole => Edge.reversePath(hole.map(e => e.transform4(m4)), mirroring))
+		return new this.constructor(this.surface.transform4(m4), newEdges, newHoles, this.name, this.info) as this
 	}
 
 	flipped() {

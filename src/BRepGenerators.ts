@@ -19,8 +19,10 @@ import {
 	raddd,
 	snap,
 	TAU,
+	Tuple3,
 	V,
 	V3,
+	VV,
 } from 'ts3dutils'
 
 import {
@@ -36,6 +38,7 @@ import {
 	FaceInfoFactory,
 	getGlobalId,
 	L3,
+	NURBS,
 	P3,
 	PCurveEdge,
 	PlaneFace,
@@ -47,7 +50,8 @@ import {
 	XiEtaCurve,
 } from './index'
 
-import { max, min, PI } from './math'
+import { max, min, PI, SQRT1_2 } from './math'
+import { NURBSSurface } from './surface/NURBSSurface'
 
 /**
  * Create a surface by projecting a curve in a direction.
@@ -657,7 +661,7 @@ export namespace B2T {
 	}
 
 	export function whatever() {
-		const iso = isocahedron()
+		const iso = icosahedron()
 		const numbersBRep = BRep.join(
 			iso.faces.map((face, i) => {
 				const numberBRep = text('' + (i + 1), 0.4, -2)
@@ -689,7 +693,7 @@ export namespace B2T {
 	}
 
 	export function d20() {
-		const iso = isocahedron()
+		const iso = icosahedron()
 		const numbersBRep = BRep.join(
 			iso.faces.map((face, i) => {
 				const numberBRep = text('' + (i + 1), 0.4, -2)
@@ -721,7 +725,7 @@ export namespace B2T {
 	 *
 	 * @example Roundabout way of creating a cube:
 	 * ```ts
-	 * B2T.rotStep(StraightEdge.rect(Math.sqrt(2) / 2, 1), 360 * DEG, 4)
+	 * B2T.rotStep(StraightEdge.rect(Math.SQRT1_2, 1), 360 * DEG, 4)
 	 * ```
 	 * @param the edges to rotate.
 	 * @param totalRads The angle between the original and last rib. [0; TAU]
@@ -881,7 +885,7 @@ export namespace B2T {
 	 * @param generator
 	 */
 	export function extrudeVertices(
-		baseVertices: V3[],
+		baseVertices: ReadonlyArray<V3>,
 		baseFacePlane: P3,
 		offset: V3,
 		name?: string,
@@ -933,13 +937,13 @@ export namespace B2T {
 
 	const b = 1 / GOLDEN_RATIO,
 		c = 2 - GOLDEN_RATIO
-	export const TETRAHEDRON_VERTICES = [
-		new V3(1, 0, -1 / Math.sqrt(2)),
-		new V3(-1, 0, -1 / Math.sqrt(2)),
-		new V3(0, -1, 1 / Math.sqrt(2)),
-		new V3(0, 1, 1 / Math.sqrt(2)),
+	export const TETRAHEDRON_VERTICES: ReadonlyArray<V3> = [
+		new V3(1, 0, -SQRT1_2),
+		new V3(-1, 0, -SQRT1_2),
+		new V3(0, -1, SQRT1_2),
+		new V3(0, 1, SQRT1_2),
 	].map(v => v.unit())
-	export const DODECAHEDRON_VERTICES = [
+	export const DODECAHEDRON_VERTICES: ReadonlyArray<V3> = [
 		new V3(c, 0, 1),
 		new V3(-c, 0, 1),
 		new V3(-b, b, b),
@@ -961,7 +965,7 @@ export namespace B2T {
 		new V3(-1, -c, 0),
 		new V3(1, -c, 0),
 	].map(v => v.unit())
-	export const DODECAHEDRON_FACE_VERTICES = [
+	export const DODECAHEDRON_FACE_VERTICES: ReadonlyArray<ReadonlyArray<number>> = [
 		[4, 3, 2, 1, 0],
 		[7, 6, 5, 0, 1],
 		[12, 11, 10, 9, 8],
@@ -976,7 +980,7 @@ export namespace B2T {
 		[7, 1, 2, 17, 18],
 	]
 
-	export const OCTAHEDRON_VERTICES = [
+	export const OCTAHEDRON_VERTICES: ReadonlyArray<V3> = [
 		new V3(1, 0, 0),
 		new V3(-1, 0, 0),
 		new V3(0, 1, 0),
@@ -984,7 +988,7 @@ export namespace B2T {
 		new V3(0, 0, 1),
 		new V3(0, 0, -1),
 	]
-	export const OCTAHEDRON_FACE_VERTICES = [
+	export const OCTAHEDRON_FACE_VERTICES: ReadonlyArray<ReadonlyArray<number>> = [
 		[0, 2, 4],
 		[2, 1, 4],
 		[1, 3, 4],
@@ -997,7 +1001,7 @@ export namespace B2T {
 	]
 
 	const { x: s, y: t } = new V3(1, GOLDEN_RATIO, 0).unit()
-	export const ISOCAHEDRON_VERTICES = [
+	export const ICOSAHEDRON_VERTICES: ReadonlyArray<V3> = [
 		new V3(-s, t, 0),
 		new V3(s, t, 0),
 		new V3(-s, -t, 0),
@@ -1013,7 +1017,7 @@ export namespace B2T {
 		new V3(-t, 0, -s),
 		new V3(-t, 0, s),
 	]
-	export const ISOCAHEDRON_FACE_VERTICES = [
+	export const ICOSAHEDRON_FACE_VERTICES: ReadonlyArray<ReadonlyArray<number>> = [
 		// 5 faces around point 0
 		[0, 11, 5],
 		[0, 5, 1],
@@ -1058,13 +1062,13 @@ export namespace B2T {
 	}
 
 	/**
-	 * Create an isocahedron [BRep]. The vertices are on the unit sphere.
+	 * Create an icosahedron [BRep]. The vertices are on the unit sphere.
 	 */
-	export function isocahedron() {
-		return makePlatonic(ISOCAHEDRON_VERTICES, ISOCAHEDRON_FACE_VERTICES, 'B2T.octahedron()')
+	export function icosahedron() {
+		return makePlatonic(ICOSAHEDRON_VERTICES, ICOSAHEDRON_FACE_VERTICES, 'B2T.icosahedron()')
 	}
 
-	function makePlatonic(VS: V3[], FVIS: int[][], generator: string) {
+	function makePlatonic(VS: ReadonlyArray<V3>, FVIS: ReadonlyArray<ReadonlyArray<number>>, generator: string) {
 		const edgeMap = new Map()
 		const faces = FVIS.map(faceIndexes => {
 			const surface = PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]])
@@ -1107,5 +1111,44 @@ export namespace B2T {
 		faces.push(bottomFace)
 		const generator = callsce('B2T.pyramidEdges', baseEdges, apex, name)
 		return new BRep(faces, false, generator)
+	}
+
+	export function fromBPT(bpt: string) {
+		const lineRegex = /.+/g
+		const ilog = x => (console.log(x), x)
+		const readLine = () => lineRegex.exec(bpt)![0]
+		const readLineNumbers = () =>
+			readLine()
+				.trim()
+				.split(/\s+/)
+				.map(s => parseFloat(s))
+		const numOfPatches = parseInt(readLine())
+		const faces = arrayFromFunction(numOfPatches, () => {
+			const [pointsUCount, pointsVCount] = readLineNumbers()
+			const points = Array.from({ length: (pointsUCount + 1) * (pointsVCount + 1) }, () =>
+				VV(...readLineNumbers(), 1),
+			)
+			const surface = new NURBSSurface(
+				points,
+				NURBS.bezierKnots(pointsUCount),
+				NURBS.bezierKnots(pointsVCount),
+				pointsUCount,
+				pointsVCount,
+				0,
+				1,
+				0,
+				1,
+			)
+			return surface
+			const edges = [
+				Edge.forCurveAndTs(surface.isoparametricV(0)),
+				Edge.forCurveAndTs(surface.isoparametricU(1)),
+				Edge.forCurveAndTs(surface.isoparametricV(1)).flipped(),
+				Edge.forCurveAndTs(surface.isoparametricU(0)).flipped(),
+			]
+			return Face.create(surface, edges)
+		})
+		return faces
+		return new BRep(faces, false)
 	}
 }

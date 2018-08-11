@@ -41,7 +41,7 @@ class Complex {
 	}
 
 	sqrt() {
-		const f = Math.sqrt(2) / 2
+		const f = Math.SQRT1_2
 		const r = Math.hypot(this.re, this.im)
 		return Z(f * Math.sqrt(r + this.re), f * Math.sqrt(r - this.re) * Math.sign(this.im))
 	}

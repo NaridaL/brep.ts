@@ -48,12 +48,14 @@ export class CylinderSurface extends ProjectedCurveSurface implements ImplicitSu
 		this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse)
 	}
 
-	static semicylinder(radius: number): CylinderSurface {
+	static semicylinder(radius: number, sMin?: number, sMax?: number, tMin?: number, tMax?: number): CylinderSurface {
 		return new CylinderSurface(
 			new EllipseCurve(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)),
 			V3.Z,
-			undefined,
-			undefined,
+			sMin,
+			sMax,
+			tMin,
+			tMax,
 		)
 	}
 

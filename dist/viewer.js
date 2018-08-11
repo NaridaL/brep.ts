@@ -2781,6 +2781,74 @@ var viewer = (function (exports) {
     });
 
     /**
+     * Returns a function, that, as long as it continues to be invoked, will not
+     * be triggered. The function will be called after it stops being called for
+     * N milliseconds. If `immediate` is passed, trigger the function on the
+     * leading edge, instead of the trailing. The function also has a property 'clear' 
+     * that is a function which will clear the timer to prevent previously scheduled executions. 
+     *
+     * @source underscore.js
+     * @see http://unscriptable.com/2009/03/20/debouncing-javascript-methods/
+     * @param {Function} function to wrap
+     * @param {Number} timeout in ms (`100`)
+     * @param {Boolean} whether to execute at the beginning (`false`)
+     * @api public
+     */
+
+    var debounce = function debounce(func, wait, immediate){
+      var timeout, args, context, timestamp, result;
+      if (null == wait) wait = 100;
+
+      function later() {
+        var last = Date.now() - timestamp;
+
+        if (last < wait && last >= 0) {
+          timeout = setTimeout(later, wait - last);
+        } else {
+          timeout = null;
+          if (!immediate) {
+            result = func.apply(context, args);
+            context = args = null;
+          }
+        }
+      }
+      var debounced = function(){
+        context = this;
+        args = arguments;
+        timestamp = Date.now();
+        var callNow = immediate && !timeout;
+        if (!timeout) timeout = setTimeout(later, wait);
+        if (callNow) {
+          result = func.apply(context, args);
+          context = args = null;
+        }
+
+        return result;
+      };
+
+      debounced.clear = function() {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+      };
+      
+      debounced.flush = function() {
+        if (timeout) {
+          result = func.apply(context, args);
+          context = args = null;
+          
+          clearTimeout(timeout);
+          timeout = null;
+        }
+      };
+
+      return debounced;
+    };
+
+    /* toSource by Marcello Bastea-Forte - zlib license */
+
+    /**
      * Java style map.
      */
     class JavaMap {
@@ -3159,6 +3227,26 @@ var viewer = (function (exports) {
             }
             return new Vector(result);
         }
+        /**
+         * Create a new 4D Vector from a V3 and a weight.
+         * @param v3
+         * @param weight
+         */
+        static fromV3AndWeight(v3, weight) {
+            return new Vector(new Float64Array([v3.x * weight, v3.y * weight, v3.z * weight, weight]));
+        }
+        get x() {
+            return this.v[0];
+        }
+        get y() {
+            return this.v[1];
+        }
+        get z() {
+            return this.v[2];
+        }
+        get w() {
+            return this.v[3];
+        }
         [Symbol.iterator]() {
             return this.v[Symbol.iterator]();
         }
@@ -3273,18 +3361,6 @@ var viewer = (function (exports) {
         toSource() {
             return callsce('VV', ...this.v);
         }
-        get x() {
-            return this.v[0];
-        }
-        get y() {
-            return this.v[1];
-        }
-        get z() {
-            return this.v[2];
-        }
-        get w() {
-            return this.v[3];
-        }
         angleTo(vector) {
             assertInst(Vector, vector);
             assert(!this.isZero(), '!this.likeO()');
@@ -3292,11 +3368,11 @@ var viewer = (function (exports) {
             return Math.acos(clamp(this.dot(vector) / this.length() / vector.length(), -1, 1));
         }
         /**
-         Returns true iff this is parallel to vector, using equals
-         Throw a DebugError
-         if vector is not a Vector or
-         if this has a length of 0 or
-         if vector has a length of 0
+         * Returns true iff this is parallel to vector, using eq
+         * Throw a DebugError
+         * - if vector is not a Vector or
+         * - if this has a length of 0 or
+         * - if vector has a length of 0
          */
         isParallelTo(vector) {
             assertInst(Vector, vector);
@@ -3313,13 +3389,12 @@ var viewer = (function (exports) {
             return eq0(this.dot(vector));
         }
         /**
-         Returns true iff the length of this vector is 0, as returned by NLA.isZero.
-         Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
+         * Returns true iff the length of this vector is 0, as returned by NLA.isZero.
+         * Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
          */
         isZero() {
             return eq0(this.length());
         }
-        // Returns a new unit Vector (.length() === 1) with the same direction as this vector. Throws a
         /*/ Returns the length of this Vector, i.e. the euclidian norm.*/
         length() {
             return Math.hypot.apply(undefined, this.v);
@@ -3334,13 +3409,21 @@ var viewer = (function (exports) {
             }
             return result;
         }
-        // NLA_DEBUGError if this has a length of 0.
-        normalized() {
+        /**
+         * Returns a new unit Vector (.length() === 1) with the same direction as this vector. Throws a
+         */
+        unit() {
             const length = this.length();
             if (eq0(length)) {
                 throw new Error('cannot normalize zero vector');
             }
             return this.div(this.length());
+        }
+        /**
+         * Documentation stub. You want {@link unit}
+         */
+        normalized() {
+            throw new Error('documentation stub. use .unit()');
         }
         asRowMatrix() {
             return new Matrix(this.v.length, 1, this.v);
@@ -3349,13 +3432,17 @@ var viewer = (function (exports) {
             return new Matrix(1, this.v.length, this.v);
         }
         /**
-         Returns a new Vector which is the projection of this vector onto the passed vector.
-         Examples
-         NLA.V(3, 4).projectedOn(NLA.V(1, 0)) // returns NLA.V(3, 0)
-         NLA.V(3, 4).projectedOn(NLA.V(2, 0)) // returns NLA.V(3, 0)
-         NLA.V(3, 4).projectedOn(NLA.V(-1, 0)) // returns NLA.V(-3, 0)
-         NLA.V(3, 4).projectedOn(NLA.V(0, 1)) // returns NLA.V(0, 4)
-         NLA.V(3, 4).projectedOn(NLA.V(1, 1)) // returns
+         * Returns a new Vector which is the projection of this vector onto the passed vector.
+         * @example
+         * VV(3, 4).projectedOn(VV(1, 0)) // returns VV(3, 0)
+         * @example
+         * VV(3, 4).projectedOn(VV(2, 0)) // returns VV(3, 0)
+         * @example
+         * VV(3, 4).projectedOn(VV(-1, 0)) // returns VV(-3, 0)
+         * @example
+         * VV(3, 4).projectedOn(VV(0, 1)) // returns VV(0, 4)
+         * @example
+         * VV(3, 4).projectedOn(VV(1, 1)) // returns
          */
         projectedOn(b) {
             assertInst(Vector, b);
@@ -3371,9 +3458,9 @@ var viewer = (function (exports) {
             return a.minus(this);
         }
         /**
-         Returns true iff the length() of this vector is equal to 'length', using equals
-         E.g. NLA.V(3, 4).hasLength(5) === true
-         NLA.V(1, 1).hasLength(1) === false
+         * Returns true iff the length() of this vector is equal to 'length', using equals
+         * E.g. NLA.V(3, 4).hasLength(5) === true
+         * NLA.V(1, 1).hasLength(1) === false
          */
         hasLength(length) {
             assertNumbers(length);
@@ -3394,14 +3481,6 @@ var viewer = (function (exports) {
         transposed() {
             return new Matrix(this.v.length, 1, this.v);
         }
-        /**
-         * Create a new 4D Vector from a V3 and a weight.
-         * @param v3
-         * @param weight
-         */
-        static fromV3AndWeight(v3, weight) {
-            return new Vector(new Float64Array([v3.x * weight, v3.y * weight, v3.z * weight, weight]));
-        }
     }
     function VV(...values) {
         return new Vector(new Float64Array(values));
@@ -3421,17 +3500,18 @@ var viewer = (function (exports) {
 
     class Matrix {
         constructor(width, height, m) {
-            assert(width * height == m.length, 'width * height == m.length', width, height, m.length);
-            this.m = m;
             this.width = width;
             this.height = height;
+            this.m = m;
+            assertInts(width, height);
+            assertf(() => 0 < width);
+            assertf(() => 0 < height);
+            assert(width * height == m.length, 'width * height == m.length', width, height, m.length);
         }
         static random(width, height) {
-            assertNumbers(width, height);
-            return Matrix.fromFunction(width, height, (i, j) => Math.random());
+            return Matrix.fromFunction(width, height, () => Math.random());
         }
         static fromFunction(width, height, f) {
-            assertNumbers(width, height);
             const m = new Float64Array(height * width);
             let elIndex = height * width;
             while (elIndex--) {
@@ -3440,7 +3520,7 @@ var viewer = (function (exports) {
             return new Matrix(width, height, m);
         }
         static identityN(dim) {
-            assertNumbers(dim);
+            assertInts(dim);
             const m = new Float64Array(dim * dim);
             // Float64Arrays are init to 0
             let elIndex = dim * (dim + 1);
@@ -3450,8 +3530,14 @@ var viewer = (function (exports) {
             }
             return new Matrix(dim, dim, m);
         }
+        /**
+         * Create new dim x dim matrix equal to an identity matrix with rows/colums i and k swapped. Note that i and k
+         * are 0-indexed.
+         */
         static permutation(dim, i, k) {
-            assertNumbers(dim, i, k);
+            assertInts(dim, i, k);
+            assertf(() => 0 <= i && i < dim);
+            assertf(() => 0 <= k && k < dim);
             const m = new Float64Array(dim * dim);
             // Float64Array are init to 0
             let elIndex = dim * (dim + 1);
@@ -3465,32 +3551,29 @@ var viewer = (function (exports) {
             m[k * dim + i] = 1;
             return new Matrix(dim, dim, m);
         }
-        static fromRowArrays(...args) {
-            return Matrix.fromRowArrays2(args);
-        }
-        static fromRowArrays2(arrays) {
-            if (0 == arrays.length) {
+        static fromRowArrays(...rowArrays) {
+            if (0 == rowArrays.length) {
                 throw new Error('cannot have 0 vector');
             }
-            const height = arrays.length;
-            const width = arrays[0].length;
+            const height = rowArrays.length;
+            const width = rowArrays[0].length;
             const m = new Float64Array(height * width);
-            arrayCopy(arrays[0], 0, m, 0, width);
+            arrayCopy(rowArrays[0], 0, m, 0, width);
             for (let rowIndex = 1; rowIndex < height; rowIndex++) {
-                if (arrays[rowIndex].length != width) {
+                if (rowArrays[rowIndex].length != width) {
                     throw new Error('all row arrays must be the same length');
                 }
-                arrayCopy(arrays[rowIndex], 0, m, rowIndex * width, width);
+                arrayCopy(rowArrays[rowIndex], 0, m, rowIndex * width, width);
             }
-            return new Matrix(width, height, m);
+            return this.new(width, height, m);
         }
         static fromColVectors(colVectors) {
-            return Matrix.fromColArrays(colVectors.map(v => v.v));
+            return Matrix.fromColArrays(...colVectors.map(v => v.v));
         }
         static forWidthHeight(width, height) {
             return new Matrix(width, height, new Float64Array(width * height));
         }
-        static fromColArrays(colArrays) {
+        static fromColArrays(...colArrays) {
             if (0 == colArrays.length) {
                 throw new Error('cannot have 0 vector');
             }
@@ -3504,7 +3587,7 @@ var viewer = (function (exports) {
                 }
                 arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height);
             }
-            return new Matrix(width, height, m);
+            return this.new(width, height, m);
         }
         static product(...args) {
             const [ms, result] = Array.isArray(args[0])
@@ -3549,20 +3632,23 @@ var viewer = (function (exports) {
             }
             return result;
         }
+        static new(width, height, m) {
+            return new Matrix(width, height, m);
+        }
         copy() {
             return Matrix.copy(this);
         }
         e(rowIndex, colIndex) {
-            assertNumbers(rowIndex, colIndex);
-            if (rowIndex >= this.height || colIndex >= this.width) {
-                throw new Error('index ' + rowIndex + ', ' + colIndex + ' is out of bounds (' + this.width + ' x ' + this.height + ')');
-            }
+            assertInts(rowIndex, colIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, 'rowIndex out of bounds ' + rowIndex);
+            assert(0 <= colIndex && colIndex < this.width, 'colIndex out of bounds ' + colIndex);
             return this.m[rowIndex * this.width + colIndex];
         }
         setEl(rowIndex, colIndex, val) {
-            assertNumbers(rowIndex, colIndex, val);
+            assertInts(rowIndex, colIndex);
             assert(0 <= rowIndex && rowIndex < this.height, 'rowIndex out of bounds ' + rowIndex);
             assert(0 <= colIndex && colIndex < this.width, 'colIndex out of bounds ' + colIndex);
+            assertNumbers(val);
             this.m[rowIndex * this.width + colIndex] = val;
         }
         plus(m) {
@@ -3583,14 +3669,16 @@ var viewer = (function (exports) {
                 r.m[i] = this.m[i] - m.m[i];
             return r;
         }
-        mulScalar(factor) {
+        mulScalar(scalar) {
+            assertNumbers(scalar);
             const r = this.new();
             let i = this.m.length;
             while (i--)
-                r.m[i] = this.m[i] * factor;
+                r.m[i] = this.m[i] * scalar;
             return r;
         }
         divScalar(scalar) {
+            assertNumbers(scalar);
             const r = this.new();
             let i = this.m.length;
             while (i--)
@@ -3628,11 +3716,15 @@ var viewer = (function (exports) {
                 .join(''); // join rows
         }
         row(rowIndex) {
+            assertInts(rowIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, 'rowIndex out of bounds ' + rowIndex);
             const v = new Float64Array(this.width);
             arrayCopy(this.m, rowIndex * this.width, v, 0, this.width);
             return new Vector(v);
         }
         col(colIndex) {
+            assertInts(colIndex);
+            assert(0 <= colIndex && colIndex < this.width, 'colIndex out of bounds ' + colIndex);
             const v = new Float64Array(this.height);
             arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height);
             return new Vector(v);
@@ -3655,10 +3747,8 @@ var viewer = (function (exports) {
             }
             return true;
         }
-        equalsMatrix(matrix, precision) {
-            precision = precision || NLA_PRECISION;
-            if (!(matrix instanceof Matrix))
-                throw new Error('not a matrix');
+        equalsMatrix(matrix, precision = NLA_PRECISION) {
+            assertInst(Matrix, matrix);
             if (this.width != matrix.width || this.height != matrix.height)
                 return false;
             let elIndex = this.m.length;
@@ -3738,9 +3828,9 @@ var viewer = (function (exports) {
                 currentRowIndex++; // this doesn't increase if pivot was zero
             }
             return {
-                L: Matrix.fromRowArrays2(lRowArrays),
-                U: Matrix.fromRowArrays2(uRowArrays),
-                P: Matrix.fromRowArrays2(pRowArrays),
+                L: Matrix.fromRowArrays(...lRowArrays),
+                U: Matrix.fromRowArrays(...uRowArrays),
+                P: Matrix.fromRowArrays(...pRowArrays),
             };
         }
         gauss() {
@@ -3785,9 +3875,9 @@ var viewer = (function (exports) {
                 currentRowIndex++; // this doesn't increase if pivot was zero
             }
             return {
-                L: Matrix.fromRowArrays2(lRowArrays),
-                U: Matrix.fromRowArrays2(uRowArrays),
-                P: Matrix.fromRowArrays2(pRowArrays),
+                L: Matrix.fromRowArrays(...lRowArrays),
+                U: Matrix.fromRowArrays(...uRowArrays),
+                P: Matrix.fromRowArrays(...pRowArrays),
             };
         }
         qrDecompositionGivensRotation() {
@@ -3800,6 +3890,7 @@ var viewer = (function (exports) {
             // 	}
             // 	return (2 * Math.sign(s)) / c
             // }
+            const R = this.copy();
             function matrixForCS(dim, i, k, c, s) {
                 const m = Matrix.identityN(dim);
                 m.setEl(i, i, c);
@@ -3813,20 +3904,20 @@ var viewer = (function (exports) {
                 // find largest value in colIndex
                 for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
                     //console.log('row ', rowIndex, 'col ', colIndex)
-                    const xi = this.e(colIndex, colIndex);
-                    const xk = this.e(rowIndex, colIndex);
+                    const xi = R.e(colIndex, colIndex);
+                    const xk = R.e(rowIndex, colIndex);
                     if (xk == 0) {
                         continue;
                     }
-                    const r = Math.sqrt(xi * xi + xk * xk);
+                    const r = Math.hypot(xi, xk);
                     const c = xi / r;
                     const s = xk / r;
                     // apply transformation on every column:
                     for (let col2 = colIndex; col2 < this.width; col2++) {
-                        const x1 = this.e(colIndex, col2) * c + this.e(rowIndex, col2) * s;
-                        const x2 = this.e(rowIndex, col2) * c - this.e(colIndex, col2) * s;
-                        this.setEl(colIndex, col2, x1);
-                        this.setEl(rowIndex, col2, x2);
+                        const x1 = R.e(colIndex, col2) * c + R.e(rowIndex, col2) * s;
+                        const x2 = R.e(rowIndex, col2) * c - R.e(colIndex, col2) * s;
+                        R.setEl(colIndex, col2, x1);
+                        R.setEl(rowIndex, col2, x2);
                     }
                     //console.log('r ', r, 'c ', c, 's ', s, 'sigma', sigma(c, s))
                     //console.log(this.toString(),'cs\n', matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
@@ -3835,7 +3926,7 @@ var viewer = (function (exports) {
             }
             //console.log(qTransposed.transposed().toString(), this.toString(),
             // qTransposed.transposed().times(this).toString())
-            return { Q: qTransposed.transposed(), R: this };
+            return { Q: qTransposed.transposed(), R };
         }
         isPermutation() {
             if (!this.isSquare())
@@ -3892,16 +3983,13 @@ var viewer = (function (exports) {
          * More efficient than calculating the inverse for few (~ <= this.height) values
          */
         solveLinearSystem(b) {
-            const lup = this.luDecomposition();
-            // console.log(lup.L.toString())
-            // console.log(lup.U.toString())
-            // console.log(lup.P.toString())
-            const y = lup.L.solveForwards(lup.P.timesVector(b));
-            const x = lup.U.solveBackwards(y);
+            assertInst(Vector, b);
+            const { L, U, P } = this.luDecomposition();
+            const y = L.solveForwards(P.timesVector(b));
+            const x = U.solveBackwards(y);
             return x;
         }
-        isLowerUnitriangular(precision) {
-            precision = 'number' == typeof precision ? precision : NLA_PRECISION;
+        isLowerUnitriangular(precision = NLA_PRECISION) {
             if (!this.isSquare())
                 return false;
             for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
@@ -3914,12 +4002,12 @@ var viewer = (function (exports) {
             }
             return true;
         }
-        isLowerTriangular() {
+        isLowerTriangular(precision = NLA_PRECISION) {
             if (!this.isSquare())
                 return false;
             for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
                 for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    if (!eq0(this.m[rowIndex * this.width + colIndex])) {
+                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
                         return false;
                     }
                 }
@@ -3978,11 +4066,8 @@ var viewer = (function (exports) {
          */
         rank() {
             const U = this.gauss().U;
-            //console.log(R.toString())
             let rowIndex = this.height;
-            while (rowIndex-- && U.row(rowIndex).isZero()) {
-                console.log('RANK' + U.row(rowIndex).toString() + U.row(rowIndex).isZero());
-            }
+            while (rowIndex-- && U.row(rowIndex).isZero()) { }
             return rowIndex + 1;
         }
         rowsIndependent() {
@@ -3991,37 +4076,24 @@ var viewer = (function (exports) {
         colsIndependent() {
             return this.width == this.rank();
         }
-        asRowArrays(arrayConstructor) {
-            arrayConstructor = arrayConstructor || Float64Array;
-            let rowIndex = this.height;
-            const result = new Array(this.height);
-            while (rowIndex--) {
-                result[rowIndex] = this.rowArray(rowIndex, arrayConstructor);
-            }
-            return result;
+        asRowArrays(arrayConstructor = Float64Array) {
+            return arrayFromFunction(this.height, rowIndex => this.rowArray(rowIndex, arrayConstructor));
         }
-        asColArrays(arrayConstructor) {
-            arrayConstructor = arrayConstructor || Float64Array;
-            const result = new Array(this.width);
-            let colIndex = this.width;
-            while (colIndex--) {
-                result[colIndex] = this.colArray(colIndex, arrayConstructor);
-            }
-            return result;
+        asColArrays(arrayConstructor = Float64Array) {
+            return arrayFromFunction(this.width, colIndex => this.colArray(colIndex, arrayConstructor));
         }
-        rowArray(rowIndex, arrayConstructor) {
-            arrayConstructor = arrayConstructor || Float64Array;
+        rowArray(rowIndex, arrayConstructor = Float64Array) {
             const result = new arrayConstructor(this.width);
-            arrayCopy(this.m, rowIndex * this.width, result, 0, this.width);
+            return arrayCopy(this.m, rowIndex * this.width, result, 0, this.width);
             return result;
         }
-        colArray(colIndex, arrayConstructor) {
-            arrayConstructor = arrayConstructor || Float64Array;
+        colArray(colIndex, arrayConstructor = Float64Array) {
             const result = new arrayConstructor(this.width);
             arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height);
             return result;
         }
         subMatrix(firstColIndex, subWidth, firstRowIndex, subHeight) {
+            assert(0 < firstColIndex && 0 < subWidth && 0 < firstRowIndex && 0 < subHeight);
             assert(firstColIndex + subWidth <= this.width && firstRowIndex + subHeight <= this.height);
             const m = new Float64Array(subWidth * subHeight);
             arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth);
@@ -4043,10 +4115,9 @@ var viewer = (function (exports) {
                 if (4 == this.width)
                     return this.inversed4();
             }
-            const lup = this.luDecomposition();
-            const y = lup.L.solveForwardsMatrix(lup.P);
-            console.log(y);
-            const inverse = lup.U.solveBackwardsMatrix(y);
+            const { L, U, P } = this.luDecomposition();
+            const y = L.solveForwardsMatrix(P);
+            const inverse = U.solveBackwardsMatrix(y);
             return inverse;
         }
         inversed2() {
@@ -4323,7 +4394,8 @@ var viewer = (function (exports) {
             return dependentRowIndexes;
         }
         lerp(b, t, result = this.new()) {
-            assertInst(Matrix, this, b, result);
+            assertInst(Matrix, b, result);
+            assertNumbers(t);
             assert(this.width == b.width && this.height == b.height);
             const s = 1 - t;
             let i = this.m.length;
@@ -4400,12 +4472,17 @@ var viewer = (function (exports) {
         {
             for (let i = 0; i < numbers.length; i++) {
                 if ('number' !== typeof numbers[i]) {
-                    throw new Error('assertNumbers arguments[' +
-                        i +
-                        '] is not a number. ' +
-                        typeof numbers[i] +
-                        ' == typeof ' +
-                        numbers[i]);
+                    throw new Error(`assertNumbers arguments[${i}] is not a number. ${typeof numbers[i]} == typeof ${numbers[i]}`);
+                }
+            }
+        }
+        return true;
+    }
+    function assertInts(...numbers) {
+        {
+            for (let i = 0; i < numbers.length; i++) {
+                if ('number' !== typeof numbers[i] || numbers[i] % 1 !== 0) {
+                    throw new Error(`assertNumbers arguments[${i}] is not an int. ${typeof numbers[i]} == typeof ${numbers[i]}`);
                 }
             }
         }
@@ -4492,17 +4569,20 @@ var viewer = (function (exports) {
         arr[j] = temp;
     }
     function arrayCopy(src, sstart, dst, dstart, length) {
+        assertInts(sstart, dstart, length);
         dstart += length;
         length += sstart;
         while (length-- > sstart) {
             dst[--dstart] = src[length];
         }
+        return dst;
     }
     function clamp(val, min, max) {
         assertNumbers(val, min, max);
         return Math.max(min, Math.min(max, val));
     }
     function between(val, min, max) {
+        assertNumbers(val, min, max);
         return min <= val && val <= max;
     }
     function fuzzyBetween(val, min, max) {
@@ -4517,6 +4597,18 @@ var viewer = (function (exports) {
             map.set(key, [val]);
         }
     }
+    /**
+     * Copies a number of items from one array to another, with a definable step size between items in the source and
+     * destination array.
+     *
+     * @param src The source array.
+     * @param sstart The location of the first item in the source array.
+     * @param sstep The offset between items in the source array.
+     * @param dst The destination array.
+     * @param dstart The location of the first item in the destination array.
+     * @param dstep The offset between items in the destination array.
+     * @param count The number of items to copy.
+     */
     function arrayCopyStep(src, sstart, sstep, dst, dstart, dstep, count) {
         let srcIndex = sstart + count * sstep;
         let dIndex = dstart + count * dstep;
@@ -4524,6 +4616,18 @@ var viewer = (function (exports) {
             dst[(dIndex -= dstep)] = src[(srcIndex -= sstep)];
         }
     }
+    /**
+     * Copies a number of contiguous, evenly-spaced blocks from one array to another.
+     *
+     * @param src The source array.
+     * @param sstart The start of the first block in the source array.
+     * @param sstep The offset from the start of one block to the start of the next block in the source array.
+     * @param dst The destination array.
+     * @param dstart The start of the first block in the destination array.
+     * @param dstep The offset from the start of one block to the start of the next block in the destination array.
+     * @param blockSize The length of one block.
+     * @param blockCount The number of blocks to copy.
+     */
     function arrayCopyBlocks(src, sstart, sstep, dst, dstart, dstep, blockSize, blockCount) {
         for (let i = 0; i < blockCount; i++) {
             arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize);
@@ -4540,6 +4644,12 @@ var viewer = (function (exports) {
         }
         return result;
     }
+    /**
+     * Returns a number of evenly-spaced values between t0 and t1 (inclusive).
+     * @param t0 First value.
+     * @param t1 Last value.
+     * @param count Total number of values.
+     */
     function arraySamples(t0, t1, count = 64) {
         return arrayFromFunction(count, i => lerp(t0, t1, i / (count - 1)));
     }
@@ -4592,14 +4702,6 @@ var viewer = (function (exports) {
             }
         });
     }
-    //function defineClass(name, parent, constructor, props, statics) {
-    //	assertf(() => 'function' == typeof constructor, 'function' == typeof constructor)
-    //	constructor.prototype = defineObject(parent && parent.prototype, props)
-    //	constructor.prototype.constructor = constructor
-    //	Object.defineProperty(constructor.prototype, 'name', {value: name})
-    //	statics && addOwnProperties(constructor, statics)
-    //	return constructor
-    //}
     let defaultRoundFunction = (x) => x; // Math.round10(x, -4)
     function forceFinite(val) {
         const valNum = parseFloat(val.replace(',', '.').replace(/^[^0-9,\.\-]/, ''));
@@ -4646,6 +4748,9 @@ var viewer = (function (exports) {
     function EllipticE(phi, k2) {
         return gaussLegendreQuadrature24(phi => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
     }
+    /**
+     * One degree in radians. Use like Math.sin(30 * DEG).
+     */
     const DEG = 0.017453292519943295;
     function rad2deg(rad) {
         //  discuss at: http://phpjs.org/functions/deg2rad/
@@ -4867,8 +4972,8 @@ var viewer = (function (exports) {
         return result;
     };
     /**
-     Returns the sum of the absolute values of the components of this vector.
-     E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
+     * Returns the sum of the absolute values of the components of this vector.
+     * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
      */
     Array.prototype.absSum = function () {
         let i = this.length;
@@ -5000,6 +5105,13 @@ var viewer = (function (exports) {
             }
         }
         this.splice(minIndex, 0, el);
+    };
+    Array.prototype.firstUnsorted = function (c) {
+        for (let i = 1; i < this.length; i++) {
+            if (c(this[i - 1], this[i]) > 0)
+                return i;
+        }
+        return -1;
     };
     Object.defineProperty(Array.prototype, 'last', {
         get() {
@@ -5437,21 +5549,6 @@ var viewer = (function (exports) {
             this.z = z;
             assertNumbers(x, y, z);
         }
-        get [0]() {
-            return this.x;
-        }
-        get [1]() {
-            return this.y;
-        }
-        get [2]() {
-            return this.z;
-        }
-        get u() {
-            return this.x;
-        }
-        get v() {
-            return this.y;
-        }
         static random() {
             return new V3(Math.random(), Math.random(), Math.random());
         }
@@ -5548,13 +5645,13 @@ var viewer = (function (exports) {
         }
         static unpack(packedArray, dest, srcStart = 0, destStart = 0, v3count = (packedArray.length - srcStart) / 3) {
             //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const result = dest || new Array(v3count);
-            assert(result.length - destStart >= v3count, 'dest.length - destStart >= v3count');
+            dest = dest || new Array(v3count);
+            assert(dest.length - destStart >= v3count, 'dest.length - destStart >= v3count');
             let i = v3count, srcIndex = srcStart, destIndex = destStart;
             while (i--) {
-                result[destIndex++] = new V3(packedArray[srcIndex++], packedArray[srcIndex++], packedArray[srcIndex++]);
+                dest[destIndex++] = new V3(packedArray[srcIndex++], packedArray[srcIndex++], packedArray[srcIndex++]);
             }
-            return result;
+            return dest;
         }
         static packXY(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
             //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
@@ -5596,6 +5693,21 @@ var viewer = (function (exports) {
         static inverseLerp(a, b, x) {
             const ab = a.to(b);
             return a.to(x).dot(ab) / ab.squared();
+        }
+        get [0]() {
+            return this.x;
+        }
+        get [1]() {
+            return this.y;
+        }
+        get [2]() {
+            return this.z;
+        }
+        get u() {
+            return this.x;
+        }
+        get v() {
+            return this.y;
         }
         perturbed(delta = NLA_PRECISION * 0.8) {
             return this.map(x => x + (Math.random() - 0.5) * delta);
@@ -5749,13 +5861,6 @@ var viewer = (function (exports) {
         cross(v) {
             return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x);
         }
-        //noinspection JSMethodCanBeStatic
-        /**
-         * Documentation stub. You want {@link unit}
-         */
-        normalized() {
-            throw new Error('documentation stub. use .unit()');
-        }
         minElement() {
             return Math.min(this.x, this.y, this.z);
         }
@@ -5836,11 +5941,11 @@ var viewer = (function (exports) {
             return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector));
         }
         /**
-         Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a pos or neg number, using equals
-         Throw a DebugError
-         if vector is not a Vector or
-         if this has a length of 0 or
-         if vector has a length of 0
+         * Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a positive or negative number,
+         * using eq. Throw a DebugError
+         * - if vector is not a Vector or
+         * - if this has a length of 0 or
+         * - if vector has a length of 0
          */
         isParallelTo(vector) {
             assertVectors(vector);
@@ -5908,6 +6013,12 @@ var viewer = (function (exports) {
             return this.div(this.length());
         }
         /**
+         * Documentation stub. You want {@link unit}
+         */
+        normalized() {
+            throw new Error('documentation stub. use .unit()');
+        }
+        /**
          * Returns a new V3 equal to this scaled so that its length is equal to newLength.
          *
          * Passing a negative newLength will flip the vector.
@@ -5917,13 +6028,14 @@ var viewer = (function (exports) {
             return this.times(newLength / this.length());
         }
         /**
-         Returns a new Vector which is the projection of this vector onto the passed vector.
-         Examples
-         V(3, 4).projectedOn(V(1, 0)) // returns V(3, 0)
-         V(3, 4).projectedOn(V(2, 0)) // returns V(3, 0)
-         V(3, 4).projectedOn(V(-1, 0)) // returns V(-3, 0)
-         V(3, 4).projectedOn(V(0, 1)) // returns V(0, 4)
-         V(3, 4).projectedOn(V(1, 1)) // returns
+         * Returns a new Vector which is the projection of this vector onto the passed vector.
+         * Examples
+         *
+         * 	V(3, 4).projectedOn(V(1, 0)) // returns V(3, 0)
+         * 	V(3, 4).projectedOn(V(2, 0)) // returns V(3, 0)
+         * 	V(3, 4).projectedOn(V(-1, 0)) // returns V(-3, 0)
+         * 	V(3, 4).projectedOn(V(0, 1)) // returns V(0, 4)
+         * 	V(3, 4).projectedOn(V(1, 1)) // returns
          */
         projectedOn(b) {
             assertVectors(b);
@@ -5969,32 +6081,34 @@ var viewer = (function (exports) {
             return Math.sqrt(this.dot(this) - Math.pow(this.dot(b1), 2));
         }
         /**
-         Returns true iff the length() of this vector is equal to 'length', using eq
-         E.g. V(3, 4).hasLength(5) === true
-         V(1, 1).hasLength(1) === false
+         * Returns true iff the length() of this vector is equal to 'length', using eq
+         * @example
+         * V(3, 4).hasLength(5) === true
+         * @example
+         * V(1, 1).hasLength(1) === false
          */
         hasLength(length) {
             assertNumbers(length);
             return eq(length, this.length());
         }
         /**
-         Returns the sum of the absolute values of the components of this vector.
-         E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
+         * Returns the sum of the absolute values of the components of this vector.
+         * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
          */
         absSum() {
             return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
-        }
-        /**
-         * returns max(|x|, |y|, |z|)
-         */
-        maxAbsElement() {
-            return Math.max(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
         }
         /**
          * returns min(|x|, |y|, |z|)
          */
         minAbsElement() {
             return Math.min(Math.abs(this.x), Math.abs(this.y), Math.min(this.z));
+        }
+        /**
+         * returns max(|x|, |y|, |z|)
+         */
+        maxAbsElement() {
+            return Math.max(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
         }
         maxAbsDim() {
             const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
@@ -6021,6 +6135,12 @@ var viewer = (function (exports) {
             }
             return ~~((floatHashCode$$1(this.x) * 31 + floatHashCode$$1(this.y)) * 31 + floatHashCode$$1(this.z));
         }
+        /**
+         * as sadjkh akjhs djkahsd kjahs k skjhdakjh dkjash dkjahs kjdhas kj dhkjahsd kjahs dkjahs dkjhas kjdkajs
+         * hdkljhfkjahdslfghal dasd
+         *
+         * * asdjklas dasds
+         */
         hashCodes() {
             //function floatHashCode(f) {
             //	return ~~(f * (1 << 28))
@@ -6212,6 +6332,7 @@ var viewer = (function (exports) {
     }
 
     const { PI: PI$1, abs: abs$1 } = Math;
+    // tslint:enable:member-ordering
     class M4 extends Matrix {
         /**
          * Takes 16 arguments in row-major order, which can be passed individually, as a list, or even as
@@ -6229,18 +6350,6 @@ var viewer = (function (exports) {
             }
             super(4, 4, m);
         }
-        get X() {
-            return this.transformVector(V3.X);
-        }
-        get Y() {
-            return this.transformVector(V3.Y);
-        }
-        get Z() {
-            return this.transformVector(V3.Z);
-        }
-        get O() {
-            return this.getTranslation();
-        }
         /**
          * Returns the matrix that when multiplied with `matrix` results in the
          * identity matrix. You can optionally pass an existing matrix in `result`
@@ -6249,6 +6358,22 @@ var viewer = (function (exports) {
          */
         static inverse(matrix, result = new M4()) {
             return matrix.inversed4(result);
+        }
+        /**
+         * Create new dim x dim matrix equal to an identity matrix with rows/colums i and k swapped. Note that i and k
+         * are 0-indexed.
+         */
+        static permutation4(i, k, result = new M4()) {
+            assertInts(i, k);
+            assertf(() => 0 <= i && i < 4);
+            assertf(() => 0 <= k && k < 4);
+            const m = result.m;
+            M4.identity(result);
+            m[i * 4 + i] = 0;
+            m[k * 4 + k] = 0;
+            m[i * 4 + k] = 1;
+            m[k * 4 + i] = 1;
+            return result;
         }
         /**
          * Returns `matrix`, exchanging columns for rows. You can optionally pass an
@@ -6285,7 +6410,6 @@ var viewer = (function (exports) {
             assertInst(M4, result);
             assert(left != result, 'left != result');
             assert(right != result, 'right != result');
-            result = result || new M4();
             const a = left.m, b = right.m, r = result.m;
             r[0] = a[0] * b[0] + a[1] * b[4] + (a[2] * b[8] + a[3] * b[12]);
             r[1] = a[0] * b[1] + a[1] * b[5] + (a[2] * b[9] + a[3] * b[13]);
@@ -6362,10 +6486,10 @@ var viewer = (function (exports) {
             return result;
         }
         /**
-         Returns a perspective transform matrix, which makes far away objects appear smaller than nearby objects. The
-         `aspect` argument should be the width divided by the height of your viewport and `fov` is the top-to-bottom angle
-         of the field of view in degrees. You can optionally pass an existing matrix in `result` to avoid allocating a new
-         matrix. This emulates the OpenGL function `gluPerspective()`.
+         * Returns a perspective transform matrix, which makes far away objects appear smaller than nearby objects. The
+         * `aspect` argument should be the width divided by the height of your viewport and `fov` is the top-to-bottom angle
+         * of the field of view in degrees. You can optionally pass an existing matrix in `result` to avoid allocating a new
+         * matrix. This emulates the OpenGL function `gluPerspective()`.
          * {@see perspectiveRad}
          * perspectiveRad
          * @param fovDegrees in degrees
@@ -6599,7 +6723,6 @@ var viewer = (function (exports) {
         static lookAt(eye, focus, up, result = new M4()) {
             assertVectors(eye, focus, up);
             assertInst(M4, result);
-            result = result || new M4();
             const m = result.m;
             const f = eye.minus(focus).unit();
             const s = up.cross(f).unit();
@@ -6671,7 +6794,6 @@ var viewer = (function (exports) {
             assertVectors(rotationAnchor, rotationAxis);
             assertNumbers(radians);
             assertInst(M4, result);
-            result = result || new M4();
             rotationAxis = rotationAxis.unit();
             const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z, dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z;
             const m = result.m, cos = Math.cos(radians), sin = Math.sin(radians);
@@ -6720,25 +6842,6 @@ var viewer = (function (exports) {
             m[15] = 1;
             return result;
         }
-        isMirror(precision = NLA_PRECISION) {
-            const m = this.m;
-            const nx = Math.sqrt((1 - m[0]) / 2);
-            const ny = Math.sqrt((1 - m[5]) / 2);
-            const nz = Math.sqrt((1 - m[10]) / 2);
-            return (eq(m[1], -2.0 * ny * nx, precision) &&
-                eq(m[2], -2.0 * nz * nx, precision) &&
-                eq(m[4], -2.0 * nx * ny, precision) &&
-                eq(m[6], -2.0 * nz * ny, precision) &&
-                eq(m[8], -2.0 * nx * nz, precision) &&
-                eq(m[9], -2.0 * ny * nz, precision) &&
-                eq(m[12], 0, precision) &&
-                eq(m[13], 0, precision) &&
-                eq(m[14], 0, precision) &&
-                eq(m[15], 1, precision) &&
-                eq(m[3] * ny, m[7] * nx, precision) &&
-                eq(m[7] * nz, m[11] * ny, precision) &&
-                eq(m[11] * nx, m[3] * nz, precision));
-        }
         /**
          *
          * @param plane
@@ -6747,19 +6850,15 @@ var viewer = (function (exports) {
          */
         static project(plane, dir = plane.normal1, result = new M4()) {
             // TODO: doc
-            /**
-             * plane.normal1 DOT (p + lambda * dir) = w (1)
-             * extract lambda:
-             * plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
-             * lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
-             * result = p + lambda * dir
-             * result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
-             * result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
-             *
-
-             a + d * (w - n . a) / (nd)
-             a + dw - d * na
-             */
+            // plane.normal1 DOT (p + lambda * dir) = w (1)
+            // extract lambda:
+            // plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
+            // lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+            // result = p + lambda * dir
+            // result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+            // result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
+            //  a + d * (w - n . a) / (nd)
+            //  a + dw - d * na
             assertVectors(dir, plane.normal1);
             assertInst(M4, result);
             const w = plane.w;
@@ -6843,6 +6942,41 @@ var viewer = (function (exports) {
             m[14] = 0;
             m[15] = 1;
             return result;
+        }
+        static new(width, height, m) {
+            assert(4 == width && 4 == height);
+            return new M4(...m);
+        }
+        get X() {
+            return this.transformVector(V3.X);
+        }
+        get Y() {
+            return this.transformVector(V3.Y);
+        }
+        get Z() {
+            return this.transformVector(V3.Z);
+        }
+        get O() {
+            return this.getTranslation();
+        }
+        isMirror(precision = NLA_PRECISION) {
+            const m = this.m;
+            const nx = Math.sqrt((1 - m[0]) / 2);
+            const ny = Math.sqrt((1 - m[5]) / 2);
+            const nz = Math.sqrt((1 - m[10]) / 2);
+            return (eq(m[1], -2.0 * ny * nx, precision) &&
+                eq(m[2], -2.0 * nz * nx, precision) &&
+                eq(m[4], -2.0 * nx * ny, precision) &&
+                eq(m[6], -2.0 * nz * ny, precision) &&
+                eq(m[8], -2.0 * nx * nz, precision) &&
+                eq(m[9], -2.0 * ny * nz, precision) &&
+                eq(m[12], 0, precision) &&
+                eq(m[13], 0, precision) &&
+                eq(m[14], 0, precision) &&
+                eq(m[15], 1, precision) &&
+                eq(m[3] * ny, m[7] * nx, precision) &&
+                eq(m[7] * nz, m[11] * ny, precision) &&
+                eq(m[11] * nx, m[3] * nz, precision));
         }
         // ### GL.Matrix.frustum(left, right, bottom, top, near, far[, result])
         //
@@ -7233,10 +7367,10 @@ var viewer = (function (exports) {
         /**
          * Wether this matrix is a translation matrix, i.e. of the form
          * ```
-         *	1, 0, 0, x,
-         *	0, 1, 0, y,
-         *	0, 0, 1, z,
-         *	0, 0, 0, 1
+         * 	1, 0, 0, x,
+         * 	0, 1, 0, y,
+         * 	0, 0, 1, z,
+         * 	0, 0, 0, 1
          * ```
          */
         isTranslation() {
@@ -7253,10 +7387,10 @@ var viewer = (function (exports) {
         /**
          * Wether this matrix is a translation matrix, i.e. of the form
          * ```
-         *	s, 0, 0, 0,
-         *	0, t, 0, 0,
-         *	0, 0, v, 0,
-         *	0, 0, 0, 1
+         * 	s, 0, 0, 0,
+         * 	0, t, 0, 0,
+         * 	0, 0, v, 0,
+         * 	0, 0, 0, 1
          * ```
          */
         isScaling() {
@@ -7346,7 +7480,7 @@ var viewer = (function (exports) {
     M4.prototype.width = 4;
     addOwnProperties(M4.prototype, Transformable.prototype, 'constructor');
 
-    const KEYWORD_REGEXP = new RegExp('^(' +
+    const KEYWORD_REGEXP$1 = new RegExp('^(' +
         'abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|' +
         'default|delete|do|double|else|enum|export|extends|false|final|finally|' +
         'float|for|function|goto|if|implements|import|in|instanceof|int|interface|' +
@@ -7355,7 +7489,7 @@ var viewer = (function (exports) {
         'undefined|var|void|volatile|while|with' +
         ')$');
     function stringIsLegalKey(key) {
-        return /^[a-z_$][0-9a-z_$]*$/gi.test(key) && !KEYWORD_REGEXP.test(key);
+        return /^[a-z_$][0-9a-z_$]*$/gi.test(key) && !KEYWORD_REGEXP$1.test(key);
     }
     const seen = [];
     function toSource(o, indent = 0) {
@@ -7645,6 +7779,7 @@ var viewer = (function (exports) {
         assertVectors: assertVectors,
         assertInst: assertInst,
         assertNumbers: assertNumbers,
+        assertInts: assertInts,
         assert: assert,
         assertNever: assertNever,
         assertf: assertf,
@@ -10935,14 +11070,14 @@ var viewer = (function (exports) {
          * Generates a square mesh in the XY plane.
          * Texture coordinates (buffer "coords") are set to go from 0 to 1 in either direction.
          *
-         * @param {Object=} options
-         * @param {number=} options.detail Defaults to 1
-         * @param {number=} options.detailX Defaults to options.detail. Number of subdivisions in X direction.
-         * @param {number=} options.detailY Defaults to options.detail. Number of subdivisions in Y direction.j
-         * @param {number=} options.width defaults to 1
-         * @param {number=} options.height defaults to 1
-         * @param {number=} options.startX defaults to 0
-         * @param {number=} options.startY defaults to 0
+         * @param options foo
+         * @param options.detail Defaults to 1
+         * @param options.detailX Defaults to options.detail. Number of subdivisions in X direction.
+         * @param options.detailY Defaults to options.detail. Number of subdivisions in Y direction.j
+         * @param options.width defaults to 1
+         * @param options.height defaults to 1
+         * @param options.startX defaults to 0
+         * @param options.startY defaults to 0
          */
         static plane(options = {}) {
             const detailX = options.detailX || options.detail || 1;
@@ -10978,6 +11113,44 @@ var viewer = (function (exports) {
                 mesh.LINES.push(detailX * (j + 1), detailX * (j + 2) + 1);
             }
             mesh.compile();
+            return mesh;
+        }
+        static box(xDetail = 1, yDetail = 1, zDetail = 1) {
+            const mesh = new Mesh$$1()
+                .addIndexBuffer('LINES')
+                .addIndexBuffer('TRIANGLES')
+                .addVertexBuffer('normals', 'ts_Normal');
+            mesh.vertices.length = mesh.normals.length =
+                2 * ((xDetail + 1) * (yDetail + 1) + (yDetail + 1) * (zDetail + 1) + (zDetail + 1) * (xDetail + 1));
+            mesh.TRIANGLES.length = 4 * (xDetail * yDetail + yDetail * zDetail + zDetail * xDetail);
+            let vi = 0, ti = 0;
+            function x(detailX, detailY, m, startX = 0, width = 1, startY = 0, height = 1) {
+                const normal = m.transformVector(V3.Z);
+                for (let j = 0; j <= detailY; j++) {
+                    const t = j / detailY;
+                    for (let i = 0; i <= detailX; i++) {
+                        const s = i / detailX;
+                        mesh.vertices[vi] = m.transformPoint(new V3(startX + s * width, startY + t * height, 0));
+                        mesh.normals[vi] = normal;
+                        vi++;
+                        if (i < detailX && j < detailY) {
+                            const offset = i + j * (detailX + 1);
+                            mesh.TRIANGLES[ti++] = offset;
+                            mesh.TRIANGLES[ti++] = offset + detailX + 1;
+                            mesh.TRIANGLES[ti++] = offset + 1;
+                            mesh.TRIANGLES[ti++] = offset + detailX + 1;
+                            mesh.TRIANGLES[ti++] = offset + detailX + 2;
+                            mesh.TRIANGLES[ti++] = offset + 1;
+                        }
+                    }
+                }
+            }
+            x(yDetail, xDetail, M4.forSys(V3.Y, V3.X, V3.Z.negated()));
+            x(xDetail, yDetail, M4.translate(V3.Z));
+            x(zDetail, yDetail, M4.forSys(V3.Z, V3.Y, V3.X.negated()));
+            x(yDetail, zDetail, M4.forSys(V3.Y, V3.Z, V3.X, V3.X));
+            x(xDetail, zDetail, M4.forSys(V3.X, V3.Z, V3.Y.negated()));
+            x(zDetail, xDetail, M4.forSys(V3.Z, V3.X, V3.Y, V3.Y));
             return mesh;
         }
         /**
@@ -11029,12 +11202,12 @@ var viewer = (function (exports) {
         static isocahedron() {
             return Mesh$$1.sphere(0);
         }
-        static sphere2(las, longs) {
-            const baseVertices = arrayFromFunction(las, i => {
-                const angle = (i / (las - 1)) * PI$2 - PI$2 / 2;
+        static sphere2(latitudes, longitudes) {
+            const baseVertices = arrayFromFunction(latitudes, i => {
+                const angle = (i / (latitudes - 1)) * PI$2 - PI$2 / 2;
                 return new V3(0, cos(angle), sin(angle));
             });
-            return Mesh$$1.rotation(baseVertices, { anchor: V3.O, dir1: V3.Z }, 2 * PI$2, longs, true, baseVertices);
+            return Mesh$$1.rotation(baseVertices, { anchor: V3.O, dir1: V3.Z }, 2 * PI$2, longitudes, true, baseVertices);
         }
         /**
          * Returns a sphere mesh with radius 1 created by subdividing the faces of a isocahedron (20-sided) recursively
@@ -13181,7 +13354,6 @@ var viewer = (function (exports) {
     function hexIntToGLColor(color) {
         return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
     }
-    //# sourceMappingURL=bundle.module.js.map
 
     var tsgl = /*#__PURE__*/Object.freeze({
         Buffer: Buffer$$1,
@@ -13218,7 +13390,7 @@ var viewer = (function (exports) {
             assertNumbers(tMin, tMax);
             assert('number' == typeof tMin && !isNaN(tMin));
             assert('number' == typeof tMax && !isNaN(tMax));
-            assert(tMin < tMax);
+            assert(tMin < tMax, 'tMin < tMax ' + tMin + ' < ' + tMax);
         }
         static integrate(curve, startT, endT, steps) {
             const step = (endT - startT) / steps;
@@ -13376,8 +13548,8 @@ var viewer = (function (exports) {
             return callsce.call(undefined, 'new ' + this.constructor.name, ...this.getConstructorParameters(), this.tMin, this.tMax);
         }
         withBounds(tMin = this.tMin, tMax = this.tMax) {
-            assert(this.tMin <= tMin && tMin <= this.tMax);
-            assert(this.tMin <= tMax && tMax <= this.tMax);
+            //assert(this.tMin <= tMin && tMin <= this.tMax)
+            //assert(this.tMin <= tMax && tMax <= this.tMax)
             return new this.constructor(...this.getConstructorParameters(), tMin, tMax);
         }
         /**
@@ -13503,6 +13675,50 @@ var viewer = (function (exports) {
                     insideIsInfosWithCurve = false;
                 }
             }
+        }
+        isTsWithSurface(surface) {
+            if (surface instanceof PlaneSurface$$1) {
+                return this.isTsWithPlane(surface.plane);
+            }
+            if (surface instanceof ProjectedCurveSurface$$1) {
+                const projPlane = new P3$$1(surface.dir.unit(), 0);
+                const projThis = this.project(projPlane);
+                const projEllipse = surface.baseCurve.project(projPlane);
+                return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther);
+            }
+            if (surface instanceof EllipsoidSurface$$1) {
+                const thisOC = this.transform(surface.matrixInverse);
+                if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
+                    return [];
+                }
+                const f = (t) => thisOC.at(t).length() - 1;
+                const df = (t) => thisOC
+                    .at(t)
+                    .unit()
+                    .dot(thisOC.tangentAt(t));
+                const stepSize = 1 / (1 << 11);
+                const result = [];
+                for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
+                    const dt = stepSize * thisOC.tangentAt(startT).length();
+                    if (abs$2(f(startT)) <= dt) {
+                        //const t = newtonIterate1d(f, startT, 16)
+                        let t = newtonIterateWithDerivative(f, startT, 16, df);
+                        if (!eq0(f(t)) || eq0(df(t))) {
+                            t = newtonIterate1d(df, startT, 16);
+                            //if (f(a) * f(b) < 0) {
+                            //    t = bisect(f, a, b, 16)
+                            //} else if (df(a) * df(b) < 0) {
+                            //    t = bisect(df, a, b, 16)
+                            //}
+                        }
+                        if (eq0(f(t)) && !result.some(r => eq(r, t))) {
+                            result.push(t);
+                        }
+                    }
+                }
+                return result.filter(t => surface.containsPoint(this.at(t)));
+            }
+            throw new Error();
         }
         arcLength(startT, endT, steps = 1) {
             assert(startT < endT, 'startT < endT');
@@ -13714,7 +13930,7 @@ var viewer = (function (exports) {
     }
 
     class XiEtaCurve$$1 extends Curve$$1 {
-        constructor(center, f1, f2, tMin = -PI$3, tMax = PI$3) {
+        constructor(center, f1, f2, tMin, tMax) {
             super(tMin, tMax);
             this.center = center;
             this.f1 = f1;
@@ -13946,16 +14162,106 @@ var viewer = (function (exports) {
             // center + f1 xi + f2 eta
             return this.center.plus(this.f1.times(xi)).plus(this.f2.times(eta));
         }
-        debugToMesh(mesh, bufferName) {
-            mesh[bufferName] || mesh.addVertexBuffer(bufferName, bufferName);
-            for (let t = 0; t < Math.PI; t += 0.1) {
-                const p = this.at(t);
-                mesh[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)));
-                mesh[bufferName].push(p, p.plus(this.normalP(t).toLength(1)));
+        debugInfo() {
+            return {
+                points: [this.center, this.at2(0.5, 0), this.at2(0, 1 / 3), this.at2(0, 2 / 3)],
+                lines: [this.center, this.at2(0, 1), this.center, this.at2(1, 0)],
+            };
+        }
+    }
+    /**
+     * Transforms the unit 4d parabola P(t) = t² (0, 1, 0, 0) + t (1, 0, 0, 0) + (0, 0, 0, 1) using m and projects the
+     * result into 3d. This is used for the transform4 implementation of conics. The parabola my not cross the vanishing
+     * plane of m in the interval [tMin, tMax], as that would result in discontinuities.
+     */
+    function parabola4Projection$$1(m, tMin, tMax) {
+        return HyperbolaCurve$$1.XY.rotateZ(45 * DEG);
+        console.log(m.str);
+        console.log();
+        const w2 = m.m[13];
+        const w1 = m.m[12];
+        const wc = m.m[15];
+        // if the 4d parabola crosses the vanishing plane, it will lead to multiple/infinite hyperbolas, both of which we
+        // want to avoid. Hence, we must check that the entire interval [tMin, tMax] is on one side of the vanishing plane.
+        // Checking tMax, tMin and the extremas is enough.
+        const extremas = solveCubicReal2(0, w2, w1, wc);
+        const wx0 = (x) => (Number.isFinite(x) ? snap0(Math.pow(x, 2) * w2 + x * w1 + wc) : sign$1(w2) * Infinity);
+        if (wx0(tMin) * wx0(tMax) < 0 || extremas.some(x => wx0(x) * (wx0(tMin) + wx0(tMax)) < 0)) {
+            console.log(m.str);
+            throw new Error('The entire interval must be on one side of the vanishing plane. P=' + P3$$1.vanishingPlane(m).toSource());
+        }
+        if (eq0(wc)) {
+            // the following matrix maps a curve C onto itself, with the parameter being inverted:
+            // C2(t) = C(-1/t). This makes C(0) a real value, which i necessary for the projection calculation.
+            // the sign inversion is so the tangent direction does not change.
+            // prettier-ignore
+            const mm = new M4(-1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
+            if (!eq0(w2)) {
+                return parabola4Projection$$1(m.times(mm), -1 / tMin, -1 / tMax);
             }
-            mesh[bufferName].push(this.center, this.center.plus(this.f1.times(1.2)));
-            mesh[bufferName].push(this.center, this.center.plus(this.f2));
-            mesh[bufferName].push(this.center, this.center.plus(this.normal));
+            // wc == w2 == 0 => degenerates to a line:
+            // C(t) = (t² f2 + t f1 + c) / (t w1)
+            // C(t) = (t f2 + f1 + c) / (t w2 + w1)
+            // substitute t = (1/s - w1) / w2
+            // C(s) = f2 / w2 + s (f1 - f2 w1 / w2), which is a line
+            // we can multiply the direction vector by w2 to avoid divisions:
+            // C(t) = f2 / w2 + s (f1 w2 - f2 w1)
+            const f1 = m.col(0);
+            const f2 = m.col(1);
+            return L3$$1.anchorDirection(f2.p3(), f1
+                .V3()
+                .times(f2.w)
+                .minus(f2.V3().times(f1.w)));
+        }
+        {
+            // ensure that the bottom-right value = 1. this does not change the 3d result.
+            m.m[15] !== 1 && (m = m.divScalar(m.m[15]));
+            const w2 = m.m[13];
+            const w1 = m.m[12];
+            const wc = m.m[15];
+            // we want to split m into X * P, such that X is a transformation with no projective component (first three
+            // values of the bottom row = 0), which can be handled by the usual .transform() method, and P which has only a
+            // projective component (only the row differs from the identity matrix). This simplifies the following
+            // calculation. X * P = x => X * P * P^-1 = m * P^-1 => X = m * P^-1 prettier-ignore
+            const Pinv = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -m.m[12], -m.m[13], -m.m[14], 1);
+            const X = m.times(Pinv);
+            // P'(t) = 0 is true for t = 0 and t1. The center is in between P(0) and P(t1), or P(t1) / 2, as P(0) = O
+            const delta = 4 * w2 * wc - Math.pow(w1, 2);
+            const center = new V3(-w1 * wc / delta, 2 * Math.pow(wc, 2) / delta, 0);
+            // f2 is parallel to P'(0), i.e. horizontal. Solve Py(t2) = Cy = Py(t1) / 2 for t2 and simplify
+            // f2x = Px(t2) - Cx = Px(t2) - Px(t1) / 2 to get the x-component of f2:
+            const f2x = 1 / sqrt(abs$2(delta)) / wc;
+            const f2 = new V3(f2x, 0, 0);
+            let result;
+            if (eq0(delta)) {
+                result = new ParabolaCurve$$1(V3.O, V3.X, V3.Y, tMin, tMax);
+            }
+            else if (0 < delta) {
+                const tMapInv = (t) => {
+                    const wt = Math.pow(t, 2) * w2 + t * w1 + wc;
+                    const xi = 1 - delta / 2 / Math.pow(wc, 2) * (Number.isFinite(t) ? Math.pow(t, 2) / wt : 1 / w2);
+                    const xx = acos(xi);
+                    const p = Number.isFinite(t) ? new V3(t, Math.pow(t, 2), 0).div(wt) : new V3(0, 1 / w2, 0);
+                    const pLC = M4.forSys(center.negated(), f2, V3.Z, center)
+                        .inversed()
+                        .transformPoint(p);
+                    const angle = pLC.angleXY();
+                    if (t > 0 && pLC.y < 0) {
+                        return angle + TAU;
+                    }
+                    else if (t < 0 && pLC.y > 0) {
+                        return angle - TAU;
+                    }
+                    return angle;
+                };
+                result = EllipseCurve$$1.andFixTs(center, center.negated(), f2, tMapInv(tMin), tMapInv(tMax));
+            }
+            else {
+                const tMapInv = (t) => sign$1(t) *
+                    acosh(1 - delta / 2 / Math.pow(wc, 2) * (Number.isFinite(t) ? Math.pow(t, 2) / (Math.pow(t, 2) * w2 + t * w1 + wc) : 1 / w2));
+                result = new HyperbolaCurve$$1(center, center.negated(), f2, tMapInv(tMin), tMapInv(tMax));
+            }
+            return result.transform(X);
         }
     }
 
@@ -14204,55 +14510,14 @@ var viewer = (function (exports) {
             const d = p0;
             return solveCubicReal2(a.dot(n), b.dot(n), c.dot(n), d.dot(n) - planeWC.w).filter(t => between(t, this.tMin, this.tMax));
         }
-        isTsWithSurface(surface) {
-            if (surface instanceof PlaneSurface$$1) {
-                return this.isTsWithPlane(surface.plane);
-            }
-            if (surface instanceof CylinderSurface$$1) {
-                const projPlane = new P3$$1(surface.dir.unit(), 0);
+        isTsWithSurface(surfaceWC) {
+            if (surfaceWC instanceof CylinderSurface$$1) {
+                const projPlane = new P3$$1(surfaceWC.dir.unit(), 0);
                 const projThis = this.project(projPlane);
-                const projEllipse = surface.baseCurve.project(projPlane);
+                const projEllipse = surfaceWC.baseCurve.project(projPlane);
                 return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther);
             }
-            if (surface instanceof ProjectedCurveSurface$$1) {
-                const projPlane = new P3$$1(surface.dir.unit(), 0);
-                const projThis = this.project(projPlane);
-                const projEllipse = surface.baseCurve.project(projPlane);
-                return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther);
-            }
-            if (surface instanceof EllipsoidSurface$$1) {
-                const thisOC = this.transform(surface.matrixInverse);
-                if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
-                    return [];
-                }
-                const f = (t) => thisOC.at(t).length() - 1;
-                const df = (t) => thisOC
-                    .at(t)
-                    .unit()
-                    .dot(thisOC.tangentAt(t));
-                const stepSize = 1 / (1 << 11);
-                const result = [];
-                for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
-                    const dt = stepSize * thisOC.tangentAt(startT).length();
-                    if (abs$2(f(startT)) <= dt) {
-                        //const t = newtonIterate1d(f, startT, 16)
-                        let t = newtonIterateWithDerivative(f, startT, 16, df);
-                        if (!eq0(f(t)) || eq0(df(t))) {
-                            t = newtonIterate1d(df, startT, 16);
-                            //if (f(a) * f(b) < 0) {
-                            //    t = bisect(f, a, b, 16)
-                            //} else if (df(a) * df(b) < 0) {
-                            //    t = bisect(df, a, b, 16)
-                            //}
-                        }
-                        if (eq0(f(t)) && !result.some(r => eq(r, t))) {
-                            result.push(t);
-                        }
-                    }
-                }
-                return result.filter(t => surface.containsPoint(this.at(t)));
-            }
-            throw new Error();
+            return super.isTsWithSurface(surfaceWC);
         }
         likeCurve(curve) {
             return (this == curve ||
@@ -14464,16 +14729,11 @@ var viewer = (function (exports) {
         isQuadratic() {
             return this.p0.lerp(this.p1, 1.5).like(this.p3.lerp(this.p2, 1.5));
         }
-        debugToMesh(mesh, bufferName) {
-            const result = mesh.addVertexBuffer(bufferName, bufferName);
-            for (let t = -2; t <= 2; t += 0.01) {
-                const p = this.at(t);
-                result[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)));
-                result[bufferName].push(p, p.plus(this.normalP(t).toLength(1)));
-            }
-            result[bufferName].push(this.p0, this.p1);
-            result[bufferName].push(this.p1, this.p2);
-            result[bufferName].push(this.p2, this.p3);
+        debugInfo() {
+            return {
+                lines: [0, 1, 1, 2, 2, 3].map(i => this.points[i]),
+                points: this.points,
+            };
         }
         split(t) {
             // do de Casteljau's algorithm at t, the resulting points are the points needed to create 2 new curves
@@ -14701,7 +14961,7 @@ var viewer = (function (exports) {
 
     /**
      * x² - y² = 1
-     *
+     * C(t) = center + f1 * cosh(t) + f2 * sinh(t)
      */
     class HyperbolaCurve$$1 extends XiEtaCurve$$1 {
         constructor(center, f1, f2, tMin = -7, tMax = 7) {
@@ -14809,6 +15069,12 @@ var viewer = (function (exports) {
                 return HyperbolaCurve$$1.intersectionUnitLine(a, b, 0);
             });
         }
+        transform4(m4) {
+            const tMap = (t) => sign$1(t) * min$1(10, sqrt(-(1 - cosh(t)) / (1 + cosh(t))));
+            // prettier-ignore
+            const parabolaToUnitHyperbola = new M4(0, 1, 0, 1, 2, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 1);
+            return parabola4Projection$$1(M4.product(m4, this.matrix, parabolaToUnitHyperbola), tMap(this.tMin), tMap(this.tMax));
+        }
     }
     HyperbolaCurve$$1.XY = new HyperbolaCurve$$1(V3.O, V3.X, V3.Y);
     HyperbolaCurve$$1.prototype.tIncrement = PI$3 / 16;
@@ -14832,7 +15098,7 @@ var viewer = (function (exports) {
         }
         static throughPoints(anchor, b, tMin = 0, tMax) {
             const dir = b.minus(anchor);
-            return new L3$$1(anchor, dir.unit(), tMin, (tMax = dir.length()));
+            return new L3$$1(anchor, dir.unit(), tMin, undefined !== tMax ? tMax : dir.length());
         }
         static anchorDirection(anchor, dir, min = 0, max = dir.length()) {
             const dir1 = dir.unit();
@@ -15095,7 +15361,8 @@ var viewer = (function (exports) {
             return new L3$$1(this.anchor, this.dir1.negated(), -this.tMax, -this.tMin);
         }
         isTsWithPlane(planeWC) {
-            return [this.isTWithPlane(planeWC)];
+            const t = this.isTWithPlane(planeWC);
+            return isNaN(t) ? [] : [t];
         }
         flipped() {
             return new L3$$1(this.anchor, this.dir1.negated());
@@ -15684,8 +15951,22 @@ var viewer = (function (exports) {
             }
             return f1Length * (F(endT - t0) - F(startT - t0));
         }
+        transform4(m4) {
+            return parabola4Projection$$1(this.matrix.transform(m4), this.tMin, this.tMax);
+        }
         asBezier() {
             return BezierCurve$$1.quadratic(this.at(-1), new L3$$1(this.at(-1), this.tangentAt(-1).unit()).isInfoWithLine(new L3$$1(this.at(1), this.tangentAt(1).unit())), this.at(1));
+        }
+        /**
+         * Returns new ParabolaCurve that has its center point at this.at(t0)
+         * @param t0
+         */
+        recenter(t0) {
+            // this.at(t) = f2 t² + f1 t + center
+            // c2.at(t) = f2 (t + t0)² + f1 (t + t0) + center
+            // c2.at(t) = f2 (t² + 2 t0 t + t0²) + f1 (t + t0) + center
+            // c2.at(t) = f2 t² + (f1 + 2 f2 t0) t + center + f2 t0² + f1 t0
+            return new ParabolaCurve$$1(this.at(t0), this.f1.plus(this.f2.times(2 * t0)), this.f2);
         }
     }
     ParabolaCurve$$1.XY = new ParabolaCurve$$1(V3.O, V3.X, V3.Y);
@@ -15698,6 +15979,18 @@ var viewer = (function (exports) {
             super(center, f1, f2, tMin, tMax);
             assert(-PI$3 <= this.tMin && this.tMin < PI$3);
             assert(-PI$3 < this.tMax && this.tMax <= PI$3);
+        }
+        static andFixTs(center, f1, f2, tMin = 0, tMax = PI$3) {
+            if (-PI$3 <= tMin && tMax <= PI$3) {
+                return new EllipseCurve$$1(center, f1, f2, tMin, tMax);
+            }
+            if (0 <= tMin && tMax <= TAU) {
+                return new EllipseCurve$$1(center, f1.negated(), f2.negated(), tMin - PI$3, tMax - PI$3);
+            }
+            if (-TAU <= tMin && tMax <= 0) {
+                return new EllipseCurve$$1(center, f1.negated(), f2.negated(), tMin + PI$3, tMax + PI$3);
+            }
+            throw new Error('Method not implemented.');
         }
         static XYLCValid(pLC) {
             const { x, y } = pLC;
@@ -16011,6 +16304,12 @@ var viewer = (function (exports) {
             }
             return super.isInfosWithCurve(curve);
         }
+        transform4(m4) {
+            const tMap = (t) => sign$1(t) * sqrt((1 - cos$1(t)) / (1 + cos$1(t)));
+            // prettier-ignore
+            const parabolaToUnitEllipse = new M4(0, -1, 0, 1, 2, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1);
+            return parabola4Projection$$1(M4.product(m4, this.matrix, parabolaToUnitEllipse), tMap(this.tMin), tMap(this.tMax));
+        }
         roots() {
             // tangent(t) = f2 cos t - f1 sin t
             // solve for each dimension separately
@@ -16057,6 +16356,692 @@ var viewer = (function (exports) {
     EllipseCurve$$1.UNIT = new EllipseCurve$$1(V3.O, V3.X, V3.Y);
     EllipseCurve$$1.prototype.hlol = Curve$$1.hlol++;
     EllipseCurve$$1.prototype.tIncrement = 2 * Math.PI / (4 * 32);
+
+    class NURBS$$1 extends Curve$$1 {
+        constructor(points, degree, knots = NURBS$$1.openUniformKnots(points.length, degree), tMin = knots[degree], tMax = knots[knots.length - degree - 1]) {
+            super(tMin, tMax);
+            this.points = points;
+            this.degree = degree;
+            this.knots = knots;
+            const knotsLength = points.length + degree + 1;
+            assert(knots.length === knotsLength, 'bad knot vector length: expected ' +
+                knotsLength +
+                ' (degree = ' +
+                degree +
+                ' pcount = ' +
+                points.length +
+                '), but was ' +
+                knots.length);
+            assert(knots[degree] <= tMin);
+            assert(tMax <= knots[knots.length - degree - 1]);
+            for (let i = 0; i < points.length; i++) {
+                assert(points[i].dim() == 4);
+            }
+            assert(degree >= 1, 'degree must be at least 1 (linear)');
+            assert(degree % 1 == 0);
+            assert(-1 == knots.firstUnsorted(MINUS), 'knot values must be in ascending order');
+        }
+        getConstructorParameters() {
+            return [this.points, this.degree, this.knots];
+        }
+        at4(t) {
+            assert(between(t, this.tMin, this.tMax), t);
+            const { points, degree, knots } = this;
+            // find s (the spline segment) for the [t] value provided
+            const s = this.tInterval(t);
+            const v = Vector.pack(points, new Float64Array((degree + 1) * 4), s - degree, 0, degree + 1);
+            for (let level = 0; level < degree; level++) {
+                // build level l of the pyramid
+                for (let i = degree; i > level; i--) {
+                    const alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+                    // interpolate each component
+                    for (let dim = 0; dim < 4; dim++) {
+                        v[i * 4 + dim] = (1 - alpha) * v[(i - 1) * 4 + dim] + alpha * v[i * 4 + dim];
+                    }
+                }
+            }
+            return new Vector(v.slice(degree * 4, (degree + 1) * 4));
+        }
+        at(t) {
+            return this.at4(t).p3();
+        }
+        /*
+        d(k, i, t) = a(i, k, t) * d(k - 1, i, t) + (1 - a(i, k, t)) * d(k - 1, i - 1, t)
+        a(i, k, t) = (t - knots[i]) / (knots[i + 1 + n - k] - knots[i])
+        a'(i, k, t) = 1 / (knots[i + 1 + n - k] - knots[i])
+
+        d/dt =  a(i, k, t) * d'(k - 1, i, t) + a'(i, k, t) * d(k - 1, i, t)
+        + (1 - a(i, k, t)) * d'(k - 1, i - 1, t) + a'(i, k, t) * d(k - 1, i - 1, t)
+    */
+        ptDtDdt4(t) {
+            const { points, degree, knots } = this;
+            // find s (the spline segment) for the [t] value provided
+            const s = this.tInterval(t);
+            const v = Vector.pack(points, new Float64Array((degree + 1) * 4), s - degree, 0, degree + 1);
+            let ddt = Vector.Zero(4), derivative;
+            for (let level = 0; level < degree; level++) {
+                if (level == degree - 2) {
+                    // see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
+                    const a = new Vector(v.slice(degree * 4, (degree + 1) * 4));
+                    const b = new Vector(v.slice((degree - 1) * 4, degree * 4));
+                    const c = new Vector(v.slice((degree - 2) * 4, (degree - 1) * 4));
+                    function step(k, i, dkMinus1iMinus1, dkMinus1i) {
+                        return dkMinus1i.minus(dkMinus1iMinus1).times(k / (knots[i + degree - k] - knots[i - 1]));
+                    }
+                    ddt = step(degree, s + 1, step(degree - 1, s + 1, a, b), step(degree - 1, s, b, c));
+                }
+                if (level == degree - 1) {
+                    const a = new Vector(v.slice(degree * 4, (degree + 1) * 4));
+                    const b = new Vector(v.slice((degree - 1) * 4, degree * 4));
+                    derivative = b.minus(a).times(degree / (knots[s] - knots[s + 1]));
+                }
+                for (let i = degree; i > level; i--) {
+                    const alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+                    // interpolate each component
+                    for (let dim = 0; dim < 4; dim++) {
+                        v[i * 4 + dim] = (1 - alpha) * v[(i - 1) * 4 + dim] + alpha * v[i * 4 + dim];
+                    }
+                }
+            }
+            const p = new Vector(v.slice(degree * 4, degree * 4 + 4));
+            return [p, derivative, ddt];
+        }
+        tangentAt(t) {
+            // x(t) = xw(t) / w(t)
+            // quotient rule
+            const [p, derivative] = this.ptDtDdt4(t);
+            const expected = derivative
+                .times(p.w)
+                .minus(p.times(derivative.w))
+                .div(Math.pow(p.w, 2))
+                .V3();
+            return expected;
+        }
+        ddt(t) {
+            const [p, dt, ddt] = this.ptDtDdt4(t);
+            // =(-w(t) x(t) w''(t) - 2 w(t) w'(t) x'(t) + 2 x(t) w'(t)^2 + w(t)^2 x''(t))/w(t)^3
+            // =(x(t) ((-w(t)) w''(t) + 2 w'(t)^2) - x'(t) 2 w(t) w'(t) + x''(t) w(t)^2 )/w(t)^3
+            // prettier-ignore
+            return Vector.add(p.times(-p.w * ddt.w + 2 * Math.pow(dt.w, 2)), dt.times(-2 * p.w * dt.w), ddt.times(Math.pow(p.w, 2))).div(Math.pow(p.w, 3)).V3();
+        }
+        ptDtDdt(t) {
+            const [pt, dt4, ddt4] = this.ptDtDdt4(t);
+            return [
+                pt.p3(),
+                dt4
+                    .times(pt.w)
+                    .minus(pt.times(dt4.w))
+                    .div(Math.pow(pt.w, 2))
+                    .V3(),
+                // prettier-ignore
+                Vector.add(pt.times(-pt.w * ddt4.w + 2 * Math.pow(dt4.w, 2)), dt4.times(-2 * pt.w * dt4.w), ddt4.times(Math.pow(pt.w, 2))).div(Math.pow(pt.w, 3)).V3(),
+            ];
+        }
+        pointT(pWC) {
+            return this.closestTToPoint(pWC);
+        }
+        closestTToPoint(p, tStart, tMin = this.tMin, tMax = this.tMax) {
+            // this.at(t) has minimal distance to p when this.tangentAt(t) is perpendicular to
+            // the vector between this.at(t) and p. This is the case iff the dot product of the two is 0.
+            // f = (this.at(t) - p) . (this.tangentAt(t)
+            // df = this.tangentAt(t) . this.tangentAt(t) + (this.at(t) - p) . this.ddt(t)
+            //    = this.tangentAt(t)² + (this.at(t) - p) . this.ddt(t)
+            const f = (t) => {
+                const [pt, dt, ddt] = this.ptDtDdt(t);
+                return [pt.minus(p).dot(dt), dt.squared() + pt.minus(p).dot(ddt)];
+            };
+            //checkDerivate(f, df, tMin, tMax)
+            const STEPS = 32;
+            if (undefined === tStart) {
+                tStart = arraySamples(tMin, tMax, STEPS).withMax(t => -this.at(t).distanceTo(p));
+            }
+            const result = newtonIterateWithDerivative2(f, tStart, 8, this.tMin, this.tMax);
+            //assert(undefined !== result)
+            return result;
+        }
+        containsPoint(pWC) {
+            const tGuess = this.closestTToPoint(pWC);
+            return undefined === tGuess ? false : this.at(tGuess).like(pWC);
+        }
+        derivate() {
+            const k = this.degree;
+            const ps = arrayFromFunction(this.points.length - 1, i => this.points[i].to(this.points[i + 1]).times(k / (this.knots[i + k + 1] - this.knots[i + 1])));
+            return new NURBS$$1(ps, this.degree - 1, this.knots.slice(1, -1), this.tMin, this.tMax);
+        }
+        /**
+         * Create a new NURBS of equal degree with the added knot [newKnot]. New NURBS will have one additional control
+         * point.
+         */
+        withKnot(newKnot, multiplicity = 1) {
+            assert(between(newKnot, this.tMin, this.tMax));
+            const k = this.tInterval(newKnot);
+            const { knots, points, degree } = this;
+            const insertPoints = arrayFromFunction(this.degree, j => {
+                const i = k - degree + 1 + j;
+                const aiNumerator = newKnot - knots[i];
+                // 0/0 defined as 0:
+                const ai = aiNumerator == 0 ? 0 : aiNumerator / (knots[i + degree] - knots[i]);
+                assert(between(ai, 0, 1));
+                return Vector.lerp(points[i - 1], points[i], ai);
+            });
+            const newPoints = points.slice();
+            newPoints.splice(k - degree + 1, degree - 1, ...insertPoints);
+            const newKnots = knots.slice();
+            newKnots.splice(k + 1, 0, newKnot);
+            return new NURBS$$1(newPoints, degree, newKnots, this.tMin, this.tMax);
+        }
+        removeKnot(t) {
+            const { knots, points, degree } = this;
+            let k = this.tInterval(t), s = 0; // s = multiplicity of the knot
+            while (knots[k + 1] == t) {
+                k++;
+                s++;
+            }
+            if (s == 0)
+                throw new Error('There is no knot ' + t + '!');
+            // the points which were relevant when inserting were (k - p - 1) to (k - 1). (- 1) because the current k has
+            // been increased by one due to the insertion.
+            // p - 1 points were replaced by p points, hence we need to generate the original p - 1 point, + 1 to check if
+            // this transformation is valid.
+            const insertPoints = [points[k - degree - 1]];
+            const oldKnots = knots.slice();
+            oldKnots.splice(k, 1);
+            for (let i = k - degree; i <= k - s; i++) {
+                const alphaInv = (oldKnots[i + degree] - oldKnots[i]) / (t - oldKnots[i]);
+                const oldPoint = Vector.lerp(insertPoints.last, points[i], alphaInv);
+                insertPoints.push(oldPoint);
+            }
+            if (insertPoints.last.like(points[k + 1 - s])) {
+                const oldPoints = points.slice();
+                oldPoints.splice(k - degree - 1, degree - s + 3, ...insertPoints);
+                return new NURBS$$1(oldPoints, degree, oldKnots);
+            }
+            return undefined;
+        }
+        static openUniformKnots(pointCount, degree, tMin = 0, tMax = 1) {
+            const knotsLength = pointCount + degree + 1;
+            return arrayFromFunction(knotsLength, i => {
+                if (i <= degree) {
+                    return tMin;
+                }
+                else if (i >= knotsLength - degree - 1) {
+                    return tMax;
+                }
+                else {
+                    return lerp(tMin, tMax, (i - degree) / (knotsLength - degree * 2 - 1));
+                }
+            });
+        }
+        static bezierKnots(degree, tMin = 0, tMax = 1) {
+            const result = new Array((degree + 1) * 2);
+            for (let i = 0; i < degree + 1; i++) {
+                result[i] = tMin;
+                result[degree + 1 + i] = tMax;
+            }
+            return result;
+        }
+        static fromBezier(bezier) {
+            const bezier01 = bezier.selectPart(bezier.tMin, bezier.tMax);
+            return NURBS$$1.Bezier(bezier01.points);
+        }
+        static Bezier(points, tMin = 0, tMax = 1) {
+            return new NURBS$$1(points.map(p => (p instanceof V3 ? new Vector(new Float64Array([p.x, p.y, p.z, 1])) : p)), points.length - 1, arrayFromFunction(points.length * 2, i => (i < points.length ? 0 : 1)), tMin, tMax);
+        }
+        static fromHyperbola(hyperbola, tMin = hyperbola.tMin, tMax = hyperbola.tMax) {
+            const p0 = HyperbolaCurve$$1.XY.at(tMin);
+            const p2 = HyperbolaCurve$$1.XY.at(tMax);
+            const p1 = new V3((sinh(tMin) - sinh(tMax)) / sinh(tMin - tMax), (cosh(tMin) - cosh(tMax)) / sinh(tMin - tMax), 0);
+            // M: midpoint between p0 and p2
+            // X: intersection of line through p1 and M and unit hyperbola
+            // result.at(1/2) = X
+            // result.at(1/2) = (1/4 p0 + 1/2 p1 w + 1/4 p2) / (1/4 + 1/ 2 w + 1/4)
+            // result.at(1/2) = (1/2 p0 + p1 w + 1/2 p2) / (1 + w)
+            // result.at(1/2) = (M + p1 w) / (1 + w) = X
+            // => w * (p1 - X) = (X - M)
+            // as p1, X and M are all on the same line, we can solve this equation with only the x
+            const M = p0.lerp(p2, 0.5);
+            const Xx = 1 / sqrt(1 - Math.pow((M.y / M.x), 2));
+            const w = (Xx - M.x) / (p1.x - Xx);
+            return NURBS$$1.fromV3s([p0, p1, p2], 2, undefined, [1, w, 1]).transform(hyperbola.matrix);
+        }
+        static fromParabola(parabola) {
+            return NURBS$$1.fromBezier(parabola.asBezier());
+        }
+        static fromEllipse(ellipse) {
+            const unitSemiEllipse = new NURBS$$1([
+                VV(1, 0, 0, 1),
+                VV(1, 1, 0, 1).times(SQRT1_2),
+                VV(0, 1, 0, 1),
+                VV(-1, 1, 0, 1).times(SQRT1_2),
+                VV(-1, 0, 0, 1),
+                VV(-1, -1, 0, 1).times(SQRT1_2),
+                VV(0, -1, 0, 1),
+            ], 2, [0, 0, 0, PI$3 / 2, PI$3 / 2, PI$3, PI$3, 3 * PI$3 / 2, 3 * PI$3 / 2, 2 * PI$3]);
+            return unitSemiEllipse.transform(ellipse.matrix);
+        }
+        /**
+         * Create a new NURBS from V3s, with optional weights.
+         * @param points
+         * @param degree
+         * @param knots
+         * @param weights
+         */
+        static fromV3s(points, degree, knots, weights = arrayFromFunction(points.length, () => 1)) {
+            assert(points.length == weights.length);
+            return new NURBS$$1(points.map((p, i) => Vector.fromV3AndWeight(p, weights[i])), degree, knots);
+        }
+        isUniform(precision = 0) {
+            const intervals = arrayFromFunction(this.knots.length - 1, i => this.knots[i + 1] - this.knots[i]);
+            const [min, max] = minAndMax(intervals);
+            return eq(min, max, precision);
+        }
+        /**
+         * NURBS is a B spline if control points all have the same weight.
+         */
+        isBSpline(precision = 0) {
+            const [minWeight, maxWeight] = minAndMax(this.points.map(p => p.w));
+            return eq(minWeight, maxWeight, precision);
+        }
+        /**
+         * Whether this is a (rational) bezier curve.
+         */
+        isBezier(precision = 0) {
+            if (this.degree + 1 != this.points.length)
+                return false;
+            const [min0, max0] = minAndMax(this.knots, 0, this.degree + 1);
+            if (!eq(min0, max0, precision))
+                return false;
+            const [min1, max1] = minAndMax(this.knots, this.degree + 1);
+            if (!eq(min1, max1, precision))
+                return false;
+            return true;
+        }
+        /**
+         * Splits NURBS curve into rational bezier curves.
+         * See https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/B-spline/subdivision.html
+         */
+        getSegments() {
+            const { knots, points, degree } = this;
+            const result = [];
+            const v = Vector.pack(points, new Float64Array(points.length * 4));
+            const vectorFromV = (i) => new Vector(v.slice(i * 4, (i + 1) * 4));
+            let k = degree + 1; // k = knot index we are duplicating
+            while (k < knots.length - degree - 1) {
+                const t = knots[k];
+                const prevKnot = knots[k - 1];
+                let s = 1; // s = multiplicity of the knot
+                while (knots[k + 1] == t) {
+                    k++;
+                    s++;
+                }
+                const newNURBSPoints = new Array(degree + 1);
+                // the first s + 1 points are identical to the current curve
+                for (let i = 0; i < s + 1; i++) {
+                    newNURBSPoints[i] = vectorFromV(k - degree - s + i);
+                }
+                // we need to have multiplicity degree, so insert (degree - s) times
+                for (let level = 1; level <= degree - s; level++) {
+                    for (let i = k - degree; i <= k - s - level; i++) {
+                        const alpha = (t - prevKnot) / (knots[i + degree + 1] - prevKnot);
+                        for (let dim = 0; dim < 4; dim++) {
+                            v[i * 4 + dim] = (1 - alpha) * v[i * 4 + dim] + alpha * v[(i + 1) * 4 + dim];
+                        }
+                    }
+                    newNURBSPoints[s + level] = vectorFromV(k - degree);
+                }
+                const newNURBSKnots = arrayFromFunction((degree + 1) * 2, i => (i < degree + 1 ? knots[k - s] : t));
+                result.push(new NURBS$$1(newNURBSPoints, degree, newNURBSKnots));
+                k++;
+            }
+            // last curve
+            const newNURBSPoints = arrayFromFunction(degree + 1, i => vectorFromV(points.length - degree - 1 + i));
+            const newNURBSKnots = arrayFromFunction((degree + 1) * 2, i => (i < degree + 1 ? knots[k - 1] : knots[k]));
+            result.push(new NURBS$$1(newNURBSPoints, degree, newNURBSKnots));
+            return result;
+        }
+        split(t) {
+            const { knots, points, degree } = this;
+            assert(le(this.tMin, t) && le(t, this.tMax));
+            let k = this.tInterval(t), s = 0; // s = multiplicity of the knot
+            while (knots[k + 1] == t) {
+                k++;
+                s++;
+            }
+            const vectorFromV = (i) => new Vector(v.slice(i * 4, (i + 1) * 4));
+            const leftPoints = new Array(k + 1 - s);
+            // the first k + s + 1 points are identical to the current curve
+            for (let i = 0; i < k + s - degree + 1; i++) {
+                leftPoints[i] = this.points[i];
+            }
+            const rightPointsLength = points.length - (k - degree);
+            const v = Vector.pack(points, new Float64Array(rightPointsLength * 4), k - degree);
+            // we need to have multiplicity degree, so insert (degree - s) times
+            for (let level = 1; level <= degree - s; level++) {
+                for (let i = k - degree; i <= k - s - level; i++) {
+                    const alpha = (t - knots[i + level]) / (knots[i + degree + 1] - knots[i + level]);
+                    const j = i - (k - degree);
+                    for (let dim = 0; dim < 4; dim++) {
+                        v[j * 4 + dim] = (1 - alpha) * v[j * 4 + dim] + alpha * v[(j + 1) * 4 + dim];
+                    }
+                }
+                leftPoints[k - degree + level] = vectorFromV(0);
+            }
+            const leftKnots = knots.slice(0, k + degree + 2 - s);
+            for (let i = 0; i < degree - s + 1; i++) {
+                leftKnots[k - s + 1 + i] = t;
+            }
+            const rightKnots = knots.slice(k - degree);
+            for (let i = 0; i < degree + 1; i++) {
+                rightKnots[i] = t;
+            }
+            const rightPoints = arrayFromFunction(rightPointsLength, i => vArrGet(v, 4, i));
+            return [new NURBS$$1(leftPoints, degree, leftKnots), new NURBS$$1(rightPoints, degree, rightKnots)];
+        }
+        simplify() {
+            assert(this.isBezier());
+            if (3 == this.degree && this.isBSpline()) {
+                return new BezierCurve$$1(this.points[0].p3(), this.points[1].p3(), this.points[2].p3(), this.points[3].p3(), this.tMin, this.tMax);
+            }
+            else if (2 == this.degree) {
+                const [P0, P1, P2] = this.points;
+                const [p0, p1, p2] = this.points.map(p => p.p3());
+                const c = NURBS$$1.simplifyUnit2(P0.w, P1.w, P2.w).transform(M4.forSys(p1.to(p0), p1.to(p2), undefined, p1));
+                const [tMin, tMax] = [c.pointT(p0), c.pointT(p2)].sort();
+                return c.withBounds(snap(tMin, c.tMin), snap(tMax, c.tMax));
+            }
+            else if (1 == this.degree) {
+                return L3$$1.throughPoints(this.points[0].p3(), this.points[1].p3());
+            }
+            else {
+                return this;
+            }
+        }
+        static simplifyUnit2(w0, w1, w2) {
+            // see https://math.stackexchange.com/a/2794874/230980
+            const delta = w0 * w2 - Math.pow(w1, 2);
+            const cxy = w0 * w2 / 2 / delta;
+            const center = new V3(cxy, cxy, 0);
+            const k = (Math.pow(w1, 2) + delta - 2 * w1 * sqrt(abs$2(delta))) / 2 / delta;
+            const p = V3.X;
+            const q = new V3(k, cxy, 0);
+            // const q = new V3(cxy, k, 0)
+            if (eq0(delta)) {
+                return new ParabolaCurve$$1(new V3(1 / 4, 1 / 4, 0), new V3(1, -1, 0), new V3(1, 1, 0), -0.5, 0.5);
+            }
+            else if (delta < 0) {
+                // hyperbola
+                return new HyperbolaCurve$$1(center, center.to(p), center.to(q));
+            }
+            else {
+                // ellipse
+                return new EllipseCurve$$1(center, center.to(p), center.to(q), 0);
+            }
+        }
+        elevateDegreeBezier() {
+            assert(this.isBezier());
+            const newPoints = new Array(this.points.length + 1);
+            newPoints[0] = this.points[0];
+            newPoints[this.points.length] = this.points[this.points.length - 1];
+            for (let i = 1; i < this.points.length; i++) {
+                newPoints[i] = Vector.lerp(this.points[i], this.points[i - 1], i / (this.degree + 1));
+            }
+            const newKnots = NURBS$$1.bezierKnots(this.degree + 1, this.knots[0], this.knots[this.degree + 1]);
+            return new NURBS$$1(newPoints, this.degree + 1, newKnots, this.tMin, this.tMax);
+        }
+        elevateDegree() {
+            const segmentsElevated = this.getSegments().map(b => b.elevateDegreeBezier());
+            // stitch together the segments
+            const newPoints = new Array(2 + segmentsElevated.length * this.degree);
+            newPoints[0] = segmentsElevated[0].points[0];
+            newPoints.last = segmentsElevated.last.points.last;
+            for (let i = 0; i < segmentsElevated.length; i++) {
+                for (let pi = 1; pi < segmentsElevated[i].points.length - 1; pi++) {
+                    newPoints[i * (segmentsElevated[0].points.length - 2) + pi] = segmentsElevated[i].points[pi];
+                }
+            }
+            const newKnots = new Array(newPoints.length + this.degree + 2);
+            for (let i = 0; i < this.degree + 2; i++) {
+                newKnots[i] = this.knots[0];
+            }
+            for (let i = 0; i < segmentsElevated.length; i++) {
+                for (let pi = 1; pi < segmentsElevated[i].points.length - 1; pi++) {
+                    newKnots[i * (segmentsElevated[0].points.length - 2) + pi + this.degree + 1] =
+                        segmentsElevated[i].knots.last;
+                }
+            }
+            newKnots[newKnots.length - 1] = this.knots.last;
+            newKnots[newKnots.length - 2] = this.knots.last;
+            let result = new NURBS$$1(newPoints, this.degree + 1, newKnots, this.tMin, this.tMax);
+            for (let i = 0; i < segmentsElevated.length - 1; i++) {
+                let optimization;
+                while ((optimization = result.removeKnot(segmentsElevated[i].knots.last))) {
+                    result = optimization;
+                }
+            }
+            return result;
+        }
+        transform(m4) {
+            return this.transform4(m4);
+        }
+        transform4(m4) {
+            return new NURBS$$1(this.points.map(p => m4.timesVector(p)), this.degree, this.knots, this.tMin, this.tMax);
+        }
+        /**
+         * Returns the index of the interval which contains the value t.
+         */
+        tInterval(t) {
+            const { degree, knots } = this;
+            for (let s = degree; s < knots.length - 1 - degree; s++) {
+                if (t >= knots[s] && t <= knots[s + 1]) {
+                    return s;
+                }
+            }
+            throw new Error(t + ' ' + knots);
+        }
+        static UnitCircle(sections = 2, tMin = 0, tMax = PI$3) {
+            const dt = tMax - tMin;
+            const tStep = dt / sections;
+            const w = sin$1(PI$3 / 2 - tStep / 2);
+            console.log(tStep / 2 / DEG);
+            // cos
+            const r = 1 / cos$1(tStep / 2);
+            const points = arrayFromFunction(sections * 2 + 1, i => {
+                const t = lerp(tMin, tMax, i / 2 / sections);
+                if (i % 2 == 0) {
+                    // control point on circle
+                    return VV(cos$1(t), sin$1(t), 0, 1);
+                }
+                else {
+                    return VV(r * w * cos$1(t), r * w * sin$1(t), 0, w);
+                }
+            });
+            const knots = [];
+            knots.push(tMin, tMin, tMin);
+            for (let i = 0; i < sections - 1; i++) {
+                const knot = lerp(tMin, tMax, (i + 1) / sections);
+                knots.push(knot, knot);
+            }
+            knots.push(tMax, tMax, tMax);
+            return new NURBS$$1(points, 2, knots);
+        }
+        debugInfo() {
+            return {
+                points: [
+                    ...this.knots.slice(this.degree, -this.degree).map(t => this.at(t)),
+                    ...this.points.map(p => p.p3()),
+                ],
+                lines: this.points.flatMap((p, i, ps) => (ps[i + 1] ? [p.p3(), ps[i + 1].p3()] : [])),
+            };
+        }
+        isTsWithPlane(planeWC) {
+            const { knots, degree, points } = this;
+            const controlPointTs = [
+                knots[degree],
+                ...points
+                    .slice(1, -1)
+                    .map((p, i) => this.closestTToPoint(p.p3(), undefined, knots[i + 3], knots[i + degree])),
+                knots[knots.length - degree - 1],
+            ];
+            const result = [];
+            for (let i = 0; i < this.points.length - 1; i++) {
+                const findClosest = (startT) => {
+                    console.log('startT', startT);
+                    // try {
+                    const f = (t) => {
+                        const [p, dt] = this.ptDtDdt(t);
+                        return [planeWC.distanceToPointSigned(p), planeWC.normal1.dot(dt)];
+                    };
+                    let t = newtonIterateWithDerivative2(f, startT, 8, this.tMin, this.tMax);
+                    let [distanceAtT, distanceDtAtT] = undefined === t ? [] : f(t);
+                    if (t === undefined || !eq0(distanceAtT) || eq0(distanceDtAtT)) {
+                        t = newtonIterateWithDerivative2(t => {
+                            const [, dt, ddt] = this.ptDtDdt(t);
+                            return [planeWC.normal1.dot(dt), planeWC.normal1.dot(ddt)];
+                        }, startT, 8, this.tMin, this.tMax);
+                    }
+                    [distanceAtT, distanceDtAtT] = undefined === t ? [] : f(t);
+                    if (undefined !== t && eq0(distanceAtT) && !result.some(r => eq(r, t))) {
+                        result.push(t);
+                    }
+                };
+                const a = this.points[i].p3();
+                const b = this.points[i + 1].p3();
+                const ad = snap0(planeWC.distanceToPointSigned(a));
+                const bd = snap0(planeWC.distanceToPointSigned(b));
+                if (ad * bd < 0) {
+                    const startT = lerp(controlPointTs[i], controlPointTs[i + 1], ad / (ad - bd));
+                    findClosest(startT);
+                }
+                else if (0 == bd) {
+                    findClosest(this.closestTToPoint(b, controlPointTs[i + 1]));
+                }
+            }
+            return result;
+        }
+        isInfosWithCurve(curveWC) {
+            if (curveWC instanceof L3$$1) {
+                return this.isInfosWithLine(curveWC.anchor, curveWC.dir1);
+            }
+            return super.isInfosWithCurve(curveWC);
+        }
+        isInfosWithLine(anchor, dir) {
+            const thisPlane = P3$$1.fromPoints(this.points.map(p => p.p3()));
+            const l = L3$$1.anchorDirection(anchor, dir);
+            const maxDistanceToPlane = this.points.map(p => thisPlane.distanceToPoint(p.p3())).max();
+            const thisIsPlanar = eq0(maxDistanceToPlane);
+            if (thisIsPlanar && !thisPlane.containsLine(l)) {
+                const [t] = l.isTsWithPlane(thisPlane);
+                if (undefined === t)
+                    return [];
+                const p = l.at(t);
+                return this.containsPoint(p) ? [{ tThis: this.pointT(p), tOther: L3$$1.pointT(anchor, dir, p), p }] : [];
+            }
+            else {
+                const thisTs = this.isTsWithPlane(P3$$1.normalOnAnchor(thisPlane.normal1.cross(dir), anchor));
+                const infos = thisTs.map(tThis => {
+                    const p = this.at(tThis);
+                    return { tThis, tOther: L3$$1.pointT(anchor, dir, p), p };
+                });
+                return thisIsPlanar ? infos : infos.filter(info => L3$$1.containsPoint(anchor, dir, info.p));
+            }
+        }
+        roots() {
+            console.log(this.tMin, this.tMax);
+            arraySamples(this.tMin, this.tMax, 30).forEach(t => {
+                console.log(t + ',' + this.tangentAt(t).z);
+            });
+            const result = [[], [], []];
+            for (let i = 0; i < this.points.length - 1; i++) {
+                const findClosest = (startT, d) => {
+                    console.log('d', d, 'startT', startT);
+                    // try {
+                    const root = newtonIterateWithDerivative2(t => {
+                        const [, dt, ddt] = this.ptDtDdt(t);
+                        return [dt.e(d), ddt.e(d)];
+                    }, startT, 8, this.tMin, this.tMax);
+                    if (undefined !== root) {
+                        result[d].push(root);
+                    }
+                    console.log('d', d, 'startT', startT, 'root', root);
+                };
+                const a = this.points[i].p3();
+                const b = this.points[i + 1].p3();
+                const ab = a.to(b);
+                for (let d = 0; d < 3; d++) {
+                    if (0 !== i && eq0(ab.e(d))) {
+                        const startT = lerp(this.knots[i], this.knots[i + this.degree + 2], 0.5);
+                        findClosest(startT, d);
+                    }
+                    else if (i < this.points.length - 2) {
+                        const bc = b.to(this.points[i + 2].p3());
+                        if (!eq0(bc.e(d)) && ab.e(d) * bc.e(d) < 0) {
+                            findClosest(this.closestTToPoint(b, this.guessTClosestToControlPoint(i + 1)), d);
+                        }
+                    }
+                }
+            }
+            console.log(result);
+            return result;
+        }
+        //getAABB() {
+        //	return new AABB().addPoints(this.points.map(p => p.p3()))
+        //}
+        /**
+         * Rough approximation of t param for points closest to control point.
+         */
+        guessTClosestToControlPoint(pointIndex) {
+            return lerp(this.knots[pointIndex], this.knots[pointIndex + this.degree + 1], 0.5);
+        }
+        likeCurve(curve) {
+            return (this == curve ||
+                (hasConstructor(curve, NURBS$$1) &&
+                    this.degree === curve.degree &&
+                    this.points.every((p, i) => p.like(curve.points[i])) &&
+                    this.knots.every((k, i) => eq(k, curve.knots[i]))));
+        }
+        isColinearTo(curve) {
+            throw new Error("This doesn't even make sense.");
+        }
+    }
+    NURBS$$1.EX2D = NURBS$$1.fromV3s([
+        V(51, 141),
+        V(11, 76),
+        V(29, 32),
+        V(46, 102),
+        V(74, 148),
+        V(189, 107),
+        V(56, 10),
+        V(206, 10),
+        V(211, 98),
+        V(195, 141),
+        V(139, 148),
+    ], 4);
+    NURBS$$1.EX3D = new NURBS$$1([
+        VV(94, 0, -34, 1),
+        VV(69, 57, 45, 0.5),
+        VV(-20, 44, 91, 1),
+        VV(-89, -13, 47, 0.5),
+        VV(-56, -97, -7, 1),
+        VV(34, -83, -54, 0.5),
+        VV(112, -53, 16, 1),
+        VV(79, 30, 70, 0.5),
+        VV(-2, -9, 141, 1),
+        VV(-80, -40, 72, 0.5),
+        VV(-38, -150, 43, 1),
+        VV(43, -110, -29, 0.5),
+        VV(130, -106, 65, 1),
+    ], 2, [-12, -12, -12, -8, -8, -4, -4, 0, 0, 4, 4, 8, 8, 12, 12, 12]);
+    NURBS$$1.prototype.tIncrement = 1 / 128;
+    function minAndMax(arr, start = 0, end = arr.length) {
+        let min = Infinity, max = -Infinity;
+        for (let i = start; i < end; i++) {
+            if (min > arr[i])
+                min = arr[i];
+            if (max < arr[i])
+                max = arr[i];
+        }
+        return [min, max];
+    }
 
     /**
      * Plane x DOT this.normal1 = this.w
@@ -16130,10 +17115,84 @@ var viewer = (function (exports) {
          */
         static forABCD(a, b, c, d) {
             const normalLength = Math.hypot(a, b, c);
+            if (eq0(normalLength))
+                return undefined;
             return new P3$$1(new V3(a / normalLength, b / normalLength, c / normalLength), -d / normalLength);
         }
         static vanishingPlane(m4) {
             return P3$$1.forABCD(m4.m[12], m4.m[13], m4.m[14], m4.m[15]);
+        }
+        static forAABB(aabb, distance = 0) {
+            return [
+                new P3$$1(V3.X, aabb.max.x + distance),
+                new P3$$1(V3.X.negated(), -aabb.min.x - distance),
+                new P3$$1(V3.Y, aabb.max.y + distance),
+                new P3$$1(V3.Y.negated(), -aabb.min.y - distance),
+                new P3$$1(V3.Z, aabb.max.z + distance),
+                new P3$$1(V3.Z.negated(), -aabb.min.z - distance),
+            ];
+        }
+        // Fit a plane to a collection of points.
+        // Fast, and accurate to within a few degrees.
+        // Returns None if the points do not span a plane.
+        static fromPoints(points) {
+            const n = points.length;
+            if (n < 3) {
+                return undefined;
+            }
+            const centroid = V3.add(...points).div(n);
+            // Calculate full 3x3 covariance matrix, excluding symmetries:
+            let xx = 0.0;
+            let xy = 0.0;
+            let xz = 0.0;
+            let yy = 0.0;
+            let yz = 0.0;
+            let zz = 0.0;
+            for (const p of points) {
+                const r = p.minus(centroid);
+                xx += r.x * r.x;
+                xy += r.x * r.y;
+                xz += r.x * r.z;
+                yy += r.y * r.y;
+                yz += r.y * r.z;
+                zz += r.z * r.z;
+            }
+            xx /= n;
+            xy /= n;
+            xz /= n;
+            yy /= n;
+            yz /= n;
+            zz /= n;
+            let weighted_dir = V3.O;
+            {
+                const det_x = yy * zz - yz * yz;
+                const axis_dir = new V3(det_x, xz * yz - xy * zz, xy * yz - xz * yy);
+                let weight = det_x * det_x;
+                if (weighted_dir.dot(axis_dir) < 0.0) {
+                    weight = -weight;
+                }
+                weighted_dir = weighted_dir.plus(axis_dir.times(weight));
+            }
+            {
+                const det_y = xx * zz - xz * xz;
+                const axis_dir = new V3(xz * yz - xy * zz, det_y, xy * xz - yz * xx);
+                let weight = det_y * det_y;
+                if (weighted_dir.dot(axis_dir) < 0.0) {
+                    weight = -weight;
+                }
+                weighted_dir = weighted_dir.plus(axis_dir.times(weight));
+            }
+            {
+                const det_z = xx * yy - xy * xy;
+                const axis_dir = new V3(xy * yz - xz * yy, xy * xz - yz * xx, det_z);
+                let weight = det_z * det_z;
+                if (weighted_dir.dot(axis_dir) < 0.0) {
+                    weight = -weight;
+                }
+                weighted_dir = weighted_dir.plus(axis_dir.times(weight));
+            }
+            const normal = weighted_dir.unit();
+            return P3$$1.normalOnAnchor(normal, centroid);
         }
         axisIntercepts() {
             const w = this.w, n = this.normal1;
@@ -16548,10 +17607,10 @@ var viewer = (function (exports) {
         parametersValid(u, v) {
             return between(u, this.uMin, this.uMax) && between(v, this.vMin, this.vMax);
         }
-        toMesh() {
+        toMesh(uStep = this.uStep, vStep = this.vStep) {
             assert(isFinite(this.vMin) && isFinite(this.vMax) && isFinite(this.uMin) && isFinite(this.uMax));
-            assert(isFinite(this.uStep) && isFinite(this.vStep));
-            return Mesh$$1.parametric(this.pUVFunc(), this.normalUVFunc(), this.uMin, this.uMax, this.vMin, this.vMax, ceil((this.uMax - this.uMin) / this.uStep), ceil((this.vMax - this.vMin) / this.vStep));
+            assert(isFinite(uStep) && isFinite(vStep));
+            return Mesh$$1.parametric(this.pUVFunc(), this.normalUVFunc(), this.uMin, this.uMax, this.vMin, this.vMax, ceil((this.uMax - this.uMin) / uStep), ceil((this.vMax - this.vMin) / vStep));
         }
         isCurvesWithImplicitSurface(is, uStep, vStep, stepSize) {
             return ParametricSurface$$1.isCurvesParametricImplicitSurface(this, is, uStep, vStep, stepSize);
@@ -16568,6 +17627,13 @@ var viewer = (function (exports) {
             const thisNormal = this.normalUVFunc()(this.uMin, this.vMin);
             const otherNormal = object.normalP(pSMinTMin);
             return 0 < thisNormal.dot(otherNormal);
+        }
+        getApproxAABB() {
+            const result = new AABB();
+            result.addPoints(this.getExtremePoints());
+            const ps = [V(0, 0), V(0, 1), V(1, 0), V(1, 1), V(0.5, 0.5)].map(p => this.pUV(lerp(this.uMin, this.uMax, p.x), lerp(this.vMin, this.vMax, p.y)));
+            result.addPoints(ps);
+            return result;
         }
     }
 
@@ -16604,7 +17670,7 @@ var viewer = (function (exports) {
                     startU = angle < -PI$3 / 2 ? angle + TAU : angle;
                 }
                 if (undefined === startV) {
-                    startV = pLC.z + (pLC.lengthXY() - pLC.z) * sqrt(2) / 2;
+                    startV = pLC.z + (pLC.lengthXY() - pLC.z) * SQRT1_2;
                 }
             }
             const f = ([u, v]) => {
@@ -16645,8 +17711,8 @@ var viewer = (function (exports) {
                     // d = 0 => z² - y² = 0 => z² = y² => z = y
                     // plane goes through origin/V3.O
                     return [
-                        new L3$$1(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
-                        new L3$$1(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0),
+                        new L3$$1(V3.O, new V3(0, -SQRT1_2, -SQRT1_2), undefined, 0),
+                        new L3$$1(V3.O, new V3(0, -SQRT1_2, SQRT1_2), 0),
                     ];
                 }
                 else {
@@ -16845,7 +17911,32 @@ var viewer = (function (exports) {
             }
         }
         transform(m4) {
-            return new ConicSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1), m4.transformVector(this.f2), m4.transformVector(this.dir));
+            return new ConicSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1), m4.transformVector(this.f2), m4.transformVector(this.dir), this.uMin, this.uMax, this.vMin, this.vMax);
+        }
+        transform4(m4) {
+            const transformedApex = m4.timesVector(Vector.fromV3AndWeight(this.center, 1));
+            const isometricZ = (z) => new EllipseCurve$$1(new V3(0, 0, z), new V3(z, 0, 0), new V3(0, z, 0));
+            if (!eq0(transformedApex.w)) {
+                // sMin doesn't change, but tMin does...
+                const c = m4.transformPoint(this.center), f1 = m4.transformVector2(this.f1, this.center).times(m4.isMirroring() ? -1 : 1), f2 = m4.transformVector2(this.f2, this.center), dir = m4.transformVector2(this.dir, this.center);
+                const matrixInv = M4.forSys(f1, f2, dir, c).inversed();
+                const aabb = isometricZ(this.vMin)
+                    .transform4(matrixInv.times(m4.times(this.matrix)))
+                    .getAABB()
+                    .addAABB(isometricZ(this.vMax)
+                    .transform4(matrixInv.times(m4.times(this.matrix)))
+                    .getAABB());
+                return new ConicSurface$$1(c, f1, f2, dir, this.uMin, this.uMax, aabb.min.z, aabb.max.z);
+            }
+            else {
+                const dir = transformedApex.V3();
+                const baseCurve = isometricZ(this.vMin).transform4(m4.times(this.matrix));
+                const matrixInv = M4.forSys(baseCurve.f1, baseCurve.f2, dir.unit(), baseCurve.center).inversed();
+                const aabb = isometricZ(this.vMax)
+                    .transform4(matrixInv.times(m4.times(this.matrix)))
+                    .getAABB();
+                return new CylinderSurface$$1(baseCurve, dir.unit(), this.uMin, this.uMax, min$1(0, aabb.min.z, aabb.max.z), max$1(0, aabb.min.z, aabb.max.z));
+            }
         }
         flipped() {
             return new ConicSurface$$1(this.center, this.f1.negated(), this.f2, this.dir);
@@ -16946,6 +18037,12 @@ var viewer = (function (exports) {
                     ? curveWC
                     : curveWC.reversed();
             });
+        }
+        debugInfo() {
+            return {
+                ps: [this.center],
+                lines: [this.center, this.center.plus(this.f1), this.center.plus(this.f2), this.center.plus(this.dir)],
+            };
         }
     }
     /**
@@ -17115,6 +18212,22 @@ var viewer = (function (exports) {
         transform(m4) {
             const f = m4.isMirroring() ? -1 : 1;
             return new this.constructor(this.baseCurve.transform(m4), m4.transformVector(this.dir).times(f), this.uMin, this.uMax, 1 == f ? this.vMin : -this.vMax, 1 == f ? this.vMax : -this.vMin);
+        }
+        transform4(m4) {
+            const vp = m4.vanishingPoint(this.dir);
+            if (!vp) {
+                const f = m4.isMirroring() ? -1 : 1;
+                return new this.constructor(this.baseCurve.transform4(m4), m4
+                    .normalized()
+                    .transformVector(this.dir)
+                    .times(f), undefined, undefined, 1 == f ? this.tMin : -this.tMax, 1 == f ? this.tMax : -this.tMin);
+            }
+            const curveT = this.baseCurve.transform4(m4);
+            if (curveT instanceof EllipseCurve$$1) {
+                console.log(vp.sce, curveT.sce);
+                return ConicSurface$$1.atApexThroughEllipse(vp, m4.isMirroring() ? curveT : curveT.reversed(), this.sMin, this.sMax, 1, 2);
+            }
+            return new PointProjectedSurface$$1(curveT, vp, P3$$1.throughPoints(curveT.at(curveT.tMin), curveT.at((curveT.tMin + curveT.tMax) / 2), curveT.at(curveT.tMax)), 1, this.sMin, this.sMax, 1, 2);
         }
         isTsForLine(line) {
             assertInst(L3$$1, line);
@@ -17325,6 +18438,12 @@ var viewer = (function (exports) {
         getExtremePoints() {
             return getExtremePointsHelper$$1.call(this, this.curve);
         }
+        asNURBSSurface() {
+            // y = 0 for baseNURBS
+            const baseNURBS = NURBS$$1.fromEllipse(this.curve);
+            const rotationNURBS = NURBS$$1.UnitCircle(2, this.tMin, this.tMax);
+            return new NURBSSurface$$1(rotationNURBS.points.flatMap(rv => baseNURBS.points.map(b => this.matrix.timesVector(VV(rv.x * b.x, rv.y * b.x, b.z * rv.w, rv.w * b.w)))), baseNURBS.knots, rotationNURBS.knots, baseNURBS.degree, rotationNURBS.degree, baseNURBS.tMin, baseNURBS.tMax, rotationNURBS.tMin, rotationNURBS.tMax);
+        }
     }
     RotatedCurveSurface$$1.prototype.uStep = EllipseCurve$$1.prototype.tIncrement;
     function getExtremePointsHelper$$1(curve) {
@@ -17362,8 +18481,8 @@ var viewer = (function (exports) {
                 .scale(this.normalDir);
             this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse);
         }
-        static semicylinder(radius) {
-            return new CylinderSurface$$1(new EllipseCurve$$1(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, undefined, undefined);
+        static semicylinder(radius, sMin, sMax, tMin, tMax) {
+            return new CylinderSurface$$1(new EllipseCurve$$1(V3.O, new V3(radius, 0, 0), new V3(0, radius, 0)), V3.Z, sMin, sMax, tMin, tMax);
         }
         /**
          *
@@ -17861,28 +18980,29 @@ var viewer = (function (exports) {
             }
         }
         transform(m4) {
+            assert(m4.isNoProj(), () => m4.sce);
             return new EllipsoidSurface$$1(m4.transformPoint(this.center), m4.transformVector(this.f1), m4.transformVector(this.f2), m4.transformVector(this.f3).times(m4.isMirroring() ? -1 : 1));
+        }
+        transform4(m4) {
+            console.log('transform4');
+            const resultMatrix = m4.times(this.matrix);
+            console.log(resultMatrix.toString());
+            const scaleDir = V(resultMatrix.m[12], resultMatrix.m[13], resultMatrix.m[14]);
+            // need to find parameters where scaleDir is parallel to the normal
+            const pLC = this.pLCNormalWCMatrix.inversed().transformPoint(scaleDir);
+            const s = pLC.angleXY();
+            const t = Math.asin(clamp(pLC.z, -1, 1));
+            const fa = resultMatrix.transformPoint(scaleDir.unit());
+            const fb = resultMatrix.transformPoint(scaleDir.unit().negated());
+            const newCenter = V3.lerp(fa, fb, 0.5);
+            console.log(scaleDir.sce, s, t, fa, fb, 'newCenter', newCenter.sce);
+            return new EllipsoidSurface$$1(newCenter, m4.transformVector2(this.f1, this.center), m4.transformVector2(this.f2, this.center), m4.transformVector2(this.f3, this.center).times(m4.isMirroring() ? -1 : 1));
         }
         isInsideOut() {
             return this.f1.cross(this.f2).dot(this.f3) < 0;
         }
-        //implicitFunction() {
-        //    return (pWC) => {
-        //        const pLC = this.inverseMatrix.transformPoint(pWC)
-        //        return (pLC.y > 0
-        //            ? pLC.length() - 1
-        //            : (-pLC.y + Math.hypot(pLC.x, pLC.z) - 1)) * this.normalDir
-        //    }
-        //}
-        //didp(pWC) {
-        //    const pLC = this.inverseMatrix.transformPoint(pWC)
-        //    const didpLC = (pLC.y > 0
-        //                ? pLC.unit()
-        //                : V(pLC.x / Math.hypot(pLC.x, pLC.z), -1, pLC.z / Math.hypot(pLC.x, pLC.z))).times(this.normalDir)
-        //    return this.inverseMatrix.transformVector(didpLC)
-        //}
         flipped() {
-            return new EllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3.negated());
+            return new EllipsoidSurface$$1(this.center, this.f1, this.f2, this.f3.negated(), this.uMin, this.uMax, -this.vMax, -this.vMin);
         }
         normalUVFunc() {
             // ugh
@@ -18076,6 +19196,28 @@ var viewer = (function (exports) {
             const pLC = this.matrixInverse.transformPoint(pWC);
             return this.pLCNormalWCMatrix.transformVector(pLC.unit()); //.times(this.normalDir)
         }
+        /*+
+         * An ellipsoid remains an ellipsoid after a perspective transform (as long as it does not intersect the vanishing
+         * plane. This transforms a matrix with a perspective component into one which would return an identical ellipsoid,
+         * but with no perspective component.
+         */
+        static unitTransform4(m) {
+            m.m[15] !== 1 && (m = m.divScalar(m.m[15]));
+            // X * P = m => X = m * P^-1
+            // prettier-ignore
+            const Pinv = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -m.m[12], -m.m[13], -m.m[14], 1);
+            const pn = new V3(m.m[12], m.m[13], m.m[14]), pw = m.m[15];
+            const pwSqrMinusPnSqr = Math.pow(pw, 2) - pn.squared();
+            if (lt(pwSqrMinusPnSqr, 0)) {
+                throw new Error('vanishing plane intersects unit sphere');
+            }
+            const c = pn.div(-pwSqrMinusPnSqr);
+            const scale = pn.times(pw * pn.length() / (pn.squared() * -pwSqrMinusPnSqr));
+            const scale1 = pw / -pwSqrMinusPnSqr;
+            const scale2 = 1 / sqrt(pwSqrMinusPnSqr);
+            const rotNX = M4.forSys(pn.unit(), pn.getPerpendicular().unit());
+            return M4.product(m, Pinv, M4.translate(c), rotNX, M4.scale(scale1, scale2, scale2), rotNX.transposed());
+        }
     }
     EllipsoidSurface$$1.UNIT = new EllipsoidSurface$$1(V3.O, V3.X, V3.Y, V3.Z);
     EllipsoidSurface$$1.prototype.uStep = PI$3 / 32;
@@ -18156,6 +19298,9 @@ var viewer = (function (exports) {
         transform(m4) {
             return new PlaneSurface$$1(this.plane.transform(m4));
         }
+        transform4(m4) {
+            return new PlaneSurface$$1(this.plane.transform(m4));
+        }
         flipped() {
             return new PlaneSurface$$1(this.plane.flipped(), this.right, this.up.negated());
         }
@@ -18177,6 +19322,300 @@ var viewer = (function (exports) {
     }
     PlaneSurface$$1.prototype.uStep = 1e6;
     PlaneSurface$$1.prototype.vStep = 1e6;
+
+    class PointProjectedSurface$$1 extends ParametricSurface$$1 {
+        constructor(curve, apex, curvePlane, normalDir = 1, sMin = curve.tMin, sMax = curve.tMax, tMin = 0, tMax = 16) {
+            super(sMin, sMax, tMin, tMax);
+            this.curve = curve;
+            this.apex = apex;
+            this.curvePlane = curvePlane;
+            this.normalDir = normalDir;
+            assertInst(Curve$$1, curve);
+            assert(!(curve instanceof L3$$1), 'use PlaneSurface instead');
+            assert(!(curve instanceof EllipseCurve$$1), 'use ConicSurface instead');
+            assert(!(curve instanceof ImplicitCurve$$1), 'this just seems like a terrible idea');
+            assert(new PlaneSurface$$1(curvePlane).containsCurve(curve));
+            assertVectors(apex);
+            assert(0 <= tMin);
+            this.planeProjectionMatrix = M4.projectPlanePoint(apex, curvePlane);
+            this.uStep = curve.tIncrement;
+        }
+        pointFoot(pWC, ss, st) {
+            if (undefined === ss || undefined === st) {
+                // similar to stP
+                if (undefined === ss) {
+                    ss = pWC.like(this.apex)
+                        ? 0
+                        : this.curve.closestTToPoint(this.planeProjectionMatrix.transformPoint(pWC)) * this.normalDir;
+                }
+                if (undefined === st) {
+                    st = V3.inverseLerp(this.apex, this.curve.at(ss), pWC);
+                }
+            }
+            const f = ([s, t]) => {
+                const pSTToPWC = this.pST(s, t).to(pWC);
+                return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)];
+            };
+            const { 0: x, 1: y } = newtonIterate(f, [ss, st]);
+            return new V3(x, y, 0);
+        }
+        getConstructorParameters() {
+            return [this.curve, this.apex, this.curvePlane, this.normalDir, this.sMin, this.sMax, this.tMin, this.tMax];
+        }
+        static unitISLineTs(anchor, dir) {
+            const { x: ax, y: ay, z: az } = anchor;
+            const { x: dx, y: dy, z: dz } = dir;
+            // this cone: x² + y² = z²
+            // line: p = anchor + t * dir1
+            // split line equation into 3 component equations, insert into cone equation
+            // transform to form (a t² + b t + c = 0) and solve with pqFormula
+            const a = dx * dx + dy * dy - dz * dz;
+            const b = 2 * (ax * dx + ay * dy - az * dz);
+            const c = ax * ax + ay * ay - az * az;
+            // cone only defined for 0 <= z, so filter invalid values
+            return pqFormula(b / a, c / a).filter(t => 0 < az + t * dz);
+        }
+        equals(obj) {
+            return (this == obj ||
+                (hasConstructor(obj, PointProjectedSurface$$1) && this.curve.equals(obj.curve) && this.apex.equals(this.apex)));
+        }
+        like(object) {
+            if (!this.isCoplanarTo(object))
+                return false;
+            // normals need to point in the same direction (outwards or inwards) for both
+            return this.normalDir == object.normalDir;
+        }
+        loopContainsPoint(contour, p) {
+            assertVectors(p);
+            const line = this.apex.like(p)
+                ? new L3$$1(p, this.apex.to(this.curve.at(this.curve.tMin)).unit())
+                : L3$$1.throughPoints(p, this.apex);
+            const lineOut = line.dir1.cross(this.curvePlane.normal1);
+            return Surface$$1.loopContainsPointGeneral(contour, p, line, lineOut);
+        }
+        isTsForLine(line) {
+            // transforming line manually has advantage that dir1 will not be renormalized,
+            // meaning that calculated values t for lineLC are directly transferable to line
+            const anchorPlane = this.planeProjectionMatrix.transformPoint(line.anchor);
+            const anchor2Plane = this.planeProjectionMatrix.transformPoint(line.anchor.plus(line.dir1));
+            if (anchorPlane.like(anchor2Plane)) {
+                // line projects onto a point in plane.
+                // there are either no or infinite intersection points
+                return [];
+            }
+            return this.curve
+                .isInfosWithLine(anchorPlane, anchorPlane.to(anchor2Plane), undefined, undefined, line.tMin, line.tMax)
+                .map(info => info.tOther);
+        }
+        /**
+         * Interestingly, two cones don't need to have parallel dirs to be coplanar.
+         */
+        isCoplanarTo(surface) {
+            if (this === surface)
+                return true;
+            if (!(surface instanceof PointProjectedSurface$$1) || !this.apex.like(surface.apex))
+                return false;
+            // at this point apexes are equal
+            return this.containsCurve(surface.curve);
+        }
+        containsLine(line) {
+            if (this.curvePlane.isParallelToLine(line)) {
+                return false;
+            }
+            if (!line.containsPoint(this.apex)) {
+                return false;
+            }
+            const p = this.curvePlane.intersectionWithLine(line);
+            return this.curve.containsPoint(p);
+        }
+        containsCurve(curve) {
+            if (curve instanceof L3$$1) {
+                return this.containsLine(curve);
+            }
+            else if (!(curve instanceof ImplicitCurve$$1)) {
+                const otherCurveOnThisPlane = curve.transform(this.planeProjectionMatrix);
+                return this.curve.isColinearTo(otherCurveOnThisPlane);
+            }
+            else {
+                return super.containsCurve(curve);
+            }
+        }
+        transform(m4) {
+            return new PointProjectedSurface$$1(this.curve.transform(m4), m4.transformPoint(this.apex), this.curvePlane.transform(m4), (m4.isMirroring() ? -1 : 1) * this.normalDir, this.sMin, this.sMax, this.tMin, this.tMax);
+        }
+        flipped() {
+            return new PointProjectedSurface$$1(this.curve, this.apex, this.curvePlane, -this.normalDir, -this.sMax, -this.sMin, this.tMin, this.tMax);
+        }
+        normalSTFunc() {
+            const dpdt = this.dpdt();
+            return (s, t) => this.curve
+                .tangentAt(s * this.normalDir)
+                .times(this.normalDir)
+                .cross(dpdt(s))
+                .unit();
+        }
+        pSTFunc() {
+            return (s, t) => {
+                return this.apex.lerp(this.curve.at(s * this.normalDir), t);
+            };
+        }
+        dpds() {
+            return (s, t) => {
+                return this.curve.tangentAt(s * this.normalDir).times(t * this.normalDir);
+            };
+        }
+        dpdt() {
+            return s => {
+                return this.apex.to(this.curve.at(s * this.normalDir));
+            };
+        }
+        containsPoint(pWC) {
+            return this.apex.like(pWC) || this.curve.containsPoint(this.planeProjectionMatrix.transformPoint(pWC));
+        }
+        stP(pWC) {
+            const s = pWC.like(this.apex) ? 0 : this.curve.pointT(this.planeProjectionMatrix.transformPoint(pWC));
+            const t = V3.inverseLerp(this.apex, this.curve.at(s), pWC);
+            return new V3(s * this.normalDir, t, 0);
+        }
+        isCurvesWithSurface(surface) {
+            if (surface instanceof PlaneSurface$$1) {
+                return this.isCurvesWithPlane(surface.plane);
+            }
+            else if (ImplicitSurface$$1.is(surface)) {
+                return ParametricSurface$$1.isCurvesParametricImplicitSurface(this, surface, 0.1, 0.1 / this.curvePlane.distanceToPoint(this.apex), 0.02);
+            }
+            return super.isCurvesWithSurface(surface);
+        }
+        isCurvesWithPlane(plane) {
+            if (plane.containsPoint(this.apex)) {
+                if (plane.isParallelToPlane(this.curvePlane)) {
+                    return [];
+                }
+                return this.curve.isTsWithPlane(plane).map(t => L3$$1.throughPoints(this.apex, this.curve.at(t)));
+            }
+            return [this.curve.transform(M4.projectPlanePoint(this.apex, plane))];
+        }
+    }
+    PointProjectedSurface$$1.prototype.vStep = 256;
+
+    class NURBSSurface$$1 extends ParametricSurface$$1 {
+        constructor(
+        /**
+         * Control points in u-major order. I.e. the first pointCountU points are a NURBS.
+         */
+        points, knotsU, knotsV, degreeU, degreeV, uMin = knotsU[degreeU], uMax = knotsU[knotsU.length - degreeU - 1], vMin = knotsV[degreeV], vMax = knotsV[knotsV.length - degreeV - 1]) {
+            super(uMin, uMax, vMin, vMax);
+            this.points = points;
+            this.knotsU = knotsU;
+            this.knotsV = knotsV;
+            this.degreeU = degreeU;
+            this.degreeV = degreeV;
+            const pointCountU = knotsU.length - 1 - degreeU;
+            const pointCountV = knotsV.length - 1 - degreeV;
+            assert(pointCountU * pointCountV == points.length);
+            assert(degreeU <= degreeV, 'degreeU <= degreeV');
+            assert(-1 == knotsU.firstUnsorted(MINUS), 'knot values must be in ascending order');
+            assert(-1 == knotsV.firstUnsorted(MINUS), 'knot values must be in ascending order');
+        }
+        getConstructorParameters() {
+            return [
+                this.points,
+                this.knotsU,
+                this.knotsV,
+                this.degreeU,
+                this.degreeV,
+                this.uMin,
+                this.uMax,
+                this.vMin,
+                this.vMax,
+            ];
+        }
+        transform(m4) {
+            return this.transform4(m4);
+        }
+        transform4(m4) {
+            return new NURBSSurface$$1(this.points.map(p => m4.timesVector(p)), this.knotsU, this.knotsV, this.degreeU, this.degreeV, this.uMin, this.uMax, this.vMin, this.vMax);
+        }
+        pUV(u, v) {
+            return this.isoparametricU(u).at(v);
+        }
+        dpdu() {
+            return (u, v) => this.isoparametricV(v).tangentAt(u);
+        }
+        dpdv() {
+            return (u, v) => this.isoparametricU(u).tangentAt(v);
+        }
+        normalUV(u, v) {
+            const normal = this.dpdu()(u, v).cross(this.dpdv()(u, v));
+            return normal.likeO() ? V3.X : normal.unit();
+        }
+        isoparametricU(u) {
+            const pointCountU = this.knotsU.length - 1 - this.degreeU;
+            const pointCountV = this.knotsV.length - 1 - this.degreeV;
+            return new NURBS$$1(arrayFromFunction(pointCountV, i => {
+                return deBoor(this.points.slice(i * pointCountU, (i + 1) * pointCountU), this.degreeU, this.knotsU, u);
+            }), this.degreeV, this.knotsV, this.vMin, this.vMax);
+        }
+        isoparametricV(v) {
+            const pointCountU = this.knotsU.length - 1 - this.degreeU;
+            return new NURBS$$1(arrayFromFunction(pointCountU, i => {
+                return deBoor(this.points.sliceStep(i, this.points.length, pointCountU, 1), this.degreeV, this.knotsV, v);
+            }), this.degreeU, this.knotsU, this.uMin, this.uMax);
+        }
+        debugInfo() {
+            const pointCountU = this.knotsU.length - 1 - this.degreeU;
+            const pointCountV = this.knotsV.length - 1 - this.degreeV;
+            const grid = [];
+            for (let u = 0; u < pointCountU; u++) {
+                for (let v = 0; v < pointCountV; v++) {
+                    const i = v * pointCountU + u;
+                    if (u < pointCountU - 1) {
+                        const j = v * pointCountU + u + 1;
+                        grid.push(this.points[i].p3(), this.points[j].p3());
+                    }
+                    if (v < pointCountV - 1) {
+                        const j = (v + 1) * pointCountU + u;
+                        grid.push(this.points[i].p3(), this.points[j].p3());
+                    }
+                }
+            }
+            return { points: this.points.map(p => p.p3()), lines: grid };
+        }
+        flipped() {
+            const pointCountU = this.knotsU.length - 1 - this.degreeU;
+            return new NURBSSurface$$1(arrayFromFunction(this.points.length, i => {
+                const u = i % pointCountU;
+                return this.points[i - u + (pointCountU - u - 1)];
+            }), this.knotsU.map(x => -x).reverse(), this.knotsV, this.degreeU, this.degreeV, -this.uMax, -this.uMin, this.vMin, this.vMax);
+        }
+    }
+    NURBSSurface$$1.prototype.uStep = 1 / 8;
+    NURBSSurface$$1.prototype.vStep = 1 / 8;
+    function getInterval(degree, knots, t) {
+        for (let s = degree; s < knots.length - 1 - degree; s++) {
+            if (t >= knots[s] && t <= knots[s + 1]) {
+                return s;
+            }
+        }
+        throw new Error(t + ' ' + knots);
+    }
+    function deBoor(points, degree, knots, t) {
+        // find s (the spline segment) for the [t] value provided
+        const s = getInterval(degree, knots, t);
+        const v = Vector.pack(points, new Float64Array(points.length * 4));
+        // l (level) goes from 1 to the curve degree + 1
+        for (let l = 1; l <= degree; l++) {
+            // build level l of the pyramid
+            for (let i = s; i > s - degree - 1 + l; i--) {
+                const alpha = (t - knots[i]) / (knots[i + degree + 1 - l] - knots[i]);
+                // interpolate each component
+                for (let d = 0; d < 4; d++) {
+                    v[i * 4 + d] = (1 - alpha) * v[(i - 1) * 4 + d] + alpha * v[i * 4 + d];
+                }
+            }
+        }
+        return new Vector(v.slice(s * 4, s * 4 + 4));
+    }
 
     /**
      * In general: the z-dir shadow volume of a face is the integral: SURFACE_INTEGRAL[p in face] (normal(p).z * p.z) dp
@@ -31559,7 +32998,7 @@ var viewer = (function (exports) {
         }
         B2T$$1.minorityReport = minorityReport;
         function whatever() {
-            const iso = isocahedron();
+            const iso = icosahedron();
             const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
                 const numberBRep = text('' + (i + 1), 0.4, -2);
                 const centroid = face.contour
@@ -31583,7 +33022,7 @@ var viewer = (function (exports) {
         }
         B2T$$1.whatever3 = whatever3;
         function d20() {
-            const iso = isocahedron();
+            const iso = icosahedron();
             const numbersBRep = BRep$$1.join(iso.faces.map((face, i) => {
                 const numberBRep = text('' + (i + 1), 0.4, -2);
                 const centroid = face.contour
@@ -31774,10 +33213,10 @@ var viewer = (function (exports) {
         B2T$$1.tetrahedron = tetrahedron;
         const b = 1 / GOLDEN_RATIO, c = 2 - GOLDEN_RATIO;
         B2T$$1.TETRAHEDRON_VERTICES = [
-            new V3(1, 0, -1 / Math.sqrt(2)),
-            new V3(-1, 0, -1 / Math.sqrt(2)),
-            new V3(0, -1, 1 / Math.sqrt(2)),
-            new V3(0, 1, 1 / Math.sqrt(2)),
+            new V3(1, 0, -SQRT1_2),
+            new V3(-1, 0, -SQRT1_2),
+            new V3(0, -1, SQRT1_2),
+            new V3(0, 1, SQRT1_2),
         ].map(v => v.unit());
         B2T$$1.DODECAHEDRON_VERTICES = [
             new V3(c, 0, 1),
@@ -31834,7 +33273,7 @@ var viewer = (function (exports) {
             [0, 3, 5],
         ];
         const { x: s, y: t } = new V3(1, GOLDEN_RATIO, 0).unit();
-        B2T$$1.ISOCAHEDRON_VERTICES = [
+        B2T$$1.ICOSAHEDRON_VERTICES = [
             new V3(-s, t, 0),
             new V3(s, t, 0),
             new V3(-s, -t, 0),
@@ -31848,7 +33287,7 @@ var viewer = (function (exports) {
             new V3(-t, 0, -s),
             new V3(-t, 0, s),
         ];
-        B2T$$1.ISOCAHEDRON_FACE_VERTICES = [
+        B2T$$1.ICOSAHEDRON_FACE_VERTICES = [
             // 5 faces around point 0
             [0, 11, 5],
             [0, 5, 1],
@@ -31889,12 +33328,12 @@ var viewer = (function (exports) {
         }
         B2T$$1.octahedron = octahedron;
         /**
-         * Create an isocahedron [BRep]. The vertices are on the unit sphere.
+         * Create an icosahedron [BRep]. The vertices are on the unit sphere.
          */
-        function isocahedron() {
-            return makePlatonic(B2T$$1.ISOCAHEDRON_VERTICES, B2T$$1.ISOCAHEDRON_FACE_VERTICES, 'B2T.octahedron()');
+        function icosahedron() {
+            return makePlatonic(B2T$$1.ICOSAHEDRON_VERTICES, B2T$$1.ICOSAHEDRON_FACE_VERTICES, 'B2T.icosahedron()');
         }
-        B2T$$1.isocahedron = isocahedron;
+        B2T$$1.icosahedron = icosahedron;
         function makePlatonic(VS, FVIS, generator) {
             const edgeMap = new Map();
             const faces = FVIS.map(faceIndexes => {
@@ -31935,6 +33374,31 @@ var viewer = (function (exports) {
             return new BRep$$1(faces, false, generator);
         }
         B2T$$1.pyramidEdges = pyramidEdges;
+        function fromBPT(bpt) {
+            const lineRegex = /.+/g;
+            const readLine = () => lineRegex.exec(bpt)[0];
+            const readLineNumbers = () => readLine()
+                .trim()
+                .split(/\s+/)
+                .map(s => parseFloat(s));
+            const numOfPatches = parseInt(readLine());
+            const faces = arrayFromFunction(numOfPatches, () => {
+                const [pointsUCount, pointsVCount] = readLineNumbers();
+                const points = Array.from({ length: (pointsUCount + 1) * (pointsVCount + 1) }, () => VV(...readLineNumbers(), 1));
+                const surface = new NURBSSurface$$1(points, NURBS$$1.bezierKnots(pointsUCount), NURBS$$1.bezierKnots(pointsVCount), pointsUCount, pointsVCount, 0, 1, 0, 1);
+                return surface;
+                const edges = [
+                    Edge$$1.forCurveAndTs(surface.isoparametricV(0)),
+                    Edge$$1.forCurveAndTs(surface.isoparametricU(1)),
+                    Edge$$1.forCurveAndTs(surface.isoparametricV(1)).flipped(),
+                    Edge$$1.forCurveAndTs(surface.isoparametricU(0)).flipped(),
+                ];
+                return Face$$1.create(surface, edges);
+            });
+            return faces;
+            return new BRep$$1(faces, false);
+        }
+        B2T$$1.fromBPT = fromBPT;
     })(B2T$$1 || (B2T$$1 = {}));
 
     class CustomPlane$$1 extends P3$$1 {
@@ -31956,7 +33420,10 @@ var viewer = (function (exports) {
         toPlaneSurface() {
             return new PlaneSurface$$1(this, this.right, this.up);
         }
-        static forPlane(plane, color, name) {
+        toSource() {
+            return callsce('new CustomPlane', this.anchor, this.right, this.up, this.name, this.color, this.sMin, this.sMax, this.tMin, this.tMax);
+        }
+        static forPlane(plane, color = GL_COLOR_BLACK$$1, name) {
             //assert(!name)
             const up = plane.normal1.getPerpendicular().unit(), right = up.cross(plane.normal1);
             return new CustomPlane$$1(plane.anchor, right, up, name, color);
@@ -32371,7 +33838,7 @@ var viewer = (function (exports) {
             if (!(curve instanceof PICurve$$1)) {
                 // TODO
                 assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), '' + aT + curve.tangentAt(aT).sce + ' ' + aDir.sce);
-                assertf(() => curve.tangentAt(bT).likeOrReversed(bDir));
+                assertf(() => curve.tangentAt(bT).likeOrReversed(bDir), '' + bT + curve.tangentAt(bT).sce + ' ' + bDir.sce);
             }
             assert(this.reversed === this.aDir.dot(curve.tangentAt(aT)) < 0, aT +
                 ' ' +
@@ -32432,6 +33899,12 @@ var viewer = (function (exports) {
         }
         transform(m4, desc) {
             return new PCurveEdge$$1(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT, this.bT, undefined, m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc);
+        }
+        transform4(m4, desc) {
+            const a_ = m4.transformPoint(this.a);
+            const b_ = m4.transformPoint(this.b);
+            const curve_ = this.curve.transform4(m4);
+            return new PCurveEdge$$1(curve_, a_, b_, snap(curve_.pointT(a_), this.aT), snap(curve_.pointT(b_), this.bT), undefined, m4.transformVector(this.aDir), m4.transformVector(this.bDir), '' + this.name + desc);
         }
         isCoEdge(edge) {
             return (this === edge ||
@@ -32504,8 +33977,18 @@ var viewer = (function (exports) {
                 (this.flippedOf = new StraightEdge$$1(this.curve, this.b, this.a, this.bT, this.aT, this, this.name)));
         }
         transform(m4, desc) {
-            const lineDir1TransLength = m4.transformVector(this.curve.dir1).length();
-            return new StraightEdge$$1(this.curve.transform(m4), m4.transformPoint(this.a), m4.transformPoint(this.b), this.aT * lineDir1TransLength, this.bT * lineDir1TransLength, undefined, '' + this.name + desc);
+            const lineDir1TransLength = m4.transformVector2(this.curve.dir1, this.curve.anchor).length();
+            const curve = this.curve.transform(m4);
+            const a = m4.transformPoint(this.a);
+            const b = m4.transformPoint(this.b);
+            return new StraightEdge$$1(curve, a, b, m4.isNoProj() ? this.aT * lineDir1TransLength : curve.pointT(a), m4.isNoProj() ? this.bT * lineDir1TransLength : curve.pointT(b), undefined, '' + this.name + desc);
+        }
+        transform4(m4, desc) {
+            const lineDir1TransLength = m4.transformVector2(this.curve.dir1, this.curve.anchor).length();
+            const curve = this.curve.transform4(m4);
+            const a = m4.transformPoint(this.a);
+            const b = m4.transformPoint(this.b);
+            return new StraightEdge$$1(curve, a, b, m4.isNoProj() ? this.aT * lineDir1TransLength : curve.pointT(a), m4.isNoProj() ? this.bT * lineDir1TransLength : curve.pointT(b), undefined, '' + this.name + desc);
         }
         isCoEdge(edge) {
             return (this === edge ||
@@ -32584,7 +34067,7 @@ var viewer = (function (exports) {
             //contour.forEach(e => {
             //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
             //})
-            assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'));
+            //assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
             holes && holes.forEach(hole => Edge$$1.assertLoop(hole));
             holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)));
             assert(!holes || holes.constructor == Array, holes && holes.toString());
@@ -33199,6 +34682,12 @@ var viewer = (function (exports) {
             const newEdges = Edge$$1.reversePath(this.contour.map(e => e.transform(m4)), mirroring);
             const newHoles = this.holes.map(hole => Edge$$1.reversePath(hole.map(e => e.transform(m4)), mirroring));
             return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info);
+        }
+        transform4(m4) {
+            const mirroring = m4.isMirroring();
+            const newEdges = Edge$$1.reversePath(this.contour.map(e => e.transform4(m4)), mirroring);
+            const newHoles = this.holes.map(hole => Edge$$1.reversePath(hole.map(e => e.transform4(m4)), mirroring));
+            return new this.constructor(this.surface.transform4(m4), newEdges, newHoles, this.name, this.info);
         }
         flipped() {
             const newEdges = this.contour.map(e => e.flipped()).reverse();
@@ -44022,6 +45511,15 @@ var viewer = (function (exports) {
             return new BRep$$1(this.faces.map(f => f.transform(m4)), this.infiniteVolume, this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
             vertexNames);
         }
+        transform4(m4, desc) {
+            let vertexNames;
+            if (this.vertexNames) {
+                vertexNames = new Map();
+                this.vertexNames.forEach((name, vertex) => vertexNames.set(m4.transformPoint(vertex), name + desc));
+            }
+            return new BRep$$1(this.faces.map(f => f.transform4(m4)), this.infiniteVolume, this.generator && desc && this.generator + desc, // if desc isn't set, the generator will be invalid
+            vertexNames);
+        }
         flipped() {
             return new BRep$$1(this.faces.map(f => f.flipped()), !this.infiniteVolume, this.generator && this.generator + '.flipped()', this.vertexNames);
         }
@@ -44462,7 +45960,7 @@ var viewer = (function (exports) {
         assertVectors(startTangent);
         const points = [];
         const tangents = [];
-        assert(eq0(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))');
+        assert(eq0(ic(startP.x, startP.y), 0.01), 'isZero(implicitCurve(startPoint.x, startPoint.y))', ic(startP.x, startP.y));
         let i = 0, p = startP, tangent = startTangent, fullLoop = false;
         do {
             points.push(p);
@@ -44522,7 +46020,7 @@ var viewer = (function (exports) {
             if (i > 4 && !validUV(p.x, p.y)) {
                 break;
             }
-            assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart);
+            assert(eq0(ic(newP.x, newP.y), NLA_PRECISION * 2), p, newP, searchStart, ic(newP.x, newP.y));
             tangent = newTangent;
             p = newP;
         } while (++i < 1000);
@@ -44979,11 +46477,11 @@ var viewer = (function (exports) {
     const vertexShaderColor = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	attribute vec4 ts_Vertex;
-	attribute vec4 color;
+	attribute vec4 ts_Color;
 	varying vec4 fragColor;
 	void main() {
 		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-		fragColor = color;
+		fragColor = ts_Color;
 	}
 `;
     const vertexShaderArc = `
@@ -45019,7 +46517,7 @@ var viewer = (function (exports) {
 		}
 		if (1 == mode) { // parabola
 			p = center + f1 * t + f2 * t * t;
-			tangent = f1 + f2 * t;
+			tangent = f1 + 2.0 * f2 * t;
 		}
 		if (2 == mode) { // hyperbola
 			p = center + f1 * cosh(t) + f2 * sinh(t);
@@ -45030,6 +46528,78 @@ var viewer = (function (exports) {
 		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `;
+    const vertexShaderNURBS = `#version 300 es
+	uniform mat4 ts_ModelViewProjectionMatrix;
+	in vec4 ts_Vertex;
+	uniform float startT, endT, scale;
+	uniform vec4 points[32];
+	uniform int pointCount, degree;
+	uniform float knots[40];
+	uniform vec3 normal;
+	const int MIN_DEGREE = 1;
+	const int MAX_DEGREE = 6;
+	
+	int tInterval(float t) {
+		for (int s = degree; s < 40 - 1 - degree; s++) {
+			if (t >= knots[s] && t <= knots[s + 1]) {
+				return s;
+			}
+		}
+	}
+	
+	vec4 stepp(int k, int i, vec4 dkMinus1iMinus1, vec4 dkMinus1i) {
+	    return dkMinus1i - dkMinus1iMinus1 * float(k) / (knots[i + degree - k] - knots[i - 1]);
+	}
+	
+	void main() {
+		// ts_Vertex.x is in [0, 1]
+		float t = startT + ts_Vertex.x * (endT - startT);
+		
+		int s = tInterval(t);
+		
+		vec4 v[MAX_DEGREE + 1];
+		for (int i = 0; i < degree + 1; i++) {
+		    v[i] = points[s - degree + i];
+		}
+		
+		vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
+		for (int level = 0; level < degree; level++) {
+			if (level == degree - 2) {
+				// see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
+				vec4 a = v[degree];
+				vec4 b = v[degree - 1];
+				vec4 c = v[degree - 2];
+				ddt4 = stepp(degree, s + 1, stepp(degree - 1, s + 1, a, b), stepp(degree - 1, s, b, c));
+			}
+			if (level == degree - 1) {
+				vec4 a = v[degree];
+				vec4 b = v[degree - 1];
+				pTangent4 = (b - a) * (float(degree) / (knots[s] - knots[s + 1]));
+			}
+			for (int i = degree; i > level; i--) {
+				float alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+
+				// interpolate each component
+                v[i] = (1.0 - alpha) * v[i - 1] + alpha * v[i];
+			}
+		}
+		
+		vec4 p4 = v[degree];
+		
+		vec3 p = p4.xyz / p4.w;
+		vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
+		vec3 ddt = (
+		    p4.xyz * (-p4.w * ddt4.w + 2.0 * pow(pTangent4.w, 2.0))
+		    + pTangent4.xyz * (-2.0 * p4.w * pTangent4.w) 
+		    + ddt4.xyz * pow(p4.w, 2.0)
+        ) / pow(p4.w, 3.0);
+		
+		vec3 outDir = normalize(cross(ddt, pTangent));
+		vec3 correctNormal = normalize(cross(pTangent, outDir));
+		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+    }
+`;
     const vertexShaderBezier = `
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform mat4 ts_ModelViewProjectionMatrix;
@@ -45037,7 +46607,7 @@ var viewer = (function (exports) {
 	uniform float width, startT, endT;
 	uniform vec3 p0, p1, p2, p3;
 	void main() {
-		// ts_Vertex.y is in [0, 1]
+		// ts_Vertex.x is in [0, 1]
 		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
 		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
 		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
@@ -45049,6 +46619,7 @@ var viewer = (function (exports) {
 	}
 `;
     const vertexShaderBezier3d = `
+    precision highp float;
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform float scale, startT, endT;
 	uniform vec3 ps[4];
@@ -45058,10 +46629,14 @@ var viewer = (function (exports) {
 	void main() {
 		// ts_Vertex.y is in [0, 1]
 		vec3 p5 = ps[0];
-		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
-		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
-		vec3 p = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
-		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
+		float t = startT * (1.0 - ts_Vertex.x) + endT * ts_Vertex.x, s = 1.0 - t;
+		float c0 = s * s * s, 
+		      c1 = 3.0 * s * s * t, 
+		      c2 = 3.0 * s * t * t, c3 = t * t * t;
+		vec3 p = (p0 * c0 + p1 * c1) + (p2 * c2 + p3 * c3);
+		float c01 = 3.0 * s * s, 
+		      c12 = 6.0 * s * t, 
+		      c23 = 3.0 * t * t;
 		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
 		vec3 outDir = normalize(cross(normal, pTangent));
 		vec3 correctNormal = normalize(cross(pTangent, outDir));
@@ -45100,6 +46675,14 @@ var viewer = (function (exports) {
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
+	}
+`;
+    const fragmentShaderColor3 = `#version 300 es
+	precision highp float;
+	uniform vec4 color;
+	out vec4 fragColor;
+	void main() {
+		fragColor = color;
 	}
 `;
     const fragmentShaderVaryingColor = `
@@ -45176,7 +46759,7 @@ var viewer = (function (exports) {
         drawPoint(p, color = GL_COLOR_BLACK$$1, size = 5) {
             this.pushMatrix();
             this.translate(p);
-            this.scale(size, size, size);
+            this.scale(size / 2, size / 2, size / 2);
             this.shaders.singleColor.uniforms({ color: color }).draw(this.meshes.sphere1);
             this.popMatrix();
         }
@@ -45187,22 +46770,31 @@ var viewer = (function (exports) {
             CURVE_PAINTERS$$1[curve.constructor.name](this, curve, color, tStart, tEnd, width);
         }
         drawVector(vector, anchor, color = GL_COLOR_BLACK$$1, size = 1) {
+            if (vector.likeO())
+                return;
             this.pushMatrix();
+            const headLength = size * 4;
+            if (headLength > vector.length())
+                return;
             const vT = vector.getPerpendicular().unit();
-            this.multMatrix(M4.forSys(vector, vT, vector.cross(vT).unit(), anchor));
-            1 != size && this.scale(size, size, size);
+            this.multMatrix(M4.forSys(vector.unit(), vT, vector.cross(vT).unit(), anchor));
+            this.scale(vector.length() - headLength, size / 2, size / 2);
             this.shaders.singleColor
                 .uniforms({
                 color: color,
             })
-                .draw(this.meshes.vector);
+                .draw(this.meshes.vectorShaft);
+            this.scale(1 / (vector.length() - headLength), 1, 1);
+            this.translate(vector.length() - headLength, 0, 0);
+            this.scale(headLength / 2, 1, 1);
+            this.shaders.singleColor.draw(this.meshes.vectorHead);
             this.popMatrix();
         }
-        drawVectors(drVs) {
-            this.drawVector(V3.X, V3.O, chroma('red').gl(), undefined);
-            this.drawVector(V3.Y, V3.O, chroma('green').gl(), undefined);
-            this.drawVector(V3.Z, V3.O, chroma('blue').gl(), undefined);
-            drVs.forEach(vi => this.drawVector(vi.dir1, vi.anchor, vi.color, undefined));
+        drawVectors(drVs, size = undefined) {
+            this.drawVector(V3.X, V3.O, chroma('red').gl(), size);
+            this.drawVector(V3.Y, V3.O, chroma('green').gl(), size);
+            this.drawVector(V3.Z, V3.O, chroma('blue').gl(), size);
+            drVs.forEach(vi => this.drawVector(vi.v, vi.anchor, vi.color, size));
         }
         drawPlane(customPlane, color, dotted = false) {
             this.pushMatrix();
@@ -45211,6 +46803,17 @@ var viewer = (function (exports) {
             this.scale(customPlane.uMax - customPlane.uMin, customPlane.vMax - customPlane.vMin, 1);
             const mesh = dotted ? this.meshes.xyDottedLinePlane : this.meshes.xyLinePlane;
             this.shaders.singleColor.uniforms({ color: color }).draw(mesh, this.LINES);
+            this.popMatrix();
+        }
+        drawBox(m4, color) {
+            this.pushMatrix();
+            this.multMatrix(m4);
+            if (color) {
+                this.shaders.singleColor.uniforms({ color: color }).draw(this.meshes.cube, this.LINES);
+            }
+            else {
+                this.shaders.multiColor.draw(this.meshes.cube, this.LINES);
+            }
             this.popMatrix();
         }
     }
@@ -45297,6 +46900,20 @@ var viewer = (function (exports) {
             })
                 .draw(gl.meshes.pipe);
         },
+        [NURBS$$1.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
+            gl.shaders.nurbs
+                .uniforms({
+                'points[0]': Vector.pack(curve.points),
+                degree: curve.degree,
+                'knots[0]': curve.knots,
+                color: color,
+                startT: startT,
+                endT: endT,
+                scale: width,
+                normal: normal,
+            })
+                .draw(gl.meshes.pipe);
+        },
         [L3$$1.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
             gl.pushMatrix();
             const a = curve.at(startT), b = curve.at(endT);
@@ -45316,11 +46933,21 @@ var viewer = (function (exports) {
     CURVE_PAINTERS$$1[PPCurve$$1.name] = CURVE_PAINTERS$$1[ImplicitCurve$$1.name];
     function initMeshes$$1(_meshes, _gl) {
         _gl.makeCurrent();
+        _meshes.cube = (() => {
+            const cube = B2T$$1.box()
+                .toMesh()
+                .addVertexBuffer('colors', 'ts_Color');
+            cube.colors = cube.vertices.map(p => [p.x, p.y, p.z, 1].map(x => x * 0.9));
+            cube.compile();
+            return cube;
+        })();
         _meshes.sphere1 = Mesh$$1.sphere(2);
         _meshes.segment = Mesh$$1.plane({ startY: -0.5, height: 1, detailX: 128 });
         _meshes.text = Mesh$$1.plane();
         _meshes.vector = Mesh$$1.rotation([V3.O, V(0, 0.05, 0), V(0.8, 0.05), V(0.8, 0.1), V(1, 0)], L3$$1.X, TAU, 16, true);
-        _meshes.pipe = Mesh$$1.rotation(arrayFromFunction(128, i => new V3(i / 127, -0.5, 0)), L3$$1.X, TAU, 8, true);
+        _meshes.vectorShaft = Mesh$$1.rotation([V3.O, V3.Y, V3.XY], L3$$1.X, TAU, 8, true);
+        _meshes.vectorHead = Mesh$$1.rotation([V3.Y, V(0, 2, 0), V(2, 0, 0)], L3$$1.X, TAU, 8, true);
+        _meshes.pipe = Mesh$$1.rotation(arrayFromFunction(512, (i, l) => new V3(i / (l - 1), -0.5, 0)), L3$$1.X, TAU, 8, true);
         _meshes.xyLinePlane = Mesh$$1.plane();
         _meshes.xyDottedLinePlane = makeDottedLinePlane();
         _meshes.pipeSegmentForICurve = Mesh$$1.offsetVertices(M4.rotateY(90 * DEG).transformedPoints(arrayFromFunction(4, i => V3.polar(1, TAU * i / 4))), V3.X, true);
@@ -45337,6 +46964,7 @@ var viewer = (function (exports) {
             ellipse3d: Shader$$1.create(vertexShaderConic3d, fragmentShaderColor),
             generic3d: Shader$$1.create(vertexShaderGeneric, fragmentShaderColor),
             bezier3d: Shader$$1.create(vertexShaderBezier3d, fragmentShaderColor),
+            nurbs: Shader$$1.create(vertexShaderNURBS, fragmentShaderColor3),
             bezier: Shader$$1.create(vertexShaderBezier, fragmentShaderColor),
             lighting: Shader$$1.create(vertexShaderLighting, fragmentShaderLighting),
             waves: Shader$$1.create(vertexShaderWaves, fragmentShaderLighting),
@@ -45441,7 +47069,7 @@ var viewer = (function (exports) {
         };
         return mouseCoordsOnElement;
     }
-    function setupCamera$$1(_eye, _gl) {
+    function setupCamera$$1(_eye, _gl, suppressEvents = false) {
         const { pos, focus, up, zoomFactor } = _eye;
         //console.log("pos", pos.$, "focus", focus.$, "up", up.$)
         _gl.matrixMode(_gl.PROJECTION);
@@ -45452,7 +47080,7 @@ var viewer = (function (exports) {
         _gl.ortho(-lr, lr, -bt, bt, -1e4, 1e4);
         _gl.lookAt(pos, focus, up);
         _gl.matrixMode(_gl.MODELVIEW);
-        cameraChangeListeners$$1.forEach(l => l(_eye));
+        !suppressEvents && cameraChangeListeners$$1.forEach(l => l(_eye));
     }
     const cameraChangeListeners$$1 = [];
     const SHADERS_TYPE_VAR$$1 = false;
@@ -45466,6 +47094,7 @@ var viewer = (function (exports) {
         curvePoint: curvePoint$$1,
         curvePointMF: curvePointMF$$1,
         Curve: Curve$$1,
+        parabola4Projection: parabola4Projection$$1,
         XiEtaCurve: XiEtaCurve$$1,
         surfaceIsICurveIsInfosWithLine: surfaceIsICurveIsInfosWithLine$$1,
         ImplicitCurve: ImplicitCurve$$1,
@@ -45476,6 +47105,7 @@ var viewer = (function (exports) {
         PPCurve: PPCurve$$1,
         ParabolaCurve: ParabolaCurve$$1,
         EllipseCurve: EllipseCurve$$1,
+        NURBS: NURBS$$1,
         P3: P3$$1,
         get PointVsFace () { return PointVsFace$$1; },
         Surface: Surface$$1,
@@ -45488,6 +47118,8 @@ var viewer = (function (exports) {
         CylinderSurface: CylinderSurface$$1,
         EllipsoidSurface: EllipsoidSurface$$1,
         PlaneSurface: PlaneSurface$$1,
+        PointProjectedSurface: PointProjectedSurface$$1,
+        NURBSSurface: NURBSSurface$$1,
         ZDirVolumeVisitor: ZDirVolumeVisitor$$1,
         glqV3: glqV3$$1,
         glqArray: glqArray$$1,
@@ -45581,8 +47213,8 @@ var viewer = (function (exports) {
             this.drPs = [];
             this.drVs = [];
             this.drLines = [];
-            this.mesh = undefined;
-            this.aabbs = [];
+            this.mesh = [];
+            this.boxes = [];
             this.paintMeshNormals = false;
             this.paintWireframe = false;
             this.paintCurveDebug = false;
@@ -45693,22 +47325,23 @@ var viewer = (function (exports) {
         }
         g.drPs.push();
     }
-    const meshColors = [
+    const brepMeshColors = [
         chroma.scale(['#ff297f', '#6636FF']),
         chroma.scale(['#ffe93a', '#ff6e35']),
         chroma.scale(['#1eff33', '#4960ff']),
         chroma.scale(['#31fff8', '#2dff2a']),
     ].map(scale => scale.mode('lab').colors(20, null));
-    const meshColorssGL = meshColors.map(cs => cs.map(c => c.gl()));
+    const brepMeshColorssGL = brepMeshColors.map(cs => cs.map(c => c.gl()));
+    const meshColorsGL = chroma.scale('GnBu').colors(16, 'gl');
     function viewerPaint(time$$1, gl) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.loadIdentity();
-        setupCamera$$1(eye, gl);
+        //setupCamera(eye, gl)
         gl.drawVectors(g.drVs, 4 / eye.zoomFactor);
         g.drPs.forEach(info => gl.drawPoint(info instanceof V3 ? info : info.p, info instanceof V3 || !info.color ? chroma('#cc0000').gl() : chroma(info.color).gl(), 6 / eye.zoomFactor));
         drawPlanes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane));
         g.planes.forEach(plane => gl.drawPlane(plane, plane.color, hovering == plane));
-        g.aabbs.forEach(aabb => gl.drawAABB(aabb, chroma('black').gl()));
+        g.boxes.forEach(m4 => gl.drawBox(m4));
         gl.shaders.lighting.uniforms({ camPos: eye.pos });
         for (let i = 0; i < bRepMeshes.length; i++) {
             const mesh = bRepMeshes[i];
@@ -45736,12 +47369,12 @@ var viewer = (function (exports) {
                 gl.shaders.lighting
                     .uniforms({
                     color: hovering == face
-                        ? meshColors
+                        ? brepMeshColors
                             .emod(i)
                             .emod(faceIndex)
                             .darken(2)
                             .gl()
-                        : meshColorssGL.emod(i).emod(faceIndex),
+                        : brepMeshColorssGL.emod(i).emod(faceIndex),
                 })
                     .draw(mesh, gl.TRIANGLES, faceTriangleIndexes.start, faceTriangleIndexes.count);
             }
@@ -45752,7 +47385,8 @@ var viewer = (function (exports) {
                 .uniforms({ color: chroma('red').gl() })
                 .drawBuffers({ ts_Vertex: faceMesh.vertexBuffers.tangents }, undefined, gl.LINES);
         }
-        for (const mesh of meshes) {
+        for (let i = 0; i < meshes.length; i++) {
+            const mesh = meshes[i];
             gl.pushMatrix();
             gl.projectionMatrix.m[11] -= 1 / (1 << 20); // prevent Z-fighting
             g.paintWireframe &&
@@ -45769,7 +47403,7 @@ var viewer = (function (exports) {
             mesh.TRIANGLES &&
                 gl.shaders.lighting
                     .uniforms({
-                    color: chroma('#ffFF00').gl(),
+                    color: meshColorsGL.emod(i),
                     camPos: eye.pos,
                 })
                     .draw(mesh);
@@ -45822,9 +47456,17 @@ var viewer = (function (exports) {
                 paintScreen();
             };
             paintScreen = () => requestAnimationFrame(t => viewerPaint(t, gl));
-            B2T$$1.defaultFont = yield B2T$$1.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff');
+            // B2T.defaultFont = await B2T.loadFont(BREPTS_ROOT + '/fonts/FiraSansMedium.woff')
             window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
                 console.log(errorMsg, url, lineNumber, column, errorObj);
+            };
+            window.onpopstate = function (e) {
+                const hash = window.location.search.substr(1) || window.location.hash.substr(1) || '';
+                const command = decodeURIComponent(hash);
+                const hashContext = new Function(`let ${renderObjectKeys.join(',')};${command};return{${renderObjectKeys.join(',')}}`)();
+                Object.assign(eye, hashContext.i);
+                setupCamera$$1(eye, gl, true);
+                paintScreen();
             };
             const gl = BREPGLContext$$1.create(TSGLContext.create({ canvas: document.getElementById('testcanvas') }));
             gl.fullscreen();
@@ -45841,8 +47483,9 @@ var viewer = (function (exports) {
             gl.loadIdentity();
             gl.scale(10, 10, 10);
             gl.loadIdentity();
+            window.gl = gl;
             initNavigationEvents$$1(gl, eye, paintScreen);
-            cameraChangeListeners$$1.push(function (eye) {
+            cameraChangeListeners$$1.push(debounce(function (eye) {
                 const round = (x) => round10(x, -3);
                 const roundedEye = {
                     pos: eye.pos.map(round),
@@ -45853,8 +47496,8 @@ var viewer = (function (exports) {
                 const iSource = 'i=' + roundedEye.toSource().replace(/[\n\r\s]+|^\(|\)$/g, '');
                 const hash = window.location.hash.substr(1) || iSource;
                 const result = hash.match(/i=\{[^}]*\}/) ? hash.replace(/i=\{[^}]*\}/, iSource) : hash + ';' + iSource;
-                window.history.replaceState(undefined, undefined, '#' + result);
-            });
+                window.history.pushState(undefined, undefined, '#' + result);
+            }, 500));
             // initInfoEvents(paintScreen, g l)
             //initToolTips() // hide tooltip on mouseover
             //initPointInfoEvents()
@@ -45864,25 +47507,26 @@ var viewer = (function (exports) {
         });
     }
     function alignX(dir) {
-        eye.focus = V3.O;
-        eye.pos = V(100 * dir, 0, 0);
+        eye.pos = eye.focus.plus(V(100 * dir, 0, 0));
         eye.up = V3.Z;
+        setupCamera$$1(eye, window.gl);
         paintScreen();
     }
     function alignY(dir) {
-        eye.focus = V3.O;
-        eye.pos = V(0, 100 * dir, 0);
+        eye.pos = eye.focus.plus(V(0, 100 * dir, 0));
         eye.up = V3.Z;
+        setupCamera$$1(eye, window.gl);
         paintScreen();
     }
     function alignZ(dir) {
-        eye.focus = V3.O;
-        eye.pos = V(0, 0, 100 * dir);
+        eye.pos = eye.focus.plus(V(0, 0, 100 * dir));
         eye.up = eye.pos.cross(V3.X).unit();
+        setupCamera$$1(eye, window.gl);
         paintScreen();
     }
     function rot(angleInDeg) {
         eye.up = M4.rotateLine(eye.pos, eye.pos.to(eye.focus), angleInDeg * DEG).transformVector(eye.up);
+        setupCamera$$1(eye, window.gl);
         paintScreen();
     }
 

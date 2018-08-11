@@ -43,7 +43,7 @@ export class L3 extends Curve {
 
 	static throughPoints(anchor: V3, b: V3, tMin: number = 0, tMax?: number): L3 {
 		const dir = b.minus(anchor)
-		return new L3(anchor, dir.unit(), tMin, (tMax = dir.length()))
+		return new L3(anchor, dir.unit(), tMin, undefined !== tMax ? tMax : dir.length())
 	}
 
 	static anchorDirection(anchor: V3, dir: V3, min: number | V3 = 0, max: number | V3 = dir.length()): L3 {
@@ -355,7 +355,8 @@ export class L3 extends Curve {
 	}
 
 	isTsWithPlane(planeWC: P3) {
-		return [this.isTWithPlane(planeWC)]
+		const t = this.isTWithPlane(planeWC)
+		return isNaN(t) ? [] : [t]
 	}
 
 	flipped() {

@@ -1,0 +1,14 @@
+rename s/t to u/v in parametric surface
+remove one of SES or SES
+remove one of SEC or ECurve
+
+rotatedcurvesurface getExtremePoints
+
+dont reverse curves so tangents match cross product
+
+refactor fuzzybetween to have min/max first
+
+
+[X] remove references to linkBrep from test folder
+
+merge centroid and vol calc

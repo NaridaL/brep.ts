@@ -1,8 +1,10 @@
 import { assert, assertInst, assertNumbers, assertVectors, hasConstructor, int, M4, V3 } from 'ts3dutils'
 
 import {
+	ConicSurface,
 	Curve,
 	Edge,
+	EllipseCurve,
 	EllipsoidSurface,
 	ImplicitCurve,
 	ImplicitSurface,
@@ -10,6 +12,7 @@ import {
 	P3,
 	ParametricSurface,
 	PlaneSurface,
+	PointProjectedSurface,
 	PointVsFace,
 	Surface,
 } from '../index'
@@ -25,10 +28,10 @@ export class ProjectedCurveSurface extends ParametricSurface {
 		new <T extends ProjectedCurveSurface>(
 			baseCurve: Curve,
 			dir: V3,
-			uMin: number,
-			uMax: number,
-			vMin: number,
-			vMax: number,
+			uMin?: number,
+			uMax?: number,
+			vMin?: number,
+			vMax?: number,
 		): T
 	}
 
@@ -230,6 +233,50 @@ export class ProjectedCurveSurface extends ParametricSurface {
 			this.uMax,
 			1 == f ? this.vMin : -this.vMax,
 			1 == f ? this.vMax : -this.vMin,
+		)
+	}
+
+	transform4(m4: M4): PointProjectedSurface | ProjectedCurveSurface | ConicSurface {
+		const vp = m4.vanishingPoint(this.dir)
+		if (!vp) {
+			const f = m4.isMirroring() ? -1 : 1
+			return new this.constructor<this>(
+				this.baseCurve.transform4(m4),
+				m4
+					.normalized()
+					.transformVector(this.dir)
+					.times(f),
+				undefined,
+				undefined,
+				1 == f ? this.tMin : -this.tMax,
+				1 == f ? this.tMax : -this.tMin,
+			)
+		}
+		const curveT = this.baseCurve.transform4(m4)
+		if (curveT instanceof EllipseCurve) {
+			console.log(vp.sce, curveT.sce)
+			return ConicSurface.atApexThroughEllipse(
+				vp,
+				m4.isMirroring() ? curveT : curveT.reversed(),
+				this.sMin,
+				this.sMax,
+				1,
+				2,
+			)
+		}
+		return new PointProjectedSurface(
+			curveT,
+			vp,
+			P3.throughPoints(
+				curveT.at(curveT.tMin),
+				curveT.at((curveT.tMin + curveT.tMax) / 2),
+				curveT.at(curveT.tMax),
+			),
+			1,
+			this.sMin,
+			this.sMax,
+			1,
+			2,
 		)
 	}
 

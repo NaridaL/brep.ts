@@ -8,16 +8,21 @@ export * from './curve/PICurve'
 export * from './curve/PPCurve'
 export * from './curve/ParabolaCurve'
 export * from './curve/EllipseCurve'
+export * from './curve/NURBS'
 
 export * from './P3'
 export * from './surface/Surface'
 export * from './surface/ParametricSurface'
+
 export * from './surface/ConicSurface'
 export * from './surface/ProjectedCurveSurface'
 export * from './surface/RotatedCurveSurface'
 export * from './surface/CylinderSurface'
 export * from './surface/EllipsoidSurface'
 export * from './surface/PlaneSurface'
+export * from './surface/PointProjectedSurface'
+export * from './surface/NURBSSurface'
+
 export * from './surface/ZDirVolumeVisitor'
 export * from './surface/CalculateAreaVisitor'
 

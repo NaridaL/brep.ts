@@ -231,57 +231,14 @@ export class BezierCurve extends Curve {
 		)
 	}
 
-	isTsWithSurface(surface: Surface): number[] {
-		if (surface instanceof PlaneSurface) {
-			return this.isTsWithPlane(surface.plane)
-		}
-		if (surface instanceof CylinderSurface) {
-			const projPlane = new P3(surface.dir.unit(), 0)
+	isTsWithSurface(surfaceWC: Surface): number[] {
+		if (surfaceWC instanceof CylinderSurface) {
+			const projPlane = new P3(surfaceWC.dir.unit(), 0)
 			const projThis = this.project(projPlane)
-			const projEllipse = surface.baseCurve.project(projPlane)
+			const projEllipse = surfaceWC.baseCurve.project(projPlane)
 			return projEllipse.isInfosWithBezier2D(projThis).map(info => info.tOther)
 		}
-		if (surface instanceof ProjectedCurveSurface) {
-			const projPlane = new P3(surface.dir.unit(), 0)
-			const projThis = this.project(projPlane)
-			const projEllipse = surface.baseCurve.project(projPlane)
-			return projEllipse.isInfosWithCurve(projThis).map(info => info.tOther)
-		}
-		if (surface instanceof EllipsoidSurface) {
-			const thisOC = this.transform(surface.matrixInverse)
-			if (!thisOC.getAABB().touchesAABBfuzzy(new AABB(V3.XYZ.negated(), V3.XYZ))) {
-				return []
-			}
-			const f = (t: number) => thisOC.at(t).length() - 1
-			const df = (t: number) =>
-				thisOC
-					.at(t)
-					.unit()
-					.dot(thisOC.tangentAt(t))
-
-			const stepSize = 1 / (1 << 11)
-			const result: number[] = []
-			for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
-				const dt = stepSize * thisOC.tangentAt(startT).length()
-				if (abs(f(startT)) <= dt) {
-					//const t = newtonIterate1d(f, startT, 16)
-					let t = newtonIterateWithDerivative(f, startT, 16, df)
-					if (!eq0(f(t)) || eq0(df(t))) {
-						t = newtonIterate1d(df, startT, 16)
-						//if (f(a) * f(b) < 0) {
-						//    t = bisect(f, a, b, 16)
-						//} else if (df(a) * df(b) < 0) {
-						//    t = bisect(df, a, b, 16)
-						//}
-					}
-					if (eq0(f(t)) && !result.some(r => eq(r, t))) {
-						result.push(t)
-					}
-				}
-			}
-			return result.filter(t => surface.containsPoint(this.at(t)))
-		}
-		throw new Error()
+		return super.isTsWithSurface(surfaceWC)
 	}
 
 	likeCurve(curve: Curve): boolean {
@@ -517,16 +474,11 @@ export class BezierCurve extends Curve {
 		return this.p0.lerp(this.p1, 1.5).like(this.p3.lerp(this.p2, 1.5))
 	}
 
-	debugToMesh<T extends string>(mesh: Mesh, bufferName: T) {
-		const result = mesh.addVertexBuffer(bufferName, bufferName) as any
-		for (let t = -2; t <= 2; t += 0.01) {
-			const p = this.at(t)
-			result[bufferName].push(p, p.plus(this.tangentAt(t).toLength(1)))
-			result[bufferName].push(p, p.plus(this.normalP(t).toLength(1)))
+	debugInfo() {
+		return {
+			lines: [0, 1, 1, 2, 2, 3].map(i => this.points[i]),
+			points: this.points,
 		}
-		result[bufferName].push(this.p0, this.p1)
-		result[bufferName].push(this.p1, this.p2)
-		result[bufferName].push(this.p2, this.p3)
 	}
 
 	split(t: number): [BezierCurve, BezierCurve] {

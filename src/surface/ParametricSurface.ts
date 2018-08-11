@@ -1,4 +1,4 @@
-import { assert, assertNumbers, between, isCCW, V3 } from 'ts3dutils'
+import { AABB, assert, assertNumbers, between, isCCW, lerp, V, V3 } from 'ts3dutils'
 import { Mesh } from 'tsgl'
 
 import { breakDownPPCurves, Curve, Edge, ImplicitSurface, MathFunctionR2R, PICurve, Surface } from '../index'
@@ -107,9 +107,9 @@ export abstract class ParametricSurface extends Surface {
 
 	abstract pointFoot(pWC: V3, startU?: number, startV?: number): V3
 
-	toMesh() {
+	toMesh(uStep = this.uStep, vStep = this.vStep) {
 		assert(isFinite(this.vMin) && isFinite(this.vMax) && isFinite(this.uMin) && isFinite(this.uMax))
-		assert(isFinite(this.uStep) && isFinite(this.vStep))
+		assert(isFinite(uStep) && isFinite(vStep))
 		return Mesh.parametric(
 			this.pUVFunc(),
 			this.normalUVFunc(),
@@ -117,8 +117,8 @@ export abstract class ParametricSurface extends Surface {
 			this.uMax,
 			this.vMin,
 			this.vMax,
-			ceil((this.uMax - this.uMin) / this.uStep),
-			ceil((this.vMax - this.vMin) / this.vStep),
+			ceil((this.uMax - this.uMin) / uStep),
+			ceil((this.vMax - this.vMin) / vStep),
 		)
 	}
 
@@ -138,5 +138,15 @@ export abstract class ParametricSurface extends Surface {
 		const thisNormal = this.normalUVFunc()(this.uMin, this.vMin)
 		const otherNormal = object.normalP(pSMinTMin)
 		return 0 < thisNormal.dot(otherNormal)
+	}
+
+	getApproxAABB() {
+		const result = new AABB()
+		result.addPoints(this.getExtremePoints())
+		const ps = [V(0, 0), V(0, 1), V(1, 0), V(1, 1), V(0.5, 0.5)].map(p =>
+			this.pUV(lerp(this.uMin, this.uMax, p.x), lerp(this.vMin, this.vMax, p.y)),
+		)
+		result.addPoints(ps)
+		return result
 	}
 }

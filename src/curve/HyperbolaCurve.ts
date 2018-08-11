@@ -1,12 +1,20 @@
-import { arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, snap0, V3 } from 'ts3dutils'
+import { arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, le, M4, snap0, V3 } from 'ts3dutils'
 
-import { Curve, intersectionUnitHyperbolaLine, XiEtaCurve } from '../index'
+import {
+	Curve,
+	EllipseCurve,
+	intersectionUnitHyperbolaLine,
+	L3,
+	parabola4Projection,
+	ParabolaCurve,
+	XiEtaCurve,
+} from '../index'
 
-import { abs, PI, sign } from '../math'
+import { abs, cosh, min, PI, sign, sqrt } from '../math'
 
 /**
  * x² - y² = 1
- *
+ * C(t) = center + f1 * cosh(t) + f2 * sinh(t)
  */
 export class HyperbolaCurve extends XiEtaCurve {
 	static XY = new HyperbolaCurve(V3.O, V3.X, V3.Y)
@@ -134,6 +142,21 @@ export class HyperbolaCurve extends XiEtaCurve {
 				b = this.f1.e(dim)
 			return HyperbolaCurve.intersectionUnitLine(a, b, 0)
 		})
+	}
+
+	transform4(m4: M4): L3 | HyperbolaCurve | ParabolaCurve | EllipseCurve {
+		const tMap = (t: number) => sign(t) * min(10, sqrt(-(1 - cosh(t)) / (1 + cosh(t))))
+		// prettier-ignore
+		const parabolaToUnitHyperbola = new M4(
+            0,  1, 0, 1,
+            2,  0, 0, 0,
+            0,  0, 1, 0,
+            0, -1, 0, 1)
+		return parabola4Projection(
+			M4.product(m4, this.matrix, parabolaToUnitHyperbola),
+			tMap(this.tMin),
+			tMap(this.tMax),
+		)
 	}
 }
 

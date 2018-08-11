@@ -10,10 +10,12 @@ import {
 	pqFormula,
 	TAU,
 	V3,
+	Vector,
 } from 'ts3dutils'
 
 import {
 	Curve,
+	CylinderSurface,
 	Edge,
 	EllipseCurve,
 	HyperbolaCurve,
@@ -27,7 +29,7 @@ import {
 	Surface,
 } from '../index'
 
-import { abs, cos, PI, sign, sin, sqrt } from '../math'
+import { abs, cos, max, min, PI, sign, sin, sqrt, SQRT1_2 } from '../math'
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 	pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
@@ -39,7 +41,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				startU = angle < -PI / 2 ? angle + TAU : angle
 			}
 			if (undefined === startV) {
-				startV = pLC.z + (pLC.lengthXY() - pLC.z) * sqrt(2) / 2
+				startV = pLC.z + (pLC.lengthXY() - pLC.z) * SQRT1_2
 			}
 		}
 		const f = ([u, v]: number[]) => {
@@ -129,8 +131,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				// d = 0 => z² - y² = 0 => z² = y² => z = y
 				// plane goes through origin/V3.O
 				return [
-					new L3(V3.O, new V3(0, -sqrt(2) / 2, -sqrt(2) / 2), undefined, 0),
-					new L3(V3.O, new V3(0, -sqrt(2) / 2, sqrt(2) / 2), 0),
+					new L3(V3.O, new V3(0, -SQRT1_2, -SQRT1_2), undefined, 0),
+					new L3(V3.O, new V3(0, -SQRT1_2, SQRT1_2), 0),
 				]
 			} else {
 				// hyperbola
@@ -349,7 +351,48 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 			m4.transformVector(this.f1).times(m4.isMirroring() ? -1 : 1),
 			m4.transformVector(this.f2),
 			m4.transformVector(this.dir),
+			this.uMin,
+			this.uMax,
+			this.vMin,
+			this.vMax,
 		) as this
+	}
+
+	transform4(m4: M4): ConicSurface | CylinderSurface {
+		const transformedApex = m4.timesVector(Vector.fromV3AndWeight(this.center, 1))
+		const isometricZ = (z: number) => new EllipseCurve(new V3(0, 0, z), new V3(z, 0, 0), new V3(0, z, 0))
+		if (!eq0(transformedApex.w)) {
+			// sMin doesn't change, but tMin does...
+			const c = m4.transformPoint(this.center),
+				f1 = m4.transformVector2(this.f1, this.center).times(m4.isMirroring() ? -1 : 1),
+				f2 = m4.transformVector2(this.f2, this.center),
+				dir = m4.transformVector2(this.dir, this.center)
+			const matrixInv = M4.forSys(f1, f2, dir, c).inversed()
+			const aabb = isometricZ(this.vMin)
+				.transform4(matrixInv.times(m4.times(this.matrix)))
+				.getAABB()
+				.addAABB(
+					isometricZ(this.vMax)
+						.transform4(matrixInv.times(m4.times(this.matrix)))
+						.getAABB(),
+				)
+			return new ConicSurface(c, f1, f2, dir, this.uMin, this.uMax, aabb.min.z, aabb.max.z) as this
+		} else {
+			const dir = transformedApex.V3()
+			const baseCurve = isometricZ(this.vMin).transform4(m4.times(this.matrix)) as EllipseCurve
+			const matrixInv = M4.forSys(baseCurve.f1, baseCurve.f2, dir.unit(), baseCurve.center).inversed()
+			const aabb = isometricZ(this.vMax)
+				.transform4(matrixInv.times(m4.times(this.matrix)))
+				.getAABB()
+			return new CylinderSurface(
+				baseCurve,
+				dir.unit(),
+				this.uMin,
+				this.uMax,
+				min(0, aabb.min.z, aabb.max.z),
+				max(0, aabb.min.z, aabb.max.z),
+			)
+		}
 	}
 
 	flipped(): this {
@@ -471,6 +514,13 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 				? curveWC
 				: curveWC.reversed()
 		})
+	}
+
+	debugInfo() {
+		return {
+			ps: [this.center],
+			lines: [this.center, this.center.plus(this.f1), this.center.plus(this.f2), this.center.plus(this.dir)],
+		}
 	}
 }
 

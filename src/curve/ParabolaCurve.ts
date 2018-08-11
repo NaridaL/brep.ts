@@ -1,6 +1,7 @@
-import { arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, int, le, pqFormula, V3 } from 'ts3dutils'
+import { arrayFromFunction, assertNumbers, eq, eq0, hasConstructor, int, le, M4, pqFormula, V3 } from 'ts3dutils'
 
-import { BezierCurve, Curve, ISInfo, L3, XiEtaCurve } from '../index'
+import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, ISInfo, L3, XiEtaCurve } from '../index'
+import { parabola4Projection } from './XiEtaCurve'
 
 /**
  * eta = xi²
@@ -150,6 +151,10 @@ export class ParabolaCurve extends XiEtaCurve {
 		return f1Length * (F(endT - t0) - F(startT - t0))
 	}
 
+	transform4(m4: M4): L3 | HyperbolaCurve | ParabolaCurve | EllipseCurve {
+		return parabola4Projection(this.matrix.transform(m4), this.tMin, this.tMax)
+	}
+
 	asBezier() {
 		return BezierCurve.quadratic(
 			this.at(-1),
@@ -157,7 +162,19 @@ export class ParabolaCurve extends XiEtaCurve {
 				new L3(this.at(1), this.tangentAt(1).unit()),
 			)!,
 			this.at(1),
-		)
+		) as BezierCurve
+	}
+
+	/**
+	 * Returns new ParabolaCurve that has its center point at this.at(t0)
+	 * @param t0
+	 */
+	recenter(t0: number) {
+		// this.at(t) = f2 t² + f1 t + center
+		// c2.at(t) = f2 (t + t0)² + f1 (t + t0) + center
+		// c2.at(t) = f2 (t² + 2 t0 t + t0²) + f1 (t + t0) + center
+		// c2.at(t) = f2 t² + (f1 + 2 f2 t0) t + center + f2 t0² + f1 t0
+		return new ParabolaCurve(this.at(t0), this.f1.plus(this.f2.times(2 * t0)), this.f2)
 	}
 }
 

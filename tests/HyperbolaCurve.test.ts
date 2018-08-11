@@ -1,6 +1,6 @@
-import { suite, test, testCurve, testISTs } from './manager'
+import { suite, test, testCurve, testCurveTransform, testISTs } from './manager'
 
-import { V } from 'ts3dutils'
+import { DEG, M4, V } from 'ts3dutils'
 import { HyperbolaCurve, intersectionUnitHyperbolaLine, P3 } from '..'
 
 import { sqrt } from '../src/math'
@@ -47,5 +47,11 @@ suite('HyperbolaCurve', () => {
 
 		testISTs(assert, HyperbolaCurve.XY, new P3(V(2, 1).unit(), -2), 0)
 		testISTs(assert, HyperbolaCurve.XY, new P3(V(2, -1).unit(), -2), 0)
+	})
+
+	test('transform4', assert => {
+		const c = HyperbolaCurve.XY.withBounds(-1, 1).translate(1, -4, 0)
+		const m = M4.product(M4.rotateX(90 * DEG), M4.perspective(45, 1, 2, 5), M4.rotateX(-90 * DEG))
+		testCurveTransform(assert, c, m)
 	})
 })

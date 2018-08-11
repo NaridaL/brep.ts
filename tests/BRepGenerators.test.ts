@@ -1,9 +1,16 @@
-import { DEG, M4, TAU, V, V3 } from 'ts3dutils'
+import { b2equals, bRepEqual, outputLink, suite, test, testBRepOp } from './manager'
+
+import chroma from 'chroma-js'
+import * as fs from 'fs'
+import { AABB,DEG, M4, TAU, V, V3 } from 'ts3dutils'
+import { Mesh } from 'tsgl'
 import {
 	B2T,
 	BRep,
 	ConicSurface,
+	CylinderSurface,
 	Edge,
+	EllipseCurve,
 	L3,
 	P3,
 	PCurveEdge,
@@ -11,16 +18,14 @@ import {
 	PlaneSurface,
 	RotatedCurveSurface,
 	RotationFace,
-	CylinderSurface,
-	EllipseCurve,
 	StraightEdge,
 } from '..'
-import { b2equals, bRepEqual, outputLink, suite, test, testBRepOp } from './manager'
 
 // prettier-ignore
 suite('BRep generators', () => {
     test('rotStep w/ straight edges', assert => {
         const actual = B2T.rotStep(StraightEdge.chain([V(2, 0, 2), V(4, 0, 2), V(4, 0, 4)]), TAU, 5)
+        // prettier-ignore
         const expected = new BRep([
             new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -2), V3.Y, V3.X), [
                 new StraightEdge(new L3(V(1.236067977499789, -3.8042260651806146, 2), V(0.5877852522924731, 0.8090169943749473, 0)), V(4, 0, 2), V(1.236067977499789, -3.8042260651806146, 2), 4.702282018339786, 0),
@@ -89,6 +94,7 @@ suite('BRep generators', () => {
         const actual = B2T.rotStep([
             Edge.forCurveAndTs(EllipseCurve.semicircle(2, V(3, 0)).rotateX(90 * DEG)),
             StraightEdge.throughPoints(V(1, 0, 0), V(5, 0, 0))], [0.1, 1, 2])
+            // prettier-ignore
         const expected = new BRep([
             new RotationFace(new CylinderSurface(new EllipseCurve(V(3, 0, 0), V(2, 0, 0), V(0, 1.2246467991473532e-16, 2), 0, 3.141592653589793), V(0.0499791692706789, -0.9987502603949664, 0), 0, 3.141592653589793, -Infinity, Infinity), [
                 new PCurveEdge(new EllipseCurve(V(3, 0, 0), V(2, 0, 0), V(0, 1.2246467991473532e-16, 2), 0, 3.141592653589793), V(1, 1.4997597826618576e-32, 2.4492935982947064e-16), V(5, 0, 0), 3.141592653589793, 0, undefined, V(2.4492935982947064e-16, 1.2246467991473532e-16, 2), V(0, -1.2246467991473532e-16, -2), undefined),
@@ -124,6 +130,7 @@ suite('BRep generators', () => {
     })
     test('rotateEdges w/ straight edges', assert => {
         const actual = B2T.rotateEdges(StraightEdge.chain([V(2, 0, 2), V(4, 0, 2), V(4, 0, 4)]), TAU)
+        // prettier-ignore
         const expected = new BRep([
             new PlaneFace(new PlaneSurface(new P3(V(0, 0, -1), -2), V3.Y, V3.X), [
                 new StraightEdge(new L3(V(2, 0, 2), V3.X), V(4, 0, 2), V(2, 0, 2), 2, 0),
@@ -162,6 +169,7 @@ suite('BRep generators', () => {
         const actual = B2T.pyramidEdges([
             Edge.forCurveAndTs(EllipseCurve.semicircle(2, V(3, 0))),
             StraightEdge.throughPoints(V(1, 0, 0), V(5, 0, 0))], V(0, 0, 4))
+            // prettier-ignore
         const expected = new BRep([
             new RotationFace(new ConicSurface(V(0, 0, 4),V(-2, 0, 0),V(0, 2, 0),V(3, 0, -4)), [
                 new StraightEdge(new L3(V(0, 0, 4),V(0.7808688094430304, 0, -0.6246950475544243)),V(0, 0, 4),V(5, 0, 0),0,6.4031242374328485),
@@ -179,6 +187,7 @@ suite('BRep generators', () => {
 
     test('torus', assert => {
         const actual = B2T.torus(1, 2)
+        // prettier-ignore
         const expected = new BRep([
             new RotationFace(new RotatedCurveSurface(new EllipseCurve(V(2, 0, 0), V3.X, V(0, 6.123233995736766e-17, 1), 0, 3.141592653589793), M4.IDENTITY, 0, 3.141592653589793), [
                 new PCurveEdge(new EllipseCurve(V(2, 0, 0),V3.X,V(0, 6.123233995736766e-17, 1),0,3.141592653589793),V(1, 7.498798913309288e-33, 1.2246467991473532e-16),V(3, 0, 0),3.141592653589793,0,undefined,V(1.2246467991473532e-16, 6.123233995736766e-17, 1),V(0, -6.123233995736766e-17, -1),'undefined.rotateX(1.5707963267948966)undefined'),
@@ -205,4 +214,46 @@ suite('BRep generators', () => {
         bRepEqual(assert, actual, expected)
     })
 
+    test('fromBPT', assert => {
+        const bpt = fs.readFileSync(__dirname + '/fixtures/teapotrim.bpt', 'utf8')
+        const actual = B2T.fromBPT(bpt)
+        const expected = BRep.EMPTY
+        actual[0].toMesh()
+        outputLink(assert, {
+            mesh: actual.map(x=>x.flipped()).toSource() + ".map(x => x.toMesh())"
+        })
+        //bRepEqual(assert, actual, expected)
+    })
+
+    test('chroma lab rgb', assert => {
+        const r = 8 * 2
+        const drPs = Mesh.box(r, r, r).vertices.map(p => {
+			const c = chroma.gl(...p, 1)
+			return { p: V(c.lab()), color: c.hex() }
+		})
+        const aabb=new AABB(
+            V(0,-87,-108),
+            V(100,99,95)
+        )
+
+		const obb = M4.forSys(V(-0.433, -0.665, -0.609).toLength(124.525), V(-0.354, 0.746, -0.564).toLength(250.71), V(0.829, -0.028, -0.558).toLength(86.463), V(99.707, -28.17, 152.469))
+        console.log("aabb vol",aabb.volume())
+        console.log("obb vol",obb.determinant())
+		//; cX: (45.848, -110.990, 76.664); cY: (10.883, 158.919, 11.178); cZ: (171.393, -30.598, 104.189)
+
+		outputLink(assert, { drPs, boxes: [obb,aabb.getM4()] })
+
+        const wedgeVol = 3602639/0x1_00_00_00*aabb.volume();
+        console.log("wedgeVol "+ wedgeVol)
+        console.log("wedgeVol/aabb vol "+ wedgeVol/aabb.volume())
+        console.log("wedgeVol/obb vol "+ wedgeVol/obb.determinant())
+        //let c = 0,m=aabb.getM4()
+        //for(let i=0;i<0x1_00_00_00;i++){
+        //    const [x,y,z]=chroma.num(i).gl()
+        //    const [l,a,b]=m.transformPoint(new V3(x,y,z))
+        //    if (!chroma.lab(l,a,b).clipped())c++
+        //
+        //}
+        //console.log("c",c)
+    })
 })
