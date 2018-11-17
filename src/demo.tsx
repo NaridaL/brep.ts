@@ -4,10 +4,10 @@ import * as hljs from 'highlight.js'
 import React, {Component, InputHTMLAttributes, MouseEvent, WheelEvent} from 'react'
 import ReactDOM from 'react-dom'
 import {clamp, DEG, int, round10, TAU, V, V3} from 'ts3dutils'
-import {TSGLContext} from 'tsgl'
+import {Mesh, TSGLContext} from 'tsgl'
 
 import {BREPGLContext, initMeshes, initNavigationEvents, initShaders, setupCamera} from './BREPGLContext'
-import {B2T, BRep, CustomPlane, Edge, P3} from './index'
+import {B2T, BRep, CustomPlane, Edge, Face, P3} from './index'
 
 const fakeB2Mesh = (false as true) && ({} as BRep).toMesh()
 type B2Mesh = typeof fakeB2Mesh
@@ -57,7 +57,7 @@ class Demo extends Component<DemoProps, DemoDesc> {
         const {f, args, height, width, ...props} = this.props
         const info = demo.b2s && 'faces: ' + demo.b2s.map(b2 => b2.faces.length).join('/')
             + ' edges: ' + demo.b2s.map(b2 => b2.edgeFaces && b2.edgeFaces.size || '?').join('/')
-            + ' triangles: ' + demo.meshes.map(m => m.TRIANGLES.length / 3).join('/')
+            + ' triangles: ' + demo.meshes.map(m => m ? m.TRIANGLES.length / 3:0).join('/')
         return <div {...props} style={{width}}
                     className={'democontainer'}>
             <div className="canvascontainer" ref={r => this.container = r} style={{width: '100%', height}}>
@@ -94,12 +94,12 @@ class InputComponent extends Component<InputHTMLAttributes<HTMLInputElement> & {
     }
 
     render() {
-        const {step, value, ...atts} = this.props
+        const {step, value, change,...atts} = this.props
         return <input {...atts}
                     defaultValue={'' + value}
                   className={classnames(this.props.className, step && 'scrollable')}
                   onWheel={step && this.onWheel}
-                  onBlur={e => this.props.change((e.target as any).value)} />
+                  onBlur={e => change((e.target as any).value)} />
     }
 }
 
@@ -181,6 +181,7 @@ function paintDemo(demo: DemoDesc) {
 
     for (let i = 0; i < demo.meshes.length; i++) {
         const mesh = demo.meshes[i], b2 = demo.b2s[i]
+        if (!mesh) continue
         gl.pushMatrix()
         //viewerGL.translate(30, 0, 0)
         gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
@@ -223,7 +224,13 @@ function update(demo: DemoDesc, params: string[]) {
     //	console.log(e.message)
     //}
     demo.gl.makeCurrent()
-    demo.meshes = demo.b2s && demo.b2s.map(b2 => b2.toMesh().compile())
+    demo.meshes = demo.b2s && demo.b2s.map(b2 => {
+        try {
+            return b2.toMesh().compile()
+        } catch(e) {
+            return undefined
+        }
+    })
     paintDemo(demo)
 }
 
@@ -246,7 +253,7 @@ const Body = () => <div>
         const result = box.minus(sphere)
         return [box, sphere, result.translate(12)]
     }} args={[
-        {name: 'sphere radius', type: 'number', fix: val => clamp(val, 0.1, 1000), def: 2, step: 0.5},
+        {name: 'sphere radius', type: 'number', fix: val => clamp(val, 0.1, 1000), def: 2.5, step: 0.5},
         {name: 'sphere height', type: 'number', fix: val => clamp(val, 0.1, 1000), def: 2, step: 0.5}]} />
     <h3>Functionality this library implements</h3>
     <ul>

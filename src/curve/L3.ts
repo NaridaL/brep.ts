@@ -261,7 +261,7 @@ export class L3 extends Curve {
 		const s = anchorDiff.cross(this.dir1).dot(dirCross) / div
 		const t = anchorDiff.cross(line.dir1).dot(dirCross) / div
 		return { s: s, t: t }
-		//console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1,
+		// console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1,
 		// "s", s, "t", t, "div", div)
 	}
 
