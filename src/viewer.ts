@@ -154,7 +154,7 @@ function initBRep() {
 		g.edges.forEach((edge, edgeIndex) => {
 			const points = edge.points()
 			for (let i = 0; i < points.length - 1; i++) {
-				const color = edgeViewerColors[(edgeIndex + i % 2) % edgeViewerColors.length]
+				const color = edgeViewerColors[(edgeIndex + (i % 2)) % edgeViewerColors.length]
 				// const tangent = edge.tangentAt(i)
 				// dMesh.curve1.push(points[i], points[i].plus(tangent.toLength(1)))
 				edgesMesh.curve1.push(points[i], points[i + 1])

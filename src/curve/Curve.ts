@@ -350,7 +350,7 @@ export abstract class Curve extends Transformable implements Equalable {
 
 		const STEPS = 32
 		if (undefined === tStart) {
-			tStart = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / (STEPS - 1)).withMax(
+			tStart = arrayFromFunction(STEPS, i => tMin + ((tMax - tMin) * i) / (STEPS - 1)).withMax(
 				t => -this.at(t).distanceTo(p),
 			)
 		}

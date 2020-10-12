@@ -18,7 +18,17 @@ import {
 } from '../index'
 
 import { sign } from '../math'
+// declare global {
+class Foo<T> {
+	bar(this: T[]) {
+		return 23
+	}
+}
 
+interface Array<T> extends Foo<T> {}
+// }
+
+// [].bar()
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
  * Choose dir appropriately to select surface orientation.

@@ -78,19 +78,21 @@ export class CustomPlane extends P3 {
 			new L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
 			new L3(this.anchor.plus(this.up.times(this.vMax)), this.right),
 		]
-			.map((line2, line2Index): number => {
-				const info = line2.infoClosestToLine(line)
-				if (
-					(isNaN(info.t) || // parallel LINES
-						(line2Index < 2 && this.vMin <= info.t && info.t <= this.vMax) ||
-						(line2Index >= 2 && this.uMin <= info.t && info.t <= this.uMax)) &&
-					info.distance <= mindist
-				) {
-					return info.s
-				} else {
-					return Infinity
-				}
-			})
+			.map(
+				(line2, line2Index): number => {
+					const info = line2.infoClosestToLine(line)
+					if (
+						(isNaN(info.t) || // parallel LINES
+							(line2Index < 2 && this.vMin <= info.t && info.t <= this.vMax) ||
+							(line2Index >= 2 && this.uMin <= info.t && info.t <= this.uMax)) &&
+						info.distance <= mindist
+					) {
+						return info.s
+					} else {
+						return Infinity
+					}
+				},
+			)
 			.min()
 	}
 

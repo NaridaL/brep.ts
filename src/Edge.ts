@@ -144,12 +144,12 @@ export abstract class Edge extends Transformable {
 	}
 
 	static ngon(n: int = 3, radius: number = 1): Edge[] {
-		return StraightEdge.chain(arrayFromFunction(n, i => V3.polar(radius, TAU * i / n)))
+		return StraightEdge.chain(arrayFromFunction(n, i => V3.polar(radius, (TAU * i) / n)))
 	}
 
 	static star(pointCount: int = 5, r0: number = 1, r1: number = 0.5): Edge[] {
 		const vertices = arrayFromFunction(pointCount * 2, i =>
-			V3.polar(0 == i % 2 ? r0 : r1, TAU * i / pointCount / 2),
+			V3.polar(0 == i % 2 ? r0 : r1, (TAU * i) / pointCount / 2),
 		)
 		return StraightEdge.chain(vertices)
 	}
@@ -171,7 +171,7 @@ export abstract class Edge extends Transformable {
 	static reuleaux(n: int = 3, radius: number = 1): Edge[] {
 		assert(3 <= n)
 		assert(1 == n % 2)
-		const corners = arrayFromFunction(n, i => V3.polar(radius, TAU * i / n))
+		const corners = arrayFromFunction(n, i => V3.polar(radius, (TAU * i) / n))
 		return arrayFromFunction(n, i => {
 			const aI = (i + floor(n / 2)) % n,
 				bI = (i + ceil(n / 2)) % n
@@ -272,8 +272,8 @@ export abstract class Edge extends Transformable {
 			return [abs(dist1) - radius, abs(dist2) - radius]
 		}
 
-		const startT1 = e1.bT - radius * sign(e1.deltaT()) / e1.bDir.length()
-		const startT2 = e2.aT + radius * sign(e2.deltaT()) / e2.aDir.length()
+		const startT1 = e1.bT - (radius * sign(e1.deltaT())) / e1.bDir.length()
+		const startT2 = e2.aT + (radius * sign(e2.deltaT())) / e2.aDir.length()
 		const [t1, t2] = newtonIterate(f, [startT1, startT2])
 		const cornerA = e1.curve.at(t1)
 		const cornerB = e2.curve.at(t2)

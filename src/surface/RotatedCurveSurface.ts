@@ -81,7 +81,7 @@ export class RotatedCurveSurface extends ParametricSurface {
 	}
 
 	dpdu(): (u: number, v: number) => V3 {
-		return (u,v) => {
+		return (u, v) => {
 			const radius = this.curve.at(v).x
 			const resultLC = new V3(radius * -sin(u), radius * cos(u), 0)
 			return this.matrix.transformVector(resultLC)

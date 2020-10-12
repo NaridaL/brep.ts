@@ -7,11 +7,12 @@
     <envs>
       <env name="TS_NODE_PROJECT" value="tests/tsconfig.json" />
       <env name="TS_NODE_TRANSPILE_ONLY" value="true" />
+      <env name="TS_NODE_IGNORE" value="foo" />
     </envs>
     <ui>tdd</ui>
     <extra-mocha-options>--require ts-node/register</extra-mocha-options>
     <test-kind>PATTERN</test-kind>
     <test-pattern>tests/**/*.test.ts</test-pattern>
-    <method />
+    <method v="2" />
   </configuration>
 </component>

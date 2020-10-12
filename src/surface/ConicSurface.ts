@@ -176,20 +176,20 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 					]
 				} else if (aa < cc) {
 					// ellipse
-					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					const center = new V3((-a * d) / (cc - aa), 0, (d * c) / (cc - aa))
 					if (center.z < 0) {
 						return []
 					}
 					const p1 = new V3(d / (a - c), 0, -d / (a - c))
-					const p2 = new V3(-a * d / (cc - aa), d / sqrt(cc - aa), d * c / (cc - aa))
+					const p2 = new V3((-a * d) / (cc - aa), d / sqrt(cc - aa), (d * c) / (cc - aa))
 					return [new EllipseCurve(center, center.to(p1), center.to(p2), -PI, PI)]
 				} else if (aa > cc) {
 					// hyperbola
-					const center = new V3(-a * d / (cc - aa), 0, d * c / (cc - aa))
+					const center = new V3((-a * d) / (cc - aa), 0, (d * c) / (cc - aa))
 					// const p1 = new V3(d / (a - c), 0, -d / (a - c))
 					// const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
 					// const f1 = center.to(p1)
-					const f1 = new V3(d * c / (aa - cc), 0, -d * a / (aa - cc))
+					const f1 = new V3((d * c) / (aa - cc), 0, (-d * a) / (aa - cc))
 					const f2 = new V3(0, d / sqrt(aa - cc), 0)
 					return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), f2)]
 				}

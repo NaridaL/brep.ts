@@ -49,7 +49,7 @@ export class HyperbolaCurve extends XiEtaCurve {
 			if (le(c * a, 0)) {
 				return []
 			}
-			const eta = sign(a * b) * (c ** 2 - a ** 2) / 2 / a / c
+			const eta = (sign(a * b) * (c ** 2 - a ** 2)) / 2 / a / c
 			return [Math.asinh(eta)]
 		} else {
 			const sqrtVal = snap0(b ** 2 * (-(a ** 2) + b ** 2 + c ** 2))
@@ -129,7 +129,7 @@ export class HyperbolaCurve extends XiEtaCurve {
 		const f1length = mainAxes.f1.length(),
 			f2length = mainAxes.f1.length()
 		const [a, b] = f1length > f2length ? [f1length, f2length] : [f2length, f1length]
-		return Math.sqrt(1 + b * b / a / a)
+		return Math.sqrt(1 + (b * b) / a / a)
 	}
 
 	roots(): [number[], number[], number[]] {

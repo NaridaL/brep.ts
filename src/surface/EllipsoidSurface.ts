@@ -99,7 +99,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 					for (let i = 0; i < points.length - 1; i++) {
 						const p = points[i],
 							ppp = points[i + 1]
-						sum += (abs(p.angleXY()) + abs(ppp.angleXY())) / 2 * (ppp.z - p.z)
+						sum += ((abs(p.angleXY()) + abs(ppp.angleXY())) / 2) * (ppp.z - p.z)
 					}
 					return sum
 				} else if (edge.curve instanceof EllipseCurve) {
@@ -195,7 +195,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 				}
 
 				const triangleArea = heron(1, surfaceRadius, surfaceCenterDist)
-				const radius = triangleArea * 2 / surfaceCenterDist
+				const radius = (triangleArea * 2) / surfaceCenterDist
 				const isCurvesCenterDist = sign(1 + surfaceCenterDist ** 2 - surfaceRadius ** 2) * sqrt(1 - radius ** 2)
 				const plane = new P3(surface.center.unit(), isCurvesCenterDist)
 				return EllipsoidSurface.unitISCurvesWithPlane(plane.flipped())
@@ -644,7 +644,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 	}
 
 	volume(): number {
-		return 4 / 3 * Math.PI * this.f1.dot(this.f2.cross(this.f3))
+		return (4 / 3) * Math.PI * this.f1.dot(this.f2.cross(this.f3))
 	}
 
 	loopContainsPoint(loop: Edge[], pWC: V3): PointVsFace {
@@ -692,10 +692,12 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 			if (c < a) {
 				const eccentricity2 = 1 - c ** 2 / a ** 2
 				const eccentricity = Math.sqrt(eccentricity2)
-				return 2 * PI * a ** 2 * (1 + (1 - eccentricity2) / Math.sqrt(eccentricity) * Math.atanh(eccentricity))
+				return (
+					2 * PI * a ** 2 * (1 + ((1 - eccentricity2) / Math.sqrt(eccentricity)) * Math.atanh(eccentricity))
+				)
 			} else {
 				const eccentricity = Math.sqrt(1 - a ** 2 / c ** 2)
-				return 2 * PI * a ** 2 * (1 + c / a / eccentricity * Math.asin(eccentricity))
+				return 2 * PI * a ** 2 * (1 + (c / a / eccentricity) * Math.asin(eccentricity))
 			}
 		}
 
@@ -708,7 +710,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 		}
 
 		const phi = Math.acos(c / a)
-		const kk = a ** 2 * (b ** 2 - c ** 2) / (b ** 2 * (a ** 2 - c ** 2))
+		const kk = (a ** 2 * (b ** 2 - c ** 2)) / (b ** 2 * (a ** 2 - c ** 2))
 		const incompleteEllipticInt1 = gaussLegendreQuadrature24(
 			phi => Math.pow(1 - kk * Math.sin(phi) ** 2, -0.5),
 			0,
@@ -720,7 +722,7 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 			phi,
 		)
 		return (
-			(2 * PI * c ** 2 + 2 * PI * a * b / Math.sin(phi)) *
+			(2 * PI * c ** 2 + (2 * PI * a * b) / Math.sin(phi)) *
 			(incompleteEllipticInt2 * Math.sin(phi) ** 2 + incompleteEllipticInt1 * Math.cos(phi) ** 2)
 		)
 	}
@@ -795,18 +797,11 @@ export class EllipsoidSurface extends ParametricSurface implements ImplicitSurfa
 			throw new Error('vanishing plane intersects unit sphere')
 		}
 		const c = pn.div(-pwSqrMinusPnSqr)
-		const scale = pn.times(pw * pn.length() / (pn.squared() * -pwSqrMinusPnSqr))
+		const scale = pn.times((pw * pn.length()) / (pn.squared() * -pwSqrMinusPnSqr))
 		const scale1 = pw / -pwSqrMinusPnSqr
 		const scale2 = 1 / sqrt(pwSqrMinusPnSqr)
 		const rotNX = M4.forSys(pn.unit(), pn.getPerpendicular().unit())
-		return M4.product(
-			m,
-			Pinv,
-			M4.translate(c),
-			rotNX,
-			M4.scale(scale1, scale2, scale2),
-			rotNX.transposed(),
-		)
+		return M4.product(m, Pinv, M4.translate(c), rotNX, M4.scale(scale1, scale2, scale2), rotNX.transposed())
 	}
 }
 EllipsoidSurface.prototype.uStep = PI / 32

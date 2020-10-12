@@ -136,7 +136,7 @@ export function calcNextEdgeIndex(currentEdge: Edge, possibleEdges: Edge[], face
 	for (let i = possibleEdges.length; i--; ) {
 		const edge = possibleEdges[i]
 		const angle1 = currentEdge.bDir.negated().angleRelativeNormal(edge.aDir, faceNormalAtCurrentB)
-		const angle = (angle1 + TAU + NLA_PRECISION) % TAU - NLA_PRECISION
+		const angle = ((angle1 + TAU + NLA_PRECISION) % TAU) - NLA_PRECISION
 		if (eq0(angle)) {
 			// do advanced analysis
 			if (currentEdge.curve.isColinearTo(edge.curve)) {
@@ -925,8 +925,8 @@ export class BRep extends Transformable {
 				// @ts-ignore
 				const els = this.faces.map(face => [
 					face,
-					Array.from(edgeLooseSegments.entries()).flatMap(
-						([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : []),
+					Array.from(edgeLooseSegments.entries()).flatMap(([edge, subs]) =>
+						face.getAllEdges().some(e => e.equals(edge)) ? subs : [],
 					),
 				])
 				this.reconstituteFaces(this.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
@@ -936,8 +936,8 @@ export class BRep extends Transformable {
 				// @ts-ignore
 				const els = other.faces.map(face => [
 					face,
-					Array.from(edgeLooseSegments.entries()).flatMap(
-						([edge, subs]) => (face.getAllEdges().some(e => e.equals(edge)) ? subs : []),
+					Array.from(edgeLooseSegments.entries()).flatMap(([edge, subs]) =>
+						face.getAllEdges().some(e => e.equals(edge)) ? subs : [],
 					),
 				])
 				other.reconstituteFaces(other.faces, edgeLooseSegments, faceMap, newFaces, infoFactory)
@@ -1071,7 +1071,7 @@ export function splitsVolumeEnclosingFaces(brep: BRep, canonEdge: Edge, dirAtEdg
 	const faceInfo0 = edgeFaceInfos[0]
 	const aDir1 = canonEdge.aDir.unit()
 	const angleToCanon =
-		(faceInfo0.inside.angleRelativeNormal(dirAtEdgeA, aDir1) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI) -
+		((faceInfo0.inside.angleRelativeNormal(dirAtEdgeA, aDir1) + 2 * Math.PI + NLA_PRECISION) % (2 * Math.PI)) -
 		NLA_PRECISION
 	const nearestFaceInfoIndex = edgeFaceInfos.findIndex(faceInfo => lt(angleToCanon, faceInfo.angle))
 	const nearestFaceInfo =
@@ -1097,7 +1097,7 @@ export function splitsVolumeEnclosingFacesP(brep: BRep, canonEdge: Edge, p: V3, 
 		const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated()
 		const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir)
 		const faceInfoAngleAtP = pInside.angleRelativeNormal(faceInfoInsideAtP, pDir1)
-		return -((faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU - NLA_PRECISION)
+		return -(((faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU) - NLA_PRECISION)
 	}
 	const nearestFaceInfo = edgeFaceInfos.withMax(faceInfoAngleFromPInsideNeg)
 	if (eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
@@ -1126,7 +1126,7 @@ export function splitsVolumeEnclosingFacesP2(
 	const pDir1 = canonEdge.tangentAt(canonEdge.curve.pointT(p)).unit()
 	let pInside = testCurve.tangentAt(curveT).times(dir)
 	if (pInside.isParallelTo(pDir1)) {
-		pInside = testCurve.diff(curveT, 1e-4 * dir / testCurve.tangentAt(curveT).length()).rejectedFrom(pDir1)
+		pInside = testCurve.diff(curveT, (1e-4 * dir) / testCurve.tangentAt(curveT).length()).rejectedFrom(pDir1)
 		pInside = pInside.div(pInside.length())
 	}
 	let minValue = 20,
@@ -1136,7 +1136,7 @@ export function splitsVolumeEnclosingFacesP2(
 		const faceInfoPDir = faceInfo.edge.getCanon() == faceInfo.edge ? pDir1 : pDir1.negated()
 		const faceInfoInsideAtP = faceInfo.face.surface.normalP(p).cross(faceInfoPDir)
 		const faceInfoAngleAtP = pInside.angleRelativeNormal(faceInfoInsideAtP, pDir1)
-		const angle = (faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU - NLA_PRECISION
+		const angle = ((faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU) - NLA_PRECISION
 		if (eq0(angle)) {
 			// do advanced analysis
 			const normVector = faceInfo.face.surface.normalP(p)
@@ -1315,7 +1315,7 @@ export function intersectionUnitCircleLine2(a: number, b: number, c: number): [n
 	if (termSqr < 0) {
 		return []
 	} else if (termSqr == 0) {
-		return [[a * c / (a * a + b * b), b * c / (a * a + b * b)]]
+		return [[(a * c) / (a * a + b * b), (b * c) / (a * a + b * b)]]
 	} else {
 		const term = sqrt(termSqr)
 		return [

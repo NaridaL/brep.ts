@@ -27,11 +27,13 @@ export class ParabolaCurve extends XiEtaCurve {
 		// t² dx² + t (ax dx + dy) + ay² + ay = 0
 		const pqDiv = dirLC.x ** 2
 		const lineTs = pqFormula((anchorLC.x * dirLC.x + dirLC.y) / pqDiv, (anchorLC.x ** 2 + anchorLC.y) / pqDiv)
-		return lineTs.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y)).map(tOther => ({
-			tThis: dirLC.x * tOther + anchorLC.x,
-			tOther: tOther,
-			p: L3.at(anchorWC, dirWC, tOther),
-		}))
+		return lineTs
+			.filter(tOther => le(0, anchorLC.y + tOther * dirLC.y))
+			.map(tOther => ({
+				tThis: dirLC.x * tOther + anchorLC.x,
+				tOther: tOther,
+				p: L3.at(anchorWC, dirWC, tOther),
+			}))
 	}
 
 	static intersectionUnitLine(a: number, b: number, c: number): number[] {
@@ -145,7 +147,7 @@ export class ParabolaCurve extends XiEtaCurve {
 		const a = f2.length() / f1Length
 
 		function F(x: number) {
-			return Math.asinh(a * 2 * x) / 4 / a + x * Math.sqrt(1 + a * a * 4 * x * x) / 2
+			return Math.asinh(a * 2 * x) / 4 / a + (x * Math.sqrt(1 + a * a * 4 * x * x)) / 2
 		}
 
 		return f1Length * (F(endT - t0) - F(startT - t0))

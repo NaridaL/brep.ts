@@ -1005,7 +1005,7 @@ export abstract class Face extends Transformable {
 			mvl = mesh.vertices!.length
 		for (let i = 0; i < vertices.length; i++) {
 			mesh.vertices!.push(vertices[i])
-			mesh.LINES!.push(mvl + i, mvl + (i + 1) % vertices.length)
+			mesh.LINES!.push(mvl + i, mvl + ((i + 1) % vertices.length))
 		}
 	}
 
@@ -1169,7 +1169,7 @@ export class PlaneFace extends Face {
 		const normal = this.surface.plane.normal1
 		const vertices = this.contour.flatMap(edge => edge.getVerticesNo0())
 		for (let i = 0; i < vertices.length; i++) {
-			mesh.LINES.push(mvl + i, mvl + (i + 1) % vertices.length)
+			mesh.LINES.push(mvl + i, mvl + ((i + 1) % vertices.length))
 		}
 		const holeStarts: number[] = []
 		this.holes.forEach(hole => {
@@ -1594,14 +1594,14 @@ export class RotationFace extends Face {
 				? this.unrollEllipsoidLoops(loops)
 				: this.unrollCylinderLoops(loops)
 		loopStarts.push(vertices.length)
-        const verticesMN = verticesUV.map(({u, v}) => new V3(u / uStep, v/ vStep, 0))
+		const verticesMN = verticesUV.map(({ u, v }) => new V3(u / uStep, v / vStep, 0))
 
 		for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
 			const vertexLoopStart = loopStarts[vertexLoopIndex]
 			const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart
 			const base = mesh.vertices!.length + loopStarts[vertexLoopIndex]
 			for (let i = 0; i < vertexLoopLength; i++) {
-				mesh.LINES.push(base + i, base + (i + 1) % vertexLoopLength)
+				mesh.LINES.push(base + i, base + ((i + 1) % vertexLoopLength))
 			}
 		}
 
@@ -1665,15 +1665,15 @@ export class RotationFace extends Face {
 					firstPart: int[] | undefined,
 					firstPartBaseM: int = -1,
 					firstPartBaseN: int = -1
-				let
-					lastBaseM = -1,lastBaseN = -1
+				let lastBaseM = -1,
+					lastBaseN = -1
 				let partCount = 0
 				const vertexLoopStart = loopStarts[vertexLoopIndex]
 				const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart
 				for (let vlvi = 0; vlvi < vertexLoopLength; vlvi++) {
 					const vx0index = vertexLoopStart + vlvi,
 						vx0 = verticesMN[vx0index]
-					const vx1index = vertexLoopStart + (vlvi + 1) % vertexLoopLength,
+					const vx1index = vertexLoopStart + ((vlvi + 1) % vertexLoopLength),
 						vx1 = verticesMN[vx1index]
 					//console.log('dask', vx0index, vx1index)
 					const vx01 = vx0.to(vx1)
@@ -1685,7 +1685,7 @@ export class RotationFace extends Face {
 						currentT = 0
 					let whileLimit = 400
 					while (--whileLimit) {
-                        // points which are on a grid line are assigned to the cell into which they are going (+
+						// points which are on a grid line are assigned to the cell into which they are going (+
 						// NLA_PRECISION * sign(di)) if they are parallel to the gridline (eq0(di)), they belong the
 						// the cell for which they are a CCW boundary
 						const baseM = floor(vx.u + (!eq0(di) ? sign(di) : -sign(dj)) * NLA_PRECISION) - mOffset
@@ -1818,7 +1818,7 @@ export class RotationFace extends Face {
 								const nextPartStartOpos =
 									opos(nextPart[0]) > currentOpos ? opos(nextPart[0]) : opos(nextPart[0]) + 4
 								let nextOpos = ceil(currentOpos + NLA_PRECISION)
-								let flipping = eq0((currentOpos + NLA_PRECISION) % 1 - NLA_PRECISION)
+								let flipping = eq0(((currentOpos + NLA_PRECISION) % 1) - NLA_PRECISION)
 								//inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2 < 1)
 								while (lt(nextOpos, nextPartStartOpos)) {
 									switch (nextOpos % 4) {

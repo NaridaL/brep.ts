@@ -92,8 +92,8 @@ export abstract class ImplicitCurve extends Curve {
 	 * @param pointStep
 	 */
 	addToMesh(mesh: MeshWith<'normals' | 'TRIANGLES'>, res: int = 4, radius: number = 0, pointStep = 1): void {
-		const baseNormals = arrayFromFunction(res, i => V3.polar(1, TAU * i / res))
-		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, TAU * i / res))
+		const baseNormals = arrayFromFunction(res, i => V3.polar(1, (TAU * i) / res))
+		const baseVertices = arrayFromFunction(res, i => V3.polar(radius, (TAU * i) / res))
 		let prevTangent = V3.Z,
 			prevMatrix = M4.IDENTITY
 		for (let i = 0; i < this.points.length; i += pointStep) {
@@ -105,8 +105,8 @@ export abstract class ImplicitCurve extends Curve {
 						true,
 						start - res + j,
 						start + j,
-						start - res + (j + 1) % res,
-						start + (j + 1) % res,
+						start - res + ((j + 1) % res),
+						start + ((j + 1) % res),
 					)
 				}
 			}

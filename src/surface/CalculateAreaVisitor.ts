@@ -69,7 +69,7 @@ export const CalculateAreaVisitor = {
 			let edgeArea: number
 			const curve = edge.curve
 			if (curve instanceof L3) {
-				edgeArea = (edge.a.dot(u1) + edge.b.dot(u1)) / 2 * edge.b.to(edge.a).dot(r1)
+				edgeArea = ((edge.a.dot(u1) + edge.b.dot(u1)) / 2) * edge.b.to(edge.a).dot(r1)
 			} else if (curve instanceof EllipseCurve) {
 				// INTEGRATE[aT; bT] (curve.at(t) * u1) * (tangent(t) * r1) dt
 				// INTEGRATE[aT; bT] (u1 f1 cos t + u1 f2 sin t + u1 c) * (r1 f1 (-sin t) + r1 f2 cos t) dt

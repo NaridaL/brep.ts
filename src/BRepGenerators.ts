@@ -154,7 +154,7 @@ export function rotateCurve(
 			// apex is intersection of segment with Z-axis
 			const a = curve.at(tMin),
 				b = curve.at(tMax)
-			const apexZ = a.z - a.x * (b.z - a.z) / (b.x - a.x)
+			const apexZ = a.z - (a.x * (b.z - a.z)) / (b.x - a.x)
 			const apex = new V3(0, 0, apexZ)
 			const factor = -(a.x > b.x ? -1 : 1) * (flipped ? -1 : 1)
 			const s = new ConicSurface(
@@ -736,7 +736,7 @@ export namespace B2T {
 	export function rotStep(edges: Edge[], totalRadsOrAngles: raddd | raddd[], countO?: int): BRep {
 		const angles: number[] =
 			'number' === typeof totalRadsOrAngles
-				? arrayFromFunction(countO!, i => (i + 1) / countO! * totalRadsOrAngles)
+				? arrayFromFunction(countO!, i => ((i + 1) / countO!) * totalRadsOrAngles)
 				: totalRadsOrAngles
 		const count = angles.length
 		const open = !eq(TAU, angles.last)

@@ -1,8 +1,5 @@
-import
-{
-	AABB,
+import {
 	arrayFromFunction,
-	arrayRange,
 	arraySamples,
 	assert,
 	between,
@@ -14,12 +11,11 @@ import
 	le,
 	lerp,
 	M4,
-	newtonIterate1d,
+	MINUS,
 	newtonIterateWithDerivative2,
-	pqFormula,
+	NLA_DEBUG,
 	snap,
 	snap0,
-	solveCubicReal2,
 	Tuple2,
 	Tuple3,
 	V,
@@ -27,16 +23,28 @@ import
 	vArrGet,
 	Vector,
 	VV,
-    MINUS
 } from 'ts3dutils'
 
 import { BezierCurve, Curve, EllipseCurve, HyperbolaCurve, L3, P3, ParabolaCurve } from '../index'
-import { abs, asinh, atanh, cos, cosh, PI, sin, sinh, sqrt, SQRT1_2, SQRT2 } from '../math'
+import { abs, cos, cosh, PI, sin, sinh, sqrt, SQRT1_2 } from '../math'
 import { ISInfo } from './Curve'
 
+/**
+ * Non-Uniform Rational B-Spline implementation.
+ *
+ * See https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/ for a good reference.
+ *
+ *
+ */
 export class NURBS extends Curve {
 	constructor(
+		/**
+		 * The control points of the NURBS curve, as 4D homogeneous coordinates.
+		 */
 		readonly points: ReadonlyArray<Vector>,
+		/**
+		 * The degree of the NURBS curve. Must be at least 1 (linear).
+		 */
 		readonly degree: int,
 		readonly knots: ReadonlyArray<number> = NURBS.openUniformKnots(points.length, degree),
 		tMin: number = knots[degree],
@@ -44,6 +52,8 @@ export class NURBS extends Curve {
 	) {
 		super(tMin, tMax)
 		const knotsLength = points.length + degree + 1
+		NLA_DEBUG && Object.freeze(points)
+		NLA_DEBUG && Object.freeze(knots)
 
 		assert(
 			knots.length === knotsLength,
@@ -63,7 +73,7 @@ export class NURBS extends Curve {
 		}
 		assert(degree >= 1, 'degree must be at least 1 (linear)')
 		assert(degree % 1 == 0)
-        assert(-1==knots.firstUnsorted(MINUS),'knot values must be in ascending order')
+		assert(-1 == knots.firstUnsorted(MINUS), 'knot values must be in ascending order')
 	}
 
 	getConstructorParameters() {
@@ -71,7 +81,7 @@ export class NURBS extends Curve {
 	}
 
 	at4(t: number) {
-		assert(between(t, this.tMin, this.tMax), t)
+		NLA_DEBUG && assert(between(t, this.tMin, this.tMax), t)
 		const { points, degree, knots } = this
 
 		// find s (the spline segment) for the [t] value provided
@@ -184,12 +194,13 @@ export class NURBS extends Curve {
 				.minus(pt.times(dt4.w))
 				.div(pt.w ** 2)
 				.V3(),
-			// prettier-ignore
 			Vector.add(
-			pt.times(-pt.w * ddt4.w + 2 * dt4.w ** 2),
-			dt4.times(-2 * pt.w * dt4.w),
-			ddt4.times(pt.w ** 2)
-		).div(pt.w ** 3).V3(),
+				pt.times(-pt.w * ddt4.w + 2 * dt4.w ** 2), //
+				dt4.times(-2 * pt.w * dt4.w),
+				ddt4.times(pt.w ** 2),
+			)
+				.div(pt.w ** 3)
+				.V3(),
 		]
 	}
 
@@ -236,7 +247,7 @@ export class NURBS extends Curve {
 	 * Create a new NURBS of equal degree with the added knot [newKnot]. New NURBS will have one additional control
 	 * point.
 	 */
-	withKnot(newKnot: number, multiplicity = 1) {
+	withKnot(newKnot: number) {
 		assert(between(newKnot, this.tMin, this.tMax))
 		const k = this.tInterval(newKnot)
 		const { knots, points, degree } = this
@@ -359,7 +370,7 @@ export class NURBS extends Curve {
 				VV(0, -1, 0, 1),
 			],
 			2,
-			[0, 0, 0, PI / 2, PI / 2, PI, PI, 3 * PI / 2, 3 * PI / 2, 2 * PI],
+			[0, 0, 0, PI / 2, PI / 2, PI, PI, (3 * PI) / 2, (3 * PI) / 2, 2 * PI],
 		)
 		return unitSemiEllipse.transform(ellipse.matrix)
 	}
@@ -522,7 +533,7 @@ export class NURBS extends Curve {
 	static simplifyUnit2(w0: number, w1: number, w2: number) {
 		// see https://math.stackexchange.com/a/2794874/230980
 		const delta = w0 * w2 - w1 ** 2
-		const cxy = w0 * w2 / 2 / delta
+		const cxy = (w0 * w2) / 2 / delta
 		const center = new V3(cxy, cxy, 0)
 		const k = (w1 ** 2 + delta - 2 * w1 * sqrt(abs(delta))) / 2 / delta
 		const p = V3.X
@@ -697,7 +708,7 @@ export class NURBS extends Curve {
 					return [planeWC.distanceToPointSigned(p), planeWC.normal1.dot(dt)]
 				}
 				let t = newtonIterateWithDerivative2(f, startT, 8, this.tMin, this.tMax)
-				let [distanceAtT, distanceDtAtT] = undefined === t ? [] : f(t)
+				let [distanceAtT, distanceDtAtT] = undefined === t ? [undefined, undefined] : f(t)
 				if (t === undefined || !eq0(distanceAtT) || eq0(distanceDtAtT)) {
 					t = newtonIterateWithDerivative2(
 						t => {

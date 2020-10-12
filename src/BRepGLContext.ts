@@ -299,7 +299,7 @@ export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BREPGLContext
 	_meshes.xyLinePlane = Mesh.plane()
 	_meshes.xyDottedLinePlane = makeDottedLinePlane()
 	_meshes.pipeSegmentForICurve = Mesh.offsetVertices(
-		M4.rotateY(90 * DEG).transformedPoints(arrayFromFunction(4, i => V3.polar(1, TAU * i / 4))),
+		M4.rotateY(90 * DEG).transformedPoints(arrayFromFunction(4, i => V3.polar(1, (TAU * i) / 4))),
 		V3.X,
 		true,
 	)
@@ -354,7 +354,7 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 		//noinspection JSBitwiseOperatorUsage
 		if (e.buttons & 4) {
 			// pan
-			const moveCamera = V(-delta.x * 2 / _gl.canvas.width, delta.y * 2 / _gl.canvas.height)
+			const moveCamera = V((-delta.x * 2) / _gl.canvas.width, (delta.y * 2) / _gl.canvas.height)
 			const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 			const worldMoveCamera = inverseProjectionMatrix.transformVector(moveCamera)
 			eye.pos = eye.pos.plus(worldMoveCamera)
@@ -365,8 +365,8 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 		// scene rotation
 		//noinspection JSBitwiseOperatorUsage
 		if (e.buttons & 2) {
-			const rotateLR = -delta.x / 6.0 * DEG
-			const rotateUD = -delta.y / 6.0 * DEG
+			const rotateLR = (-delta.x / 6.0) * DEG
+			const rotateUD = (-delta.y / 6.0) * DEG
 			// rotate
 			let matrix = M4.rotateLine(eye.focus, eye.up, rotateLR)
 			//let horizontalRotationAxis = focus.minus(pos).cross(up)
@@ -387,8 +387,8 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
 		eye.zoomFactor *= pow(0.9, -wheelY)
 		const mouseCoordsOnCanvas = getPosOnTarget(e)
 		const mousePosFrustrum = V(
-			mouseCoordsOnCanvas.x * 2 / _gl.canvas.offsetWidth - 1,
-			-mouseCoordsOnCanvas.y * 2 / _gl.canvas.offsetHeight + 1,
+			(mouseCoordsOnCanvas.x * 2) / _gl.canvas.offsetWidth - 1,
+			(-mouseCoordsOnCanvas.y * 2) / _gl.canvas.offsetHeight + 1,
 			0,
 		)
 		const moveCamera = mousePosFrustrum.times(1 - 1 / pow(0.9, -wheelY))
@@ -414,8 +414,8 @@ export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: 
  * Transforms position on the screen into a line in world coordinates.
  */
 export function getMouseLine(pos: { x: number; y: number }, _gl: TSGLContext): L3 {
-	const ndc1 = V(pos.x * 2 / _gl.canvas.width - 1, -pos.y * 2 / _gl.canvas.height + 1, 0)
-	const ndc2 = V(pos.x * 2 / _gl.canvas.width - 1, -pos.y * 2 / _gl.canvas.height + 1, 1)
+	const ndc1 = V((pos.x * 2) / _gl.canvas.width - 1, (-pos.y * 2) / _gl.canvas.height + 1, 0)
+	const ndc2 = V((pos.x * 2) / _gl.canvas.width - 1, (-pos.y * 2) / _gl.canvas.height + 1, 1)
 	//console.log(ndc)
 	const inverseProjectionMatrix = _gl.projectionMatrix.inversed()
 	const s = inverseProjectionMatrix.transformPoint(ndc1)

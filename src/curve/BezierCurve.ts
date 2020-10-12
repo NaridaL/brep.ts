@@ -120,7 +120,7 @@ export class BezierCurve extends Curve {
 	 * Formula from here: https://pomax.github.io/bezierinfo/#circles_cubic
 	 */
 	static approximateUnitArc(phi: number): BezierCurve {
-		const f = 4 / 3 * Math.tan(phi / 4)
+		const f = (4 / 3) * Math.tan(phi / 4)
 		return new BezierCurve(
 			V3.X,
 			new V3(1, f, 0),
@@ -385,10 +385,10 @@ export class BezierCurve extends Curve {
 			NLA_PRECISION < a.maxAbsElement()
 				? a.maxAbsDim()
 				: NLA_PRECISION < b.maxAbsElement()
-					? b.maxAbsDim()
-					: NLA_PRECISION < c.maxAbsElement()
-						? c.maxAbsDim()
-						: assertNever()
+				? b.maxAbsDim()
+				: NLA_PRECISION < c.maxAbsElement()
+				? c.maxAbsDim()
+				: assertNever()
 
 		const results = solveCubicReal2(a.e(maxDim), b.e(maxDim), c.e(maxDim), d.e(maxDim)).filter(t =>
 			this.at(t).like(p),
@@ -589,7 +589,7 @@ export class BezierCurve extends Curve {
 		}
 
 		const STEPS = 32
-		const startT = arrayFromFunction(STEPS, i => tMin + (tMax - tMin) * i / STEPS).withMax(t => -f(t))
+		const startT = arrayFromFunction(STEPS, i => tMin + ((tMax - tMin) * i) / STEPS).withMax(t => -f(t))
 
 		return newtonIterate1d(f, startT, 8)
 	}

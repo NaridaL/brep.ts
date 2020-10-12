@@ -66,8 +66,8 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 							.inversed()
 							.transformVector(tangentWC).x
 						const factor =
-							uvOfPWC.y ** 3 / 3 * (this.pUV(uvOfPWC.x, 1).z - this.center.z) +
-							uvOfPWC.y ** 2 / 2 * this.center.z
+							(uvOfPWC.y ** 3 / 3) * (this.pUV(uvOfPWC.x, 1).z - this.center.z) +
+							(uvOfPWC.y ** 2 / 2) * this.center.z
 						const actual = dpdu(uvOfPWC.x, factor).cross(dpdv(uvOfPWC.x)).z
 						return actual * du
 					}
@@ -109,8 +109,10 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 					//   (1/2 t² center center.z dt)[0; atUV.y]
 					const pUVS1V = this.pUV(uvOfPWC.x, 1).minus(this.center)
 					const factor = V3.add(
-						pUVS1V.times(1 / 4 * uvOfPWC.y ** 4 * pUVS1V.z + 1 / 3 * uvOfPWC.y ** 3 * this.center.z),
-						this.center.times(1 / 3 * uvOfPWC.y ** 3 * pUVS1V.z + 1 / 2 * uvOfPWC.y ** 2 * this.center.z),
+						pUVS1V.times((1 / 4) * uvOfPWC.y ** 4 * pUVS1V.z + (1 / 3) * uvOfPWC.y ** 3 * this.center.z),
+						this.center.times(
+							(1 / 3) * uvOfPWC.y ** 3 * pUVS1V.z + (1 / 2) * uvOfPWC.y ** 2 * this.center.z,
+						),
 					)
 					const partialCentroid = factor.times(dpdu(uvOfPWC.x, 1).cross(dpdv(uvOfPWC.x)).z)
 
@@ -141,55 +143,59 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 		assert(r1.hasLength(1))
 		assert(u1.hasLength(1))
 		assert(r1.isPerpendicularTo(u1))
-		const volumeAndCentroidZX2Parts = edges.map((edgeWC): [number, V3] => {
-			const curveWC = edgeWC.curve
-			if (curveWC instanceof L3) {
-				// split shadow volume into two triangle shadow volumes and use the same logic as for mesh triangles:
-				function triangleShadowVolumeAndCentroid(a: V3, b: V3, c: V3): [number, V3] {
-					const ab = b.minus(a),
-						ac = c.minus(a)
-					const normal = ab.cross(ac)
-					const faceCentroid = V3.add(a, b, c).div(3)
-					return [
-						faceCentroid.z * normal.z / 2,
-						V3.add(
-							a.times(2 * a.z + b.z + c.z),
-							b.times(a.z + 2 * b.z + c.z),
-							c.times(a.z + b.z + 2 * c.z),
-						).times(normal.z), // 1/24 factor is done at very end
-					]
+		const volumeAndCentroidZX2Parts = edges.map(
+			(edgeWC): [number, V3] => {
+				const curveWC = edgeWC.curve
+				if (curveWC instanceof L3) {
+					// split shadow volume into two triangle shadow volumes and use the same logic as for mesh triangles:
+					function triangleShadowVolumeAndCentroid(a: V3, b: V3, c: V3): [number, V3] {
+						const ab = b.minus(a),
+							ac = c.minus(a)
+						const normal = ab.cross(ac)
+						const faceCentroid = V3.add(a, b, c).div(3)
+						return [
+							(faceCentroid.z * normal.z) / 2,
+							V3.add(
+								a.times(2 * a.z + b.z + c.z),
+								b.times(a.z + 2 * b.z + c.z),
+								c.times(a.z + b.z + 2 * c.z),
+							).times(normal.z), // 1/24 factor is done at very end
+						]
+					}
+					const a = edgeWC.a,
+						b = edgeWC.b
+					const as = a.dot(r1)
+					const bs = b.dot(r1)
+					const aBase = this.pUV(as, 0)
+					const bBase = this.pUV(bs, 0)
+					const [v1, c1] = triangleShadowVolumeAndCentroid(a, b, aBase)
+					const [v2, c2] = triangleShadowVolumeAndCentroid(bBase, aBase, b)
+					return [v1 + v2, c1.plus(c2).div(24)]
+				} else if (curveWC instanceof ImplicitCurve) {
+					throw new Error()
+				} else {
+					const sliceAreaAndCentroidZX2TimesDs = (curveT: number) => {
+						const p = curveWC.at(curveT)
+						const s = p.dot(r1)
+						const t = p.dot(u1)
+						const area = t * c.z + s * t * r1.z + (1 / 2) * t ** 2 * u1.z
+						const ds = -curveWC.tangentAt(curveT).dot(r1)
+						return [
+							area * ds,
+							...V3.add(
+								c.times(area),
+								r1.times(c.z * s * t + r1.z * s ** 2 * t + (1 / 2) * s * t ** 2 * u1.z),
+								u1.times(
+									(1 / 2) * c.z * t ** 2 + (1 / 2) * r1.z * s * t ** 2 + (1 / 3) * t ** 3 * u1.z,
+								),
+							).times(ds),
+						]
+					}
+					const [vol, cx, cy, cz] = glqArray(sliceAreaAndCentroidZX2TimesDs, edgeWC.aT, edgeWC.bT, 4)
+					return [vol * this.plane.normal1.z, new V3(cx, cy, cz).times(this.plane.normal1.z)]
 				}
-				const a = edgeWC.a,
-					b = edgeWC.b
-				const as = a.dot(r1)
-				const bs = b.dot(r1)
-				const aBase = this.pUV(as, 0)
-				const bBase = this.pUV(bs, 0)
-				const [v1, c1] = triangleShadowVolumeAndCentroid(a, b, aBase)
-				const [v2, c2] = triangleShadowVolumeAndCentroid(bBase, aBase, b)
-				return [v1 + v2, c1.plus(c2).div(24)]
-			} else if (curveWC instanceof ImplicitCurve) {
-				throw new Error()
-			} else {
-				const sliceAreaAndCentroidZX2TimesDs = (curveT: number) => {
-					const p = curveWC.at(curveT)
-					const s = p.dot(r1)
-					const t = p.dot(u1)
-					const area = t * c.z + s * t * r1.z + 1 / 2 * t ** 2 * u1.z
-					const ds = -curveWC.tangentAt(curveT).dot(r1)
-					return [
-						area * ds,
-						...V3.add(
-							c.times(area),
-							r1.times(c.z * s * t + r1.z * s ** 2 * t + 1 / 2 * s * t ** 2 * u1.z),
-							u1.times(1 / 2 * c.z * t ** 2 + 1 / 2 * r1.z * s * t ** 2 + 1 / 3 * t ** 3 * u1.z),
-						).times(ds),
-					]
-				}
-				const [vol, cx, cy, cz] = glqArray(sliceAreaAndCentroidZX2TimesDs, edgeWC.aT, edgeWC.bT, 4)
-				return [vol * this.plane.normal1.z, new V3(cx, cy, cz).times(this.plane.normal1.z)]
-			}
-		})
+			},
+		)
 		return mergeVolumeAndCentroidZX2Parts(volumeAndCentroidZX2Parts)
 	},
 
@@ -199,41 +205,43 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 	[ParametricSurface.name](this: ParametricSurface, edges: Edge[]): { centroid: V3; volume: number } {
 		const dpdu = this.dpdu()
 		const dpdv = this.dpdv()
-		const volume = edges.map((edgeWC): [number, V3] => {
-			const curveWC = edgeWC.curve
-			if (curveWC instanceof ImplicitCurve) {
-				throw new Error()
-			} else {
-				const sliceAreaAndCentroidZX2TimesDs = (curveT: number) => {
-					// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-					const pWC = curveWC.at(curveT),
-						tangentWC = curveWC.tangentAt(curveT)
-					const uvOfPWC = this.uvP(pWC)
-					const slice = (t: number) => {
-						const p = this.pUV(uvOfPWC.x, t)
-						const normal = dpdu(uvOfPWC.x, t).cross(dpdv(uvOfPWC.x, t))
-						return p.z * normal.z
+		const volume = edges.map(
+			(edgeWC): [number, V3] => {
+				const curveWC = edgeWC.curve
+				if (curveWC instanceof ImplicitCurve) {
+					throw new Error()
+				} else {
+					const sliceAreaAndCentroidZX2TimesDs = (curveT: number) => {
+						// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
+						const pWC = curveWC.at(curveT),
+							tangentWC = curveWC.tangentAt(curveT)
+						const uvOfPWC = this.uvP(pWC)
+						const slice = (t: number) => {
+							const p = this.pUV(uvOfPWC.x, t)
+							const normal = dpdu(uvOfPWC.x, t).cross(dpdv(uvOfPWC.x, t))
+							return p.z * normal.z
+						}
+						const sliceIntegral0ToPWCT = glqInSteps(slice, 0, uvOfPWC.y, 1)
+						// const dt = tangentWC.dot(scalingVector)
+						const dt = -M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x, uvOfPWC.y))
+							.inversed()
+							.transformVector(tangentWC).x
+						const sliceAreaTimesDs = sliceIntegral0ToPWCT * dt
+						const slice2 = (t: number) => {
+							const p = this.pUV(uvOfPWC.x, t)
+							const normal = dpdu(uvOfPWC.x, t).cross(dpdv(uvOfPWC.x, t))
+							return p.times(p.z * normal.z)
+						}
+						const sliceIntegral0ToPWCT2 = glqV3(slice2, 0, uvOfPWC.y)
+						// const dt = tangentWC.dot(scalingVector)
+						const sliceCentroidZX2TimesDs = sliceIntegral0ToPWCT2.times(dt)
+						return [sliceAreaTimesDs, ...sliceCentroidZX2TimesDs.toArray()]
 					}
-					const sliceIntegral0ToPWCT = glqInSteps(slice, 0, uvOfPWC.y, 1)
-					// const dt = tangentWC.dot(scalingVector)
-					const dt = -M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x, uvOfPWC.y))
-						.inversed()
-						.transformVector(tangentWC).x
-					const sliceAreaTimesDs = sliceIntegral0ToPWCT * dt
-					const slice2 = (t: number) => {
-						const p = this.pUV(uvOfPWC.x, t)
-						const normal = dpdu(uvOfPWC.x, t).cross(dpdv(uvOfPWC.x, t))
-						return p.times(p.z * normal.z)
-					}
-					const sliceIntegral0ToPWCT2 = glqV3(slice2, 0, uvOfPWC.y)
-					// const dt = tangentWC.dot(scalingVector)
-					const sliceCentroidZX2TimesDs = sliceIntegral0ToPWCT2.times(dt)
-					return [sliceAreaTimesDs, ...sliceCentroidZX2TimesDs.toArray()]
+					const [vol, cx, cy, cz] = glqArray(sliceAreaAndCentroidZX2TimesDs, edgeWC.aT, edgeWC.bT, 4)
+					return [vol, new V3(cx, cy, cz)]
 				}
-				const [vol, cx, cy, cz] = glqArray(sliceAreaAndCentroidZX2TimesDs, edgeWC.aT, edgeWC.bT, 4)
-				return [vol, new V3(cx, cy, cz)]
-			}
-		})
+			},
+		)
 		return mergeVolumeAndCentroidZX2Parts(volume)
 	},
 
@@ -259,56 +267,58 @@ export const ZDirVolumeVisitor: { [className: string]: (edges: Edge[]) => { volu
 		// the length of the base of the trapezoid is calculated by dotting with the baseVector
 		const baseVector = upDir1.rejectedFrom(V3.Z).unit()
 		// INT[edge.at; edge.bT] (at(t) DOT dir1) * (at(t) - at(t).projectedOn(dir) / 2).z
-		const volume = edges.map((edgeWC): [number, V3] => {
-			if (edgeWC.curve instanceof L3) {
-				return [0, V3.O]
-			} else if (edgeWC.curve instanceof ImplicitCurve) {
-				return [0, V3.O]
-				// 	const { points, tangents } = edgeWC.curve
-				// 	const minT = edgeWC.minT,
-				// 		maxT = edgeWC.maxT
-				// 	let sum = 0
-				// 	const start = Math.ceil(minT + NLA_PRECISION)
-				// 	const end = Math.floor(maxT - NLA_PRECISION)
-				// 	for (let i = start; i <= end; i++) {
-				// 		const at = points[i],
-				// 			tangent = tangents[i]
-				// 		const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
-				// 		const scale = tangent.dot(scalingVector)
-				// 		sum += area * scale
-				// 	}
-				// 	const f = (t: number) => {
-				// 		const at = edgeWC.curve.at(t),
-				// 			tangent = edgeWC.curve.tangentAt(t)
-				// 		const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
-				// 		const scale = tangent.dot(scalingVector)
-				// 		return area * scale
-				// 	}
-				// 	sum += f(minT) * (start - minT - 0.5)
-				// 	sum += f(maxT) * (maxT - end - 0.5)
-				// 	return sum * Math.sign(edgeWC.deltaT())
-			} else {
-				const f = (curveT: number) => {
-					// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
-					const at = edgeWC.curve.at(curveT),
-						tangent = edgeWC.curve.tangentAt(curveT)
-					const b = at.rejectedFrom1(upDir1)
-					const area = at.z * b.to(at).dot(baseVector) / 2 + b.z * b.to(at).dot(baseVector) / 2
-					const areaCentroidA = V3.add(at.xy(), b, at).times(at.z * b.to(at).dot(baseVector) / 2 / 3)
-					const areaCentroidB = V3.add(at.xy(), b, b.xy()).times(b.z * b.to(at).dot(baseVector) / 2 / 3)
-					const scale = tangent.dot(scalingVector)
-					return [
-						area * scale,
-						...areaCentroidA
-							.plus(areaCentroidB)
-							.times(scale)
-							.schur(V(1, 1, 2)),
-					]
+		const volume = edges.map(
+			(edgeWC): [number, V3] => {
+				if (edgeWC.curve instanceof L3) {
+					return [0, V3.O]
+				} else if (edgeWC.curve instanceof ImplicitCurve) {
+					return [0, V3.O]
+					// 	const { points, tangents } = edgeWC.curve
+					// 	const minT = edgeWC.minT,
+					// 		maxT = edgeWC.maxT
+					// 	let sum = 0
+					// 	const start = Math.ceil(minT + NLA_PRECISION)
+					// 	const end = Math.floor(maxT - NLA_PRECISION)
+					// 	for (let i = start; i <= end; i++) {
+					// 		const at = points[i],
+					// 			tangent = tangents[i]
+					// 		const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
+					// 		const scale = tangent.dot(scalingVector)
+					// 		sum += area * scale
+					// 	}
+					// 	const f = (t: number) => {
+					// 		const at = edgeWC.curve.at(t),
+					// 			tangent = edgeWC.curve.tangentAt(t)
+					// 		const area = (at.z + at.rejectedFrom1(upDir1).z) / 2 * at.projectedOn(upDir1).dot(baseVector)
+					// 		const scale = tangent.dot(scalingVector)
+					// 		return area * scale
+					// 	}
+					// 	sum += f(minT) * (start - minT - 0.5)
+					// 	sum += f(maxT) * (maxT - end - 0.5)
+					// 	return sum * Math.sign(edgeWC.deltaT())
+				} else {
+					const f = (curveT: number) => {
+						// use curve.tangent not edge.tangent, reverse edges are handled by the integration boundaries
+						const at = edgeWC.curve.at(curveT),
+							tangent = edgeWC.curve.tangentAt(curveT)
+						const b = at.rejectedFrom1(upDir1)
+						const area = (at.z * b.to(at).dot(baseVector)) / 2 + (b.z * b.to(at).dot(baseVector)) / 2
+						const areaCentroidA = V3.add(at.xy(), b, at).times((at.z * b.to(at).dot(baseVector)) / 2 / 3)
+						const areaCentroidB = V3.add(at.xy(), b, b.xy()).times((b.z * b.to(at).dot(baseVector)) / 2 / 3)
+						const scale = tangent.dot(scalingVector)
+						return [
+							area * scale,
+							...areaCentroidA
+								.plus(areaCentroidB)
+								.times(scale)
+								.schur(V(1, 1, 2)),
+						]
+					}
+					const [vol, cx, cy, cz] = glqArray(f, edgeWC.aT, edgeWC.bT, 4)
+					return [vol, new V3(cx, cy, cz)]
 				}
-				const [vol, cx, cy, cz] = glqArray(f, edgeWC.aT, edgeWC.bT, 4)
-				return [vol, new V3(cx, cy, cz)]
-			}
-		})
+			},
+		)
 		return mergeVolumeAndCentroidZX2Parts(volume)
 	},
 
@@ -419,7 +429,7 @@ ZDirVolumeVisitor[EllipsoidSurface.name] = ZDirVolumeVisitor[RotatedCurveSurface
 export function glqV3(f: (x: number) => V3, startT: number, endT: number) {
 	return gaussLegendre24Xs
 		.reduce((val, currVal, index) => {
-			const x = startT + (currVal + 1) / 2 * (endT - startT)
+			const x = startT + ((currVal + 1) / 2) * (endT - startT)
 			return val.plus(f(x).times(gaussLegendre24Weights[index]))
 		}, V3.O)
 		.times((endT - startT) / 2)
@@ -427,7 +437,7 @@ export function glqV3(f: (x: number) => V3, startT: number, endT: number) {
 export function glqArray(f: (x: number) => number[], startT: number, endT: number, numEls = 3) {
 	const result = new Array(numEls).fill(0)
 	for (let i = 0; i < 24; i++) {
-		const x = startT + (gaussLegendre24Xs[i] + 1) / 2 * (endT - startT)
+		const x = startT + ((gaussLegendre24Xs[i] + 1) / 2) * (endT - startT)
 		const fx = f(x)
 		for (let j = 0; j < numEls; j++) {
 			result[j] += fx[j] * gaussLegendre24Weights[i]

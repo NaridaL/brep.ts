@@ -139,7 +139,7 @@ function closestXToP(
 ) {
 	const STEPS = 32
 	if (undefined === startX) {
-		startX = arrayFromFunction(STEPS, i => xMin + (xMax - xMin) * i / STEPS).withMax(
+		startX = arrayFromFunction(STEPS, i => xMin + ((xMax - xMin) * i) / STEPS).withMax(
 			x => -Math.hypot(x - p.x, f(x) - p.y),
 		)
 	}

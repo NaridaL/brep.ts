@@ -35,3 +35,5 @@ export * from './BRep'
 
 export * from './ClassSerializer'
 export * from './BREPGLContext'
+
+export * from './Quaternion'
