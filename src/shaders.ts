@@ -1,6 +1,9 @@
-import { ShaderType } from 'tsgl'
+import { ShaderType } from "tsgl"
 
-export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3'; camPos: 'FLOAT_VEC3' }> = `
+export const fragmentShaderLighting: ShaderType<{
+  color: "FLOAT_VEC3"
+  camPos: "FLOAT_VEC3"
+}> = `
 	precision highp float;
 	uniform vec4 color;
 	uniform vec3 camPos;
@@ -18,7 +21,7 @@ export const fragmentShaderLighting: ShaderType<{ color: 'FLOAT_VEC3'; camPos: '
 		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
 	}
 `
-export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC4' }> = `
+export const vertexShaderLighting: ShaderType<{ color: "FLOAT_VEC4" }> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	uniform mat4 ts_ModelViewMatrix;
 	attribute vec4 ts_Vertex;
@@ -33,7 +36,7 @@ export const vertexShaderLighting: ShaderType<{ color: 'FLOAT_VEC4' }> = `
 		normal = normalize(ts_NormalMatrix * ts_Normal);
 	}
 `
-export const vertexShaderWaves: ShaderType<{ color: 'FLOAT_VEC3' }> = `
+export const vertexShaderWaves: ShaderType<{ color: "FLOAT_VEC3" }> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	uniform mat4 ts_ModelViewMatrix;
 	attribute vec4 ts_Vertex;
@@ -59,7 +62,7 @@ export const vertexShader: ShaderType<{}> = `
 			vec4(position,1.0);
 	}
 `
-export const fragmentShader: ShaderType<{ color: 'FLOAT_VEC3' }> = `
+export const fragmentShader: ShaderType<{ color: "FLOAT_VEC3" }> = `
 	precision highp float;
 	uniform vec3 color;
 	varying vec4 pos;
@@ -107,11 +110,11 @@ export const vertexShaderColor: ShaderType<{}> = `
 	}
 `
 export const vertexShaderArc: ShaderType<{
-	color: 'FLOAT_VEC4'
-	step: 'FLOAT'
-	offset: 'FLOAT'
-	radius: 'FLOAT'
-	width: 'FLOAT'
+  color: "FLOAT_VEC4"
+  step: "FLOAT"
+  offset: "FLOAT"
+  radius: "FLOAT"
+  width: "FLOAT"
 }> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	attribute vec4 ts_Vertex;
@@ -126,13 +129,13 @@ export const vertexShaderArc: ShaderType<{
 }
 `
 export const vertexShaderConic3d: ShaderType<{
-	startT: 'FLOAT'
-	endT: 'FLOAT'
-	scale: 'FLOAT'
-	center: 'FLOAT_VEC3'
-	f1: 'FLOAT_VEC3'
-	f2: 'FLOAT_VEC3'
-	mode: 'INT'
+  startT: "FLOAT"
+  endT: "FLOAT"
+  scale: "FLOAT"
+  center: "FLOAT_VEC3"
+  f1: "FLOAT_VEC3"
+  f2: "FLOAT_VEC3"
+  mode: "INT"
 }> = `
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	attribute vec4 ts_Vertex;
@@ -239,13 +242,13 @@ export const vertexShaderNURBS: ShaderType<{}> = `#version 300 es
 `
 
 export const vertexShaderBezier: ShaderType<{
-	width: 'FLOAT'
-	startT: 'FLOAT'
-	endT: 'FLOAT'
-	p0: 'FLOAT_VEC3'
-	p1: 'FLOAT_VEC3'
-	p2: 'FLOAT_VEC3'
-	p3: 'FLOAT_VEC3'
+  width: "FLOAT"
+  startT: "FLOAT"
+  endT: "FLOAT"
+  p0: "FLOAT_VEC3"
+  p1: "FLOAT_VEC3"
+  p2: "FLOAT_VEC3"
+  p3: "FLOAT_VEC3"
 }> = `
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
 	uniform mat4 ts_ModelViewProjectionMatrix;
@@ -265,14 +268,14 @@ export const vertexShaderBezier: ShaderType<{
 	}
 `
 export const vertexShaderBezier3d: ShaderType<{
-	scale: 'FLOAT'
-	startT: 'FLOAT'
-	endT: 'FLOAT'
-	p0: 'FLOAT_VEC3'
-	p1: 'FLOAT_VEC3'
-	p2: 'FLOAT_VEC3'
-	p3: 'FLOAT_VEC3'
-	normal: 'FLOAT_VEC3'
+  scale: "FLOAT"
+  startT: "FLOAT"
+  endT: "FLOAT"
+  p0: "FLOAT_VEC3"
+  p1: "FLOAT_VEC3"
+  p2: "FLOAT_VEC3"
+  p3: "FLOAT_VEC3"
+  normal: "FLOAT_VEC3"
 }> = `
     precision highp float;
     // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
@@ -299,7 +302,7 @@ export const vertexShaderBezier3d: ShaderType<{
 		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
 	}
 `
-export const vertexShaderGeneric: ShaderType<{ scale: 'FLOAT' }> = `
+export const vertexShaderGeneric: ShaderType<{ scale: "FLOAT" }> = `
 	uniform float scale;
 	uniform mat4 ts_ModelViewProjectionMatrix;
 	attribute vec4 ts_Vertex;
@@ -311,7 +314,11 @@ export const vertexShaderGeneric: ShaderType<{ scale: 'FLOAT' }> = `
 		gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
 	}
 `
-export const vertexShaderRing: ShaderType<{ step: 'FLOAT'; innerRadius: 'FLOAT'; outerRadius: 'FLOAT' }> = `
+export const vertexShaderRing: ShaderType<{
+  step: "FLOAT"
+  innerRadius: "FLOAT"
+  outerRadius: "FLOAT"
+}> = `
 	#define M_PI 3.1415926535897932384626433832795
 	uniform float step;
 	uniform float innerRadius, outerRadius;
@@ -325,14 +332,16 @@ export const vertexShaderRing: ShaderType<{ step: 'FLOAT'; innerRadius: 'FLOAT';
 		gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
 	}
 `
-export const fragmentShaderColor: ShaderType<{ color: 'FLOAT_VEC4' }> = `
+export const fragmentShaderColor: ShaderType<{ color: "FLOAT_VEC4" }> = `
 	precision highp float;
 	uniform vec4 color;
 	void main() {
 		gl_FragColor = color;
 	}
 `
-export const fragmentShaderColor3: ShaderType<{ color: 'FLOAT_VEC4' }> = `#version 300 es
+export const fragmentShaderColor3: ShaderType<{
+  color: "FLOAT_VEC4"
+}> = `#version 300 es
 	precision highp float;
 	uniform vec4 color;
 	out vec4 fragColor;

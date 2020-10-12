@@ -1,97 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<title>BREP.TS</title>
-	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/styles/default.min.css">
-	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/highlight.min.js"></script>
-	<script type="text/javascript" src="lib/SVGPathData.js"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <title>BREP.TS</title>
+    <link
+      rel="stylesheet"
+      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/styles/default.min.css"
+    />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.11.0/highlight.min.js"></script>
+    <script type="text/javascript" src="lib/SVGPathData.js"></script>
 
-	<script type="text/javascript" src="dist/demo.js"></script>
+    <script type="text/javascript" src="dist/demo.js"></script>
 
-	<style>
-		@font-face {
-			font-family: FiraMedia;
-			src: url(fonts/FiraSansMedium.woff);
-		}
+    <style>
+      @font-face {
+      	font-family: FiraMedia;
+      	src: url(fonts/FiraSansMedium.woff);
+      }
 
-		body {
-			font-family: FiraMedia, Verdana, sans-serif;
-			max-width: 1280px;
-			padding: 8px;
-			margin: auto;
-		}
+      body {
+      	font-family: FiraMedia, Verdana, sans-serif;
+      	max-width: 1280px;
+      	padding: 8px;
+      	margin: auto;
+      }
 
-		.democontainer {
-			border: 1px solid cornflowerblue;
-		}
-		.canvascontainer {
-			position: relative;
-		}
+      .democontainer {
+      	border: 1px solid cornflowerblue;
+      }
+      .canvascontainer {
+      	position: relative;
+      }
 
-		canvas {
-			position: absolute;
-			top: 0;
-			left: 0;
-		}
+      canvas {
+      	position: absolute;
+      	top: 0;
+      	left: 0;
+      }
 
-		.incont {
-			position: relative;
-			font-size: smaller;
-			display: table;
-			color: dimgrey;
-			background-color: white;
-			padding: 2px;
-		}
-		.incont input {
-			width: 40px;
-			margin-right: 0.5em;
-		}
-		.scrollable {
-			cursor: s-resize;
-		}
-		.info {
-			position: absolute;
-			bottom: 0;
-			margin: 2px;
-			font-size: x-small;
-		}
-		.navinfo {
-			position: absolute;
-			top: 0;
-			right: 0;
-			margin: 2px;
-			font-size: x-small;
-		}
-		.sourcelink {
-			position: absolute;
-			bottom: 0;
-			right: 0;
-			margin: 2px;
-			font-size: x-small;
-			color: blue;
-			cursor: pointer;
-			text-decoration: underline;
-		}
-		.src {
-			position: relative;
-			display: block;
-			white-space: pre;
-			font-family: Consolas, monospace;
-			font-size: smaller;
-			padding: 8px;
-			background-color: aliceblue;
-		}
-		.hide {
-			display: none;!important;
-		}
+      .incont {
+      	position: relative;
+      	font-size: smaller;
+      	display: table;
+      	color: dimgrey;
+      	background-color: white;
+      	padding: 2px;
+      }
+      .incont input {
+      	width: 40px;
+      	margin-right: 0.5em;
+      }
+      .scrollable {
+      	cursor: s-resize;
+      }
+      .info {
+      	position: absolute;
+      	bottom: 0;
+      	margin: 2px;
+      	font-size: x-small;
+      }
+      .navinfo {
+      	position: absolute;
+      	top: 0;
+      	right: 0;
+      	margin: 2px;
+      	font-size: x-small;
+      }
+      .sourcelink {
+      	position: absolute;
+      	bottom: 0;
+      	right: 0;
+      	margin: 2px;
+      	font-size: x-small;
+      	color: blue;
+      	cursor: pointer;
+      	text-decoration: underline;
+      }
+      .src {
+      	position: relative;
+      	display: block;
+      	white-space: pre;
+      	font-family: Consolas, monospace;
+      	font-size: smaller;
+      	padding: 8px;
+      	background-color: aliceblue;
+      }
+      .hide {
+      	display: none;!important;
+      }
 
-		.canvasinput {
-			text-align: right;
-		}
-	</style>
-</head>
-<body>
-	<div id="react-root"></div>
-</body>
+      .canvasinput {
+      	text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="react-root"></div>
+  </body>
 </html>

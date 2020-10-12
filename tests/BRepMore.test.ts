@@ -1,236 +1,327 @@
-import { Assert, outputLink, skip, suite, test, testBRepAnd, testBRepOp } from './manager'
-
-import { JavaMap as CustomMap, JavaSet as CustomSet } from 'javasetmap.ts'
-import { DEG, M4, V, V3 } from 'ts3dutils'
 import {
-	B2T,
-	BezierCurve,
-	BRep,
-	Edge,
-	Face,
-	IntersectionPointInfo,
-	L3,
-	P3,
-	PCurveEdge,
-	PlaneFace,
-	PlaneSurface,
-	ProjectedCurveSurface,
-	RotationFace,
-	CylinderSurface,
-	EllipseCurve,
-	StraightEdge,
-} from '..'
+  Assert,
+  outputLink,
+  skip,
+  suite,
+  test,
+  testBRepAnd,
+  testBRepOp,
+} from "./manager"
 
-function doTest(assert: Assert, face: PlaneFace, brep2: BRep, resultEdges: Edge[], resultPoints: V3[], desc?: string) {
-	if (brep2 instanceof Face) {
-		brep2 = new BRep([brep2], false)
-	}
-	brep2.buildAdjacencies()
-	outputLink(
-		{
-			a: new BRep([face]),
-			b: brep2,
-			edges: resultEdges,
-			drPs: resultPoints,
-		},
-		desc,
-	)
-	const faceMap = new Map(),
-		edgeMap = new Map(),
-		colinearEdgePairs = new CustomSet()
-	brep2.faces.forEach(face2 => {
-		face.intersectPlaneFace(face2, new BRep([face]), brep2, faceMap, edgeMap, colinearEdgePairs)
-	})
-	const edges = faceMap.get(face) || []
-	console.log(faceMap)
-	assert.equal(
-		edges.length,
-		resultEdges.length,
-		resultEdges.length + ' == resultEdges.length == edges.length' + edges.toSource(),
-	)
-	resultEdges.forEach(edge => {
-		assert.ok(
-			edges.some(edge2 => edge.like(edge2)),
-			`edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`,
-		)
-	})
-	const uniquePoints = []
-	face.contour.forEach(edge => {
-		const em = edgeMap.get(edge)
-		em &&
-			em.forEach(
-				info =>
-					info && !uniquePoints.some(up => up.like(info.p)) && assert.ok(info.p) && uniquePoints.push(info.p),
-			)
-	})
-	assert.equal(
-		uniquePoints.length,
-		resultPoints.length,
-		resultPoints.length + ' == points.length == resultPoints.length' + uniquePoints.toSource(),
-	)
-	resultPoints.forEach(p => {
-		assert.ok(
-			uniquePoints.some(up => up.like(p)),
-			`edges.some(edge2 => edge.like(edge2)) [${uniquePoints.toSource()}]`,
-		)
-	})
+import { JavaMap as CustomMap, JavaSet as CustomSet } from "javasetmap.ts"
+import { DEG, M4, V, V3 } from "ts3dutils"
+import {
+  B2T,
+  BezierCurve,
+  BRep,
+  Edge,
+  Face,
+  IntersectionPointInfo,
+  L3,
+  P3,
+  PCurveEdge,
+  PlaneFace,
+  PlaneSurface,
+  ProjectedCurveSurface,
+  RotationFace,
+  CylinderSurface,
+  EllipseCurve,
+  StraightEdge,
+} from ".."
+
+function doTest(
+  assert: Assert,
+  face: PlaneFace,
+  brep2: BRep,
+  resultEdges: Edge[],
+  resultPoints: V3[],
+  desc?: string,
+) {
+  if (brep2 instanceof Face) {
+    brep2 = new BRep([brep2], false)
+  }
+  brep2.buildAdjacencies()
+  outputLink(
+    {
+      a: new BRep([face]),
+      b: brep2,
+      edges: resultEdges,
+      drPs: resultPoints,
+    },
+    desc,
+  )
+  const faceMap = new Map(),
+    edgeMap = new Map(),
+    colinearEdgePairs = new CustomSet()
+  brep2.faces.forEach((face2) => {
+    face.intersectPlaneFace(
+      face2,
+      new BRep([face]),
+      brep2,
+      faceMap,
+      edgeMap,
+      colinearEdgePairs,
+    )
+  })
+  const edges = faceMap.get(face) || []
+  console.log(faceMap)
+  assert.equal(
+    edges.length,
+    resultEdges.length,
+    resultEdges.length +
+      " == resultEdges.length == edges.length" +
+      edges.toSource(),
+  )
+  resultEdges.forEach((edge) => {
+    assert.ok(
+      edges.some((edge2) => edge.like(edge2)),
+      `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`,
+    )
+  })
+  const uniquePoints = []
+  face.contour.forEach((edge) => {
+    const em = edgeMap.get(edge)
+    em &&
+      em.forEach(
+        (info) =>
+          info &&
+          !uniquePoints.some((up) => up.like(info.p)) &&
+          assert.ok(info.p) &&
+          uniquePoints.push(info.p),
+      )
+  })
+  assert.equal(
+    uniquePoints.length,
+    resultPoints.length,
+    resultPoints.length +
+      " == points.length == resultPoints.length" +
+      uniquePoints.toSource(),
+  )
+  resultPoints.forEach((p) => {
+    assert.ok(
+      uniquePoints.some((up) => up.like(p)),
+      `edges.some(edge2 => edge.like(edge2)) [${uniquePoints.toSource()}]`,
+    )
+  })
 }
 
 function doTestWithBrep(
-	assert: Assert,
-	face: Face,
-	faceBrep: BRep,
-	brep2: BRep,
-	expectedEdges: Edge[],
-	expectedPoints: V3[],
-	desc: string,
-	backwards?: boolean,
+  assert: Assert,
+  face: Face,
+  faceBrep: BRep,
+  brep2: BRep,
+  expectedEdges: Edge[],
+  expectedPoints: V3[],
+  desc: string,
+  backwards?: boolean,
 ) {
-	return
-	faceBrep.buildAdjacencies()
-	brep2.buildAdjacencies()
-	outputLink(
-		assert,
-		{
-			a: faceBrep,
-			b: brep2,
-			edges: expectedEdges,
-			drPs: expectedPoints,
-		},
-		`expected ${desc}`,
-	)
-	const faceMap = new Map(),
-		faceEdgePoints: Map<Edge, IntersectionPointInfo[]> = new CustomMap(),
-		checkedPairs = new CustomSet()
-	let x
-	if (!backwards) {
-		brep2.faces.forEach(face2 => {
-			face.intersectFace(face2, faceBrep, brep2, faceMap, faceEdgePoints, (x = new CustomMap()), checkedPairs)
-		})
-	} else {
-		brep2.faces.forEach(face2 => {
-			face2.intersectFace(face, brep2, faceBrep, faceMap, new CustomMap(), faceEdgePoints, checkedPairs)
-		})
-	}
-	const edges = faceMap.get(face) || []
-	const edgePointInfos = face
-		.getAllEdges()
-		.mapFilter(e => {
-			const canonEdgePoints = faceEdgePoints.get(e.getCanon())
-			return canonEdgePoints
-		})
-		.concatenated()
-	const uniquePoints = []
+  return
+  faceBrep.buildAdjacencies()
+  brep2.buildAdjacencies()
+  outputLink(
+    assert,
+    {
+      a: faceBrep,
+      b: brep2,
+      edges: expectedEdges,
+      drPs: expectedPoints,
+    },
+    `expected ${desc}`,
+  )
+  const faceMap = new Map(),
+    faceEdgePoints: Map<Edge, IntersectionPointInfo[]> = new CustomMap(),
+    checkedPairs = new CustomSet()
+  let x
+  if (!backwards) {
+    brep2.faces.forEach((face2) => {
+      face.intersectFace(
+        face2,
+        faceBrep,
+        brep2,
+        faceMap,
+        faceEdgePoints,
+        (x = new CustomMap()),
+        checkedPairs,
+      )
+    })
+  } else {
+    brep2.faces.forEach((face2) => {
+      face2.intersectFace(
+        face,
+        brep2,
+        faceBrep,
+        faceMap,
+        new CustomMap(),
+        faceEdgePoints,
+        checkedPairs,
+      )
+    })
+  }
+  const edges = faceMap.get(face) || []
+  const edgePointInfos = face
+    .getAllEdges()
+    .mapFilter((e) => {
+      const canonEdgePoints = faceEdgePoints.get(e.getCanon())
+      return canonEdgePoints
+    })
+    .concatenated()
+  const uniquePoints = []
 
-	edgePointInfos &&
-		edgePointInfos.forEach(
-			info => !uniquePoints.some(up => up.like(info.p)) && assert.ok(info.p) && uniquePoints.push(info.p),
-		)
-	console.log('edgePointInfos', edgePointInfos)
-	outputLink(
-		assert,
-		{
-			a: faceBrep,
-			b: brep2,
-			edges: edges,
-			drPs: uniquePoints,
-		},
-		`actual ${desc}`,
-	)
-	console.log(faceMap)
-	assert.equal(
-		edges.length,
-		expectedEdges.length,
-		expectedEdges.length + ' == resultEdges.length == edges.length' + edges.toSource(),
-	)
-	expectedEdges.forEach(edge => {
-		assert.ok(
-			edges.some(edge2 => edge.like(edge2)),
-			`edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`,
-		)
-	})
-	assert.equal(
-		uniquePoints.length,
-		expectedPoints.length,
-		expectedPoints.length + ' == resultPoints.length == uniquePoints.length' + uniquePoints.toSource(),
-	)
-	expectedPoints.forEach(p => {
-		assert.ok(
-			uniquePoints.some(up => up.like(p)),
-			`uniquePoints.some(up => up.like(p)) [${uniquePoints.toSource()}]`,
-		)
-	})
+  edgePointInfos &&
+    edgePointInfos.forEach(
+      (info) =>
+        !uniquePoints.some((up) => up.like(info.p)) &&
+        assert.ok(info.p) &&
+        uniquePoints.push(info.p),
+    )
+  console.log("edgePointInfos", edgePointInfos)
+  outputLink(
+    assert,
+    {
+      a: faceBrep,
+      b: brep2,
+      edges: edges,
+      drPs: uniquePoints,
+    },
+    `actual ${desc}`,
+  )
+  console.log(faceMap)
+  assert.equal(
+    edges.length,
+    expectedEdges.length,
+    expectedEdges.length +
+      " == resultEdges.length == edges.length" +
+      edges.toSource(),
+  )
+  expectedEdges.forEach((edge) => {
+    assert.ok(
+      edges.some((edge2) => edge.like(edge2)),
+      `edges.some(edge2 => edge.like(edge2)) [${edges.toSource()}] ${edge.toSource()}`,
+    )
+  })
+  assert.equal(
+    uniquePoints.length,
+    expectedPoints.length,
+    expectedPoints.length +
+      " == resultPoints.length == uniquePoints.length" +
+      uniquePoints.toSource(),
+  )
+  expectedPoints.forEach((p) => {
+    assert.ok(
+      uniquePoints.some((up) => up.like(p)),
+      `uniquePoints.some(up => up.like(p)) [${uniquePoints.toSource()}]`,
+    )
+  })
 }
 
-function doTest2(assert: Assert, face: Face, brep: BRep, resultFaces: Face[], desc: string) {
-	if (brep instanceof Face) {
-		brep = new BRep([brep])
-	}
-	const faceMap = new Map(),
-		edgeMap = new CustomMap<Edge, IntersectionPointInfo[]>()
-	const faceBrep = new BRep([face])
+function doTest2(
+  assert: Assert,
+  face: Face,
+  brep: BRep,
+  resultFaces: Face[],
+  desc: string,
+) {
+  if (brep instanceof Face) {
+    brep = new BRep([brep])
+  }
+  const faceMap = new Map(),
+    edgeMap = new CustomMap<Edge, IntersectionPointInfo[]>()
+  const faceBrep = new BRep([face])
 
-	outputLink(
-		assert,
-		{
-			a: faceBrep,
-			b: brep,
-			c: new BRep(resultFaces).translate(20, 0, 0),
-		},
-		desc,
-	)
-	brep.faces.forEach(face2 => {
-		face.intersectFace(face2, faceBrep, brep, faceMap, edgeMap, new CustomMap(), new CustomSet())
-	})
-	console.log('faceMap', faceMap)
-	const edgeLooseSegments = BRep.getLooseEdgeSegments(edgeMap, faceBrep.edgeFaces)
-	const newFaces: Face[] = []
-	faceBrep.reconstituteFaces([face], edgeLooseSegments, faceMap, newFaces)
-	assert.equal(newFaces.length, resultFaces.length, 'number of new faces')
-	outputLink(
-		assert,
-		{
-			a: faceBrep,
-			b: brep,
-			c: new BRep(newFaces).translate(20, 0, 0),
-		},
-		desc,
-	)
-	resultFaces.forEach(face => {
-		assert.ok(
-			newFaces.some(newFace => newFace.likeFace(face)),
-			`newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`,
-		)
-	})
+  outputLink(
+    assert,
+    {
+      a: faceBrep,
+      b: brep,
+      c: new BRep(resultFaces).translate(20, 0, 0),
+    },
+    desc,
+  )
+  brep.faces.forEach((face2) => {
+    face.intersectFace(
+      face2,
+      faceBrep,
+      brep,
+      faceMap,
+      edgeMap,
+      new CustomMap(),
+      new CustomSet(),
+    )
+  })
+  console.log("faceMap", faceMap)
+  const edgeLooseSegments = BRep.getLooseEdgeSegments(
+    edgeMap,
+    faceBrep.edgeFaces,
+  )
+  const newFaces: Face[] = []
+  faceBrep.reconstituteFaces([face], edgeLooseSegments, faceMap, newFaces)
+  assert.equal(newFaces.length, resultFaces.length, "number of new faces")
+  outputLink(
+    assert,
+    {
+      a: faceBrep,
+      b: brep,
+      c: new BRep(newFaces).translate(20, 0, 0),
+    },
+    desc,
+  )
+  resultFaces.forEach((face) => {
+    assert.ok(
+      newFaces.some((newFace) => newFace.likeFace(face)),
+      `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`,
+    )
+  })
 }
 
-function doTest3(assert, face: Face, newEdges: Edge[], points: Map<Edge, V3[]>, resultFaces: Face[], desc: string) {
-	const faceBrep = new BRep([face])
-	assert.ok(
-		true,
-		`<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-href='brep2.html?a=${faceBrep.toSource()}&c=${new BRep(resultFaces).toSource()}.translate(20, 0, 0)'>${desc}</a>`,
-	)
-	const isps = Array.from(points.entries())
-		.map(([edge, ps]) =>
-			ps.map(p => ({ edge: edge, p: p, edgeT: snap(snap(edge.curve.pointT(p), edge.aT), edge.bT) })),
-		)
-		.concatenated()
-	const edgeLooseSegments = BRep.prototype.getLooseEdgeSegments(new Map().set(face, isps))
-	const newFaces = []
-	BRep.reconstituteFaces([face], edgeLooseSegments, new Map().set(face, newEdges), newFaces)
-	assert.ok(
-		true,
-		`<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
-        href='brep2.html?a=${faceBrep.toSource()}&c=${new BRep(newFaces).toSource()}.translate(20, 0, 0)'>result</a>`,
-	)
-	assert.equal(newFaces.length, resultFaces.length, 'number of new faces')
-	resultFaces.forEach(face => {
-		assert.ok(
-			newFaces.some(newFace => newFace.likeFace(face)),
-			`newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`,
-		)
-	})
+function doTest3(
+  assert,
+  face: Face,
+  newEdges: Edge[],
+  points: Map<Edge, V3[]>,
+  resultFaces: Face[],
+  desc: string,
+) {
+  const faceBrep = new BRep([face])
+  assert.ok(
+    true,
+    `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+href='brep2.html?a=${faceBrep.toSource()}&c=${new BRep(
+      resultFaces,
+    ).toSource()}.translate(20, 0, 0)'>${desc}</a>`,
+  )
+  const isps = Array.from(points.entries())
+    .map(([edge, ps]) =>
+      ps.map((p) => ({
+        edge: edge,
+        p: p,
+        edgeT: snap(snap(edge.curve.pointT(p), edge.aT), edge.bT),
+      })),
+    )
+    .concatenated()
+  const edgeLooseSegments = BRep.prototype.getLooseEdgeSegments(
+    new Map().set(face, isps),
+  )
+  const newFaces = []
+  BRep.reconstituteFaces(
+    [face],
+    edgeLooseSegments,
+    new Map().set(face, newEdges),
+    newFaces,
+  )
+  assert.ok(
+    true,
+    `<html><a style='color: #0000ff; text-decoration: underline;' target='blank'
+        href='brep2.html?a=${faceBrep.toSource()}&c=${new BRep(
+      newFaces,
+    ).toSource()}.translate(20, 0, 0)'>result</a>`,
+  )
+  assert.equal(newFaces.length, resultFaces.length, "number of new faces")
+  resultFaces.forEach((face) => {
+    assert.ok(
+      newFaces.some((newFace) => newFace.likeFace(face)),
+      `newFaces.some(newFace => newFace.likeFace(face) ${newFaces.toSource()}`,
+    )
+  })
 }
 
 // prettier-ignore

@@ -1,25 +1,32 @@
-import { b2equals, bRepEqual, outputLink, suite, test, testBRepOp } from './manager'
-
-import chroma from 'chroma-js'
-import * as fs from 'fs'
-import { AABB,DEG, M4, TAU, V, V3 } from 'ts3dutils'
-import { Mesh } from 'tsgl'
 import {
-	B2T,
-	BRep,
-	ConicSurface,
-	CylinderSurface,
-	Edge,
-	EllipseCurve,
-	L3,
-	P3,
-	PCurveEdge,
-	PlaneFace,
-	PlaneSurface,
-	RotatedCurveSurface,
-	RotationFace,
-	StraightEdge,
-} from '..'
+  b2equals,
+  bRepEqual,
+  outputLink,
+  suite,
+  test,
+  testBRepOp,
+} from "./manager"
+
+import chroma from "chroma-js"
+import * as fs from "fs"
+import { AABB, DEG, M4, TAU, V, V3 } from "ts3dutils"
+import { Mesh } from "tsgl"
+import {
+  B2T,
+  BRep,
+  ConicSurface,
+  CylinderSurface,
+  Edge,
+  EllipseCurve,
+  L3,
+  P3,
+  PCurveEdge,
+  PlaneFace,
+  PlaneSurface,
+  RotatedCurveSurface,
+  RotationFace,
+  StraightEdge,
+} from ".."
 
 // prettier-ignore
 suite('BRep generators', () => {
