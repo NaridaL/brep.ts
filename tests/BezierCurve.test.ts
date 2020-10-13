@@ -18,6 +18,7 @@ import {
   EllipseCurve,
   EllipsoidSurface,
   Edge,
+  edgeForCurveAndTs,
 } from ".."
 
 import { PI } from "../src/math"
@@ -233,7 +234,7 @@ suite("BezierCurve", () => {
     const arcs = bezier.circleApprox()
     outputLink(assert, {
       edges: [bezier.translate(0, 0, 1), ...arcs].map((arc) =>
-        Edge.forCurveAndTs(arc),
+        edgeForCurveAndTs(arc),
       ),
     })
   })
@@ -248,7 +249,7 @@ suite("BezierCurve", () => {
     const arcs = bezier.circleApprox()
     outputLink(assert, {
       edges: [bezier.translate(200, 0, 1), ...arcs].map((arc) =>
-        Edge.forCurveAndTs(arc),
+        edgeForCurveAndTs(arc),
       ),
     })
   })

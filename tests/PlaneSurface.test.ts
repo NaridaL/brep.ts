@@ -114,8 +114,8 @@ suite("PlaneSurface", () => {
   )
 
   const faceWithEllipses = Face.create(new PlaneSurface(P3.XY), [
-    Edge.forCurveAndTs(EllipseCurve.UNIT),
-    Edge.forCurveAndTs(
+    edgeForCurveAndTs(EllipseCurve.UNIT),
+    edgeForCurveAndTs(
       EllipseCurve.circleThroughPoints(V3.X.negated(), V(0, -0.5), V3.X),
     ),
   ])

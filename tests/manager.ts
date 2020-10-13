@@ -1,3 +1,5 @@
+import * as path from "path"
+
 declare const require: any
 try {
   ;(global as any).WebGLRenderingContext = {}
@@ -23,14 +25,13 @@ import {
   V,
   V3,
 } from "ts3dutils"
-import { Assert, test } from "ts3dutils/tests/manager"
-import { RenderObjects } from "../src/viewer"
-
+import { promises as fsp } from "fs"
+import * as fs from "fs"
 import slug from "slug"
 
-function sanitizeFilename(s: string) {
-  return slug(s.replace(/-/g, "minus").replace(/\+/g, "plus"), "_")
-}
+import { Assert, test } from "ts3dutils/tests/manager"
+
+import { RenderObjects } from "../src/viewer"
 
 import {
   BRep,
@@ -38,6 +39,7 @@ import {
   Curve,
   CustomPlane,
   Edge,
+  edgeForCurveAndTs,
   EllipseCurve,
   Face,
   ImplicitSurface,
@@ -50,9 +52,12 @@ import {
   StraightEdge,
   Surface,
 } from ".."
+import * as brepts from ".."
+import * as ts3dutils from "ts3dutils"
 
-import chroma from "chroma-js"
-import * as fs from "fs"
+function sanitizeFilename(s: string) {
+  return slug(s.replace(/-/g, "minus").replace(/\+/g, "plus"), "_")
+}
 
 export function testCurveCentralProjection(assert: Assert, curve: Curve) {
   const m4 = M4.projectPlanePoint(V3.O, new P3(V3.Z, 1))
@@ -66,8 +71,8 @@ export function testCurveCentralProjection(assert: Assert, curve: Curve) {
   } catch (e) {}
   outputLink(assert, {
     edges: [
-      Edge.forCurveAndTs(curve),
-      ...(curveTransformed ? [Edge.forCurveAndTs(curveTransformed)] : []),
+      edgeForCurveAndTs(curve),
+      ...(curveTransformed ? [edgeForCurveAndTs(curveTransformed)] : []),
     ],
     drPs: pls,
     drLines: pls,
@@ -137,7 +142,36 @@ export function bRepEqual(
     a: expected,
     b: actualTranslated,
   })
-  b2equals(assert, actual, expected)
+  b2equals(assert, actual, expected, message)
+}
+
+export async function bRepSnapshot(assert: Assert, actual: BRep, message = "") {
+  const fileName = path.join(
+    __dirname,
+    "snapshots",
+    sanitizeFilename(assert.getTestName()) + ".ts",
+  )
+  console.log("snapshot", fileName)
+  try {
+    await fsp.access(fileName)
+  } catch (e) {
+    // file does not exist
+    const target = actual.toSource()
+    fsp.writeFile(fileName, target, "utf8")
+    return
+  }
+  const cc = (x, y) => "const {" + Object.keys(x).join(",") + "} = " + y
+  const expected: BRep = eval(
+    "(() => { " +
+      cc(ts3dutils, "ts3dutils") +
+      ";" +
+      cc(brepts, "brepts") +
+      ";" +
+      "return " +
+      (await fsp.readFile(fileName, "utf8")) +
+      "})()",
+  )
+  bRepEqual(assert, actual, expected, message)
 }
 
 export function testBRepAnd(
@@ -237,6 +271,7 @@ export function outputLink(
     "utf8",
   )
   assert.link("http://localhost:10001/tests/results/" + o, msg)
+  console.log("http://localhost:10001/tests/results/" + o, msg)
 }
 
 const demoFile = fs.readFileSync(__dirname + "/../viewer.html", "utf8")
@@ -256,7 +291,7 @@ export function testISCurves(
     if (isCurves) {
       outputLink(assert, {
         mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
-        edges: isCurves.map((c) => Edge.forCurveAndTs(c)),
+        edges: isCurves.map((c) => edgeForCurveAndTs(c)),
       })
 
       assert.equal(
@@ -311,7 +346,7 @@ export function testPointT(
   precision?: number,
 ) {
   outputLink(assert, {
-    edges: [Edge.forCurveAndTs(curve)],
+    edges: [edgeForCurveAndTs(curve)],
     drPs: [p],
   })
   const actualT = curve.pointT(p)
@@ -468,7 +503,7 @@ export function testCurve(
   checkTangents = true,
   msg?: string,
 ) {
-  const edge = Edge.forCurveAndTs(curve)
+  const edge = edgeForCurveAndTs(curve)
   const debugInfo = curve.debugInfo && curve.debugInfo()
   const aabb = curve.getAABB()
   outputLink(
@@ -675,7 +710,7 @@ export function testContainsCurve(
     assert,
     {
       mesh: surface.sce + ".toMesh()",
-      edges: [Edge.forCurveAndTs(curve)],
+      edges: [edgeForCurveAndTs(curve)],
     },
     msg,
   )
@@ -692,11 +727,11 @@ export function rotateEdge(edge: Edge, angle: raddd) {
   )
   const edges = [
     edge,
-    Edge.forCurveAndTs(
+    edgeForCurveAndTs(
       EllipseCurve.semicircle(edge.b.lengthXY(), V(0, 0, edge.b.z), 0, angle),
     ),
     edge.rotateZ(angle).flipped(),
-    Edge.forCurveAndTs(
+    edgeForCurveAndTs(
       EllipseCurve.semicircle(edge.a.lengthXY(), V(0, 0, edge.a.z), 0, angle),
     ).flipped(),
   ]
@@ -742,7 +777,7 @@ export function testCurveISInfos(
     outputLink(
       assert,
       {
-        edges: [c1, c2].map((c) => Edge.forCurveAndTs(c)),
+        edges: [c1, c2].map((c) => edgeForCurveAndTs(c)),
         drPs: intersections,
       },
       msg,
@@ -770,7 +805,7 @@ export function testCurveISInfos(
     !intersections &&
       outputLink(
         assert,
-        { edges: [c1, c2].map((c) => Edge.forCurveAndTs(c)) },
+        { edges: [c1, c2].map((c) => edgeForCurveAndTs(c)) },
         msg,
       )
   }
@@ -821,7 +856,7 @@ export function testISTs(
       assert,
       {
         mesh: `[${surface}.toMesh()]`,
-        edges: [Edge.forCurveAndTs(curve)],
+        edges: [edgeForCurveAndTs(curve)],
         drPs: ists ? ists.map((t) => curve.at(t)) : [],
       },
       "view",
@@ -868,7 +903,7 @@ export function testCurvesColinear(
       .isColinearTo(curve2),
   )
   outputLink(test, {
-    edges: [curve1, curve2].map((c) => Edge.forCurveAndTs(c)),
+    edges: [curve1, curve2].map((c) => edgeForCurveAndTs(c)),
   })
   for (let i = 0; i < 10; i++) {
     const t = lerp(curve1.tMin, curve1.tMax, i / 9)
@@ -899,7 +934,7 @@ export function testCurveTransform(
       {
         edges: [curve, curveT]
           .filter((x) => x)
-          .map((c) => Edge.forCurveAndTs(c)),
+          .map((c) => edgeForCurveAndTs(c)),
         drPs: ss,
         drLines: ss.map((x) => x.p),
         boxes: [curve.getAABB().getM4(), m4.times(curve.getAABB().getM4())],

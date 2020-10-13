@@ -1,7 +1,9 @@
 import { Equalable } from "javasetmap.ts"
 import {
   AABB,
+  arrayEquals,
   arrayFromFunction,
+  arrayHashCode,
   assert,
   assertNumbers,
   callsce,
@@ -10,11 +12,13 @@ import {
   eq0,
   fuzzyUniquesF,
   getIntervals,
+  getLast,
   glqInSteps,
   hasConstructor,
   int,
   le,
   M4,
+  mapFilter,
   newtonIterate1d,
   newtonIterate2dWithDerivatives,
   newtonIterateWithDerivative,
@@ -22,11 +26,11 @@ import {
   Transformable,
   V,
   V3,
+  withMax,
 } from "ts3dutils"
 
 import {
   curvePointPP,
-  CylinderSurface,
   EllipsoidSurface,
   followAlgorithm2d,
   followAlgorithmPP,
@@ -41,6 +45,7 @@ import {
 } from "../index"
 
 import { abs, ceil, floor } from "../math"
+import { WebGLDebugable } from "../WebGLDebugable"
 
 /**
  * Information about the intersection of two curves.
@@ -56,23 +61,26 @@ export interface ISInfo {
 
 let insideIsInfosWithCurve = false
 
-export interface Curve {
-  /**
-   * Derivative of tangentAt for parameter t at t.
-   */
-  ddt?(t: number): V3
-}
-export abstract class Curve extends Transformable implements Equalable {
+export abstract class Curve
+  extends Transformable
+  implements Equalable, WebGLDebugable {
   static hlol = 0
   tIncrement!: number
   hlol!: number;
   readonly ["constructor"]: new (...args: any[]) => this
 
+  debugInfo?(): { points: V3[]; lines: V3[] }
+
+  /**
+   * Derivative of tangentAt for parameter t at t.
+   */
+  ddt?(t: number): V3
+
   constructor(readonly tMin: number, readonly tMax: number) {
     super()
     assertNumbers(tMin, tMax)
-    assert("number" == typeof tMin && !isNaN(tMin))
-    assert("number" == typeof tMax && !isNaN(tMax))
+    assert("number" === typeof tMin && !isNaN(tMin))
+    assert("number" === typeof tMax && !isNaN(tMax))
     assert(tMin < tMax, "tMin < tMax " + tMin + " < " + tMax)
   }
 
@@ -397,10 +405,13 @@ export abstract class Curve extends Transformable implements Equalable {
 
     const STEPS = 32
     if (undefined === tStart) {
-      tStart = arrayFromFunction(
-        STEPS,
-        (i) => tMin + ((tMax - tMin) * i) / (STEPS - 1),
-      ).withMax((t) => -this.at(t).distanceTo(p))
+      tStart = withMax(
+        arrayFromFunction(
+          STEPS,
+          (i) => tMin + ((tMax - tMin) * i) / (STEPS - 1),
+        ),
+        (t) => -this.at(t).distanceTo(p),
+      )
     }
 
     return newtonIterateWithDerivative(f, tStart, 16, df)
@@ -601,12 +612,15 @@ export abstract class Curve extends Transformable implements Equalable {
     if (this === obj) return true
     return (
       hasConstructor(obj, this.constructor) &&
-      this.getConstructorParameters().equals(obj.getConstructorParameters())
+      arrayEquals(
+        this.getConstructorParameters(),
+        obj.getConstructorParameters(),
+      )
     )
   }
 
   hashCode(): int {
-    return this.getConstructorParameters().hashCode()
+    return arrayHashCode(this.getConstructorParameters())
   }
 
   /**
@@ -656,7 +670,7 @@ export abstract class Curve extends Transformable implements Equalable {
     const ists = this.isTsWithPlane(plane).filter(
       (ist) => this.tMin <= ist && ist <= this.tMax,
     )
-    return getIntervals(ists, this.tMin, this.tMax).mapFilter(([a, b]) => {
+    return mapFilter(getIntervals(ists, this.tMin, this.tMax), ([a, b]) => {
       const midT = (a + b) / 2
       return (
         !eq(a, b) &&
@@ -686,7 +700,10 @@ function mkcurves(
     bounds,
     validUV,
   )
-  if (points.length > 4 && points[0].distanceTo(points.last) <= abs(stepSize)) {
+  if (
+    points.length > 4 &&
+    points[0].distanceTo(getLast(points)) <= abs(stepSize)
+  ) {
     // this is a loop: split it
     for (let i = 0; i < points.length - 1; i++) {
       assert(!points[i].equals(points[i + 1]))
@@ -716,12 +733,12 @@ function mkcurves(
     } = followAlgorithm2d(implicitCurve, start, -stepSize, bounds, validUV)
     const result = followAlgorithm2d(
       implicitCurve,
-      reversePoints.last,
+      getLast(reversePoints),
       stepSize,
       bounds,
       validUV,
       undefined,
-      reverseTangents.last.negated(),
+      getLast(reverseTangents).negated(),
     )
     assert(result.points.length > 2)
     return [result]
@@ -838,7 +855,7 @@ function mkPPCurves(
     bounds1,
     bounds2,
   )
-  if (points[0].distanceTo(points.last) < stepSize && points.length > 2) {
+  if (points[0].distanceTo(getLast(points)) < stepSize && points.length > 2) {
     // this is a loop: split it
     for (let i = 0; i < points.length - 1; i++) {
       assert(!points[i].equals(points[i + 1]))
@@ -876,7 +893,7 @@ function mkPPCurves(
     const result = followAlgorithmPP(
       ps1,
       ps2,
-      reversePoints.last,
+      getLast(reversePoints),
       stepSize,
       bounds1,
       bounds2,

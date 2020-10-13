@@ -253,7 +253,7 @@ suite("EllipseCurve", () => {
     console.log(pm.str)
     outputLink(assert, {
       edges: [c, parabola4Projection(pm, c.tMin, c.tMax)].map((c) =>
-        Edge.forCurveAndTs(c),
+        edgeForCurveAndTs(c),
       ),
       drPs: ss,
       drLines: ss,

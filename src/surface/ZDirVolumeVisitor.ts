@@ -5,6 +5,7 @@ import {
   gaussLegendreQuadrature24,
   glqInSteps,
   M4,
+  sum,
   V,
   V3,
 } from "ts3dutils"
@@ -43,8 +44,8 @@ export const ZDirVolumeVisitor: {
     const dpdu = this.dpdu()
     const dpdv = this.dpdv()
     // INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z dt
-    const totalVolume = edges
-      .map((edgeWC) => {
+    const totalVolume = sum(
+      edges.map((edgeWC) => {
         const curveWC = edgeWC.curve
         if (
           curveWC instanceof EllipseCurve ||
@@ -84,8 +85,8 @@ export const ZDirVolumeVisitor: {
         } else {
           throw new Error()
         }
-      })
-      .sum()
+      }),
+    )
     const centroidZX2Parts = edges.map((edgeWC) => {
       const curveWC = edgeWC.curve
       if (
@@ -370,8 +371,8 @@ export const ZDirVolumeVisitor: {
   ): { volume: number; centroid: V3 } {
     const dpdu = this.dpdu()
     const dpdv = this.dpdv()
-    const totalVolume = edges
-      .map((edgeWC) => {
+    const totalVolume = sum(
+      edges.map((edgeWC) => {
         const curveWC = edgeWC.curve
 
         const f = (curveT: number) => {
@@ -466,8 +467,8 @@ export const ZDirVolumeVisitor: {
         }
 
         return gaussLegendreQuadrature24(f, edgeWC.aT, edgeWC.bT)
-      })
-      .sum()
+      }),
+    )
 
     // calc centroid:
     const centroidZX2Parts = edges.map((edgeWC) => {

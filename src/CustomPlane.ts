@@ -1,8 +1,8 @@
-import { callsce, V3 } from "ts3dutils"
+import {callsce, min, V3} from "ts3dutils"
 
 import chroma from "chroma-js"
-import { GL_COLOR, GL_COLOR_BLACK } from "tsgl"
-import { getGlobalId, L3, P3, PlaneSurface } from "./index"
+import {GL_COLOR, GL_COLOR_BLACK} from "tsgl"
+import {getGlobalId, L3, P3, PlaneSurface} from "./index"
 
 export class CustomPlane extends P3 {
   readonly up: V3
@@ -20,19 +20,19 @@ export class CustomPlane extends P3 {
     up: V3,
     name: string = "CustomPlane" + getGlobalId(),
     color: GL_COLOR = chroma.random().gl(),
-    rightStart: number = -500,
-    rightEnd: number = 500,
-    upStart: number = -500,
-    upEnd: number = 500,
+    uMin: number = -500,
+    uMax: number = 500,
+    vMin: number = -500,
+    vMax: number = 500,
   ) {
-    const { normal1, w } = P3.forAnchorAndPlaneVectors(anchor, right, up)
+    const {normal1, w} = P3.forAnchorAndPlaneVectors(anchor, right, up)
     super(normal1, w)
     this.up = up
     this.right = right
-    this.uMin = rightStart
-    this.uMax = rightEnd
-    this.vMin = upStart
-    this.vMax = upEnd
+    this.uMin = uMin
+    this.uMax = uMax
+    this.vMin = vMin
+    this.vMax = vMax
     this.name = name
     this.color = color
   }
@@ -53,10 +53,10 @@ export class CustomPlane extends P3 {
       this.up,
       this.name,
       this.color,
-      this.sMin,
-      this.sMax,
-      this.tMin,
-      this.tMax,
+      this.uMin,
+      this.uMax,
+      this.vMin,
+      this.vMax,
     )
   }
 
@@ -77,7 +77,7 @@ export class CustomPlane extends P3 {
   }
 
   distanceTo(line: L3, mindist: number) {
-    return [
+    return min( [
       new L3(this.anchor.plus(this.right.times(this.uMin)), this.up),
       new L3(this.anchor.plus(this.right.times(this.uMax)), this.up),
       new L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
@@ -95,12 +95,11 @@ export class CustomPlane extends P3 {
         } else {
           return Infinity
         }
-      })
-      .min()
+      }))
   }
 
   distanceTo2(line: L3, mindist: number) {
-    return [
+    return min([
       new L3(this.anchor.plus(this.right.times(this.uMin)), this.up),
       new L3(this.anchor.plus(this.right.times(this.uMax)), this.up),
       new L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
@@ -118,7 +117,6 @@ export class CustomPlane extends P3 {
         } else {
           return Infinity
         }
-      })
-      .min()
+      }))
   }
 }

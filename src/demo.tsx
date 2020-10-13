@@ -8,8 +8,8 @@ import React, {
   WheelEvent,
 } from "react"
 import ReactDOM from "react-dom"
-import { clamp, DEG, int, round10, TAU, V, V3 } from "ts3dutils"
-import { Mesh, TSGLContext } from "tsgl"
+import { clamp, DEG, emod, int, round10, TAU, V, V3 } from "ts3dutils"
+import { TSGLContext } from "tsgl"
 
 import {
   BREPGLContext,
@@ -18,7 +18,7 @@ import {
   initShaders,
   setupCamera,
 } from "./BREPGLContext"
-import { B2T, BRep, CustomPlane, Edge, Face, P3 } from "./index"
+import { B2T, BRep, CustomPlane, P3, round } from "./index"
 
 const fakeB2Mesh = (false as true) && ({} as BRep).toMesh()
 type B2Mesh = typeof fakeB2Mesh
@@ -311,7 +311,7 @@ function paintDemo(demo: DemoDesc) {
           color:
             hovering == face
               ? chroma("purple").gl()
-              : meshColorss.emod(i).emod(faceIndex),
+              : emod(emod(meshColorss, i), faceIndex),
         })
         .draw(
           mesh,
@@ -506,10 +506,10 @@ const Body = () => (
 
         // create an n-gon centered on the XY-plane with corners insideRadius away from the origin
         // the ngon is counter-clockwise (CCW) when viewed from +Z
-        const ngon = Edge.ngon(n, insideRadius)
+        const ngon = ngon(n, insideRadius)
 
         // round the corners of the ngon with radius cornerRadius
-        const ngonRounded = Edge.round(ngon, cornerRadius)
+        const ngonRounded = round(ngon, cornerRadius)
 
         // create a hole punch by extruding ngonRounded in direction +Z
         // Like triangles in opengl, faces face the direction they are CCW when viewed from.

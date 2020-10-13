@@ -1,5 +1,4 @@
 import {
-  AABB,
   arrayFromFunction,
   assert,
   assertf,
@@ -9,6 +8,7 @@ import {
   assertVectors,
   between,
   combinations,
+  concatenated,
   eq,
   eq0,
   fuzzyUniques,
@@ -19,25 +19,21 @@ import {
   MINUS,
   newtonIterate1d,
   newtonIterate2dWithDerivatives,
-  newtonIterateWithDerivative,
   NLA_PRECISION,
   solveCubicReal2,
   Tuple3,
   V,
   V3,
+  withMax,
 } from "ts3dutils"
-import { Mesh } from "tsgl"
 
 import {
   Curve,
   CylinderSurface,
   EllipseCurve,
-  EllipsoidSurface,
   ISInfo,
   L3,
   P3,
-  PlaneSurface,
-  ProjectedCurveSurface,
   R2_R,
   Surface,
 } from "../index"
@@ -603,10 +599,10 @@ export class BezierCurve extends Curve {
     }
 
     const STEPS = 32
-    const startT = arrayFromFunction(
-      STEPS,
-      (i) => tMin + ((tMax - tMin) * i) / STEPS,
-    ).withMax((t) => -f(t))
+    const startT = withMax(
+      arrayFromFunction(STEPS, (i) => tMin + ((tMax - tMin) * i) / STEPS),
+      (t) => -f(t),
+    )
 
     return newtonIterate1d(f, startT, 8)
   }
@@ -749,7 +745,7 @@ export class BezierCurve extends Curve {
       tMin = Math.min(tMin, sMin)
       tMax = Math.max(tMax, sMax)
       const splits = fuzzyUniques(
-        this.roots().concatenated().filter(isFinite).concat([tMin, tMax]),
+        concatenated(this.roots()).filter(isFinite).concat([tMin, tMax]),
       ).sort(MINUS)
       //const aabbs = arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
       Array.from(combinations(splits.length - 1)).forEach(({ i, j }) => {

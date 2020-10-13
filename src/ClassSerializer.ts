@@ -1,5 +1,5 @@
 import { assert } from "ts3dutils"
-import { getGlobalId } from "./index"
+import { getGlobalId } from "."
 
 export function doNotSerialize(target: any, key: PropertyKey) {
   const map =

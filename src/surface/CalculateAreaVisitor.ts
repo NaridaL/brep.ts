@@ -1,4 +1,12 @@
-import { assert, assertf, eq, glqInSteps, M4, NLA_PRECISION } from "ts3dutils"
+import {
+  assert,
+  assertf,
+  eq,
+  glqInSteps,
+  M4,
+  NLA_PRECISION,
+  sum,
+} from "ts3dutils"
 
 import {
   ConicSurface,
@@ -20,8 +28,8 @@ export const CalculateAreaVisitor = {
     const dpdu = this.dpdu()
     const dpdv = this.dpdv()
     // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-    const totalArea = edges
-      .map((edge) => {
+    const totalArea = sum(
+      edges.map((edge) => {
         if (
           edge.curve instanceof EllipseCurve ||
           edge.curve instanceof HyperbolaCurve ||
@@ -56,8 +64,8 @@ export const CalculateAreaVisitor = {
         } else {
           throw new Error()
         }
-      })
-      .sum()
+      }),
+    )
     return totalArea * this.normalDir
   },
 
@@ -167,7 +175,7 @@ export const CalculateAreaVisitor = {
         }
       }
     })
-    return areaParts.sum()
+    return sum(areaParts)
   },
 
   [ProjectedCurveSurface.name](
@@ -176,8 +184,8 @@ export const CalculateAreaVisitor = {
   ): number {
     // calculation cannot be done in local coordinate system, as the area doesn't scale proportionally
     const thisDir1 = this.dir.unit()
-    const totalArea = edges
-      .map((edge) => {
+    const totalArea = sum(
+      edges.map((edge) => {
         if (edge.curve instanceof L3) {
           return 0
         } else if (edge.curve instanceof ImplicitCurve) {
@@ -218,8 +226,8 @@ export const CalculateAreaVisitor = {
           assert(0 !== sign)
           return val * sign
         }
-      })
-      .sum()
+      }),
+    )
     console.log("totalArea", totalArea)
     return totalArea
   },

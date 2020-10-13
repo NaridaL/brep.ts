@@ -32,7 +32,7 @@ skip("PointProjectedSurface", () => {
     2,
   )
 
-  // const edge = PCurveEdge.forCurveAndTs(baseCurve, 0, 2)
+  // const edge = PCurveedgeForCurveAndTs(baseCurve, 0, 2)
   // const edges = [
   // 	edge,
   // 	StraightEdge.throughPoints(baseCurve.at(2), baseCurve.at(2).plus(V(0, 0, 2))),

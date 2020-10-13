@@ -15,12 +15,12 @@ import {
   lerp,
   lt,
   M4,
+  mapFilter,
   newtonIterate1d,
   newtonIterateSmart,
   pqFormula,
   TAU,
   V3,
-  Matrix,
 } from "ts3dutils"
 
 import {
@@ -35,7 +35,7 @@ import {
   XiEtaCurve,
 } from "../index"
 
-import { atan2, cos, max, min, PI, sign, sin, sqrt } from "../math"
+import { atan2, cos, max, min, PI, sign, sqrt } from "../math"
 import { parabola4Projection } from "./XiEtaCurve"
 
 export class EllipseCurve extends XiEtaCurve {
@@ -527,15 +527,18 @@ export class EllipseCurve extends XiEtaCurve {
       // results.map(pLC => { const p = resetMatrix.transformPoint(pLC) return {tThis: this.pointT(p, PI),
       // tOther: ellipse.pointT(p, PI), p} })
     } else {
-      return this.isTsWithPlane(
-        P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center),
-      ).mapFilter((t) => {
-        const p = this.at(t)
-        if (ellipse.containsPoint(p)) {
-          return { tThis: t, tOther: ellipse.pointT(p), p }
-        }
-        return undefined
-      })
+      return mapFilter(
+        this.isTsWithPlane(
+          P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center),
+        ),
+        (t) => {
+          const p = this.at(t)
+          if (ellipse.containsPoint(p)) {
+            return { tThis: t, tOther: ellipse.pointT(p), p }
+          }
+          return undefined
+        },
+      )
     }
   }
 

@@ -2,39 +2,22 @@ import chroma, { Color } from "chroma-js"
 import debounce from "debounce"
 import deepmerge from "deepmerge"
 import nerdamer from "nerdamer"
-import {
-  AABB,
-  arrayFromFunction,
-  assert,
-  DEG,
-  int,
-  M4,
-  round10,
-  V,
-  V3,
-} from "ts3dutils"
+import { assert, DEG, emod, int, M4, round10, V, V3 } from "ts3dutils"
 import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from "tsgl"
 
 import {
-  B2T,
   BRep,
   BREPGLContext,
   cameraChangeListeners,
   COLORS,
-  Curve,
-  curvePointMF,
   CustomPlane,
-  CylinderSurface,
   Edge,
-  EllipsoidSurface,
   Face,
   FaceMesh,
-  followAlgorithm2d,
   getMouseLine,
   ImplicitCurve,
   initNavigationEvents,
   L3,
-  MathFunctionR2R,
   P3,
   PICurve,
   setupCamera,
@@ -62,8 +45,8 @@ let edgesMesh: Mesh & {
 let faceMesh: FaceMesh & { tangents: V3[] }
 let meshes: (Mesh & { TRIANGLES: int[]; normals: V3[] })[] = []
 let hovering: {}
-const edgeDebugPoints = [],
-  edgeDebugLines = []
+const edgeDebugPoints: V3[] = []
+const edgeDebugLines: V3[] = []
 
 import * as ts3dutils from "ts3dutils"
 import * as tsgl from "tsgl"
@@ -74,10 +57,10 @@ const addMissing = (to: any, from: any) =>
   )
 // tslint:disable-next-line:class-name
 export class RenderObjects {
-  a: BRep = undefined
-  b: BRep = undefined
-  c: BRep = undefined
-  d: BRep = undefined
+  a: BRep | undefined = undefined
+  b: BRep | undefined = undefined
+  c: BRep | undefined = undefined
+  d: BRep | undefined = undefined
   face: Face[]
   edges: Edge[] = []
   wireframe: boolean = false
@@ -108,12 +91,13 @@ declare global {
 }
 const arrayLiteralType = <T extends string>(x: T[]): T[] => x
 const g = window
+Object.assign
 function objectAssignConcatArray<T, U>(a: T, b: U): T & U {
   for (const key of Object.keys(b)) {
-    if (Array.isArray(g[key]) && Array.isArray(b[key])) {
-      a[key].push(...b[key])
-    } else if (undefined !== b[key]) {
-      a[key] = b[key]
+    if (Array.isArray((g as any)[key]) && Array.isArray((b as any)[key])) {
+      ;(a as any)[key].push(...(b as any)[key])
+    } else if (undefined !== (b as any)[key]) {
+      ;(a as any)[key] = (b as any)[key]
     }
   }
   return a as any
@@ -294,8 +278,8 @@ function viewerPaint(time: int, gl: BREPGLContext) {
         .uniforms({
           color:
             hovering == face
-              ? brepMeshColors.emod(i).emod(faceIndex).darken(2).gl()
-              : brepMeshColorssGL.emod(i).emod(faceIndex),
+              ? emod(emod(brepMeshColors, i), faceIndex).darken(2).gl()
+              : emod(emod(brepMeshColorssGL, i), faceIndex),
         })
         .draw(
           mesh,
@@ -340,7 +324,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
     mesh.TRIANGLES &&
       gl.shaders.lighting
         .uniforms({
-          color: meshColorsGL.emod(i),
+          color: emod(meshColorsGL, i),
           camPos: eye.pos,
         })
         .draw(mesh)
@@ -353,7 +337,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
     gl.projectionMatrix.m[11] += 1 / (1 << 20)
   }
   g.edges.forEach((e, i) =>
-    gl.drawEdge(e, edgeViewerColors.emod(i), 3 / eye.zoomFactor),
+    gl.drawEdge(e, emod(edgeViewerColors, i), 3 / eye.zoomFactor),
   )
 
   if (g.paintCurveDebug) {

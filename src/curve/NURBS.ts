@@ -6,14 +6,18 @@ import {
   DEG,
   eq,
   eq0,
+  firstUnsorted,
+  getLast,
   hasConstructor,
   int,
   le,
   lerp,
   M4,
+  max,
   MINUS,
   newtonIterateWithDerivative2,
   NLA_DEBUG,
+  setLast,
   snap,
   snap0,
   Tuple2,
@@ -23,6 +27,7 @@ import {
   vArrGet,
   Vector,
   VV,
+  withMax,
 } from "ts3dutils"
 
 import {
@@ -85,7 +90,7 @@ export class NURBS extends Curve {
     assert(degree >= 1, "degree must be at least 1 (linear)")
     assert(degree % 1 == 0)
     assert(
-      -1 == knots.firstUnsorted(MINUS),
+      -1 == firstUnsorted(knots, MINUS),
       "knot values must be in ascending order",
     )
   }
@@ -162,6 +167,7 @@ export class NURBS extends Curve {
         const a = new Vector(v.slice(degree * 4, (degree + 1) * 4))
         const b = new Vector(v.slice((degree - 1) * 4, degree * 4))
         const c = new Vector(v.slice((degree - 2) * 4, (degree - 1) * 4))
+
         function step(
           k: int,
           i: int,
@@ -172,6 +178,7 @@ export class NURBS extends Curve {
             .minus(dkMinus1iMinus1)
             .times(k / (knots[i + degree - k] - knots[i - 1]))
         }
+
         ddt = step(
           degree,
           s + 1,
@@ -223,10 +230,10 @@ export class NURBS extends Curve {
     // =(x(t) ((-w(t)) w''(t) + 2 w'(t)^2) - x'(t) 2 w(t) w'(t) + x''(t) w(t)^2 )/w(t)^3
     // prettier-ignore
     return Vector.add(
-		p.times(-p.w * ddt.w + 2 * dt.w ** 2),
-		dt.times(-2 * p.w * dt.w),
-		ddt.times(p.w ** 2)
-	).div(p.w ** 3).V3();
+      p.times(-p.w * ddt.w + 2 * dt.w ** 2),
+      dt.times(-2 * p.w * dt.w),
+      ddt.times(p.w ** 2)
+    ).div(p.w ** 3).V3();
   }
 
   ptDtDdt(t: number) {
@@ -271,7 +278,8 @@ export class NURBS extends Curve {
 
     const STEPS = 32
     if (undefined === tStart) {
-      tStart = arraySamples(tMin, tMax, STEPS).withMax(
+      tStart = withMax(
+        arraySamples(tMin, tMax, STEPS),
         (t) => -this.at(t).distanceTo(p),
       )
     }
@@ -350,10 +358,10 @@ export class NURBS extends Curve {
     oldKnots.splice(k, 1)
     for (let i = k - degree; i <= k - s; i++) {
       const alphaInv = (oldKnots[i + degree] - oldKnots[i]) / (t - oldKnots[i])
-      const oldPoint = Vector.lerp(insertPoints.last, points[i], alphaInv)
+      const oldPoint = Vector.lerp(getLast(insertPoints), points[i], alphaInv)
       insertPoints.push(oldPoint)
     }
-    if (insertPoints.last.like(points[k + 1 - s])) {
+    if (getLast(insertPoints).like(points[k + 1 - s])) {
       const oldPoints = points.slice()
       oldPoints.splice(k - degree - 1, degree - s + 3, ...insertPoints)
       return new NURBS(oldPoints, degree, oldKnots)
@@ -694,7 +702,7 @@ export class NURBS extends Curve {
     // stitch together the segments
     const newPoints = new Array(2 + segmentsElevated.length * this.degree)
     newPoints[0] = segmentsElevated[0].points[0]
-    newPoints.last = segmentsElevated.last.points.last
+    setLast(newPoints, getLast(getLast(segmentsElevated).points))
     for (let i = 0; i < segmentsElevated.length; i++) {
       for (let pi = 1; pi < segmentsElevated[i].points.length - 1; pi++) {
         newPoints[i * (segmentsElevated[0].points.length - 2) + pi] =
@@ -709,11 +717,11 @@ export class NURBS extends Curve {
       for (let pi = 1; pi < segmentsElevated[i].points.length - 1; pi++) {
         newKnots[
           i * (segmentsElevated[0].points.length - 2) + pi + this.degree + 1
-        ] = segmentsElevated[i].knots.last
+        ] = getLast(segmentsElevated[i].knots)
       }
     }
-    newKnots[newKnots.length - 1] = this.knots.last
-    newKnots[newKnots.length - 2] = this.knots.last
+    newKnots[newKnots.length - 1] = getLast(this.knots)
+    newKnots[newKnots.length - 2] = getLast(this.knots)
 
     let result = new NURBS(
       newPoints,
@@ -725,7 +733,7 @@ export class NURBS extends Curve {
     for (let i = 0; i < segmentsElevated.length - 1; i++) {
       let optimization
       while (
-        (optimization = result.removeKnot(segmentsElevated[i].knots.last))
+        (optimization = result.removeKnot(getLast(segmentsElevated[i].knots)))
       ) {
         result = optimization
       }
@@ -862,7 +870,7 @@ export class NURBS extends Curve {
         let t = newtonIterateWithDerivative2(f, startT, 8, this.tMin, this.tMax)
         let [distanceAtT, distanceDtAtT] =
           undefined === t ? [undefined, undefined] : f(t)
-        if (t === undefined || !eq0(distanceAtT) || eq0(distanceDtAtT)) {
+        if (t === undefined || !eq0(distanceAtT!) || eq0(distanceDtAtT!)) {
           t = newtonIterateWithDerivative2(
             (t) => {
               const [, dt, ddt] = this.ptDtDdt(t)
@@ -912,9 +920,9 @@ export class NURBS extends Curve {
   isInfosWithLine(anchor: V3, dir: V3): ISInfo[] {
     const thisPlane = P3.fromPoints(this.points.map((p) => p.p3()))!
     const l = L3.anchorDirection(anchor, dir)
-    const maxDistanceToPlane = this.points
-      .map((p) => thisPlane.distanceToPoint(p.p3()))
-      .max()
+    const maxDistanceToPlane = max(
+      this.points.map((p) => thisPlane.distanceToPoint(p.p3())),
+    )
     const thisIsPlanar = eq0(maxDistanceToPlane)
     if (thisIsPlanar && !thisPlane.containsLine(l)) {
       const [t] = l.isTsWithPlane(thisPlane)
@@ -989,6 +997,7 @@ export class NURBS extends Curve {
     console.log(result)
     return result
   }
+
   //getAABB() {
   //	return new AABB().addPoints(this.points.map(p => p.p3()))
   //}
@@ -1013,6 +1022,7 @@ export class NURBS extends Curve {
         this.knots.every((k, i) => eq(k, curve.knots[i])))
     )
   }
+
   isColinearTo(curve: Curve): boolean {
     throw new Error("This doesn't even make sense.")
   }

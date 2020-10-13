@@ -1,6 +1,5 @@
 import chroma from "chroma-js"
 import {
-  AABB,
   addOwnProperties,
   arrayFromFunction,
   DEG,

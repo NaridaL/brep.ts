@@ -9,12 +9,16 @@ import {
   assertNever,
   assertNumbers,
   assertVectors,
+  concatenated,
   eq,
   eq0,
+  getLast,
   gt,
+  indexWithMax,
   int,
   lt,
   M4,
+  mapFilter,
   mapPush,
   newtonIterate2d,
   newtonIterateWithDerivative,
@@ -23,10 +27,12 @@ import {
   SCE,
   snap,
   snap0,
+  sum,
   TAU,
   Transformable,
   V,
   V3,
+  withMax,
 } from "ts3dutils"
 import { Mesh } from "tsgl"
 
@@ -46,6 +52,7 @@ import {
   R2_R,
   Surface,
   uvInAABB2,
+  createEdge,
 } from "./index"
 
 import { abs, sign, sqrt } from "./math"
@@ -113,7 +120,7 @@ export function assembleFaceFromLooseEdges(
       loop.push(currentEdge)
       const possibleEdges = edges.filter((edge) => currentEdge.b.like(edge.a))
       const normalAtCurrentB = surface.normalP(currentEdge.b)
-      const nextEdgeIndex = possibleEdges.indexWithMax((edge) =>
+      const nextEdgeIndex = indexWithMax(possibleEdges, (edge) =>
         currentEdge.bDir.angleRelativeNormal(edge.aDir, normalAtCurrentB),
       )
       currentEdge = possibleEdges[nextEdgeIndex]
@@ -439,7 +446,7 @@ export class BRep extends Transformable {
   }
 
   calculateVolume(): number {
-    return this.faces.map((face) => face.zDirVolume().volume).sum()
+    return sum(this.faces.map((face) => face.zDirVolume().volume))
   }
 
   toMesh(): Mesh & {
@@ -603,10 +610,9 @@ export class BRep extends Transformable {
       const usableOldEdges = face
         .getAllEdges()
         .filter((edge) => !edgeSubEdges.get(edge))
-      const subEdges: Edge[] = face
-        .getAllEdges()
-        .mapFilter((edge) => edgeSubEdges.get(edge))
-        .concatenated()!
+      const subEdges: Edge[] = concatenated(
+        mapFilter(face.getAllEdges(), (edge) => edgeSubEdges.get(edge)),
+      )
       const newEdges = faceMap.get(face) || []
       if (newEdges.length || subEdges.length) {
         oldFaceStatuses.set(face, "partial")
@@ -737,7 +743,7 @@ export class BRep extends Transformable {
         const info = pointInfos[i]
         const pDir = canonEdge.tangentAt(info.edgeT)
         if (!eq(info.edgeT, startT)) {
-          const newEdge = Edge.create(
+          const newEdge = createEdge(
             canonEdge.curve,
             startP,
             info.p,
@@ -756,7 +762,7 @@ export class BRep extends Transformable {
         startDir = pDir
       }
       if (startInfo && !eq(startT, canonEdge.bT)) {
-        const newEdge = Edge.create(
+        const newEdge = createEdge(
           canonEdge.curve,
           startP,
           canonEdge.b,
@@ -796,7 +802,7 @@ export class BRep extends Transformable {
       })
     })
 
-    return Array.from(faceMap.values()).concatenated()
+    return concatenated(Array.from(faceMap.values()))
   }
 
   shellCount(): int {
@@ -866,7 +872,7 @@ export class BRep extends Transformable {
   //                    // faces have a common edge
   //                    const aT = curve1.pointT(edge2.a), bT = curve1.pointT(edge2.a)
   //                    const minT = min(aT, bT), maxT = max(aT, bT)
-  //                    const commonEdge = Edge.create(curve1, min(edge1.minT, minT), min(edge1.maxT, maxT), )
+  //                    const commonEdge = createEdge(curve1, min(edge1.minT, minT), min(edge1.maxT, maxT), )
   //                }
   //            } else if (x = curve1.isInfosWithCurve(edge2.curve)) {
   //                // edges intersect in a point
@@ -1304,7 +1310,7 @@ export function splitsVolumeEnclosingFacesP(
     )
     return -(((faceInfoAngleAtP + TAU + NLA_PRECISION) % TAU) - NLA_PRECISION)
   }
-  const nearestFaceInfo = edgeFaceInfos.withMax(faceInfoAngleFromPInsideNeg)
+  const nearestFaceInfo = withMax(edgeFaceInfos, faceInfoAngleFromPInsideNeg)!
   if (eq0(faceInfoAngleFromPInsideNeg(nearestFaceInfo))) {
     //assert(false) todo
     const coplanarSame =
@@ -1804,7 +1810,7 @@ export function followAlgorithm2d(
       if (p.distanceTo(startP) > abs(stepLength)) {
         points.pop()
         tangents.pop()
-        assert(points.last.distanceTo(startP) <= abs(stepLength))
+        assert(getLast(points).distanceTo(startP) <= abs(stepLength))
         break
       }
     } else {
@@ -1817,7 +1823,7 @@ export function followAlgorithm2d(
       const endP = figureOutBorderPoint(bounds, p, ic)
       points.pop()
       tangents.pop()
-      if (points.last.distanceTo(endP) < abs(stepLength) / 2) {
+      if (getLast(points).distanceTo(endP) < abs(stepLength) / 2) {
         points.pop()
         tangents.pop()
       }

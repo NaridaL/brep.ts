@@ -379,13 +379,13 @@ suite("EllipsoidSurface", () => {
   suite("triangular face from P3.XY to V3.Z", () => {
     const surface = EllipsoidSurface.UNIT
     const loop = [
-      Edge.forCurveAndTs(EllipseCurve.UNIT, 10 * DEG, 40 * DEG),
-      Edge.forCurveAndTs(
+      edgeForCurveAndTs(EllipseCurve.UNIT, 10 * DEG, 40 * DEG),
+      edgeForCurveAndTs(
         new EllipseCurve(V3.O, V3.sphere(40 * DEG, 0), V3.Z),
         0,
         PI / 2,
       ),
-      Edge.forCurveAndTs(
+      edgeForCurveAndTs(
         new EllipseCurve(V3.O, V3.sphere(10 * DEG, 0), V3.Z),
         PI / 2,
         0,
@@ -407,8 +407,8 @@ suite("EllipsoidSurface", () => {
   //    const surface = EllipsoidSurface.UNIT
   //    const loop = [
   //        StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
-  //        Edge.forCurveAndTs(EllipseCurve.forAB(1, 1), 0, PI / 2),
-  //        Edge.forCurveAndTs(new EllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0),
+  //        edgeForCurveAndTs(EllipseCurve.forAB(1, 1), 0, PI / 2),
+  //        edgeForCurveAndTs(new EllipseCurve(V3.O, V(1, 0, 1), V(0, 1, 0)), PI / 2, 0),
   //    ]
   //    const face = Face.create(surface, loop)
   //
@@ -454,7 +454,7 @@ suite("EllipsoidSurface", () => {
   test("loopContainsPoint", (assert) => {
     const testFace = B2T.rotateEdges(
       [
-        Edge.forCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),
+        edgeForCurveAndTs(EllipseCurve.UNIT, 0, 90 * DEG).rotateX(90 * DEG),
         StraightEdge.throughPoints(V3.Z, V3.X),
       ],
       45 * DEG,

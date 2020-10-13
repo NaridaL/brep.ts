@@ -686,7 +686,7 @@ suite('BRep 2', () => {
 		const result = B2T.extrudeEdges([
 				StraightEdge.throughPoints(V(8, 0, 0), V(1, 0, 0)),
 				StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
-				PCurveEdge.forCurveAndTs(EllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
+				PCurveedgeForCurveAndTs(EllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
 			P3.XY.flipped(), V(0, 0, 5), 'pie/4')
 		testBRepAnd(assert, pie, boxKnife, result, '1')
 
@@ -760,7 +760,7 @@ suite('BRep 2', () => {
 		const s2 = new ProjectedCurveSurface(new BezierCurve(V(0, 0, 0), V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0), -0.1, 1.1), V(0, 0, -1), 0, 1)
 		const a = B2T.extrudeEdges([
 				StraightEdge.throughPoints(V(10, 0, 0), V(0, 0, 0)),
-				PCurveEdge.forCurveAndTs(new BezierCurve(V3.O, V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0)), 0, 1)],
+				PCurveedgeForCurveAndTs(new BezierCurve(V3.O, V(-5, 5, 0), V(15, 5, 0), V(10, 0, 0)), 0, 1)],
 			P3.XY.flipped(), V(0, 0, 5), 'a/4')
 		const punch = B2T.box(5, 10, 3, 'knife').translate(1, -1, 1).flipped()
 

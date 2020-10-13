@@ -259,7 +259,7 @@ suite("CylinderSurface", () => {
   suite("zDirVolume", () => {
     const face = B2T.extrudeEdges(
       [
-        Edge.forCurveAndTs(EllipseCurve.forAB(-1, 1), 0, PI),
+        edgeForCurveAndTs(EllipseCurve.forAB(-1, 1), 0, PI),
         StraightEdge.throughPoints(V3.X, V3.X.negated()),
       ],
       P3.XY.flipped(),
@@ -268,7 +268,7 @@ suite("CylinderSurface", () => {
     ).faces.find((face) => face.surface instanceof CylinderSurface)
     const face2 = B2T.extrudeEdges(
       [
-        Edge.forCurveAndTs(EllipseCurve.UNIT, PI, 0),
+        edgeForCurveAndTs(EllipseCurve.UNIT, PI, 0),
         StraightEdge.throughPoints(V3.X, V3.X.negated()),
       ],
       P3.XY.flipped(),
@@ -277,7 +277,7 @@ suite("CylinderSurface", () => {
     ).faces.find((face) => face.surface instanceof CylinderSurface)
     const face3 = B2T.extrudeEdges(
       [
-        Edge.forCurveAndTs(EllipseCurve.UNIT, PI, 0).rotateY(-80 * DEG),
+        edgeForCurveAndTs(EllipseCurve.UNIT, PI, 0).rotateY(-80 * DEG),
         StraightEdge.throughPoints(V3.X, V3.X.negated()).rotateY(-80 * DEG),
       ],
       P3.XY.flipped().rotateY(-80 * DEG),
@@ -379,9 +379,9 @@ suite("CylinderSurface", () => {
   // loop which is 1 high and goes around a quarter of the cylinder
   const loop = [
     StraightEdge.throughPoints(V(1, 0, 1), V(1, 0, 0)),
-    Edge.forCurveAndTs(EllipseCurve.UNIT, 0, PI / 2),
+    edgeForCurveAndTs(EllipseCurve.UNIT, 0, PI / 2),
     StraightEdge.throughPoints(V(0, 1, 0), V(0, 1, 1)),
-    Edge.forCurveAndTs(EllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0),
+    edgeForCurveAndTs(EllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0),
   ]
   const cylinderFace2 = Face.create(surface, loop)
   suite("cylinderFace2", () => surfaceVolumeAndAreaTests(cylinderFace2))

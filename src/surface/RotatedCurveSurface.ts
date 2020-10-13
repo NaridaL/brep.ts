@@ -10,6 +10,7 @@ import {
   M4,
   V3,
   VV,
+  withMax,
 } from "ts3dutils"
 
 import {
@@ -26,7 +27,7 @@ import {
   PlaneSurface,
   PointVsFace,
   Surface,
-} from "../index"
+} from ".."
 
 import { abs, cos, PI, sin } from "../math"
 
@@ -281,9 +282,10 @@ export class RotatedCurveSurface extends ParametricSurface {
     if (curve.constructor == this.curve.constructor) {
       const curveLC = curve.transform(this.matrixInverse)
       // find a point on curveLC which isn't on the Z-axis
-      const t = [0, 0.5, 1]
-        .map((x) => lerp(curveLC.tMin, curveLC.tMax, x))
-        .withMax((t) => curveLC.at(t).lengthXY())
+      const t = withMax(
+        [0, 0.5, 1].map((x) => lerp(curveLC.tMin, curveLC.tMax, x)),
+        (t) => curveLC.at(t).lengthXY(),
+      )!
       const angle = curveLC.at(t).angleXY()
       const curveLCRotated = curveLC.rotateZ(-angle)
       if (this.curve.isColinearTo(curveLCRotated)) {
@@ -312,7 +314,7 @@ export class RotatedCurveSurface extends ParametricSurface {
   asNURBSSurface() {
     // y = 0 for baseNURBS
     const baseNURBS = NURBS.fromEllipse(this.curve as EllipseCurve)
-    const rotationNURBS = NURBS.UnitCircle(2, this.tMin, this.tMax)
+    const rotationNURBS = NURBS.UnitCircle(2, this.vMin, this.vMax)
     return new NURBSSurface(
       rotationNURBS.points.flatMap((rv) =>
         baseNURBS.points.map((b) =>

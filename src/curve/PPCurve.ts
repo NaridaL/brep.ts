@@ -2,6 +2,7 @@ import {
   assert,
   assertVectors,
   callsce,
+  getLast,
   M4,
   newtonIterate,
   Tuple3,
@@ -155,7 +156,7 @@ export class PPCurve extends ImplicitCurve {
       this.parametricSurface1,
       this.parametricSurface2,
       this.points[0],
-      this.points.last,
+      getLast(this.points),
       this.stepSize,
     )
   }

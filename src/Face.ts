@@ -7,14 +7,20 @@ import {
   assertf,
   assertInst,
   assertVectors,
+  bagRemoveIndex,
+  binaryIndexOf,
+  binaryInsert,
+  concatenated,
   disableConsole,
   doubleSignedArea,
   enableConsole,
   eq,
   eq0,
   ge,
+  getLast,
   GOLDEN_RATIO,
   gt,
+  indexWithMax,
   int,
   isCCW,
   le,
@@ -29,6 +35,7 @@ import {
   TAU,
   Transformable,
   V3,
+  min as arrayMin,
 } from "ts3dutils"
 import { Mesh, MeshWith, pushQuad } from "tsgl"
 
@@ -36,6 +43,7 @@ import {
   BRep,
   ConicSurface,
   COPLANAR_SAME,
+  createEdge,
   Curve,
   dotCurve2,
   Edge,
@@ -407,6 +415,7 @@ export abstract class Face extends Transformable {
         if (hasPair(col1.getCanon(), col2.getCanon())) return false
 
         addPair(col1.getCanon(), col2.getCanon())
+
         function handleColinearEdgeFaces(
           col1: Edge,
           col2: Edge,
@@ -750,7 +759,7 @@ export abstract class Face extends Transformable {
           startT > last.t && (startDir = startDir.negated())
           let endDir = isCurve.tangentAt(last.t)
           startT > last.t && (endDir = endDir.negated())
-          const newEdge = Edge.create(
+          const newEdge = createEdge(
             isCurve,
             startP,
             last.p,
@@ -785,7 +794,7 @@ export abstract class Face extends Transformable {
         startT > endT && (startDir = startDir.negated())
         let endDir = isCurve.tangentAt(endT)
         startT > endT && (endDir = endDir.negated())
-        const newEdge = Edge.create(
+        const newEdge = createEdge(
           isCurve,
           startP!,
           isCurve.at(endT),
@@ -1054,6 +1063,7 @@ export abstract class Face extends Transformable {
       this.info,
     ) as this
   }
+
   transform4(m4: M4): this {
     const mirroring = m4.isMirroring()
     const newEdges = Edge.reversePath(
@@ -1231,7 +1241,7 @@ export abstract class Face extends Transformable {
     const containedIntersectionsTs = this.surface
       .isTsForLine(line)
       .filter((t) => this.containsPoint(line.at(t)))
-    const nearestPointT = containedIntersectionsTs.withMax((t) => -t)
+    const nearestPointT = arrayMin(containedIntersectionsTs)
 
     return undefined != nearestPointT ? nearestPointT : NaN
   }
@@ -1798,7 +1808,7 @@ export class RotationFace extends Face {
             new V3(inAngle, stLast.y, 0),
             new V3(outAngle, stLast.y, 0),
           )
-          vertices.push(vertices.last)
+          vertices.push(getLast(vertices))
         }
         verticesUV.forEach(({ u, v }) => {
           assert(isFinite(u))
@@ -1828,10 +1838,10 @@ export class RotationFace extends Face {
       loop.flatMap((edge) => edge.getVerticesNo0()),
     )
     const surface = this.surface as ParametricSurface
-    const vertices: V3[] = vertexLoops.concatenated()
+    const vertices: V3[] = concatenated(vertexLoops)
     // this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
     const loopStarts = vertexLoops.reduce(
-      (arr, loop) => (arr.push(arr.last + loop.length), arr),
+      (arr, loop) => (arr.push(getLast(arr) + loop.length), arr),
       [0],
     )
     const uvPFunc = surface.uvPFunc()
@@ -1989,10 +1999,10 @@ export class RotationFace extends Face {
         vertexLoopIndex < loops.length;
         vertexLoopIndex++
       ) {
-        let part: int[] | undefined = undefined,
-          firstPart: int[] | undefined,
-          firstPartBaseM: int = -1,
-          firstPartBaseN: int = -1
+        let part: int[] | undefined = undefined
+        let firstPart: int[] | undefined = undefined
+        let firstPartBaseM: int = -1
+        let firstPartBaseN: int = -1
         let lastBaseM = -1,
           lastBaseN = -1
         let partCount = 0
@@ -2150,11 +2160,12 @@ export class RotationFace extends Face {
               let currentPart = startPart
               do {
                 outline.push(...currentPart)
-                const currentPartEndOpos = opos(currentPart.last)
-                const nextPartIndex = parts.indexWithMax(
+                const currentPartEndOpos = opos(getLast(currentPart))
+                const nextPartIndex = indexWithMax(
+                  parts,
                   (part) => -mod(opos(part[0]) - currentPartEndOpos, 4),
                 )
-                const nextPart = parts.removeIndex(nextPartIndex)
+                const nextPart = bagRemoveIndex(parts, nextPartIndex)
                 let currentOpos = currentPartEndOpos
                 const nextPartStartOpos =
                   opos(nextPart[0]) > currentOpos
@@ -2242,7 +2253,7 @@ export class RotationFace extends Face {
       .map((loop) => this.unrollLoop(loop))
     vertexLoops.forEach((vertexLoop) => {
       vertexLoop.forEach(({ x: d, y: z }) => {
-        const index0 = ribs.binaryIndexOf(d, (a, b) => snap(a.value - b, 0))
+        const index0 = binaryIndexOf(ribs, d, (a, b) => snap(a.value - b, 0))
         if (index0 < 0) {
           ribs.splice(-index0 - 1, 0, { value: d, left: [], right: [] })
         }
@@ -2269,9 +2280,9 @@ export class RotationFace extends Face {
           ;[v0, v1] = [v1, v0]
           dDiff = -dDiff
         }
-        const index0 = ribs.binaryIndexOf(v0.x, (a, b) => snap(a.value - b, 0))
-        const index1 = ribs.binaryIndexOf(v1.x, (a, b) => snap(a.value - b, 0))
-        ribs[index0].right.binaryInsert(v0.y)
+        const index0 = binaryIndexOf(ribs, v0.x, (a, b) => snap(a.value - b, 0))
+        const index1 = binaryIndexOf(ribs, v1.x, (a, b) => snap(a.value - b, 0))
+        binaryInsert(ribs[index0].right, v0.y)
         for (
           let j = (index0 + correction) % ribs.length;
           j != index1;
@@ -2280,10 +2291,10 @@ export class RotationFace extends Face {
           const x = ribs[j].value
           const part = (x - v0.x) / dDiff
           const interpolated = v1.y * part + v0.y * (1 - part)
-          ribs[j].left.binaryInsert(interpolated)
-          ribs[j].right.binaryInsert(interpolated)
+          binaryInsert(ribs[j].left, interpolated)
+          binaryInsert(ribs[j].right, interpolated)
         }
-        ribs[index1].left.binaryInsert(v1.y)
+        binaryInsert(ribs[index1].left, v1.y)
         // console.log(ribs.map(r=>r.toSource()).join('\n'))
       })
     })

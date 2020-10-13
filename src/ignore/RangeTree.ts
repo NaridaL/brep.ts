@@ -140,7 +140,7 @@ export class RangeTree {
     }
 
     const P1 = getPath(this, interval.left, interval.right)
-    const u1 = P1.last
+    const u1 = getLast(P1)
     const P2 = getPath(u1.left, interval.left, interval.left)
     const P3 = getPath(u1.left, interval.right, interval.right)
     const result = []

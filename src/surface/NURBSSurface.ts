@@ -1,13 +1,15 @@
 import {
   arrayFromFunction,
   assert,
+  firstUnsorted,
   int,
   M4,
   MINUS,
+  sliceStep,
   V3,
   Vector,
 } from "ts3dutils"
-import { NURBS, ParametricSurface } from "../index"
+import { NURBS, ParametricSurface } from ".."
 
 export class NURBSSurface extends ParametricSurface {
   constructor(
@@ -30,11 +32,11 @@ export class NURBSSurface extends ParametricSurface {
     assert(pointCountU * pointCountV == points.length)
     assert(degreeU <= degreeV, "degreeU <= degreeV")
     assert(
-      -1 == knotsU.firstUnsorted(MINUS),
+      -1 === firstUnsorted(knotsU, MINUS),
       "knot values must be in ascending order",
     )
     assert(
-      -1 == knotsV.firstUnsorted(MINUS),
+      -1 === firstUnsorted(knotsV, MINUS),
       "knot values must be in ascending order",
     )
   }
@@ -76,11 +78,11 @@ export class NURBSSurface extends ParametricSurface {
   }
 
   dpdu() {
-    return (u, v) => this.isoparametricV(v).tangentAt(u)
+    return (u: number, v: number) => this.isoparametricV(v).tangentAt(u)
   }
 
   dpdv() {
-    return (u, v) => this.isoparametricU(u).tangentAt(v)
+    return (u: number, v: number) => this.isoparametricU(u).tangentAt(v)
   }
 
   normalUV(u: number, v: number) {
@@ -112,7 +114,7 @@ export class NURBSSurface extends ParametricSurface {
     return new NURBS(
       arrayFromFunction(pointCountU, (i) => {
         return deBoor(
-          this.points.sliceStep(i, this.points.length, pointCountU, 1),
+          sliceStep(this.points, i, this.points.length, pointCountU, 1),
           this.degreeV,
           this.knotsV,
           v,
@@ -163,6 +165,7 @@ export class NURBSSurface extends ParametricSurface {
     ) as this
   }
 }
+
 NURBSSurface.prototype.uStep = 1 / 8
 NURBSSurface.prototype.vStep = 1 / 8
 

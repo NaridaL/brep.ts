@@ -18,7 +18,7 @@ import {
   MathFunctionR2R,
   PICurve,
   Surface,
-} from "../index"
+} from ".."
 
 import { ceil, min } from "../math"
 

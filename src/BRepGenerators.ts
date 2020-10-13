@@ -9,6 +9,7 @@ import {
   callsce,
   eq,
   eq0,
+  getLast,
   GOLDEN_RATIO,
   int,
   le,
@@ -19,7 +20,6 @@ import {
   raddd,
   snap,
   TAU,
-  Tuple3,
   V,
   V3,
   VV,
@@ -48,6 +48,9 @@ import {
   StraightEdge,
   Surface,
   XiEtaCurve,
+  createEdge,
+  edgeForCurveAndTs,
+  edgePathFromSVG,
 } from "./index"
 
 import { max, min, PI, SQRT1_2 } from "./math"
@@ -131,7 +134,9 @@ export function projectPointCurve(
 /**
  * Create a surface by rotating a curve in the XZ-plane, with X > 0, around the Z-axis according to the right-hand rule.
  * @param curve The curve to rotate.
- * @param rotationAxis The line around which to rotate the curve.
+ * @param tMin The minimum value for t for which the surface should be defined.
+ * @param tMax The maximum value for t for which the surface should be defined.
+ * @param angle How much the curve should be rotated. sMin/sMax will be be 0/angle.
  * @param flipped Whether the surface's default orientation (normal = curve tangent cross rotation tangent) should be
  * flipped.
  */
@@ -139,7 +144,7 @@ export function rotateCurve(
   curve: Curve,
   tMin = curve.tMin,
   tMax = curve.tMax,
-  degrees: raddd,
+  angle: raddd,
   flipped: boolean,
 ): Surface | undefined {
   assertf(() => new PlaneSurface(P3.ZX).containsCurve(curve))
@@ -154,7 +159,7 @@ export function rotateCurve(
         curve.anchor.xy(),
         curve.anchor.xy().getPerpendicular(),
         0,
-        degrees,
+        angle,
       )
       // if curve.dir1 is going up (+Z), it the cylinder surface should face inwards
       const factor = (curve.dir1.z > 0 ? -1 : 1) * (flipped ? -1 : 1)
@@ -166,7 +171,7 @@ export function rotateCurve(
         baseEllipse,
         V3.Z.times(factor),
         0,
-        degrees,
+        angle,
         zMin,
         zMax,
       )
@@ -201,7 +206,7 @@ export function rotateCurve(
         new V3(0, curve.dir1.lengthXY(), 0),
         new V3(0, 0, (a.x > b.x ? -1 : 1) * curve.dir1.z),
         0,
-        degrees,
+        angle,
         0,
         1,
       )
@@ -432,7 +437,7 @@ export namespace B2T {
     name: string = "sphere" + getGlobalId(),
     rot: raddd = TAU,
   ): BRep {
-    const ee = PCurveEdge.create(
+    const ee = new PCurveEdge(
       new EllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)),
       new V3(0, 0, -radius),
       new V3(0, 0, radius),
@@ -508,7 +513,7 @@ export namespace B2T {
     recurse(res, M4.IDENTITY)
     const stencil = new BRep(stencilFaces, true)
 
-    return B2T.box()
+    return B2T.box(1, 1, 1, name)
       .and(stencil)
       .and(stencil.transform(M4.YZX))
       .and(stencil.transform(M4.ZXY))
@@ -571,7 +576,7 @@ export namespace B2T {
       }
       return undefined
     })
-    const baseSurfaces = baseLoop.map((edge, i) => {
+    const baseSurfaces = baseLoop.map((edge) => {
       const s = rotateCurve(
         edge.curve,
         edge.minT,
@@ -817,13 +822,13 @@ export namespace B2T {
       if (c.type == "M") {
         subpaths.push([])
       }
-      subpaths.last.push(c)
+      getLast(subpaths).push(c)
     })
     const loops = subpaths.map((sp) => {
       const path = new opentype.Path()
       path.commands = sp
       const loop = Edge.reversePath(
-        Edge.pathFromSVG(path.toPathData(13)),
+        edgePathFromSVG(path.toPathData(13)),
       ).map((e) => e.mirrorY())
       assert(Edge.isLoop(loop))
       return loop
@@ -923,7 +928,7 @@ export namespace B2T {
    * ```ts
    * B2T.rotStep(StraightEdge.rect(Math.SQRT1_2, 1), 360 * DEG, 4)
    * ```
-   * @param the edges to rotate.
+   * @param edges the edges to rotate.
    * @param totalRads The angle between the original and last rib. [0; TAU]
    * @param count The number of steps to take. If totalRads == TAU, it must be >= 3, otherwise >= 2.
    */
@@ -942,7 +947,7 @@ export namespace B2T {
           )
         : totalRadsOrAngles
     const count = angles.length
-    const open = !eq(TAU, angles.last)
+    const open = !eq(TAU, getLast(angles))
     const ribs = [
       edges,
       ...angles.map((phi) => {
@@ -1042,7 +1047,7 @@ export namespace B2T {
     if (open) {
       const endFaceEdges = ribs[count].map((edge) => edge.flipped()).reverse()
       const endFace = new PlaneFace(
-        new PlaneSurface(P3.ZX.rotateZ(angles.last)),
+        new PlaneSurface(P3.ZX.rotateZ(getLast(angles))),
         endFaceEdges,
       )
       faces.push(
@@ -1061,7 +1066,7 @@ export namespace B2T {
           edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge]
         return splitEdges.map((edge) => {
           if (edge.minT >= 0) {
-            return Edge.create(
+            return createEdge(
               new EllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax),
               edge.a,
               edge.b,
@@ -1074,7 +1079,7 @@ export namespace B2T {
             )
           } else {
             // "rotate" the curve
-            return Edge.create(
+            return createEdge(
               new EllipseCurve(
                 c.center,
                 c.f1.negated(),
@@ -1416,7 +1421,6 @@ export namespace B2T {
 
   export function fromBPT(bpt: string) {
     const lineRegex = /.+/g
-    const ilog = (x) => (console.log(x), x)
     const readLine = () => lineRegex.exec(bpt)![0]
     const readLineNumbers = () =>
       readLine()
@@ -1424,7 +1428,7 @@ export namespace B2T {
         .split(/\s+/)
         .map((s) => parseFloat(s))
     const numOfPatches = parseInt(readLine())
-    const faces = arrayFromFunction(numOfPatches, () => {
+    const faces: Face[] = arrayFromFunction(numOfPatches, () => {
       const [pointsUCount, pointsVCount] = readLineNumbers()
       const points = Array.from(
         { length: (pointsUCount + 1) * (pointsVCount + 1) },
@@ -1443,10 +1447,10 @@ export namespace B2T {
       )
       return surface
       const edges = [
-        Edge.forCurveAndTs(surface.isoparametricV(0)),
-        Edge.forCurveAndTs(surface.isoparametricU(1)),
-        Edge.forCurveAndTs(surface.isoparametricV(1)).flipped(),
-        Edge.forCurveAndTs(surface.isoparametricU(0)).flipped(),
+        edgeForCurveAndTs(surface.isoparametricV(0)),
+        edgeForCurveAndTs(surface.isoparametricU(1)),
+        edgeForCurveAndTs(surface.isoparametricV(1)).flipped(),
+        edgeForCurveAndTs(surface.isoparametricU(0)).flipped(),
       ]
       return Face.create(surface, edges)
     })

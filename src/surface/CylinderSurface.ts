@@ -22,7 +22,7 @@ import {
   PointVsFace,
   ProjectedCurveSurface,
   Surface,
-} from "../index"
+} from ".."
 
 import { sign } from "../math"
 

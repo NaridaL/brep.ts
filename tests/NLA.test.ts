@@ -1,36 +1,20 @@
-import {
-  b2equals,
-  inDifferentSystems,
-  suite,
-  test,
-  testBRepOp,
-  testLoopContainsPoint,
-} from "./manager"
+import { b2equals, inDifferentSystems, suite, test } from "./manager"
 
 import { JavaSet as CustomSet } from "javasetmap.ts"
-import { DEG, eq, M4, P3XY, V, V3 } from "ts3dutils"
+import { DEG, M4, V, V3 } from "ts3dutils"
 import * as ts3dutils from "ts3dutils"
 import * as brepts from ".."
 import {
   B2T,
   BezierCurve,
   ClassSerializer,
-  CylinderSurface,
   Edge,
   EllipseCurve,
-  EllipsoidSurface,
-  Face,
   intersectionCircleLine,
   intersectionUnitCircleLine,
-  L3,
-  P3,
-  PCurveEdge,
-  PlaneSurface,
-  PointVsFace,
-  StraightEdge,
 } from ".."
 
-import { cos, PI, sin, sqrt } from "../src/math"
+import { cos, PI } from "../src/math"
 
 suite("NLA", () => {
   suite("isPointsWithBezier()", () =>
@@ -183,8 +167,8 @@ suite("NLA", () => {
   test("Edge.edgesIntersects", (assert) => {
     const curve1 = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
     const curve2 = curve1.transform(M4.rotateLine(V(0.5, 0), V3.Z, PI / 2))
-    const edge1 = PCurveEdge.forCurveAndTs(curve1, 0, 1)
-    const edge2 = PCurveEdge.forCurveAndTs(curve2, 0, 1)
+    const edge1 = PCurveedgeForCurveAndTs(curve1, 0, 1)
+    const edge2 = PCurveedgeForCurveAndTs(curve2, 0, 1)
     assert.ok(Edge.edgesIntersect(edge1, edge2))
     assert.notOk(Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0)))
     assert.notOk(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
@@ -218,13 +202,13 @@ suite("NLA", () => {
   //    //const es = EllipsoidSurface.UNIT
   //    const a = V3.sphere(30 * DEG, 70 * DEG), z = a.z, xy = a.lengthXY(), center = V(0, 0, z), f1 = V(a.x, a.y,
   // 0), f2 = V(-a.y, a.x) const curve = new EllipseCurve(center, f1, f2) const seamCurve =
-  // EllipseCurve.UNIT.rotateX(-PI / 2) const edge = Edge.forCurveAndTs(curve, -PI, PI) assert.ok(true, `<html><a
+  // EllipseCurve.UNIT.rotateX(-PI / 2) const edge = edgeForCurveAndTs(curve, -PI, PI) assert.ok(true, `<html><a
   // style='color: #0000ff text-decoration: underline' target='blank'
   // href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[${edge.str}]'>view</a>`) const [front,
   // back] = EllipsoidSurface.splitOnPlaneLoop([edge], true)  assert.ok(true, `<html><a style='color: #0000ff
   // text-decoration: underline' target='blank' href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1,
   // -1)]&edges=${back.sce}'>view</a>`) console.log(front, back) const expectedFront = [] const expectedBack =
-  // [Edge.forCurveAndTs(curve, -120 * DEG, 60 * DEG), Edge.forCurveAndTs(seamCurve)] },
+  // [edgeForCurveAndTs(curve, -120 * DEG, 60 * DEG), edgeForCurveAndTs(seamCurve)] },
 
   //test('EllipseCurve.getVolZAnd', assert => {
   //

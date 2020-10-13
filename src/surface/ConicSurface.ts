@@ -27,7 +27,7 @@ import {
   PlaneSurface,
   PointVsFace,
   Surface,
-} from "../index"
+} from ".."
 
 import { abs, cos, max, min, PI, sign, sin, sqrt, SQRT1_2 } from "../math"
 

@@ -6,10 +6,12 @@ import {
   callsce,
   clamp,
   fuzzyUniques,
+  getLast,
   int,
   M4,
   newtonIterate2dWithDerivatives,
   V3,
+  withMax,
 } from "ts3dutils"
 
 import {
@@ -82,7 +84,7 @@ export class PICurve extends ImplicitCurve {
         stepSize,
         ps,
         (u, v) => is.containsPoint(pFunc(u, v)),
-        this.pmPoints.last,
+        getLast(this.pmPoints),
         this.pmTangents[0],
       )
       if (points.length !== this.points.length) {
@@ -92,7 +94,7 @@ export class PICurve extends ImplicitCurve {
           stepSize,
           ps,
           (u, v) => is.containsPoint(pFunc(u, v)),
-          this.pmPoints.last,
+          getLast(this.pmPoints),
           this.pmTangents[0],
         )
       }
@@ -429,7 +431,8 @@ export class PICurve extends ImplicitCurve {
     }
     if (ps[t].like(p)) return t
     if (ps[t + 1].like(p)) return t + 1
-    const startT = arrayRange(floor(this.tMin), ceil(this.tMax), 1).withMax(
+    const startT = withMax(
+      arrayRange(floor(this.tMin), ceil(this.tMax), 1),
       (t) => -pmPoint.distanceTo(pmps[t]),
     )
     if (undefined === startT) throw new Error()
@@ -464,7 +467,7 @@ export class PICurve extends ImplicitCurve {
       this.parametricSurface.transform(m4),
       this.implicitSurface.transform(m4),
       m4.transformPoint(this.points[0]),
-      m4.transformPoint(this.points.last),
+      m4.transformPoint(getLast(this.points)),
       this.stepSize * dirFactor,
       m4.transformVector(this.tangents[0]),
       m4.transformPoint(this.at(this.tMin)),
@@ -474,7 +477,7 @@ export class PICurve extends ImplicitCurve {
     //	this.parametricSurface.transform(m4),
     //	this.implicitSurface.transform(m4),
     //	this.pmPoints[0],
-    //	this.pmPoints.last,
+    //	getLast(this.pmPoints),
     //	this.stepSize,
     //	this.dir,
     //	this.tMin,
@@ -523,7 +526,7 @@ export class PICurve extends ImplicitCurve {
       this.parametricSurface,
       this.implicitSurface,
       this.pmPoints[0],
-      this.pmPoints.last,
+      getLast(this.pmPoints),
       this.stepSize,
       this.pmTangents[0],
       this.tMin,

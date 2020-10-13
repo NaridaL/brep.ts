@@ -1,5 +1,6 @@
 import {
   arrayFromFunction,
+  arrayHashCode,
   arrayRange,
   assert,
   assertVectors,
@@ -12,6 +13,7 @@ import {
   TAU,
   Tuple3,
   V3,
+  withMax,
 } from "ts3dutils"
 import { MeshWith, pushQuad } from "tsgl"
 
@@ -56,7 +58,7 @@ export abstract class ImplicitCurve extends Curve {
   }
 
   hashCode(): int {
-    return [this.points[0], this.tangents[0]].hashCode()
+    return arrayHashCode([this.points[0], this.tangents[0]])
   }
 
   tangentP(pWC: V3): V3 {
@@ -150,7 +152,8 @@ export abstract class ImplicitCurve extends Curve {
   }
 
   pointT(pWC: V3): number {
-    const startT = arrayRange(floor(this.tMin), ceil(this.tMax), 1).withMax(
+    const startT = withMax(
+      arrayRange(floor(this.tMin), ceil(this.tMax), 1),
       (t) => -pWC.distanceTo(this.points[t]),
     )
     if (undefined === startT) throw new Error()

@@ -1,7 +1,5 @@
 import {
   arrayFromFunction,
-  arraySamples,
-  assert,
   assertInst,
   assertNumbers,
   assertVectors,
@@ -10,16 +8,14 @@ import {
   hasConstructor,
   int,
   M4,
-  mapPush,
-  Matrix,
+  mapFilter,
   NLA_PRECISION,
   snap0,
   solveCubicReal2,
   TAU,
+  toSource,
   V,
   V3,
-  Vector,
-  VV,
 } from "ts3dutils"
 import { Mesh, pushQuad } from "tsgl"
 
@@ -38,7 +34,7 @@ import {
   ProjectedCurveSurface,
   Surface,
 } from "../index"
-import { abs, acos, acosh, atan, atan2, sign, sqrt } from "../math"
+import { abs, acos, acosh, sign, sqrt } from "../math"
 
 export abstract class XiEtaCurve extends Curve {
   readonly normal: V3
@@ -180,7 +176,7 @@ export abstract class XiEtaCurve extends Curve {
     }
     if (curve instanceof XiEtaCurve) {
       if (!this.normal.isParallelTo(curve.normal)) {
-        return this.isTsWithPlane(curve.getPlane()).mapFilter((tThis) => {
+        return mapFilter(this.isTsWithPlane(curve.getPlane()), (tThis) => {
           const p = this.at(tThis)
           if (curve.containsPoint(p)) {
             return { tThis, tOther: curve.pointT(p), p }
@@ -363,7 +359,7 @@ export abstract class XiEtaCurve extends Curve {
     if (new PlaneSurface(P3.XY).containsCurve(bezierLC)) {
       return this.isInfosWithBezier2D(bezierWC)
     } else {
-      const infos = bezierLC.isTsWithPlane(P3.XY).mapFilter((tOther) => {
+      const infos = mapFilter(bezierLC.isTsWithPlane(P3.XY), (tOther) => {
         const pLC = bezierLC.at(tOther)
         if (this.constructor.XYLCValid(pLC)) {
           return {
@@ -438,7 +434,7 @@ export function parabola4Projection(
     console.log(m.str)
     throw new Error(
       "The entire interval must be on one side of the vanishing plane. P=" +
-        P3.vanishingPlane(m).toSource(),
+        toSource(P3.vanishingPlane(m)),
     )
   }
   if (eq0(wc)) {

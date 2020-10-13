@@ -41,7 +41,7 @@ suite("ProjectedCurveSurface", () => {
     2,
   )
 
-  const edge = PCurveEdge.forCurveAndTs(baseCurve, 0, 2)
+  const edge = PCurveedgeForCurveAndTs(baseCurve, 0, 2)
   const edges = [
     edge,
     StraightEdge.throughPoints(
@@ -112,7 +112,7 @@ suite("ProjectedCurveSurface", () => {
   })
 
   // create a pcs face which includes a PICurve
-  const bezierEdge = Edge.forCurveAndTs(BezierCurve.EX2D, 0, 1)
+  const bezierEdge = edgeForCurveAndTs(BezierCurve.EX2D, 0, 1)
 
   const a = B2T.extrudeEdges(
     [
@@ -372,7 +372,7 @@ suite("ProjectedCurveSurface", () => {
         100,
       ),
       [
-        PCurveEdge.forCurveAndTs(
+        PCurveedgeForCurveAndTs(
           new BezierCurve(
             V(142.87578921496748, -191.46078243076332, 0),
             V(161.78547089700214, -252.13248349581008, 0),
@@ -386,7 +386,7 @@ suite("ProjectedCurveSurface", () => {
           V(142.87578921496748, -191.46078243076332, 0),
           V(142.87578921496748, -191.46078243076332, -100),
         ),
-        PCurveEdge.forCurveAndTs(
+        PCurveedgeForCurveAndTs(
           new BezierCurve(
             V(142.87578921496748, -191.46078243076332, -100),
             V(161.78547089700214, -252.13248349581008, -100),

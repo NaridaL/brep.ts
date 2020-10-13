@@ -18,7 +18,7 @@ import {
   ParametricSurface,
   PointVsFace,
   Surface,
-} from "../index"
+} from ".."
 
 export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
   readonly matrix: M4

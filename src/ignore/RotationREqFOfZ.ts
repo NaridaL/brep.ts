@@ -12,6 +12,7 @@ import {
 import { EPS, ImplicitSurface, ParametricSurface } from "../index"
 
 import { atan2, cos, PI, sin } from "../math"
+import { withMax } from "ts3dutils"
 
 /**
  * Rotation surface with r = f(z)
@@ -177,10 +178,10 @@ function closestXToP(
 ) {
   const STEPS = 32
   if (undefined === startX) {
-    startX = arrayFromFunction(
-      STEPS,
-      (i) => xMin + ((xMax - xMin) * i) / STEPS,
-    ).withMax((x) => -Math.hypot(x - p.x, f(x) - p.y))
+    startX = withMax(
+      arrayFromFunction(STEPS, (i) => xMin + ((xMax - xMin) * i) / STEPS),
+      (x) => -Math.hypot(x - p.x, f(x) - p.y),
+    )
   }
 
   return newtonIterate1d(

@@ -1,4 +1,5 @@
 import {
+  arrayHashCode,
   assert,
   assertInst,
   assertNumbers,
@@ -27,17 +28,7 @@ import {
 } from "../index"
 
 import { sign } from "../math"
-// declare global {
-class Foo<T> {
-  bar(this: T[]) {
-    return 23
-  }
-}
 
-interface Array<T> extends Foo<T> {}
-// }
-
-// [].bar()
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
  * Choose dir appropriately to select surface orientation.
@@ -90,7 +81,7 @@ export class ProjectedCurveSurface extends ParametricSurface {
   }
 
   hashCode(): int {
-    return [this.dir, this.baseCurve].hashCode()
+    return arrayHashCode([this.dir, this.baseCurve])
   }
 
   containsLine(line: L3): boolean {
@@ -275,8 +266,8 @@ export class ProjectedCurveSurface extends ParametricSurface {
         m4.normalized().transformVector(this.dir).times(f),
         undefined,
         undefined,
-        1 == f ? this.tMin : -this.tMax,
-        1 == f ? this.tMax : -this.tMin,
+        1 == f ? this.vMin : -this.vMax,
+        1 == f ? this.vMax : -this.vMin,
       )
     }
     const curveT = this.baseCurve.transform4(m4)
@@ -285,8 +276,8 @@ export class ProjectedCurveSurface extends ParametricSurface {
       return ConicSurface.atApexThroughEllipse(
         vp,
         m4.isMirroring() ? curveT : curveT.reversed(),
-        this.sMin,
-        this.sMax,
+        this.uMin,
+        this.uMax,
         1,
         2,
       )
@@ -300,8 +291,8 @@ export class ProjectedCurveSurface extends ParametricSurface {
         curveT.at(curveT.tMax),
       ),
       1,
-      this.sMin,
-      this.sMax,
+      this.uMin,
+      this.uMax,
       1,
       2,
     )

@@ -114,7 +114,7 @@ export default {
       // Source maps are on by default
       // sourceMap: false
     }),
-    process.env.ROLLUP_WATCH && serve(),
+    process.env.ROLLUP_WATCH && serve({ historyApiFallback: true }),
     // {
     // 	contentBase: '.',
     // 	open: true,

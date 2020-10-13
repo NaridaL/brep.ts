@@ -2,7 +2,7 @@ import { Assert, outputLink, suite, test, testCurveCentralProjection } from './m
 
 import { arrayFromFunction, arraySamples, lerp, M4, NLA_PRECISION, V, V3, Vector } from 'ts3dutils'
 import { Mesh } from 'tsgl'
-import { Curve, Edge, L3, P3, CustomPlane } from '..'
+import {Curve, Edge, L3, P3, CustomPlane, edgeForCurveAndTs} from '..'
 
 suite('L3', () => {
 	only.test('isInfosWithLine', assert => {
@@ -31,7 +31,7 @@ suite('L3', () => {
 		const minv = m4.inversed()
 		const curveTransformed = (curve as any).transform4(m4) as Curve
 		outputLink(assert, {
-			edges: [Edge.forCurveAndTs(curve), Edge.forCurveAndTs(curveTransformed)],
+			edges: [edgeForCurveAndTs(curve), edgeForCurveAndTs(curveTransformed)],
 			drLines: [...cubeLines, ...m4.transformedPoints(cubeLines)],
 		})
 	}

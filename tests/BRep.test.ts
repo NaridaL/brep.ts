@@ -576,7 +576,7 @@ suite('BREP', () => {
 	})
 	test('splitsVolumeEnclosingCone2', assert => {
 		function tst(b2, p, curve, t0, dir, result) {
-			outputLink(assert, {a: b2, edges: [Edge.forCurveAndTs(curve, t0, t0 + dir)]})
+			outputLink(assert, {a: b2, edges: [edgeForCurveAndTs(curve, t0, t0 + dir)]})
 			assert.equal(splitsVolumeEnclosingCone2(b2, p, curve, t0, dir), result)
 		}
 
@@ -1951,7 +1951,7 @@ suite('BREP', () => {
 
         test('sphere() - BRep w/ PCS', assert => {
             const a = B2T.sphere()
-            const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
+            const b = B2T.extrudeEdges([PCurveedgeForCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .rotateX(85 * DEG)
                 .translate(0.1, 0.1, 0.4)
@@ -1983,7 +1983,7 @@ suite('BREP', () => {
 
         test('sphere() - BRep w/ PCS 2', assert => {
             const a = B2T.sphere()
-            const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
+            const b = B2T.extrudeEdges([PCurveedgeForCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .translate(0.1, -0.1, 1.2)
                 .flipped()
@@ -2020,7 +2020,7 @@ suite('BREP', () => {
 
         test('box() - BRep w/ PCS 2', assert => {
             const a = B2T.box()
-            const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
+            const b = B2T.extrudeEdges([PCurveedgeForCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 4)
                 .translate(-0.1, 0.4, 2)
                 .rotateX(10 * DEG)
@@ -2082,7 +2082,7 @@ suite('BREP', () => {
 
         test('BRep w/ PCS - sphere()', assert => {
             const a = B2T.sphere().flipped()
-            const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
+            const b = B2T.extrudeEdges([PCurveedgeForCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .translate(0.1, -0.1, 1.2)
             const result = new BRep([
@@ -2113,7 +2113,7 @@ suite('BREP', () => {
         })
 
         skip('BRep w/ PCS and cylinder', assert => {
-            const bezierEdge = Edge.forCurveAndTs(BezierCurve.EX2D, 0, 1)
+            const bezierEdge = edgeForCurveAndTs(BezierCurve.EX2D, 0, 1)
             const a = B2T.extrudeEdges([bezierEdge, ...StraightEdge.chain([bezierEdge.b, V3.X.negated(), bezierEdge.a], false)],
                 P3.XY.flipped())
             const b = B2T.cylinder(0.2, 2).rotateY(90 * DEG).translate(0, 0, 0.5)
@@ -2123,7 +2123,7 @@ suite('BREP', () => {
 
         test('sphere() - BRep w/ PCS - sphere(0.9)', assert => {
             const a = B2T.sphere(0.9).flipped()
-            const b = B2T.extrudeEdges([PCurveEdge.forCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
+            const b = B2T.extrudeEdges([PCurveedgeForCurveAndTs(BezierCurve.QUARTER_CIRCLE, 0, 1), StraightEdge.throughPoints(V3.Y, V3.X)], P3.XY, V3.Z.negated())
                 .scale(0.2, 0.2, 2)
                 .translate(0.1, -0.1, 1.2).flipped()
             const c = B2T.sphere()
@@ -2196,7 +2196,7 @@ suite('BREP', () => {
             const result = B2T.extrudeEdges([
                     StraightEdge.throughPoints(V(8, 0, 0), V(1, 0, 0)),
                     StraightEdge.throughPoints(V(1, 0, 0), resultTopPoint),
-                    PCurveEdge.forCurveAndTs(EllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
+                    PCurveedgeForCurveAndTs(EllipseCurve.semicircle(8), Math.acos(1 / 8), 0)],
                 P3.XY.flipped(), V(0, 0, 5), 'pie/4')
             testBRepAnd(assert, pie, boxKnife, result)
         })
@@ -2334,7 +2334,7 @@ suite('BREP', () => {
         })
         test('pcs - triangle', assert => {
             // file:///C:/Users/aval/Desktop/cs/viewer.html?a=B2T.cylinder()&b=B2T.extrudeEdges(Edge.ngon(3,1.5))&c=a.and(b).translate(3)
-            const e1 = Edge.forCurveAndTs(BezierCurve.EX3D, 0.5).projectXY()
+            const e1 = edgeForCurveAndTs(BezierCurve.EX3D, 0.5).projectXY()
             const edges = [e1, StraightEdge.throughPoints(e1.b, e1.a)]
             const a = B2T.extrudeEdges(edges, P3.XY.flipped(), V3.Z)
             const p = e1.curve.at(0.95).plus(V(-NLA_PRECISION * 2, 0, 0))

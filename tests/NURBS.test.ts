@@ -13,6 +13,7 @@ import {
   arraySamples,
   checkDerivate,
   DEG,
+  getLast,
   lerp,
   M4,
   V,
@@ -23,6 +24,7 @@ import {
 import {
   BezierCurve,
   Edge,
+  edgeForCurveAndTs,
   EllipsoidSurface,
   HyperbolaCurve,
   L3,
@@ -135,7 +137,7 @@ suite("NURBS", () => {
       drVs: xx
         .filter((x) => isFinite(x[2].x) && !x[2].likeO())
         .map((x) => ({ anchor: x[1], v: x[2] })),
-      edges: [Edge.forCurveAndTs(BezierCurve.EX3D), Edge.forCurveAndTs(nurbs)],
+      edges: [edgeForCurveAndTs(BezierCurve.EX3D), edgeForCurveAndTs(nurbs)],
     })
   })
 
@@ -181,8 +183,8 @@ suite("NURBS", () => {
     const segments = nurbs.getSegments()
     outputLink(assert, {
       edges: [
-        Edge.forCurveAndTs(nurbs).translate(V3.Z),
-        ...segments.map((s) => Edge.forCurveAndTs(s)),
+        edgeForCurveAndTs(nurbs).translate(V3.Z),
+        ...segments.map((s) => edgeForCurveAndTs(s)),
       ],
     })
     assert.equal(
@@ -191,7 +193,10 @@ suite("NURBS", () => {
       "number of segments",
     )
     assert.v3like(segments[0].points[0].p3(), nurbs.points[0].p3())
-    assert.v3like(segments.last.points.last.p3(), nurbs.points.last.p3())
+    assert.v3like(
+      getLast(getLast(segments).points).p3(),
+      getLast(nurbs.points).p3(),
+    )
     segments.forEach((s) => {
       assert.ok(s instanceof NURBS)
       assert.equal(s.degree, nurbs.degree)
@@ -204,8 +209,8 @@ suite("NURBS", () => {
     const segments = nurbs.getSegments()
     outputLink(assert, {
       edges: [
-        Edge.forCurveAndTs(nurbs).translate(V3.Z),
-        ...segments.map((s) => Edge.forCurveAndTs(s)),
+        edgeForCurveAndTs(nurbs).translate(V3.Z),
+        ...segments.map((s) => edgeForCurveAndTs(s)),
       ],
     })
     assert.equal(
@@ -214,7 +219,10 @@ suite("NURBS", () => {
       "number of segments",
     )
     assert.v3like(segments[0].points[0].p3(), nurbs.points[0].p3())
-    assert.v3like(segments.last.points.last.p3(), nurbs.points.last.p3())
+    assert.v3like(
+      getLast(getLast(segments).points).p3(),
+      getLast(nurbs.points).p3(),
+    )
     segments.forEach((s) => {
       assert.ok(s instanceof NURBS)
       assert.equal(s.degree, nurbs.degree)
@@ -230,8 +238,8 @@ suite("NURBS", () => {
     outputLink(assert, {
       //
       edges: [
-        Edge.forCurveAndTs(nurbs).translate(V3.Z),
-        ...segments.map((s) => Edge.forCurveAndTs(s)),
+        edgeForCurveAndTs(nurbs).translate(V3.Z),
+        ...segments.map((s) => edgeForCurveAndTs(s)),
       ],
     })
     assert.equal(
@@ -240,7 +248,10 @@ suite("NURBS", () => {
       "number of segments",
     )
     assert.v3like(segments[0].points[0].p3(), nurbs.points[0].p3())
-    assert.v3like(segments.last.points.last.p3(), nurbs.points.last.p3())
+    assert.v3like(
+      getLast(getLast(segments).points).p3(),
+      getLast(nurbs.points).p3(),
+    )
     segments.forEach((s) => {
       assert.ok(s instanceof NURBS)
       assert.equal(s.degree, nurbs.degree)
@@ -257,8 +268,8 @@ suite("NURBS", () => {
     outputLink(assert, {
       //drPs: arrayFromFunction(12, (i, l) => n0.at(lerp(n0.tMin, n0.tMax, i/(l - 1)))),
       edges: [
-        Edge.forCurveAndTs(nurbs).translate(V3.Z),
-        ...[n0, n1].map((s) => Edge.forCurveAndTs(s)),
+        edgeForCurveAndTs(nurbs).translate(V3.Z),
+        ...[n0, n1].map((s) => edgeForCurveAndTs(s)),
       ],
     })
     assert.equal(n0.tMax, t0)
@@ -279,8 +290,8 @@ suite("NURBS", () => {
         n0.at(lerp(n0.tMin, n0.tMax, i / (l - 1))),
       ),
       edges: [
-        Edge.forCurveAndTs(nurbs).translate(V3.Z),
-        ...[n0, n1].map((s) => Edge.forCurveAndTs(s)),
+        edgeForCurveAndTs(nurbs).translate(V3.Z),
+        ...[n0, n1].map((s) => edgeForCurveAndTs(s)),
       ],
     })
     assert.equal(n0.tMax, t0)
@@ -296,7 +307,7 @@ suite("NURBS", () => {
     const nurbsBezier2 = nurbsBezier.elevateDegreeBezier()
     const curves = [nurbsBezier, nurbsBezier2.translate(0, 0, 10)]
     outputLink(assert, {
-      edges: curves.map((n) => Edge.forCurveAndTs(n)),
+      edges: curves.map((n) => edgeForCurveAndTs(n)),
     })
   })
 
@@ -304,14 +315,14 @@ suite("NURBS", () => {
     const nurbs = NURBS.EX2D
     const nurbs2 = nurbs.elevateDegree()
     const curves = [nurbs, nurbs2.translate(0, 0, 10)]
-    const edges = curves.map((n) => Edge.forCurveAndTs(n))
+    const edges = curves.map((n) => edgeForCurveAndTs(n))
     outputLink(assert, {
       drPs: edges.flatMap((e) => e.getVerticesNo0()),
       edges: edges,
     })
     assert.equal(nurbs2.degree, nurbs.degree + 1)
     assert.v3like(nurbs2.points[0].p3(), nurbs.points[0].p3())
-    assert.v3like(nurbs2.points.last.p3(), nurbs.points.last.p3())
+    assert.v3like(getLast(nurbs2.points).p3(), getLast(nurbs.points).p3())
   })
 
   test("elevateDegree 2", (assert) => {
@@ -332,7 +343,7 @@ suite("NURBS", () => {
     )
     const nurbs2 = nurbs.elevateDegree()
     const curves = [nurbs, nurbs2.translate(0, 0, 10)]
-    const edges = curves.map((n) => Edge.forCurveAndTs(n))
+    const edges = curves.map((n) => edgeForCurveAndTs(n))
     outputLink(assert, {
       edges: edges,
     })
@@ -340,7 +351,7 @@ suite("NURBS", () => {
     assert.equal(nurbs2.points.length, 11)
     assert.equal(nurbs2.degree, nurbs.degree + 1)
     assert.v3like(nurbs2.points[0].p3(), nurbs.points[0].p3())
-    assert.v3like(nurbs2.points.last.p3(), nurbs.points.last.p3())
+    assert.v3like(getLast(nurbs2.points).p3(), getLast(nurbs.points).p3())
   })
 
   test("removeKnots multi=1", (assert) => {
@@ -350,7 +361,7 @@ suite("NURBS", () => {
     assert.equal(nurbs2.knots.length, nurbs.knots.length - 1)
     outputLink(assert, {
       edges: [nurbs, nurbs2.translate(0, 0, 10)].map((n) =>
-        Edge.forCurveAndTs(n),
+        edgeForCurveAndTs(n),
       ),
     })
   })
@@ -364,7 +375,7 @@ suite("NURBS", () => {
     assert.equal(nurbs2.knots.length, nurbs.knots.length - 1)
     outputLink(assert, {
       edges: [nurbs, nurbs2.translate(0, 0, 10)].map((n) =>
-        Edge.forCurveAndTs(n),
+        edgeForCurveAndTs(n),
       ),
     })
   })
@@ -464,10 +475,7 @@ suite("NURBS", () => {
       assert.ok(simple.containsPoint(c.at(t)))
     })
     outputLink(assert, {
-      edges: [
-        Edge.forCurveAndTs(simple),
-        Edge.forCurveAndTs(c.translate(V3.Z)),
-      ],
+      edges: [edgeForCurveAndTs(simple), edgeForCurveAndTs(c.translate(V3.Z))],
       drPs: arraySamples(0, 1, 8).map((t) => c.at(t)),
     })
   }
@@ -525,7 +533,7 @@ suite("NURBS", () => {
     ]).translate(V3.Z)
     const c2 = NURBS.simplifyUnit2(w0, w1, w2)
     outputLink(assert, {
-      edges: [c1, c2].map((c) => Edge.forCurveAndTs(c)),
+      edges: [c1, c2].map((c) => edgeForCurveAndTs(c)),
       drPs: arraySamples(0, 1, 10).map((t) => c1.at(t)),
     })
   })
@@ -534,7 +542,7 @@ suite("NURBS", () => {
     const hb = HyperbolaCurve.XY.withBounds(-1, 2)
     const nurbs = NURBS.fromHyperbola(hb)
     outputLink(assert, {
-      edges: [hb, nurbs].map((c) => Edge.forCurveAndTs(c)),
+      edges: [hb, nurbs].map((c) => edgeForCurveAndTs(c)),
       drPs: arraySamples(0, 1, 33).map((t) => nurbs.at(t)),
     })
   })
@@ -542,7 +550,7 @@ suite("NURBS", () => {
     const hb = HyperbolaCurve.XY.withBounds(-1, 2).transform(M4.FOO)
     const nurbs = NURBS.fromHyperbola(hb)
     outputLink(assert, {
-      edges: [hb, nurbs].map((c) => Edge.forCurveAndTs(c)),
+      edges: [hb, nurbs].map((c) => edgeForCurveAndTs(c)),
       drPs: arraySamples(0, 1, 33).map((t) => nurbs.at(t)),
     })
   })

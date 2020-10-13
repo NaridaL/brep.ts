@@ -21,7 +21,7 @@ import {
   PlaneSurface,
   PointVsFace,
   Surface,
-} from "../index"
+} from ".."
 
 export class PointProjectedSurface extends ParametricSurface {
   pointFoot(pWC: V3, ss?: number, st?: number): V3 {
@@ -53,12 +53,12 @@ export class PointProjectedSurface extends ParametricSurface {
     readonly apex: V3,
     readonly curvePlane: P3,
     readonly normalDir = 1,
-    sMin: number = curve.tMin,
-    sMax: number = curve.tMax,
-    tMin: number = 0,
-    tMax: number = 16,
+    uMin: number = curve.tMin,
+    uMax: number = curve.tMax,
+    vMin: number = 0,
+    vMax: number = 16,
   ) {
-    super(sMin, sMax, tMin, tMax)
+    super(uMin, uMax, vMin, vMax)
     assertInst(Curve, curve)
     assert(!(curve instanceof L3), "use PlaneSurface instead")
     assert(!(curve instanceof EllipseCurve), "use ConicSurface instead")
@@ -68,7 +68,7 @@ export class PointProjectedSurface extends ParametricSurface {
     )
     assert(new PlaneSurface(curvePlane).containsCurve(curve))
     assertVectors(apex)
-    assert(0 <= tMin)
+    assert(0 <= vMin)
     this.planeProjectionMatrix = M4.projectPlanePoint(apex, curvePlane)
     this.uStep = curve.tIncrement
   }
@@ -79,10 +79,10 @@ export class PointProjectedSurface extends ParametricSurface {
       this.apex,
       this.curvePlane,
       this.normalDir,
-      this.sMin,
-      this.sMax,
-      this.tMin,
-      this.tMax,
+      this.uMin,
+      this.uMax,
+      this.vMin,
+      this.vMax,
     ]
   }
 
@@ -192,10 +192,10 @@ export class PointProjectedSurface extends ParametricSurface {
       m4.transformPoint(this.apex),
       this.curvePlane.transform(m4),
       (m4.isMirroring() ? -1 : 1) * this.normalDir,
-      this.sMin,
-      this.sMax,
-      this.tMin,
-      this.tMax,
+      this.uMin,
+      this.uMax,
+      this.vMin,
+      this.vMax,
     ) as this
   }
 
@@ -205,10 +205,10 @@ export class PointProjectedSurface extends ParametricSurface {
       this.apex,
       this.curvePlane,
       -this.normalDir,
-      -this.sMax,
-      -this.sMin,
-      this.tMin,
-      this.tMax,
+      -this.uMax,
+      -this.uMin,
+      this.vMin,
+      this.vMax,
     ) as this
   }
 

@@ -24,6 +24,7 @@ import {
   NLA_PRECISION,
   pqFormula,
   snap,
+  sum,
   toSource,
   V,
   V3,
@@ -44,10 +45,14 @@ import {
   PointVsFace,
   ProjectedCurveSurface,
   Surface,
-} from "../index"
+} from ".."
 
 import { abs, cos, max, min, PI, sign, sin, sqrt } from "../math"
 
+class ArrayExt {}
+declare global {
+  interface Array<T> extends ArrayExt {}
+}
 export class EllipsoidSurface
   extends ParametricSurface
   implements ImplicitSurface {
@@ -86,8 +91,8 @@ export class EllipsoidSurface
   }
 
   static unitArea(contour: Edge[]) {
-    const totalArea = contour
-      .map((edge) => {
+    const totalArea = sum(
+      contour.map((edge) => {
         if (edge.curve instanceof PICurve) {
           const points = edge.curve.calcSegmentPoints(
             edge.aT,
@@ -118,8 +123,8 @@ export class EllipsoidSurface
         } else {
           throw new Error()
         }
-      })
-      .sum()
+      }),
+    )
     return totalArea
   }
 
@@ -273,8 +278,8 @@ export class EllipsoidSurface
       matrixInverse = matrix.inversed()
     const circleRadius = a.length()
     const c1 = c.unit()
-    const totalArea = edges
-      .map((edge) => {
+    const totalArea = sum(
+      edges.map((edge) => {
         if (edge.curve instanceof EllipseCurve) {
           const f = (t: number) => {
             const at = edge.curve.at(t),
@@ -291,8 +296,8 @@ export class EllipsoidSurface
         } else {
           throw new Error()
         }
-      })
-      .sum()
+      }),
+    )
 
     return totalArea
   }

@@ -1,5 +1,7 @@
 import { Equalable } from "javasetmap.ts"
 import {
+  arrayEquals,
+  arrayHashCode,
   callsce,
   eq,
   eq0,
@@ -22,12 +24,18 @@ import {
   PICurve,
   PPCurve,
   ZDirVolumeVisitor,
-} from "../index"
+} from ".."
 
 import { ceil, floor, PI, sign } from "../math"
+import { WebGLDebugable } from "../WebGLDebugable"
 
-export abstract class Surface extends Transformable implements Equalable {
+export abstract class Surface
+  extends Transformable
+  implements Equalable, WebGLDebugable {
   readonly ["constructor"]: new (...args: any[]) => this
+
+  debugInfo?(): { points: []; lines: [] }
+
   static loopContainsPointGeneral(
     loop: Edge[],
     pWC: V3,
@@ -287,12 +295,15 @@ export abstract class Surface extends Transformable implements Equalable {
     return (
       this === obj ||
       (this.constructor === obj.constructor &&
-        this.getConstructorParameters().equals(obj.getConstructorParameters()))
+        arrayEquals(
+          this.getConstructorParameters(),
+          obj.getConstructorParameters(),
+        ))
     )
   }
 
   hashCode(): int {
-    return this.getConstructorParameters().hashCode()
+    return arrayHashCode(this.getConstructorParameters())
   }
 
   zDirVolume(allEdges: Edge[]): { centroid: V3; volume: number } {
