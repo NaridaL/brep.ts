@@ -11,6 +11,7 @@ var svgPathdata = require('svg-pathdata');
 var javasetmap_ts = require('javasetmap.ts');
 var earcut = require('earcut');
 var nerdamer = require('nerdamer');
+var _ = require('.');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
@@ -27,8 +28,8 @@ class Curve extends ts3dutils.Transformable {
         this.tMin = tMin;
         this.tMax = tMax;
         ts3dutils.assertNumbers(tMin, tMax);
-        ts3dutils.assert("number" == typeof tMin && !isNaN(tMin));
-        ts3dutils.assert("number" == typeof tMax && !isNaN(tMax));
+        ts3dutils.assert("number" === typeof tMin && !isNaN(tMin));
+        ts3dutils.assert("number" === typeof tMax && !isNaN(tMax));
         ts3dutils.assert(tMin < tMax, "tMin < tMax " + tMin + " < " + tMax);
     }
     static integrate(curve, startT, endT, steps) {
@@ -218,7 +219,7 @@ class Curve extends ts3dutils.Transformable {
         //checkDerivate(f, df, tMin, tMax)
         const STEPS = 32;
         if (undefined === tStart) {
-            tStart = ts3dutils.arrayFromFunction(STEPS, (i) => tMin + ((tMax - tMin) * i) / (STEPS - 1)).withMax((t) => -this.at(t).distanceTo(p));
+            tStart = ts3dutils.withMax(ts3dutils.arrayFromFunction(STEPS, (i) => tMin + ((tMax - tMin) * i) / (STEPS - 1)), (t) => -this.at(t).distanceTo(p));
         }
         return ts3dutils.newtonIterateWithDerivative(f, tStart, 16, df);
     }
@@ -362,10 +363,10 @@ class Curve extends ts3dutils.Transformable {
         if (this === obj)
             return true;
         return (ts3dutils.hasConstructor(obj, this.constructor) &&
-            this.getConstructorParameters().equals(obj.getConstructorParameters()));
+            ts3dutils.arrayEquals(this.getConstructorParameters(), obj.getConstructorParameters()));
     }
     hashCode() {
-        return this.getConstructorParameters().hashCode();
+        return ts3dutils.arrayHashCode(this.getConstructorParameters());
     }
     getAABB(tMin = this.tMin, tMax = this.tMax) {
         tMin = isFinite(tMin) ? tMin : this.tMin;
@@ -391,7 +392,7 @@ class Curve extends ts3dutils.Transformable {
     }
     clipPlane(plane) {
         const ists = this.isTsWithPlane(plane).filter((ist) => this.tMin <= ist && ist <= this.tMax);
-        return ts3dutils.getIntervals(ists, this.tMin, this.tMax).mapFilter(([a, b]) => {
+        return ts3dutils.mapFilter(ts3dutils.getIntervals(ists, this.tMin, this.tMax), ([a, b]) => {
             const midT = (a + b) / 2;
             return (!ts3dutils.eq(a, b) &&
                 plane.distanceToPointSigned(this.at(midT)) < 0 &&
@@ -406,7 +407,8 @@ function mkcurves(implicitCurve, sStart, tStart, stepSize, bounds, validUV) {
     // checkDerivate(s => implicitCurve(s, 0), s => didu(s, 0), -1, 1, 0)
     // checkDerivate(t => implicitCurve(0, t), t => didv(0, t), -1, 1, 0)
     const { points, tangents } = followAlgorithm2d(implicitCurve, start, stepSize, bounds, validUV);
-    if (points.length > 4 && points[0].distanceTo(points.last) <= abs(stepSize)) {
+    if (points.length > 4 &&
+        points[0].distanceTo(ts3dutils.getLast(points)) <= abs(stepSize)) {
         // this is a loop: split it
         for (let i = 0; i < points.length - 1; i++) {
             ts3dutils.assert(!points[i].equals(points[i + 1]));
@@ -430,7 +432,7 @@ function mkcurves(implicitCurve, sStart, tStart, stepSize, bounds, validUV) {
     else {
         // not a loop: check in the other direction
         const { points: reversePoints, tangents: reverseTangents, } = followAlgorithm2d(implicitCurve, start, -stepSize, bounds, validUV);
-        const result = followAlgorithm2d(implicitCurve, reversePoints.last, stepSize, bounds, validUV, undefined, reverseTangents.last.negated());
+        const result = followAlgorithm2d(implicitCurve, ts3dutils.getLast(reversePoints), stepSize, bounds, validUV, undefined, ts3dutils.getLast(reverseTangents).negated());
         ts3dutils.assert(result.points.length > 2);
         return [result];
     }
@@ -508,7 +510,7 @@ function mkPPCurves(ps1, ps2, startPoint, stepSize, bounds1, bounds2) {
     // checkDerivate(s => implicitCurve(s, 0), s => didu(s, 0), -1, 1, 0)
     // checkDerivate(t => implicitCurve(0, t), t => didv(0, t), -1, 1, 0)
     const { points, tangents, st1s } = followAlgorithmPP(ps1, ps2, startPoint, stepSize, bounds1, bounds2);
-    if (points[0].distanceTo(points.last) < stepSize && points.length > 2) {
+    if (points[0].distanceTo(ts3dutils.getLast(points)) < stepSize && points.length > 2) {
         // this is a loop: split it
         for (let i = 0; i < points.length - 1; i++) {
             ts3dutils.assert(!points[i].equals(points[i + 1]));
@@ -534,7 +536,7 @@ function mkPPCurves(ps1, ps2, startPoint, stepSize, bounds1, bounds2) {
     else {
         // not a loop: check in the other direction
         const { points: reversePoints } = followAlgorithmPP(ps1, ps2, startPoint, -stepSize, bounds1, bounds2);
-        const result = followAlgorithmPP(ps1, ps2, reversePoints.last, stepSize, bounds1, bounds2);
+        const result = followAlgorithmPP(ps1, ps2, ts3dutils.getLast(reversePoints), stepSize, bounds1, bounds2);
         ts3dutils.assert(result.points.length > 2);
         return [result];
     }
@@ -856,7 +858,7 @@ class ImplicitCurve extends Curve {
                 this.tangents[0].equals(obj.tangents[0])));
     }
     hashCode() {
-        return [this.points[0], this.tangents[0]].hashCode();
+        return ts3dutils.arrayHashCode([this.points[0], this.tangents[0]]);
     }
     tangentP(pWC) {
         ts3dutils.assertVectors(pWC);
@@ -921,7 +923,7 @@ class ImplicitCurve extends Curve {
         return roots;
     }
     pointT(pWC) {
-        const startT = ts3dutils.arrayRange(floor(this.tMin), ceil(this.tMax), 1).withMax((t) => -pWC.distanceTo(this.points[t]));
+        const startT = ts3dutils.withMax(ts3dutils.arrayRange(floor(this.tMin), ceil(this.tMax), 1), (t) => -pWC.distanceTo(this.points[t]));
         if (undefined === startT)
             throw new Error();
         if (this.points[startT].like(pWC))
@@ -954,6 +956,7 @@ function surfaceIsICurveIsInfosWithLine(surface1, surface2, anchorWC, dirWC, tMi
     }));
     const result = commonTInfos.filter((info) => this.containsPoint(info.p));
     result.forEach((info) => (info.tThis = this.pointT(info.p)));
+    return result;
 }
 
 /**
@@ -1344,7 +1347,7 @@ class BezierCurve extends Curve {
                 .dot(this.tangentAt(t));
         };
         const STEPS = 32;
-        const startT = ts3dutils.arrayFromFunction(STEPS, (i) => tMin + ((tMax - tMin) * i) / STEPS).withMax((t) => -f(t));
+        const startT = ts3dutils.withMax(ts3dutils.arrayFromFunction(STEPS, (i) => tMin + ((tMax - tMin) * i) / STEPS), (t) => -f(t));
         return ts3dutils.newtonIterate1d(f, startT, 8);
     }
     /**
@@ -1419,7 +1422,7 @@ class BezierCurve extends Curve {
             }
             tMin = Math.min(tMin, sMin);
             tMax = Math.max(tMax, sMax);
-            const splits = ts3dutils.fuzzyUniques(this.roots().concatenated().filter(isFinite).concat([tMin, tMax])).sort(ts3dutils.MINUS);
+            const splits = ts3dutils.fuzzyUniques(ts3dutils.concatenated(this.roots()).filter(isFinite).concat([tMin, tMax])).sort(ts3dutils.MINUS);
             //const aabbs = arrayFromFunction(splits.length - 1, i => this.getAABB(splits[i], splits[i + 1]))
             Array.from(ts3dutils.combinations(splits.length - 1)).forEach(({ i, j }) => {
                 // adjacent curves can't intersect
@@ -1966,9 +1969,9 @@ class PICurve extends ImplicitCurve {
             const dpdv = ps.dpdv();
             const didp = is.didp.bind(is);
             const mf = exports.MathFunctionR2R.forFFxFy((x, y) => iFunc(pFunc(x, y)), (u, v) => didp(pFunc(u, v)).dot(dpdu(u, v)), (u, v) => didp(pFunc(u, v)).dot(dpdv(u, v)));
-            const { points } = followAlgorithm2d(mf, this.pmPoints[0], stepSize, ps, (u, v) => is.containsPoint(pFunc(u, v)), this.pmPoints.last, this.pmTangents[0]);
+            const { points } = followAlgorithm2d(mf, this.pmPoints[0], stepSize, ps, (u, v) => is.containsPoint(pFunc(u, v)), ts3dutils.getLast(this.pmPoints), this.pmTangents[0]);
             if (points.length !== this.points.length) {
-                followAlgorithm2d(mf, this.pmPoints[0], stepSize, ps, (u, v) => is.containsPoint(pFunc(u, v)), this.pmPoints.last, this.pmTangents[0]);
+                followAlgorithm2d(mf, this.pmPoints[0], stepSize, ps, (u, v) => is.containsPoint(pFunc(u, v)), ts3dutils.getLast(this.pmPoints), this.pmTangents[0]);
             }
             ts3dutils.assert(points.length == this.points.length, points.length, this.points.length);
         }
@@ -2169,7 +2172,7 @@ class PICurve extends ImplicitCurve {
             return t;
         if (ps[t + 1].like(p))
             return t + 1;
-        const startT = ts3dutils.arrayRange(floor(this.tMin), ceil(this.tMax), 1).withMax((t) => -pmPoint.distanceTo(pmps[t]));
+        const startT = ts3dutils.withMax(ts3dutils.arrayRange(floor(this.tMin), ceil(this.tMax), 1), (t) => -pmPoint.distanceTo(pmps[t]));
         if (undefined === startT)
             throw new Error();
         if (ps[startT].like(p))
@@ -2197,12 +2200,12 @@ class PICurve extends ImplicitCurve {
     }
     transform(m4) {
         const dirFactor = m4.isMirroring() ? -1 : 1;
-        return PICurve.forStartEnd(this.parametricSurface.transform(m4), this.implicitSurface.transform(m4), m4.transformPoint(this.points[0]), m4.transformPoint(this.points.last), this.stepSize * dirFactor, m4.transformVector(this.tangents[0]), m4.transformPoint(this.at(this.tMin)), m4.transformPoint(this.at(this.tMax)));
+        return PICurve.forStartEnd(this.parametricSurface.transform(m4), this.implicitSurface.transform(m4), m4.transformPoint(this.points[0]), m4.transformPoint(ts3dutils.getLast(this.points)), this.stepSize * dirFactor, m4.transformVector(this.tangents[0]), m4.transformPoint(this.at(this.tMin)), m4.transformPoint(this.at(this.tMax)));
         //return PICurve.forParametricStartEnd(
         //	this.parametricSurface.transform(m4),
         //	this.implicitSurface.transform(m4),
         //	this.pmPoints[0],
-        //	this.pmPoints.last,
+        //	getLast(this.pmPoints),
         //	this.stepSize,
         //	this.dir,
         //	this.tMin,
@@ -2225,10 +2228,10 @@ class PICurve extends ImplicitCurve {
         return [allTs, allTs, allTs];
     }
     isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
-        return surfaceIsICurveIsInfosWithLine.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
+        return surfaceIsICurveIsInfosWithLine.call(this, this.implicitSurface, this.parametricSurface, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
     }
     toSource(rounder = (x) => x) {
-        const result = ts3dutils.callsce("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], this.pmPoints.last, this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
+        const result = ts3dutils.callsce("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], ts3dutils.getLast(this.pmPoints), this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
         return result;
     }
 }
@@ -2321,14 +2324,14 @@ class PPCurve extends ImplicitCurve {
         return new PPCurve(m4.transformedPoints(this.points), m4.transformedVectors(this.tangents), this.parametricSurface1.transform(m4), this.parametricSurface2.transform(m4), this.st1s, undefined, this.stepSize, this.dir, undefined);
     }
     toSource() {
-        return ts3dutils.callsce("PPCurve.forStartEnd", this.parametricSurface1, this.parametricSurface2, this.points[0], this.points.last, this.stepSize);
+        return ts3dutils.callsce("PPCurve.forStartEnd", this.parametricSurface1, this.parametricSurface2, this.points[0], ts3dutils.getLast(this.points), this.stepSize);
     }
     static forStartEnd(ps1, ps2, startPoint, end, stepSize = 0.02) {
         const { points, tangents, st1s } = followAlgorithmPP(ps1, ps2, startPoint, stepSize);
         return new PPCurve(points, tangents, ps1, ps2, st1s, undefined, stepSize, 1);
     }
     isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
-        return surfaceIsICurveIsInfosWithLine.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
+        return surfaceIsICurveIsInfosWithLine.call(this, this.parametricSurface1, this.parametricSurface2, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
     }
     isTsWithSurface(surface) {
         if (ImplicitSurface.is(surface)) {
@@ -2845,7 +2848,7 @@ class EllipseCurve extends XiEtaCurve {
             // tOther: ellipse.pointT(p, PI), p} })
         }
         else {
-            return this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center)).mapFilter((t) => {
+            return ts3dutils.mapFilter(this.isTsWithPlane(P3.normalOnAnchor(ellipse.normal.unit(), ellipse.center)), (t) => {
                 const p = this.at(t);
                 if (ellipse.containsPoint(p)) {
                     return { tThis: t, tOther: ellipse.pointT(p), p };
@@ -2871,7 +2874,8 @@ class EllipseCurve extends XiEtaCurve {
         // solve for each dimension separately
         // tangent(eta, xi) = f2 eta - f1 xi
         return ts3dutils.arrayFromFunction(3, (dim) => {
-            const a = this.f2.e(dim), b = -this.f1.e(dim);
+            const a = this.f2.e(dim);
+            const b = -this.f1.e(dim);
             return intersectionUnitCircleLine2(a, b, 0)
                 .map(([xi, eta]) => Math.atan2(eta, xi))
                 .filter((t) => this.isValidT(t));
@@ -3071,7 +3075,7 @@ class NURBS extends Curve {
         //checkDerivate(f, df, tMin, tMax)
         const STEPS = 32;
         if (undefined === tStart) {
-            tStart = ts3dutils.arraySamples(tMin, tMax, STEPS).withMax((t) => -this.at(t).distanceTo(p));
+            tStart = ts3dutils.withMax(ts3dutils.arraySamples(tMin, tMax, STEPS), (t) => -this.at(t).distanceTo(p));
         }
         const result = ts3dutils.newtonIterateWithDerivative2(f, tStart, 8, this.tMin, this.tMax);
         //assert(undefined !== result)
@@ -3128,10 +3132,10 @@ class NURBS extends Curve {
         oldKnots.splice(k, 1);
         for (let i = k - degree; i <= k - s; i++) {
             const alphaInv = (oldKnots[i + degree] - oldKnots[i]) / (t - oldKnots[i]);
-            const oldPoint = ts3dutils.Vector.lerp(insertPoints.last, points[i], alphaInv);
+            const oldPoint = ts3dutils.Vector.lerp(ts3dutils.getLast(insertPoints), points[i], alphaInv);
             insertPoints.push(oldPoint);
         }
-        if (insertPoints.last.like(points[k + 1 - s])) {
+        if (ts3dutils.getLast(insertPoints).like(points[k + 1 - s])) {
             const oldPoints = points.slice();
             oldPoints.splice(k - degree - 1, degree - s + 3, ...insertPoints);
             return new NURBS(oldPoints, degree, oldKnots);
@@ -3378,7 +3382,7 @@ class NURBS extends Curve {
         // stitch together the segments
         const newPoints = new Array(2 + segmentsElevated.length * this.degree);
         newPoints[0] = segmentsElevated[0].points[0];
-        newPoints.last = segmentsElevated.last.points.last;
+        ts3dutils.setLast(newPoints, ts3dutils.getLast(ts3dutils.getLast(segmentsElevated).points));
         for (let i = 0; i < segmentsElevated.length; i++) {
             for (let pi = 1; pi < segmentsElevated[i].points.length - 1; pi++) {
                 newPoints[i * (segmentsElevated[0].points.length - 2) + pi] =
@@ -3391,15 +3395,15 @@ class NURBS extends Curve {
         }
         for (let i = 0; i < segmentsElevated.length; i++) {
             for (let pi = 1; pi < segmentsElevated[i].points.length - 1; pi++) {
-                newKnots[i * (segmentsElevated[0].points.length - 2) + pi + this.degree + 1] = segmentsElevated[i].knots.last;
+                newKnots[i * (segmentsElevated[0].points.length - 2) + pi + this.degree + 1] = ts3dutils.getLast(segmentsElevated[i].knots);
             }
         }
-        newKnots[newKnots.length - 1] = this.knots.last;
-        newKnots[newKnots.length - 2] = this.knots.last;
+        newKnots[newKnots.length - 1] = ts3dutils.getLast(this.knots);
+        newKnots[newKnots.length - 2] = ts3dutils.getLast(this.knots);
         let result = new NURBS(newPoints, this.degree + 1, newKnots, this.tMin, this.tMax);
         for (let i = 0; i < segmentsElevated.length - 1; i++) {
             let optimization;
-            while ((optimization = result.removeKnot(segmentsElevated[i].knots.last))) {
+            while ((optimization = result.removeKnot(ts3dutils.getLast(segmentsElevated[i].knots)))) {
                 result = optimization;
             }
         }
@@ -3514,9 +3518,7 @@ class NURBS extends Curve {
     isInfosWithLine(anchor, dir) {
         const thisPlane = P3.fromPoints(this.points.map((p) => p.p3()));
         const l = L3.anchorDirection(anchor, dir);
-        const maxDistanceToPlane = this.points
-            .map((p) => thisPlane.distanceToPoint(p.p3()))
-            .max();
+        const maxDistanceToPlane = ts3dutils.max(this.points.map((p) => thisPlane.distanceToPoint(p.p3())));
         const thisIsPlanar = ts3dutils.eq0(maxDistanceToPlane);
         if (thisIsPlanar && !thisPlane.containsLine(l)) {
             const [t] = l.isTsWithPlane(thisPlane);
@@ -4082,7 +4084,7 @@ class Surface extends ts3dutils.Transformable {
         return ts3dutils.callsce.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters());
     }
     /**
-     * Return points which would touch AABB. Doesnt include borders due to paramtetric bounds, for example.
+     * Return points which would touch AABB. Doesnt include borders due to parametric bounds, for example.
      */
     getExtremePoints() {
         return [];
@@ -4133,11 +4135,6 @@ class Surface extends ts3dutils.Transformable {
     PointVsFace[PointVsFace["OUTSIDE"] = 1] = "OUTSIDE";
     PointVsFace[PointVsFace["ON_EDGE"] = 2] = "ON_EDGE";
 })(exports.PointVsFace || (exports.PointVsFace = {}));
-class ImplicitSurface extends Surface {
-    static is(obj) {
-        return obj.implicitFunction && obj.didp;
-    }
-}
 
 class ParametricSurface extends __.Surface {
     constructor(uMin, uMax, vMin, vMax) {
@@ -4668,8 +4665,6 @@ ConicSurface.UNIT = new ConicSurface(ts3dutils.V3.O, ts3dutils.V3.X, ts3dutils.V
 ConicSurface.prototype.uStep = PI / 16;
 ConicSurface.prototype.vStep = 256;
 
-// }
-// [].bar()
 /**
  * Surface normal1 is (t, z) => this.baseCurve.tangentAt(t) X this.dir
  * Choose dir appropriately to select surface orientation.
@@ -4701,7 +4696,7 @@ class ProjectedCurveSurface extends ParametricSurface {
                 this.baseCurve.equals(obj.baseCurve)));
     }
     hashCode() {
-        return [this.dir, this.baseCurve].hashCode();
+        return ts3dutils.arrayHashCode([this.dir, this.baseCurve]);
     }
     containsLine(line) {
         return this.dir.isParallelTo(line.dir1) && this.containsPoint(line.anchor);
@@ -4841,14 +4836,14 @@ class ProjectedCurveSurface extends ParametricSurface {
         const vp = m4.vanishingPoint(this.dir);
         if (!vp) {
             const f = m4.isMirroring() ? -1 : 1;
-            return new this.constructor(this.baseCurve.transform4(m4), m4.normalized().transformVector(this.dir).times(f), undefined, undefined, 1 == f ? this.tMin : -this.tMax, 1 == f ? this.tMax : -this.tMin);
+            return new this.constructor(this.baseCurve.transform4(m4), m4.normalized().transformVector(this.dir).times(f), undefined, undefined, 1 == f ? this.vMin : -this.vMax, 1 == f ? this.vMax : -this.vMin);
         }
         const curveT = this.baseCurve.transform4(m4);
         if (curveT instanceof EllipseCurve) {
             console.log(vp.sce, curveT.sce);
-            return ConicSurface.atApexThroughEllipse(vp, m4.isMirroring() ? curveT : curveT.reversed(), this.sMin, this.sMax, 1, 2);
+            return ConicSurface.atApexThroughEllipse(vp, m4.isMirroring() ? curveT : curveT.reversed(), this.uMin, this.uMax, 1, 2);
         }
-        return new PointProjectedSurface(curveT, vp, P3.throughPoints(curveT.at(curveT.tMin), curveT.at((curveT.tMin + curveT.tMax) / 2), curveT.at(curveT.tMax)), 1, this.sMin, this.sMax, 1, 2);
+        return new PointProjectedSurface(curveT, vp, P3.throughPoints(curveT.at(curveT.tMin), curveT.at((curveT.tMin + curveT.tMax) / 2), curveT.at(curveT.tMax)), 1, this.uMin, this.uMax, 1, 2);
     }
     isTsForLine(line) {
         ts3dutils.assertInst(L3, line);
@@ -5048,9 +5043,7 @@ class RotatedCurveSurface extends __.ParametricSurface {
         if (curve.constructor == this.curve.constructor) {
             const curveLC = curve.transform(this.matrixInverse);
             // find a point on curveLC which isn't on the Z-axis
-            const t = [0, 0.5, 1]
-                .map((x) => ts3dutils.lerp(curveLC.tMin, curveLC.tMax, x))
-                .withMax((t) => curveLC.at(t).lengthXY());
+            const t = ts3dutils.withMax([0, 0.5, 1].map((x) => ts3dutils.lerp(curveLC.tMin, curveLC.tMax, x)), (t) => curveLC.at(t).lengthXY());
             const angle = curveLC.at(t).angleXY();
             const curveLCRotated = curveLC.rotateZ(-angle);
             if (this.curve.isColinearTo(curveLCRotated)) {
@@ -5073,7 +5066,7 @@ class RotatedCurveSurface extends __.ParametricSurface {
     asNURBSSurface() {
         // y = 0 for baseNURBS
         const baseNURBS = __.NURBS.fromEllipse(this.curve);
-        const rotationNURBS = __.NURBS.UnitCircle(2, this.tMin, this.tMax);
+        const rotationNURBS = __.NURBS.UnitCircle(2, this.vMin, this.vMax);
         return new __.NURBSSurface(rotationNURBS.points.flatMap((rv) => baseNURBS.points.map((b) => this.matrix.timesVector(ts3dutils.VV(rv.x * b.x, rv.y * b.x, b.z * rv.w, rv.w * b.w)))), baseNURBS.knots, rotationNURBS.knots, baseNURBS.degree, rotationNURBS.degree, baseNURBS.tMin, baseNURBS.tMax, rotationNURBS.tMin, rotationNURBS.tMax);
     }
 }
@@ -5083,7 +5076,8 @@ function getExtremePointsHelper(curve) {
     const f1 = this.matrix.X;
     const f2 = this.matrix.Y;
     return [0, 1, 2].flatMap((dim) => {
-        const a = f2.e(dim), b = -f1.e(dim);
+        const a = f2.e(dim);
+        const b = -f1.e(dim);
         const xiEtas = ts3dutils.eq0(a) && ts3dutils.eq0(b) ? [[1, 0]] : __.intersectionUnitCircleLine2(a, b, 0);
         return xiEtas.flatMap(([xi, eta]) => {
             const u = Math.atan2(eta, xi);
@@ -5278,8 +5272,7 @@ class EllipsoidSurface extends __.ParametricSurface {
         this.pWCNormalWCMatrix = this.pLCNormalWCMatrix.times(this.matrixInverse);
     }
     static unitArea(contour) {
-        const totalArea = contour
-            .map((edge) => {
+        const totalArea = ts3dutils.sum(contour.map((edge) => {
             if (edge.curve instanceof __.PICurve) {
                 const points = edge.curve.calcSegmentPoints(edge.aT, edge.bT, edge.a, edge.b, edge.aT > edge.bT, true);
                 let sum = 0;
@@ -5303,8 +5296,7 @@ class EllipsoidSurface extends __.ParametricSurface {
             else {
                 throw new Error();
             }
-        })
-            .sum();
+        }));
         return totalArea;
     }
     /**
@@ -5426,8 +5418,7 @@ class EllipsoidSurface extends __.ParametricSurface {
         const matrix = ts3dutils.M4.forSys(a, b, c), matrixInverse = matrix.inversed();
         const circleRadius = a.length();
         const c1 = c.unit();
-        const totalArea = edges
-            .map((edge) => {
+        const totalArea = ts3dutils.sum(edges.map((edge) => {
             if (edge.curve instanceof __.EllipseCurve) {
                 const f = (t) => {
                     const at = edge.curve.at(t), tangent = edge.tangentAt(t);
@@ -5443,8 +5434,7 @@ class EllipsoidSurface extends __.ParametricSurface {
             else {
                 throw new Error();
             }
-        })
-            .sum();
+        }));
         return totalArea;
     }
     getConstructorParameters() {
@@ -6293,6 +6283,13 @@ class NURBSSurface extends __.ParametricSurface {
             return this.points[i - u + (pointCountU - u - 1)];
         }), this.knotsU.map((x) => -x).reverse(), this.knotsV, this.degreeU, this.degreeV, -this.uMax, -this.uMin, this.vMin, this.vMax);
     }
+    isCoplanarTo(surface) {
+        return false;
+    }
+    isTsForLine(line) {
+        // intersect line with
+        throw new Error("not implemented");
+    }
 }
 NURBSSurface.prototype.uStep = 1 / 8;
 NURBSSurface.prototype.vStep = 1 / 8;
@@ -6334,8 +6331,7 @@ const ZDirVolumeVisitor = {
         const dpdu = this.dpdu();
         const dpdv = this.dpdv();
         // INT[edge.at; edge.bT] (at(t) DOT dir) * (at(t) - at(t).projectedOn(dir) / 2).z dt
-        const totalVolume = edges
-            .map((edgeWC) => {
+        const totalVolume = ts3dutils.sum(edges.map((edgeWC) => {
             const curveWC = edgeWC.curve;
             if (curveWC instanceof EllipseCurve ||
                 curveWC instanceof HyperbolaCurve ||
@@ -6372,8 +6368,7 @@ const ZDirVolumeVisitor = {
             else {
                 throw new Error();
             }
-        })
-            .sum();
+        }));
         const centroidZX2Parts = edges.map((edgeWC) => {
             const curveWC = edgeWC.curve;
             if (curveWC instanceof EllipseCurve ||
@@ -6600,8 +6595,7 @@ const ZDirVolumeVisitor = {
     [RotatedCurveSurface.name](edges) {
         const dpdu = this.dpdu();
         const dpdv = this.dpdv();
-        const totalVolume = edges
-            .map((edgeWC) => {
+        const totalVolume = ts3dutils.sum(edges.map((edgeWC) => {
             const curveWC = edgeWC.curve;
             const f = (curveT) => {
                 const pWC = curveWC.at(curveT), tangentWC = curveWC.tangentAt(curveT);
@@ -6678,8 +6672,7 @@ const ZDirVolumeVisitor = {
                 return result;
             };
             return ts3dutils.gaussLegendreQuadrature24(f, edgeWC.aT, edgeWC.bT);
-        })
-            .sum();
+        }));
         // calc centroid:
         const centroidZX2Parts = edges.map((edgeWC) => {
             const f = (curveT) => {
@@ -6741,8 +6734,7 @@ const CalculateAreaVisitor = {
         const dpdu = this.dpdu();
         const dpdv = this.dpdv();
         // calculation cannot be done in local coordinate system, as the area doesnt scale proportionally
-        const totalArea = edges
-            .map((edge) => {
+        const totalArea = ts3dutils.sum(edges.map((edge) => {
             if (edge.curve instanceof EllipseCurve ||
                 edge.curve instanceof HyperbolaCurve ||
                 edge.curve instanceof ParabolaCurve) {
@@ -6772,8 +6764,7 @@ const CalculateAreaVisitor = {
             else {
                 throw new Error();
             }
-        })
-            .sum();
+        }));
         return totalArea * this.normalDir;
     },
     [PlaneSurface.name](edges) {
@@ -6867,13 +6858,12 @@ const CalculateAreaVisitor = {
                 }
             }
         });
-        return areaParts.sum();
+        return ts3dutils.sum(areaParts);
     },
     [ProjectedCurveSurface.name](edges) {
         // calculation cannot be done in local coordinate system, as the area doesn't scale proportionally
         const thisDir1 = this.dir.unit();
-        const totalArea = edges
-            .map((edge) => {
+        const totalArea = ts3dutils.sum(edges.map((edge) => {
             if (edge.curve instanceof L3) {
                 return 0;
             }
@@ -6911,8 +6901,7 @@ const CalculateAreaVisitor = {
                 ts3dutils.assert(0 !== sign);
                 return val * sign;
             }
-        })
-            .sum();
+        }));
         console.log("totalArea", totalArea);
         return totalArea;
     },
@@ -7412,7 +7401,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             if (c.type == "M") {
                 subpaths.push([]);
             }
-            subpaths.last.push(c);
+            ts3dutils.getLast(subpaths).push(c);
         });
         const loops = subpaths.map((sp) => {
             const path = new opentype.Path();
@@ -7480,7 +7469,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             ? ts3dutils.arrayFromFunction(countO, (i) => ((i + 1) / countO) * totalRadsOrAngles)
             : totalRadsOrAngles;
         const count = angles.length;
-        const open = !ts3dutils.eq(ts3dutils.TAU, angles.last);
+        const open = !ts3dutils.eq(ts3dutils.TAU, ts3dutils.getLast(angles));
         const ribs = [
             edges,
             ...angles.map((phi) => {
@@ -9277,7 +9266,7 @@ class Face extends ts3dutils.Transformable {
         const containedIntersectionsTs = this.surface
             .isTsForLine(line)
             .filter((t) => this.containsPoint(line.at(t)));
-        const nearestPointT = containedIntersectionsTs.withMax((t) => -t);
+        const nearestPointT = ts3dutils.min(containedIntersectionsTs);
         return undefined != nearestPointT ? nearestPointT : NaN;
     }
     toMesh() {
@@ -9716,7 +9705,7 @@ class RotationFace extends Face {
                     const outAngle = Math.atan2(aDirLC.y, aDirLC.x);
                     const stLast = verticesUV.pop();
                     verticesUV.push(new ts3dutils.V3(inAngle, stLast.y, 0), new ts3dutils.V3(outAngle, stLast.y, 0));
-                    vertices.push(vertices.last);
+                    vertices.push(ts3dutils.getLast(vertices));
                 }
                 verticesUV.forEach(({ u, v }) => {
                     ts3dutils.assert(isFinite(u));
@@ -9746,7 +9735,7 @@ class RotationFace extends Face {
         const surface = this.surface;
         const vertices = ts3dutils.concatenated(vertexLoops);
         // this.unrollLoop(loop).map(v => new V3(v.x / uStep, v.y / vStep, 0)))
-        const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(arr.last + loop.length), arr), [0]);
+        const loopStarts = vertexLoops.reduce((arr, loop) => (arr.push(ts3dutils.getLast(arr) + loop.length), arr), [0]);
         const uvPFunc = surface.uvPFunc();
         const verticesUV = vertices.map((v) => uvPFunc(v));
         const uvN = surface.normalUVFunc();
@@ -9985,7 +9974,7 @@ class RotationFace extends Face {
                             let currentPart = startPart;
                             do {
                                 outline.push(...currentPart);
-                                const currentPartEndOpos = opos(currentPart.last);
+                                const currentPartEndOpos = opos(ts3dutils.getLast(currentPart));
                                 const nextPartIndex = ts3dutils.indexWithMax(parts, (part) => -ts3dutils.mod(opos(part[0]) - currentPartEndOpos, 4));
                                 const nextPart = ts3dutils.bagRemoveIndex(parts, nextPartIndex);
                                 let currentOpos = currentPartEndOpos;
@@ -10560,10 +10549,7 @@ class BRep extends ts3dutils.Transformable {
             const usableOldEdges = face
                 .getAllEdges()
                 .filter((edge) => !edgeSubEdges.get(edge));
-            const subEdges = face
-                .getAllEdges()
-                .mapFilter((edge) => edgeSubEdges.get(edge))
-                .concatenated();
+            const subEdges = ts3dutils.concatenated(ts3dutils.mapFilter(face.getAllEdges(), (edge) => edgeSubEdges.get(edge)));
             const newEdges = faceMap.get(face) || [];
             if (newEdges.length || subEdges.length) {
                 oldFaceStatuses.set(face, "partial");
@@ -10675,7 +10661,7 @@ class BRep extends ts3dutils.Transformable {
                 face.intersectFace(face2, this, brep2, faceMap, thisEdgePoints, otherEdgePoints, checkedPairs);
             });
         });
-        return Array.from(faceMap.values()).concatenated();
+        return ts3dutils.concatenated(Array.from(faceMap.values()));
     }
     shellCount() {
         const foundFaces = new Set();
@@ -11444,7 +11430,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, validUV, endP, 
             if (p.distanceTo(startP) > abs(stepLength)) {
                 points.pop();
                 tangents.pop();
-                ts3dutils.assert(points.last.distanceTo(startP) <= abs(stepLength));
+                ts3dutils.assert(ts3dutils.getLast(points).distanceTo(startP) <= abs(stepLength));
                 break;
             }
         }
@@ -11458,7 +11444,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, validUV, endP, 
             const endP = figureOutBorderPoint(bounds, p, ic);
             points.pop();
             tangents.pop();
-            if (points.last.distanceTo(endP) < abs(stepLength) / 2) {
+            if (ts3dutils.getLast(points).distanceTo(endP) < abs(stepLength) / 2) {
                 points.pop();
                 tangents.pop();
             }
@@ -11836,7 +11822,7 @@ class ClassSerializer {
                         }
                     }
                     Object.defineProperty(result, "loadID", {
-                        value: getGlobalId(),
+                        value: _.getGlobalId(),
                         enumerable: false,
                         writable: false,
                     });
@@ -12672,6 +12658,12 @@ class Quaternion {
     }
 }
 Quaternion.O = new Quaternion(1, 0, 0, 0);
+
+class ImplicitSurface extends __.Surface {
+    static is(obj) {
+        return obj.implicitFunction && obj.didp;
+    }
+}
 
 exports.AABB2 = AABB2;
 exports.ALONG_EDGE_OR_PLANE = ALONG_EDGE_OR_PLANE;

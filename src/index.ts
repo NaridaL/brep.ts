@@ -40,3 +40,4 @@ export * from "./ClassSerializer"
 export * from "./BREPGLContext"
 
 export * from "./Quaternion"
+export { ImplicitSurface } from "./surface/ImplicitSurface"

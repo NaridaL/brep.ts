@@ -187,6 +187,8 @@ export class PPCurve extends ImplicitCurve {
   ): ISInfo[] {
     return surfaceIsICurveIsInfosWithLine.call(
       this,
+      this.parametricSurface1,
+      this.parametricSurface2,
       anchorWC,
       dirWC,
       tMin,

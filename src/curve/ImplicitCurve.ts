@@ -17,7 +17,7 @@ import {
 } from "ts3dutils"
 import { MeshWith, pushQuad } from "tsgl"
 
-import { Curve, L3, PICurve, Surface } from "../index"
+import { Curve, ISInfo, L3, PICurve, Surface } from "../index"
 import { ceil, floor, max, min } from "../math"
 
 export abstract class ImplicitCurve extends Curve {
@@ -187,7 +187,7 @@ export function surfaceIsICurveIsInfosWithLine(
   tMax?: number | undefined,
   lineMin?: number | undefined,
   lineMax?: number | undefined,
-) {
+): ISInfo[] {
   const line = new L3(anchorWC, dirWC.unit())
   const psTs = surface1.isTsForLine(line)
   const isTs = surface2.isTsForLine(line)
@@ -199,4 +199,5 @@ export function surfaceIsICurveIsInfosWithLine(
   }))
   const result = commonTInfos.filter((info) => this.containsPoint(info.p))
   result.forEach((info) => (info.tThis = this.pointT(info.p)))
+  return result
 }

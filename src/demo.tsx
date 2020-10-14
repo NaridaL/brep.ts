@@ -92,10 +92,10 @@ class Demo extends Component<DemoProps, DemoDesc> {
       <div {...props} style={{ width }} className={"democontainer"}>
         <div
           className="canvascontainer"
-          ref={(r) => (this.container = r)}
+          ref={(r) => (this.container = r!)}
           style={{ width: "100%", height }}
         >
-          <canvas style={{ height }} ref={(r) => (demo.canvas = r)} />
+          <canvas style={{ height }} ref={(r) => (demo.canvas = r!)} />
           {this.props.args.map((arg) => (
             <span className="incont" key={arg.name}>
               <InputComponent
@@ -119,7 +119,7 @@ class Demo extends Component<DemoProps, DemoDesc> {
         </div>
         <code
           className={classnames("src", !demo.showingSource && "hide")}
-          ref={(r) => (this.sourceContainer = r)}
+          ref={(r) => (this.sourceContainer = r!)}
         >
           {this.props.f.toSource()}
         </code>
@@ -305,7 +305,7 @@ function paintDemo(demo: DemoDesc) {
     let faceIndex = b2.faces.length
     while (faceIndex--) {
       const face = b2.faces[faceIndex]
-      const faceTriangleIndexes = mesh.faceIndexes.get(face)
+      const faceTriangleIndexes = mesh.faceIndexes.get(face)!
       gl.shaders.lighting
         .uniforms({
           color:

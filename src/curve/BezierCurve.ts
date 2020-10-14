@@ -602,7 +602,7 @@ export class BezierCurve extends Curve {
     const startT = withMax(
       arrayFromFunction(STEPS, (i) => tMin + ((tMax - tMin) * i) / STEPS),
       (t) => -f(t),
-    )
+    )!
 
     return newtonIterate1d(f, startT, 8)
   }

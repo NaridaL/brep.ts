@@ -311,7 +311,7 @@ export class RotatedCurveSurface extends ParametricSurface {
     return getExtremePointsHelper.call(this, this.curve)
   }
 
-  asNURBSSurface() {
+  asNURBSSurface(): NURBSSurface {
     // y = 0 for baseNURBS
     const baseNURBS = NURBS.fromEllipse(this.curve as EllipseCurve)
     const rotationNURBS = NURBS.UnitCircle(2, this.vMin, this.vMax)
@@ -338,15 +338,15 @@ export class RotatedCurveSurface extends ParametricSurface {
 RotatedCurveSurface.prototype.uStep = EllipseCurve.prototype.tIncrement
 
 export function getExtremePointsHelper(
-  this: RotatedCurveSurface & { matrix: M4 },
+  this: ParametricSurface & { matrix: M4 },
   curve: Curve,
 ) {
   // this logic comes from EllipseCurve.roots
   const f1 = this.matrix.X
   const f2 = this.matrix.Y
   return [0, 1, 2].flatMap((dim) => {
-    const a = f2.e(dim),
-      b = -f1.e(dim)
+    const a = f2.e(dim)
+    const b = -f1.e(dim)
     const xiEtas =
       eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2(a, b, 0)
     return xiEtas.flatMap(([xi, eta]) => {

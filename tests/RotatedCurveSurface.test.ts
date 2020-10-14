@@ -23,6 +23,7 @@ import {
   RotatedCurveSurface,
   EllipseCurve,
   StraightEdge,
+  edgeForCurveAndTs,
 } from ".."
 import { cos, PI, sin } from "../src/math"
 

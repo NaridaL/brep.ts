@@ -281,7 +281,7 @@ export class NURBS extends Curve {
       tStart = withMax(
         arraySamples(tMin, tMax, STEPS),
         (t) => -this.at(t).distanceTo(p),
-      )
+      )!
     }
 
     const result = newtonIterateWithDerivative2(
@@ -885,8 +885,8 @@ export class NURBS extends Curve {
         ;[distanceAtT, distanceDtAtT] = undefined === t ? [] : f(t)
         if (
           undefined !== t &&
-          eq0(distanceAtT) &&
-          !result.some((r) => eq(r, t))
+          eq0(distanceAtT!) &&
+          !result.some((r) => eq(r, t!))
         ) {
           result.push(t)
         }

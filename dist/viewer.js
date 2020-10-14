@@ -3333,16 +3333,12 @@ var viewer = (function (exports) {
      */
     class JavaMap {
         constructor() {
-            this[Symbol.toStringTag] = "Map";
+            this[Symbol.toStringTag] = 'Map';
             this._map = new Map();
             this._size = 0;
         }
         toString() {
-            return ("{" +
-                Array.from(this.entries2())
-                    .map(({ key, value }) => key + ":" + value)
-                    .join(", ") +
-                "}");
+            return '{' + Array.from(this.entries2()).map(({ key, value }) => key + ':' + value).join(', ') + '}';
         }
         forEach(callbackfn, thisArg) {
             for (const bucket of this._map.values()) {
@@ -3380,7 +3376,7 @@ var viewer = (function (exports) {
             const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
             //assert(hashCode === (hashCode | 0))
             if (bucket) {
-                const pairIndex = bucket.findIndex((pair) => pair.key.equals(key));
+                const pairIndex = bucket.findIndex(pair => pair.key.equals(key));
                 if (-1 == pairIndex) {
                     bucket.push({ key: key, value: val });
                 }
@@ -3398,16 +3394,16 @@ var viewer = (function (exports) {
         has(key) {
             const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
             //assert(hashCode === (hashCode | 0))
-            return undefined !== bucket && bucket.some((pair) => pair.key.equals(key));
+            return undefined !== bucket && bucket.some(pair => pair.key.equals(key));
         }
         get(key) {
-            const hashCode = key.hashCode(), bucket = this._map.get(hashCode), pair = bucket && bucket.find((pair) => pair.key.equals(key));
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode), pair = bucket && bucket.find(pair => pair.key.equals(key));
             return pair && pair.value;
         }
         getLike(key) {
             for (const hashCode of key.hashCodes()) {
                 const bucket = this._map.get(hashCode);
-                const canonVal = bucket && bucket.find((x) => x.key.like(key));
+                const canonVal = bucket && bucket.find(x => x.key.like(key));
                 if (canonVal)
                     return canonVal;
             }
@@ -3415,10 +3411,10 @@ var viewer = (function (exports) {
         setLike(key, val) {
             return !this.getLike(key) && this.set(key, val);
         }
-        delete(key) {
+        'delete'(key) {
             const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
             if (bucket) {
-                const index = bucket.findIndex((x) => x.key.equals(key));
+                const index = bucket.findIndex(x => x.key.equals(key));
                 if (-1 != index) {
                     if (1 == bucket.length) {
                         this._map.delete(hashCode);
@@ -3436,7 +3432,7 @@ var viewer = (function (exports) {
             for (const hashCode of key.hashCodes()) {
                 const bucket = this._map.get(hashCode);
                 if (bucket) {
-                    const index = bucket.findIndex((x) => x.key.like(key));
+                    const index = bucket.findIndex(x => x.key.like(key));
                     if (-1 != index) {
                         const deleted = bucket[index];
                         if (1 == bucket.length) {
@@ -3469,167 +3465,6 @@ var viewer = (function (exports) {
         }
         get size() {
             return this._size;
-        }
-    }
-
-    class JavaSet {
-        constructor(iterable) {
-            this[Symbol.toStringTag] = "Set";
-            this[Symbol.iterator] = JavaSet.prototype.values;
-            this.keys = JavaSet.prototype.values;
-            this._map = new Map();
-            this._size = 0;
-            if (iterable) {
-                this.addAll(iterable);
-            }
-        }
-        forEach(callbackfn, thisArg) {
-            for (const [value] of this.entries()) {
-                callbackfn.call(thisArg, value, value, this);
-            }
-        }
-        add(val) {
-            this.add2(val);
-            return this;
-        }
-        add2(val) {
-            // you can't use this.canonicalize here, as there is no way to differentiate if val
-            // is new or if val was === the exisitng value (not only .equals)
-            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
-            if (bucket) {
-                if (bucket.some((x) => x.equals(val))) {
-                    return false;
-                }
-                bucket.push(val);
-            }
-            else {
-                this._map.set(hashCode, [val]);
-            }
-            this._size++;
-            return true;
-        }
-        addAll(iterable) {
-            for (const val of iterable) {
-                this.add(val);
-            }
-            return this;
-        }
-        canonicalize(val) {
-            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
-            if (bucket) {
-                const existing = bucket.find((x) => x.equals(val));
-                if (existing) {
-                    return existing;
-                }
-                bucket.push(val);
-            }
-            else {
-                this._map.set(hashCode, [val]);
-            }
-            this._size++;
-            return val;
-        }
-        has(val) {
-            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
-            return undefined !== bucket && bucket.some((x) => x.equals(val));
-        }
-        getLike(val) {
-            for (const hashCode of val.hashCodes()) {
-                const bucket = this._map.get(hashCode);
-                const canonVal = bucket && bucket.find((x) => x.like(val));
-                if (canonVal)
-                    return canonVal;
-            }
-        }
-        canonicalizeLike(val) {
-            // if this.getLike(val) is defined, return it, otherwise add val and return val
-            return this.getLike(val) || this.canonicalize(val);
-        }
-        addLike(val) {
-            return !this.getLike(val) && this.add(val);
-        }
-        delete(val) {
-            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
-            if (bucket) {
-                const index = bucket.findIndex((x) => x.equals(val));
-                if (-1 != index) {
-                    if (1 == bucket.length) {
-                        this._map.delete(hashCode);
-                    }
-                    else {
-                        bucket.splice(index, 1);
-                    }
-                    this._size--;
-                    return true;
-                }
-            }
-            return false;
-        }
-        deleteLike(val) {
-            for (const hashCode of val.hashCodes()) {
-                const bucket = this._map.get(hashCode);
-                if (bucket) {
-                    const index = bucket.findIndex((x) => x.like(val));
-                    if (-1 != index) {
-                        const deleted = bucket[index];
-                        if (1 == bucket.length) {
-                            this._map.delete(hashCode);
-                        }
-                        else {
-                            bucket.splice(index, 1);
-                        }
-                        this._size--;
-                        return deleted;
-                    }
-                }
-            }
-        }
-        *values() {
-            for (const bucket of this._map.values()) {
-                yield* bucket;
-            }
-        }
-        *entries() {
-            for (const bucket of this._map.values()) {
-                for (const value of bucket) {
-                    yield [value, value];
-                }
-            }
-        }
-        clear() {
-            this._map.clear();
-            this._size = 0;
-        }
-        get size() {
-            return this._size;
-        }
-        toString() {
-            return "{" + Array.from(this.values()).join(", ") + "}";
-        }
-    }
-    class Pair {
-        constructor(left, right) {
-            this.left = left;
-            this.right = right;
-        }
-        hashCode() {
-            return this.left.hashCode() * 31 + this.right.hashCode();
-        }
-        equals(other) {
-            return (this == other ||
-                (Object.getPrototypeOf(other) == Pair.prototype &&
-                    this.left.equals(other.left) &&
-                    this.right.equals(other.right)));
-        }
-        toString() {
-            return "(" + this.left.toString() + ", " + this.right.toString() + ")";
-        }
-        toSource() {
-            return ("new Pair(" +
-                this.left.toSource() +
-                ", " +
-                this.right.toSource() +
-                ")");
         }
     }
 
@@ -4270,7 +4105,7 @@ var viewer = (function (exports) {
         return true;
     }
     function equals(a, b) {
-        return 'object' === typeof a ? a.equals(b) : a === b;
+        return Array.isArray(a) ? arrayEquals(a, b) : 'object' === typeof a ? a.equals(b) : a === b;
     }
     /**
      * arr.map(f).filter((x) => x)
@@ -14097,6 +13932,7 @@ var viewer = (function (exports) {
         }));
         const result = commonTInfos.filter((info) => this.containsPoint(info.p));
         result.forEach((info) => (info.tThis = this.pointT(info.p)));
+        return result;
     }
 
     /**
@@ -15368,7 +15204,7 @@ var viewer = (function (exports) {
             return [allTs, allTs, allTs];
         }
         isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
-            return surfaceIsICurveIsInfosWithLine.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
+            return surfaceIsICurveIsInfosWithLine.call(this, this.implicitSurface, this.parametricSurface, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
         }
         toSource(rounder = (x) => x) {
             const result = callsce("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], getLast(this.pmPoints), this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
@@ -15471,7 +15307,7 @@ var viewer = (function (exports) {
             return new PPCurve(points, tangents, ps1, ps2, st1s, undefined, stepSize, 1);
         }
         isInfosWithLine(anchorWC, dirWC, tMin, tMax, lineMin, lineMax) {
-            return surfaceIsICurveIsInfosWithLine.call(this, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
+            return surfaceIsICurveIsInfosWithLine.call(this, this.parametricSurface1, this.parametricSurface2, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
         }
         isTsWithSurface(surface) {
             if (ImplicitSurface.is(surface)) {
@@ -16014,7 +15850,8 @@ var viewer = (function (exports) {
             // solve for each dimension separately
             // tangent(eta, xi) = f2 eta - f1 xi
             return arrayFromFunction(3, (dim) => {
-                const a = this.f2.e(dim), b = -this.f1.e(dim);
+                const a = this.f2.e(dim);
+                const b = -this.f1.e(dim);
                 return intersectionUnitCircleLine2(a, b, 0)
                     .map(([xi, eta]) => Math.atan2(eta, xi))
                     .filter((t) => this.isValidT(t));
@@ -17223,7 +17060,7 @@ var viewer = (function (exports) {
             return callsce.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters());
         }
         /**
-         * Return points which would touch AABB. Doesnt include borders due to paramtetric bounds, for example.
+         * Return points which would touch AABB. Doesnt include borders due to parametric bounds, for example.
          */
         getExtremePoints() {
             return [];
@@ -17275,11 +17112,6 @@ var viewer = (function (exports) {
         PointVsFace[PointVsFace["OUTSIDE"] = 1] = "OUTSIDE";
         PointVsFace[PointVsFace["ON_EDGE"] = 2] = "ON_EDGE";
     })(PointVsFace || (PointVsFace = {}));
-    class ImplicitSurface extends Surface {
-        static is(obj) {
-            return obj.implicitFunction && obj.didp;
-        }
-    }
 
     class ParametricSurface extends Surface {
         constructor(uMin, uMax, vMin, vMax) {
@@ -18221,7 +18053,8 @@ var viewer = (function (exports) {
         const f1 = this.matrix.X;
         const f2 = this.matrix.Y;
         return [0, 1, 2].flatMap((dim) => {
-            const a = f2.e(dim), b = -f1.e(dim);
+            const a = f2.e(dim);
+            const b = -f1.e(dim);
             const xiEtas = eq0(a) && eq0(b) ? [[1, 0]] : intersectionUnitCircleLine2(a, b, 0);
             return xiEtas.flatMap(([xi, eta]) => {
                 const u = Math.atan2(eta, xi);
@@ -19424,6 +19257,13 @@ var viewer = (function (exports) {
                 const u = i % pointCountU;
                 return this.points[i - u + (pointCountU - u - 1)];
             }), this.knotsU.map((x) => -x).reverse(), this.knotsV, this.degreeU, this.degreeV, -this.uMax, -this.uMin, this.vMin, this.vMax);
+        }
+        isCoplanarTo(surface) {
+            return false;
+        }
+        isTsForLine(line) {
+            // intersect line with
+            throw new Error("not implemented");
         }
     }
     NURBSSurface.prototype.uStep = 1 / 8;
@@ -35863,6 +35703,300 @@ var viewer = (function (exports) {
         }
     }
 
+    /**
+     * Java style map.
+     */
+    class JavaMap$1 {
+        constructor() {
+            this[Symbol.toStringTag] = 'Map';
+            this._map = new Map();
+            this._size = 0;
+        }
+        toString() {
+            return '{' + Array.from(this.entries2()).map(({ key, value }) => key + ':' + value).join(', ') + '}';
+        }
+        forEach(callbackfn, thisArg) {
+            for (const bucket of this._map.values()) {
+                for (const { key, value } of bucket) {
+                    callbackfn.call(thisArg, value, key, this);
+                }
+            }
+        }
+        *keys() {
+            for (const bucket of this._map.values()) {
+                for (const { key } of bucket) {
+                    yield key;
+                }
+            }
+        }
+        *values() {
+            for (const bucket of this._map.values()) {
+                for (const { value } of bucket) {
+                    yield value;
+                }
+            }
+        }
+        [Symbol.iterator]() {
+            return this.entries();
+        }
+        set(key, value) {
+            this.set2(key, value);
+            return this;
+        }
+        /**
+         * Like {@link #set} except it returns true if key was new and false if the value was only updated.
+         *
+         */
+        set2(key, val) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+            //assert(hashCode === (hashCode | 0))
+            if (bucket) {
+                const pairIndex = bucket.findIndex(pair => pair.key.equals(key));
+                if (-1 == pairIndex) {
+                    bucket.push({ key: key, value: val });
+                }
+                else {
+                    bucket[pairIndex].value = val;
+                    return false;
+                }
+            }
+            else {
+                this._map.set(hashCode, [{ key: key, value: val }]);
+            }
+            this._size++;
+            return true;
+        }
+        has(key) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+            //assert(hashCode === (hashCode | 0))
+            return undefined !== bucket && bucket.some(pair => pair.key.equals(key));
+        }
+        get(key) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode), pair = bucket && bucket.find(pair => pair.key.equals(key));
+            return pair && pair.value;
+        }
+        getLike(key) {
+            for (const hashCode of key.hashCodes()) {
+                const bucket = this._map.get(hashCode);
+                const canonVal = bucket && bucket.find(x => x.key.like(key));
+                if (canonVal)
+                    return canonVal;
+            }
+        }
+        setLike(key, val) {
+            return !this.getLike(key) && this.set(key, val);
+        }
+        'delete'(key) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+            if (bucket) {
+                const index = bucket.findIndex(x => x.key.equals(key));
+                if (-1 != index) {
+                    if (1 == bucket.length) {
+                        this._map.delete(hashCode);
+                    }
+                    else {
+                        bucket.splice(index, 1);
+                    }
+                    this._size--;
+                    return true;
+                }
+            }
+            return false;
+        }
+        deleteLike(key) {
+            for (const hashCode of key.hashCodes()) {
+                const bucket = this._map.get(hashCode);
+                if (bucket) {
+                    const index = bucket.findIndex(x => x.key.like(key));
+                    if (-1 != index) {
+                        const deleted = bucket[index];
+                        if (1 == bucket.length) {
+                            this._map.delete(hashCode);
+                        }
+                        else {
+                            bucket.splice(index, 1);
+                        }
+                        this._size--;
+                        return deleted;
+                    }
+                }
+            }
+        }
+        *entries2() {
+            for (const bucket of this._map.values()) {
+                yield* bucket;
+            }
+        }
+        *entries() {
+            for (const bucket of this._map.values()) {
+                for (const { key, value } of bucket) {
+                    yield [key, value];
+                }
+            }
+        }
+        clear() {
+            this._map.clear();
+            this._size = 0;
+        }
+        get size() {
+            return this._size;
+        }
+    }
+
+    class JavaSet {
+        constructor(iterable) {
+            this[Symbol.toStringTag] = 'Set';
+            this[Symbol.iterator] = JavaSet.prototype.values;
+            this.keys = JavaSet.prototype.values;
+            this._map = new Map();
+            this._size = 0;
+            if (iterable) {
+                this.addAll(iterable);
+            }
+        }
+        forEach(callbackfn, thisArg) {
+            for (const value of this.entries()) {
+                callbackfn.call(thisArg, value, value, this);
+            }
+        }
+        add(val) {
+            this.add2(val);
+            return this;
+        }
+        add2(val) {
+            // you can't use this.canonicalize here, as there is no way to differentiate if val
+            // is new or if val was === the exisitng value (not only .equals)
+            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+            if (bucket) {
+                if (bucket.some(x => x.equals(val))) {
+                    return false;
+                }
+                bucket.push(val);
+            }
+            else {
+                this._map.set(hashCode, [val]);
+            }
+            this._size++;
+            return true;
+        }
+        addAll(iterable) {
+            for (const val of iterable) {
+                this.add(val);
+            }
+            return this;
+        }
+        canonicalize(val) {
+            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+            if (bucket) {
+                const existing = bucket.find(x => x.equals(val));
+                if (existing) {
+                    return existing;
+                }
+                bucket.push(val);
+            }
+            else {
+                this._map.set(hashCode, [val]);
+            }
+            this._size++;
+            return val;
+        }
+        has(val) {
+            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+            return undefined !== bucket && bucket.some(x => x.equals(val));
+        }
+        getLike(val) {
+            for (const hashCode of val.hashCodes()) {
+                const bucket = this._map.get(hashCode);
+                const canonVal = bucket && bucket.find(x => x.like(val));
+                if (canonVal)
+                    return canonVal;
+            }
+        }
+        canonicalizeLike(val) {
+            // if this.getLike(val) is defined, return it, otherwise add val and return val
+            return this.getLike(val) || this.canonicalize(val);
+        }
+        addLike(val) {
+            return !this.getLike(val) && this.add(val);
+        }
+        'delete'(val) {
+            const hashCode = val.hashCode(), bucket = this._map.get(hashCode);
+            if (bucket) {
+                const index = bucket.findIndex(x => x.equals(val));
+                if (-1 != index) {
+                    if (1 == bucket.length) {
+                        this._map.delete(hashCode);
+                    }
+                    else {
+                        bucket.splice(index, 1);
+                    }
+                    this._size--;
+                    return true;
+                }
+            }
+            return false;
+        }
+        deleteLike(val) {
+            for (const hashCode of val.hashCodes()) {
+                const bucket = this._map.get(hashCode);
+                if (bucket) {
+                    const index = bucket.findIndex(x => x.like(val));
+                    if (-1 != index) {
+                        const deleted = bucket[index];
+                        if (1 == bucket.length) {
+                            this._map.delete(hashCode);
+                        }
+                        else {
+                            bucket.splice(index, 1);
+                        }
+                        this._size--;
+                        return deleted;
+                    }
+                }
+            }
+        }
+        *values() {
+            for (const bucket of this._map.values()) {
+                yield* bucket;
+            }
+        }
+        *entries() {
+            for (const bucket of this._map.values()) {
+                for (const value of bucket) {
+                    yield [value, value];
+                }
+            }
+        }
+        clear() {
+            this._map.clear();
+            this._size = 0;
+        }
+        get size() {
+            return this._size;
+        }
+        toString() {
+            return '{' + Array.from(this.values()).join(', ') + '}';
+        }
+    }
+    class Pair {
+        constructor(left, right) {
+            this.left = left;
+            this.right = right;
+        }
+        hashCode() {
+            return this.left.hashCode() * 31 + this.right.hashCode();
+        }
+        equals(other) {
+            return this == other || Object.getPrototypeOf(other) == Pair.prototype && this.left.equals(other.left) && this.right.equals(other.right);
+        }
+        toString() {
+            return '(' + this.left.toString() + ', ' + this.right.toString() + ')';
+        }
+        toSource() {
+            return 'new Pair(' + this.left.toSource() + ', ' + this.right.toSource() + ')';
+        }
+    }
+
     class Face extends Transformable {
         constructor(surface, contour, holes = [], name, info) {
             super();
@@ -50523,7 +50657,7 @@ var viewer = (function (exports) {
             newFaces.push(...oldFaces.filter((face) => oldFaceStatuses.get(face) == "inside"));
         }
         static getLooseEdgeSegments(edgePointInfoss, edgeFaces) {
-            const result = new JavaMap();
+            const result = new JavaMap$1();
             // if there are no point info, the original edge will be kept, so we should return nothing
             // otherwise, something will be returned, even if it a new edge identical to the base edge
             for (const [canonEdge, pointInfos] of edgePointInfoss) {
@@ -50558,7 +50692,7 @@ var viewer = (function (exports) {
             return result;
         }
         getIntersectionEdges(brep2) {
-            const faceMap = new Map(), thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
+            const faceMap = new Map(), thisEdgePoints = new JavaMap$1(), otherEdgePoints = new JavaMap$1();
             const checkedPairs = new JavaSet();
             this.faces.forEach((face) => {
                 //console.log('face', face.toString())
@@ -50675,7 +50809,7 @@ var viewer = (function (exports) {
         buildAdjacencies() {
             if (this.edgeFaces)
                 return this;
-            this.edgeFaces = new JavaMap();
+            this.edgeFaces = new JavaMap$1();
             for (const face of this.faces) {
                 for (const edge of face.getAllEdges()) {
                     const canon = edge.getCanon();
@@ -50735,7 +50869,7 @@ var viewer = (function (exports) {
             this.buildAdjacencies();
             other.buildAdjacencies();
             const faceMap = new Map();
-            const thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
+            const thisEdgePoints = new JavaMap$1(), otherEdgePoints = new JavaMap$1();
             const checkedPairs = new JavaSet();
             for (const thisFace of this.faces) {
                 for (const otherFace of other.faces) {
@@ -52564,8 +52698,15 @@ var viewer = (function (exports) {
     }
     Quaternion.O = new Quaternion(1, 0, 0, 0);
 
+    class ImplicitSurface extends Surface {
+        static is(obj) {
+            return obj.implicitFunction && obj.didp;
+        }
+    }
+
     var brepts = /*#__PURE__*/Object.freeze({
         __proto__: null,
+        ImplicitSurface: ImplicitSurface,
         Curve: Curve,
         breakDownPPCurves: breakDownPPCurves,
         AABB2: AABB2,
@@ -52587,7 +52728,6 @@ var viewer = (function (exports) {
         P3: P3,
         Surface: Surface,
         get PointVsFace () { return PointVsFace; },
-        ImplicitSurface: ImplicitSurface,
         ParametricSurface: ParametricSurface,
         ConicSurface: ConicSurface,
         ProjectedCurveSurface: ProjectedCurveSurface,
@@ -52694,6 +52834,7 @@ var viewer = (function (exports) {
             this.b = undefined;
             this.c = undefined;
             this.d = undefined;
+            this.face = [];
             this.edges = [];
             this.wireframe = false;
             this.normallines = false;
@@ -52746,8 +52887,9 @@ var viewer = (function (exports) {
         // let gets: any = {a, b, c, d, mesh, edges, points, vectors}
         // g.hjk && Object.assign(g, HJK())
         arrayLiteralType(["a", "b", "c", "d"]).forEach((k) => {
-            if (g[k]) {
-                bReps.push(g[k]);
+            const bRep = g[k];
+            if (bRep) {
+                bReps.push(bRep);
             }
         });
         bRepMeshes = bReps.map((bRep) => bRep.toMesh());
@@ -52988,7 +53130,7 @@ var viewer = (function (exports) {
                 const result = hash.match(/i=\{[^}]*\}/)
                     ? hash.replace(/i=\{[^}]*\}/, iSource)
                     : hash + ";" + iSource;
-                window.history.pushState(undefined, undefined, "#" + result);
+                window.history.pushState(undefined, "", "#" + result);
             }, 500));
             // initInfoEvents(paintScreen, g l)
             //initToolTips() // hide tooltip on mouseover

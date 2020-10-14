@@ -9,7 +9,7 @@ import {
   V3,
   Vector,
 } from "ts3dutils"
-import { NURBS, ParametricSurface } from ".."
+import { L3, NURBS, ParametricSurface, Surface } from ".."
 
 export class NURBSSurface extends ParametricSurface {
   constructor(
@@ -163,6 +163,17 @@ export class NURBSSurface extends ParametricSurface {
       this.vMin,
       this.vMax,
     ) as this
+  }
+
+  isCoplanarTo(surface: Surface): boolean {
+    return false
+    throw new Error("not implemented")
+  }
+
+  isTsForLine(line: L3): number[] {
+    // intersect line with
+
+    throw new Error("not implemented")
   }
 }
 

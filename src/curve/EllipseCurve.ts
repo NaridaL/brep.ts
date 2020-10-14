@@ -570,8 +570,8 @@ export class EllipseCurve extends XiEtaCurve {
     // tangent(eta, xi) = f2 eta - f1 xi
 
     return arrayFromFunction(3, (dim) => {
-      const a = this.f2.e(dim),
-        b = -this.f1.e(dim)
+      const a = this.f2.e(dim)
+      const b = -this.f1.e(dim)
       return intersectionUnitCircleLine2(a, b, 0)
         .map(([xi, eta]) => Math.atan2(eta, xi))
         .filter((t) => this.isValidT(t))

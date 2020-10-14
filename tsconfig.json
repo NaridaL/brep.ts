@@ -10,7 +10,7 @@
     "skipLibCheck": true,
     "jsx": "react",
     //    "jsxFactory": "h",
-    "lib": ["dom", "es2019"],
+    "lib": ["DOM", "ES2019"],
     "module": "es6",
     "moduleResolution": "node",
     "noEmitHelpers": true,

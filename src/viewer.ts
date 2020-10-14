@@ -1,7 +1,5 @@
 import chroma, { Color } from "chroma-js"
 import debounce from "debounce"
-import deepmerge from "deepmerge"
-import nerdamer from "nerdamer"
 import { assert, DEG, emod, int, M4, round10, V, V3 } from "ts3dutils"
 import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from "tsgl"
 
@@ -23,13 +21,17 @@ import {
   setupCamera,
 } from "./index"
 
+import * as ts3dutils from "ts3dutils"
+import * as tsgl from "tsgl"
+import * as brepts from "./index"
+
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 }
 const bReps: BRep[] = []
 const edgeViewerColors = ["darkorange", "darkgreen", "cyan"].map((c) =>
   chroma(c).gl(),
 )
 let bRepMeshes: (Mesh & {
-  faceIndexes?: Map<Face, { start: int; count: int }>
+  faceIndexes: Map<Face, { start: int; count: int }>
   TRIANGLES: int[]
   normals: V3[]
 })[] = []
@@ -48,20 +50,18 @@ let hovering: {}
 const edgeDebugPoints: V3[] = []
 const edgeDebugLines: V3[] = []
 
-import * as ts3dutils from "ts3dutils"
-import * as tsgl from "tsgl"
-import * as brepts from "./index"
 const addMissing = (to: any, from: any) =>
   Object.keys(from).forEach(
     (key) => "Buffer" != key && !to[key] && (to[key] = from[key]),
   )
+
 // tslint:disable-next-line:class-name
 export class RenderObjects {
   a: BRep | undefined = undefined
   b: BRep | undefined = undefined
   c: BRep | undefined = undefined
   d: BRep | undefined = undefined
-  face: Face[]
+  face: Face[] = []
   edges: Edge[] = []
   wireframe: boolean = false
   normallines: boolean = false
@@ -77,11 +77,13 @@ export class RenderObjects {
   paintCurveDebug = false
   planes: CustomPlane[] = []
 }
+
 const renderObjectKeys = Object.keys(
   new RenderObjects(),
 ) as (keyof RenderObjects)[]
 
 declare function INIT_HTML(): void
+
 addMissing(window, ts3dutils)
 addMissing(window, tsgl)
 addMissing(window, brepts)
@@ -92,6 +94,7 @@ declare global {
 const arrayLiteralType = <T extends string>(x: T[]): T[] => x
 const g = window
 Object.assign
+
 function objectAssignConcatArray<T, U>(a: T, b: U): T & U {
   for (const key of Object.keys(b)) {
     if (Array.isArray((g as any)[key]) && Array.isArray((b as any)[key])) {
@@ -102,6 +105,7 @@ function objectAssignConcatArray<T, U>(a: T, b: U): T & U {
   }
   return a as any
 }
+
 function initBRep() {
   eye.pos = V(1, 2, 101)
   eye.focus = V(0, 1, 0)
@@ -129,8 +133,9 @@ function initBRep() {
   // let gets: any = {a, b, c, d, mesh, edges, points, vectors}
   // g.hjk && Object.assign(g, HJK())
   arrayLiteralType(["a", "b", "c", "d"]).forEach((k) => {
-    if (g[k]) {
-      bReps.push(g[k])
+    const bRep = g[k]
+    if (bRep) {
+      bReps.push(bRep)
     }
   })
 
@@ -273,7 +278,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
     let faceIndex = bReps[i].faces.length
     while (faceIndex--) {
       const face = bReps[i].faces[faceIndex]
-      const faceTriangleIndexes = mesh.faceIndexes.get(face)
+      const faceTriangleIndexes = mesh.faceIndexes.get(face)!
       gl.shaders.lighting
         .uniforms({
           color:
@@ -362,7 +367,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 function getHovering(
   mouseLine: L3,
   faces: Face[],
-  planes: CustomPlane[],
+  planes: CustomPlane[] | undefined,
   points: V3[],
   edges: Edge[],
   mindist: number,
@@ -491,20 +496,21 @@ const drawPlanes = [
 ]
 let paintScreen: () => void
 declare var BREPTS_ROOT: string
+
 export async function viewerMain() {
-  const meshNormalsCheckbox = document.getElementById("paint-mesh-normals")
+  const meshNormalsCheckbox = document.getElementById("paint-mesh-normals")!
   meshNormalsCheckbox.onclick = (e) => {
     g.paintMeshNormals = !g.paintMeshNormals
     paintScreen()
   }
 
-  const wireframeCheckbox = document.getElementById("paint-wireframe")
+  const wireframeCheckbox = document.getElementById("paint-wireframe")!
   wireframeCheckbox.onclick = (e) => {
     g.paintWireframe = !g.paintWireframe
     paintScreen()
   }
 
-  const paintDebugCheckbox = document.getElementById("paint-curvedebug")
+  const paintDebugCheckbox = document.getElementById("paint-curvedebug")!
   paintDebugCheckbox.onclick = (e) => {
     g.paintCurveDebug = !g.paintCurveDebug
     paintScreen()
@@ -569,7 +575,7 @@ export async function viewerMain() {
       const result = hash.match(/i=\{[^}]*\}/)
         ? hash.replace(/i=\{[^}]*\}/, iSource)
         : hash + ";" + iSource
-      window.history.pushState(undefined, undefined, "#" + result)
+      window.history.pushState(undefined, "", "#" + result)
     }, 500),
   )
   // initInfoEvents(paintScreen, g l)
@@ -586,18 +592,21 @@ export function alignX(dir: number) {
   setupCamera(eye, (window as any).gl)
   paintScreen()
 }
+
 export function alignY(dir: number) {
   eye.pos = eye.focus.plus(V(0, 100 * dir, 0))
   eye.up = V3.Z
   setupCamera(eye, (window as any).gl)
   paintScreen()
 }
+
 export function alignZ(dir: number) {
   eye.pos = eye.focus.plus(V(0, 0, 100 * dir))
   eye.up = eye.pos.cross(V3.X).unit()
   setupCamera(eye, (window as any).gl)
   paintScreen()
 }
+
 export function rot(angleInDeg: number) {
   eye.up = M4.rotateLine(
     eye.pos,

@@ -34,7 +34,6 @@ import {
   EllipsoidSurface,
   followAlgorithm2d,
   followAlgorithmPP,
-  ISInfo,
   MathFunctionR2R,
   P3,
   ParametricSurface,
@@ -411,7 +410,7 @@ export abstract class Curve
           (i) => tMin + ((tMax - tMin) * i) / (STEPS - 1),
         ),
         (t) => -this.at(t).distanceTo(p),
-      )
+      )!
     }
 
     return newtonIterateWithDerivative(f, tStart, 16, df)

@@ -1,0 +1,1 @@
+See https://math.stackexchange.com/questions/2788893/convert-2nd-degree-rational-b%c3%a9zier-to-parametric-ellipse-or-hyperbola?noredirect=1#comment7490657_2788893

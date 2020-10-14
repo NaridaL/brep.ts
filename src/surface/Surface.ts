@@ -34,7 +34,7 @@ export abstract class Surface
   implements Equalable, WebGLDebugable {
   readonly ["constructor"]: new (...args: any[]) => this
 
-  debugInfo?(): { points: []; lines: [] }
+  debugInfo?(): { ps?: V3[]; lines?: V3[] }
 
   static loopContainsPointGeneral(
     loop: Edge[],
@@ -213,7 +213,7 @@ export abstract class Surface
   }
 
   /**
-   * Return points which would touch AABB. Doesnt include borders due to paramtetric bounds, for example.
+   * Return points which would touch AABB. Doesnt include borders due to parametric bounds, for example.
    */
   getExtremePoints(): V3[] {
     return []
@@ -319,19 +319,4 @@ export enum PointVsFace {
   INSIDE,
   OUTSIDE,
   ON_EDGE,
-}
-
-export abstract class ImplicitSurface extends Surface {
-  static is(obj: any): obj is ImplicitSurface {
-    return obj.implicitFunction && obj.didp
-  }
-
-  abstract implicitFunction(): (pWC: V3) => number
-
-  /**
-   * partial derivatives of this.implicitFunction in point pWC
-   * @param pWC
-   * @return
-   */
-  abstract didp(pWC: V3): V3
 }

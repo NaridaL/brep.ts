@@ -511,6 +511,8 @@ export class PICurve extends ImplicitCurve {
   ): ISInfo[] {
     return surfaceIsICurveIsInfosWithLine.call(
       this,
+      this.implicitSurface,
+      this.parametricSurface,
       anchorWC,
       dirWC,
       tMin,
