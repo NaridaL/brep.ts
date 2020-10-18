@@ -1,15 +1,25 @@
 import {
   arrayFromFunction,
   assert,
+  clamp,
   firstUnsorted,
+  indexWithMax,
   int,
+  lerp,
   M4,
   MINUS,
+  newtonIterate,
   sliceStep,
+  toSource,
+  V,
   V3,
   Vector,
 } from "ts3dutils"
-import { L3, NURBS, ParametricSurface, Surface } from ".."
+import { Curve, L3, NURBS, ParametricSurface, Surface } from ".."
+import { Edge } from "../Edge"
+import { P3 } from "../P3"
+import { PointVsFace } from "./Surface"
+import { ceil, floor } from "../math"
 
 export class NURBSSurface extends ParametricSurface {
   constructor(
@@ -109,7 +119,7 @@ export class NURBSSurface extends ParametricSurface {
     )
   }
 
-  isoparametricV(v: number) {
+  isoparametricV(v: number): NURBS {
     const pointCountU = this.knotsU.length - 1 - this.degreeU
     return new NURBS(
       arrayFromFunction(pointCountU, (i) => {
@@ -166,21 +176,94 @@ export class NURBSSurface extends ParametricSurface {
   }
 
   isCoplanarTo(surface: Surface): boolean {
-    return false
     throw new Error("not implemented")
   }
 
   isTsForLine(line: L3): number[] {
     // intersect line with
+    let t = 1
 
     throw new Error("not implemented")
+  }
+
+  pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
+    const closestPointIndex = indexWithMax(
+      this.points,
+      (p) => -p.p3().distanceTo(pWC),
+    )
+    const pointCountU = this.knotsU.length - this.degreeU - 1
+    const closestPointPos = V(
+      closestPointIndex % pointCountU,
+      (closestPointIndex / pointCountU) | 0,
+    )
+    const start = this.guessUVForMeshPos(closestPointPos.x, closestPointPos.y)
+    const dpdu = this.dpdu()
+    const dpdv = this.dpdv()
+
+    const [u, v] = newtonIterate(
+      ([u, v]) => {
+        const pUV = this.pUV(u, v)
+        const pUVToPWC = pUV.to(pWC)
+        return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))]
+      },
+      [start.x, start.y],
+      8,
+      undefined,
+      0.1,
+    )
+    return new V3(u, v, 0)
+    /**
+     *
+     */
+    throw new Error("Method not implemented.")
+  }
+
+  isCurvesWithPlane(plane: P3): Curve[] {
+    throw new Error("Method not implemented.")
+  }
+
+  containsPoint(pWC: V3): boolean {
+    throw new Error("Method not implemented.")
+  }
+
+  loopContainsPoint(contour: Edge[], point: V3): PointVsFace {
+    throw new Error("Method not implemented.")
+  }
+
+  guessUVForMeshPos(x: int, y: int): V3 {
+    function eLerp<T>(
+      arr: ArrayLike<T>,
+      t: number,
+      lerp: (a: T, b: T, t: number) => T,
+    ): T {
+      if (0 === t % 1) return arr[t]
+      return lerp(arr[floor(t)], arr[ceil(t)], t % 1)
+    }
+
+    return new V3(
+      clamp(
+        eLerp(this.knotsU, x + (this.degreeU + 1) / 2, lerp),
+        this.uMin,
+        this.uMax,
+      ),
+      clamp(
+        eLerp(this.knotsV, y + (this.degreeV + 1) / 2, lerp),
+        this.vMin,
+        this.vMax,
+      ),
+      0,
+    )
   }
 }
 
 NURBSSurface.prototype.uStep = 1 / 8
 NURBSSurface.prototype.vStep = 1 / 8
 
-function getInterval(degree: int, knots: ReadonlyArray<number>, t: number) {
+function getInterval(
+  degree: int,
+  knots: ReadonlyArray<number>,
+  t: number,
+): int {
   for (let s = degree; s < knots.length - 1 - degree; s++) {
     if (t >= knots[s] && t <= knots[s + 1]) {
       return s
@@ -194,7 +277,7 @@ function deBoor(
   degree: int,
   knots: ReadonlyArray<number>,
   t: number,
-) {
+): Vector {
   // find s (the spline segment) for the [t] value provided
   const s = getInterval(degree, knots, t)
 

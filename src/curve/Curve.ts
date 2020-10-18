@@ -927,17 +927,25 @@ export function uvInAABB2(aabb2: AABB2, u: number, v: number) {
   )
 }
 
+/**
+ * Finds a point on a 2D implicit curve.
+ *
+ * @param implicitCurve The curve follows the path where implicitCurve(u, v) is zero.
+ * @param startPoint The point from which to start looking (only .x = u and .y = v will be read).
+ * @param didu Derivative of implicitCurve in the first parameter.
+ * @param didv Derivative of implicitCurve in the second parameter.
+ */
 export function curvePoint(
   implicitCurve: R2_R,
   startPoint: V3,
   didu: R2_R,
   didv: R2_R,
-) {
+): V3 {
   let p = startPoint
   for (let i = 0; i < 8; i++) {
     const fp = implicitCurve(p.x, p.y)
-    const dfpdx = didu(p.x, p.y),
-      dfpdy = didv(p.x, p.y)
+    const dfpdx = didu(p.x, p.y)
+    const dfpdy = didv(p.x, p.y)
     const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
     p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
   }
@@ -949,12 +957,12 @@ export function curvePointMF(
   startPoint: V3,
   steps: int = 8,
   eps: number = 1 / (1 << 30),
-) {
+): V3 {
   let p = startPoint
   for (let i = 0; i < steps; i++) {
     const fp = mf(p.x, p.y)
-    const dfpdx = mf.x(p.x, p.y),
-      dfpdy = mf.y(p.x, p.y)
+    const dfpdx = mf.x(p.x, p.y)
+    const dfpdy = mf.y(p.x, p.y)
     const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy)
     p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0))
     if (abs(fp) <= eps) break

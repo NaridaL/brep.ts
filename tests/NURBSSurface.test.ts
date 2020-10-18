@@ -1,11 +1,12 @@
-import { suite, suiteSurface, test } from "./manager"
+import { outputLink, suite, suiteSurface, test } from "./manager"
 
-import { DEG, M4, VV } from "ts3dutils"
+import { arrayFromFunction, DEG, M4, V3, VV } from "ts3dutils"
 import {
   EllipseCurve,
   NURBSSurface,
   rotateCurve,
   RotatedCurveSurface,
+  StraightEdge,
 } from ".."
 
 suite("NURBSSurface", () => {
@@ -47,6 +48,39 @@ suite("NURBSSurface", () => {
   test("b", (assert) => {
     console.log(s.pUV(0.1, 0.1))
     console.log(s.sce)
+  })
+  test("s2 guessUVForMeshPos", (assert) => {
+    //  let s2 = s
+    const debugInfo = s2.debugInfo()
+    const drPs: V3[] = []
+    const uPointCount = s2.knotsU.length - s2.degreeU - 1
+    for (let x = 0; x < uPointCount; x++) {
+      for (let y = 0; y < s2.knotsV.length - s2.degreeV - 1; y++) {
+        const uv = s2.guessUVForMeshPos(x, y)
+        console.log("x", x, "y", y, "uv", uv)
+        drPs.push(s2.points[y * uPointCount + x].p3(), s2.pUV(uv.x, uv.y))
+      }
+    }
+
+    outputLink(
+      assert,
+
+      {
+        mesh: `[${s2}.toMesh()]`,
+        edges: [
+          ...(debugInfo && debugInfo.lines
+            ? arrayFromFunction(debugInfo.lines.length / 2, (i) => {
+                const a = debugInfo.lines[i * 2],
+                  b = debugInfo.lines[i * 2 + 1]
+                return !a.like(b) && StraightEdge.throughPoints(a, b)
+              }).filter((x) => x)
+            : []),
+        ],
+        drPs: [...(debugInfo?.points ?? [])],
+        drLines: drPs,
+      },
+      "view",
+    )
   })
   suite("a", () => suiteSurface(s2))
 })

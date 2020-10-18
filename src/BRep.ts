@@ -53,7 +53,7 @@ import {
   Surface,
   uvInAABB2,
   createEdge,
-} from "./index"
+} from "."
 
 import { abs, sign, sqrt } from "./math"
 
@@ -1709,8 +1709,8 @@ export function followAlgorithmPP(
   let st2 = ps2.uvP(Q)
   assert(ps1.pUV(st1.x, st1.y).like(Q))
   assert(st1.like(ps1.pointFoot(Q, st1.x, st1.y)))
-  assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)))
   assert(ps2.pUV(st2.x, st2.y).like(Q))
+  assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)))
   for (let i = 0; i < 1000; i++) {
     ;({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q)!)
     assert(ps1.containsPoint(Q), Q, ps1)

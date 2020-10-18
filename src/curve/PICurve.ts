@@ -310,6 +310,7 @@ export class PICurve extends ImplicitCurve {
 
   uvT(t: number): V3 {
     assert(!isNaN(t))
+    //TODO: use elerp
     if (0 === t % 1) return this.pmPoints[t]
     const startParams = V3.lerp(
       this.pmPoints[floor(t)],

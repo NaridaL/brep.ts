@@ -8,7 +8,7 @@ import {
   testBRepOp,
 } from "./manager"
 
-import chroma from "chroma-js"
+import * as chroma from "chroma.ts"
 import * as fs from "fs"
 import { AABB, DEG, M4, TAU, V, V3 } from "ts3dutils"
 import { Mesh } from "tsgl"

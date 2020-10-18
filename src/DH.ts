@@ -30,7 +30,7 @@ function MatrixsetSub(this: Matrix, x: int, y: int, sub: Matrix) {
   )
 }
 
-function MatrixfromMultiRows(...rows: (Vector | V3 | Matrix | number)[][]) {
+function MatrixFromMultiRows(...rows: (Vector | V3 | Matrix | number)[][]) {
   const width: (x: Vector | V3 | Matrix | number) => int = (x) =>
     x instanceof Matrix ? x.width : 1
   const height: (x: Vector | V3 | Matrix | number) => int = (x) =>
@@ -75,7 +75,7 @@ function JacobiCol(paramss: DHParams[], isRot: boolean[]) {
         : stack[i].Z,
     )
   }
-  MatrixfromMultiRows(moves, rots)
+  MatrixFromMultiRows(moves, rots)
   if (isRot) {
     return
   }

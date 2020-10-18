@@ -4,18 +4,17 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var ts3dutils = require('ts3dutils');
 var tsgl = require('tsgl');
+var _ = require('.');
 var __ = require('..');
 var opentype = require('opentype.js');
-var chroma = require('chroma-js');
+var chroma = require('chroma.ts');
 var svgPathdata = require('svg-pathdata');
 var javasetmap_ts = require('javasetmap.ts');
 var earcut = require('earcut');
 var nerdamer = require('nerdamer');
-var _ = require('.');
 
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
-var chroma__default = /*#__PURE__*/_interopDefaultLegacy(chroma);
 var earcut__default = /*#__PURE__*/_interopDefaultLegacy(earcut);
 var nerdamer__default = /*#__PURE__*/_interopDefaultLegacy(nerdamer);
 
@@ -547,11 +546,20 @@ function AABB2(uMin, uMax, vMin, vMax) {
 function uvInAABB2(aabb2, u, v) {
     return (aabb2.uMin <= u && u <= aabb2.uMax && aabb2.vMin <= v && v <= aabb2.vMax);
 }
+/**
+ * Finds a point on a 2D implicit curve.
+ *
+ * @param implicitCurve The curve follows the path where implicitCurve(u, v) is zero.
+ * @param startPoint The point from which to start looking (only .x = u and .y = v will be read).
+ * @param didu Derivative of implicitCurve in the first parameter.
+ * @param didv Derivative of implicitCurve in the second parameter.
+ */
 function curvePoint(implicitCurve, startPoint, didu, didv) {
     let p = startPoint;
     for (let i = 0; i < 8; i++) {
         const fp = implicitCurve(p.x, p.y);
-        const dfpdx = didu(p.x, p.y), dfpdy = didv(p.x, p.y);
+        const dfpdx = didu(p.x, p.y);
+        const dfpdy = didv(p.x, p.y);
         const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy);
         p = p.minus(new ts3dutils.V3(scale * dfpdx, scale * dfpdy, 0));
     }
@@ -561,7 +569,8 @@ function curvePointMF(mf, startPoint, steps = 8, eps = 1 / (1 << 30)) {
     let p = startPoint;
     for (let i = 0; i < steps; i++) {
         const fp = mf(p.x, p.y);
-        const dfpdx = mf.x(p.x, p.y), dfpdy = mf.y(p.x, p.y);
+        const dfpdx = mf.x(p.x, p.y);
+        const dfpdy = mf.y(p.x, p.y);
         const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy);
         p = p.minus(new ts3dutils.V3(scale * dfpdx, scale * dfpdy, 0));
         if (abs(fp) <= eps)
@@ -977,7 +986,7 @@ class BezierCurve extends Curve {
         return [this.p0, this.p1, this.p2, this.p3];
     }
     /**
-     * Returns a curve with curve.at(x) == V(x, ax³ + bx² + cx + d, 0)
+     * Returns a new BezierCurve with curve.at(x) == V(x, ax³ + bx² + cx + d, 0).
      */
     static graphXY(a, b, c, d, tMin, tMax) {
         // d = p0y
@@ -1252,6 +1261,14 @@ class BezierCurve extends Curve {
         ts3dutils.assert(m4.isNoProj(), m4.str);
         return new BezierCurve(m4.transformPoint(this.p0), m4.transformPoint(this.p1), m4.transformPoint(this.p2), m4.transformPoint(this.p3), this.tMin, this.tMax);
     }
+    transform4(m4) {
+        if (m4.isNoProj()) {
+            return this.transform(m4);
+        }
+        else {
+            return this.toNURBS().transform4(m4);
+        }
+    }
     isClosed() {
         return this.p0.like(this.p3);
     }
@@ -1476,6 +1493,9 @@ class BezierCurve extends Curve {
         this.circleApprox(t0, tMid, REL_ERROR, result);
         this.circleApprox(tMid, t1, REL_ERROR, result);
         return result;
+    }
+    toNURBS() {
+        return new NURBS();
     }
 }
 /**
@@ -2085,6 +2105,7 @@ class PICurve extends ImplicitCurve {
     }
     uvT(t) {
         ts3dutils.assert(!isNaN(t));
+        //TODO: use elerp
         if (0 === t % 1)
             return this.pmPoints[t];
         const startParams = ts3dutils.V3.lerp(this.pmPoints[floor(t)], this.pmPoints[ceil(t)], t % 1);
@@ -2959,7 +2980,8 @@ class NURBS extends Curve {
         return [this.points, this.degree, this.knots];
     }
     at4(t) {
-        ts3dutils.NLA_DEBUG && ts3dutils.assert(ts3dutils.between(t, this.tMin, this.tMax), t);
+        ts3dutils.NLA_DEBUG &&
+            ts3dutils.assert(ts3dutils.between(t, this.tMin, this.tMax), t + " " + this.tMin + " " + this.tMax);
         const { points, degree, knots } = this;
         // find s (the spline segment) for the [t] value provided
         const s = this.tInterval(t);
@@ -2981,20 +3003,21 @@ class NURBS extends Curve {
     at(t) {
         return this.at4(t).p3();
     }
-    /*
-      d(k, i, t) = a(i, k, t) * d(k - 1, i, t) + (1 - a(i, k, t)) * d(k - 1, i - 1, t)
-      a(i, k, t) = (t - knots[i]) / (knots[i + 1 + n - k] - knots[i])
-      a'(i, k, t) = 1 / (knots[i + 1 + n - k] - knots[i])
+    /**
+     d(k, i, t) = a(i, k, t) * d(k - 1, i, t) + (1 - a(i, k, t)) * d(k - 1, i - 1, t)
+     a(i, k, t) = (t - knots[i]) / (knots[i + 1 + n - k] - knots[i])
+     a'(i, k, t) = 1 / (knots[i + 1 + n - k] - knots[i])
   
-      d/dt =  a(i, k, t) * d'(k - 1, i, t) + a'(i, k, t) * d(k - 1, i, t)
-      + (1 - a(i, k, t)) * d'(k - 1, i - 1, t) + a'(i, k, t) * d(k - 1, i - 1, t)
-  */
+     d/dt =  a(i, k, t) * d'(k - 1, i, t) + a'(i, k, t) * d(k - 1, i, t)
+     + (1 - a(i, k, t)) * d'(k - 1, i - 1, t) + a'(i, k, t) * d(k - 1, i - 1, t)
+     */
     ptDtDdt4(t) {
         const { points, degree, knots } = this;
         // find s (the spline segment) for the [t] value provided
         const s = this.tInterval(t);
         const v = ts3dutils.Vector.pack(points, new Float64Array((degree + 1) * 4), s - degree, 0, degree + 1);
-        let ddt = ts3dutils.Vector.Zero(4), derivative;
+        let ddt = ts3dutils.Vector.Zero(4);
+        let derivative;
         for (let level = 0; level < degree; level++) {
             if (level == degree - 2) {
                 // see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
@@ -3811,11 +3834,11 @@ class P3 extends ts3dutils.Transformable {
         return ts3dutils.eq(1, Math.abs(this.normal1.dot(plane.normal1)));
     }
     isParallelToLine(line) {
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         return ts3dutils.eq0(this.normal1.dot(line.dir1));
     }
     isPerpendicularToLine(line) {
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         // this.normal1 || line.dir1
         return ts3dutils.eq(1, Math.abs(this.normal1.dot(line.dir1)));
     }
@@ -3845,7 +3868,7 @@ class P3 extends ts3dutils.Transformable {
         return P3.forABCD(newNormal.x, newNormal.y, newNormal.z, newNormal.w);
     }
     distanceToLine(line) {
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         if (!this.isParallelToLine(line)) {
             return this.distanceToPoint(line.anchor);
         }
@@ -3858,7 +3881,7 @@ class P3 extends ts3dutils.Transformable {
         return ts3dutils.eq(this.w, this.normal1.dot(x));
     }
     containsLine(line) {
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         return this.containsPoint(line.anchor) && this.isParallelToLine(line);
     }
     distanceToPointSigned(point) {
@@ -3897,7 +3920,7 @@ class P3 extends ts3dutils.Transformable {
         const p = ts3dutils.M4.forRows(n0, n1, n2)
             .inversed()
             .transformVector(new ts3dutils.V3(this.w, plane.w, 0));
-        return new L3(p, n2);
+        return new _.L3(p, n2);
     }
     /**
      * Returns the point in the plane closest to the given point
@@ -3916,16 +3939,16 @@ class P3 extends ts3dutils.Transformable {
         return new P3(this.normal1.negated(), -this.w);
     }
     containsCurve(curve) {
-        if (curve instanceof L3) {
+        if (curve instanceof _.L3) {
             return this.containsLine(curve);
         }
-        else if (curve instanceof EllipseCurve ||
-            curve instanceof HyperbolaCurve ||
-            curve instanceof ParabolaCurve) {
+        else if (curve instanceof _.EllipseCurve ||
+            curve instanceof _.HyperbolaCurve ||
+            curve instanceof _.ParabolaCurve) {
             return (this.containsPoint(curve.center) &&
                 this.normal1.isParallelTo(curve.normal));
         }
-        else if (curve instanceof BezierCurve) {
+        else if (curve instanceof _.BezierCurve) {
             return curve.points.every((p) => this.containsPoint(p));
         }
         else {
@@ -6018,23 +6041,23 @@ class PointProjectedSurface extends __.ParametricSurface {
         this.planeProjectionMatrix = ts3dutils.M4.projectPlanePoint(apex, curvePlane);
         this.uStep = curve.tIncrement;
     }
-    pointFoot(pWC, ss, st) {
-        if (undefined === ss || undefined === st) {
+    pointFoot(pWC, startU, startV) {
+        if (undefined === startU || undefined === startV) {
             // similar to stP
-            if (undefined === ss) {
-                ss = pWC.like(this.apex)
+            if (undefined === startU) {
+                startU = pWC.like(this.apex)
                     ? 0
                     : this.curve.closestTToPoint(this.planeProjectionMatrix.transformPoint(pWC)) * this.normalDir;
             }
-            if (undefined === st) {
-                st = ts3dutils.V3.inverseLerp(this.apex, this.curve.at(ss), pWC);
+            if (undefined === startV) {
+                startV = ts3dutils.V3.inverseLerp(this.apex, this.curve.at(startU), pWC);
             }
         }
-        const f = ([s, t]) => {
-            const pSTToPWC = this.pST(s, t).to(pWC);
-            return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)];
+        const f = ([u, v]) => {
+            const pUVToPWC = this.pUV(u, v).to(pWC);
+            return [this.dpdu()(u, v).dot(pUVToPWC), this.dpdv()(u).dot(pUVToPWC)];
         };
-        const { 0: x, 1: y } = ts3dutils.newtonIterate(f, [ss, st]);
+        const { 0: x, 1: y } = ts3dutils.newtonIterate(f, [startU, startV]);
         return new ts3dutils.V3(x, y, 0);
     }
     getConstructorParameters() {
@@ -6136,39 +6159,39 @@ class PointProjectedSurface extends __.ParametricSurface {
     flipped() {
         return new PointProjectedSurface(this.curve, this.apex, this.curvePlane, -this.normalDir, -this.uMax, -this.uMin, this.vMin, this.vMax);
     }
-    normalSTFunc() {
-        const dpdt = this.dpdt();
-        return (s, t) => this.curve
-            .tangentAt(s * this.normalDir)
+    normalUVFunc() {
+        const dpdv = this.dpdv();
+        return (u) => this.curve
+            .tangentAt(u * this.normalDir)
             .times(this.normalDir)
-            .cross(dpdt(s))
+            .cross(dpdv(u))
             .unit();
     }
-    pSTFunc() {
-        return (s, t) => {
-            return this.apex.lerp(this.curve.at(s * this.normalDir), t);
+    pUVFunc() {
+        return (u, v) => {
+            return this.apex.lerp(this.curve.at(u * this.normalDir), v);
         };
     }
-    dpds() {
-        return (s, t) => {
-            return this.curve.tangentAt(s * this.normalDir).times(t * this.normalDir);
+    dpdu() {
+        return (u, v) => {
+            return this.curve.tangentAt(u * this.normalDir).times(v * this.normalDir);
         };
     }
-    dpdt() {
-        return (s) => {
-            return this.apex.to(this.curve.at(s * this.normalDir));
+    dpdv() {
+        return (u) => {
+            return this.apex.to(this.curve.at(u * this.normalDir));
         };
     }
     containsPoint(pWC) {
         return (this.apex.like(pWC) ||
             this.curve.containsPoint(this.planeProjectionMatrix.transformPoint(pWC)));
     }
-    stP(pWC) {
-        const s = pWC.like(this.apex)
+    uvP(pWC) {
+        const u = pWC.like(this.apex)
             ? 0
             : this.curve.pointT(this.planeProjectionMatrix.transformPoint(pWC));
-        const t = ts3dutils.V3.inverseLerp(this.apex, this.curve.at(s), pWC);
-        return new ts3dutils.V3(s * this.normalDir, t, 0);
+        const v = ts3dutils.V3.inverseLerp(this.apex, this.curve.at(u), pWC);
+        return new ts3dutils.V3(u * this.normalDir, v, 0);
     }
     isCurvesWithSurface(surface) {
         if (surface instanceof __.PlaneSurface) {
@@ -6284,11 +6307,41 @@ class NURBSSurface extends __.ParametricSurface {
         }), this.knotsU.map((x) => -x).reverse(), this.knotsV, this.degreeU, this.degreeV, -this.uMax, -this.uMin, this.vMin, this.vMax);
     }
     isCoplanarTo(surface) {
-        return false;
+        throw new Error("not implemented");
     }
     isTsForLine(line) {
-        // intersect line with
         throw new Error("not implemented");
+    }
+    pointFoot(pWC, startU, startV) {
+        const closestPointIndex = ts3dutils.indexWithMax(this.points, (p) => -p.p3().distanceTo(pWC));
+        const pointCountU = this.knotsU.length - this.degreeU - 1;
+        const closestPointPos = ts3dutils.V(closestPointIndex % pointCountU, (closestPointIndex / pointCountU) | 0);
+        const start = this.guessUVForMeshPos(closestPointPos.x, closestPointPos.y);
+        const dpdu = this.dpdu();
+        const dpdv = this.dpdv();
+        const [u, v] = ts3dutils.newtonIterate(([u, v]) => {
+            const pUV = this.pUV(u, v);
+            const pUVToPWC = pUV.to(pWC);
+            return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))];
+        }, [start.x, start.y], 8, undefined, 0.1);
+        return new ts3dutils.V3(u, v, 0);
+    }
+    isCurvesWithPlane(plane) {
+        throw new Error("Method not implemented.");
+    }
+    containsPoint(pWC) {
+        throw new Error("Method not implemented.");
+    }
+    loopContainsPoint(contour, point) {
+        throw new Error("Method not implemented.");
+    }
+    guessUVForMeshPos(x, y) {
+        function eLerp(arr, t, lerp) {
+            if (0 === t % 1)
+                return arr[t];
+            return lerp(arr[floor(t)], arr[ceil(t)], t % 1);
+        }
+        return new ts3dutils.V3(ts3dutils.clamp(eLerp(this.knotsU, x + (this.degreeU + 1) / 2, ts3dutils.lerp), this.uMin, this.uMax), ts3dutils.clamp(eLerp(this.knotsV, y + (this.degreeV + 1) / 2, ts3dutils.lerp), this.vMin, this.vMax), 0);
     }
 }
 NURBSSurface.prototype.uStep = 1 / 8;
@@ -6917,17 +6970,17 @@ CalculateAreaVisitor[EllipsoidSurface.name] =
  * @param flipped Whether the surface's default orientation (normal = curve tangent cross offset) should be flipped.
  */
 function projectCurve(curve, offset, flipped) {
-    if (curve instanceof L3) {
+    if (curve instanceof _.L3) {
         const surfaceNormal = offset.cross(curve.dir1).toLength(flipped ? -1 : 1);
-        return new PlaneSurface(P3.normalOnAnchor(surfaceNormal, curve.anchor));
+        return new _.PlaneSurface(_.P3.normalOnAnchor(surfaceNormal, curve.anchor));
     }
-    if (curve instanceof EllipseCurve) {
+    if (curve instanceof _.EllipseCurve) {
         const curveDir = flipped ? offset : offset.negated();
-        return new CylinderSurface(curve, curveDir.unit(), undefined, undefined);
+        return new _.CylinderSurface(curve, curveDir.unit(), undefined, undefined);
     }
-    if (curve instanceof BezierCurve || curve instanceof XiEtaCurve) {
+    if (curve instanceof _.BezierCurve || curve instanceof _.XiEtaCurve) {
         const curveDir = offset.times(flipped ? 1 : -1);
-        return new ProjectedCurveSurface(curve, curveDir, undefined, undefined, flipped ? 0 : -1, flipped ? 1 : 0);
+        return new _.ProjectedCurveSurface(curve, curveDir, undefined, undefined, flipped ? 0 : -1, flipped ? 1 : 0);
     }
     throw new Error();
 }
@@ -6935,14 +6988,14 @@ function projectCurve(curve, offset, flipped) {
  * Create a surface by projecting a curve onto a point.
  */
 function projectPointCurve(curve, tMin = curve.tMin, tMax = curve.tMax, p, flipped) {
-    if (curve instanceof L3) {
+    if (curve instanceof _.L3) {
         const up = curve.anchor.to(p).rejectedFrom(curve.dir1);
-        return PlaneSurface.forAnchorAndPlaneVectors(curve.anchor, curve.dir1, up.unit(), tMin, tMax, 0, up.length());
+        return _.PlaneSurface.forAnchorAndPlaneVectors(curve.anchor, curve.dir1, up.unit(), tMin, tMax, 0, up.length());
     }
-    else if (curve instanceof EllipseCurve) {
+    else if (curve instanceof _.EllipseCurve) {
         // flip f2 by default
         const factor = -1 * (flipped ? -1 : 1);
-        return new ConicSurface(p, curve.f1.times(factor), curve.f2, p.to(curve.center), tMin, tMax, 0, 1);
+        return new _.ConicSurface(p, curve.f1.times(factor), curve.f2, p.to(curve.center), tMin, tMax, 0, 1);
     }
     else {
         throw new Error("projectPointCurve not implemented for " + curve.constructor.name);
@@ -6958,21 +7011,21 @@ function projectPointCurve(curve, tMin = curve.tMin, tMax = curve.tMax, p, flipp
  * flipped.
  */
 function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped) {
-    ts3dutils.assertf(() => new PlaneSurface(P3.ZX).containsCurve(curve));
-    if (curve instanceof L3) {
+    ts3dutils.assertf(() => new _.PlaneSurface(_.P3.ZX).containsCurve(curve));
+    if (curve instanceof _.L3) {
         if (curve.dir1.isParallelTo(ts3dutils.V3.Z)) {
             if (ts3dutils.eq0(curve.anchor.x)) {
                 return undefined;
                 //throw new Error('Cannot rotate curve colinear to Z axis.')
             }
-            const baseEllipse = new EllipseCurve(ts3dutils.V3.O, curve.anchor.xy(), curve.anchor.xy().getPerpendicular(), 0, angle);
+            const baseEllipse = new _.EllipseCurve(ts3dutils.V3.O, curve.anchor.xy(), curve.anchor.xy().getPerpendicular(), 0, angle);
             // if curve.dir1 is going up (+Z), it the cylinder surface should face inwards
             const factor = (curve.dir1.z > 0 ? -1 : 1) * (flipped ? -1 : 1);
             const [zMin, zMax] = [
                 curve.at(tMin).z * factor,
                 curve.at(tMax).z * factor,
             ].sort(ts3dutils.MINUS);
-            return new CylinderSurface(baseEllipse, ts3dutils.V3.Z.times(factor), 0, angle, zMin, zMax);
+            return new _.CylinderSurface(baseEllipse, ts3dutils.V3.Z.times(factor), 0, angle, zMin, zMax);
         }
         if (curve.at(tMin).xy().dot(curve.dir1) *
             curve.at(tMax).xy().dot(curve.dir1) <
@@ -6983,7 +7036,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             // if line.dir1 is pointing aways from V3.Z, then the surface should face up
             const factor = (curve.at(ts3dutils.lerp(tMin, tMax, 0.5)).dot(curve.dir1) > 0 ? 1 : -1) *
                 (flipped ? -1 : 1);
-            return new PlaneSurface(new P3(ts3dutils.V3.Z.times(factor), curve.anchor.z * factor));
+            return new _.PlaneSurface(new _.P3(ts3dutils.V3.Z.times(factor), curve.anchor.z * factor));
         }
         else {
             // apex is intersection of segment with Z-axis
@@ -6991,24 +7044,24 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             const apexZ = a.z - (a.x * (b.z - a.z)) / (b.x - a.x);
             const apex = new ts3dutils.V3(0, 0, apexZ);
             const factor = -(a.x > b.x ? -1 : 1) * (flipped ? -1 : 1);
-            const s = new ConicSurface(apex, new ts3dutils.V3(curve.dir1.lengthXY(), 0, 0), new ts3dutils.V3(0, curve.dir1.lengthXY(), 0), new ts3dutils.V3(0, 0, (a.x > b.x ? -1 : 1) * curve.dir1.z), 0, angle, 0, 1);
+            const s = new _.ConicSurface(apex, new ts3dutils.V3(curve.dir1.lengthXY(), 0, 0), new ts3dutils.V3(0, curve.dir1.lengthXY(), 0), new ts3dutils.V3(0, 0, (a.x > b.x ? -1 : 1) * curve.dir1.z), 0, angle, 0, 1);
             return factor > 0 ? s : s.flipped();
         }
     }
-    if (curve instanceof EllipseCurve) {
+    if (curve instanceof _.EllipseCurve) {
         const a = curve.at(tMin), b = curve.at(tMax);
         const ell = curve.rightAngled();
         const f1Perp = ell.f1.isPerpendicularTo(ts3dutils.V3.Z), f2Perp = ell.f2.isPerpendicularTo(ts3dutils.V3.Z);
-        if (L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
+        if (_.L3.Z.containsPoint(ell.center) && (f1Perp || f2Perp)) {
             flipped = flipped == a.z > b.z;
             let width = ell.f1.length(), height = ell.f2.length();
             if (ell.f1.isParallelTo(ts3dutils.V3.Z)) {
                 [width, height] = [height, width];
             }
-            return EllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center);
+            return _.EllipsoidSurface.forABC(width, (!flipped ? 1 : -1) * width, height, ell.center);
         }
         else {
-            const s = new RotatedCurveSurface(curve, ts3dutils.M4.IDENTITY, tMin, tMax);
+            const s = new _.RotatedCurveSurface(curve, ts3dutils.M4.IDENTITY, tMin, tMax);
             return s;
         }
     }
@@ -7022,7 +7075,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * @param depth z-direction size.
      * @param name
      */
-    function box(width = 1, height = 1, depth = 1, name = "box" + getGlobalId()) {
+    function box(width = 1, height = 1, depth = 1, name = "box" + _.getGlobalId()) {
         ts3dutils.assertNumbers(width, height, depth);
         ts3dutils.assert("string" === typeof name);
         const baseVertices = [
@@ -7032,14 +7085,14 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             new ts3dutils.V3(width, 0, 0),
         ];
         const generator = ts3dutils.callsce("B2T.box", width, height, depth, name);
-        return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new ts3dutils.V3(0, 0, depth), name, generator);
+        return B2T.extrudeVertices(baseVertices, _.P3.XY.flipped(), new ts3dutils.V3(0, 0, depth), name, generator);
     }
     B2T.box = box;
-    function puckman(radius, rads, height, name = "puckman" + getGlobalId()) {
+    function puckman(radius, rads, height, name = "puckman" + _.getGlobalId()) {
         ts3dutils.assertf(() => ts3dutils.lt(0, radius));
         ts3dutils.assertf(() => ts3dutils.lt(0, rads) && ts3dutils.le(rads, ts3dutils.TAU));
         ts3dutils.assertf(() => ts3dutils.lt(0, height));
-        const edges = StraightEdge.chain([
+        const edges = _.StraightEdge.chain([
             ts3dutils.V3.O,
             new ts3dutils.V3(radius, 0, 0),
             new ts3dutils.V3(radius, 0, height),
@@ -7064,31 +7117,31 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * @param gen
      * @param infoFactory
      */
-    function extrudeEdges(baseFaceEdges, baseFacePlane = P3.XY, offset = ts3dutils.V3.Z, name = "extrude" + getGlobalId(), gen, infoFactory) {
+    function extrudeEdges(baseFaceEdges, baseFacePlane = _.P3.XY, offset = ts3dutils.V3.Z, name = "extrude" + _.getGlobalId(), gen, infoFactory) {
         baseFaceEdges = fixEdges(baseFaceEdges);
         //Array.from(combinations(baseFaceEdges.length)).forEach(({i, j}) => {
         //	assertf(() => !Edge.edgesIntersect(baseFaceEdges[i], baseFaceEdges[j]), baseFaceEdges[i].sce +
         // baseFaceEdges[j].sce) })
-        ts3dutils.assertf(() => Edge.isLoop(baseFaceEdges));
+        ts3dutils.assertf(() => _.Edge.isLoop(baseFaceEdges));
         // TODO checks..
         //if (offset.dot(baseFacePlane.normal1) > 0) {
         //	baseFacePlane = baseFacePlane.flipped()
         //}
         const vertexNames = new Map();
-        const basePlaneSurface = new PlaneSurface(baseFacePlane);
+        const basePlaneSurface = new _.PlaneSurface(baseFacePlane);
         //assert(basePlaneSurface.edgeLoopCCW(baseFaceEdges), 'edges not CCW on baseFacePlane')
         const translationMatrix = ts3dutils.M4.translate(offset);
         const topEdges = baseFaceEdges.map((edge) => edge.transform(translationMatrix, "top"));
         const edgeCount = baseFaceEdges.length;
         const bottomInfo = infoFactory && infoFactory.extrudeBottom(basePlaneSurface, baseFaceEdges);
-        const bottomFace = new PlaneFace(basePlaneSurface, baseFaceEdges, [], name + "Bottom", bottomInfo);
+        const bottomFace = new _.PlaneFace(basePlaneSurface, baseFaceEdges, [], name + "Bottom", bottomInfo);
         const topFaceEdges = topEdges.map((edge) => edge.flipped()).reverse();
-        const topSurface = new PlaneSurface(baseFacePlane.flipped().translated(offset));
+        const topSurface = new _.PlaneSurface(baseFacePlane.flipped().translated(offset));
         const topInfo = infoFactory && infoFactory.extrudeBottom(topSurface, topFaceEdges);
-        const topFace = new PlaneFace(topSurface, topFaceEdges, [], name + "Top", topInfo);
+        const topFace = new _.PlaneFace(topSurface, topFaceEdges, [], name + "Top", topInfo);
         baseFaceEdges.forEach((edge) => B2T.registerVertexName(vertexNames, edge.name + "A", edge.a));
         topFaceEdges.forEach((edge) => B2T.registerVertexName(vertexNames, edge.name + "A", edge.a));
-        const ribs = ts3dutils.arrayFromFunction(edgeCount, (i) => StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + "Rib" + i));
+        const ribs = ts3dutils.arrayFromFunction(edgeCount, (i) => _.StraightEdge.throughPoints(baseFaceEdges[i].a, topEdges[i].a, name + "Rib" + i));
         const faces = baseFaceEdges.map((edge, i) => {
             const faceName = name + "Wall" + i;
             const j = (i + 1) % edgeCount;
@@ -7100,38 +7153,38 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             ];
             const surface = projectCurve(edge.curve, offset, edge.reversed);
             const info = infoFactory && infoFactory.extrudeWall(i, surface, faceEdges);
-            return Face.create(surface, faceEdges, undefined, faceName, info);
+            return _.Face.create(surface, faceEdges, undefined, faceName, info);
         });
         faces.push(bottomFace, topFace);
         gen =
             gen ||
                 ts3dutils.callsce("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name);
-        return new BRep(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames);
+        return new _.BRep(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames);
     }
     B2T.extrudeEdges = extrudeEdges;
-    function cylinder(radius = 1, height = 1, rads = ts3dutils.TAU, name = "cylinder" + getGlobalId()) {
+    function cylinder(radius = 1, height = 1, rads = ts3dutils.TAU, name = "cylinder" + _.getGlobalId()) {
         const vertices = [
             new ts3dutils.V3(0, 0, 0),
             new ts3dutils.V3(radius, 0, 0),
             new ts3dutils.V3(radius, 0, height),
             new ts3dutils.V3(0, 0, height),
         ];
-        return rotateEdges(StraightEdge.chain(vertices, true), rads, name);
+        return rotateEdges(_.StraightEdge.chain(vertices, true), rads, name);
     }
     B2T.cylinder = cylinder;
-    function cone(radius = 1, height = 1, rads = ts3dutils.TAU, name = "cone" + getGlobalId()) {
+    function cone(radius = 1, height = 1, rads = ts3dutils.TAU, name = "cone" + _.getGlobalId()) {
         const vertices = [
             new ts3dutils.V3(0, 0, 0),
             new ts3dutils.V3(radius, 0, height),
             new ts3dutils.V3(0, 0, height),
         ];
-        return rotateEdges(StraightEdge.chain(vertices, true), rads, name);
+        return rotateEdges(_.StraightEdge.chain(vertices, true), rads, name);
     }
     B2T.cone = cone;
-    function sphere(radius = 1, name = "sphere" + getGlobalId(), rot = ts3dutils.TAU) {
-        const ee = new PCurveEdge(new EllipseCurve(ts3dutils.V3.O, new ts3dutils.V3(0, 0, -radius), new ts3dutils.V3(radius, 0, 0)), new ts3dutils.V3(0, 0, -radius), new ts3dutils.V3(0, 0, radius), 0, PI, undefined, new ts3dutils.V3(radius, 0, 0), new ts3dutils.V3(-radius, 0, 0));
+    function sphere(radius = 1, name = "sphere" + _.getGlobalId(), rot = ts3dutils.TAU) {
+        const ee = new _.PCurveEdge(new _.EllipseCurve(ts3dutils.V3.O, new ts3dutils.V3(0, 0, -radius), new ts3dutils.V3(radius, 0, 0)), new ts3dutils.V3(0, 0, -radius), new ts3dutils.V3(0, 0, radius), 0, PI, undefined, new ts3dutils.V3(radius, 0, 0), new ts3dutils.V3(-radius, 0, 0));
         const generator = ts3dutils.callsce("B2T.sphere", radius, name, rot);
-        return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator);
+        return rotateEdges([_.StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator);
     }
     B2T.sphere = sphere;
     /**
@@ -7139,7 +7192,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * @param res 0: just a cube, 1: every cube face has one hole, 2: 9 holes, etc
      * @param name
      */
-    function menger(res = 2, name = "menger" + getGlobalId()) {
+    function menger(res = 2, name = "menger" + _.getGlobalId()) {
         let result = B2T.box(1, 1, 1);
         if (0 == res)
             return result;
@@ -7163,7 +7216,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
         return result;
     }
     B2T.menger = menger;
-    function menger2(res = 2, name = "menger" + getGlobalId()) {
+    function menger2(res = 2, name = "menger" + _.getGlobalId()) {
         if (0 == res)
             return B2T.box(1, 1, 1);
         const punch = B2T.box(1 / 3, 1 / 3, 2)
@@ -7182,7 +7235,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             }
         }
         recurse(res, ts3dutils.M4.IDENTITY);
-        const stencil = new BRep(stencilFaces, true);
+        const stencil = new _.BRep(stencilFaces, true);
         return B2T.box(1, 1, 1, name)
             .and(stencil)
             .and(stencil.transform(ts3dutils.M4.YZX))
@@ -7196,14 +7249,14 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * @param rads
      * @param name
      */
-    function torus(rSmall, rLarge, rads = ts3dutils.TAU, name = "torus" + getGlobalId()) {
+    function torus(rSmall, rLarge, rads = ts3dutils.TAU, name = "torus" + _.getGlobalId()) {
         ts3dutils.assertNumbers(rSmall, rLarge, rads);
         ts3dutils.assertf(() => rLarge > rSmall);
         const curves = [
-            EllipseCurve.semicircle(rSmall, new ts3dutils.V3(rLarge, 0, 0)),
-            EllipseCurve.semicircle(-rSmall, new ts3dutils.V3(rLarge, 0, 0)),
+            _.EllipseCurve.semicircle(rSmall, new ts3dutils.V3(rLarge, 0, 0)),
+            _.EllipseCurve.semicircle(-rSmall, new ts3dutils.V3(rLarge, 0, 0)),
         ];
-        const baseEdges = curves.map((c) => PCurveEdge.forCurveAndTs(c, 0, Math.PI).rotateX(PI / 2));
+        const baseEdges = curves.map((c) => _.PCurveEdge.forCurveAndTs(c, 0, Math.PI).rotateX(PI / 2));
         return B2T.rotateEdges(baseEdges, rads, name);
     }
     B2T.torus = torus;
@@ -7211,22 +7264,22 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * Create a [BRep] by smoothly rotating edges around Z.
      * baseLoop should be CCW on XZ plane for a bounded BRep
      */
-    function rotateEdges(baseLoop, totalRads, name = "rotateEdges" + getGlobalId(), generator, infoFactory) {
-        ts3dutils.assert(baseLoop.every((e) => new PlaneSurface(P3.ZX).containsCurve(e.curve)));
+    function rotateEdges(baseLoop, totalRads, name = "rotateEdges" + _.getGlobalId(), generator, infoFactory) {
+        ts3dutils.assert(baseLoop.every((e) => new _.PlaneSurface(_.P3.ZX).containsCurve(e.curve)));
         ts3dutils.assert(!ts3dutils.eq(PI, totalRads) || PI == totalRads); // URHGJ
         ts3dutils.assertf(() => ts3dutils.lt(0, totalRads) && ts3dutils.le(totalRads, ts3dutils.TAU));
         totalRads = ts3dutils.snap(totalRads, ts3dutils.TAU);
-        ts3dutils.assertf(() => Edge.isLoop(baseLoop));
-        const basePlane = new PlaneSurface(P3.ZX.flipped()).edgeLoopCCW(baseLoop)
-            ? new PlaneSurface(P3.ZX.flipped())
-            : new PlaneSurface(P3.ZX);
+        ts3dutils.assertf(() => _.Edge.isLoop(baseLoop));
+        const basePlane = new _.PlaneSurface(_.P3.ZX.flipped()).edgeLoopCCW(baseLoop)
+            ? new _.PlaneSurface(_.P3.ZX.flipped())
+            : new _.PlaneSurface(_.P3.ZX);
         // const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
         // const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
         const open = !ts3dutils.eq(totalRads, 2 * PI);
         const baseRibCurves = baseLoop.map((edge) => {
             const a = edge.a, radius = a.lengthXY();
             if (!ts3dutils.eq0(radius)) {
-                return new EllipseCurve(ts3dutils.V(0, 0, a.z), ts3dutils.V(radius, 0, 0), ts3dutils.V(0, radius, 0));
+                return new _.EllipseCurve(ts3dutils.V(0, 0, a.z), ts3dutils.V(radius, 0, 0), ts3dutils.V(0, radius, 0));
             }
             return undefined;
         });
@@ -7254,7 +7307,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
                 const b = stepEndEdges[i].a;
                 if (!ts3dutils.eq0(radius)) {
                     const curve = 0 === rot ? baseRibCurves[i] : baseRibCurves[i].rotateZ(rot);
-                    return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + "rib" + i);
+                    return new _.PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT), name + "rib" + i);
                 }
                 return undefined;
             });
@@ -7273,20 +7326,20 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
                         : baseSurfaces[edgeIndex].rotateZ(rot);
                     const info = infoFactory &&
                         infoFactory.extrudeWall(edgeIndex, surface, faceEdges, undefined);
-                    faces.push(Face.create(surface, faceEdges, undefined, name + "Wall" + edgeIndex, info));
+                    faces.push(_.Face.create(surface, faceEdges, undefined, name + "Wall" + edgeIndex, info));
                 }
             }
             stepStartEdges = stepEndEdges;
         }
         if (open) {
-            const endFaceEdges = Edge.reversePath(stepEndEdges);
+            const endFaceEdges = _.Edge.reversePath(stepEndEdges);
             const infoStart = infoFactory && infoFactory.rotationStart(basePlane, baseLoop, undefined);
             const infoEnd = infoFactory &&
                 infoFactory.rotationEnd(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined);
-            faces.push(new PlaneFace(basePlane, baseLoop, undefined, name + "start", infoStart), new PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + "end", infoEnd));
+            faces.push(new _.PlaneFace(basePlane, baseLoop, undefined, name + "start", infoStart), new _.PlaneFace(basePlane.flipped().rotateZ(totalRads), endFaceEdges, undefined, name + "end", infoEnd));
         }
-        const infiniteVolume = new PlaneSurface(P3.ZX).edgeLoopCCW(baseLoop);
-        return new BRep(faces, infiniteVolume, generator);
+        const infiniteVolume = new _.PlaneSurface(_.P3.ZX).edgeLoopCCW(baseLoop);
+        return new _.BRep(faces, infiniteVolume, generator);
     }
     B2T.rotateEdges = rotateEdges;
     /**
@@ -7334,13 +7387,13 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
         // .map(vi => B2T.DODECAHEDRON_VERTICES[vi])
         // .reduce((a,b) => a.plus(b), V3.O)
         // .unit()))
-        const ss = new BRep(B2T.TETRAHEDRON_VERTICES.flatMap((v) => baseK.rotateAB(ts3dutils.V3.Y, v).faces), false);
+        const ss = new _.BRep(B2T.TETRAHEDRON_VERTICES.flatMap((v) => baseK.rotateAB(ts3dutils.V3.Y, v).faces), false);
         //return ss
         return B2T.sphere().and(ss);
     }
     B2T.quaffle = quaffle;
     function extrudeFace(face, dir) {
-        return new BRep(extrudeEdges(face.contour, face.surface.plane, dir)
+        return new _.BRep(extrudeEdges(face.contour, face.surface.plane, dir)
             .faces.slice(0, -2)
             .concat(face, face.translate(dir.x, dir.y, dir.z).flipped(), face.holes.flatMap((hole) => extrudeEdges(hole, face.surface.plane.flipped(), dir).faces.slice(0, -2))), false);
     }
@@ -7406,13 +7459,13 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
         const loops = subpaths.map((sp) => {
             const path = new opentype.Path();
             path.commands = sp;
-            const loop = Edge.reversePath(edgePathFromSVG(path.toPathData(13))).map((e) => e.mirrorY());
-            ts3dutils.assert(Edge.isLoop(loop));
+            const loop = _.Edge.reversePath(_.edgePathFromSVG(path.toPathData(13))).map((e) => e.mirrorY());
+            ts3dutils.assert(_.Edge.isLoop(loop));
             return loop;
         });
-        const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace);
+        const faces = _.Face.assembleFacesFromLoops(loops, new _.PlaneSurface(_.P3.XY), _.PlaneFace);
         const generator = ts3dutils.callsce("B2T.text", text, size, depth);
-        return BRep.join(faces.map((face) => B2T.extrudeFace(face, ts3dutils.V(0, 0, -depth))), generator);
+        return _.BRep.join(faces.map((face) => B2T.extrudeFace(face, ts3dutils.V(0, 0, -depth))), generator);
     }
     B2T.text = text;
     function minorityReport() {
@@ -7427,7 +7480,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
     B2T.minorityReport = minorityReport;
     function whatever() {
         const iso = icosahedron();
-        const numbersBRep = BRep.join(iso.faces.map((face, i) => {
+        const numbersBRep = _.BRep.join(iso.faces.map((face, i) => {
             const numberBRep = text("" + (i + 1), 0.4, -2);
             const centroid = face.contour
                 .map((edge) => edge.a)
@@ -7449,7 +7502,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
     B2T.whatever3 = whatever3;
     function d20() {
         const iso = icosahedron();
-        const numbersBRep = BRep.join(iso.faces.map((face, i) => {
+        const numbersBRep = _.BRep.join(iso.faces.map((face, i) => {
             const numberBRep = text("" + (i + 1), 0.4, -2);
             const centroid = face.contour
                 .map((edge) => edge.a)
@@ -7484,7 +7537,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
             const ipp = (i + 1) % (count + 1);
             return ts3dutils.arrayFromFunction(edges.length, (j) => {
                 if (!ts3dutils.eq0(edges[j].a.lengthXY())) {
-                    return StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a);
+                    return _.StraightEdge.throughPoints(ribs[i][j].a, ribs[ipp][j].a);
                 }
                 return undefined;
             });
@@ -7494,10 +7547,10 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
         edges.forEach((edge, i) => {
             const ipp = (i + 1) % edges.length;
             // for straight edges perpendicular to the Z-axis, we only create one face.
-            if (edge instanceof StraightEdge &&
+            if (edge instanceof _.StraightEdge &&
                 edge.curve.dir1.isPerpendicularTo(ts3dutils.V3.Z)) {
                 const flipped = edge.a.x > edge.b.x;
-                const surface = new PlaneSurface(flipped ? new P3(ts3dutils.V3.Z, edge.a.z) : new P3(ts3dutils.V3.Z.negated(), -edge.a.z));
+                const surface = new _.PlaneSurface(flipped ? new _.P3(ts3dutils.V3.Z, edge.a.z) : new _.P3(ts3dutils.V3.Z.negated(), -edge.a.z));
                 if (open) {
                     const faceEdges = [];
                     if (!ts3dutils.eq0(edge.a.x)) {
@@ -7508,7 +7561,7 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
                         faceEdges.push(...ts3dutils.arrayFromFunction(count, (j) => horizontalEdges[count - j - 1][ipp].flipped()));
                     }
                     faceEdges.push(edge.flipped());
-                    face = new PlaneFace(surface, faceEdges);
+                    face = new _.PlaneFace(surface, faceEdges);
                 }
                 else {
                     const contour = flipped
@@ -7521,12 +7574,12 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
                     else if (!flipped && !ts3dutils.eq0(edge.a.x)) {
                         hole = ts3dutils.arrayFromFunction(count, (j) => horizontalEdges[j][i]);
                     }
-                    face = new PlaneFace(surface, contour, hole ? [hole] : []);
+                    face = new _.PlaneFace(surface, contour, hole ? [hole] : []);
                 }
                 faces.push(face);
                 return;
             }
-            else if (edge instanceof StraightEdge) {
+            else if (edge instanceof _.StraightEdge) {
                 if (ts3dutils.eq0(edge.a.lengthXY()) && ts3dutils.eq0(edge.b.lengthXY())) {
                     return;
                 }
@@ -7540,8 +7593,8 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
                     horizontalEdges[r][ipp] && horizontalEdges[r][ipp].flipped(),
                 ].filter((x) => x);
                 let surface;
-                if (edge instanceof StraightEdge) {
-                    surface = new PlaneSurface(P3.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a));
+                if (edge instanceof _.StraightEdge) {
+                    surface = new _.PlaneSurface(_.P3.throughPoints(faceEdges[0].a, faceEdges[1].a, faceEdges[2].a));
                 }
                 else {
                     const maxX = edges[i].getAABB().max.x;
@@ -7549,33 +7602,33 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
                     const offset = ts3dutils.V3.polar(maxX, prevPhi).to(ts3dutils.V3.polar(maxX, phi));
                     surface = projectCurve(ribs[r][i].curve, offset, false);
                 }
-                faces.push(Face.create(surface, faceEdges));
+                faces.push(_.Face.create(surface, faceEdges));
             }
         });
         if (open) {
             const endFaceEdges = ribs[count].map((edge) => edge.flipped()).reverse();
-            const endFace = new PlaneFace(new PlaneSurface(P3.ZX.rotateZ(ts3dutils.getLast(angles))), endFaceEdges);
-            faces.push(new PlaneFace(new PlaneSurface(P3.ZX.flipped()), edges), endFace);
+            const endFace = new _.PlaneFace(new _.PlaneSurface(_.P3.ZX.rotateZ(ts3dutils.getLast(angles))), endFaceEdges);
+            faces.push(new _.PlaneFace(new _.PlaneSurface(_.P3.ZX.flipped()), edges), endFace);
         }
-        return new BRep(faces, new PlaneSurface(P3.ZX).edgeLoopCCW(edges));
+        return new _.BRep(faces, new _.PlaneSurface(_.P3.ZX).edgeLoopCCW(edges));
     }
     B2T.rotStep = rotStep;
     function fixEdges(edges) {
         return edges.flatMap((edge) => {
             const c = edge.curve;
-            if (c instanceof EllipseCurve && c.tMin === -PI && c.tMax === PI) {
+            if (c instanceof _.EllipseCurve && c.tMin === -PI && c.tMax === PI) {
                 const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge];
                 return splitEdges.map((edge) => {
                     if (edge.minT >= 0) {
-                        return createEdge(new EllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
+                        return _.createEdge(new _.EllipseCurve(c.center, c.f1, c.f2, max(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
                     }
                     else {
                         // "rotate" the curve
-                        return createEdge(new EllipseCurve(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI, min(PI, c.tMax + PI)), edge.a, edge.b, edge.aT + PI, edge.bT + PI, undefined, edge.aDir, edge.bDir, edge.name);
+                        return _.createEdge(new _.EllipseCurve(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI, min(PI, c.tMax + PI)), edge.a, edge.b, edge.aT + PI, edge.bT + PI, undefined, edge.aDir, edge.bDir, edge.name);
                     }
                 });
             }
-            if (c instanceof BezierCurve) {
+            if (c instanceof _.BezierCurve) {
                 if (edge.a.like(edge.b)) {
                     return edge.split(ts3dutils.lerp(edge.aT, edge.bT, 0.5));
                 }
@@ -7594,11 +7647,11 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      */
     function extrudeVertices(baseVertices, baseFacePlane, offset, name, generator) {
         ts3dutils.assert(baseVertices.every((v) => v instanceof ts3dutils.V3), "baseVertices.every(v => v instanceof V3)");
-        ts3dutils.assertInst(P3, baseFacePlane);
+        ts3dutils.assertInst(_.P3, baseFacePlane);
         ts3dutils.assertVectors(offset);
         if (baseFacePlane.normal1.dot(offset) > 0)
             baseFacePlane = baseFacePlane.flipped();
-        const edges = StraightEdge.chain(baseVertices, true);
+        const edges = _.StraightEdge.chain(baseVertices, true);
         generator =
             generator ||
                 ts3dutils.callsce("B2T.extrudeVertices", baseVertices, baseFacePlane, offset, name);
@@ -7615,29 +7668,29 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * @param d
      * @param name
      */
-    function tetrahedron(a, b, c, d, name = "tetra" + getGlobalId()) {
+    function tetrahedron(a, b, c, d, name = "tetra" + _.getGlobalId()) {
         ts3dutils.assertVectors(a, b, c, d);
-        const dDistance = P3.throughPoints(a, b, c).distanceToPointSigned(d);
+        const dDistance = _.P3.throughPoints(a, b, c).distanceToPointSigned(d);
         if (ts3dutils.eq0(dDistance)) {
             throw new Error("four points are coplanar");
         }
         if (dDistance > 0) {
             [c, d] = [d, c];
         }
-        const ab = StraightEdge.throughPoints(a, b);
-        const ac = StraightEdge.throughPoints(a, c);
-        const ad = StraightEdge.throughPoints(a, d);
-        const bc = StraightEdge.throughPoints(b, c);
-        const bd = StraightEdge.throughPoints(b, d);
-        const cd = StraightEdge.throughPoints(c, d);
+        const ab = _.StraightEdge.throughPoints(a, b);
+        const ac = _.StraightEdge.throughPoints(a, c);
+        const ad = _.StraightEdge.throughPoints(a, d);
+        const bc = _.StraightEdge.throughPoints(b, c);
+        const bd = _.StraightEdge.throughPoints(b, d);
+        const cd = _.StraightEdge.throughPoints(c, d);
         const faces = [
-            new PlaneFace(PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()], [], name + "abc"),
-            new PlaneFace(PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()], [], name + "adb"),
-            new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + "bdc"),
-            new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + "cda"),
+            new _.PlaneFace(_.PlaneSurface.throughPoints(a, b, c), [ab, bc, ac.flipped()], [], name + "abc"),
+            new _.PlaneFace(_.PlaneSurface.throughPoints(a, d, b), [ad, bd.flipped(), ab.flipped()], [], name + "adb"),
+            new _.PlaneFace(_.PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + "bdc"),
+            new _.PlaneFace(_.PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + "cda"),
         ];
         const gen = ts3dutils.callsce("B2T.tetrahedron", a, b, c, d);
-        return new BRep(faces, false, gen);
+        return new _.BRep(faces, false, gen);
     }
     B2T.tetrahedron = tetrahedron;
     const b = 1 / ts3dutils.GOLDEN_RATIO, c = 2 - ts3dutils.GOLDEN_RATIO;
@@ -7766,19 +7819,19 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
     function makePlatonic(VS, FVIS, generator) {
         const edgeMap = new Map();
         const faces = FVIS.map((faceIndexes) => {
-            const surface = PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]]);
+            const surface = _.PlaneSurface.throughPoints(VS[faceIndexes[0]], VS[faceIndexes[1]], VS[faceIndexes[2]]);
             const contour = ts3dutils.arrayFromFunction(faceIndexes.length, (i) => {
                 const ipp = (i + 1) % faceIndexes.length;
                 const iA = faceIndexes[i], iB = faceIndexes[ipp];
                 const iMin = min(iA, iB), iMax = max(iA, iB), edgeID = iMin * VS.length + iMax;
                 let edge = edgeMap.get(edgeID);
                 !edge &&
-                    edgeMap.set(edgeID, (edge = StraightEdge.throughPoints(VS[iMin], VS[iMax])));
+                    edgeMap.set(edgeID, (edge = _.StraightEdge.throughPoints(VS[iMin], VS[iMax])));
                 return iA < iB ? edge : edge.flipped();
             });
-            return new PlaneFace(surface, contour);
+            return new _.PlaneFace(surface, contour);
         });
-        return new BRep(faces, false, generator);
+        return new _.BRep(faces, false, generator);
     }
     /**
      * Create a [BRep] by projecting a number of edges onto a point.
@@ -7786,22 +7839,22 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
      * @param apex The tip of the pyramid.
      * @param name
      */
-    function pyramidEdges(baseEdges, apex, name = "pyramid" + getGlobalId()) {
-        ts3dutils.assertInst(Edge, ...baseEdges);
+    function pyramidEdges(baseEdges, apex, name = "pyramid" + _.getGlobalId()) {
+        ts3dutils.assertInst(_.Edge, ...baseEdges);
         ts3dutils.assertVectors(apex);
-        const ribs = baseEdges.map((baseEdge) => StraightEdge.throughPoints(apex, baseEdge.a));
+        const ribs = baseEdges.map((baseEdge) => _.StraightEdge.throughPoints(apex, baseEdge.a));
         const faces = baseEdges.map((baseEdge, i) => {
             const faceName = name + "Wall" + i;
             const ipp = (i + 1) % baseEdges.length;
             const faceEdges = [ribs[i], baseEdge, ribs[ipp].flipped()];
             const surface = projectPointCurve(baseEdge.curve, baseEdge.minT, baseEdge.maxT, apex, baseEdge.deltaT() < 0);
-            return Face.create(surface, faceEdges, undefined, faceName);
+            return _.Face.create(surface, faceEdges, undefined, faceName);
         });
-        const baseSurface = new PlaneSurface(P3.XY).flipped();
-        const bottomFace = Face.create(baseSurface, Edge.reversePath(baseEdges));
+        const baseSurface = new _.PlaneSurface(_.P3.XY).flipped();
+        const bottomFace = _.Face.create(baseSurface, _.Edge.reversePath(baseEdges));
         faces.push(bottomFace);
         const generator = ts3dutils.callsce("B2T.pyramidEdges", baseEdges, apex, name);
-        return new BRep(faces, false, generator);
+        return new _.BRep(faces, false, generator);
     }
     B2T.pyramidEdges = pyramidEdges;
     function fromBPT(bpt) {
@@ -7815,17 +7868,23 @@ function rotateCurve(curve, tMin = curve.tMin, tMax = curve.tMax, angle, flipped
         const faces = ts3dutils.arrayFromFunction(numOfPatches, () => {
             const [pointsUCount, pointsVCount] = readLineNumbers();
             const points = Array.from({ length: (pointsUCount + 1) * (pointsVCount + 1) }, () => ts3dutils.VV(...readLineNumbers(), 1));
-            const surface = new NURBSSurface(points, NURBS.bezierKnots(pointsUCount), NURBS.bezierKnots(pointsVCount), pointsUCount, pointsVCount, 0, 1, 0, 1);
-            return surface;
+            const surface = new NURBSSurface(points, _.NURBS.bezierKnots(pointsUCount), _.NURBS.bezierKnots(pointsVCount), pointsUCount, pointsVCount, 0, 1, 0, 1);
+            const edges = [
+                _.edgeForCurveAndTs(surface.isoparametricV(0)),
+                _.edgeForCurveAndTs(surface.isoparametricU(1)),
+                _.edgeForCurveAndTs(surface.isoparametricV(1)).flipped(),
+                _.edgeForCurveAndTs(surface.isoparametricU(0)).flipped(),
+            ];
+            return _.Face.create(surface, edges);
         });
-        return faces;
+        return new _.BRep(faces, false);
     }
     B2T.fromBPT = fromBPT;
 })(exports.B2T || (exports.B2T = {}));
 
-class CustomPlane extends P3 {
-    constructor(anchor, right, up, name = "CustomPlane" + getGlobalId(), color = chroma__default['default'].random().gl(), uMin = -500, uMax = 500, vMin = -500, vMax = 500) {
-        const { normal1, w } = P3.forAnchorAndPlaneVectors(anchor, right, up);
+class CustomPlane extends _.P3 {
+    constructor(anchor, right, up, name = "CustomPlane" + _.getGlobalId(), color = chroma.random().gl(), uMin = -500, uMax = 500, vMin = -500, vMax = 500) {
+        const { normal1, w } = _.P3.forAnchorAndPlaneVectors(anchor, right, up);
         super(normal1, w);
         this.up = up;
         this.right = right;
@@ -7840,7 +7899,7 @@ class CustomPlane extends P3 {
         return this;
     }
     toPlaneSurface() {
-        return new PlaneSurface(this, this.right, this.up);
+        return new _.PlaneSurface(this, this.right, this.up);
     }
     toSource() {
         return ts3dutils.callsce("new CustomPlane", this.anchor, this.right, this.up, this.name, this.color, this.uMin, this.uMax, this.vMin, this.vMax);
@@ -7851,16 +7910,15 @@ class CustomPlane extends P3 {
         return new CustomPlane(plane.anchor, right, up, name, color);
     }
     static fromPlaneSurface(surface) {
-        return new CustomPlane(surface.plane.anchor, surface.right, surface.up, "genCustomPlane" + getGlobalId());
+        return new CustomPlane(surface.plane.anchor, surface.right, surface.up, "genCustomPlane" + _.getGlobalId());
     }
     distanceTo(line, mindist) {
         return ts3dutils.min([
-            new L3(this.anchor.plus(this.right.times(this.uMin)), this.up),
-            new L3(this.anchor.plus(this.right.times(this.uMax)), this.up),
-            new L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
-            new L3(this.anchor.plus(this.up.times(this.vMax)), this.right),
-        ]
-            .map((line2, line2Index) => {
+            new _.L3(this.anchor.plus(this.right.times(this.uMin)), this.up),
+            new _.L3(this.anchor.plus(this.right.times(this.uMax)), this.up),
+            new _.L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
+            new _.L3(this.anchor.plus(this.up.times(this.vMax)), this.right),
+        ].map((line2, line2Index) => {
             const info = line2.infoClosestToLine(line);
             if ((isNaN(info.t) || // parallel LINES
                 (line2Index < 2 && this.vMin <= info.t && info.t <= this.vMax) ||
@@ -7875,12 +7933,11 @@ class CustomPlane extends P3 {
     }
     distanceTo2(line, mindist) {
         return ts3dutils.min([
-            new L3(this.anchor.plus(this.right.times(this.uMin)), this.up),
-            new L3(this.anchor.plus(this.right.times(this.uMax)), this.up),
-            new L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
-            new L3(this.anchor.plus(this.up.times(this.vMax)), this.right),
-        ]
-            .map((line2, line2Index) => {
+            new _.L3(this.anchor.plus(this.right.times(this.uMin)), this.up),
+            new _.L3(this.anchor.plus(this.right.times(this.uMax)), this.up),
+            new _.L3(this.anchor.plus(this.up.times(this.vMin)), this.right),
+            new _.L3(this.anchor.plus(this.up.times(this.vMax)), this.right),
+        ].map((line2, line2Index) => {
             const info = line2.infoClosestToLine(line);
             if ((isNaN(info.t) || // parallel LINES
                 (line2Index < 2 && this.vMin <= info.t && info.t <= this.vMax) ||
@@ -7908,7 +7965,7 @@ class Edge extends ts3dutils.Transformable {
         ts3dutils.assertNumbers(aT, bT);
         ts3dutils.assert(!ts3dutils.eq(aT, bT));
         ts3dutils.assertVectors(a, b);
-        ts3dutils.assertf(() => curve instanceof Curve, curve);
+        ts3dutils.assertf(() => curve instanceof _.Curve, curve);
         ts3dutils.assertf(() => !curve.isValidT || (curve.isValidT(aT) && curve.isValidT(bT)), aT, bT, curve);
         //if (curve instanceof PICurve) {
         //    assertf(() => curve.at(aT).to(a).length() < 0.1, ''+curve.at(aT)+a)
@@ -7967,7 +8024,7 @@ class Edge extends ts3dutils.Transformable {
         return ts3dutils.callsce("new " + this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir);
     }
     colinearToLine(line) {
-        return this.curve instanceof L3 && this.curve.isColinearTo(line);
+        return this.curve instanceof _.L3 && this.curve.isColinearTo(line);
     }
     tValueInside(t) {
         return this.aT < this.bT
@@ -8066,11 +8123,11 @@ class Edge extends ts3dutils.Transformable {
     }
 }
 
-class StraightEdge extends Edge {
+class StraightEdge extends _.Edge {
     constructor(line, a, b, aT, bT, flippedOf, name) {
         super(line, a, b, aT, bT, flippedOf, name);
         this.flippedOf = flippedOf;
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         !flippedOf || ts3dutils.assertInst(StraightEdge, flippedOf);
         !name || ts3dutils.assertf(() => "string" === typeof name, name);
         this.tangent =
@@ -8083,7 +8140,7 @@ class StraightEdge extends Edge {
         return this.tangent;
     }
     static throughPoints(a, b, name) {
-        return new StraightEdge(L3.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), undefined, name);
+        return new StraightEdge(_.L3.throughPoints(a, b, 0, a.to(b).length()), a, b, 0, a.to(b).length(), undefined, name);
     }
     /**
      * Create a list of StraightEdges from a list of vertices.
@@ -8112,7 +8169,7 @@ class StraightEdge extends Edge {
         return this.minT <= edgeT && edgeT <= this.maxT ? [edgeT] : [];
     }
     edgeISTsWithSurface(surface) {
-        if (surface instanceof PlaneSurface) {
+        if (surface instanceof _.PlaneSurface) {
             return this.edgeISTsWithPlane(surface.plane);
         }
         else {
@@ -8172,7 +8229,7 @@ class StraightEdge extends Edge {
     }
 }
 
-class PCurveEdge extends Edge {
+class PCurveEdge extends _.Edge {
     constructor(curve, a, b, aT, bT, flippedOf, aDir, bDir, name) {
         super(curve, a, b, aT, bT, flippedOf, name);
         this.flippedOf = flippedOf;
@@ -8181,7 +8238,7 @@ class PCurveEdge extends Edge {
         ts3dutils.assertVectors(aDir, bDir);
         ts3dutils.assertf(() => !aDir.likeO(), curve);
         ts3dutils.assertf(() => !bDir.likeO(), curve);
-        if (!(curve instanceof PICurve)) {
+        if (!(curve instanceof _.PICurve)) {
             // TODO
             ts3dutils.assertf(() => curve.tangentAt(aT).likeOrReversed(aDir), "" + aT + curve.tangentAt(aT).sce + " " + aDir.sce);
             ts3dutils.assertf(() => curve.tangentAt(bT).likeOrReversed(bDir), "" + bT + curve.tangentAt(bT).sce + " " + bDir.sce);
@@ -8284,20 +8341,20 @@ function edgePathFromSVG(pathString) {
         const endPos = new ts3dutils.V3(c.x, c.y, 0);
         switch (c.type) {
             case svgPathdata.SVGPathData.LINE_TO:
-                path.push(StraightEdge.throughPoints(currentPos, endPos));
+                path.push(_.StraightEdge.throughPoints(currentPos, endPos));
                 break;
             case svgPathdata.SVGPathData.CURVE_TO: {
                 const c1 = new ts3dutils.V3(c.x1, c.y1, 0);
                 const c2 = new ts3dutils.V3(c.x2, c.y2, 0);
-                const curve = new BezierCurve(currentPos, c1, c2, endPos, 0, 1);
-                const edge = new PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1));
+                const curve = new _.BezierCurve(currentPos, c1, c2, endPos, 0, 1);
+                const edge = new _.PCurveEdge(curve, currentPos, endPos, 0, 1, undefined, curve.tangentAt(0), curve.tangentAt(1));
                 path.push(edge);
                 break;
             }
             case svgPathdata.SVGPathData.QUAD_TO: {
                 const c1 = new ts3dutils.V3(c.x1, c.y1, 0);
-                const curve = ParabolaCurve.quadratic(currentPos, c1, endPos).rightAngled();
-                const edge = new PCurveEdge(curve, currentPos, endPos, curve.tMin, curve.tMax, undefined, curve.tangentAt(curve.tMin), curve.tangentAt(curve.tMax));
+                const curve = _.ParabolaCurve.quadratic(currentPos, c1, endPos).rightAngled();
+                const edge = new _.PCurveEdge(curve, currentPos, endPos, curve.tMin, curve.tMax, undefined, curve.tangentAt(curve.tMin), curve.tangentAt(curve.tMax));
                 path.push(edge);
                 break;
             }
@@ -8317,12 +8374,12 @@ function edgePathFromSVG(pathString) {
                     const gtPI = t1_ > ts3dutils.PI || t2_ > ts3dutils.PI;
                     const aT = gtPI ? t1_ - ts3dutils.PI : t1_;
                     const bT = gtPI ? t2_ - ts3dutils.PI : t2_;
-                    const curve = new EllipseCurve(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2);
+                    const curve = new _.EllipseCurve(center, gtPI ? f1.negated() : f1, gtPI ? f2.negated() : f2);
                     const a = phi1 == t1 ? currentPos : phi2 == t1 ? endPos : curve.at(aT);
                     const b = phi1 == t2 ? currentPos : phi2 == t2 ? endPos : curve.at(bT);
-                    return new PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT));
+                    return new _.PCurveEdge(curve, a, b, aT, bT, undefined, curve.tangentAt(aT), curve.tangentAt(bT));
                 });
-                path.push(...(c.phiDelta > 0 ? edges : Edge.reversePath(edges)));
+                path.push(...(c.phiDelta > 0 ? edges : _.Edge.reversePath(edges)));
                 break;
             }
         }
@@ -8342,21 +8399,21 @@ function edgeRect(width = 1, height = width) {
         new ts3dutils.V3(width, height, 0),
         new ts3dutils.V3(0, height, 0),
     ];
-    return StraightEdge.chain(vertices);
+    return _.StraightEdge.chain(vertices);
 }
-function ngon(n = 3, radius = 1) {
-    return StraightEdge.chain(ts3dutils.arrayFromFunction(n, (i) => ts3dutils.V3.polar(radius, (ts3dutils.TAU * i) / n)));
+function edgeNgon(n = 3, radius = 1) {
+    return _.StraightEdge.chain(ts3dutils.arrayFromFunction(n, (i) => ts3dutils.V3.polar(radius, (ts3dutils.TAU * i) / n)));
 }
-function star(pointCount = 5, r0 = 1, r1 = 0.5) {
+function edgeStar(pointCount = 5, r0 = 1, r1 = 0.5) {
     const vertices = ts3dutils.arrayFromFunction(pointCount * 2, (i) => ts3dutils.V3.polar(0 == i % 2 ? r0 : r1, (ts3dutils.TAU * i) / pointCount / 2));
-    return StraightEdge.chain(vertices);
+    return _.StraightEdge.chain(vertices);
 }
 function createEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name) {
-    if (curve instanceof L3) {
-        return new StraightEdge(curve, a, b, aT, bT, flippedOf, name);
+    if (curve instanceof _.L3) {
+        return new _.StraightEdge(curve, a, b, aT, bT, flippedOf, name);
     }
     else {
-        return new PCurveEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name);
+        return new _.PCurveEdge(curve, a, b, aT, bT, flippedOf, aDir, bDir, name);
     }
 }
 function edgeForCurveAndTs(curve, aT = curve.tMin, bT = curve.tMax) {
@@ -8370,7 +8427,7 @@ function reuleaux(n = 3, radius = 1) {
         const aI = (i + floor(n / 2)) % n, bI = (i + ceil(n / 2)) % n;
         const a = corners[aI], b = corners[bI];
         const center = corners[i];
-        const f1 = center.to(a), curve = new EllipseCurve(center, f1, ts3dutils.V3.Z.cross(f1));
+        const f1 = center.to(a), curve = new _.EllipseCurve(center, f1, ts3dutils.V3.Z.cross(f1));
         return createEdge(curve, a, b, 0, curve.pointT(b), undefined, ts3dutils.V3.Z.cross(f1), ts3dutils.V3.Z.cross(center.to(b)));
     });
 }
@@ -8384,7 +8441,7 @@ function round$1(edges, radius) {
             return undefined;
         const angleToNext = edge.bDir.angleTo(nextEdge.aDir);
         const c1 = edge.curve, c2 = nextEdge.curve;
-        if (c1 instanceof L3 && c2 instanceof L3) {
+        if (c1 instanceof _.L3 && c2 instanceof _.L3) {
             const normal = c1.dir1.cross(c2.dir1);
             if (ts3dutils.eq0(angleToNext))
                 return undefined;
@@ -8397,7 +8454,7 @@ function round$1(edges, radius) {
             const cornerA = center.plus(l1inside.toLength(-radius));
             const cornerB = center.plus(l2inside.toLength(-radius));
             const f1 = l1inside.toLength(-radius);
-            const curve = new EllipseCurve(center, f1, normal.cross(f1).toLength(radius));
+            const curve = new _.EllipseCurve(center, f1, normal.cross(f1).toLength(radius));
             const cornerEdge = createEdge(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.dir1, c2.dir1);
             return cornerEdge;
         }
@@ -8455,7 +8512,7 @@ function arbitraryCorner(e1, e2, radius) {
     const normal1 = virtualPlaneNormal.cross(dp1).unit();
     const f1 = normal1.toLength(-radius);
     const center = cornerA.minus(f1);
-    const curve = new EllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius));
+    const curve = new _.EllipseCurve(center, f1, virtualPlaneNormal.cross(f1).toLength(radius));
     const cornerEdge = createEdge(curve, cornerA, cornerB, 0, curve.pointT(cornerB), undefined, c1.tangentAt(t1), c2.tangentAt(t2));
     return cornerEdge;
 }
@@ -8513,15 +8570,15 @@ class Face extends ts3dutils.Transformable {
         this.info = info;
         this.aabb = undefined;
         //assert(name)
-        Edge.assertLoop(contour);
-        ts3dutils.assert(contour.every((f) => f instanceof Edge), () => "contour.every(f => f instanceof Edge)" + contour);
+        _.Edge.assertLoop(contour);
+        ts3dutils.assert(contour.every((f) => f instanceof _.Edge), () => "contour.every(f => f instanceof Edge)" + contour);
         // contour.forEach(e => !surface.containsCurve(e.curve) &&
         // console.log('FAIL:'+surface.distanceToPoint(e.curve.anchor)))
         //contour.forEach(e => {
         //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
         //})
         //assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
-        holes && holes.forEach((hole) => Edge.assertLoop(hole));
+        holes && holes.forEach((hole) => _.Edge.assertLoop(hole));
         holes && holes.forEach((hole) => ts3dutils.assert(!surface.edgeLoopCCW(hole)));
         ts3dutils.assert(!holes || holes.constructor == Array, holes && holes.toString());
         this.allEdges = Array.prototype.concat.apply(this.contour, this.holes);
@@ -8532,7 +8589,7 @@ class Face extends ts3dutils.Transformable {
                 loopInfos.push(newLoopInfo);
             }
             else {
-                const subLoopInfo = loopInfos.find((loopInfo) => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface));
+                const subLoopInfo = loopInfos.find((loopInfo) => _.BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop, newLoopInfo.ccw, surface));
                 if (subLoopInfo) {
                     placeRecursively(newLoopInfo, subLoopInfo.subloops);
                 }
@@ -8542,7 +8599,7 @@ class Face extends ts3dutils.Transformable {
                         const subLoopInfo = loopInfos[i];
                         //console.log('cheving subLoopInfo', surface.loopContainsPoint(newLoopInfo.edges,
                         // subLoopInfo.edges[0].a))
-                        if (BRep.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
+                        if (_.BRep.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                             newLoopInfo.subloops.push(subLoopInfo);
                             loopInfos.splice(i, 1); // remove it
                         }
@@ -8552,7 +8609,7 @@ class Face extends ts3dutils.Transformable {
             }
         }
         function newFacesRecursive(loopInfo) {
-            newFaces.push(new faceConstructor(surface, loopInfo.ccw ? loopInfo.loop : Edge.reversePath(loopInfo.loop), loopInfo.subloops.map((sl) => sl.ccw ? Edge.reversePath(sl.loop) : sl.loop)));
+            newFaces.push(new faceConstructor(surface, loopInfo.ccw ? loopInfo.loop : _.Edge.reversePath(loopInfo.loop), loopInfo.subloops.map((sl) => sl.ccw ? _.Edge.reversePath(sl.loop) : sl.loop)));
             loopInfo.subloops.forEach((sl) => sl.subloops.forEach((sl2) => newFacesRecursive(sl2)));
         }
         const newFaces = [];
@@ -8587,7 +8644,7 @@ class Face extends ts3dutils.Transformable {
     // surface.edgeLoopCCW(loop), subloops: []}, topLevelLoops)) topLevelLoops.forEach(tll => newFacesRecursive(tll))
     // return newFaces }
     static create(surface, faceEdges, holes, faceName, info) {
-        return surface instanceof PlaneSurface
+        return surface instanceof _.PlaneSurface
             ? new PlaneFace(surface, faceEdges, holes, faceName, info)
             : new RotationFace(surface, faceEdges, holes, faceName, info);
     }
@@ -8631,22 +8688,22 @@ class Face extends ts3dutils.Transformable {
                 }
                 else {
                     const p = newEdge.a;
-                    const plane = P3.normalOnAnchor(newEdge.aDir, p);
+                    const plane = _.P3.normalOnAnchor(newEdge.aDir, p);
                     const up = face.surface.normalP(p);
                     const sameDir = up.dot(face2.surface.normalP(p)) > 0;
                     const canonDir = plane.normal1.cross(up);
                     const curve = face.surface.isCurvesWithPlane(plane)[0], curveT = curve.pointT(p), curveDir = sign(canonDir.dot(curve.tangentAt(curveT)));
                     const curve2 = face2.surface.isCurvesWithPlane(plane)[0], curve2T = curve2.pointT(p), curve2Dir = sign(canonDir.dot(curve.tangentAt(curve2T)));
-                    const foo = curve.diff(curveT, EPS * curveDir).dot(up);
-                    const foo2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up);
+                    const foo = curve.diff(curveT, _.EPS * curveDir).dot(up);
+                    const foo2 = curve2.diff(curve2T, _.EPS * curve2Dir).dot(up);
                     if (foo2 < foo) {
                         ts3dutils.mapPush(faceMap, face2, sameDir ? newEdge.flipped() : newEdge);
                     }
                     if (up.dot(face2.surface.normalP(p)) < 0 == foo2 < foo) {
                         ts3dutils.mapPush(faceMap, face, newEdge.flipped());
                     }
-                    const bar = curve.diff(curveT, EPS * curveDir).dot(up);
-                    const bar2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up);
+                    const bar = curve.diff(curveT, _.EPS * curveDir).dot(up);
+                    const bar2 = curve2.diff(curve2T, _.EPS * curve2Dir).dot(up);
                     if (bar2 < bar) {
                         ts3dutils.mapPush(faceMap, face2, sameDir ? newEdge : newEdge.flipped());
                     }
@@ -8668,9 +8725,9 @@ class Face extends ts3dutils.Transformable {
                     thisBrep.edgeFaces.get(col1.getCanon()).forEach((faceInfo) => {
                         //const dot = snap0(surface2.normal1.dot(faceInfo.inside))
                         //if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
-                        const pointsInsideFace = fff(faceInfo, face2.surface);
-                        const edgeInside = pointsInsideFace == INSIDE ||
-                            (!coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME);
+                        const pointsInsideFace = _.fff(faceInfo, face2.surface);
+                        const edgeInside = pointsInsideFace == _.INSIDE ||
+                            (!coplanarSameIsInside && pointsInsideFace == _.COPLANAR_SAME);
                         const pushEdge = faceInfo.edge
                             .tangentAt(faceInfo.edge.curve.pointT(newEdge.a))
                             .like(newEdge.aDir)
@@ -8684,23 +8741,23 @@ class Face extends ts3dutils.Transformable {
                     });
                     const surface2NormalAtNewEdgeA = surface2.normalP(newEdge.a);
                     const newEdgeInside = surface2NormalAtNewEdgeA.cross(newEdge.aDir);
-                    const sVEF1 = splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside, surface2NormalAtNewEdgeA);
+                    const sVEF1 = _.splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside, surface2NormalAtNewEdgeA);
                     let addNewEdge, addNewEdgeFlipped;
                     if ((addNewEdge =
-                        sVEF1 == INSIDE ||
-                            (coplanarSameIsInside && sVEF1 == COPLANAR_SAME))) {
+                        sVEF1 == _.INSIDE ||
+                            (coplanarSameIsInside && sVEF1 == _.COPLANAR_SAME))) {
                         ts3dutils.mapPush(faceMap, face2, newEdge);
                     }
-                    const sVEF2 = splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside.negated(), surface2NormalAtNewEdgeA);
+                    const sVEF2 = _.splitsVolumeEnclosingFacesP(thisBrep, col1.getCanon(), newEdge.a, newEdgeInside.negated(), surface2NormalAtNewEdgeA);
                     if ((addNewEdgeFlipped =
-                        sVEF2 == INSIDE ||
-                            (coplanarSameIsInside && sVEF2 == COPLANAR_SAME))) {
+                        sVEF2 == _.INSIDE ||
+                            (coplanarSameIsInside && sVEF2 == _.COPLANAR_SAME))) {
                         ts3dutils.mapPush(faceMap, face2, newEdge.flipped());
                     }
                     if (addNewEdge ||
                         addNewEdgeFlipped ||
-                        (sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE) ||
-                        (sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE)) {
+                        (sVEF1 == _.COPLANAR_SAME && sVEF2 == _.INSIDE) ||
+                        (sVEF2 == _.COPLANAR_SAME && sVEF1 == _.INSIDE)) {
                         return true;
                     }
                 }
@@ -8721,8 +8778,8 @@ class Face extends ts3dutils.Transformable {
                     // bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
                     // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
                     for (const faceInfo of thisBrep.edgeFaces.get(col1.getCanon())) {
-                        const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA);
-                        const edgeInside = sVEF == INSIDE || (coplanarSameIsInside && sVEF == COPLANAR_SAME);
+                        const sVEF = _.splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA);
+                        const edgeInside = sVEF == _.INSIDE || (coplanarSameIsInside && sVEF == _.COPLANAR_SAME);
                         const pushEdge = faceInfo.edge.aDir.like(newEdge.aDir)
                             ? newEdge
                             : newEdge.flipped();
@@ -8731,7 +8788,7 @@ class Face extends ts3dutils.Transformable {
                             const aT = col1.getCanon().curve.pointT(newEdge.a);
                             if (!ts3dutils.eq(aT, col1.aT) && !ts3dutils.eq(aT, col1.bT)) {
                                 // newEdge.a is in center of col1
-                                if (splitsVolumeEnclosingCone2(face2Brep, newEdge.a, newEdge.curve, newEdge.aT, -Math.sign(newEdge.deltaT())) == INSIDE) {
+                                if (_.splitsVolumeEnclosingCone2(face2Brep, newEdge.a, newEdge.curve, newEdge.aT, -Math.sign(newEdge.deltaT())) == _.INSIDE) {
                                     ts3dutils.mapPush(thisEdgePoints, col1.getCanon(), {
                                         p: newEdge.a,
                                         edgeT: aT,
@@ -8740,7 +8797,7 @@ class Face extends ts3dutils.Transformable {
                             }
                             const bT = col1.getCanon().curve.pointT(newEdge.b);
                             if (!ts3dutils.eq(bT, col1.aT) && !ts3dutils.eq(bT, col1.bT)) {
-                                if (splitsVolumeEnclosingCone2(face2Brep, newEdge.b, newEdge.curve, newEdge.bT, Math.sign(newEdge.deltaT())) == INSIDE) {
+                                if (_.splitsVolumeEnclosingCone2(face2Brep, newEdge.b, newEdge.curve, newEdge.bT, Math.sign(newEdge.deltaT())) == _.INSIDE) {
                                     ts3dutils.mapPush(thisEdgePoints, col1.getCanon(), {
                                         p: newEdge.b,
                                         edgeT: bT,
@@ -8791,10 +8848,10 @@ class Face extends ts3dutils.Transformable {
                         if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) {
                             const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b;
                             // face2brep corner on edge
-                            const sVEC1 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, 1);
-                            const sVEC2 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, -1);
+                            const sVEC1 = _.splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, 1);
+                            const sVEC2 = _.splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, -1);
                             // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge
-                            if (INSIDE == sVEC1 || INSIDE == sVEC2) {
+                            if (_.INSIDE == sVEC1 || _.INSIDE == sVEC2) {
                                 ts3dutils.mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                 ts3dutils.assert(a.edge.isValidT(a.edgeT));
                             }
@@ -8805,12 +8862,12 @@ class Face extends ts3dutils.Transformable {
                             // const testVector =
                             // a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
                             // assert(!testVector.likeO())
-                            const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
-                            const sVEF2 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p));
-                            if (INSIDE == sVEF1 ||
-                                (first && COPLANAR_SAME == sVEF1) ||
-                                INSIDE == sVEF2 ||
-                                (first && COPLANAR_SAME == sVEF2)) {
+                            const sVEF1 = _.splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
+                            const sVEF2 = _.splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, -1, thisPlane.normalP(a.p));
+                            if (_.INSIDE == sVEF1 ||
+                                (first && _.COPLANAR_SAME == sVEF1) ||
+                                _.INSIDE == sVEF2 ||
+                                (first && _.COPLANAR_SAME == sVEF2)) {
                                 ts3dutils.mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                 ts3dutils.assert(a.edge.isValidT(a.edgeT));
                             }
@@ -8857,7 +8914,7 @@ class Face extends ts3dutils.Transformable {
             function startsInside(ps, face) {
                 if (0 == ps.length) {
                     return (isFinite(isCurve.tMin) &&
-                        face.containsPoint2(isCurve.at(isCurve.tMin)) == exports.PointVsFace.INSIDE);
+                        face.containsPoint2(isCurve.at(isCurve.tMin)) == _.PointVsFace.INSIDE);
                 }
                 else {
                     return ps[0].insideDir.dot(isCurve.tangentAt(ps[0].t)) < 0;
@@ -8917,7 +8974,7 @@ class Face extends ts3dutils.Transformable {
                     startT > last.t && (startDir = startDir.negated());
                     let endDir = isCurve.tangentAt(last.t);
                     startT > last.t && (endDir = endDir.negated());
-                    const newEdge = createEdge(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, "genseg" + getGlobalId());
+                    const newEdge = _.createEdge(isCurve, startP, last.p, startT, last.t, undefined, startDir, endDir, "genseg" + _.getGlobalId());
                     startP = undefined;
                     if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
                         handleEndPoint(startA || col1, startB || col2);
@@ -8939,7 +8996,7 @@ class Face extends ts3dutils.Transformable {
                 startT > endT && (startDir = startDir.negated());
                 let endDir = isCurve.tangentAt(endT);
                 startT > endT && (endDir = endDir.negated());
-                const newEdge = createEdge(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, "genseg" + getGlobalId());
+                const newEdge = _.createEdge(isCurve, startP, isCurve.at(endT), startT, endT, undefined, startDir, endDir, "genseg" + _.getGlobalId());
                 if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) {
                     handleEndPoint(startA || col1, startB || col2);
                 }
@@ -8971,7 +9028,7 @@ class Face extends ts3dutils.Transformable {
                         const curveAT = isCurve.pointT(edge.a);
                         const colinearOutA = edge.aDir.cross(surface.normalP(edge.a));
                         if (!colinearEdges[prevEdgeIndex] &&
-                            dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -sign(prevEdge.deltaT())) > 0) {
+                            _.dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -sign(prevEdge.deltaT())) > 0) {
                             ps.push({
                                 p: prevEdge.b,
                                 insideDir: edge.aDir.negated(),
@@ -8994,7 +9051,7 @@ class Face extends ts3dutils.Transformable {
                         const curveBT = isCurve.pointT(edge.b);
                         const colinearOutB = edge.bDir.cross(surface.normalP(edge.b));
                         if (!colinearEdges[nextEdgeIndex] &&
-                            dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, sign(nextEdge.deltaT())) > 0) {
+                            _.dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, sign(nextEdge.deltaT())) > 0) {
                             ps.push({
                                 p: edge.b,
                                 insideDir: edge.bDir,
@@ -9034,8 +9091,8 @@ class Face extends ts3dutils.Transformable {
                             if (!colinearEdges[nextEdgeIndex]) {
                                 if (!ts3dutils.eq(curveT, isCurve.tMax)) {
                                     const pointsToInside = this.pointsToInside3(edge.b, isCurve, curveT, 1);
-                                    ts3dutils.assert(pointsToInside != exports.PointVsFace.ON_EDGE);
-                                    if (exports.PointVsFace.INSIDE == pointsToInside) {
+                                    ts3dutils.assert(pointsToInside != _.PointVsFace.ON_EDGE);
+                                    if (_.PointVsFace.INSIDE == pointsToInside) {
                                         ps.push({
                                             p: edge.b,
                                             insideDir: isTangent,
@@ -9048,8 +9105,8 @@ class Face extends ts3dutils.Transformable {
                                 }
                                 if (!ts3dutils.eq(curveT, isCurve.tMin)) {
                                     const pointsToInside = this.pointsToInside3(edge.b, isCurve, curveT, -1);
-                                    ts3dutils.assert(pointsToInside != exports.PointVsFace.ON_EDGE);
-                                    if (exports.PointVsFace.INSIDE == pointsToInside) {
+                                    ts3dutils.assert(pointsToInside != _.PointVsFace.ON_EDGE);
+                                    if (_.PointVsFace.INSIDE == pointsToInside) {
                                         ps.push({
                                             p: edge.b,
                                             insideDir: isTangent.negated(),
@@ -9146,14 +9203,14 @@ class Face extends ts3dutils.Transformable {
     }
     transform(m4) {
         const mirroring = m4.isMirroring();
-        const newEdges = Edge.reversePath(this.contour.map((e) => e.transform(m4)), mirroring);
-        const newHoles = this.holes.map((hole) => Edge.reversePath(hole.map((e) => e.transform(m4)), mirroring));
+        const newEdges = _.Edge.reversePath(this.contour.map((e) => e.transform(m4)), mirroring);
+        const newHoles = this.holes.map((hole) => _.Edge.reversePath(hole.map((e) => e.transform(m4)), mirroring));
         return new this.constructor(this.surface.transform(m4), newEdges, newHoles, this.name, this.info);
     }
     transform4(m4) {
         const mirroring = m4.isMirroring();
-        const newEdges = Edge.reversePath(this.contour.map((e) => e.transform4(m4)), mirroring);
-        const newHoles = this.holes.map((hole) => Edge.reversePath(hole.map((e) => e.transform4(m4)), mirroring));
+        const newEdges = _.Edge.reversePath(this.contour.map((e) => e.transform4(m4)), mirroring);
+        const newHoles = this.holes.map((hole) => _.Edge.reversePath(hole.map((e) => e.transform4(m4)), mirroring));
         return new this.constructor(this.surface.transform4(m4), newEdges, newHoles, this.name, this.info);
     }
     flipped() {
@@ -9189,8 +9246,8 @@ class Face extends ts3dutils.Transformable {
         return (this == obj ||
             (Object.getPrototypeOf(this) == Object.getPrototypeOf(obj) &&
                 this.holes.length == obj.holes.length &&
-                Edge.loopsEqual(this.contour, obj.contour) &&
-                this.holes.every((hole) => obj.holes.some((hole2) => Edge.loopsEqual(hole, hole2)))));
+                _.Edge.loopsEqual(this.contour, obj.contour) &&
+                this.holes.every((hole) => obj.holes.some((hole2) => _.Edge.loopsEqual(hole, hole2)))));
     }
     hashCode() {
         function arrayHashCode(array) {
@@ -9236,23 +9293,23 @@ class Face extends ts3dutils.Transformable {
     }
     containsPoint(p) {
         ts3dutils.assertVectors(p);
-        return (this.surface.loopContainsPoint(this.contour, p) != exports.PointVsFace.OUTSIDE &&
-            !this.holes.some((hole) => this.surface.loopContainsPoint(hole, p) != exports.PointVsFace.OUTSIDE));
+        return (this.surface.loopContainsPoint(this.contour, p) != _.PointVsFace.OUTSIDE &&
+            !this.holes.some((hole) => this.surface.loopContainsPoint(hole, p) != _.PointVsFace.OUTSIDE));
     }
     containsPoint2(p) {
         ts3dutils.assertVectors(p);
         const contourContainsPoint = this.surface.loopContainsPoint(this.contour, p);
-        if (contourContainsPoint != exports.PointVsFace.INSIDE)
+        if (contourContainsPoint != _.PointVsFace.INSIDE)
             return contourContainsPoint;
         for (const hole of this.holes) {
             const loopContainsPoint = this.surface.loopContainsPoint(hole, p);
-            if (loopContainsPoint != exports.PointVsFace.OUTSIDE) {
-                return loopContainsPoint == exports.PointVsFace.ON_EDGE
-                    ? exports.PointVsFace.ON_EDGE
-                    : exports.PointVsFace.OUTSIDE;
+            if (loopContainsPoint != _.PointVsFace.OUTSIDE) {
+                return loopContainsPoint == _.PointVsFace.ON_EDGE
+                    ? _.PointVsFace.ON_EDGE
+                    : _.PointVsFace.OUTSIDE;
             }
         }
-        return exports.PointVsFace.INSIDE;
+        return _.PointVsFace.INSIDE;
     }
     /**
      *
@@ -9260,7 +9317,7 @@ class Face extends ts3dutils.Transformable {
      * @returns t param of the line if there is an intersection, NaN otherwise
      */
     intersectsLine(line) {
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         if (!this.getAABB().intersectsLine(line))
             return NaN;
         const containedIntersectionsTs = this.surface
@@ -9311,7 +9368,7 @@ class Face extends ts3dutils.Transformable {
             const angle = curveTangent.angleRelativeNormal(edgeTangent, normal);
             if (ts3dutils.eq0(angle)) {
                 if (curve.isColinearTo(edge.curve)) {
-                    return exports.PointVsFace.ON_EDGE;
+                    return _.PointVsFace.ON_EDGE;
                 }
                 const edgeT = aEqP ? edge.aT : edge.bT;
                 const edgeDir = (aEqP ? 1 : -1) * sign(edge.deltaT());
@@ -9321,14 +9378,14 @@ class Face extends ts3dutils.Transformable {
                 if (diff > 0 && (!advanced || diff < minValue)) {
                     advanced = true;
                     minValue = diff;
-                    result = aEqP ? exports.PointVsFace.OUTSIDE : exports.PointVsFace.INSIDE;
+                    result = aEqP ? _.PointVsFace.OUTSIDE : _.PointVsFace.INSIDE;
                 }
             }
             else if (!advanced) {
                 const angle2 = (angle + ts3dutils.TAU) % ts3dutils.TAU;
                 if (angle2 < minValue) {
                     minValue = angle2;
-                    result = aEqP ? exports.PointVsFace.OUTSIDE : exports.PointVsFace.INSIDE;
+                    result = aEqP ? _.PointVsFace.OUTSIDE : _.PointVsFace.INSIDE;
                 }
             }
         }
@@ -9337,7 +9394,7 @@ class Face extends ts3dutils.Transformable {
         return result;
     }
     pointsToInside2(p, dir) {
-        return this.pointsToInside3(p, L3.anchorDirection(p, dir), 0, 1);
+        return this.pointsToInside3(p, _.L3.anchorDirection(p, dir), 0, 1);
         //const normal = this.surface.normalP(p)
         //let minAngle = Infinity, inOut = false
         //function test(v, b) {
@@ -9361,15 +9418,15 @@ class Face extends ts3dutils.Transformable {
 }
 class PlaneFace extends Face {
     constructor(p, contour, holes, name, info) {
-        ts3dutils.assert(p instanceof P3 || p instanceof PlaneSurface);
-        super(p instanceof P3 ? new PlaneSurface(p) : p, contour, holes, name, info);
+        ts3dutils.assert(p instanceof _.P3 || p instanceof _.PlaneSurface);
+        super(p instanceof _.P3 ? new _.PlaneSurface(p) : p, contour, holes, name, info);
     }
     static forVertices(planeSurface, vs, ...holeVss) {
-        const _planeSurface = planeSurface instanceof P3 ? new PlaneSurface(planeSurface) : planeSurface;
+        const _planeSurface = planeSurface instanceof _.P3 ? new _.PlaneSurface(planeSurface) : planeSurface;
         ts3dutils.assert(ts3dutils.isCCW(vs, _planeSurface.plane.normal1), "isCCW(vs, planeSurface.plane.normal1)");
-        const edges = StraightEdge.chain(vs);
+        const edges = _.StraightEdge.chain(vs);
         holeVss.forEach((vs) => ts3dutils.assert(ts3dutils.doubleSignedArea(vs, _planeSurface.plane.normal1) >= 0, "doubleSignedArea(vs, planeSurface.plane.normal1) >= 0"));
-        const holes = holeVss.map((hvs) => StraightEdge.chain(hvs));
+        const holes = holeVss.map((hvs) => _.StraightEdge.chain(hvs));
         return new PlaneFace(planeSurface, edges, holes);
     }
     addToMesh(mesh) {
@@ -9384,13 +9441,13 @@ class PlaneFace extends Face {
             holeStarts.push(vertices.length);
             vertices.push(...hole.flatMap((edge) => edge.getVerticesNo0()));
         });
-        const triangles = triangulateVertices(normal, vertices, holeStarts).map((index) => index + mvl);
+        const triangles = _.triangulateVertices(normal, vertices, holeStarts).map((index) => index + mvl);
         Array.prototype.push.apply(mesh.vertices, vertices);
         Array.prototype.push.apply(mesh.TRIANGLES, triangles);
         Array.prototype.push.apply(mesh.normals, ts3dutils.arrayFromFunction(vertices.length, () => normal));
     }
     intersectsLine(line) {
-        ts3dutils.assertInst(L3, line);
+        ts3dutils.assertInst(_.L3, line);
         const lambda = line.isTWithPlane(this.surface.plane);
         if (!Number.isFinite(lambda)) {
             return NaN;
@@ -9543,7 +9600,7 @@ class PlaneFace extends Face {
                     });
                     // open next interval if necessary
                     const nextSide = colinearEdges[nextEdgeIndex] ||
-                        dotCurve2(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign());
+                        _.dotCurve2(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign());
                     if (colinearEdge * nextSide < 0) {
                         // side changes
                         ps.push({
@@ -9563,9 +9620,9 @@ class PlaneFace extends Face {
                     for (const edgeT of edgeTs) {
                         if (edgeT == edge.bT) {
                             // endpoint lies on intersection line
-                            const side = dotCurve2(edge.curve, edge.bT, isLineOut, -edge.deltaTSign());
+                            const side = _.dotCurve2(edge.curve, edge.bT, isLineOut, -edge.deltaTSign());
                             const nextSide = colinearEdges[nextEdgeIndex] ||
-                                dotCurve2(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign());
+                                _.dotCurve2(nextEdge.curve, nextEdge.aT, isLineOut, nextEdge.deltaTSign());
                             if (side * nextSide < 0) {
                                 // next segment is not colinear and ends on different side
                                 ps.push({
@@ -9622,7 +9679,7 @@ class RotationFace extends Face {
         for (const edge of loop) {
             const ts = edge.edgeISTsWithPlane(seamPlane);
             if (ts.length == 0) {
-                if (!(edge.curve instanceof L3) &&
+                if (!(edge.curve instanceof _.L3) &&
                     checkSide(seamPlane.distanceToPointSigned(edge.a)))
                     return false;
             }
@@ -9631,11 +9688,11 @@ class RotationFace extends Face {
                     // TODO: this part probably should be in a separate function
                     // check 'backwards' only if if aT != t
                     if (edge.aT != t) {
-                        if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, -edge.deltaTSign())))
+                        if (checkSide(_.dotCurve2(edge.curve, t, seamPlane.normal1, -edge.deltaTSign())))
                             return false;
                     }
                     if (edge.bT != t) {
-                        if (checkSide(dotCurve2(edge.curve, t, seamPlane.normal1, edge.deltaTSign())))
+                        if (checkSide(_.dotCurve2(edge.curve, t, seamPlane.normal1, edge.deltaTSign())))
                             return false;
                     }
                 }
@@ -9685,7 +9742,7 @@ class RotationFace extends Face {
         const verticesUV = [], vertices = [], loopStarts = [];
         const ellipsoid = this.surface;
         const ptpf = ellipsoid.uvPFunc();
-        const testDegeneratePoint = ellipsoid instanceof EllipsoidSurface
+        const testDegeneratePoint = ellipsoid instanceof _.EllipsoidSurface
             ? (nextStart) => nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) ||
                 nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
             : (nextStart) => nextStart.like(this.surface.center);
@@ -9714,7 +9771,7 @@ class RotationFace extends Face {
             }
         }
         let normals;
-        if (this.surface instanceof EllipsoidSurface) {
+        if (this.surface instanceof _.EllipsoidSurface) {
             normals = vertices.map((v) => ellipsoid.normalP(v));
         }
         else {
@@ -9784,8 +9841,8 @@ class RotationFace extends Face {
         const pMN = (m, n) => this.surface.pUVFunc()(m * uStep, n * vStep);
         const normalMN = (m, n) => this.surface.normalUVFunc()(m * uStep, n * vStep);
         const loops = this.getLoops();
-        const { vertices, verticesUV, normals, loopStarts } = this.surface instanceof EllipsoidSurface ||
-            this.surface instanceof ConicSurface
+        const { vertices, verticesUV, normals, loopStarts } = this.surface instanceof _.EllipsoidSurface ||
+            this.surface instanceof _.ConicSurface
             ? this.unrollEllipsoidLoops(loops)
             : this.unrollCylinderLoops(loops);
         loopStarts.push(vertices.length);
@@ -9812,13 +9869,13 @@ class RotationFace extends Face {
             minN = min(minN, n);
             maxN = max(maxN, n);
         });
-        if (ParametricSurface.is(this.surface)) ;
+        if (_.ParametricSurface.is(this.surface)) ;
         const mOffset = floor(minM + ts3dutils.NLA_PRECISION), nOffset = floor(minN + ts3dutils.NLA_PRECISION);
         const mRes = ceil(maxM - ts3dutils.NLA_PRECISION) - mOffset, nRes = ceil(maxN - ts3dutils.NLA_PRECISION) - nOffset;
         console.log(uStep, vStep, mRes, nRes);
         if (mRes == 1 && nRes == 1) {
             // triangulate this face as if it were a plane
-            const polyTriangles = triangulateVertices(ts3dutils.V3.Z, verticesMN, loopStarts.slice(1, 1 + this.holes.length));
+            const polyTriangles = _.triangulateVertices(ts3dutils.V3.Z, verticesMN, loopStarts.slice(1, 1 + this.holes.length));
             triangles.push(...polyTriangles);
         }
         else {
@@ -10019,7 +10076,7 @@ class RotationFace extends Face {
                                 triangles.push(...outline);
                             }
                             else {
-                                const polyTriangles = triangulateVertices(ts3dutils.V3.Z, outline.map((i) => verticesMN[i]), []).map((i) => outline[i]);
+                                const polyTriangles = _.triangulateVertices(ts3dutils.V3.Z, outline.map((i) => verticesMN[i]), []).map((i) => outline[i]);
                                 triangles.push(...polyTriangles);
                             }
                             //console.log('outline', col, row, outline)
@@ -10270,7 +10327,7 @@ class BRep extends ts3dutils.Transformable {
     constructor(faces, infiniteVolume, generator, vertexNames) {
         super();
         this.faces = faces;
-        ts3dutils.assertInst(Face, ...faces);
+        ts3dutils.assertInst(_.Face, ...faces);
         this.infiniteVolume = infiniteVolume;
         ts3dutils.assert(!this.infiniteVolume || true === this.infiniteVolume);
         this.generator = generator;
@@ -10281,14 +10338,14 @@ class BRep extends ts3dutils.Transformable {
     static loop1ContainsLoop2(loop1, ccw1, loop2, ccw2, surface) {
         for (const edge of loop2) {
             const loop1ContainsPoint = surface.loopContainsPoint(loop1, edge.a);
-            if (exports.PointVsFace.ON_EDGE != loop1ContainsPoint)
-                return exports.PointVsFace.INSIDE == loop1ContainsPoint;
+            if (_.PointVsFace.ON_EDGE != loop1ContainsPoint)
+                return _.PointVsFace.INSIDE == loop1ContainsPoint;
         }
         for (const edge of loop2) {
             const edgePoint = edge.curve.at(edge.aT * 0.2 + edge.bT * 0.8);
             const loop1ContainsPoint = surface.loopContainsPoint(loop1, edgePoint);
-            if (exports.PointVsFace.ON_EDGE != loop1ContainsPoint)
-                return exports.PointVsFace.INSIDE == loop1ContainsPoint;
+            if (_.PointVsFace.ON_EDGE != loop1ContainsPoint)
+                return _.PointVsFace.INSIDE == loop1ContainsPoint;
         }
         if (ccw1 != ccw2) {
             return ccw2;
@@ -10367,7 +10424,7 @@ class BRep extends ts3dutils.Transformable {
             ts3dutils.V(-0.5576497966736425, 0.8006695748324647, 0.2189861552871446),
         ];
         dirLoop: for (const dir of dirs) {
-            const testLine = new L3(p, dir);
+            const testLine = new _.L3(p, dir);
             let inside = this.infiniteVolume;
             for (const face of this.faces) {
                 ts3dutils.assert(!face.surface.containsCurve(testLine));
@@ -10378,10 +10435,10 @@ class BRep extends ts3dutils.Transformable {
                     //assert(pvf != PointVsFace.ON_EDGE)
                     !forceInsideOutside && ts3dutils.assert(!ts3dutils.eq0(t));
                     if (t > 0) {
-                        if (pvf == exports.PointVsFace.ON_EDGE) {
+                        if (pvf == _.PointVsFace.ON_EDGE) {
                             continue dirLoop;
                         }
-                        if (pvf == exports.PointVsFace.INSIDE) {
+                        if (pvf == _.PointVsFace.INSIDE) {
                             inside = !inside;
                         }
                     }
@@ -10636,7 +10693,7 @@ class BRep extends ts3dutils.Transformable {
                 const info = pointInfos[i];
                 const pDir = canonEdge.tangentAt(info.edgeT);
                 if (!ts3dutils.eq(info.edgeT, startT)) {
-                    const newEdge = createEdge(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, "looseSegment" + getGlobalId());
+                    const newEdge = _.createEdge(canonEdge.curve, startP, info.p, startT, info.edgeT, undefined, startDir, pDir, "looseSegment" + getGlobalId());
                     addNewEdge(startInfo, info, newEdge);
                 }
                 startP = info.p;
@@ -10645,7 +10702,7 @@ class BRep extends ts3dutils.Transformable {
                 startDir = pDir;
             }
             if (startInfo && !ts3dutils.eq(startT, canonEdge.bT)) {
-                const newEdge = createEdge(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, "looseSegment" + getGlobalId());
+                const newEdge = _.createEdge(canonEdge.curve, startP, canonEdge.b, startT, canonEdge.bT, undefined, startDir, canonEdge.bDir, "looseSegment" + getGlobalId());
                 addNewEdge(startInfo, undefined, newEdge);
             }
         }
@@ -10965,7 +11022,7 @@ function dotCurve2(curve, t, normal, sign) {
         .at(t)
         .to(curve.at(t + sign * 4 * ts3dutils.NLA_PRECISION))
         .dot(normal);
-    ts3dutils.assert(!(curve instanceof L3));
+    ts3dutils.assert(!(curve instanceof _.L3));
     return numericDot;
 }
 const INSIDE = 0, OUTSIDE = 1, COPLANAR_SAME = 2, COPLANAR_OPPOSITE = 3, ALONG_EDGE_OR_PLANE = 4;
@@ -11076,7 +11133,7 @@ function splitsVolumeEnclosingFacesP2(brep, canonEdge, p, testCurve, curveT, dir
                 const coplanarSame = normVector.dot(faceNormal) > 0;
                 return coplanarSame ? COPLANAR_SAME : COPLANAR_OPPOSITE;
             }
-            const testPlane = P3.normalOnAnchor(pDir1, p);
+            const testPlane = _.P3.normalOnAnchor(pDir1, p);
             const isCurve = faceInfo.face.surface.isCurvesWithPlane(testPlane)[0];
             const isCurvePT = isCurve.pointT(p);
             const dirFactor = sign(isCurve.tangentAt(isCurvePT).dot(pInside));
@@ -11106,19 +11163,19 @@ function splitsVolumeEnclosingFacesP2(brep, canonEdge, p, testCurve, curveT, dir
     return result;
 }
 function splitsVolumeEnclosingCone(brep, p, dir) {
-    const testPlane = P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
+    const testPlane = _.P3.forAnchorAndPlaneVectors(p, dir, dir.getPerpendicular());
     const rays = [];
     for (let k = 0; k < brep.faces.length; k++) {
         const planeFace = brep.faces[k];
-        ts3dutils.assertf(() => planeFace instanceof PlaneFace);
+        ts3dutils.assertf(() => planeFace instanceof _.PlaneFace);
         if (planeFace.getAllEdges().some((edge) => edge.a.like(p))) {
             if (testPlane.isParallelToPlane(planeFace.surface.plane)) {
-                if (planeFace.pointsToInside(p, dir) != exports.PointVsFace.OUTSIDE) {
+                if (planeFace.pointsToInside(p, dir) != _.PointVsFace.OUTSIDE) {
                     return ALONG_EDGE_OR_PLANE;
                 }
             }
             else {
-                const isLine = L3.fromPlanes(testPlane, planeFace.surface.plane);
+                const isLine = _.L3.fromPlanes(testPlane, planeFace.surface.plane);
                 const ps = planeFace.edgeISPsWithPlane(isLine, testPlane);
                 let i = 0;
                 while (i < ps.length) {
@@ -11152,7 +11209,7 @@ function splitsVolumeEnclosingCone2(brep, p, curve, curveT, fb) {
         const face = pFaces[k];
         if (face.surface.containsCurve(curve)) {
             //assert(false)
-            if (face.pointsToInside3(p, curve, curveT, fb) != exports.PointVsFace.OUTSIDE) {
+            if (face.pointsToInside3(p, curve, curveT, fb) != _.PointVsFace.OUTSIDE) {
                 return ALONG_EDGE_OR_PLANE;
             }
         }
@@ -11344,7 +11401,7 @@ function curvePointPP(ps1, ps2, startPoint, dontCheck) {
  * @param {number} curveStepSize
  * @return {Curve[]}
  */
-function followAlgorithmPP(ps1, ps2, startPoint, curveStepSize, bounds1 = uvInAABB2.bind(undefined, ps1), bounds2 = uvInAABB2.bind(undefined, ps2)) {
+function followAlgorithmPP(ps1, ps2, startPoint, curveStepSize, bounds1 = _.uvInAABB2.bind(undefined, ps1), bounds2 = _.uvInAABB2.bind(undefined, ps2)) {
     const points = [];
     const tangents = [];
     const st1s = [];
@@ -11354,8 +11411,8 @@ function followAlgorithmPP(ps1, ps2, startPoint, curveStepSize, bounds1 = uvInAA
     let st2 = ps2.uvP(Q);
     ts3dutils.assert(ps1.pUV(st1.x, st1.y).like(Q));
     ts3dutils.assert(st1.like(ps1.pointFoot(Q, st1.x, st1.y)));
-    ts3dutils.assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)));
     ts3dutils.assert(ps2.pUV(st2.x, st2.y).like(Q));
+    ts3dutils.assert(st2.like(ps2.pointFoot(Q, st2.x, st2.y)));
     for (let i = 0; i < 1000; i++) {
         ({ p: Q, st1, st2 } = curvePointPP(ps1, ps2, Q));
         ts3dutils.assert(ps1.containsPoint(Q), Q, ps1);
@@ -11402,7 +11459,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, validUV, endP, 
         tangents.push(tangent);
         const searchStart = p.plus(tangent);
         ts3dutils.assert(searchStart);
-        const newP = curvePointMF(ic, searchStart);
+        const newP = _.curvePointMF(ic, searchStart);
         const dfpdx = ic.x(newP.x, newP.y), dfpdy = ic.y(newP.x, newP.y);
         const newTangent = new ts3dutils.V3(-dfpdy, dfpdx, 0).toLength(stepLength);
         //const reversedDir = p.minus(prevp).dot(tangent) < 0
@@ -11440,7 +11497,7 @@ function followAlgorithm2d(ic, startP, stepLength = 0.5, bounds, validUV, endP, 
             }
         }
         // check if out of bounds
-        if (i > 1 && !uvInAABB2(bounds, p.x, p.y)) {
+        if (i > 1 && !_.uvInAABB2(bounds, p.x, p.y)) {
             const endP = figureOutBorderPoint(bounds, p, ic);
             points.pop();
             tangents.pop();
@@ -11474,14 +11531,14 @@ function figureOutBorderPoint(bounds, p, ic) {
     if (p.x < bounds.uMin || bounds.uMax < p.x) {
         const u = bounds.uMax < p.x ? bounds.uMax : bounds.uMin;
         const v = ts3dutils.newtonIterateWithDerivative((t) => ic(u, t), p.y, 4, (t) => ic.y(u, t));
-        if (uvInAABB2(bounds, u, v)) {
+        if (_.uvInAABB2(bounds, u, v)) {
             return new ts3dutils.V3(u, v, 0);
         }
     }
     if (p.y < bounds.vMin || bounds.vMax < p.y) {
         const v = bounds.vMax < p.y ? bounds.vMax : bounds.vMin;
         const u = ts3dutils.newtonIterateWithDerivative((s) => ic(s, v), p.x, 4, (s) => ic.x(s, v));
-        ts3dutils.assert(uvInAABB2(bounds, u, v));
+        ts3dutils.assert(_.uvInAABB2(bounds, u, v));
         return new ts3dutils.V3(u, v, 0);
     }
     throw new Error(p + " " + bounds);
@@ -11507,7 +11564,7 @@ function followAlgorithm2dAdjustable(ic, start, stepLength = 0.5, bounds, endp =
         points.push(p);
         tangents.push(tangent);
         prevp = p;
-        const newP = curvePointMF(ic, newPStart);
+        const newP = _.curvePointMF(ic, newPStart);
         if (newP.equals(p)) {
             ts3dutils.assertNever();
         }
@@ -11545,7 +11602,7 @@ function intersectionICurveICurve(iCurve1, startParams1, endParams1, startDir, s
         if (p.minus(prevp).dot(tangent) < 0)
             tangent = tangent.negated();
         prevp = p;
-        p = curvePointMF(iCurve1, p.plus(tangent));
+        p = _.curvePointMF(iCurve1, p.plus(tangent));
         vertices.push(p);
     }
     // TODO gleichmäßige Verteilung der Punkte
@@ -12186,12 +12243,12 @@ function parseGetParams(str) {
     return result;
 }
 const COLORS = {
-    RD_FILL: chroma__default['default']("#9EDBF9"),
-    RD_STROKE: chroma__default['default']("#77B0E0"),
-    TS_FILL: chroma__default['default']("#D19FE3"),
-    TS_STROKE: chroma__default['default']("#A76BC2"),
-    PP_FILL: chroma__default['default']("#F3B6CF"),
-    PP_STROKE: chroma__default['default']("#EB81B4"),
+    RD_FILL: chroma.color("#9EDBF9"),
+    RD_STROKE: chroma.color("#77B0E0"),
+    TS_FILL: chroma.color("#D19FE3"),
+    TS_STROKE: chroma.color("#A76BC2"),
+    PP_FILL: chroma.color("#F3B6CF"),
+    PP_STROKE: chroma.color("#EB81B4"),
 };
 class BREPGLContext {
     constructor(gl) {
@@ -12241,9 +12298,9 @@ class BREPGLContext {
         this.popMatrix();
     }
     drawVectors(drVs, size = undefined) {
-        this.drawVector(ts3dutils.V3.X, ts3dutils.V3.O, chroma__default['default']("red").gl(), size);
-        this.drawVector(ts3dutils.V3.Y, ts3dutils.V3.O, chroma__default['default']("green").gl(), size);
-        this.drawVector(ts3dutils.V3.Z, ts3dutils.V3.O, chroma__default['default']("blue").gl(), size);
+        this.drawVector(ts3dutils.V3.X, ts3dutils.V3.O, chroma.color("red").gl(), size);
+        this.drawVector(ts3dutils.V3.Y, ts3dutils.V3.O, chroma.color("green").gl(), size);
+        this.drawVector(ts3dutils.V3.Z, ts3dutils.V3.O, chroma.color("blue").gl(), size);
         drVs.forEach((vi) => this.drawVector(vi.v, vi.anchor, vi.color, size));
     }
     drawPlane(customPlane, color, dotted = false) {
@@ -12286,10 +12343,10 @@ function conicPainter(mode, gl, ellipse, color, startT, endT, width = 2) {
         .draw(gl.meshes.pipe);
 }
 const CURVE_PAINTERS = {
-    [EllipseCurve.name]: conicPainter.bind(undefined, 0),
-    [ParabolaCurve.name]: conicPainter.bind(undefined, 1),
-    [HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
-    [ImplicitCurve.name](gl, curve, color, startT, endT, width = 2) {
+    [_.EllipseCurve.name]: conicPainter.bind(undefined, 0),
+    [_.ParabolaCurve.name]: conicPainter.bind(undefined, 1),
+    [_.HyperbolaCurve.name]: conicPainter.bind(undefined, 2),
+    [_.ImplicitCurve.name](gl, curve, color, startT, endT, width = 2) {
         let mesh = gl.cachedMeshes.get(curve);
         const RES = 4;
         if (!mesh) {
@@ -12347,7 +12404,7 @@ const CURVE_PAINTERS = {
             gl.popMatrix();
         }
     },
-    [BezierCurve.name](gl, curve, color, startT, endT, width = 2, normal = ts3dutils.V3.Z) {
+    [_.BezierCurve.name](gl, curve, color, startT, endT, width = 2, normal = ts3dutils.V3.Z) {
         gl.shaders.bezier3d
             .uniforms({
             p0: curve.p0,
@@ -12362,7 +12419,7 @@ const CURVE_PAINTERS = {
         })
             .draw(gl.meshes.pipe);
     },
-    [NURBS.name](gl, curve, color, startT, endT, width = 2, normal = ts3dutils.V3.Z) {
+    [_.NURBS.name](gl, curve, color, startT, endT, width = 2, normal = ts3dutils.V3.Z) {
         gl.shaders.nurbs
             .uniforms({
             "points[0]": ts3dutils.Vector.pack(curve.points),
@@ -12376,7 +12433,7 @@ const CURVE_PAINTERS = {
         })
             .draw(gl.meshes.pipe);
     },
-    [L3.name](gl, curve, color, startT, endT, width = 2, normal = ts3dutils.V3.Z) {
+    [_.L3.name](gl, curve, color, startT, endT, width = 2, normal = ts3dutils.V3.Z) {
         gl.pushMatrix();
         const a = curve.at(startT), b = curve.at(endT);
         const ab = b.minus(a), abT = ab.getPerpendicular().unit();
@@ -12391,12 +12448,12 @@ const CURVE_PAINTERS = {
         gl.popMatrix();
     },
 };
-CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name];
-CURVE_PAINTERS[PPCurve.name] = CURVE_PAINTERS[ImplicitCurve.name];
+CURVE_PAINTERS[_.PICurve.name] = CURVE_PAINTERS[_.ImplicitCurve.name];
+CURVE_PAINTERS[_.PPCurve.name] = CURVE_PAINTERS[_.ImplicitCurve.name];
 function initMeshes(_meshes, _gl) {
     _gl.makeCurrent();
     _meshes.cube = (() => {
-        const cube = exports.B2T.box().toMesh().addVertexBuffer("colors", "ts_Color");
+        const cube = _.B2T.box().toMesh().addVertexBuffer("colors", "ts_Color");
         cube.colors = cube.vertices.map((p) => [p.x, p.y, p.z, 1].map((x) => x * 0.9));
         cube.compile();
         return cube;
@@ -12404,10 +12461,10 @@ function initMeshes(_meshes, _gl) {
     _meshes.sphere1 = tsgl.Mesh.sphere(2);
     _meshes.segment = tsgl.Mesh.plane({ startY: -0.5, height: 1, detailX: 128 });
     _meshes.text = tsgl.Mesh.plane();
-    _meshes.vector = tsgl.Mesh.rotation([ts3dutils.V3.O, ts3dutils.V(0, 0.05, 0), ts3dutils.V(0.8, 0.05), ts3dutils.V(0.8, 0.1), ts3dutils.V(1, 0)], L3.X, ts3dutils.TAU, 16, true);
-    _meshes.vectorShaft = tsgl.Mesh.rotation([ts3dutils.V3.O, ts3dutils.V3.Y, ts3dutils.V3.XY], L3.X, ts3dutils.TAU, 8, true);
-    _meshes.vectorHead = tsgl.Mesh.rotation([ts3dutils.V3.Y, ts3dutils.V(0, 2, 0), ts3dutils.V(2, 0, 0)], L3.X, ts3dutils.TAU, 8, true);
-    _meshes.pipe = tsgl.Mesh.rotation(ts3dutils.arrayFromFunction(512, (i, l) => new ts3dutils.V3(i / (l - 1), -0.5, 0)), L3.X, ts3dutils.TAU, 8, true);
+    _meshes.vector = tsgl.Mesh.rotation([ts3dutils.V3.O, ts3dutils.V(0, 0.05, 0), ts3dutils.V(0.8, 0.05), ts3dutils.V(0.8, 0.1), ts3dutils.V(1, 0)], _.L3.X, ts3dutils.TAU, 16, true);
+    _meshes.vectorShaft = tsgl.Mesh.rotation([ts3dutils.V3.O, ts3dutils.V3.Y, ts3dutils.V3.XY], _.L3.X, ts3dutils.TAU, 8, true);
+    _meshes.vectorHead = tsgl.Mesh.rotation([ts3dutils.V3.Y, ts3dutils.V(0, 2, 0), ts3dutils.V(2, 0, 0)], _.L3.X, ts3dutils.TAU, 8, true);
+    _meshes.pipe = tsgl.Mesh.rotation(ts3dutils.arrayFromFunction(512, (i, l) => new ts3dutils.V3(i / (l - 1), -0.5, 0)), _.L3.X, ts3dutils.TAU, 8, true);
     _meshes.xyLinePlane = tsgl.Mesh.plane();
     _meshes.xyDottedLinePlane = makeDottedLinePlane();
     _meshes.pipeSegmentForICurve = tsgl.Mesh.offsetVertices(ts3dutils.M4.rotateY(90 * ts3dutils.DEG).transformedPoints(ts3dutils.arrayFromFunction(4, (i) => ts3dutils.V3.polar(1, (ts3dutils.TAU * i) / 4))), ts3dutils.V3.X, true);
@@ -12518,7 +12575,7 @@ function getMouseLine(pos, _gl) {
     const inverseProjectionMatrix = _gl.projectionMatrix.inversed();
     const s = inverseProjectionMatrix.transformPoint(ndc1);
     const dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s);
-    return L3.anchorDirection(s, dir);
+    return _.L3.anchorDirection(s, dir);
 }
 function getPosOnTarget(e) {
     const target = e.target;
@@ -12729,8 +12786,10 @@ exports.doNotSerialize = doNotSerialize;
 exports.dotCurve = dotCurve;
 exports.dotCurve2 = dotCurve2;
 exports.edgeForCurveAndTs = edgeForCurveAndTs;
+exports.edgeNgon = edgeNgon;
 exports.edgePathFromSVG = edgePathFromSVG;
 exports.edgeRect = edgeRect;
+exports.edgeStar = edgeStar;
 exports.fff = fff;
 exports.followAlgorithm2d = followAlgorithm2d;
 exports.followAlgorithm2dAdjustable = followAlgorithm2dAdjustable;
@@ -12750,7 +12809,6 @@ exports.intersectionICurveICurve2 = intersectionICurveICurve2;
 exports.intersectionUnitCircleLine = intersectionUnitCircleLine;
 exports.intersectionUnitCircleLine2 = intersectionUnitCircleLine2;
 exports.intersectionUnitHyperbolaLine = intersectionUnitHyperbolaLine;
-exports.ngon = ngon;
 exports.parabola4Projection = parabola4Projection;
 exports.parseGetParams = parseGetParams;
 exports.projectCurve = projectCurve;
@@ -12764,7 +12822,6 @@ exports.splitsVolumeEnclosingCone2 = splitsVolumeEnclosingCone2;
 exports.splitsVolumeEnclosingFaces = splitsVolumeEnclosingFaces;
 exports.splitsVolumeEnclosingFacesP = splitsVolumeEnclosingFacesP;
 exports.splitsVolumeEnclosingFacesP2 = splitsVolumeEnclosingFacesP2;
-exports.star = star;
 exports.surfaceIsICurveIsInfosWithLine = surfaceIsICurveIsInfosWithLine;
 exports.triangulateVertices = triangulateVertices;
 exports.uvInAABB2 = uvInAABB2;

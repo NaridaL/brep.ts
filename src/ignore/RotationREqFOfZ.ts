@@ -25,8 +25,8 @@ export class RotationREqFOfZ
   constructor(
     readonly matrix: M4,
     readonly rt: (z: number) => number, // r(z)
-    readonly vMin: number,
-    readonly vMax: number,
+    vMin: number,
+    vMax: number,
     readonly normalDir: number,
     readonly drdz: (z: number) => number = (z) => (rt(z + EPS) - rt(z)) / EPS,
   ) {
@@ -84,9 +84,9 @@ export class RotationREqFOfZ
 
   dpdu(): (u: number, v: number) => V3 {
     return (u, v) => {
-      const radius = this.rt(t)
+      const radius = this.rt(v)
       return this.matrix.transformVector(
-        new V3(radius * -sin(s), radius * cos(s), 0),
+        new V3(radius * -sin(u), radius * cos(u), 0),
       )
     }
   }
@@ -97,9 +97,9 @@ export class RotationREqFOfZ
 
   dpdv(): (u: number, v: number) => V3 {
     return (u, v) => {
-      const drdt = this.drdz(t)
+      const drdt = this.drdz(v)
       return this.matrix.transformVector(
-        new V3(drdt * cos(s), drdt * sin(s), 1),
+        new V3(drdt * cos(u), drdt * sin(u), 1),
       )
     }
   }
@@ -181,7 +181,7 @@ function closestXToP(
     startX = withMax(
       arrayFromFunction(STEPS, (i) => xMin + ((xMax - xMin) * i) / STEPS),
       (x) => -Math.hypot(x - p.x, f(x) - p.y),
-    )
+    )!
   }
 
   return newtonIterate1d(

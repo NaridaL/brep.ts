@@ -104,7 +104,7 @@ export default {
       // Source maps are on by default
       // sourceMap: false
     }),
-    process.env.ROLLUP_WATCH && serve({ port: 5555 }),
+    process.env.ROLLUP_WATCH && serve({}),
     // {
     // 	contentBase: '.',
     // 	open: true,

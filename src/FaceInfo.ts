@@ -1,6 +1,6 @@
 import { int, M4 } from "ts3dutils"
 
-import { Edge, Face, Surface } from "./index"
+import { Edge, Face, Surface } from "."
 
 /**
  * Created by aval on 19.04.2017.

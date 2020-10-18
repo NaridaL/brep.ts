@@ -65,7 +65,7 @@ import {
   StraightEdge,
   Surface,
   triangulateVertices,
-} from "./index"
+} from "."
 
 import { abs, ceil, floor, max, min, sign } from "./math"
 

@@ -1,4 +1,4 @@
-import chroma, { Color } from "chroma-js"
+import * as chroma from "chroma.ts"
 import debounce from "debounce"
 import { assert, DEG, emod, int, M4, round10, V, V3 } from "ts3dutils"
 import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from "tsgl"
@@ -19,16 +19,16 @@ import {
   P3,
   PICurve,
   setupCamera,
-} from "./index"
+} from "."
 
 import * as ts3dutils from "ts3dutils"
 import * as tsgl from "tsgl"
-import * as brepts from "./index"
+import * as brepts from "."
 
 const eye = { pos: V(1000, 1000, 1000), focus: V3.O, up: V3.Z, zoomFactor: 1 }
 const bReps: BRep[] = []
 const edgeViewerColors = ["darkorange", "darkgreen", "cyan"].map((c) =>
-  chroma(c).gl(),
+  chroma.css(c).gl(),
 )
 let bRepMeshes: (Mesh & {
   faceIndexes: Map<Face, { start: int; count: int }>
@@ -186,7 +186,7 @@ function initBRep() {
     edgesMesh.compile()
   }
   if (g.face) {
-    if (!g.face.length) {
+    if (undefined === g.face.length) {
       g.face = [g.face] as any
     }
     faceMesh = new Mesh()
@@ -215,12 +215,12 @@ function initBRep() {
   g.drPs.push()
 }
 
-const brepMeshColors: Color[][] = [
+const brepMeshColors: chroma.Color[][] = [
   chroma.scale(["#ff297f", "#6636FF"]),
   chroma.scale(["#ffe93a", "#ff6e35"]),
   chroma.scale(["#1eff33", "#4960ff"]),
   chroma.scale(["#31fff8", "#2dff2a"]),
-].map((scale) => scale.mode("lab").colors(20, null as "alpha"))
+].map((scale) => scale.mode("lab").colors(20, "color"))
 const brepMeshColorssGL = brepMeshColors.map((cs) => cs.map((c) => c.gl()))
 const meshColorsGL: GL_COLOR[] = chroma.scale("GnBu").colors(16, "gl")
 
@@ -236,8 +236,8 @@ function viewerPaint(time: int, gl: BREPGLContext) {
     gl.drawPoint(
       info instanceof V3 ? info : info.p,
       info instanceof V3 || !info.color
-        ? chroma("#cc0000").gl()
-        : chroma(info.color).gl(),
+        ? chroma.css("#cc0000").gl()
+        : chroma.css(info.color).gl(),
       6 / eye.zoomFactor,
     ),
   )
@@ -283,7 +283,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
         .uniforms({
           color:
             hovering == face
-              ? emod(emod(brepMeshColors, i), faceIndex).darken(2).gl()
+              ? emod(emod(brepMeshColors, i), faceIndex).darker(2).gl()
               : emod(emod(brepMeshColorssGL, i), faceIndex),
         })
         .draw(
@@ -299,7 +299,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
 
   if (faceMesh) {
     gl.shaders.singleColor
-      .uniforms({ color: chroma("red").gl() })
+      .uniforms({ color: chroma.css("red").gl() })
       .drawBuffers(
         { ts_Vertex: faceMesh.vertexBuffers.tangents },
         undefined,
@@ -351,7 +351,7 @@ function viewerPaint(time: int, gl: BREPGLContext) {
     edgeDebugLines.forEach((x) => gl.vertex(x))
     gl.end()
     edgeDebugPoints.forEach((p) =>
-      gl.drawPoint(p, chroma("red").gl(), 6 / eye.zoomFactor),
+      gl.drawPoint(p, chroma.css("red").gl(), 6 / eye.zoomFactor),
     )
   }
   if (0 !== g.drLines.length) {
@@ -489,9 +489,9 @@ function initInfoEvents(paintScreen: () => {}, gl: BREPGLContext) {
 
 //var sketchPlane = new CustomPlane(V3.X, V3(1, 0, -1).unit(), V3.Y, -500, 500, -500, 500, 0xff00ff);
 const drawPlanes = [
-  new CustomPlane(V3.O, V3.Y, V3.Z, "planeYZ", chroma(0xff0000).gl()),
-  new CustomPlane(V3.O, V3.X, V3.Z, "planeZX", chroma(0x00ff00).gl()),
-  new CustomPlane(V3.O, V3.X, V3.Y, "planeXY", chroma(0x0000ff).gl()),
+  new CustomPlane(V3.O, V3.Y, V3.Z, "planeYZ", chroma.color(0xff0000).gl()),
+  new CustomPlane(V3.O, V3.X, V3.Z, "planeZX", chroma.color(0x00ff00).gl()),
+  new CustomPlane(V3.O, V3.X, V3.Y, "planeXY", chroma.color(0x0000ff).gl()),
   //	sketchPlane
 ]
 let paintScreen: () => void

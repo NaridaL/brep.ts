@@ -2,7 +2,7 @@
   "author": "Adrian Leonhard <adrianleonhard@gmail.com> (https://github.com/NaridaL)",
   "dependencies": {
     "@types/qunit": "^2.9.5",
-    "chroma-js": "^2.1.0",
+    "chroma.ts": "^1.0.9",
     "earcut": "^2.2.2",
     "nerdamer": "^1.1.5",
     "opentype.js": "^1.3.3",

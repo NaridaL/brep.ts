@@ -20,7 +20,7 @@ import {
   V3,
 } from "ts3dutils"
 
-import { Curve, L3, P3, Surface } from "./index"
+import { Curve, L3, P3, Surface } from "."
 import { sign } from "./math"
 
 export abstract class Edge extends Transformable {

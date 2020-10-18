@@ -24,25 +24,25 @@ import {
 } from ".."
 
 export class PointProjectedSurface extends ParametricSurface {
-  pointFoot(pWC: V3, ss?: number, st?: number): V3 {
-    if (undefined === ss || undefined === st) {
+  pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
+    if (undefined === startU || undefined === startV) {
       // similar to stP
-      if (undefined === ss) {
-        ss = pWC.like(this.apex)
+      if (undefined === startU) {
+        startU = pWC.like(this.apex)
           ? 0
           : this.curve.closestTToPoint(
               this.planeProjectionMatrix.transformPoint(pWC),
             ) * this.normalDir
       }
-      if (undefined === st) {
-        st = V3.inverseLerp(this.apex, this.curve.at(ss), pWC)
+      if (undefined === startV) {
+        startV = V3.inverseLerp(this.apex, this.curve.at(startU), pWC)
       }
     }
-    const f = ([s, t]: number[]) => {
-      const pSTToPWC = this.pST(s, t).to(pWC)
-      return [this.dpds()(s, t).dot(pSTToPWC), this.dpdt()(s).dot(pSTToPWC)]
+    const f = ([u, v]: number[]) => {
+      const pUVToPWC = this.pUV(u, v).to(pWC)
+      return [this.dpdu()(u, v).dot(pUVToPWC), this.dpdv()(u).dot(pUVToPWC)]
     }
-    const { 0: x, 1: y } = newtonIterate(f, [ss, st])
+    const { 0: x, 1: y } = newtonIterate(f, [startU, startV])
     return new V3(x, y, 0)
   }
 
@@ -212,31 +212,31 @@ export class PointProjectedSurface extends ParametricSurface {
     ) as this
   }
 
-  normalSTFunc(): (s: number, t: number) => V3 {
-    const dpdt = this.dpdt()
-    return (s, t) =>
+  normalUVFunc(): (u: number, v: number) => V3 {
+    const dpdv = this.dpdv()
+    return (u) =>
       this.curve
-        .tangentAt(s * this.normalDir)
+        .tangentAt(u * this.normalDir)
         .times(this.normalDir)
-        .cross(dpdt(s))
+        .cross(dpdv(u))
         .unit()
   }
 
-  pSTFunc(): (s: number, t: number) => V3 {
-    return (s, t) => {
-      return this.apex.lerp(this.curve.at(s * this.normalDir), t)
+  pUVFunc(): (u: number, v: number) => V3 {
+    return (u, v) => {
+      return this.apex.lerp(this.curve.at(u * this.normalDir), v)
     }
   }
 
-  dpds(): (s: number, t: number) => V3 {
-    return (s, t) => {
-      return this.curve.tangentAt(s * this.normalDir).times(t * this.normalDir)
+  dpdu(): (u: number, v: number) => V3 {
+    return (u, v) => {
+      return this.curve.tangentAt(u * this.normalDir).times(v * this.normalDir)
     }
   }
 
-  dpdt(): (s: number) => V3 {
-    return (s) => {
-      return this.apex.to(this.curve.at(s * this.normalDir))
+  dpdv(): (u: number) => V3 {
+    return (u) => {
+      return this.apex.to(this.curve.at(u * this.normalDir))
     }
   }
 
@@ -247,12 +247,12 @@ export class PointProjectedSurface extends ParametricSurface {
     )
   }
 
-  stP(pWC: V3) {
-    const s = pWC.like(this.apex)
+  uvP(pWC: V3) {
+    const u = pWC.like(this.apex)
       ? 0
       : this.curve.pointT(this.planeProjectionMatrix.transformPoint(pWC))
-    const t = V3.inverseLerp(this.apex, this.curve.at(s), pWC)
-    return new V3(s * this.normalDir, t, 0)
+    const v = V3.inverseLerp(this.apex, this.curve.at(u), pWC)
+    return new V3(u * this.normalDir, v, 0)
   }
 
   isCurvesWithSurface(surface: Surface): Curve[] {

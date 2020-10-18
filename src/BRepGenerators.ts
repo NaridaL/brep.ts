@@ -51,7 +51,7 @@ import {
   createEdge,
   edgeForCurveAndTs,
   edgePathFromSVG,
-} from "./index"
+} from "."
 
 import { max, min, PI, SQRT1_2 } from "./math"
 import { NURBSSurface } from "./surface/NURBSSurface"
@@ -1445,7 +1445,6 @@ export namespace B2T {
         0,
         1,
       )
-      return surface
       const edges = [
         edgeForCurveAndTs(surface.isoparametricV(0)),
         edgeForCurveAndTs(surface.isoparametricU(1)),
@@ -1454,7 +1453,6 @@ export namespace B2T {
       ]
       return Face.create(surface, edges)
     })
-    return faces
     return new BRep(faces, false)
   }
 }

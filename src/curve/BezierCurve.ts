@@ -33,6 +33,7 @@ import {
   EllipseCurve,
   ISInfo,
   L3,
+  NURBS,
   P3,
   R2_R,
   Surface,
@@ -83,7 +84,7 @@ export class BezierCurve extends Curve {
   }
 
   /**
-   * Returns a curve with curve.at(x) == V(x, ax³ + bx² + cx + d, 0)
+   * Returns a new BezierCurve with curve.at(x) == V(x, ax³ + bx² + cx + d, 0).
    */
   static graphXY(
     a: number,
@@ -472,6 +473,14 @@ export class BezierCurve extends Curve {
     ) as this
   }
 
+  transform4(m4: M4): BezierCurve | NURBS {
+    if (m4.isNoProj()) {
+      return this.transform(m4)
+    } else {
+      return this.toNURBS().transform4(m4)
+    }
+  }
+
   isClosed(): boolean {
     return this.p0.like(this.p3)
   }
@@ -833,6 +842,10 @@ export class BezierCurve extends Curve {
     this.circleApprox(t0, tMid, REL_ERROR, result)
     this.circleApprox(tMid, t1, REL_ERROR, result)
     return result
+  }
+
+  private toNURBS() {
+    return new NURBS()
   }
 }
 

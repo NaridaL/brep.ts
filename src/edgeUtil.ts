@@ -27,7 +27,7 @@ import {
   ParabolaCurve,
   PCurveEdge,
   StraightEdge,
-} from "./index"
+} from "."
 import { floor, ceil, abs, sign } from "./math"
 
 export function edgePathFromSVG(pathString: string): Edge[] {
@@ -142,13 +142,13 @@ export function edgeRect(width: number = 1, height: number = width): Edge[] {
   return StraightEdge.chain(vertices)
 }
 
-export function ngon(n: int = 3, radius: number = 1): Edge[] {
+export function edgeNgon(n: int = 3, radius: number = 1): Edge[] {
   return StraightEdge.chain(
     arrayFromFunction(n, (i) => V3.polar(radius, (TAU * i) / n)),
   )
 }
 
-export function star(
+export function edgeStar(
   pointCount: int = 5,
   r0: number = 1,
   r1: number = 0.5,

@@ -62,10 +62,10 @@ export abstract class XiEtaCurve extends Curve {
       const f1p = f1.getPerpendicular()
       // prettier-ignore
       this.matrixInverse = new M4(
-				1, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 0, 0,
-				0, 0, 0, 1).times(M4.forSys(f1, f1p, f1.cross(f1p), center).inversed());
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 1).times(M4.forSys(f1, f1p, f1.cross(f1p), center).inversed())
     }
   }
 
@@ -443,11 +443,11 @@ export function parabola4Projection(
     // the sign inversion is so the tangent direction does not change.
     // prettier-ignore
     const mm = new M4(
-            -1, 0, 0, 0,
-            0, 0, 0, 1,
-            0, 0, 1, 0,
-            0, 1, 0, 0,
-        );
+      -1, 0, 0, 0,
+      0, 0, 0, 1,
+      0, 0, 1, 0,
+      0, 1, 0, 0,
+    )
     if (!eq0(w2)) {
       return parabola4Projection(m.times(mm), -1 / tMin, -1 / tMax)
     }
@@ -477,10 +477,10 @@ export function parabola4Projection(
     // calculation. X * P = x => X * P * P^-1 = m * P^-1 => X = m * P^-1
     // prettier-ignore
     const Pinv = new M4(
-			       1,        0,        0, 0,
-			       0,        1,        0, 0,
-			       0,        0,        1, 0,
-			-m.m[12], -m.m[13], -m.m[14], 1)
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      -m.m[12], -m.m[13], -m.m[14], 1)
     const X = m.times(Pinv)
 
     // P'(t) = 0 is true for t = 0 and t1. The center is in between P(0) and P(t1), or P(t1) / 2, as P(0) = O

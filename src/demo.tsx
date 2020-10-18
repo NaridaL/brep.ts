@@ -1,4 +1,4 @@
-import chroma from "chroma-js"
+import * as chroma from "chroma.ts"
 import classnames from "classnames"
 import * as hljs from "highlight.js"
 import React, {
@@ -18,7 +18,7 @@ import {
   initShaders,
   setupCamera,
 } from "./BREPGLContext"
-import { B2T, BRep, CustomPlane, P3, round } from "./index"
+import { B2T, BRep, CustomPlane, edgeNgon, P3, round } from "."
 
 const fakeB2Mesh = (false as true) && ({} as BRep).toMesh()
 type B2Mesh = typeof fakeB2Mesh
@@ -245,7 +245,7 @@ const demoPlanes = [
     V3.Y,
     V3.Z,
     "planeYZ",
-    chroma("red").gl(),
+    chroma.color("red").gl(),
     -5,
     5,
     -5,
@@ -256,7 +256,7 @@ const demoPlanes = [
     V3.X,
     V3.Z,
     "planeZX",
-    chroma("green").gl(),
+    chroma.color("green").gl(),
     -5,
     5,
     -5,
@@ -267,7 +267,7 @@ const demoPlanes = [
     V3.X,
     V3.Y,
     "planeXY",
-    chroma("blue").gl(),
+    chroma.color("blue").gl(),
     -5,
     5,
     -5,
@@ -283,7 +283,7 @@ function paintDemo(demo: DemoDesc) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
   gl.loadIdentity()
   demoPlanes.forEach((plane) =>
-    gl.drawPlane(plane, chroma(plane.color).gl(), false),
+    gl.drawPlane(plane, chroma.color(plane.color).gl(), false),
   )
   // gl.drawVectors(g.Vs)
   if (!demo.meshes) return
@@ -298,7 +298,7 @@ function paintDemo(demo: DemoDesc) {
     gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
     mesh.lines &&
       gl.shaders.singleColor
-        .uniforms({ color: chroma("#bfbfbf").gl() })
+        .uniforms({ color: chroma.color("#bfbfbf").gl() })
         .draw(mesh, gl.LINES)
     gl.projectionMatrix.m[11] += 1 / (1 << 22)
 
@@ -310,7 +310,7 @@ function paintDemo(demo: DemoDesc) {
         .uniforms({
           color:
             hovering == face
-              ? chroma("purple").gl()
+              ? chroma.color("purple").gl()
               : emod(emod(meshColorss, i), faceIndex),
         })
         .draw(
@@ -506,7 +506,7 @@ const Body = () => (
 
         // create an n-gon centered on the XY-plane with corners insideRadius away from the origin
         // the ngon is counter-clockwise (CCW) when viewed from +Z
-        const ngon = ngon(n, insideRadius)
+        const ngon = edgeNgon(n, insideRadius)
 
         // round the corners of the ngon with radius cornerRadius
         const ngonRounded = round(ngon, cornerRadius)

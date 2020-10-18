@@ -1,4 +1,4 @@
-import chroma from "chroma-js"
+import * as chroma from "chroma.ts"
 import {
   addOwnProperties,
   arrayFromFunction,
@@ -26,7 +26,7 @@ import {
   ParabolaCurve,
   PICurve,
   PPCurve,
-} from "./index"
+} from "."
 import { ceil, floor, pow, sign } from "./math"
 import * as shaders from "./shaders"
 
@@ -46,12 +46,12 @@ export function parseGetParams(str: string) {
 }
 
 export const COLORS = {
-  RD_FILL: chroma("#9EDBF9"),
-  RD_STROKE: chroma("#77B0E0"),
-  TS_FILL: chroma("#D19FE3"),
-  TS_STROKE: chroma("#A76BC2"),
-  PP_FILL: chroma("#F3B6CF"),
-  PP_STROKE: chroma("#EB81B4"),
+  RD_FILL: chroma.color("#9EDBF9"),
+  RD_STROKE: chroma.color("#77B0E0"),
+  TS_FILL: chroma.color("#D19FE3"),
+  TS_STROKE: chroma.color("#A76BC2"),
+  PP_FILL: chroma.color("#F3B6CF"),
+  PP_STROKE: chroma.color("#EB81B4"),
 }
 export interface BREPGLContext extends TSGLContext {}
 export class BREPGLContext {
@@ -147,9 +147,9 @@ export class BREPGLContext {
     drVs: { v: V3; anchor: V3; color?: GL_COLOR }[],
     size: number | undefined = undefined,
   ) {
-    this.drawVector(V3.X, V3.O, chroma("red").gl(), size)
-    this.drawVector(V3.Y, V3.O, chroma("green").gl(), size)
-    this.drawVector(V3.Z, V3.O, chroma("blue").gl(), size)
+    this.drawVector(V3.X, V3.O, chroma.color("red").gl(), size)
+    this.drawVector(V3.Y, V3.O, chroma.color("green").gl(), size)
+    this.drawVector(V3.Z, V3.O, chroma.color("blue").gl(), size)
 
     drVs.forEach((vi) => this.drawVector(vi.v, vi.anchor, vi.color, size))
   }
@@ -218,7 +218,7 @@ function conicPainter(
 export const CURVE_PAINTERS: {
   [curveConstructorName: string]: (
     gl: BREPGLContext,
-    curve: Curve,
+    curve: any,
     color: GL_COLOR,
     startT: number,
     endT: number,

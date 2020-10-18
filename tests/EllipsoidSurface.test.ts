@@ -25,6 +25,7 @@ import {
   EllipseCurve,
   EllipsoidSurface,
   StraightEdge,
+  edgeForCurveAndTs,
 } from ".."
 
 import { PI, sin, sqrt } from "../src/math"

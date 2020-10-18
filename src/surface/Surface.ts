@@ -34,7 +34,7 @@ export abstract class Surface
   implements Equalable, WebGLDebugable {
   readonly ["constructor"]: new (...args: any[]) => this
 
-  debugInfo?(): { ps?: V3[]; lines?: V3[] }
+  debugInfo?(): { points?: V3[]; lines?: V3[] }
 
   static loopContainsPointGeneral(
     loop: Edge[],

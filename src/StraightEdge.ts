@@ -10,7 +10,7 @@ import {
   V3,
 } from "ts3dutils"
 
-import { Edge, L3, P3, PlaneSurface, Surface } from "./index"
+import { Edge, L3, P3, PlaneSurface, Surface } from "."
 
 export class StraightEdge extends Edge {
   readonly tangent: V3

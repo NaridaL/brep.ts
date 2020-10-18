@@ -10,7 +10,7 @@ import {
   snap,
 } from "ts3dutils"
 
-import { Curve, Edge, P3, PICurve, Surface } from "./index"
+import { Curve, Edge, P3, PICurve, Surface } from "."
 
 export class PCurveEdge extends Edge {
   constructor(

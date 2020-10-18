@@ -100,7 +100,11 @@ export class NURBS extends Curve {
   }
 
   at4(t: number) {
-    NLA_DEBUG && assert(between(t, this.tMin, this.tMax), t)
+    NLA_DEBUG &&
+      assert(
+        between(t, this.tMin, this.tMax),
+        t + " " + this.tMin + " " + this.tMax,
+      )
     const { points, degree, knots } = this
 
     // find s (the spline segment) for the [t] value provided
@@ -136,15 +140,15 @@ export class NURBS extends Curve {
     return this.at4(t).p3()
   }
 
-  /*
-	d(k, i, t) = a(i, k, t) * d(k - 1, i, t) + (1 - a(i, k, t)) * d(k - 1, i - 1, t)
-	a(i, k, t) = (t - knots[i]) / (knots[i + 1 + n - k] - knots[i])
-	a'(i, k, t) = 1 / (knots[i + 1 + n - k] - knots[i])
+  /**
+   d(k, i, t) = a(i, k, t) * d(k - 1, i, t) + (1 - a(i, k, t)) * d(k - 1, i - 1, t)
+   a(i, k, t) = (t - knots[i]) / (knots[i + 1 + n - k] - knots[i])
+   a'(i, k, t) = 1 / (knots[i + 1 + n - k] - knots[i])
 
-	d/dt =  a(i, k, t) * d'(k - 1, i, t) + a'(i, k, t) * d(k - 1, i, t)
-	+ (1 - a(i, k, t)) * d'(k - 1, i - 1, t) + a'(i, k, t) * d(k - 1, i - 1, t)
-*/
-  ptDtDdt4(t: number) {
+   d/dt =  a(i, k, t) * d'(k - 1, i, t) + a'(i, k, t) * d(k - 1, i, t)
+   + (1 - a(i, k, t)) * d'(k - 1, i - 1, t) + a'(i, k, t) * d(k - 1, i - 1, t)
+   */
+  ptDtDdt4(t: number): [Vector, Vector, Vector] {
     const { points, degree, knots } = this
 
     // find s (the spline segment) for the [t] value provided
@@ -158,8 +162,8 @@ export class NURBS extends Curve {
       degree + 1,
     )
 
-    let ddt: Vector = Vector.Zero(4),
-      derivative: Vector
+    let ddt: Vector = Vector.Zero(4)
+    let derivative: Vector
 
     for (let level = 0; level < degree; level++) {
       if (level == degree - 2) {
@@ -232,8 +236,8 @@ export class NURBS extends Curve {
     return Vector.add(
       p.times(-p.w * ddt.w + 2 * dt.w ** 2),
       dt.times(-2 * p.w * dt.w),
-      ddt.times(p.w ** 2)
-    ).div(p.w ** 3).V3();
+      ddt.times(p.w ** 2),
+    ).div(p.w ** 3).V3()
   }
 
   ptDtDdt(t: number) {

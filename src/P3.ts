@@ -23,7 +23,7 @@ import {
   HyperbolaCurve,
   L3,
   ParabolaCurve,
-} from "./index"
+} from "."
 
 /**
  * Plane x DOT this.normal1 = this.w
