@@ -1694,7 +1694,7 @@ var chroma = createCommonjsModule(function (module, exports) {
   _interpolators.push(['rgb', interpolate_rgb]);
 
   Color.prototype.luminance = function(lum, mode) {
-    var cur_lum, eps, max_iter, rgba, test;
+    var cur_lum, eps, max_iter, rgba;
     if (mode == null) {
       mode = 'rgb';
     }
@@ -4578,9 +4578,9 @@ function rad2deg(rad) {
  */
 function numberToStr(value, length) {
     let minAbsDiff = Infinity, closestValue = undefined, closestValueStr = undefined;
-    function test(testValue, testValueStr) {
+    function test(testValueValueStr) {
         const absDiff = Math.abs(testValue - value);
-        console.log(testValue, testValueStr, absDiff);
+        console.log(testValueValueStr, absDiff);
         if (absDiff < minAbsDiff) {
             minAbsDiff = absDiff;
             closestValue = testValue;
@@ -9239,7 +9239,7 @@ var chroma$1 = createCommonjsModule(function (module, exports) {
   _interpolators.push(['rgb', interpolate_rgb]);
 
   Color.prototype.luminance = function(lum, mode) {
-    var cur_lum, eps, max_iter, test;
+    var cur_lum, eps, max_iter;
     if (mode == null) {
       mode = 'rgb';
     }
@@ -11749,7 +11749,7 @@ const glValidEnumContexts = {
     'getFramebufferAttachmentParameter': { 3: { 0: true, 1: true, 2: true } },
     'getRenderbufferParameter': { 2: { 0: true, 1: true } },
     'renderbufferStorage': { 4: { 0: true, 1: true } },
-    // Frame buffer operations (clear, blend, depth test, stencil)
+    // Frame buffer operations (clear, blend, depth  stencil)
     'clear': { 1: { 0: { 'enumBitwiseOr': ['COLOR_BUFFER_BIT', 'DEPTH_BUFFER_BIT', 'STENCIL_BUFFER_BIT'] } } },
     'depthFunc': { 1: { 0: true } },
     'blendFunc': { 2: { 0: true, 1: true } },
@@ -16835,7 +16835,7 @@ P3$$1.ZX = new P3$$1(V3.Y, 0);
 P3$$1.XY = new P3$$1(V3.Z, 0);
 
 class Surface$$1 extends Transformable {
-    static loopContainsPointGeneral(loop, pWC, testLine, lineOut) {
+    static loopContainsPointGeneral(loop, pWCLine, lineOut) {
         const testPlane = P3$$1.normalOnAnchor(lineOut, pWC);
         // edges colinear to the testing line; these will always be counted as "inside" relative to the testing line
         const colinearEdges = loop.map(edge => edge.colinearToLine(testLine));
@@ -16899,7 +16899,7 @@ class Surface$$1 extends Transformable {
         }
         return inside ? PointVsFace$$1.INSIDE : PointVsFace$$1.OUTSIDE;
     }
-    static loopContainsPointEllipse(loop, pWC, testLine, pWCT) {
+    static loopContainsPointEllipse(loop, pWCLine, pWCT) {
         const lineOut = testLine.normal;
         const testPlane = P3$$1.normalOnAnchor(testLine.normal, pWC);
         const colinearEdges = loop.map(edge => testLine.isColinearTo(edge.curve));
@@ -17834,7 +17834,7 @@ class RotatedCurveSurface$$1 extends ParametricSurface$$1 {
         const angle = EllipseCurve$$1.XYLCPointT(pLC, this.sMin, this.sMax);
         const testCurveLC = EllipseCurve$$1.semicircle(pLC.lengthXY(), new V3(0, 0, pLC.z));
         const testCurveWC = testCurveLC.transform(this.matrix);
-        return Surface$$1.loopContainsPointEllipse(loop, pWC, testCurveWC, angle);
+        return Surface$$1.loopContainsPointEllipse(loop, pWCCurveWC, angle);
     }
     isCoplanarTo(surface) {
         if (this === surface)
@@ -18556,7 +18556,7 @@ class EllipsoidSurface$$1 extends ParametricSurface$$1 {
                 ? PointVsFace$$1.ON_EDGE
                 : PointVsFace$$1.OUTSIDE;
         }
-        return Surface$$1.loopContainsPointEllipse(loop, pWC, testLine);
+        return Surface$$1.loopContainsPointEllipse(loop, pWCLine);
     }
     surfaceAreaApprox() {
         // See https://en.wikipedia.org/wiki/Ellipsoid#Surface_area
@@ -29572,7 +29572,7 @@ function IF(state) {
     let test = state.stack.pop();
     let ins;
 
-    if (exports.DEBUG) console.log(state.step, 'IF[]', test);
+    if (exports.DEBUG) console.log(state.step, 'IF[]');
 
     // if test is true it just continues
     // if not the ip is skipped until matching ELSE or EIF
@@ -34357,8 +34357,8 @@ class PlaneFace$$1 extends Face$$1 {
     // mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center
     // intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const
     // testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 =
-    // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector, thisPlane.normal1) const sVEF2 =
-    // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector.negated(), thisPlane.normal1) if (INSIDE ==
+    // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector, thisPlane.normal1) const sVEF2 =
+    // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector.negated(), thisPlane.normal1) if (INSIDE ==
     // sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } }
     // } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2,
     // face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2)
@@ -42405,7 +42405,7 @@ var nerdamer = (function(imports) {
                 result = testSQRT(result);
                 //don't multiply until we've tested the remaining symbol
                 if(num && den)
-                    result = _.multiply(result, testPow(_.multiply(num, den)));
+                    result = _.multiply(resultPow(_.multiply(num, den)));
 
                 //reduce square root
                 if(result.fname === SQRT) {
@@ -44985,7 +44985,7 @@ function splitsVolumeEnclosingFacesP$$1(brep, canonEdge, p, pInside, pFaceNormal
         return nearestFaceInfo.reversed ? OUTSIDE$$1 : INSIDE$$1;
     }
 }
-function splitsVolumeEnclosingFacesP2$$1(brep, canonEdge, p, testCurve, curveT, dir, faceNormal) {
+function splitsVolumeEnclosingFacesP2$$1(brep, canonEdge, pCurve, curveT, dir, faceNormal) {
     assert(canonEdge == canonEdge.getCanon());
     //assert(p.equals(canonEdge.a))
     assertf(() => brep.edgeFaces);
@@ -45053,14 +45053,14 @@ function splitsVolumeEnclosingCone$$1(brep, p, dir) {
             }
             else {
                 const isLine = L3$$1.fromPlanes(testPlane, planeFace.surface.plane);
-                const ps = planeFace.edgeISPsWithPlane(isLine, testPlane);
+                const ps = planeFace.edgeISPsWithPlane(isLinePlane);
                 let i = 0;
                 while (i < ps.length) {
                     const a = ps[i++], b = ps[i++];
                     const out = a.p.like(p);
                     if (out || b.p.like(p)) {
                         const dir2 = out ? isLine.dir1 : isLine.dir1.negated();
-                        const angle = (dir.angleRelativeNormal(dir2, testPlane.normal1) + 2 * Math.PI + NLA_PRECISION / 2) %
+                        const angle = (dir.angleRelativeNormal(dir2Plane.normal1) + 2 * Math.PI + NLA_PRECISION / 2) %
                             (2 * Math.PI);
                         rays.push({ angle: angle, out: out });
                     }
@@ -45069,7 +45069,7 @@ function splitsVolumeEnclosingCone$$1(brep, p, dir) {
         }
     }
     rays.sort((a, b) => a.angle - b.angle);
-    //console.log("testPlane", testPlane.toSource(), "rays", rays.toSource())
+    //console.log("testPlane"Plane.toSource(), "rays", rays.toSource())
     if (eq0(rays[0].angle)) {
         return ALONG_EDGE_OR_PLANE$$1;
     }

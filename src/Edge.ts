@@ -27,6 +27,7 @@ export abstract class Edge extends Transformable {
   readonly reversed: boolean
 
   abstract get aDir(): V3
+
   abstract get bDir(): V3
 
   constructor(
@@ -208,10 +209,11 @@ export abstract class Edge extends Transformable {
     // TODO: what, where?
     return (
       this === edge ||
-      (edge instanceof Edge &&
-        this.curve.isColinearTo(edge.curve) &&
+      (this.curve.isColinearTo(edge.curve) &&
         this.a.like(edge.a) &&
-        this.b.like(edge.b))
+        this.b.like(edge.b) &&
+        this.aDir.isParallelTo(edge.aDir) &&
+        this.aDir.dot(edge.aDir) > 0)
     )
   }
 

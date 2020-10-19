@@ -1,10 +1,8 @@
 import {
   outputLink,
   rotateEdge,
-  suite,
   suiteSurface,
   surfaceVolumeAndAreaTests,
-  test,
   testISCurves,
   testISTs,
   testLoopContainsPoint,
@@ -27,7 +25,7 @@ import {
 } from ".."
 import { cos, PI, sin } from "../src/math"
 
-suite("RotatedCurveSurface", () => {
+describe("RotatedCurveSurface", () => {
   const baseCurve = EllipseCurve.forAB(2, 2)
     .rotateZ(-20 * DEG)
     .translate(4, 3)
@@ -42,26 +40,25 @@ suite("RotatedCurveSurface", () => {
 
   const torusFace = rotateEdge(edgeForCurveAndTs(baseCurve).flipped(), 40 * DEG)
 
-  suite("torusSurface", () => suiteSurface(torusSurface))
-  suite("torusSurface.scale(2)", () => suiteSurface(torusSurface.scale(2)))
-  suite("torusSurface.shearX(2, 2)", () =>
-    suiteSurface(torusSurface.shearX(2, 2)),
-  )
+  describe("torusSurface", () => suiteSurface(torusSurface))
+  describe("torusSurface.scale(2)", () => suiteSurface(torusSurface.scale(2)))
+  describe("torusSurface.shearX(2, 2)", () =>
+    suiteSurface(torusSurface.shearX(2, 2)))
 
-  test("getExtremePoints", (assert) => {
-    outputLink(assert, {
+  test("getExtremePoints", () => {
+    outputLink({
       mesh: torusSurface.sce + ".toMesh()",
       drPs: torusSurface.getExtremePoints(),
     })
   })
-  test("getExtremePoints2", (assert) => {
-    outputLink(assert, {
+  test("getExtremePoints2", () => {
+    outputLink({
       mesh: torusSurface.shearX(2, 2).sce + ".toMesh()",
       drPs: torusSurface.shearX(2, 2).getExtremePoints(),
     })
   })
 
-  test("coplanar with curve translated up, surface down", (assert) => {
+  test("coplanar with curve translated up, surface down", () => {
     const torusSurface2 = rotateCurve(
       baseCurve.translate(0, 0, 2),
       undefined,
@@ -69,20 +66,20 @@ suite("RotatedCurveSurface", () => {
       100 * DEG,
       false,
     ).translate(0, 0, -2) as RotatedCurveSurface
-    assert.ok(torusSurface.isCoplanarTo(torusSurface2))
+    expect(torusSurface.isCoplanarTo(torusSurface2)).toBeTruthy()
   })
-  test("is curves with plane perpendicular to rotation axis", (assert) => {
-    const cs = testISCurves(assert, torusSurface, new P3(V3.Z, 4), 2)
-    assert.ok(cs[0] instanceof EllipseCurve, "cs[0] instanceof EllipseCurve")
-    assert.ok(cs[1] instanceof EllipseCurve, "cs[1] instanceof EllipseCurve")
+  test("is curves with plane perpendicular to rotation axis", () => {
+    const cs = testISCurves(torusSurface, new P3(V3.Z, 4), 2)
+    expect(cs[0]).toBeInstanceOf(EllipseCurve)
+    expect(cs[1]).toBeInstanceOf(EllipseCurve)
   })
-  test("is curves with plane through rotation axis", (assert) => {
-    const cs = testISCurves(assert, torusSurface, P3.ZX.rotateZ(20 * DEG), 1)
-    assert.ok(cs[0] instanceof EllipseCurve, "cs[0] instanceof EllipseCurve")
+  test("is curves with plane through rotation axis", () => {
+    const cs = testISCurves(torusSurface, P3.ZX.rotateZ(20 * DEG), 1)
+    expect(cs[0]).toBeInstanceOf(EllipseCurve)
   })
-  test("is curves with plane ", (assert) =>
-    testISCurves(assert, torusSurface, new P3(V3.XYZ.unit(), 4), 1))
-  test("is curves with plane 2", (assert) => {
+  test("is curves with plane ", () =>
+    testISCurves(torusSurface, new P3(V3.XYZ.unit(), 4), 1))
+  test("is curves with plane 2", () => {
     const torus = new RotatedCurveSurface(
       new EllipseCurve(
         V(2, 0, 0),
@@ -96,59 +93,37 @@ suite("RotatedCurveSurface", () => {
       3.141592653589793,
     )
     const plane = new PlaneSurface(new P3(V3.Y, 2.5), V(-1, 0, 0), V3.Z)
-    testISCurves(assert, torus, plane, 1)
+    testISCurves(torus, plane, 1)
   })
 
-  suite("torusFace", () => surfaceVolumeAndAreaTests(torusFace))
+  describe("torusFace", () => surfaceVolumeAndAreaTests(torusFace))
   console.log(
     "shearX22 centroid",
     torusFace.toMesh().shearX(2, 2).calcVolume().centroid,
   )
-  suite("torusFace.shearX(2, 2)", () =>
-    surfaceVolumeAndAreaTests(torusFace.shearX(2, 2)),
-  )
+  describe("torusFace.shearX(2, 2)", () =>
+    surfaceVolumeAndAreaTests(torusFace.shearX(2, 2)))
 
-  suite("isTsWithLine", () => {
-    test("vertical", (assert) =>
-      testISTs(assert, new L3(V(4, 4, 0), V3.Z), torusSurface, 1))
-    test("vertical, 0 is", (assert) =>
-      testISTs(assert, new L3(V(4, -4, 0), V3.Z), torusSurface, 0))
-    test("in ZX plane", (assert) =>
-      testISTs(
-        assert,
-        new L3(V(0, 0, 3.8), V(1, 0, -0.1).unit()),
-        torusSurface,
-        3,
-      ))
-    test("through Z axis", (assert) =>
-      testISTs(
-        assert,
-        new L3(V(4, 4, 3.8), V(1, 1, -0.1).unit()),
-        torusSurface,
-        2,
-      ))
-    test("parallel to XY plane", (assert) =>
-      testISTs(
-        assert,
-        new L3(V(4, 4, 3.8), V(1, -0.2, 0).unit()),
-        torusSurface,
-        2,
-      ))
-    test("parallel to XY plane, 0 is", (assert) =>
-      testISTs(
-        assert,
-        new L3(V(4, 4, 0), V(1, -0.2, 0).unit()),
-        torusSurface,
-        0,
-      ))
-    test("general", (assert) => {
+  describe("isTsWithLine", () => {
+    test("vertical", () => testISTs(new L3(V(4, 4, 0), V3.Z), torusSurface, 1))
+    test("vertical, 0 is", () =>
+      testISTs(new L3(V(4, -4, 0), V3.Z), torusSurface, 0))
+    test("in ZX plane", () =>
+      testISTs(new L3(V(0, 0, 3.8), V(1, 0, -0.1).unit()), torusSurface, 3))
+    test("through Z axis", () =>
+      testISTs(new L3(V(4, 4, 3.8), V(1, 1, -0.1).unit()), torusSurface, 2))
+    test("parallel to XY plane", () =>
+      testISTs(new L3(V(4, 4, 3.8), V(1, -0.2, 0).unit()), torusSurface, 2))
+    test("parallel to XY plane, 0 is", () =>
+      testISTs(new L3(V(4, 4, 0), V(1, -0.2, 0).unit()), torusSurface, 0))
+    test("general", () => {
       const line = new L3(V3.X, V(0, 1, 1).unit())
-      testISTs(assert, line, torusSurface, 1)
+      testISTs(line, torusSurface, 1)
     })
 
-    test("general 2", (assert) => {
+    test("general 2", () => {
       const line = L3.throughPoints(V(4, 2, 3.8), V(-2, 0.2, 4))
-      testISTs(assert, line, torusSurface, 3)
+      testISTs(line, torusSurface, 3)
     })
   })
 

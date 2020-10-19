@@ -1,4 +1,4 @@
-import { b2equals, inDifferentSystems, suite, test } from "./manager"
+import { b2equals, inDifferentSystems } from "./manager"
 
 import { JavaSet as CustomSet } from "javasetmap.ts"
 import { DEG, M4, V, V3 } from "ts3dutils"
@@ -9,6 +9,7 @@ import {
   BezierCurve,
   ClassSerializer,
   Edge,
+  edgeForCurveAndTs,
   EllipseCurve,
   intersectionCircleLine,
   intersectionUnitCircleLine,
@@ -16,9 +17,9 @@ import {
 
 import { cos, PI } from "../src/math"
 
-suite("NLA", () => {
-  suite("isPointsWithBezier()", () =>
-    inDifferentSystems((assert, m4) => {
+describe("NLA", () => {
+  describe("isPointsWithBezier()", () =>
+    inDifferentSystems((m4) => {
       const ell = new EllipseCurve(
         V(-223.34900663163222, -176.63214006755936, 0),
         V(-169.5891804980124, -35.54247345835796, 0),
@@ -31,23 +32,16 @@ suite("NLA", () => {
         V(-59.14331799274822, -299.7830665459221, 0),
       )
       const isPoints = ell.isInfosWithBezier(bez).map((info) => info.p)
-      assert.equal(isPoints.length, 3)
+      expect(isPoints.length).toBe(3)
       isPoints.forEach((p) => {
-        assert.ok(
-          ell.containsPoint(p),
-          `ell.distanceToPoint(${p}) = ${ell.distanceToPoint(p)}`,
-        )
-        assert.ok(
-          bez.containsPoint(p),
-          `bez.distanceToPoint(${p}) = ${bez.distanceToPoint(p)}`,
-        )
+        expect(ell.containsPoint(p)).toBeTruthy()
+        expect(bez.containsPoint(p)).toBeTruthy()
       })
-    }),
-  )
+    }))
 
-  suite("EllipseCurve.getAreaInDir", () =>
+  describe("EllipseCurve.getAreaInDir", () =>
     inDifferentSystems(
-      (assert, m4) => {
+      (m4) => {
         const k = 1
         ;[
           {
@@ -122,7 +116,7 @@ suite("NLA", () => {
                 .plus(offsetCentroid.times(offsetArea))
                 .div(totalArea),
             )
-            console.log(test.t, test.s, 1 - cos(test.t), 1 - cos(test.s))
+            console.log(test.t.s, 1 - cos(test.t), 1 - cos(test.s))
             console.log(
               test.c.times(test.result).str,
               offsetCentroid.str,
@@ -133,26 +127,10 @@ suite("NLA", () => {
               totalArea,
               expectedCentroid.str,
             )
-            assert.fuzzyEqual(
-              result.area,
-              expectedArea,
-              `yDiff: ${yDiff}, ${
-                test.sce
-              }, offsetArea: ${offsetArea}, expected: ${expectedArea}, ${
-                areaFactor * offsetArea
-              }`,
-            )
+            expect(result.area).toFuzzyEqual(expectedArea)
 
-            assert.fuzzyEqual(
-              result.centroid.x,
-              expectedCentroid.x,
-              "cx " + result.centroid.x,
-            )
-            assert.fuzzyEqual(
-              result.centroid.y,
-              expectedCentroid.y,
-              "cy " + result.centroid.y,
-            )
+            expect(result.centroid.x).toFuzzyEqual(expectedCentroid.x)
+            expect(result.centroid.y).toFuzzyEqual(expectedCentroid.y)
             // if (!k--) throw new Error()
           })
         })
@@ -161,44 +139,43 @@ suite("NLA", () => {
       M4.rotateZ(45 * DEG),
       M4.forRows(V(1, 2, 3), V3.Y, V3.Z),
       M4.FOO.as3x3(),
-    ),
-  )
+    ))
 
-  test("Edge.edgesIntersects", (assert) => {
+  test("Edge.edgesIntersects", () => {
     const curve1 = BezierCurve.graphXY(2, -3, -3, 2, -2, 3)
     const curve2 = curve1.transform(M4.rotateLine(V(0.5, 0), V3.Z, PI / 2))
-    const edge1 = PCurveedgeForCurveAndTs(curve1, 0, 1)
-    const edge2 = PCurveedgeForCurveAndTs(curve2, 0, 1)
-    assert.ok(Edge.edgesIntersect(edge1, edge2))
-    assert.notOk(Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0)))
-    assert.notOk(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0)))
+    const edge1 = edgeForCurveAndTs(curve1, 0, 1)
+    const edge2 = edgeForCurveAndTs(curve2, 0, 1)
+    expect(Edge.edgesIntersect(edge1, edge2)).toBeTruthy()
+    expect(Edge.edgesIntersect(edge1, edge1.translate(10, 0, 0))).toBeFalsy()
+    expect(Edge.edgesIntersect(edge1, edge2.translate(10, 0, 0))).toBeFalsy()
   })
-  test("V3.areDisjoint2", (assert) => {
+  test("V3.areDisjoint2", () => {
     const s = new CustomSet()
     const a = V(0, 2.7499999999999996, -5),
       b = V(0, 2.749999999999999, -5)
     s.canonicalizeLike(a)
-    assert.ok(s.canonicalizeLike(b) == a)
+    expect(s.canonicalizeLike(b) == a).toBeTruthy()
   })
-  test("intersectionUnitCircleLine", (assert) => {
+  test("intersectionUnitCircleLine", () => {
     // y = -x + 1 => x + y = 1
-    assert.deepEqual(intersectionUnitCircleLine(1, 1, 1), {
+    expect(intersectionUnitCircleLine(1, 1, 1)).toEqual({
       x1: 1,
       x2: 0,
       y1: 0,
       y2: 1,
     })
   })
-  test("intersectionCircleLine", (assert) => {
+  test("intersectionCircleLine", () => {
     // y = -x + 2 => x + y = 2
-    assert.deepEqual(intersectionCircleLine(1, 1, 2, 2), {
+    expect(intersectionCircleLine(1, 1, 2, 2)).toEqual({
       x1: 2,
       x2: 0,
       y1: 0,
       y2: 2,
     })
   })
-  //test('EllipsoidSurface.splitOnPlaneLoop', assert => {
+  //test('EllipsoidSurface.splitOnPlaneLoop', () => {
   //    //const es = EllipsoidSurface.UNIT
   //    const a = V3.sphere(30 * DEG, 70 * DEG), z = a.z, xy = a.lengthXY(), center = V(0, 0, z), f1 = V(a.x, a.y,
   // 0), f2 = V(-a.y, a.x) const curve = new EllipseCurve(center, f1, f2) const seamCurve =
@@ -210,49 +187,49 @@ suite("NLA", () => {
   // -1)]&edges=${back.sce}'>view</a>`) console.log(front, back) const expectedFront = [] const expectedBack =
   // [edgeForCurveAndTs(curve, -120 * DEG, 60 * DEG), edgeForCurveAndTs(seamCurve)] },
 
-  //test('EllipseCurve.getVolZAnd', assert => {
+  //test('EllipseCurve.getVolZAnd', () => {
   //
   //	assert.equal(EllipseCurve.UNIT.getVolZAnd(V3.Z, -PI, PI).volume, 0)
   //	assert.equal(EllipseCurve.UNIT.rotateY(90 * DEG).translate(1, 0, 0).getVolZAnd(V3.Z, -PI, PI).volume, PI)
   //},
 })
 
-suite("serialization", () => {
-  test("serialization", (assert) => {
+describe("serialization", () => {
+  test("serialization", () => {
     const sz = new ClassSerializer(),
       unserialize = (x) => sz.unserialize(x),
       serialize = (x) => sz.serialize(x)
     let a: any = { a: 2, b: 3 }
-    assert.equal(unserialize(serialize(a)).toString(), a.toString())
+    expect(unserialize(serialize(a)).toString()).toBe(a.toString())
 
     a.c = a
 
     const a2 = unserialize(serialize(a))
-    assert.equal(a2.a, 2)
-    assert.equal(a2.b, 3)
-    assert.equal(a2.c, a2)
+    expect(a2.a).toBe(2)
+    expect(a2.b).toBe(3)
+    expect(a2.c).toBe(a2)
 
     a = [1, 2, 3]
-    assert.equal(unserialize(serialize(a)).toString(), a.toString())
+    expect(unserialize(serialize(a)).toString()).toBe(a.toString())
   })
-  test("brep", (assert) => {
+  test("brep", () => {
     const cs = new ClassSerializer()
     cs.addNamespace(ts3dutils, "ts3dutils")
     cs.addNamespace(brepts, "brepts")
     const input = B2T.box().rotateX(20 * DEG)
     const str = cs.serialize(input)
     const output = cs.unserialize(str)
-    b2equals(assert, output, input)
+    b2equals(output, input)
   })
 })
 
-suite("tsgl", () => {
-  test("centroid of tetrahedron O X Y Z", (assert) => {
+describe("tsgl", () => {
+  test("centroid of tetrahedron O X Y Z", () => {
     const centroidMesh = B2T.tetrahedron(V3.O, V3.X, V3.Y, V3.Z).toMesh()
     const centroid = centroidMesh.calcVolume().centroid
-    assert.v3like(centroid, V(0.25, 0.25, 0.25))
+    expect(centroid).toBeLike(V(0.25, 0.25, 0.25))
 
     const centroid2 = centroidMesh.translate(2, 2).calcVolume().centroid
-    assert.v3like(centroid2, V(2.25, 2.25, 0.25))
+    expect(centroid2).toBeLike(V(2.25, 2.25, 0.25))
   })
 })

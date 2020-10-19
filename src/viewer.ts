@@ -305,6 +305,12 @@ function viewerPaint(time: int, gl: BREPGLContext) {
         undefined,
         gl.LINES,
       )
+    gl.shaders.lighting
+      .uniforms({
+        color: chroma.css("red").gl(),
+        camPos: eye.pos,
+      })
+      .draw(faceMesh)
   }
 
   for (let i = 0; i < meshes.length; i++) {

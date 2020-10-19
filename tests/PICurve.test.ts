@@ -1,6 +1,4 @@
 import {
-  suite,
-  test,
   testCurve,
   testCurveISInfos,
   testISCurves,
@@ -22,9 +20,9 @@ import {
   EllipsoidSurface,
 } from ".."
 
-suite("PICurve", () => {
-  suite("pointT", () => {
-    test("1", (assert) => {
+describe("PICurve", () => {
+  describe("pointT", () => {
+    test("1", () => {
       const piCurve = PICurve.forStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -47,9 +45,9 @@ suite("PICurve", () => {
         0.02,
       )
       const p = V(0.010937499999999989, 0.2890625, 0.9572477433702835)
-      testPointT(assert, piCurve, p, NaN)
+      testPointT(piCurve, p, NaN)
     })
-    test("2", (assert) => {
+    test("2", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -88,9 +86,9 @@ suite("PICurve", () => {
         10.421498564770445,
       )
       const p = piCurve.points[8]
-      testPointT(assert, piCurve, p, 8)
+      testPointT(piCurve, p, 8)
     })
-    test("3", (assert) => {
+    test("3", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -116,9 +114,9 @@ suite("PICurve", () => {
         20,
       )
       const p = V(-0.16499999999999998, 0.255, 0.9527591510974849)
-      testPointT(assert, piCurve, p, 20)
+      testPointT(piCurve, p, 20)
     })
-    test("4", (assert) => {
+    test("4", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -157,9 +155,9 @@ suite("PICurve", () => {
         9.887672300683334,
       )
       const p = V(2.700000000000252, 13.710000000000084, 13.80000000000074)
-      testPointT(assert, piCurve, p)
+      testPointT(piCurve, p)
     })
-    test("5", (assert) => {
+    test("5", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -194,9 +192,9 @@ suite("PICurve", () => {
         -6.873697213268433e-13,
         -0.9527983194419218,
       )
-      testPointT(assert, piCurve, p, 13.449200584902428)
+      testPointT(piCurve, p, 13.449200584902428)
     })
-    test("6", (assert) => {
+    test("6", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -235,10 +233,10 @@ suite("PICurve", () => {
         11,
       )
       const p = V(0.49999999999999967, 0, 0.30000000000000004)
-      testPointT(assert, piCurve, p)
+      testPointT(piCurve, p)
     })
   })
-  test("is curves", (assert) => {
+  test("is curves", () => {
     const pcs = new ProjectedCurveSurface(
       new BezierCurve(
         V(4, 13.8, 15.7),
@@ -269,7 +267,7 @@ suite("PICurve", () => {
       2,
     )
     console.log(pcs.isCurvesWithSurface(ses).sce)
-    testISCurves(assert, pcs, ses, 1)
+    testISCurves(pcs, ses, 1)
     const edges = [
       new PCurveEdge(
         PICurve.forParametricStartEnd(
@@ -454,7 +452,7 @@ suite("PICurve", () => {
       ),
     ]
   })
-  test("isTsWithSurface", (assert) => {
+  test("isTsWithSurface", () => {
     const pcs = new ProjectedCurveSurface(
       BezierCurve.EX2D,
       V3.Z,
@@ -468,9 +466,9 @@ suite("PICurve", () => {
     const ses = EllipsoidSurface.UNIT
     const piCurve = ses.isCurvesWithSurface(pcs)[0]
     console.log(piCurve)
-    testISTs(assert, piCurve, new PlaneSurface(P3.XY), 1)
+    testISTs(piCurve, new PlaneSurface(P3.XY), 1)
   })
-  test("isTsWithPlane", (assert) => {
+  test("isTsWithPlane", () => {
     const piCurve = PICurve.forParametricStartEnd(
       new RotatedCurveSurface(
         new EllipseCurve(
@@ -500,9 +498,9 @@ suite("PICurve", () => {
       V(0, -0.1220799925322713, -0.9925202644900105),
       0.8281304558850031,
     )
-    testISTs(assert, piCurve, plane, 1)
+    testISTs(piCurve, plane, 1)
   })
-  test("testCurve", (assert) => {
+  test("testCurve", () => {
     const curve = PICurve.forParametricStartEnd(
       new ProjectedCurveSurface(
         new BezierCurve(
@@ -527,10 +525,10 @@ suite("PICurve", () => {
       0,
       13.433240755090269,
     )
-    testCurve(assert, curve, true, "curve")
-    testCurve(assert, curve.transform(M4.FOO), true, "curve.foo()")
+    testCurve(curve, true, "curve")
+    testCurve(curve.transform(M4.FOO), true, "curve.foo()")
   })
-  test("testCurve 2", (assert) => {
+  test("testCurve 2", () => {
     const curve = PICurve.forParametricStartEnd(
       new ProjectedCurveSurface(
         new BezierCurve(
@@ -568,7 +566,7 @@ suite("PICurve", () => {
       2,
       10,
     )
-    testCurve(assert, curve, false, "curve")
-    testCurve(assert, curve.transform(M4.FOO), false, "curve.foo()")
+    testCurve(curve, false, "curve")
+    testCurve(curve.transform(M4.FOO), false, "curve.foo()")
   })
 })

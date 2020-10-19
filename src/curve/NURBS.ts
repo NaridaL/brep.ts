@@ -41,7 +41,7 @@ import {
 } from "../index"
 import { abs, cos, cosh, PI, sin, sinh, sqrt, SQRT1_2 } from "../math"
 import { ISInfo } from "./Curve"
-
+import * as ts3dutils from "ts3dutils"
 /**
  * Non-Uniform Rational B-Spline implementation.
  *

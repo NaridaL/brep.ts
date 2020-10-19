@@ -1,22 +1,21 @@
 import {
   inDifferentSystems,
   outputLink,
-  suite,
   suiteSurface,
   surfaceVolumeAndAreaTests,
-  test,
   testISCurves,
   testISTs,
   testLoopCCW,
   testSurfaceTransform,
 } from "./manager"
 
-import { DEG, M4, V, V3 } from "ts3dutils"
+import { assert, DEG, M4, V, V3 } from "ts3dutils"
 import {
   B2T,
   BezierCurve,
   CylinderSurface,
   Edge,
+  edgeForCurveAndTs,
   EllipseCurve,
   EllipsoidSurface,
   Face,
@@ -30,7 +29,7 @@ import {
   StraightEdge,
 } from ".."
 
-suite("ProjectedCurveSurface", () => {
+describe("ProjectedCurveSurface", () => {
   const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, 0, 2)
   const testSurface = new ProjectedCurveSurface(
     baseCurve,
@@ -41,7 +40,7 @@ suite("ProjectedCurveSurface", () => {
     2,
   )
 
-  const edge = PCurveedgeForCurveAndTs(baseCurve, 0, 2)
+  const edge = edgeForCurveAndTs(baseCurve, 0, 2)
   const edges = [
     edge,
     StraightEdge.throughPoints(
@@ -55,37 +54,34 @@ suite("ProjectedCurveSurface", () => {
     ),
   ]
   const testFace = new RotationFace(testSurface, edges)
-  suite("projectedBezierSurface", () => suiteSurface(testSurface))
-  suite("projectedBezierSurface.shearX(2, 2)", () =>
-    suiteSurface(testSurface.shearX(2, 2)),
-  )
-  suite("projectedBezierSurface.foo()", () => suiteSurface(testSurface.foo()))
+  describe("projectedBezierSurface", () => suiteSurface(testSurface))
+  describe("projectedBezierSurface.shearX(2, 2)", () =>
+    suiteSurface(testSurface.shearX(2, 2)))
+  describe("projectedBezierSurface.foo()", () =>
+    suiteSurface(testSurface.foo()))
   const curve = BezierCurve.graphXY(2, -3, -3, 2)
   const surface = new ProjectedCurveSurface(curve, V3.Z)
 
-  //test('(face w/ dir=V3.Z).rotateY(20 * DEG) ps test', assert => testSurface(assert, pcsFace.rotateY(20 *
+  //test('(face w/ dir=V3.Z).rotateY(20 * DEG) ps test', () => testSurface(assert, pcsFace.rotateY(20 *
   // DEG).surface as ParametricSurface))
-  suite("face w/ dir=V3.Z", () => surfaceVolumeAndAreaTests(testFace))
-  suite("(face w/ dir=V3.Z).rotateY(90 * DEG).translate(0, 0, 1)", () =>
-    surfaceVolumeAndAreaTests(testFace.rotateY(90 * DEG).translate(0, 0, 1)),
-  )
-  suite("(face w/ dir=V3.Z).shearX(2, 2)", () =>
-    surfaceVolumeAndAreaTests(testFace.shearX(2, 2)),
-  )
-  suite("(face w/ dir=V3.Z).foo()", () => {
+  describe("face w/ dir=V3.Z", () => surfaceVolumeAndAreaTests(testFace))
+  describe("(face w/ dir=V3.Z).rotateY(90 * DEG).translate(0, 0, 1)", () =>
+    surfaceVolumeAndAreaTests(testFace.rotateY(90 * DEG).translate(0, 0, 1)))
+  describe("(face w/ dir=V3.Z).shearX(2, 2)", () =>
+    surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))
+  describe("(face w/ dir=V3.Z).foo()", () => {
     console.log("pUV(0,0)", testSurface.foo().pUV(0, 0))
     const { u, v } = testSurface.foo().uvP(V(-0.59566, 12.37799, 2.98851))
     console.log(u, v)
     console.log(testSurface.foo().pUV(u, v))
     surfaceVolumeAndAreaTests(testFace.foo())
   })
-  suite("Face line intersection test", () =>
-    inDifferentSystems((assert, m4) => {
+  describe("Face line intersection test", () =>
+    inDifferentSystems((m4) => {
       const line = new L3(V3.Z, V3.X).transform(m4)
       const d = testFace.transform(m4).intersectsLine(line)
-      assert.ok(d)
-    }),
-  )
+      expect(d).toBeTruthy()
+    }))
   const pcs1 = new ProjectedCurveSurface(
     BezierCurve.EX2D,
     V3.Z,
@@ -94,8 +90,8 @@ suite("ProjectedCurveSurface", () => {
     -1,
     4,
   )
-  suite("pcs1", () => suiteSurface(pcs1))
-  test("isTsWithSurface", (assert) => {
+  describe("pcs1", () => suiteSurface(pcs1))
+  test("isTsWithSurface", () => {
     const pcs = new ProjectedCurveSurface(
       BezierCurve.EX2D,
       V3.Z,
@@ -108,7 +104,7 @@ suite("ProjectedCurveSurface", () => {
       .rotateX(-90 * DEG)
     const ses = EllipsoidSurface.UNIT
     const pic = ses.isCurvesWithSurface(pcs)[0]
-    testISTs(assert, pic, new PlaneSurface(P3.XY), 1)
+    testISTs(pic, new PlaneSurface(P3.XY), 1)
   })
 
   // create a pcs face which includes a PICurve
@@ -321,22 +317,21 @@ suite("ProjectedCurveSurface", () => {
     a.faces.find((f) => f.surface instanceof ProjectedCurveSurface).surface,
     loop,
   )
-  test("ccw for round face", (assert) => {
+  test("ccw for round face", () => {
     testLoopCCW(
       assert,
       a.faces.find((f) => f.surface instanceof ProjectedCurveSurface).surface,
       loop,
     )
   })
-  test("isCurvesWithCylinderSurface", (assert) => {
+  test("isCurvesWithCylinderSurface", () => {
     testISCurves(
-      assert,
       a.faces.find((f) => f.surface instanceof ProjectedCurveSurface).surface,
       b.faces.find((f) => f.surface instanceof CylinderSurface).surface,
       1,
     )
   })
-  test("isCurvesWithSurface w/ PCS", (assert) => {
+  test("isCurvesWithSurface w/ PCS", () => {
     const pcs = new ProjectedCurveSurface(
       BezierCurve.EX2D,
       V3.Z,
@@ -346,15 +341,15 @@ suite("ProjectedCurveSurface", () => {
       4,
     )
     const pcs2 = pcs.mirrorY().rotateX(80 * DEG)
-    testISCurves(assert, pcs, pcs2, 2)
+    testISCurves(pcs, pcs2, 2)
   })
 
   // TODO
-  //suite('face w/ PICurve', () => surfaceVolumeAndAreaTests(piCurveFace))
-  //suite('(face w/ PICurve).shearX(2, 2)', () => surfaceVolumeAndAreaTests(piCurveFace.shearX(2, 2)))
-  //suite('(face w/ PICurve).foo()', () => surfaceVolumeAndAreaTests(piCurveFace.foo()))
+  //describe('face w/ PICurve', () => surfaceVolumeAndAreaTests(piCurveFace))
+  //describe('(face w/ PICurve).shearX(2, 2)', () => surfaceVolumeAndAreaTests(piCurveFace.shearX(2, 2)))
+  //describe('(face w/ PICurve).foo()', () => surfaceVolumeAndAreaTests(piCurveFace.foo()))
 
-  test("Face containsPoint", (assert) => {
+  test("Face containsPoint", () => {
     const face = new RotationFace(
       new ProjectedCurveSurface(
         new BezierCurve(
@@ -372,7 +367,7 @@ suite("ProjectedCurveSurface", () => {
         100,
       ),
       [
-        PCurveedgeForCurveAndTs(
+        edgeForCurveAndTs(
           new BezierCurve(
             V(142.87578921496748, -191.46078243076332, 0),
             V(161.78547089700214, -252.13248349581008, 0),
@@ -386,7 +381,7 @@ suite("ProjectedCurveSurface", () => {
           V(142.87578921496748, -191.46078243076332, 0),
           V(142.87578921496748, -191.46078243076332, -100),
         ),
-        PCurveedgeForCurveAndTs(
+        edgeForCurveAndTs(
           new BezierCurve(
             V(142.87578921496748, -191.46078243076332, -100),
             V(161.78547089700214, -252.13248349581008, -100),
@@ -407,35 +402,35 @@ suite("ProjectedCurveSurface", () => {
       V(1241.5987, -1214.1894, 38.9886),
       V(-0.6705, 0.7386, -0.0696).unit(),
     )
-    testISTs(assert, line, face.surface, 3)
+    testISTs(line, face.surface, 3)
   })
 
-  test("transform4", (assert) => {
+  test("transform4", () => {
     const s = CylinderSurface.UNIT.translate(1, 0, -3)
     const m = M4.perspective(45, 1, 2, 4)
-    testSurfaceTransform(assert, s, m)
+    testSurfaceTransform(s, m)
   })
 
-  test("transform4 2", (assert) => {
+  test("transform4 2", () => {
     const s = CylinderSurface.UNIT.translate(1, 0, -3).flipped()
     const m = M4.perspective(45, 1, 2, 4)
-    testSurfaceTransform(assert, s, m)
+    testSurfaceTransform(s, m)
   })
 
-  test("transform4 3", (assert) => {
+  test("transform4 3", () => {
     const s = CylinderSurface.UNIT.rotateX(90 * DEG).translate(1, 0, -3)
     const m = M4.perspective(45, 1, 2, 4)
-    testSurfaceTransform(assert, s, m)
+    testSurfaceTransform(s, m)
   })
 
-  test("boxprespected", (assert) => {
+  test("boxprespected", () => {
     const punch = B2T.cylinder(0.5, 2).translate(1, 1, 0)
     const box = B2T.box(2, 2, 2)
       .minus(punch)
       .rotateY(10 * DEG)
       .translate(-0, -0, -5)
     const m = M4.perspective(45, 1, 2, 5)
-    outputLink(assert, {
+    outputLink({
       a: box,
       b: box.transform4(m).translate(10),
     })

@@ -1,30 +1,27 @@
-import { inDifferentSystems, suite, test } from "./manager"
+import { inDifferentSystems } from "./manager"
 
 import { M4, P3XY, snap0, V, V3 } from "ts3dutils"
 import { L3, P3 } from ".."
 import { sign } from "../src/math"
 
-suite("P3", () => {
-  test("projectedVector", (assert) => {
+describe("P3", () => {
+  test("projectedVector", () => {
     const p = new P3(V3.Z, 2)
-    assert.ok(V(1, 1, 0).like(p.projectedVector(V(1, 1, 1))))
+    expect(V(1, 1, 0).like(p.projectedVector(V(1, 1, 1)))).toBeTruthy()
   })
-  test("transform IDENTITY", (assert) => {
+  test("transform IDENTITY", () => {
     const p = new P3(V3.Z, 2)
-    assert.ok(
-      P3.XY.like(P3.XY.transform(M4.IDENTITY)),
-      P3.XY.transform(M4.IDENTITY).sce,
-    )
+    expect(P3.XY.like(P3.XY.transform(M4.IDENTITY))).toBeTruthy()
   })
-  test("intersectionWithPlane", (assert) => {
-    assert.ok(P3.XY.intersectionWithPlane(P3.ZX).isColinearTo(L3.X))
-    assert.ok(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.X))
-    assert.notOk(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.Y))
+  test("intersectionWithPlane", () => {
+    expect(P3.XY.intersectionWithPlane(P3.ZX).isColinearTo(L3.X)).toBeTruthy()
+    expect(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.X)).toBeTruthy()
+    expect(P3.ZX.intersectionWithPlane(P3.XY).isColinearTo(L3.Y)).toBeFalsy()
   })
 
-  suite("transform", () =>
+  describe("transform", () =>
     inDifferentSystems(
-      (assert) => {
+      () => {
         const plane = new P3(V3.X, 2)
         const m4 = M4.mirror(P3.YZ)
         const planet = plane.transform(m4)
@@ -32,8 +29,7 @@ suite("P3", () => {
         const ps = [plane.anchor, V(2, 2, 2), V(3, 0, 0)]
         ps.forEach((p) => {
           const pt = m4.transformPoint(p)
-          assert.equal(
-            sign(snap0(planet.distanceToPointSigned(pt))),
+          expect(sign(snap0(planet.distanceToPointSigned(pt)))).toBe(
             sign(snap0(plane.distanceToPointSigned(p))),
           )
         })
@@ -43,39 +39,46 @@ suite("P3", () => {
       M4.translate(1, 0, 0),
       M4.FOO,
       M4.IDENTITY,
-    ),
-  )
+    ))
 
-  test("M4.projection", (assert) => {
+  test("M4.projection", () => {
     const plane = new P3(V(1, 2, 3).unit(), 5)
     const proj = M4.project(plane)
     console.log(proj.transformPoint(V(2, 4, 6)))
-    assert.v3like(proj.transformPoint(V(2, 4, 6)), plane.anchor)
-    assert.v3like(proj.transformVector(V(2, 4, 6)), V3.O)
+    expect(proj.transformPoint(V(2, 4, 6))).toBeLike(plane.anchor)
+    expect(proj.transformVector(V(2, 4, 6))).toBeLike(V3.O)
     const p2 = V(3, 5, 22)
-    assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(plane.normal1))
-    assert.ok(plane.containsPoint(proj.transformPoint(p2)))
-    assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(plane.normal1))
-    assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal1))
+    expect(
+      proj.transformPoint(p2).minus(p2).isParallelTo(plane.normal1),
+    ).toBeTruthy()
+    expect(plane.containsPoint(proj.transformPoint(p2))).toBeTruthy()
+    expect(
+      proj.transformVector(p2).minus(p2).isParallelTo(plane.normal1),
+    ).toBeTruthy()
+    expect(
+      proj.transformVector(p2).isPerpendicularTo(plane.normal1),
+    ).toBeTruthy()
   })
-  test("M4.projection 2", (assert) => {
+  test("M4.projection 2", () => {
     ;[V(1, 1, 1), V(0, 0, -1)].forEach((dir) => {
       const plane = new P3(V(1, 2, 3).unit(), 5)
       const proj = M4.project(plane, dir)
       const p2 = V(3, 5, 22)
-      assert.ok(proj.transformPoint(p2).minus(p2).isParallelTo(dir))
-      assert.ok(plane.containsPoint(proj.transformPoint(p2)))
-      assert.ok(proj.transformVector(p2).minus(p2).isParallelTo(dir))
-      assert.ok(proj.transformVector(p2).isPerpendicularTo(plane.normal1))
+      expect(proj.transformPoint(p2).minus(p2).isParallelTo(dir)).toBeTruthy()
+      expect(plane.containsPoint(proj.transformPoint(p2))).toBeTruthy()
+      expect(proj.transformVector(p2).minus(p2).isParallelTo(dir)).toBeTruthy()
+      expect(
+        proj.transformVector(p2).isPerpendicularTo(plane.normal1),
+      ).toBeTruthy()
       console.log(proj.transformPoint(p2).sce)
       console.log(proj.str)
     })
   })
-  test("M4.projectPlanePoint()", (assert) => {
+  test("M4.projectPlanePoint()", () => {
     const m4 = M4.projectPlanePoint(V3.Z.negated(), P3XY)
-    assert.v3like(m4.transformPoint(V(4, 0, 1)), V(2, 0, 0))
-    assert.v3like(m4.transformPoint(V(4, 8, 1)), V(2, 4, 0))
-    assert.v3like(m4.transformPoint(V(4, 8, 2)), V(4 / 3, 8 / 3, 0))
+    expect(m4.transformPoint(V(4, 0, 1))).toBeLike(V(2, 0, 0))
+    expect(m4.transformPoint(V(4, 8, 1))).toBeLike(V(2, 4, 0))
+    expect(m4.transformPoint(V(4, 8, 2))).toBeLike(V(4 / 3, 8 / 3, 0))
     assert.m4equiv(
       M4.projectPlanePoint(
         M4.FOO.transformPoint(V3.Z.negated()),

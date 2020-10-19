@@ -7,12 +7,12 @@ import {
   newtonIterate1d,
   V,
   V3,
-} from "../../../ts3dutils/index"
+  withMax,
+} from "ts3dutils"
 
 import { EPS, ImplicitSurface, ParametricSurface } from "../index"
 
 import { atan2, cos, PI, sin } from "../math"
-import { withMax } from "ts3dutils"
 
 /**
  * Rotation surface with r = f(z)

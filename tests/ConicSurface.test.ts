@@ -1,9 +1,7 @@
 import {
   outputLink,
-  suite,
   suiteSurface,
   surfaceVolumeAndAreaTests,
-  test,
   testContainsCurve,
   testISCurves,
   testLoopCCW,
@@ -29,14 +27,13 @@ import {
 } from ".."
 import { PI } from "../src/math"
 
-suite("ConicSurface", () => {
+describe("ConicSurface", () => {
   const UCS = ConicSurface.UNIT
 
-  suite("UNIT", () => suiteSurface(ConicSurface.UNIT))
-  suite("UNIT.scale(2, 2, 1)", () =>
-    suiteSurface(ConicSurface.UNIT.scale(2, 2, 1)),
-  )
-  suite("weird", () =>
+  describe("UNIT", () => suiteSurface(ConicSurface.UNIT))
+  describe("UNIT.scale(2, 2, 1)", () =>
+    suiteSurface(ConicSurface.UNIT.scale(2, 2, 1)))
+  describe("weird", () =>
     suiteSurface(
       new ConicSurface(
         V(2, 0.2, 1.1),
@@ -44,8 +41,7 @@ suite("ConicSurface", () => {
         V(0, 0, -2.4),
         V(-12, 0, 0),
       ),
-    ),
-  )
+    ))
 
   const testFace = new RotationFace(
     new ConicSurface(V3.Z, V(-1, 0, 0), V3.Y, V(0, 0, -1)),
@@ -104,16 +100,15 @@ suite("ConicSurface", () => {
     ],
     [],
   )
-  suite("testFace surface", () =>
-    suiteSurface(testFace.surface as ConicSurface),
-  )
-  suite("testFace", () => surfaceVolumeAndAreaTests(testFace))
-  suite("testFace.scale(2)", () => surfaceVolumeAndAreaTests(testFace.scale(2)))
-  suite("testFace.shearX(2, 2)", () =>
-    surfaceVolumeAndAreaTests(testFace.shearX(2, 2)),
-  )
-  suite("testFace.foo()", () => surfaceVolumeAndAreaTests(testFace.foo()))
-  test("testLoopCCW", (assert) => {
+  describe("testFace surface", () =>
+    suiteSurface(testFace.surface as ConicSurface))
+  describe("testFace", () => surfaceVolumeAndAreaTests(testFace))
+  describe("testFace.scale(2)", () =>
+    surfaceVolumeAndAreaTests(testFace.scale(2)))
+  describe("testFace.shearX(2, 2)", () =>
+    surfaceVolumeAndAreaTests(testFace.shearX(2, 2)))
+  describe("testFace.foo()", () => surfaceVolumeAndAreaTests(testFace.foo()))
+  test("testLoopCCW", () => {
     const surface = new ConicSurface(
       V(0, 0, 53.51411369448604),
       V(198.46477746372744, 0, 0),
@@ -174,57 +169,57 @@ suite("ConicSurface", () => {
         V(0, -131.35224103228387, 0),
       ),
     ].map((e) => e.scale(1 / 200))
-    testLoopCCW(assert, surface, Edge.reversePath(loop))
-    testLoopCCW(assert, surface.flipped(), loop)
+    testLoopCCW(surface, Edge.reversePath(loop))
+    testLoopCCW(surface.flipped(), loop)
   })
-  test("isCoplanarTo", (assert) => {
+  test("isCoplanarTo", () => {
     const unitCone = ConicSurface.UNIT
-    assert.ok(unitCone.matrix.isIdentity(), "UCS.matrix.isIdentity()")
-    assert.v3like(unitCone.pUVFunc()(0, 3), V(3, 0, 3))
+    expect(unitCone.matrix.isIdentity()).toBeTruthy()
+    expect(unitCone.pUVFunc()(0, 3)).toBeLike(V(3, 0, 3))
     const ellipseAtZ3 = EllipseCurve.UNIT.scale(3, 3, 3).translate(0, 0, 3)
     const planeAtZ3 = P3.XY.translate(0, 0, 3)
     const issAtZ3 = unitCone.isCurvesWithPlane(planeAtZ3)
-    assert.equal(issAtZ3.length, 1)
-    assert.ok(ellipseAtZ3.isColinearTo(issAtZ3[0]))
-    assert.ok(unitCone.containsEllipse(ellipseAtZ3))
+    expect(issAtZ3.length).toBe(1)
+    expect(ellipseAtZ3.isColinearTo(issAtZ3[0])).toBeTruthy()
+    expect(unitCone.containsEllipse(ellipseAtZ3)).toBeTruthy()
 
     const scaledUnit = ConicSurface.UNIT.scale(2, 2, 1)
-    assert.notOk(scaledUnit.isCoplanarTo(unitCone))
-    assert.notOk(unitCone.isCoplanarTo(scaledUnit))
+    expect(scaledUnit.isCoplanarTo(unitCone)).toBeFalsy()
+    expect(unitCone.isCoplanarTo(scaledUnit)).toBeFalsy()
     const ell1 = unitCone.isCurvesWithPlane(
       new P3(V(2, 3, 10).unit(), 10),
     )[0] as EllipseCurve
-    assert.ok(unitCone.containsEllipse(ell1), "UCS.containsEllipse(ell1)")
+    expect(unitCone.containsEllipse(ell1)).toBeTruthy()
     const ell2 = unitCone.isCurvesWithPlane(
       new P3(V(1, 1, 2).unit(), 4),
     )[0] as EllipseCurve
     const ell1Cone = ConicSurface.atApexThroughEllipse(V3.O, ell1)
     const ell2Cone = ConicSurface.atApexThroughEllipse(V3.O, ell2)
     console.log(ell1Cone)
-    assert.ok(unitCone.isCoplanarTo(ell1Cone))
-    assert.ok(unitCone.isCoplanarTo(ell2Cone))
-    assert.ok(ell1Cone.isCoplanarTo(ell2Cone))
-    assert.ok(ell2Cone.isCoplanarTo(ell1Cone))
-    assert.ok(ell1Cone.foo().isCoplanarTo(ell2Cone.foo()))
+    expect(unitCone.isCoplanarTo(ell1Cone)).toBeTruthy()
+    expect(unitCone.isCoplanarTo(ell2Cone)).toBeTruthy()
+    expect(ell1Cone.isCoplanarTo(ell2Cone)).toBeTruthy()
+    expect(ell2Cone.isCoplanarTo(ell1Cone)).toBeTruthy()
+    expect(ell1Cone.foo().isCoplanarTo(ell2Cone.foo())).toBeTruthy()
   })
-  test("isCurvesWithPlane", (assert) => {
-    testISCurves(assert, UCS, new P3(V(1, 1, 2).unit(), 4), 2)
-    testISCurves(assert, UCS, P3.XY.translate(0, 0, 3), 1)
-    testISCurves(assert, UCS, P3.XY.translate(0, 0, 3).flipped(), 1)
+  test("isCurvesWithPlane", () => {
+    testISCurves(UCS, new P3(V(1, 1, 2).unit(), 4), 2)
+    testISCurves(UCS, P3.XY.translate(0, 0, 3), 1)
+    testISCurves(UCS, P3.XY.translate(0, 0, 3).flipped(), 1)
   })
-  test("isCurvesWithPlane 2", (assert) => {
-    testISCurves(assert, ConicSurface.UNIT, P3.ZX, 2)
-    testISCurves(assert, ConicSurface.UNIT, P3.ZX.flipped(), 2)
-    testISCurves(assert, ConicSurface.UNIT, P3.YZ, 2)
-    testISCurves(assert, ConicSurface.UNIT, P3.YZ.flipped(), 2)
-    testISCurves(assert, ConicSurface.UNIT, new P3(V(1, 0, 1).unit(), 4), 1)
+  test("isCurvesWithPlane 2", () => {
+    testISCurves(ConicSurface.UNIT, P3.ZX, 2)
+    testISCurves(ConicSurface.UNIT, P3.ZX.flipped(), 2)
+    testISCurves(ConicSurface.UNIT, P3.YZ, 2)
+    testISCurves(ConicSurface.UNIT, P3.YZ.flipped(), 2)
+    testISCurves(ConicSurface.UNIT, new P3(V(1, 0, 1).unit(), 4), 1)
   })
-  test("isCurvesWithPlane hyperbolas", (assert) => {
+  test("isCurvesWithPlane hyperbolas", () => {
     const plane = new P3(V(2, 0, -1).unit(), 1)
-    testISCurves(assert, UCS, plane, 1)
-    testISCurves(assert, UCS, plane.flipped(), 1)
+    testISCurves(UCS, plane, 1)
+    testISCurves(UCS, plane.flipped(), 1)
   })
-  test("isCurvesWithEllipsoid", (assert) => {
+  test("isCurvesWithEllipsoid", () => {
     const a = ConicSurface.UNIT.scale(0.05, 0.2)
       .rotateZ(90 * DEG)
       .rotateY(-90 * DEG)
@@ -238,10 +233,10 @@ suite("ConicSurface", () => {
     )
     const sphere = new EllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1))
     const b = EllipsoidSurface.UNIT
-    testISCurves(assert, a, b, 2)
-    testISCurves(assert, cone, sphere, 2)
+    testISCurves(a, b, 2)
+    testISCurves(cone, sphere, 2)
   })
-  test("isCurvesWithEllipsoid 2", (assert) => {
+  test("isCurvesWithEllipsoid 2", () => {
     const cone = new ConicSurface(
       V(2, 0.2, 0.7),
       V(2.2496396739927868e-33, 0.6000000000000001, 3.67394039744206e-17),
@@ -250,24 +245,24 @@ suite("ConicSurface", () => {
     )
     const sphere = new EllipsoidSurface(V3.O, V3.X, V3.Y, V(0, 0, -1))
 
-    testISCurves(assert, cone, sphere, 2)
+    testISCurves(cone, sphere, 2)
   })
-  test("containsParabola", (assert) => {
+  test("containsParabola", () => {
     const pb = UCS.isCurvesWithPlane(
       new P3(V(1, 0, 1).unit(), 4),
     )[0] as ParabolaCurve
-    assert.ok(pb instanceof ParabolaCurve)
-    testContainsCurve(assert, UCS, pb)
+    expect(pb instanceof ParabolaCurve).toBeTruthy()
+    testContainsCurve(UCS, pb)
   })
-  test("containsParabola 2", (assert) => {
+  test("containsParabola 2", () => {
     const c2 = UCS.shearX(2, 3)
     const pb2 = c2.isCurvesWithPlane(
       new P3(V(1, 0, 1).unit(), 4).shearX(2, 3),
     )[0] as ParabolaCurve
-    assert.ok(pb2 instanceof ParabolaCurve)
-    testContainsCurve(assert, c2, pb2)
+    expect(pb2 instanceof ParabolaCurve).toBeTruthy()
+    testContainsCurve(c2, pb2)
   })
-  test("containsHyperbola", (assert) => {
+  test("containsHyperbola", () => {
     const s = new ConicSurface(
       V(-242.1625189124994, 38.960257711878945, 0),
       V(197.87979681325515, -15.226749714620981, 2.4304925446444556e-14),
@@ -280,55 +275,40 @@ suite("ConicSurface", () => {
       V(-99.70524711843181, 7.672268051394617, -1.8369701987210304e-14),
     )
 
-    testContainsCurve(assert, s, c)
+    testContainsCurve(s, c)
   })
-  test("containsHyperbola 2", (assert) => {
+  test("containsHyperbola 2", () => {
     const pb = UCS.isCurvesWithPlane(new P3(V3.Y, 2))[0] as HyperbolaCurve
-    testContainsCurve(assert, UCS, pb)
+    testContainsCurve(UCS, pb)
+    testContainsCurve(UCS, pb.translate(0, 2, 0), false, ".translate(0, 2, 0)")
+    testContainsCurve(UCS, pb.scale(1, 2, 1), false, ".scale(1, 2, 1)")
     testContainsCurve(
-      assert,
-      UCS,
-      pb.translate(0, 2, 0),
-      false,
-      ".translate(0, 2, 0)",
-    )
-    testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, ".scale(1, 2, 1)")
-    testContainsCurve(
-      assert,
       UCS,
       pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
       false,
       ".rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)",
     )
   })
-  test("containsHyperbola 3", (assert) => {
+  test("containsHyperbola 3", () => {
     const pb = UCS.isCurvesWithPlane(
       new P3(V(0, 1, -0.1).unit(), 2),
     )[0] as HyperbolaCurve
     console.log(pb)
-    testContainsCurve(assert, UCS, pb)
+    testContainsCurve(UCS, pb)
+    testContainsCurve(UCS, pb.translate(0, 2, 0), false, ".translate(0, 2, 0)")
+    testContainsCurve(UCS, pb.scale(1, 2, 1), false, ".scale(1, 2, 1)")
     testContainsCurve(
-      assert,
-      UCS,
-      pb.translate(0, 2, 0),
-      false,
-      ".translate(0, 2, 0)",
-    )
-    testContainsCurve(assert, UCS, pb.scale(1, 2, 1), false, ".scale(1, 2, 1)")
-    testContainsCurve(
-      assert,
       UCS,
       pb.rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG),
       false,
       ".rotate(pb.center.plus(pb.f1), pb.f2, -20 * DEG)",
     )
   })
-  test("containsPoint", (assert) => {
+  test("containsPoint", () => {
     const face = B2T.cone(1, 1, PI).faces.find(
       (face) => face.surface instanceof ConicSurface,
     )
     testLoopContainsPoint(
-      assert,
       face.surface,
       face.contour,
       V(-0.2, 0, 0.2),
@@ -336,7 +316,7 @@ suite("ConicSurface", () => {
     )
   })
 
-  test("atApexThroughEllipse", (assert) => {
+  test("atApexThroughEllipse", () => {
     const apex = V(0, 0, 3)
     const ellipse = new EllipseCurve(
       V(0.8047378541243649, 0, 0.3333333333333333),
@@ -346,11 +326,11 @@ suite("ConicSurface", () => {
       3.141592653589793,
     )
     const cone = ConicSurface.atApexThroughEllipse(apex, ellipse)
-    assert.ok(cone.containsPoint(ellipse.at(0)))
-    outputLink(assert, { mesh: cone.sce + ".toMesh()", drPs: [ellipse.at(0)] })
+    expect(cone.containsPoint(ellipse.at(0))).toBeTruthy()
+    outputLink({ mesh: cone.sce + ".toMesh()", drPs: [ellipse.at(0)] })
   })
 
-  test("transform4", (assert) => {
+  test("transform4", () => {
     const c = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z, 0, PI, 1, 2)
       .rotateZ(20 * DEG)
       .scale(1, 0.8, -2)
@@ -358,16 +338,16 @@ suite("ConicSurface", () => {
       .translate(1, 0, -1)
     console.log(c.sce)
     const m = M4.perspective(45, 1, 2, 6)
-    testSurfaceTransform(assert, c, m)
+    testSurfaceTransform(c, m)
   })
 
-  test("transform4 2", (assert) => {
+  test("transform4 2", () => {
     const c = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z, 0, PI, 1, 2)
       .scale(1, 1, -2)
       .rotateY(10 * DEG)
       .translate(1, 0, 0)
     console.log(c.sce)
     const m = M4.perspective(45, 1, 2, 6)
-    testSurfaceTransform(assert, c, m)
+    testSurfaceTransform(c, m)
   })
 })

@@ -1,9 +1,4 @@
-import {
-  suite,
-  surfaceVolumeAndAreaTests,
-  test,
-  testLoopContainsPoint,
-} from "./manager"
+import { surfaceVolumeAndAreaTests, testLoopContainsPoint } from "./manager"
 
 import {
   Edge,
@@ -14,22 +9,22 @@ import {
   PointVsFace,
   EllipseCurve,
   StraightEdge,
+  edgeForCurveAndTs,
 } from ".."
 
-import { DEG, V, V3 } from "ts3dutils"
+import { assert, DEG, V, V3 } from "ts3dutils"
 
-suite("PlaneSurface", () => {
-  test("loopContainsPoint", (assert) => {
+describe("PlaneSurface", () => {
+  test("loopContainsPoint", () => {
     const loop = StraightEdge.chain(
       [V(0, 0), V(10, 0), V(10, 10), V(0, 10)],
       true,
     )
-    assert.equal(
-      new PlaneSurface(P3.XY).loopContainsPoint(loop, V(8, 10)),
+    expect(new PlaneSurface(P3.XY).loopContainsPoint(loop, V(8, 10))).toBe(
       PointVsFace.ON_EDGE,
     )
   })
-  test("loopContainsPoint 2", (assert) => {
+  test("loopContainsPoint 2", () => {
     const loop = [
       new StraightEdge(
         new L3(V(2, 10, 0), V3.Z),
@@ -90,7 +85,6 @@ suite("PlaneSurface", () => {
     ]
     const p = V(6, 10, 3)
     testLoopContainsPoint(
-      assert,
       new PlaneSurface(new P3(V(0, -1, 0), -10)),
       loop,
       p,
@@ -102,16 +96,13 @@ suite("PlaneSurface", () => {
     new PlaneSurface(P3.XY),
     StraightEdge.chain([V(1, 1), V(3, 2), V(2, 3)]),
   ).rotateX(10 * DEG)
-  suite("triangleFace", () => surfaceVolumeAndAreaTests(triangleFace))
-  suite("triangleFace.translate(2, 2, 2)", () =>
-    surfaceVolumeAndAreaTests(triangleFace.translate(2, 2, 2)),
-  )
-  suite("triangleFace.shearX(2, 2)", () =>
-    surfaceVolumeAndAreaTests(triangleFace.shearX(2, 2)),
-  )
-  suite("triangleFace.foo()", () =>
-    surfaceVolumeAndAreaTests(triangleFace.foo()),
-  )
+  describe("triangleFace", () => surfaceVolumeAndAreaTests(triangleFace))
+  describe("triangleFace.translate(2, 2, 2)", () =>
+    surfaceVolumeAndAreaTests(triangleFace.translate(2, 2, 2)))
+  describe("triangleFace.shearX(2, 2)", () =>
+    surfaceVolumeAndAreaTests(triangleFace.shearX(2, 2)))
+  describe("triangleFace.foo()", () =>
+    surfaceVolumeAndAreaTests(triangleFace.foo()))
 
   const faceWithEllipses = Face.create(new PlaneSurface(P3.XY), [
     edgeForCurveAndTs(EllipseCurve.UNIT),
@@ -119,8 +110,8 @@ suite("PlaneSurface", () => {
       EllipseCurve.circleThroughPoints(V3.X.negated(), V(0, -0.5), V3.X),
     ),
   ])
-  suite("faceWithEllipses", () => surfaceVolumeAndAreaTests(faceWithEllipses))
-  suite("faceWithEllipses.foo()", () =>
-    surfaceVolumeAndAreaTests(faceWithEllipses.foo()),
-  )
+  describe("faceWithEllipses", () =>
+    surfaceVolumeAndAreaTests(faceWithEllipses))
+  describe("faceWithEllipses.foo()", () =>
+    surfaceVolumeAndAreaTests(faceWithEllipses.foo()))
 })

@@ -1,4 +1,4 @@
-import { outputLink, suite, suiteSurface, test } from "./manager"
+import { outputLink, suiteSurface } from "./manager"
 
 import { arrayFromFunction, DEG, M4, V3, VV } from "ts3dutils"
 import {
@@ -9,7 +9,7 @@ import {
   StraightEdge,
 } from ".."
 
-suite("NURBSSurface", () => {
+describe("NURBSSurface", () => {
   const baseCurve = EllipseCurve.forAB(2, 2)
     .rotateZ(-20 * DEG)
     .translate(4, 3)
@@ -45,11 +45,11 @@ suite("NURBSSurface", () => {
     2,
     2,
   )
-  test("b", (assert) => {
+  test("b", () => {
     console.log(s.pUV(0.1, 0.1))
     console.log(s.sce)
   })
-  test("s2 guessUVForMeshPos", (assert) => {
+  test("s2 guessUVForMeshPos", () => {
     //  let s2 = s
     const debugInfo = s2.debugInfo()
     const drPs: V3[] = []
@@ -63,8 +63,6 @@ suite("NURBSSurface", () => {
     }
 
     outputLink(
-      assert,
-
       {
         mesh: `[${s2}.toMesh()]`,
         edges: [
@@ -82,5 +80,5 @@ suite("NURBSSurface", () => {
       "view",
     )
   })
-  suite("a", () => suiteSurface(s2))
+  describe("a", () => suiteSurface(s2))
 })

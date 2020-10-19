@@ -1427,7 +1427,7 @@ export function splitsVolumeEnclosingCone(brep: BRep, p: V3, dir: V3) {
     }
   }
   rays.sort((a, b) => a.angle - b.angle)
-  //console.log("testPlane", testPlane.toSource(), "rays", rays.toSource())
+  //console.log("testPlane"Plane.toSource(), "rays", rays.toSource())
 
   if (eq0(rays[0].angle)) {
     return ALONG_EDGE_OR_PLANE

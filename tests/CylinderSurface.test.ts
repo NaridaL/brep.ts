@@ -1,8 +1,6 @@
 import {
-  suite,
   suiteSurface,
   surfaceVolumeAndAreaTests,
-  test,
   testContainsCurve,
   testISCurves,
   testISTs,
@@ -27,11 +25,12 @@ import {
   EllipseCurve,
   EllipsoidSurface,
   StraightEdge,
+  edgeForCurveAndTs,
 } from ".."
 import { PI, sin } from "../src/math"
 
-suite("CylinderSurface", () => {
-  test("loopContainsPoint with PICurve", (assert) => {
+describe("CylinderSurface", () => {
+  test("loopContainsPoint with PICurve", () => {
     const surface = new CylinderSurface(
       new EllipseCurve(
         V(0.5, 0, -2),
@@ -139,7 +138,7 @@ suite("CylinderSurface", () => {
       ),
     ]
     const p = V(0.55, 0, 2)
-    testLoopContainsPoint(assert, surface, loop, p, PointVsFace.OUTSIDE)
+    testLoopContainsPoint(surface, loop, p, PointVsFace.OUTSIDE)
   })
   const simpleCyl = new CylinderSurface(
     EllipseCurve.UNIT,
@@ -149,9 +148,9 @@ suite("CylinderSurface", () => {
     0,
     1,
   )
-  suite("simpleCyl", () => suiteSurface(simpleCyl))
-  suite("simpleCyl.rotateZ(PI)", () => suiteSurface(simpleCyl.rotateZ(PI)))
-  test("is curves w/ CylinderSurface", (assert) => {
+  describe("simpleCyl", () => suiteSurface(simpleCyl))
+  describe("simpleCyl.rotateZ(PI)", () => suiteSurface(simpleCyl.rotateZ(PI)))
+  test("is curves w/ CylinderSurface", () => {
     const cyl = CylinderSurface.UNIT.scale(5, 5, 1)
     const ell = new CylinderSurface(
       new EllipseCurve(V(6, 1, 4), V(3, 1, 4), V(4, 0, 0)),
@@ -159,9 +158,9 @@ suite("CylinderSurface", () => {
       undefined,
       undefined,
     )
-    testISCurves(assert, cyl, ell, 1)
+    testISCurves(cyl, ell, 1)
   })
-  test("is curves w/ CylinderSurface 2", (assert) => {
+  test("is curves w/ CylinderSurface 2", () => {
     const cyl = CylinderSurface.UNIT.scale(5, 5, 1)
     const scs = new CylinderSurface(
       new EllipseCurve(
@@ -177,37 +176,36 @@ suite("CylinderSurface", () => {
       -2,
       2,
     )
-    testISCurves(assert, cyl, scs, 2)
+    testISCurves(cyl, scs, 2)
   })
-  test("is curves w/ EllipsoidSurface", (assert) => {
+  test("is curves w/ EllipsoidSurface", () => {
     const cyl = CylinderSurface.UNIT.scale(0.05, 0.05, 4).translate(
       0.5,
       0.5,
       -2,
     )
     const sphere = EllipsoidSurface.UNIT
-    testISCurves(assert, sphere, cyl, 2)
+    testISCurves(sphere, cyl, 2)
   })
-  test("is curves w/ EllipsoidSurface 2", (assert) => {
+  test("is curves w/ EllipsoidSurface 2", () => {
     const cyl = CylinderSurface.UNIT.scale(0.5, 0.05, 4).translate(0, 0, -2)
     const sphere = EllipsoidSurface.UNIT
-    testISCurves(assert, sphere, cyl, 2)
+    testISCurves(sphere, cyl, 2)
   })
-  test("is curves w/ EllipsoidSurface 3", (assert) => {
+  test("is curves w/ EllipsoidSurface 3", () => {
     const cyl = CylinderSurface.UNIT.rotateZ(PI)
       .scale(0.5, 0.05, 4)
       .translate(0.25, 0, -2)
     const sphere = EllipsoidSurface.UNIT
-    testISCurves(assert, sphere, cyl, 0)
+    testISCurves(sphere, cyl, 0)
   })
-  test("is curves w/ plane", (assert) => {
-    testISCurves(assert, CylinderSurface.UNIT, P3.XY, 1)
-    testISCurves(assert, CylinderSurface.UNIT, P3.XY.flipped(), 1)
-    testISCurves(assert, CylinderSurface.UNIT.flipped(), P3.XY, 1)
-    testISCurves(assert, CylinderSurface.UNIT.flipped(), P3.XY.flipped(), 1)
+  test("is curves w/ plane", () => {
+    testISCurves(CylinderSurface.UNIT, P3.XY, 1)
+    testISCurves(CylinderSurface.UNIT, P3.XY.flipped(), 1)
+    testISCurves(CylinderSurface.UNIT.flipped(), P3.XY, 1)
+    testISCurves(CylinderSurface.UNIT.flipped(), P3.XY.flipped(), 1)
 
     testISCurves(
-      assert,
       new CylinderSurface(
         new EllipseCurve(
           V(0.5, 0.2, 0),
@@ -226,7 +224,7 @@ suite("CylinderSurface", () => {
       1,
     )
   })
-  test("intersectionLine 2", (assert) => {
+  test("intersectionLine 2", () => {
     const cylSurface = new CylinderSurface(
       new EllipseCurve(V3.O, V(8, 0, 0), V(0, 5, 0)),
       V3.Z,
@@ -234,29 +232,29 @@ suite("CylinderSurface", () => {
       undefined,
     )
     const line = L3.throughPoints(V(10, 0, 0), V(-10, 2, 10))
-    testISTs(assert, line, cylSurface, 2)
+    testISTs(line, cylSurface, 2)
   })
-  test("intersectionLine", (assert) => {
+  test("intersectionLine", () => {
     const cylSurface = CylinderSurface.semicylinder(5)
     const line = L3.throughPoints(V(10, 0, 0), V(-10, 2, 10))
     const isPoints = cylSurface.isTsForLine(line).map(line.at, line)
 
-    assert.equal(isPoints.length, 2, "no of points")
-    assert.notOk(isPoints[0].like(isPoints[1]))
+    expect(isPoints.length).toBe(2)
+    expect(isPoints[0].like(isPoints[1])).toBeFalsy()
 
-    assert.ok(cylSurface.containsPoint(isPoints[0]))
-    assert.ok(cylSurface.containsPoint(isPoints[1]))
+    expect(cylSurface.containsPoint(isPoints[0])).toBeTruthy()
+    expect(cylSurface.containsPoint(isPoints[1])).toBeTruthy()
 
-    assert.ok(
+    expect(
       line.containsPoint(isPoints[0]),
       "" + line.distanceToPoint(isPoints[0]),
-    )
-    assert.ok(
+    ).toBeTruthy()
+    expect(
       line.containsPoint(isPoints[1]),
       "" + line.distanceToPoint(isPoints[1]),
-    )
+    ).toBeTruthy()
   })
-  suite("zDirVolume", () => {
+  describe("zDirVolume", () => {
     const face = B2T.extrudeEdges(
       [
         edgeForCurveAndTs(EllipseCurve.forAB(-1, 1), 0, PI),
@@ -303,7 +301,7 @@ suite("CylinderSurface", () => {
     surfaceVolumeAndAreaTests(face4, "")
     surfaceVolumeAndAreaTests(face4.translate(1, 0, 2), "")
   })
-  test("loopContainsPoint", (assert) => {
+  test("loopContainsPoint", () => {
     const surface = new CylinderSurface(
       new EllipseCurve(V(0, 0, 0), V(8, 0, 0), V(0, 8, 0)),
       V(0, 0, -1),
@@ -340,15 +338,8 @@ suite("CylinderSurface", () => {
         V(-7.937253933193772, 0.9999999999999991, 0),
       ),
     ]
+    testLoopContainsPoint(surface, loop, V(8, 0, 0), PointVsFace.OUTSIDE)
     testLoopContainsPoint(
-      assert,
-      surface,
-      loop,
-      V(8, 0, 0),
-      PointVsFace.OUTSIDE,
-    )
-    testLoopContainsPoint(
-      assert,
       surface,
       loop,
       V(1, 7.937253933193773, 3),
@@ -356,7 +347,7 @@ suite("CylinderSurface", () => {
     )
   })
 
-  test("containsCurve", (assert) => {
+  test("containsCurve", () => {
     const surface = new CylinderSurface(
       new EllipseCurve(V3.O, V3.X, V3.Y, 0, 3.141592653589793),
       V3.Z,
@@ -384,8 +375,7 @@ suite("CylinderSurface", () => {
     edgeForCurveAndTs(EllipseCurve.UNIT.translate(0, 0, 1), PI / 2, 0),
   ]
   const cylinderFace2 = Face.create(surface, loop)
-  suite("cylinderFace2", () => surfaceVolumeAndAreaTests(cylinderFace2))
-  suite("cylinderFace2.foo()", () =>
-    surfaceVolumeAndAreaTests(cylinderFace2.foo()),
-  )
+  describe("cylinderFace2", () => surfaceVolumeAndAreaTests(cylinderFace2))
+  describe("cylinderFace2.foo()", () =>
+    surfaceVolumeAndAreaTests(cylinderFace2.foo()))
 })

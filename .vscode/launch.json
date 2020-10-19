@@ -5,6 +5,19 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Jest Current File",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [
+			  "--inspect-brk",
+			  "${workspaceRoot}/node_modules/jest/bin/jest.js",
+			  "--runInBand",
+			  "${fileBasename}"
+			],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+		  },
+		{
 			"type": "node",
 			"request": "launch",
 			"name": "Launch Program",
@@ -15,7 +28,10 @@
 			"request": "launch",
 			"name": "Debug rollup",
 			"program": "${workspaceFolder}/node_modules/rollup/bin/rollup",
-			"args": ["-c", "./rollup.viewer.config.js"]
+			"args": [
+				"-c",
+				"./rollup.viewer.config.js"
+			]
 		},
 		{
 			"type": "chrome",

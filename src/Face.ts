@@ -335,7 +335,6 @@ export abstract class Face extends Transformable {
               .like(newEdge.aDir)
               ? newEdge
               : newEdge.flipped()
-            console.log(newEdge.sce)
             assert(
               faceInfo.edge
                 .tangentAt(faceInfo.edge.curve.pointT(pushEdge.a))
@@ -1501,8 +1500,8 @@ export class PlaneFace extends Face {
   // mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center
   // intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const
   // testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 =
-  // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector, thisPlane.normal1) const sVEF2 =
-  // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon(), testVector.negated(), thisPlane.normal1) if (INSIDE ==
+  // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector, thisPlane.normal1) const sVEF2 =
+  // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector.negated(), thisPlane.normal1) if (INSIDE ==
   // sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } }
   // } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2,
   // face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2)
