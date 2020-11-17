@@ -1,10 +1,12 @@
 import {
+  AABB,
   assert,
   assertInst,
   assertVectors,
   eq,
   eq0,
   getIntervals,
+  ilog,
   M4,
   newtonIterate,
   pqFormula,
@@ -32,6 +34,64 @@ import {
 import { abs, cos, max, min, PI, sign, sin, sqrt, SQRT1_2 } from "../math"
 
 export class ConicSurface extends ParametricSurface implements ImplicitSurface {
+  /**
+   * Unit cone. x² + y² = z², 0 <= z
+   */
+  static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
+  readonly matrix: M4
+  readonly matrixInverse: M4
+  readonly pLCNormalWCMatrix: M4
+  readonly normalDir: number // -1 | 1
+
+  /**
+   * returns new cone C = {apex + f1 * v * cos(u) + f2 * v * sin(u) + f3 * v |
+   * -PI <= u <= PI, 0 <= v}
+   *
+   * If the coordinate system [f1 f2 dir] is right-handed, the normals will
+   * point outwards, otherwise inwards.
+   *
+   * @param f1
+   * @param f2
+   * @param dir Direction in which the cone opens. The ellipse spanned by f1,
+   *   f2 is contained at (apex + dir).
+   */
+  constructor(
+    readonly center: V3,
+    readonly f1: V3,
+    readonly f2: V3,
+    readonly dir: V3,
+    uMin: number = 0,
+    uMax: number = PI,
+    vMin: number = 0,
+    vMax: number = 16,
+  ) {
+    super(uMin, uMax, vMin, vMax)
+    assertVectors(center, f1, f2, dir)
+    assert(-PI <= uMin && uMax <= PI)
+    assert(0 <= vMin, vMin)
+    this.matrix = M4.forSys(f1, f2, dir, center)
+    this.matrixInverse = this.matrix.inversed()
+    this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
+    this.pLCNormalWCMatrix = this.matrix
+      .as3x3()
+      .inversed()
+      .transposed()
+      .scale(this.normalDir)
+  }
+
+  getConstructorParameters(): any[] {
+    return [
+      this.center,
+      this.f1,
+      this.f2,
+      this.dir,
+      this.uMin,
+      this.uMax,
+      this.vMin,
+      this.vMax,
+    ]
+  }
+
   pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
     if (undefined === startU || undefined === startV) {
       // similar to uvP
@@ -50,43 +110,6 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
     }
     const { 0: x, 1: y } = newtonIterate(f, [startU, startV])
     return new V3(x, y, 0)
-  }
-  /**
-   * Unit cone. x² + y² = z², 0 <= z
-   */
-  static readonly UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z)
-  readonly matrix: M4
-  readonly matrixInverse: M4
-  readonly pLCNormalWCMatrix: M4
-  readonly normalDir: number // -1 | 1
-
-  /**
-   * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
-   * @param f1
-   * @param f2
-   * @param dir Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
-   */
-  constructor(
-    readonly center: V3,
-    readonly f1: V3,
-    readonly f2: V3,
-    readonly dir: V3,
-    uMin: number = 0,
-    uMax: number = PI,
-    vMin: number = 0,
-    vMax: number = 16,
-  ) {
-    super(uMin, uMax, vMin, vMax)
-    assertVectors(center, f1, f2, dir)
-    assert(0 <= vMin)
-    this.matrix = M4.forSys(f1, f2, dir, center)
-    this.matrixInverse = this.matrix.inversed()
-    this.normalDir = sign(this.f1.cross(this.f2).dot(this.dir))
-    this.pLCNormalWCMatrix = this.matrix
-      .as3x3()
-      .inversed()
-      .transposed()
-      .scale(this.normalDir)
   }
 
   get apex() {
@@ -146,7 +169,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
       } else {
         // hyperbola
         const center = new V3(d / a, 0, 0)
-        const f1 = new V3(0, 0, abs(d / a)) // abs, because we always want the hyperbola to be pointing up
+        const f1 = new V3(0, 0, abs(d / a)) // abs, because we always want the
+        // hyperbola to be pointing up
         const f2 = new V3(0, d / a, 0)
         return [new HyperbolaCurve(center, f1, f2)]
       }
@@ -202,8 +226,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
           // hyperbola
           const center = new V3((-a * d) / (cc - aa), 0, (d * c) / (cc - aa))
           // const p1 = new V3(d / (a - c), 0, -d / (a - c))
-          // const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
-          // const f1 = center.to(p1)
+          // const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c /
+          // (cc - aa)) const f1 = center.to(p1)
           const f1 = new V3((d * c) / (aa - cc), 0, (-d * a) / (aa - cc))
           const f2 = new V3(0, d / sqrt(aa - cc), 0)
           return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), f2)]
@@ -226,7 +250,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
 
   like(object: any): boolean {
     if (!this.isCoplanarTo(object)) return false
-    // normals need to point in the same direction (outwards or inwards) for both
+    // normals need to point in the same direction (outwards or inwards) for
+    // both
     return this.normalDir == object.normalDir
   }
 
@@ -252,22 +277,10 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
     return Surface.loopContainsPointGeneral(contour, p, line, lineOut)
   }
 
-  getConstructorParameters(): any[] {
-    return [
-      this.center,
-      this.f1,
-      this.f2,
-      this.dir,
-      this.uMin,
-      this.uMax,
-      this.vMin,
-      this.vMax,
-    ]
-  }
-
   isTsForLine(line: L3): number[] {
-    // transforming line manually has advantage that dir1 will not be renormalized,
-    // meaning that calculated values t for lineLC are directly transferable to line
+    // transforming line manually has advantage that dir1 will not be
+    // renormalized, meaning that calculated values t for lineLC are directly
+    // transferable to line
     const anchorLC = this.matrixInverse.transformPoint(line.anchor)
     const dirLC = this.matrixInverse.transformVector(line.dir1)
     return ConicSurface.unitISLineTs(anchorLC, dirLC)
@@ -397,7 +410,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
     const transformedApex = m4.timesVector(
       Vector.fromV3AndWeight(this.center, 1),
     )
-    const isometricZ = (z: number) =>
+    const isometricV = (z: number) =>
       new EllipseCurve(new V3(0, 0, z), new V3(z, 0, 0), new V3(0, z, 0))
     if (!eq0(transformedApex.w)) {
       // sMin doesn't change, but tMin does...
@@ -408,14 +421,16 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
         f2 = m4.transformVector2(this.f2, this.center),
         dir = m4.transformVector2(this.dir, this.center)
       const matrixInv = M4.forSys(f1, f2, dir, c).inversed()
-      const aabb = isometricZ(this.vMin)
-        .transform4(matrixInv.times(m4.times(this.matrix)))
-        .getAABB()
-        .addAABB(
-          isometricZ(this.vMax)
-            .transform4(matrixInv.times(m4.times(this.matrix)))
-            .getAABB(),
-        )
+      const x = isometricV(this.vMin).transform4(
+        matrixInv.times(m4).times(this.matrix),
+      )
+      const y = isometricV(this.vMax).transform4(
+        matrixInv.times(m4).times(this.matrix),
+      )
+      const aabb = AABB.forAABBs([x.getAABB(), y.getAABB()])
+      console.log("aabb", aabb)
+      console.log(matrixInv.str)
+      console.log(x.str, y.str)
       return new ConicSurface(
         c,
         f1,
@@ -428,7 +443,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
       ) as this
     } else {
       const dir = transformedApex.V3()
-      const baseCurve = isometricZ(this.vMin).transform4(
+      const baseCurve = isometricV(this.vMin).transform4(
         m4.times(this.matrix),
       ) as EllipseCurve
       const matrixInv = M4.forSys(
@@ -437,7 +452,7 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
         dir.unit(),
         baseCurve.center,
       ).inversed()
-      const aabb = isometricZ(this.vMax)
+      const aabb = isometricV(this.vMax)
         .transform4(matrixInv.times(m4.times(this.matrix)))
         .getAABB()
       return new CylinderSurface(
@@ -553,7 +568,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
      *  y-component of normal1 is 0 */
     const a = planeNormal.lengthXY()
     const d = planeLC.w
-    // generated curves need to be rotated back before transforming to world coordinates
+    // generated curves need to be rotated back before transforming to world
+    // coordinates
     const rotationMatrix = M4.rotateZ(planeNormal.angleXY())
     const wcMatrix = eq0(planeNormal.lengthXY())
       ? this.matrix

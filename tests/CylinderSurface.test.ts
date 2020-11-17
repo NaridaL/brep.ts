@@ -283,7 +283,9 @@ describe("CylinderSurface", () => {
       "cyl",
     ).faces.find((face) => face.surface instanceof CylinderSurface)
     const modface = face.rotateY(-45 * DEG).translate(1, 0, 2)
-    const e0 = modface.contour[0].project(new P3(modface.surface.dir, 0))
+    const e0 = modface.contour[0].project(
+      new P3((modface.surface as CylinderSurface).dir, 0),
+    )
     const face4 = Face.create(modface.surface, [
       e0,
       StraightEdge.throughPoints(e0.b, modface.contour[2].a),
@@ -363,7 +365,7 @@ describe("CylinderSurface", () => {
       0,
       3.141592653589793,
     )
-    testContainsCurve(assert, surface, curve)
+    testContainsCurve(surface, curve)
   })
 
   const surface = CylinderSurface.UNIT

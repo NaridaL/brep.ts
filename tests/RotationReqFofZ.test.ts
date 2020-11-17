@@ -1,9 +1,9 @@
-import { testParametricSurface } from "../manager"
+import { testParametricSurface } from "./manager"
 
 import { M4, TAU } from "ts3dutils"
-import { RotationREqFOfZ } from "../.."
+import { RotationREqFOfZ } from ".."
 
-import { sin, cos } from "../math"
+import { sin, cos } from "../src/math"
 
 describe.skip("RotationREqFOfZ", () => {
   const sinSurface = new RotationREqFOfZ(

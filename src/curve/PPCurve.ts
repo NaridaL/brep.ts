@@ -124,7 +124,7 @@ export class PPCurve extends ImplicitCurve {
     return results
   }
 
-  roots(): Tuple3<number[]> {
+  roots(): [number[], number[], number[]] {
     return this.rootPoints().map((ps) => ps.map((p) => this.pointT(p)))
   }
 

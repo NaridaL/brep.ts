@@ -50,9 +50,11 @@ import {
 import { abs, cos, max, min, PI, sign, sin, sqrt } from "../math"
 
 class ArrayExt {}
+
 declare global {
   interface Array<T> extends ArrayExt {}
 }
+
 export class EllipsoidSurface
   extends ParametricSurface
   implements ImplicitSurface {
@@ -74,8 +76,8 @@ export class EllipsoidSurface
     vMax: number = PI / 2,
   ) {
     super(uMin, uMax, vMin, vMax)
-    assert(0 <= uMin && uMin <= PI)
-    assert(0 <= uMax && uMax <= PI)
+    assert(0 <= uMin && uMin <= PI, uMin)
+    assert(0 <= uMax && uMax <= PI, uMax)
     assert(-PI / 2 <= vMin && vMin <= PI / 2)
     assert(-PI / 2 <= vMax && vMax <= PI / 2)
     assertVectors(center, f1, f2, f3)
@@ -353,6 +355,7 @@ export class EllipsoidSurface
   clipCurves(curves: Curve[]): Curve[] {
     return curves.flatMap((curve) => curve.clipPlane(this.getSeamPlane()))
   }
+
   dpdu(): (u: number, v: number) => V3 {
     // dp(u, v) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
     return (u: number, v: number) =>
@@ -902,11 +905,11 @@ export class EllipsoidSurface
     // X * P = m => X = m * P^-1
     // prettier-ignore
     const Pinv = new M4(
-            1,        0,        0, 0,
-            0,        1,        0, 0,
-            0,        0,        1, 0,
-            -m.m[12], -m.m[13], -m.m[14], 1,
-        )
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      -m.m[12], -m.m[13], -m.m[14], 1,
+    )
     const pn = new V3(m.m[12], m.m[13], m.m[14]),
       pw = m.m[15]
     const pwSqrMinusPnSqr = pw ** 2 - pn.squared()
@@ -930,5 +933,6 @@ export class EllipsoidSurface
     )
   }
 }
+
 EllipsoidSurface.prototype.uStep = PI / 32
 EllipsoidSurface.prototype.vStep = PI / 32

@@ -553,10 +553,10 @@ export class EllipseCurve extends XiEtaCurve {
     const tMap = (t: number) => sign(t) * sqrt((1 - cos(t)) / (1 + cos(t)))
     // prettier-ignore
     const parabolaToUnitEllipse = new M4(
-            0, -1, 0, 1,
-            2,  0, 0, 0,
-            0,  0, 1, 0,
-            0,  1, 0, 1);
+      0, -1, 0, 1,
+      2,  0, 0, 0,
+      0,  0, 1, 0,
+      0,  1, 0, 1);
     return parabola4Projection(
       M4.product(m4, this.matrix, parabolaToUnitEllipse),
       tMap(this.tMin),

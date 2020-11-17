@@ -1,8 +1,9 @@
-import { outputLink, suiteSurface } from "./manager"
+import { outputLink, suiteSurface, testISTs } from "./manager"
 
-import { arrayFromFunction, DEG, M4, V3, VV } from "ts3dutils"
+import { arrayFromFunction, DEG, M4, V, V, V3, VV } from "ts3dutils"
 import {
   EllipseCurve,
+  L3,
   NURBSSurface,
   rotateCurve,
   RotatedCurveSurface,
@@ -49,6 +50,7 @@ describe("NURBSSurface", () => {
     console.log(s.pUV(0.1, 0.1))
     console.log(s.sce)
   })
+
   test("s2 guessUVForMeshPos", () => {
     //  let s2 = s
     const debugInfo = s2.debugInfo()
@@ -56,9 +58,9 @@ describe("NURBSSurface", () => {
     const uPointCount = s2.knotsU.length - s2.degreeU - 1
     for (let x = 0; x < uPointCount; x++) {
       for (let y = 0; y < s2.knotsV.length - s2.degreeV - 1; y++) {
-        const uv = s2.guessUVForMeshPos(x, y)
-        console.log("x", x, "y", y, "uv", uv)
-        drPs.push(s2.points[y * uPointCount + x].p3(), s2.pUV(uv.x, uv.y))
+        const uv = s2.pointFoot(s2.points[y * uPointCount + x].p3())
+        console.log("x", x, "y", y, "uv", uv, s2.guessUVForMeshPos(x, y))
+        uv && drPs.push(s2.points[y * uPointCount + x].p3(), s2.pUV(uv.x, uv.y))
       }
     }
 
@@ -80,5 +82,9 @@ describe("NURBSSurface", () => {
       "view",
     )
   })
+
+  test("s2 ISTs line", () =>
+    testISTs(L3.throughPoints(V(0, -2, 1.2), V(-1, -1, 3.2)), s2, 1))
+
   describe("a", () => suiteSurface(s2))
 })

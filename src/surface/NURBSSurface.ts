@@ -3,6 +3,7 @@ import {
   assert,
   clamp,
   firstUnsorted,
+  ilog,
   indexWithMax,
   int,
   lerp,
@@ -10,7 +11,6 @@ import {
   MINUS,
   newtonIterate,
   sliceStep,
-  toSource,
   V,
   V3,
   Vector,
@@ -181,9 +181,26 @@ export class NURBSSurface extends ParametricSurface {
 
   isTsForLine(line: L3): number[] {
     // intersect line with
-    let t = 1
+    const startT = 4
 
-    throw new Error("not implemented")
+    // Once we have a starting t param, there are two options:
+    // 1. 1-D Newton iterate on (t) -> (distanceFromSurface)
+    // 2. 3-D Newton iterate on (u, v, t) -> this.pUV(u, v).to(line.at(t))
+
+    // Let's go with 2, because 1 will require doing a nested newton iteration.
+    const [startU, startV] = this.pointFoot(line.at(startT))
+
+    const [, , t] = newtonIterate(
+      ([u, v, t]) => {
+        console.log("uvt", u, v, t)
+        const lineP = line.at(t)
+        return ilog(this.pUV(u, v).to(lineP).toArray())
+      },
+      [startU, startV, startT],
+      8,
+    )
+
+    return [t]
   }
 
   pointFoot(pWC: V3, startU?: number, startV?: number): V3 {
@@ -200,22 +217,21 @@ export class NURBSSurface extends ParametricSurface {
     const dpdu = this.dpdu()
     const dpdv = this.dpdv()
 
-    const [u, v] = newtonIterate(
-      ([u, v]) => {
-        const pUV = this.pUV(u, v)
-        const pUVToPWC = pUV.to(pWC)
-        return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))]
-      },
-      [start.x, start.y],
-      8,
-      undefined,
-      0.1,
-    )
-    return new V3(u, v, 0)
-    /**
-     *
-     */
-    throw new Error("Method not implemented.")
+    try {
+      const [u, v] = newtonIterate(
+        ([u, v]) => {
+          // console.log("u,v", u, v)
+          const pUV = this.pUV(u, v)
+          const pUVToPWC = pUV.to(pWC)
+          return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))]
+        },
+        [start.x, start.y],
+        16,
+      )
+      return new V3(u, v, 0)
+    } catch (e) {
+      return undefined!
+    }
   }
 
   isCurvesWithPlane(plane: P3): Curve[] {
@@ -223,7 +239,8 @@ export class NURBSSurface extends ParametricSurface {
   }
 
   containsPoint(pWC: V3): boolean {
-    throw new Error("Method not implemented.")
+    const foot = this.pointFoot(pWC)
+    return foot && this.pUV(foot.x, foot.y).like(pWC)
   }
 
   loopContainsPoint(contour: Edge[], point: V3): PointVsFace {

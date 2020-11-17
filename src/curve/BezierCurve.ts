@@ -21,7 +21,6 @@ import {
   newtonIterate2dWithDerivatives,
   NLA_PRECISION,
   solveCubicReal2,
-  Tuple3,
   V,
   V3,
   withMax,
@@ -527,7 +526,7 @@ export class BezierCurve extends Curve {
     return isFinite(this.pointT(p))
   }
 
-  roots(): Tuple3<number[]> {
+  roots(): [number[], number[], number[]] {
     /**
      *            := (3 (p3 - p2) - 6 (p2 - p1) + 3 (p1 - p0)) t²*
      *                + (-6 (p1 - p0) + 6 (p2 - p1)) t
@@ -844,8 +843,8 @@ export class BezierCurve extends Curve {
     return result
   }
 
-  private toNURBS() {
-    return new NURBS()
+  public toNURBS() {
+    return NURBS.fromBezier(this)
   }
 }
 

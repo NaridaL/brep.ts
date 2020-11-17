@@ -14,13 +14,11 @@ import {
   arraySamples,
   assert,
   DEG,
-  eq,
   eq0,
   glqInSteps,
   int,
   lerp,
   M4,
-  NLA_PRECISION,
   raddd,
   toSource,
   V,
@@ -28,23 +26,20 @@ import {
 } from "ts3dutils"
 
 export * from "ts3dutils/tests/manager"
-import { promises as fsp } from "fs"
 import * as fs from "fs"
 import slug from "slug"
-
-import { Assert } from "ts3dutils/tests/manager"
 
 import { RenderObjects } from "../src/viewer"
 
 import {
   BRep,
-  ConicSurface,
   Curve,
   CustomPlane,
   Edge,
   edgeForCurveAndTs,
   EllipseCurve,
   Face,
+  HyperbolaCurve,
   ImplicitSurface,
   L3,
   P3,
@@ -57,7 +52,6 @@ import {
 } from ".."
 import * as brepts from ".."
 import * as ts3dutils from "ts3dutils"
-import defineProperty = Reflect.defineProperty
 
 declare global {
   namespace jest {
@@ -69,7 +63,7 @@ declare global {
 expect.extend({
   toMatchBRepSnapshot(actual: BRep, additionalStuff = {}) {
     const brepToString = (x: BRep) =>
-      prettier.format(x.toSource(), {
+      prettier.format(x.toSource(false), {
         parser: "typescript",
         semi: false,
       })
@@ -363,16 +357,17 @@ export function testISCurves(
         const pN1 = surface1.normalP(p)
         const pN2 = surface2.normalP(p)
         const expectedTangent = pN1.cross(pN2)
-        // expectedTangent can be zero if the surfaces just touch and dont cross each other
-        //!expectedTangent.likeZero() && assert.ok(expectedTangent.isParallelTo(dp),
-        // 'pN1.cross(pN2).isParallelTo(dp)') !expectedTangent.likeZero() && assert.ok(expectedTangent.dot(dp)
-        // > 0, 'pN1.cross(pN2).dot(dp) > 0')
+        // expectedTangent can be zero if the surfaces just touch and dont
+        // cross each other !expectedTangent.likeZero() &&
+        // assert.ok(expectedTangent.isParallelTo(dp),
+        // 'pN1.cross(pN2).isParallelTo(dp)') !expectedTangent.likeZero() &&
+        // assert.ok(expectedTangent.dot(dp) > 0, 'pN1.cross(pN2).dot(dp) > 0')
       }
     } else {
       outputLink({
         mesh: `[${surface1}.toMesh(), ${surface2}.toMesh()]`,
       })
-      assert.ok(false, "no isCurves returned: " + isCurves)
+      throw new Error("no isCurves returned: " + isCurves)
     }
   }
   return isCurves
@@ -402,7 +397,8 @@ export function testPointT(
 }
 
 /**
- * Tests that the passed loop is CCW on the passed surface, and that the reversed loop is CW.
+ * Tests that the passed loop is CCW on the passed surface, and that the
+ * reversed loop is CW.
  * @param assert
  * @param surface
  * @param loop
@@ -431,7 +427,7 @@ export function surfaceVolumeAndAreaTests(
   const faceMeshVol = faceMesh.calcVolume()
 
   test(msg + " area", () => {
-    outputLink({ mesh: face.toSource() + ".toMesh()", face: face })
+    outputLink({ mesh: face.toSource() + ".toMesh()", face: [face] })
     const actualArea = face.calcArea()
     const expectedArea = faceMeshVol.area
     expect(actualArea).toFuzzyEqual(expectedArea, 0.05)
@@ -577,14 +573,14 @@ export function testCurve(curve: Curve, checkTangents = true, msg?: string) {
 
 export function suiteSurface(surface: Surface) {
   if (ParametricSurface.is(surface)) {
-    test("ParametricSurface", () => testParametricSurface(assert, surface))
+    test("ParametricSurface", () => testParametricSurface(surface))
   }
   if (ImplicitSurface.is(surface)) {
-    test("ImplicitSurface", () => testImplicitSurface(assert, surface))
+    test("ImplicitSurface", () => testImplicitSurface(surface))
   }
 }
 
-export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
+export function testParametricSurface(surf: ParametricSurface) {
   const debugInfo = surf.debugInfo && surf.debugInfo()
   outputLink(
     {
@@ -669,15 +665,17 @@ export function testParametricSurface(assert: Assert, surf: ParametricSurface) {
     const offsetPoint = p.plus(pNormal.toLength(0.5))
     const actualFoot = surf.pointFoot(offsetPoint)
     // the original params may not actually be the closest.
-    //if (!actualFoot.like(pm) && surf.pUV(actualFoot.x, actualFoot.y).distanceTo(p) > 0.5) {
-    //    assert.v3like(actualFoot, pm, 'distance to foot ' + surf.pUV(actualFoot.x, actualFoot.y).distanceTo(p))
-    //}
+    //if (!actualFoot.like(pm) && surf.pUV(actualFoot.x,
+    // actualFoot.y).distanceTo(p) > 0.5) { assert.v3like(actualFoot, pm,
+    // 'distance to foot ' + surf.pUV(actualFoot.x,
+    // actualFoot.y).distanceTo(p)) }
     const offsetPoint2 = p.plus(pNormal.toLength(-0.5))
     const actualFoot2 = surf.pointFoot(offsetPoint2)
     // the original params may not actually be the closest.
-    //if (!actualFoot2.like(pm) && surf.pUV(actualFoot2.x, actualFoot2.y).distanceTo(p) > 0.5) {
-    //    assert.v3like(actualFoot2, pm, 'distance to foot ' + surf.pUV(actualFoot2.x, actualFoot2.y).distanceTo(p))
-    //}
+    //if (!actualFoot2.like(pm) && surf.pUV(actualFoot2.x,
+    // actualFoot2.y).distanceTo(p) > 0.5) { assert.v3like(actualFoot2, pm,
+    // 'distance to foot ' + surf.pUV(actualFoot2.x,
+    // actualFoot2.y).distanceTo(p)) }
   }
   const matrices = [M4.mirror(P3.XY), M4.mirror(P3.YZ), M4.mirror(P3.ZX)]
   for (let mI = 0; mI < matrices.length; mI++) {
@@ -718,7 +716,7 @@ export function testContainsCurve(
     },
     msg,
   )
-  assert.equal(surface.containsCurve(curve), expected, "surface contains curve")
+  expect(surface.containsCurve(curve)).toBe(expected)
 }
 
 export function rotateEdge(edge: Edge, angle: raddd) {
@@ -742,7 +740,7 @@ export function rotateEdge(edge: Edge, angle: raddd) {
   return Face.create(surface, edges)
 }
 
-function testImplicitSurface(assert: Assert, surface: ImplicitSurface) {
+function testImplicitSurface(surface: ImplicitSurface) {
   const EPS = 1e-8
   const testPoints = [
     V3.O.plus(V(0.2, 0, 0)), // V3.O fails on ellipsoidSurface
@@ -938,28 +936,37 @@ export function testCurveTransform(
   }
   arraySamples(curve.tMin, curve.tMax, 8).forEach((t) => {
     const pT = m4.transformPoint(curve.at(t))
-    assert.ok(curveT.containsPoint(pT), pT.sce + curveT.distanceToPoint(pT))
+    expect(
+      curveT.containsPoint(pT),
+      pT.sce + curveT.distanceToPoint(pT),
+    ).toBeTruthy()
   })
   return curveT
 }
 
 export function testSurfaceTransform(
   surface: ParametricSurface,
-  m4: M4,
+  transform: M4,
   allowFlipped = false,
   msg?: string,
 ) {
   const uvs = arraySamples(surface.uMin, surface.uMax, 4).flatMap((u) =>
     arraySamples(surface.vMin, surface.vMax, 4).map((v) => new V3(u, v, 0)),
   )
-  const normalT = m4.inversed().transposed()
+  const normalT = transform.inversed().transposed()
   let surfaceT
   try {
-    surfaceT = (surface.transform4 || surface.transform).call(surface, m4)
+    surfaceT = (surface.transform4 || surface.transform).call(
+      surface,
+      transform,
+    )
   } finally {
     const ss = uvs.flatMap((uv) => [
       { p: surface.pUV(uv.x, uv.y), color: "orange" },
-      { p: m4.transformPoint(surface.pUV(uv.x, uv.y)), color: "darkgreen" },
+      {
+        p: transform.transformPoint(surface.pUV(uv.x, uv.y)),
+        color: "lightgrey",
+      },
     ])
     const aabbM4 = surface.getApproxAABB().getM4()
     outputLink(
@@ -972,26 +979,28 @@ export function testSurfaceTransform(
             .join(",") +
           "]",
         drPs: ss,
+        drVs: [],
         drLines: ss.map((x) => x.p),
-        boxes: [aabbM4, m4.times(aabbM4)],
+        boxes: [aabbM4, transform.times(aabbM4)],
+        edges: [],
       },
       msg,
     )
   }
   uvs.forEach((uv) => {
     const pUV = surface.pUV(uv.x, uv.y)
-    const pUVT = m4.transformPoint(pUV)
+    const pUVT = transform.transformPoint(pUV)
     const surfaceNT = P3.normalOnAnchor(
       surface.normalUV(uv.x, uv.y),
       pUV,
-    ).transform(m4).normal1
+    ).transform(transform).normal1
     const surfaceTN = surfaceT.normalP(pUVT).unit()
     expect(
-      surfaceT.containsPoint(m4.transformPoint(surface.pUV(uv.x, uv.y))),
+      surfaceT.containsPoint(transform.transformPoint(surface.pUV(uv.x, uv.y))),
     ).toBeTruthy()
     expect(
       surfaceNT.isParallelTo(surfaceTN),
-      "uv" + uv.sce + " " + surfaceNT.sce + " " + surfaceTN.sce,
+      "uv " + uv.sce + " " + surfaceNT.sce + " " + surfaceTN.sce,
     ).toBeTruthy()
     expect(surfaceNT.dot(surfaceTN) > 0, "normal same dir").toBeTruthy()
   })

@@ -2,8 +2,6 @@ import {
   outputLink,
   suiteSurface,
   surfaceVolumeAndAreaTests,
-  testCurve,
-  testImplicitSurface,
   testISCurves,
   testLoopContainsPoint,
 } from "./manager"

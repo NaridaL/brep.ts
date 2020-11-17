@@ -79,12 +79,11 @@ describe("P3", () => {
     expect(m4.transformPoint(V(4, 0, 1))).toBeLike(V(2, 0, 0))
     expect(m4.transformPoint(V(4, 8, 1))).toBeLike(V(2, 4, 0))
     expect(m4.transformPoint(V(4, 8, 2))).toBeLike(V(4 / 3, 8 / 3, 0))
-    assert.m4equiv(
+    expect(
       M4.projectPlanePoint(
         M4.FOO.transformPoint(V3.Z.negated()),
         P3.XY.transform(M4.FOO),
       ),
-      M4.product(M4.FOO, m4, M4.BAR),
-    )
+    ).toBeLike(M4.product(M4.FOO, m4, M4.BAR))
   })
 })

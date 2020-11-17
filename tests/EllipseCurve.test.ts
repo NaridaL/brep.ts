@@ -12,31 +12,22 @@ import {
   DEG,
   lerp,
   M4,
-  Matrix,
   V,
   V3,
   Vector,
-  VV,
 } from "ts3dutils"
 import {
-  AABB2,
   BezierCurve,
-  breakDownPPCurves,
-  Curve,
-  curvePoint,
-  curvePointMF,
-  Edge,
   EllipseCurve,
   EllipsoidSurface,
-  followAlgorithm2d,
-  MathFunctionR2R,
-  NURBS,
   P3,
   ParabolaCurve,
   PlaneSurface,
   parabola4Projection,
+  edgeForCurveAndTs,
 } from ".."
-import { PI, sin } from "../src/math"
+
+const { PI } = Math
 
 describe("EllipseCurve", () => {
   const curve = EllipseCurve.UNIT.shearX(2, 1)

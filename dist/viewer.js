@@ -2195,6 +2195,7 @@ var viewer = (function (exports) {
         return min <= val && val <= max;
     }
     function fuzzyBetween(val, min, max) {
+        assertNumbers(val, min, max);
         return le(min, val) && le(val, max);
     }
     function mapPush(map, key, val) {
@@ -2407,6 +2408,10 @@ var viewer = (function (exports) {
         },
         configurable: true,
     });
+    function ilog(x) {
+        console.log(x);
+        return x;
+    }
     //const NLA = {}
     //for (let key in ARRAY_UTILITIES) {
     //    const nlaName = 'array' + key.capitalizeFirstLetter()
@@ -2624,7 +2629,7 @@ var viewer = (function (exports) {
         return result;
     }
     function emod(arr, i) {
-        return arr[i % arr.length];
+        return arr[mod(i, arr.length)];
     }
     function sliceStep(arr, start, end, step, chunkSize = 1) {
         assertNumbers(start, step);
@@ -5995,7 +6000,7 @@ var viewer = (function (exports) {
          */
         normalized2() {
             const div = this.m[15];
-            return 1 == div ? this : this.divScalar(Math.pow(div, 0.25));
+            return 1 == div ? this : this.divScalar(div);
         }
         /**
          * Returns if the matrix has the following form (within NLA_PRECISION):
@@ -6838,6 +6843,7 @@ var viewer = (function (exports) {
         gt: gt,
         hasConstructor: hasConstructor,
         hashCode: hashCode,
+        ilog: ilog,
         indexWithMax: indexWithMax,
         isCCW: isCCW,
         le: le,
@@ -10193,7 +10199,8 @@ var viewer = (function (exports) {
             tMax = isFinite(tMax) ? tMax : this.tMax;
             const tMinAt = this.at(tMin), tMaxAt = this.at(tMax);
             const roots = this.roots();
-            const mins = new Array(3), maxs = new Array(3);
+            const mins = [0, 0, 0];
+            const maxs = [0, 0, 0];
             for (let dim = 0; dim < 3; dim++) {
                 const tRoots = roots[dim];
                 mins[dim] = Math.min(tMinAt.e(dim), tMaxAt.e(dim));
@@ -10652,12 +10659,105 @@ var viewer = (function (exports) {
         }
     }
     /**
-     * Transforms the unit 4d parabola P(t) = t² (0, 1, 0, 0) + t (1, 0, 0, 0) + (0, 0, 0, 1) using m and projects the
-     * result into 3d. This is used for the transform4 implementation of conics. The parabola may not cross the vanishing
-     * plane of m in the interval [tMin, tMax], as that would result in discontinuities.
+     * Transforms the unit 4d parabola
+     * P(t) = t² (0, 1, 0, 0) + t (1, 0, 0, 0) + (0, 0, 0, 1) using m and projects
+     * the result into 3d. This is used for the transform4 implementation of conics.
+     * The parabola may not cross the vanishing plane of m in the interval
+     * [tMin, tMax], as that would result in discontinuities.
      */
     function parabola4Projection(m, tMin, tMax) {
-        return HyperbolaCurve.XY.rotateZ(45 * DEG);
+        const w1 = m.m[12];
+        const w2 = m.m[13];
+        const wc = m.m[15];
+        // if the 4d parabola crosses the vanishing plane, it will lead to multiple/infinite hyperbolas, both of which we
+        // want to avoid. Hence, we must check that the entire interval [tMin, tMax] is on one side of the vanishing plane.
+        // Checking tMax, tMin and the extremas is enough.
+        const extremas = solveCubicReal2(0, w2, w1, wc);
+        const wx0 = (x) => Number.isFinite(x) ? snap0(Math.pow(x, 2) * w2 + x * w1 + wc) : sign$1(w2) * Infinity;
+        if (wx0(tMin) * wx0(tMax) < 0 ||
+            extremas.some((x) => wx0(x) * (wx0(tMin) + wx0(tMax)) < 0)) {
+            console.log(m.str);
+            throw new Error("The entire interval must be on one side of the vanishing plane. P=" +
+                toSource(P3.vanishingPlane(m)));
+        }
+        if (eq0(wc)) {
+            // the following matrix maps a curve C onto itself, with the parameter being inverted:
+            // C2(t) = C(-1/t). This makes C(0) a real value, which is necessary for the projection calculation.
+            // the sign inversion is so the tangent direction does not change.
+            // prettier-ignore
+            const mm = new M4(-1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0);
+            if (!eq0(w2)) {
+                return parabola4Projection(m.times(mm), -1 / tMin, -1 / tMax);
+            }
+            // wc == w2 == 0 => degenerates to a line:
+            // C(t) = (t² f2 + t f1 + c) / (t w1)
+            // C(t) = (t f2 + f1 + c) / (t w2 + w1)
+            // substitute t = (1/s - w1) / w2
+            // C(s) = f2 / w2 + s (f1 - f2 w1 / w2), which is a line
+            // we can multiply the direction vector by w2 to avoid divisions:
+            // C(t) = f2 / w2 + s (f1 w2 - f2 w1)
+            const f1 = m.col(0);
+            const f2 = m.col(1);
+            return L3.anchorDirection(f2.p3(), f1.V3().times(f2.w).minus(f2.V3().times(f1.w)));
+        }
+        {
+            // ensure that the bottom-right value = 1. this does not change the 3d result.
+            m.m[15] !== 1 && (m = m.divScalar(m.m[15]));
+            const w2 = m.m[13];
+            const w1 = m.m[12];
+            const wc = m.m[15];
+            // we want to split m into X * P, such that X is a transformation with no projective component (first three
+            // values of the bottom row = 0), which can be handled by the usual .transform() method, and P which has only a
+            // projective component (only the last row differs from the identity matrix). This simplifies the following
+            // calculation. X * P = m => X * P * P^-1 = m * P^-1 => X = m * P^-1
+            // prettier-ignore
+            const Pinv = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -m.m[12], -m.m[13], -m.m[14], 1);
+            const X = m.times(Pinv);
+            // P'(t) = 0 is true for t = 0 and t1. The center is in between P(0) and P(t1), or P(t1) / 2, as P(0) = O
+            const delta = 4 * w2 * wc - Math.pow(w1, 2);
+            const center = new V3((-w1 * wc) / delta, (2 * Math.pow(wc, 2)) / delta, 0);
+            // f2 is parallel to P'(0), i.e. horizontal. Solve Py(t2) = Cy = Py(t1) / 2 for t2 and simplify
+            // f2x = Px(t2) - Cx = Px(t2) - Px(t1) / 2 to get the x-component of f2:
+            const f2x = 1 / sqrt$1(abs$2(delta)) / wc;
+            const f2 = new V3(f2x, 0, 0);
+            let result;
+            if (eq0(delta)) {
+                result = new ParabolaCurve(V3.O, V3.X, V3.Y, tMin, tMax);
+            }
+            else if (0 < delta) {
+                const tMapInv = (t) => {
+                    const wt = Math.pow(t, 2) * w2 + t * w1 + wc;
+                    const xi = 1 -
+                        (delta / 2 / Math.pow(wc, 2)) * (Number.isFinite(t) ? Math.pow(t, 2) / wt : 1 / w2);
+                    const xx = acos(xi);
+                    const p = Number.isFinite(t)
+                        ? new V3(t, Math.pow(t, 2), 0).div(wt)
+                        : new V3(0, 1 / w2, 0);
+                    const pLC = M4.forSys(center.negated(), f2, V3.Z, center)
+                        .inversed()
+                        .transformPoint(p);
+                    const angle = pLC.angleXY();
+                    if (t > 0 && pLC.y < 0) {
+                        return angle + TAU;
+                    }
+                    else if (t < 0 && pLC.y > 0) {
+                        return angle - TAU;
+                    }
+                    return angle;
+                };
+                result = EllipseCurve.andFixTs(center, center.negated(), f2, tMapInv(tMin), tMapInv(tMax));
+            }
+            else {
+                const tMapInv = (t) => sign$1(t) *
+                    acosh(1 -
+                        (delta / 2 / Math.pow(wc, 2)) *
+                            (Number.isFinite(t)
+                                ? Math.pow(t, 2) / (Math.pow(t, 2) * w2 + t * w1 + wc)
+                                : 1 / w2));
+                result = new HyperbolaCurve(center, center.negated(), f2, tMapInv(tMin), tMapInv(tMax));
+            }
+            return result.transform(X);
+        }
     }
 
     class ImplicitCurve extends Curve {
@@ -11316,7 +11416,7 @@ var viewer = (function (exports) {
             return result;
         }
         toNURBS() {
-            return new NURBS();
+            return NURBS.fromBezier(this);
         }
     }
     /**
@@ -13275,7 +13375,6 @@ var viewer = (function (exports) {
             const dt = tMax - tMin;
             const tStep = dt / sections;
             const w = sin$2(PI$3 / 2 - tStep / 2);
-            console.log(tStep / 2 / DEG);
             // cos
             const r = 1 / cos$2(tStep / 2);
             const points = arrayFromFunction(sections * 2 + 1, (i) => {
@@ -13991,7 +14090,7 @@ var viewer = (function (exports) {
             assertNumbers(uMin, uMax, vMin, vMax);
             assert(uMin < uMax);
             assert(vMin < vMax);
-            assert(((x) => x[x.length - 4])(this.getConstructorParameters()) == this.uMin, this.getConstructorParameters(), this.uMin);
+            assert(emod(this.getConstructorParameters(), -4) == this.uMin, this.getConstructorParameters(), this.uMin);
         }
         static isCurvesParametricImplicitSurface(ps, is, uStep, vStep = uStep, curveStepSize) {
             const pf = ps.pUVFunc(), icc = is.implicitFunction();
@@ -14002,7 +14101,7 @@ var viewer = (function (exports) {
             const didu = (u, v) => didp(pf(u, v)).dot(dpdu(u, v));
             const didv = (u, v) => didp(pf(u, v)).dot(dpdv(u, v));
             const mf = MathFunctionR2R.forFFxFy(ist, didu, didv);
-            const curves = Curve.breakDownIC(mf, ps, uStep, vStep, curveStepSize, (u, v) => is.containsPoint(pf(u, v))).map(({ points, tangents }, i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize));
+            const curves = Curve.breakDownIC(mf, ps, uStep, vStep, curveStepSize, (u, v) => is.containsPoint(pf(u, v))).map(({ points, tangents }, _i) => PICurve.forParametricPointsTangents(ps, is, points, tangents, curveStepSize));
             return curves;
         }
         static isCurvesParametricParametricSurface(ps1, ps2, s1Step, t1Step = s1Step, curveStepSize) {
@@ -14080,10 +14179,16 @@ var viewer = (function (exports) {
 
     class ConicSurface extends ParametricSurface {
         /**
-         * returns new cone C = {apex + f1 * z * cos(d) + f2 * z * sin(d) + f3 * z | -PI <= d <= PI, 0 <= z}
+         * returns new cone C = {apex + f1 * v * cos(u) + f2 * v * sin(u) + f3 * v |
+         * -PI <= u <= PI, 0 <= v}
+         *
+         * If the coordinate system [f1 f2 dir] is right-handed, the normals will
+         * point outwards, otherwise inwards.
+         *
          * @param f1
          * @param f2
-         * @param dir Direction in which the cone opens. The ellipse spanned by f1, f2 is contained at (apex + f1).
+         * @param dir Direction in which the cone opens. The ellipse spanned by f1,
+         *   f2 is contained at (apex + dir).
          */
         constructor(center, f1, f2, dir, uMin = 0, uMax = PI$3, vMin = 0, vMax = 16) {
             super(uMin, uMax, vMin, vMax);
@@ -14092,7 +14197,8 @@ var viewer = (function (exports) {
             this.f2 = f2;
             this.dir = dir;
             assertVectors(center, f1, f2, dir);
-            assert(0 <= vMin);
+            assert(-PI$3 <= uMin && uMax <= PI$3);
+            assert(0 <= vMin, vMin);
             this.matrix = M4.forSys(f1, f2, dir, center);
             this.matrixInverse = this.matrix.inversed();
             this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.dir));
@@ -14101,6 +14207,18 @@ var viewer = (function (exports) {
                 .inversed()
                 .transposed()
                 .scale(this.normalDir);
+        }
+        getConstructorParameters() {
+            return [
+                this.center,
+                this.f1,
+                this.f2,
+                this.dir,
+                this.uMin,
+                this.uMax,
+                this.vMin,
+                this.vMax,
+            ];
         }
         pointFoot(pWC, startU, startV) {
             if (undefined === startU || undefined === startV) {
@@ -14159,7 +14277,8 @@ var viewer = (function (exports) {
                 else {
                     // hyperbola
                     const center = new V3(d / a, 0, 0);
-                    const f1 = new V3(0, 0, abs$2(d / a)); // abs, because we always want the hyperbola to be pointing up
+                    const f1 = new V3(0, 0, abs$2(d / a)); // abs, because we always want the
+                    // hyperbola to be pointing up
                     const f2 = new V3(0, d / a, 0);
                     return [new HyperbolaCurve(center, f1, f2)];
                 }
@@ -14211,8 +14330,8 @@ var viewer = (function (exports) {
                         // hyperbola
                         const center = new V3((-a * d) / (cc - aa), 0, (d * c) / (cc - aa));
                         // const p1 = new V3(d / (a - c), 0, -d / (a - c))
-                        // const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c / (cc - aa))
-                        // const f1 = center.to(p1)
+                        // const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c /
+                        // (cc - aa)) const f1 = center.to(p1)
                         const f1 = new V3((d * c) / (aa - cc), 0, (-d * a) / (aa - cc));
                         const f2 = new V3(0, d / sqrt$1(aa - cc), 0);
                         return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), f2)];
@@ -14232,7 +14351,8 @@ var viewer = (function (exports) {
         like(object) {
             if (!this.isCoplanarTo(object))
                 return false;
-            // normals need to point in the same direction (outwards or inwards) for both
+            // normals need to point in the same direction (outwards or inwards) for
+            // both
             return this.normalDir == object.normalDir;
         }
         getVectors() {
@@ -14253,21 +14373,10 @@ var viewer = (function (exports) {
             const lineOut = line.dir1.cross(this.dir);
             return Surface.loopContainsPointGeneral(contour, p, line, lineOut);
         }
-        getConstructorParameters() {
-            return [
-                this.center,
-                this.f1,
-                this.f2,
-                this.dir,
-                this.uMin,
-                this.uMax,
-                this.vMin,
-                this.vMax,
-            ];
-        }
         isTsForLine(line) {
-            // transforming line manually has advantage that dir1 will not be renormalized,
-            // meaning that calculated values t for lineLC are directly transferable to line
+            // transforming line manually has advantage that dir1 will not be
+            // renormalized, meaning that calculated values t for lineLC are directly
+            // transferable to line
             const anchorLC = this.matrixInverse.transformPoint(line.anchor);
             const dirLC = this.matrixInverse.transformVector(line.dir1);
             return ConicSurface.unitISLineTs(anchorLC, dirLC);
@@ -14369,26 +14478,26 @@ var viewer = (function (exports) {
         }
         transform4(m4) {
             const transformedApex = m4.timesVector(Vector.fromV3AndWeight(this.center, 1));
-            const isometricZ = (z) => new EllipseCurve(new V3(0, 0, z), new V3(z, 0, 0), new V3(0, z, 0));
+            const isometricV = (z) => new EllipseCurve(new V3(0, 0, z), new V3(z, 0, 0), new V3(0, z, 0));
             if (!eq0(transformedApex.w)) {
                 // sMin doesn't change, but tMin does...
                 const c = m4.transformPoint(this.center), f1 = m4
                     .transformVector2(this.f1, this.center)
                     .times(m4.isMirroring() ? -1 : 1), f2 = m4.transformVector2(this.f2, this.center), dir = m4.transformVector2(this.dir, this.center);
                 const matrixInv = M4.forSys(f1, f2, dir, c).inversed();
-                const aabb = isometricZ(this.vMin)
-                    .transform4(matrixInv.times(m4.times(this.matrix)))
-                    .getAABB()
-                    .addAABB(isometricZ(this.vMax)
-                    .transform4(matrixInv.times(m4.times(this.matrix)))
-                    .getAABB());
+                const x = isometricV(this.vMin).transform4(matrixInv.times(m4).times(this.matrix));
+                const y = isometricV(this.vMax).transform4(matrixInv.times(m4).times(this.matrix));
+                const aabb = AABB.forAABBs([x.getAABB(), y.getAABB()]);
+                console.log("aabb", aabb);
+                console.log(matrixInv.str);
+                console.log(x.str, y.str);
                 return new ConicSurface(c, f1, f2, dir, this.uMin, this.uMax, aabb.min.z, aabb.max.z);
             }
             else {
                 const dir = transformedApex.V3();
-                const baseCurve = isometricZ(this.vMin).transform4(m4.times(this.matrix));
+                const baseCurve = isometricV(this.vMin).transform4(m4.times(this.matrix));
                 const matrixInv = M4.forSys(baseCurve.f1, baseCurve.f2, dir.unit(), baseCurve.center).inversed();
-                const aabb = isometricZ(this.vMax)
+                const aabb = isometricV(this.vMax)
                     .transform4(matrixInv.times(m4.times(this.matrix)))
                     .getAABB();
                 return new CylinderSurface(baseCurve, dir.unit(), this.uMin, this.uMax, min$3(0, aabb.min.z, aabb.max.z), max$3(0, aabb.min.z, aabb.max.z));
@@ -14471,7 +14580,8 @@ var viewer = (function (exports) {
              *  y-component of normal1 is 0 */
             const a = planeNormal.lengthXY();
             const d = planeLC.w;
-            // generated curves need to be rotated back before transforming to world coordinates
+            // generated curves need to be rotated back before transforming to world
+            // coordinates
             const rotationMatrix = M4.rotateZ(planeNormal.angleXY());
             const wcMatrix = eq0(planeNormal.lengthXY())
                 ? this.matrix
@@ -15101,8 +15211,8 @@ var viewer = (function (exports) {
             this.f1 = f1;
             this.f2 = f2;
             this.f3 = f3;
-            assert(0 <= uMin && uMin <= PI$3);
-            assert(0 <= uMax && uMax <= PI$3);
+            assert(0 <= uMin && uMin <= PI$3, uMin);
+            assert(0 <= uMax && uMax <= PI$3, uMax);
             assert(-PI$3 / 2 <= vMin && vMin <= PI$3 / 2);
             assert(-PI$3 / 2 <= vMax && vMax <= PI$3 / 2);
             assertVectors(center, f1, f2, f3);
@@ -16130,7 +16240,19 @@ var viewer = (function (exports) {
             throw new Error("not implemented");
         }
         isTsForLine(line) {
-            throw new Error("not implemented");
+            // intersect line with
+            const startT = 4;
+            // Once we have a starting t param, there are two options:
+            // 1. 1-D Newton iterate on (t) -> (distanceFromSurface)
+            // 2. 3-D Newton iterate on (u, v, t) -> this.pUV(u, v).to(line.at(t))
+            // Let's go with 2, because 1 will require doing a nested newton iteration.
+            const [startU, startV] = this.pointFoot(line.at(startT));
+            const [, , t] = newtonIterate(([u, v, t]) => {
+                console.log("uvt", u, v, t);
+                const lineP = line.at(t);
+                return ilog(this.pUV(u, v).to(lineP).toArray());
+            }, [startU, startV, startT], 8);
+            return [t];
         }
         pointFoot(pWC, startU, startV) {
             const closestPointIndex = indexWithMax(this.points, (p) => -p.p3().distanceTo(pWC));
@@ -16139,18 +16261,25 @@ var viewer = (function (exports) {
             const start = this.guessUVForMeshPos(closestPointPos.x, closestPointPos.y);
             const dpdu = this.dpdu();
             const dpdv = this.dpdv();
-            const [u, v] = newtonIterate(([u, v]) => {
-                const pUV = this.pUV(u, v);
-                const pUVToPWC = pUV.to(pWC);
-                return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))];
-            }, [start.x, start.y], 8, undefined, 0.1);
-            return new V3(u, v, 0);
+            try {
+                const [u, v] = newtonIterate(([u, v]) => {
+                    // console.log("u,v", u, v)
+                    const pUV = this.pUV(u, v);
+                    const pUVToPWC = pUV.to(pWC);
+                    return [pUVToPWC.dot(dpdu(u, v)), pUVToPWC.dot(dpdv(u, v))];
+                }, [start.x, start.y], 16);
+                return new V3(u, v, 0);
+            }
+            catch (e) {
+                return undefined;
+            }
         }
         isCurvesWithPlane(plane) {
             throw new Error("Method not implemented.");
         }
         containsPoint(pWC) {
-            throw new Error("Method not implemented.");
+            const foot = this.pointFoot(pWC);
+            return foot && this.pUV(foot.x, foot.y).like(pWC);
         }
         loopContainsPoint(contour, point) {
             throw new Error("Method not implemented.");
@@ -49204,8 +49333,8 @@ var viewer = (function (exports) {
         }
         drawPlane(customPlane, color, dotted = false) {
             this.pushMatrix();
-            this.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal1));
-            this.translate(customPlane.uMin, customPlane.vMin, customPlane.w);
+            this.multMatrix(M4.forSys(customPlane.right, customPlane.up, customPlane.normal1, customPlane.anchor));
+            this.translate(customPlane.uMin, customPlane.vMin, 0);
             this.scale(customPlane.uMax - customPlane.uMin, customPlane.vMax - customPlane.vMin, 1);
             const mesh = dotted
                 ? this.meshes.xyDottedLinePlane
@@ -49215,7 +49344,7 @@ var viewer = (function (exports) {
         }
         drawBox(m4, color) {
             this.pushMatrix();
-            this.multMatrix(m4);
+            this.multMatrix(m4.m[15] >= 0 ? m4 : m4.mulScalar(-1));
             if (color) {
                 this.shaders.singleColor
                     .uniforms({ color: color })
@@ -49611,6 +49740,9 @@ var viewer = (function (exports) {
             const s1 = sin$2(theta) / sin$2(theta0);
             console.log(s0, s1, a.times(s0), b.times(s1));
             return a.times(s0).plus(b.times(s1));
+        }
+        toArray() {
+            return [this.s, this.x, this.y, this.z];
         }
     }
     Quaternion.O = new Quaternion(1, 0, 0, 0);

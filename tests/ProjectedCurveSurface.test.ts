@@ -9,12 +9,12 @@ import {
   testSurfaceTransform,
 } from "./manager"
 
-import { assert, DEG, M4, V, V3 } from "ts3dutils"
+import { DEG, M4, V, V3 } from "ts3dutils"
+
 import {
   B2T,
   BezierCurve,
   CylinderSurface,
-  Edge,
   edgeForCurveAndTs,
   EllipseCurve,
   EllipsoidSurface,
@@ -319,7 +319,6 @@ describe("ProjectedCurveSurface", () => {
   )
   test("ccw for round face", () => {
     testLoopCCW(
-      assert,
       a.faces.find((f) => f.surface instanceof ProjectedCurveSurface).surface,
       loop,
     )

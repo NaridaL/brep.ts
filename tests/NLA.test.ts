@@ -116,7 +116,7 @@ describe("NLA", () => {
                 .plus(offsetCentroid.times(offsetArea))
                 .div(totalArea),
             )
-            console.log(test.t.s, 1 - cos(test.t), 1 - cos(test.s))
+            console.log(test.t, test.s, 1 - cos(test.t), 1 - cos(test.s))
             console.log(
               test.c.times(test.result).str,
               offsetCentroid.str,

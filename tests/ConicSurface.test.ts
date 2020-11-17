@@ -336,7 +336,6 @@ describe("ConicSurface", () => {
       .scale(1, 0.8, -2)
       .rotateY(10 * DEG)
       .translate(1, 0, -1)
-    console.log(c.sce)
     const m = M4.perspective(45, 1, 2, 6)
     testSurfaceTransform(c, m)
   })

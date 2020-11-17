@@ -3,7 +3,12 @@ import "./manager"
 import { DEG, M4, V3 } from "ts3dutils"
 
 import { Quaternion } from "../src"
-import { PI } from "../src/math"
+
+const { PI } = Math
+
+function expectQLike(received: Quaternion, expected: Quaternion) {
+  expect(received.toArray()).toBeLike(expected.toArray())
+}
 
 describe("Quaternion", () => {
   test("transformPoint", () => {
@@ -14,7 +19,6 @@ describe("Quaternion", () => {
     const v = new V3(3, 4, 5).unit()
     const q = Quaternion.axis(v, 2)
     const m = M4.rotate(2, v)
-    console.log(m.str)
     expect(q.toM4()).toBeLike(m)
   })
   test("times", () => {
@@ -30,17 +34,17 @@ describe("Quaternion", () => {
     const b = Quaternion.of(5, 6, 7, 8)
     const actual = a.plus(b)
     const expected = Quaternion.of(6, 8, 10, 12)
-    expect(actual).toBeLike(expected)
+    expectQLike(actual, expected)
   })
   test("inversed", () => {
     const q = Quaternion.of(1, 2, 3, 4)
     const actual = q.times(q.inverse())
     const expected = Quaternion.O
-    expect(actual).toBeLike(expected)
+    expectQLike(actual, expected)
   })
   test("slerp", () => {
     const actual = Quaternion.O.slerp(Quaternion.axis(V3.Z, 100 * DEG), 0.3)
     const expected = Quaternion.axis(V3.Z, 30 * DEG)
-    expect(actual).toBeLike(expected)
+    expectQLike(actual, expected)
   })
 })

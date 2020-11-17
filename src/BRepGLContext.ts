@@ -53,7 +53,9 @@ export const COLORS = {
   PP_FILL: chroma.color("#F3B6CF"),
   PP_STROKE: chroma.color("#EB81B4"),
 }
+
 export interface BREPGLContext extends TSGLContext {}
+
 export class BREPGLContext {
   shaders: SHADERS_TYPE
 
@@ -161,9 +163,14 @@ export class BREPGLContext {
   ) {
     this.pushMatrix()
     this.multMatrix(
-      M4.forSys(customPlane.right, customPlane.up, customPlane.normal1),
+      M4.forSys(
+        customPlane.right,
+        customPlane.up,
+        customPlane.normal1,
+        customPlane.anchor,
+      ),
     )
-    this.translate(customPlane.uMin, customPlane.vMin, customPlane.w)
+    this.translate(customPlane.uMin, customPlane.vMin, 0)
     this.scale(
       customPlane.uMax - customPlane.uMin,
       customPlane.vMax - customPlane.vMin,
@@ -180,7 +187,7 @@ export class BREPGLContext {
 
   drawBox(m4: M4, color?: GL_COLOR) {
     this.pushMatrix()
-    this.multMatrix(m4)
+    this.multMatrix(m4.m[15] >= 0 ? m4 : m4.mulScalar(-1))
     if (color) {
       this.shaders.singleColor
         .uniforms({ color: color })
@@ -500,6 +507,7 @@ function makeDottedLinePlane(count: int = 128) {
 }
 
 export type Eye = { pos: V3; focus: V3; up: V3; zoomFactor: number }
+
 export function initNavigationEvents(
   _gl: BREPGLContext,
   eye: Eye,
@@ -588,6 +596,7 @@ export function initNavigationEvents(
     e.preventDefault()
   })
 }
+
 /**
  * Transforms position on the screen into a line in world coordinates.
  */
@@ -611,6 +620,7 @@ export function getMouseLine(
   const dir = inverseProjectionMatrix.transformPoint(ndc2).minus(s)
   return L3.anchorDirection(s, dir)
 }
+
 export function getPosOnTarget(e: MouseEvent) {
   const target = e.target as HTMLElement
   const targetRect = target.getBoundingClientRect()
@@ -638,6 +648,7 @@ export function setupCamera(
   _gl.matrixMode(_gl.MODELVIEW)
   !suppressEvents && cameraChangeListeners.forEach((l) => l(_eye))
 }
+
 export const cameraChangeListeners: ((eye: Eye) => void)[] = []
 
 export const SHADERS_TYPE_VAR = (false as true) && initShaders(0 as any)

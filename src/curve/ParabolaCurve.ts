@@ -137,7 +137,7 @@ export class ParabolaCurve extends XiEtaCurve {
   roots(): [number[], number[], number[]] {
     const dimRoots = (dim: int) =>
       eq0(this.f2.e(dim)) ? [] : [-this.f1.e(dim) / 2 / this.f2.e(dim)]
-    return arrayFromFunction(3, dimRoots) as [number[], number[], number[]]
+    return arrayFromFunction(3, dimRoots)
   }
 
   isColinearTo(curve: Curve): boolean {

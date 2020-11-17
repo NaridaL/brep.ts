@@ -3,6 +3,7 @@ import {
   assert,
   assertNumbers,
   between,
+  emod,
   isCCW,
   lerp,
   V,
@@ -26,7 +27,7 @@ export abstract class ParametricSurface extends Surface {
   uStep!: number
   vStep!: number
 
-  constructor(
+  protected constructor(
     readonly uMin: number,
     readonly uMax: number,
     readonly vMin: number,
@@ -37,7 +38,7 @@ export abstract class ParametricSurface extends Surface {
     assert(uMin < uMax)
     assert(vMin < vMax)
     assert(
-      ((x) => x[x.length - 4])(this.getConstructorParameters()) == this.uMin,
+      emod(this.getConstructorParameters(), -4) == this.uMin,
       this.getConstructorParameters(),
       this.uMin,
     )
@@ -66,7 +67,7 @@ export abstract class ParametricSurface extends Surface {
       vStep,
       curveStepSize,
       (u, v) => is.containsPoint(pf(u, v)),
-    ).map(({ points, tangents }, i) =>
+    ).map(({ points, tangents }, _i) =>
       PICurve.forParametricPointsTangents(
         ps,
         is,
@@ -140,6 +141,12 @@ export abstract class ParametricSurface extends Surface {
     return between(u, this.uMin, this.uMax) && between(v, this.vMin, this.vMax)
   }
 
+  /**
+   * @param pWC The point to search the foot for, in world coordinates.
+   * @param startU
+   * @param startV
+   * @return UV parametric coordinates of the "foot" of pWC.
+   */
   abstract pointFoot(pWC: V3, startU?: number, startV?: number): V3
 
   toMesh(uStep = this.uStep, vStep = this.vStep) {

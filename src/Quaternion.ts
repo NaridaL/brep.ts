@@ -9,7 +9,9 @@ export class Quaternion {
     public readonly y: number,
     public readonly z: number,
   ) {}
+
   static O = new Quaternion(1, 0, 0, 0)
+
   static axis(axis: V3, rotation: raddd) {
     assertf(() => axis.hasLength(1))
     return new Quaternion(
@@ -19,9 +21,11 @@ export class Quaternion {
       sin(rotation / 2) * axis.z,
     )
   }
+
   static of(s: number, x: number, y: number, z: number) {
     return new Quaternion(s, x, y, z)
   }
+
   public plus(q: Quaternion) {
     return new Quaternion(
       this.s + q.s,
@@ -30,6 +34,7 @@ export class Quaternion {
       this.z + q.z,
     )
   }
+
   public times(q: Quaternion | number) {
     return "number" == typeof q
       ? new Quaternion(q * this.s, q * this.x, q * this.y, q * this.z)
@@ -40,33 +45,40 @@ export class Quaternion {
           this.x * q.y - this.y * q.x + this.s * q.z + q.s * this.z,
         )
   }
+
   public conjugated() {
     return new Quaternion(this.s, -this.x, -this.y, -this.z)
   }
+
   public length() {
     return Math.hypot(this.s, this.x, this.y, this.z)
   }
+
   public norm() {
     return this.s ** 2 + this.x ** 2 + (this.y ** 2 + this.z ** 2)
   }
+
   public unit() {
     const l = this.length()
     return new Quaternion(this.s / l, this.x / l, this.y / l, this.z / l)
   }
+
   public inverse() {
     return this.conjugated().times(1 / this.norm())
   }
+
   public toM4() {
     assertf(() => eq(1, this.length()))
     const { s, x, y, z } = this
     // prettier-ignore
     return new M4([
-			1 - 2 * (y * y + z * z),     2 * (x * y - z * s),     2 * (x * z + y * s), 0,
-			    2 * (x * y + z * s), 1 - 2 * (x * x + z * z),     2 * (y * z - x * s), 0,
-			    2 * (x * z - y * s),     2 * (y * z + x * s), 1 - 2 * (x * x + y * y), 0,
-			                      0,                       0,                       0, 1,
-		])
+      1 - 2 * (y * y + z * z), 2 * (x * y - z * s), 2 * (x * z + y * s), 0,
+      2 * (x * y + z * s), 1 - 2 * (x * x + z * z), 2 * (y * z - x * s), 0,
+      2 * (x * z - y * s), 2 * (y * z + x * s), 1 - 2 * (x * x + y * y), 0,
+      0, 0, 0, 1,
+    ])
   }
+
   static fromRotation(m4: M4) {
     const sqrtTracePlus1 = Math.sqrt(m4.trace() + 1)
     const f = 1 / (2 * sqrtTracePlus1)
@@ -77,12 +89,14 @@ export class Quaternion {
       f * (m4.e(1, 0) - m4.e(0, 1)),
     )
   }
+
   public rotatePoint(p: V3) {
     const v = this.times(Quaternion.of(1, p.x, p.y, p.z)).times(
       this.conjugated(),
     )
     return new V3(v.x, v.y, v.z)
   }
+
   public like(q: Quaternion, precision?: number) {
     return (
       eq(this.s, q.s, precision) &&
@@ -91,6 +105,7 @@ export class Quaternion {
       eq(this.z, q.z, precision)
     )
   }
+
   public equals(q: any) {
     return (
       this == q ||
@@ -101,6 +116,7 @@ export class Quaternion {
         this.z == q.z)
     )
   }
+
   public hashCode() {
     let hashCode = 0
     hashCode = (hashCode * 31 + floatHashCode(this.s)) | 0
@@ -109,6 +125,7 @@ export class Quaternion {
     hashCode = (hashCode * 31 + floatHashCode(this.z)) | 0
     return hashCode
   }
+
   public slerp(b: Quaternion, f: number) {
     assertf(() => eq(1, this.length()))
     assertf(() => eq(1, b.length()))
@@ -139,5 +156,9 @@ export class Quaternion {
     const s1 = sin(theta) / sin(theta0)
     console.log(s0, s1, a.times(s0), b.times(s1))
     return a.times(s0).plus(b.times(s1))
+  }
+
+  toArray(): [number, number, number, number] {
+    return [this.s, this.x, this.y, this.z]
   }
 }

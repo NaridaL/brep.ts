@@ -808,11 +808,14 @@ export class NURBS extends Curve {
     [-12, -12, -12, -8, -8, -4, -4, 0, 0, 4, 4, 8, 8, 12, 12, 12],
   )
 
-  static UnitCircle(sections: int = 2, tMin: number = 0, tMax: number = PI) {
+  static UnitCircle(
+    sections: int = 2,
+    tMin: number = 0,
+    tMax: number = PI,
+  ): NURBS {
     const dt = tMax - tMin
     const tStep = dt / sections
     const w = sin(PI / 2 - tStep / 2)
-    console.log(tStep / 2 / DEG)
     // cos
     const r = 1 / cos(tStep / 2)
     const points = arrayFromFunction(sections * 2 + 1, (i) => {

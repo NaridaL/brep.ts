@@ -24,6 +24,7 @@ import {
   newtonIterateWithDerivative,
   NLA_PRECISION,
   Transformable,
+  Tuple3,
   V,
   V3,
   withMax,
@@ -638,8 +639,8 @@ export abstract class Curve
     const tMinAt = this.at(tMin),
       tMaxAt = this.at(tMax)
     const roots = this.roots()
-    const mins = new Array(3),
-      maxs = new Array(3)
+    const mins = [0, 0, 0]
+    const maxs = [0, 0, 0]
     for (let dim = 0; dim < 3; dim++) {
       const tRoots = roots[dim]
       mins[dim] = Math.min(tMinAt.e(dim), tMaxAt.e(dim))
@@ -659,7 +660,7 @@ export abstract class Curve
    * local extrema. This is mainly used for calculating the AABB of the curve.
    * @returns {number[][]}
    */
-  abstract roots(): number[][]
+  abstract roots(): [number[], number[], number[]]
 
   reversed(): Curve {
     throw new Error()

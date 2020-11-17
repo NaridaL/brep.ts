@@ -406,20 +406,19 @@ export abstract class XiEtaCurve extends Curve {
 }
 
 /**
- * Transforms the unit 4d parabola P(t) = t² (0, 1, 0, 0) + t (1, 0, 0, 0) + (0, 0, 0, 1) using m and projects the
- * result into 3d. This is used for the transform4 implementation of conics. The parabola may not cross the vanishing
- * plane of m in the interval [tMin, tMax], as that would result in discontinuities.
+ * Transforms the unit 4d parabola
+ * P(t) = t² (0, 1, 0, 0) + t (1, 0, 0, 0) + (0, 0, 0, 1) using m and projects
+ * the result into 3d. This is used for the transform4 implementation of conics.
+ * The parabola may not cross the vanishing plane of m in the interval
+ * [tMin, tMax], as that would result in discontinuities.
  */
 export function parabola4Projection(
   m: M4,
   tMin: number,
   tMax: number,
 ): L3 | HyperbolaCurve | ParabolaCurve | EllipseCurve {
-  return HyperbolaCurve.XY.rotateZ(45 * DEG)
-  console.log(m.str)
-  console.log()
-  const w2 = m.m[13]
   const w1 = m.m[12]
+  const w2 = m.m[13]
   const wc = m.m[15]
   // if the 4d parabola crosses the vanishing plane, it will lead to multiple/infinite hyperbolas, both of which we
   // want to avoid. Hence, we must check that the entire interval [tMin, tMax] is on one side of the vanishing plane.
@@ -444,9 +443,9 @@ export function parabola4Projection(
     // prettier-ignore
     const mm = new M4(
       -1, 0, 0, 0,
-      0, 0, 0, 1,
-      0, 0, 1, 0,
-      0, 1, 0, 0,
+       0, 0, 0, 1,
+       0, 0, 1, 0,
+       0, 1, 0, 0,
     )
     if (!eq0(w2)) {
       return parabola4Projection(m.times(mm), -1 / tMin, -1 / tMax)
@@ -473,8 +472,8 @@ export function parabola4Projection(
     const wc = m.m[15]
     // we want to split m into X * P, such that X is a transformation with no projective component (first three
     // values of the bottom row = 0), which can be handled by the usual .transform() method, and P which has only a
-    // projective component (only the row differs from the identity matrix). This simplifies the following
-    // calculation. X * P = x => X * P * P^-1 = m * P^-1 => X = m * P^-1
+    // projective component (only the last row differs from the identity matrix). This simplifies the following
+    // calculation. X * P = m => X * P * P^-1 = m * P^-1 => X = m * P^-1
     // prettier-ignore
     const Pinv = new M4(
       1, 0, 0, 0,
