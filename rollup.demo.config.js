@@ -1,7 +1,4 @@
 import viewerConfig from "./rollup.viewer.config"
-import uglify from "rollup-plugin-uglify"
-import Visualizer from "rollup-plugin-visualizer"
-import { minify } from "uglify-es"
 import merge from "deepmerge"
 
 const config = merge(viewerConfig, {

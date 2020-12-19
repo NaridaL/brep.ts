@@ -1,5 +1,3 @@
-
-(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
 var viewer = (function (exports) {
     'use strict';
 
@@ -3703,8 +3701,8 @@ var viewer = (function (exports) {
         foo() {
             return this.transform(M4.FOO);
         }
-        bar() {
-            return this.transform(M4.BAR);
+        fooInv() {
+            return this.transform(M4.FOO_INV);
         }
         visit(visitor, ...args) {
             let proto = Object.getPrototypeOf(this);
@@ -5160,6 +5158,9 @@ var viewer = (function (exports) {
          * perspectiveRad
          * @param fovDegrees in degrees
          * @param aspect aspect ratio = width/height of viewport
+         * @param near near plane
+         * @param far far plane
+         * @param result A new M4 as described.
          */
         static perspective(fovDegrees, aspect, near, far, result = new M4()) {
             return M4.perspectiveRad(fovDegrees * DEG, aspect, near, far, result);
@@ -5943,12 +5944,10 @@ var viewer = (function (exports) {
          *      det(A^-1) = 1 / det(A)
          */
         determinant() {
-            /*
-                 | a b c d |
-                 | e f g h |
-                 | i j k l |
-                 | m n o p |
-                 */
+            // | a b c d |
+            // | e f g h |
+            // | i j k l |
+            // | m n o p |
             const $ = this.m, a = $[0], b = $[1], c = $[2], d = $[3], e = $[4], f = $[5], g = $[6], h = $[7], i = $[8], j = $[9], k = $[10], l = $[11], m = $[12], n = $[13], o = $[14], p = $[15], klop = k * p - l * o, jlnp = j * p - l * n, jkno = j * o - k * n, ilmp = i * p - l * m, ikmo = i * o - k * m, ijmn = i * n - j * m;
             return (a * (f * klop - g * jlnp + h * jkno) -
                 b * (e * klop - g * ilmp + h * ikmo) +
@@ -6045,10 +6044,10 @@ var viewer = (function (exports) {
         /**
          * Wether this matrix is a translation matrix, i.e. of the form
          * ```
-         * 	1, 0, 0, x,
-         * 	0, 1, 0, y,
-         * 	0, 0, 1, z,
-         * 	0, 0, 0, 1
+         *  1, 0, 0, x,
+         *  0, 1, 0, y,
+         *  0, 0, 1, z,
+         *  0, 0, 0, 1
          * ```
          */
         isTranslation() {
@@ -6065,10 +6064,10 @@ var viewer = (function (exports) {
         /**
          * Wether this matrix is a translation matrix, i.e. of the form
          * ```
-         * 	s, 0, 0, 0,
-         * 	0, t, 0, 0,
-         * 	0, 0, v, 0,
-         * 	0, 0, 0, 1
+         *  s, 0, 0, 0,
+         *  0, t, 0, 0,
+         *  0, 0, v, 0,
+         *  0, 0, 0, 1
          * ```
          */
         isScaling() {
@@ -6120,12 +6119,11 @@ var viewer = (function (exports) {
             }
             else {
                 const m = this.m;
-                // prettier-ignore
-                return 'new M4(' +
-                    '\n\t' + m[0] + ',\t' + m[1] + ',\t' + m[2] + ',\t' + m[3] + ',' +
-                    '\n\t' + m[4] + ',\t' + m[5] + ',\t' + m[6] + ',\t' + m[7] + ',' +
-                    '\n\t' + m[8] + ',\t' + m[9] + ',\t' + m[10] + ',\t' + m[11] + ',' +
-                    '\n\t' + m[12] + ',\t' + m[13] + ',\t' + m[14] + ',\t' + m[15] + ')';
+                return ("new M4(" +
+                    ("\n\t" + m[0] + ",\t" + m[1] + ",\t" + m[2] + ",\t" + m[3] + ",") +
+                    ("\n\t" + m[4] + ",\t" + m[5] + ",\t" + m[6] + ",\t" + m[7] + ",") +
+                    ("\n\t" + m[8] + ",\t" + m[9] + ",\t" + m[10] + ",\t" + m[11] + ",") +
+                    ("\n\t" + m[12] + ",\t" + m[13] + ",\t" + m[14] + ",\t" + m[15] + ")"));
             }
         }
         xyAreaFactor() {
@@ -6134,11 +6132,11 @@ var viewer = (function (exports) {
     }
     /**
      * A simple (consists of integers), regular, non-orthogonal matrix, useful mainly for testing.
-     * M4.BAR = M4.FOO.inverse()
+     * M4.FOO_INV = M4.FOO.inverse()
      */
     // prettier-ignore
     M4.FOO = new M4(0, 1, 1, 2, 0.3, 0.4, 0.8, 13, 2.1, 3.4, 5.5, 8.9, 0, 0, 0, 1);
-    M4.BAR = M4.FOO.inversed();
+    M4.FOO_INV = M4.FOO.inversed();
     M4.IDENTITY = M4.identity();
     // prettier-ignore
     M4.O = new M4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -6153,7 +6151,7 @@ var viewer = (function (exports) {
         .set(M4.IDENTITY3, "M4.IDENTITY3")
         .set(M4.FOO, "M4.FOO")
         .set(M4.O, "M4.O")
-        .set(M4.BAR, "M4.BAR")
+        .set(M4.FOO_INV, "M4.FOO_INV")
         .set(M4.IDENTITY, "M4.IDENTITY")
         .set(M4.ZXY, "M4.ZXY")
         .set(M4.YZX, "M4.YZX");
@@ -6414,7 +6412,7 @@ var viewer = (function (exports) {
             return aabb;
         }
         corners() {
-            const min = this.min, max = this.max;
+            const { min, max } = this;
             return [
                 min,
                 new V3(min.x, min.y, max.z),
@@ -6893,31 +6891,6 @@ var viewer = (function (exports) {
         zeroAngle: zeroAngle
     });
 
-    /*! *****************************************************************************
-    Copyright (c) Microsoft Corporation.
-
-    Permission to use, copy, modify, and/or distribute this software for any
-    purpose with or without fee is hereby granted.
-
-    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-    PERFORMANCE OF THIS SOFTWARE.
-    ***************************************************************************** */
-
-    function __awaiter$1(thisArg, _arguments, P, generator) {
-        function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-        return new (P || (P = Promise))(function (resolve, reject) {
-            function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-            function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-            function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-            step((generator = generator.apply(thisArg, _arguments || [])).next());
-        });
-    }
-
     /// <reference types="webgl-strict-types" />
     const WGL = WebGLRenderingContext;
     class Buffer$1 {
@@ -7177,7 +7150,7 @@ var viewer = (function (exports) {
             return this;
         }
         static fromBinarySTL(stl) {
-            return __awaiter$1(this, void 0, void 0, function* () {
+            return __awaiter(this, void 0, void 0, function* () {
                 return new Promise((resolve, reject) => {
                     const mesh = new Mesh().addVertexBuffer('normals', 'ts_Normal');
                     const fileReader = new FileReader();
@@ -9622,7 +9595,7 @@ var viewer = (function (exports) {
             this.viewport(0, 0, this.canvas.width, this.canvas.height);
         }
         setupTextRendering(pngURL, jsonURL) {
-            return __awaiter$1(this, void 0, void 0, function* () {
+            return __awaiter(this, void 0, void 0, function* () {
                 this.textRenderShader = Shader.create(posCoordVS, sdfRenderFS);
                 [this.textAtlas, this.textMetrics] = yield Promise.all([
                     Texture.fromURL(pngURL, {
@@ -34703,7 +34676,7 @@ var viewer = (function (exports) {
     }
 
     var earcut_1 = earcut;
-    var default_1 = earcut;
+    var _default = earcut;
 
     function earcut(data, holeIndices, dim) {
 
@@ -35379,13 +35352,13 @@ var viewer = (function (exports) {
         }
         return result;
     };
-    earcut_1.default = default_1;
+    earcut_1.default = _default;
 
-    function createCommonjsModule(fn, module) {
-    	return module = { exports: {} }, fn(module, module.exports), module.exports;
+    function createCommonjsModule(fn) {
+      var module = { exports: {} };
+    	return fn(module, module.exports), module.exports;
     }
 
-    var nerdamer_core = createCommonjsModule(function (module) {
     /*
      * Author : Martin Donk
      * Website : http://www.nerdamer.com
@@ -35393,6 +35366,7 @@ var viewer = (function (exports) {
      * Source : https://github.com/jiggzson/nerdamer
      */
 
+    var nerdamer_core = createCommonjsModule(function (module) {
     /* global trig, trigh, Infinity, define, arguments2Array, NaN */
     //externals ====================================================================
     /* BigInterger.js v1.6.40 https://github.com/peterolson/BigInteger.js/blob/master/LICENSE */
@@ -35402,8 +35376,8 @@ var viewer = (function (exports) {
 
     var nerdamer = (function (imports) {
 
-    //version ====================================================================== 
-        var version = '1.1.5';
+    //version ======================================================================
+        var version = '1.1.6';
 
     //inits ========================================================================
         var _ = new Parser(); //nerdamer's parser
@@ -35434,23 +35408,23 @@ var viewer = (function (exports) {
             1759, 1777, 1783, 1787, 1789, 1801, 1811, 1823, 1831, 1847, 1861, 1867, 1871, 1873, 1877, 1879, 1889, 1901, 1907, 1913, 1931,
             1933, 1949, 1951, 1973, 1979, 1987, 1993, 1997, 1999, 2003, 2011, 2017, 2027, 2029, 2039, 2053, 2063, 2069, 2081, 2083];
 
-    //Settings ===================================================================== 
+    //Settings =====================================================================
         var CUSTOM_OPERATORS = {};
 
         var Settings = {
     		//Enables/Disables call peekers. False means callPeekers are disabled and true means callPeekers are enabled.
     		callPeekers: false,
-    		
-    		
+
+
             //the max number up to which to cache primes. Making this too high causes performance issues
             init_primes: 1000,
 
             exclude: [],
-            //If you don't care about division by zero for example then this can be set to true. 
+            //If you don't care about division by zero for example then this can be set to true.
             //Has some nasty side effects so choose carefully.
             suppress_errors: false,
             //the global used to invoke the libary to parse to a number. Normally cos(9) for example returns
-            //cos(9) for convenience but parse to number will always try to return a number if set to true. 
+            //cos(9) for convenience but parse to number will always try to return a number if set to true.
             PARSE2NUMBER: false,
             //this flag forces the a clone to be returned when add, subtract, etc... is called
             SAFE: false,
@@ -35493,13 +35467,13 @@ var viewer = (function (exports) {
                     '39193200305992181741359662904357290033429526059563073813232862794349076323382988075319525101901',
             PI: Math.PI,
             E: Math.E,
-            LOG: 'log', 
+            LOG: 'log',
             LOG10: 'log10',
             LOG10_LATEX: 'log_{10}',
             MAX_EXP: 200000,
             //The number of scientific place to round to
             SCIENTIFIC_MAX_DECIMAL_PLACES: 14,
-            //True if ints should not be converted to 
+            //True if ints should not be converted to
             SCIENTIFIC_IGNORE_ZERO_EXPONENTS: true
         };
 
@@ -35514,13 +35488,13 @@ var viewer = (function (exports) {
                 }
             }
         })();
-        
+
         //Add the groups. These have been reorganized as of v0.5.1 to make CP the highest group
-        //The groups that help with organizing during parsing. Note that for FN is still a function even 
+        //The groups that help with organizing during parsing. Note that for FN is still a function even
         //when it's raised to a symbol, which typically results in an EX
         var N = Groups.N = 1, // A number
-                P = Groups.P = 2, // A number with a rational power e.g. 2^(3/5). 
-                S = Groups.S = 3, // A single variable e.g. x. 
+                P = Groups.P = 2, // A number with a rational power e.g. 2^(3/5).
+                S = Groups.S = 3, // A single variable e.g. x.
                 EX = Groups.EX = 4, // An exponential
                 FN = Groups.FN = 5, // A function
                 PL = Groups.PL = 6, // A symbol/expression having same name with different powers e.g. 1/x + x^2
@@ -35553,7 +35527,7 @@ var viewer = (function (exports) {
         /**
          * Use this when errors are suppressible
          * @param {String} msg
-         * @param {object} ErrorObj 
+         * @param {object} ErrorObj
          */
         var err = function (msg, ErrorObj) {
             if (!Settings.suppress_errors) {
@@ -35564,7 +35538,7 @@ var viewer = (function (exports) {
             }
         };
 
-    //Utils ======================================================================== 
+    //Utils ========================================================================
         var customError = function (name) {
             var E = function (message) {
                 this.name = name;
@@ -35611,7 +35585,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * Enforces rule: "must start with a letter or underscore and 
+         * Enforces rule: "must start with a letter or underscore and
          * can have any number of underscores, letters, and numbers thereafter."
          * @param name The name of the symbol being checked
          * @param {String} typ - The type of symbols that's being validated
@@ -35647,11 +35621,11 @@ var viewer = (function (exports) {
                     l = l - coeff_array[0].length;
                     if (l < 0) {
                       num = coeff_array[0].slice(0, l) + '.' + coeff_array[0].slice(l) + (coeff_array.length === 2 ? coeff_array[1] : '');
-                    } 
+                    }
                     else {
                       num = zero + '.' + new Array(l + 1).join(zero) + coeff_array.join('');
                     }
-                } 
+                }
                 else {
                     var dec = coeff_array[1];
                     if (dec)
@@ -35678,18 +35652,18 @@ var viewer = (function (exports) {
             }
             return true;
         };
-        
+
         /**
          * Checks if n is a number
-         * @param {any} n 
+         * @param {any} n
          */
         var isNumber = function(n) {
             return /^\d+\.?\d*$/.test(n);
         };
-        
+
         /**
          * Checks to see if an array contains only numeric values
-         * @param {Array} arr 
+         * @param {Array} arr
          */
         var allNumeric = function(arr) {
             for(var i=0; i<arr.length; i++)
@@ -35728,8 +35702,8 @@ var viewer = (function (exports) {
          * This method traverses the symbol structure and grabs all the variables in a symbol. The variable
          * names are then returned in alphabetical order.
          * @param {Symbol} obj
-         * @param {Boolean} poly 
-         * @param {Object} vars - An object containing the variables. Do not pass this in as it generated 
+         * @param {Boolean} poly
+         * @param {Object} vars - An object containing the variables. Do not pass this in as it generated
          * automatically. In the future this will be a Collector object.
          * @returns {String[]} - An array containing variable names
          */
@@ -35775,7 +35749,7 @@ var viewer = (function (exports) {
 
             return vars.c.sort();
         };
-        
+
         /**
          * Returns the sum of an array
          * @param {Array} arr
@@ -35790,8 +35764,8 @@ var viewer = (function (exports) {
         };
 
         /**
-         * Separates out the variables into terms of variabls. 
-         * e.g. x+y+x*y+sqrt(2)+pi returns 
+         * Separates out the variables into terms of variabls.
+         * e.g. x+y+x*y+sqrt(2)+pi returns
          * {x: x, y: y, x y: x*y, constants: sqrt(2)+pi
          * @param {type} symbol
          * @param {type} o
@@ -35807,8 +35781,9 @@ var viewer = (function (exports) {
                 o[key] = _.add(o[key], sym.clone());
             };
             symbol.each(function (x) {
-                if (x.isConstant('all'))
+                if (x.isConstant('all')) {
                     insert('constants', x);
+                }
                 else if (x.group === S) {
                     insert(x.value, x);
                 }
@@ -35828,8 +35803,8 @@ var viewer = (function (exports) {
 
         /**
          * Fills holes in an array with zero symbol or generates one with n zeroes
-         * @param {Array} arr 
-         * @param {Number} n 
+         * @param {Array} arr
+         * @param {Number} n
          */
         var fillHoles = function (arr, n) {
             n = n || arr.length;
@@ -35842,7 +35817,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * Checks to see if the object provided is a Vector
          * @param {Object} obj
          */
@@ -35857,11 +35832,11 @@ var viewer = (function (exports) {
         var isMatrix = function (obj) {
             return (obj instanceof Matrix);
         };
-        
+
         var isSet = function(obj) {
             return (obj instanceof Set);
         };
-        
+
         /**
          * Checks to see if a symbol is in group N
          * @param {Symbol} symbol
@@ -35913,7 +35888,7 @@ var viewer = (function (exports) {
                 return o;
             return String(o);
         };
-        
+
         /**
          * @param {String} str
          * @returns {String} - returns a formatted string surrounded by brackets
@@ -35968,7 +35943,7 @@ var viewer = (function (exports) {
 
             return new_str;
         };
-        
+
         /**
          * Generates an array with values within a range. Multiplies by a step if provided
          * @param {Number} start
@@ -35978,11 +35953,11 @@ var viewer = (function (exports) {
         var range = function(start, end, step) {
             var arr = [];
             step = step || 1;
-            for(var i=start; i<=end; i++) 
+            for(var i=start; i<=end; i++)
                 arr.push(i*step);
             return arr;
         };
-        
+
         /**
          * Returns an array of all the keys in an array
          * @param {Object} obj
@@ -35991,7 +35966,7 @@ var viewer = (function (exports) {
         var keys = Object.keys;
 
         /**
-         * Returns the first encountered item in an object. Items do not have a fixed order in objects 
+         * Returns the first encountered item in an object. Items do not have a fixed order in objects
          * so only use if you need any first random or if there's only one item in the object
          * @param {Object} obj
          * @param {String} key Return this key as first object
@@ -36054,7 +36029,7 @@ var viewer = (function (exports) {
         /**
          * Returns the minimum number in an array
          * @param {Array} arr
-         * @returns {Number} 
+         * @returns {Number}
          */
         var arrayMax = function (arr) {
             return Math.max.apply(undefined, arr);
@@ -36063,7 +36038,7 @@ var viewer = (function (exports) {
         /**
          * Returns the maximum number in an array
          * @param {Array} arr
-         * @returns {Number} 
+         * @returns {Number}
          */
         var arrayMin = function (arr) {
             return Math.min.apply(undefined, arr);
@@ -36103,7 +36078,7 @@ var viewer = (function (exports) {
 
             return retval;
         };
-        
+
          /**
          * Gets nth roots of a number
          * @param {Symbol} symbol
@@ -36123,10 +36098,10 @@ var viewer = (function (exports) {
 
             if(a && b && (a.group === N) && b.group === N && a.multiplier.isNegative()) {
                 var _roots = [];
-                
+
                 var parts = Symbol.toPolarFormArray(evaluate(symbol));
                 var r = parts[0];
-                
+
                 //var r = _.parse(a).abs().toString();
 
                 //https://en.wikipedia.org/wiki/De_Moivre%27s_formula
@@ -36153,7 +36128,7 @@ var viewer = (function (exports) {
                     _roots = _roots.map(function(x) {
                         return _.multiply(x, Symbol.imaginary());
                     });
-                    
+
             }
             else {
                 _roots = [_.parse(symbol)];
@@ -36228,16 +36203,16 @@ var viewer = (function (exports) {
                     return x.toString();
                 return Number(x);
             }
-                
+
             s = typeof s === 'undefined' ? 14 : s;
             return Math.round(x * Math.pow(10, s)) / Math.pow(10, s);
         };
-        
+
         /**
          * Is used for u-substitution. Gets a suitable u for substitution. If for
          * instance a is used in the symbol then it keeps going down the line until
          * one is found that's not in use. If all letters are taken then it
-         * starts appending numbers. 
+         * starts appending numbers.
          * IMPORTANT! It assumes that the substitution will be undone
          * beore the user gets to interact with the object again.
          * @param {Symbol} symbol
@@ -36275,7 +36250,7 @@ var viewer = (function (exports) {
         /**
          * Loops through each item in object and calls function with item as param
          * @param {Object|Array} obj
-         * @param {Function} fn 
+         * @param {Function} fn
          */
         var each = function (obj, fn) {
             if (isArray(obj)) {
@@ -36321,7 +36296,7 @@ var viewer = (function (exports) {
             }
             return a;
         };
-        
+
         /**
          * Removes duplicates from an array. Returns a new array
          * @param {Array} arr
@@ -36359,7 +36334,7 @@ var viewer = (function (exports) {
 
             return seen;
         };
-        
+
         /**
          * Reserves the names in an object so they cannot be used as function names
          * @param {Object} obj
@@ -36380,7 +36355,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * Removes an item from either an array or an object. If the object is an array, the index must be 
+         * Removes an item from either an array or an object. If the object is an array, the index must be
          * specified after the array. If it's an object then the key must be specified
          * @param {Object|Array} obj
          * @param {Integer} indexOrKey
@@ -36403,7 +36378,7 @@ var viewer = (function (exports) {
          * answer for a period you would set PARSE2NUMBER to true in the block.
          * @example block('PARSE2NUMBER', function(){//symbol being parsed to number}, true);
          * @param {String} setting - The setting being accessed
-         * @param {Function} f 
+         * @param {Function} f
          * @param {boolean} opt - The value of the setting in the block
          * @param {String} obj - The obj of interest. Usually a Symbol but could be any object
          */
@@ -36416,10 +36391,10 @@ var viewer = (function (exports) {
         };
 
         /**
-         * provide a mechanism for accessing functions directly. Not yet complete!!! 
-         * Some functions will return undefined. This can maybe just remove the 
-         * function object at some point when all functions are eventually 
-         * housed in the global function object. Returns ALL parser available 
+         * provide a mechanism for accessing functions directly. Not yet complete!!!
+         * Some functions will return undefined. This can maybe just remove the
+         * function object at some point when all functions are eventually
+         * housed in the global function object. Returns ALL parser available
          * functions. Parser.functions may not contain all functions
          */
         var importFunctions = function () {
@@ -36438,13 +36413,14 @@ var viewer = (function (exports) {
         };
 
         /**
-         * Returns the coefficients of a symbol
+         * Returns the coefficients of a symbol given a variable. Given ax^2+b^x+c, it divides
+         * each nth term by x^n.
          * @param {Symbol} symbol
          * @param {Symbol} wrt
          */
-        var getCoeffs = function (symbol, wrt) {
+        var getCoeffs = function (symbol, wrt, info) {
             var coeffs = [];
-            //we loop through the symbols and stick them in their respective 
+            //we loop through the symbols and stick them in their respective
             //containers e.g. y*x^2 goes to index 2
             symbol.each(function (term) {
                 if (term.contains(wrt)) {
@@ -36472,7 +36448,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * As the name states. It forces evaluation of the expression 
+         * As the name states. It forces evaluation of the expression
          * @param {Symbol} symbol
          * @param {Symbol} o
          */
@@ -36484,7 +36460,7 @@ var viewer = (function (exports) {
 
         /**
          * Converts an array to a vector. Consider moving this to Vector.fromArray
-         * @param {String[]|String|Symbol|Number|Number[]} x 
+         * @param {String[]|String|Symbol|Number|Number[]} x
          */
         var convertToVector = function (x) {
             if (isArray(x)) {
@@ -36501,7 +36477,7 @@ var viewer = (function (exports) {
 
         /**
          * Generates prime numbers up to a specified number
-         * @param {Number} upto 
+         * @param {Number} upto
          */
         var generatePrimes = function (upto) {
             //get the last prime in the array
@@ -36525,7 +36501,7 @@ var viewer = (function (exports) {
         /*
          * Checks if all arguments aren't just all number but if they
          * are constants as well e.g. pi, e.
-         * @param {object} args 
+         * @param {object} args
          */
         var allConstants = function (args) {
             for (var i = 0; i < args.length; i++) {
@@ -36541,32 +36517,34 @@ var viewer = (function (exports) {
     //Exceptions ===================================================================
         //Is thrown for division by zero
         var DivisionByZero = customError('DivisionByZero');
-        //Is throw if an error occured during parsing
+        // Is throw if an error occured during parsing
         var ParseError = customError('ParseError');
-        //Is thrown if the expression results in undefined
+        // Is thrown if the expression results in undefined
         var UndefinedError = customError('UndefinedError');
-        //Is throw if a function exceeds x amount of iterations
+        // Is throw if a function exceeds x amount of iterations
         var MaximumIterationsReached = customError('MaximumIterationsReached');
-        //Is thrown if the parser receives an incorrect type
+        // Is thrown if the parser receives an incorrect type
         var NerdamerTypeError = customError('NerdamerTypeError');
-        //Is thrown if bracket parity is not correct
+        // Is thrown if bracket parity is not correct
         var ParityError = customError('ParityError');
-        //Is thrown if an unexpectd or incorrect operator is encountered
+        // Is thrown if an unexpectd or incorrect operator is encountered
         var OperatorError = customError('OperatorError');
-        //Is thrown if an index is out of range.
+        // Is thrown if an index is out of range.
         var OutOfRangeError = customError('OutOfRangeError');
-        //Is thrown if dimensions are incorrect. Mostly for matrices
+        // Is thrown if dimensions are incorrect. Mostly for matrices
         var DimensionError = customError('DimensionError');
-        //Is thrown if variable name violates naming rule
+        // Is thrown if variable name violates naming rule
         var InvalidVariableNameError = customError('InvalidVariableNameError');
-        //Is thrown if the limits of the library are exceeded for a function
-        //This can be that the function become unstable passed a value
+        // Is thrown if the limits of the library are exceeded for a function
+        // This can be that the function become unstable passed a value
         var ValueLimitExceededError = customError('ValueLimitExceededError');
-        //Is throw if the value is an incorrect LH or RH value
+        // Is throw if the value is an incorrect LH or RH value
         var NerdamerValueError = customError('NerdamerValueError');
-        //Is throw if the value is an incorrect LH or RH value
+        // Is throw if the value is an incorrect LH or RH value
         var SolveError = customError('SolveError');
-
+        // Is thrown for an infinite loop
+        var InfiniteLoopError = customError('InfiniteLoopError');
+        
         var exceptions = {
             DivisionByZero: DivisionByZero,
             ParseError: ParseError,
@@ -36580,9 +36558,10 @@ var viewer = (function (exports) {
             InvalidVariableNameError: InvalidVariableNameError,
             ValueLimitExceededError: ValueLimitExceededError,
             NerdamerValueError: NerdamerValueError,
-            SolveError: SolveError
+            SolveError: SolveError,
+            InfiniteLoopError: InfiniteLoopError
         };
-    //Big ========================================================================== 
+    //Big ==========================================================================
         var Big = {
             cos: function (x) {
                 return new Symbol(bigDec.cos(x.multiplier.toDecimal()));
@@ -36591,9 +36570,9 @@ var viewer = (function (exports) {
                 return new Symbol(bigDec.sin(x.multiplier.toDecimal()));
             }
         };
-    //Math2 ======================================================================== 
+    //Math2 ========================================================================
         //This object holds additional functions for nerdamer. Think of it as an extension of the Math object.
-        //I really don't like touching objects which aren't mine hence the reason for Math2. The names of the 
+        //I really don't like touching objects which aren't mine hence the reason for Math2. The names of the
         //functions within are pretty self-explanatory.
         //NOTE: DO NOT USE INLINE COMMENTS WITH THE MATH2 OBJECT! THIS BREAK DURING COMPILATION OF BUILDFUNCTION.
         var Math2 = {
@@ -36607,10 +36586,10 @@ var viewer = (function (exports) {
                 return 1 / Math.tan(x);
             },
     		acsc: function(x) { return Math.asin(1/x); },
-            asec: function(x) { 
-                return Math.acos(1/x); 
+            asec: function(x) {
+                return Math.acos(1/x);
             },
-            acot: function(x) { 
+            acot: function(x) {
                 return (Math.PI / 2) - Math.atan(x);
             },
             // https://gist.github.com/jiggzson/df0e9ae8b3b06ff3d8dc2aa062853bd8
@@ -36631,11 +36610,11 @@ var viewer = (function (exports) {
             },
             diff: function(f) {
                 var h = 0.001;
-                
-                var derivative = function(x) { 
-                    return (f(x + h) - f(x - h)) / (2 * h); 
+
+                var derivative = function(x) {
+                    return (f(x + h) - f(x - h)) / (2 * h);
                 };
-                
+
                 return derivative;
             },
             median: function (...values) {
@@ -36791,14 +36770,14 @@ var viewer = (function (exports) {
             //the factorial function but using the big library instead
             factorial: function (x) {
                 var is_int = x % 1 === 0;
-                
+
                 /*factorial for negative integers is complex infinity according to Wolfram Alpha*/
                 if (is_int && x < 0)
                     return NaN;
-                
+
                 if(!is_int)
                     return Math2.gamma(x+1);
-                
+
                 var retval = 1;
                 for (var i = 2; i <= x; i++)
                     retval = retval * i;
@@ -36897,15 +36876,15 @@ var viewer = (function (exports) {
                     factors.symbols[x] = factor;
                 }
                 factors.updateHash();
-                
+
                 if(n === 1) {
                     factors = new Symbol(n);
                 }
-                
+
                 /*put back the sign*/
                 if(sign < 0)
                     factors.negate();
-                
+
                 return factors;
             },
             /**
@@ -36941,6 +36920,8 @@ var viewer = (function (exports) {
              * @returns {object}
              */
             ifactor: function (n) {
+                var input = new bigInt(n);
+                
                 n = String(n);
 
                 if (n === '0')
@@ -36960,12 +36941,12 @@ var viewer = (function (exports) {
                         else
                             factors[e] = (factors[e] || 0) + 1;
                     };
-                    
+
                     try {
                         //set a safety
                         var max = 1e3;
                         var safety = 0;
-                        
+
                         while (!n.abs().equals(1)) {
                             if (n.isPrime()) {
                                 add(n);
@@ -36983,7 +36964,7 @@ var viewer = (function (exports) {
                                             //trigger the safety
                                             if(safety++ > max)
                                                 throw new Error('stopping');
-                                            
+
                                             x = x.pow(2).add(1).mod(n);
                                             factor = bigInt.gcd(x.minus(xf).abs(), n);
                                         }
@@ -37006,9 +36987,9 @@ var viewer = (function (exports) {
                     catch(e) {
                         //reset factors
                         factors = {};
-                        add(n);
+                        add(input);
                     }
-                        
+
                 }
 
                 /*put the sign back*/
@@ -37083,7 +37064,7 @@ var viewer = (function (exports) {
                 var retval = get_value(f, a, 1);
 
                 //get the middle part 4x1+2x2+4x3 ...
-                //but first set a flag to see if it's even or odd. 
+                //but first set a flag to see if it's even or odd.
                 //The first one is odd so we start there
                 var even = false;
                 //get x1
@@ -37223,11 +37204,11 @@ var viewer = (function (exports) {
             Ci: function (x) {
                 var n = 20,
                         /*roughly Euler–Mascheroni*/
-                        g = 0.5772156649015329, 
+                        g = 0.5772156649015329,
                         sum = 0;
                 for (var i = 1; i < n; i++) {
                     /*cache 2n*/
-                    var n2 = 2 * i; 
+                    var n2 = 2 * i;
                     sum += (Math.pow(-1, i) * Math.pow(x, n2)) / (n2 * Math2.factorial(n2));
                 }
                 return Math.log(x) + g + sum;
@@ -37414,7 +37395,7 @@ var viewer = (function (exports) {
         reserveNames(Math2); //reserve the names in Math2
 
 
-    //Polyfills ==================================================================== 
+    //Polyfills ====================================================================
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/
         Math.sign = Math.sign || function (x) {
             x = +x; // convert to a number
@@ -37490,13 +37471,13 @@ var viewer = (function (exports) {
             return Math.ceil(x);
         };
 
-    //Global functions ============================================================= 
+    //Global functions =============================================================
         /**
-         * This method will return a hash or a text representation of a Symbol, Matrix, or Vector. 
+         * This method will return a hash or a text representation of a Symbol, Matrix, or Vector.
          * If all else fails it *assumes* the object has a toString method and will call that.
-         * 
+         *
          * @param {Object} obj
-         * @param {String} option get is as a hash 
+         * @param {String} option get is as a hash
          * @param {int} useGroup
          * @returns {String}
          */
@@ -37506,10 +37487,10 @@ var viewer = (function (exports) {
                 wrapCondition = undefined,
                 opt = asHash ? undefined : option,
                 asDecimal = opt === 'decimal' || opt === 'decimals';
-        
+
             if(asDecimal && typeof decp === 'undefined')
                 decp = 16;
-            
+
             function toString(obj) {
                 switch (option)
                 {
@@ -37596,7 +37577,7 @@ var viewer = (function (exports) {
                         wrapCondition = wrapCondition || function (str) {
                             return str.indexOf('/') !== -1;
                         };
-                        
+
                         return obj.toString();
                 }
             }
@@ -37608,7 +37589,7 @@ var viewer = (function (exports) {
                         sign = '',
                         group = obj.group || useGroup,
                         value = obj.value;
-                
+
                 //if the value is to be used as a hash then the power and multiplier need to be suppressed
                 if (!asHash) {
                     //use asDecimal to get the object back as a decimal
@@ -37622,7 +37603,7 @@ var viewer = (function (exports) {
                         multiplier = om;
                     //use asDecimal to get the object back as a decimal
                     var p = obj.power ? toString(obj.power) : '';
-                    //only add the multiplier 
+                    //only add the multiplier
                     if (p != '1') {
                         //is it a symbol
                         if (isSymbol(p)) {
@@ -37692,7 +37673,7 @@ var viewer = (function (exports) {
                         return text(symbol, opt);
                     }).join(','));
                 }
-                //TODO: Needs to be more efficient. Maybe. 
+                //TODO: Needs to be more efficient. Maybe.
                 if (group === FN && obj.fname in CUSTOM_OPERATORS) {
                     var a = text(obj.args[0]);
                     var b = text(obj.args[1]);
@@ -37717,24 +37698,24 @@ var viewer = (function (exports) {
 
                     value = inBrackets(value);
                 }
-                
+
                 if(decp && (option === 'decimal' || option === 'decimals' && multiplier)) {
                     multiplier = nround(multiplier, decp);
                 }
-                
+
                 //add the sign back
                 var c = sign + multiplier;
-                
+
                 if (multiplier && wrapCondition(multiplier))
                     c = inBrackets(c);
 
                 if (power < 0)
                     power = inBrackets(power);
-                
+
                 //add the multiplication back
                 if (multiplier)
                     c = c + '*';
-                
+
                 if (power)
                     power = Settings.POWER_OPERATOR + power;
 
@@ -37766,7 +37747,9 @@ var viewer = (function (exports) {
             }
         }
         /**
-         * Calculates prime factors for a number
+         * Calculates prime factors for a number. It first checks if the number
+         * is a prime number. If it's not then it will calculate all the primes 
+         * for that number.
          * @param {int} num
          * @returns {Array}
          */
@@ -37781,21 +37764,27 @@ var viewer = (function (exports) {
                 var whole = Math.floor(quotient);
                 var remainder = quotient - whole;
                 if (remainder <= epsilon && i > 1) {
-                    if (PRIMES.indexOf(i) !== -1)
-                        PRIMES[i]=i;
-                    factors.push(i);
+                    // If the prime wasn't found but calculated then save it and
+                    // add it as a factor.
+                    if(isPrime(i)) {
+                        if (PRIMES.indexOf(i) === -1) {
+                            PRIMES.push(i);
+                        }
+                        factors.push(i);
+                    }
+                        
                     l = whole;
                 }
                 i++;
             }
-            
+
             return factors.sort(function (a, b) {
                 return a - b;
             });
         }
-    //Expression ===================================================================   
-        /** 
-         * This is what nerdamer returns. It's sort of a wrapper around the symbol class and 
+    //Expression ===================================================================
+        /**
+         * This is what nerdamer returns. It's sort of a wrapper around the symbol class and
          * provides the user with some useful functions. If you want to provide the user with extra
          * library functions then add them to this class's prototype.
          * @param {Symbol} symbol
@@ -37807,8 +37796,8 @@ var viewer = (function (exports) {
         }
         /**
          * Returns stored expression at index. For first index use 1 not 0.
-         * @param {bool} asType  
-         * @param {Integer} expression_number 
+         * @param {bool} asType
+         * @param {Integer} expression_number
          */
         Expression.getExpression = function (expression_number, asType) {
             if (expression_number === 'last' || !expression_number)
@@ -37828,11 +37817,11 @@ var viewer = (function (exports) {
              * @returns {String}
              */
             text: function (opt, n) {
-                n = n || 19; 
+                n = n || 19;
                 opt = opt || 'decimals';
                 if (this.symbol.text_)
                     return this.symbol.text_(opt);
-                
+
                 return text(this.symbol, opt, undefined, n);
             },
             /**
@@ -37872,15 +37861,15 @@ var viewer = (function (exports) {
                 }
 
                 var subs = arguments[idx] || {};
-                
+
                 var retval = new Expression(block('PARSE2NUMBER', function () {
                     return _.parse(expression, subs);
                 }, true));
-                
+
                 return retval;
             },
             /**
-             * Converts a symbol to a JS function. Pass in an array of variables to use that order instead of 
+             * Converts a symbol to a JS function. Pass in an array of variables to use that order instead of
              * the default alphabetical order
              * @param vars {Array}
              */
@@ -38029,7 +38018,7 @@ var viewer = (function (exports) {
         //Aliases
         Expression.prototype.toTeX = Expression.prototype.latex;
 
-    //Scientific ===================================================================  
+    //Scientific ===================================================================
         function Scientific(num) {
             if (!(this instanceof Scientific))
                 return new Scientific(num);
@@ -38117,7 +38106,7 @@ var viewer = (function (exports) {
             },
             toString: function (n) {
                 var coeff = typeof n === 'undefined' ? this.coeff : Scientific.round(this.coeff, n);
-                
+
                 var c;
                 if(this.exponent === 0 && Settings.SCIENTIFIC_IGNORE_INTS) {
                     c = this.coeff;
@@ -38199,7 +38188,7 @@ var viewer = (function (exports) {
                 //get wholes and decimals
                 var parts = num.split('.');
                 //make zero go away
-                var w = parts[0] || ''; 
+                var w = parts[0] || '';
                 var d = parts[1] || '';
                 //convert zero to blank strings
                 w = Scientific.removeLeadingZeroes(w);
@@ -38215,7 +38204,7 @@ var viewer = (function (exports) {
                 //set the coeff but first remove leading zeroes
                 var coeff = Scientific.removeLeadingZeroes(n);
                 this.coeff = coeff.charAt(0)+'.'+(coeff.substr(1, coeff.length) || '0');
-                
+
                 //the coeff decimal places
                 var dec = this.coeff.split('.')[1] || ''; //if it's undefined or zero it's going to blank
 
@@ -38260,7 +38249,7 @@ var viewer = (function (exports) {
             },
             toString: function(n) {
                 var retval;
-                
+
                 if(Settings.SCIENTIFIC_IGNORE_ZERO_EXPONENTS && this.exponent === 0 && this.decp < n) {
                     if(this.decp === 0)
                         retval = this.wholes;
@@ -38271,7 +38260,7 @@ var viewer = (function (exports) {
                     var coeff = typeof n === 'undefined' ? this.coeff : Scientific.round(this.coeff, Math.min(n, this.decp || 1));
                     retval = this.exponent === 0 ? coeff : coeff+'e'+this.exponent;
                 }
-                
+
                 return (this.sign === -1 ? '-' : '' )+retval;
             }
         };
@@ -38282,7 +38271,7 @@ var viewer = (function (exports) {
         Scientific.leadingZeroes = function(num) {
             var match = num.match(/^(0*).*$/);
             return match ? match[1] : '';
-        }; 
+        };
         Scientific.removeLeadingZeroes = function(num) {
           var match = num.match(/^0*(.*)$/);
           return match ? match[1] : '';
@@ -38294,7 +38283,7 @@ var viewer = (function (exports) {
         };
 
 
-    //Frac =========================================================================    
+    //Frac =========================================================================
         function Frac(n) {
             if (n instanceof Frac)
                 return n;
@@ -38460,7 +38449,7 @@ var viewer = (function (exports) {
                 if (prec || Settings.PRECISION) {
                     return this.decimal(prec);
                 }
-                else 
+                else
                     return this.num / this.den;
             },
             qcompare: function (n) {
@@ -38550,10 +38539,10 @@ var viewer = (function (exports) {
 
     //Symbol =======================================================================
         /**
-         * All symbols e.g. x, y, z, etc or functions are wrapped in this class. All symbols have a multiplier and a group. 
-         * All symbols except for "numbers (group N)" have a power. 
-         * @class Primary data type for the Parser. 
-         * @param {String} obj 
+         * All symbols e.g. x, y, z, etc or functions are wrapped in this class. All symbols have a multiplier and a group.
+         * All symbols except for "numbers (group N)" have a power.
+         * @class Primary data type for the Parser.
+         * @param {String} obj
          * @returns {Symbol}
          */
         function Symbol(obj) {
@@ -38597,8 +38586,8 @@ var viewer = (function (exports) {
         };
         /**
          * Return nerdamer's representation of Infinity
-         * @param {int} negative -1 to return negative infinity 
-         * @returns {Symbol} 
+         * @param {int} negative -1 to return negative infinity
+         * @returns {Symbol}
          */
         Symbol.infinity = function (negative) {
             var v = new Symbol('Infinity');
@@ -38659,10 +38648,81 @@ var viewer = (function (exports) {
             return _.parse('(' + value + ')^(' + power + ')');
         };
         Symbol.prototype = {
+            /**
+             * Gets nth root accounting for rounding errors
+             * @param {Number} n
+             * @return {Number}
+             */
+            getNth: function(n) {
+                // First calculate the root
+                var root = evaluate(_.pow(_.parse(this.multiplier), _.parse(n).invert()));
+                // Round of any errors
+                var rounded = _.parse(nround(root));
+                // Reverse the root
+                var e = evaluate(_.pow(rounded, _.parse(n)));
+                // If the rounded root equals the original number then we're good 
+                if(e.equals(_.parse(this.multiplier))) {
+                    return rounded;
+                }
+                // Otherwise return the unrounded version
+                return root;
+            },
+            /**
+             * Checks if symbol is to the nth power
+             * @returns {Boolean}
+             */
+            isToNth: function(n) {
+                // Start by check in the multiplier for squareness
+                // First get the root but round it because currently we still depend 
+                var root = this.getNth(n);
+                var nthMultiplier = isInt(root);
+                var nthPower;
+                
+                if(this.group === CB) {
+                    // Start by assuming that all will be square.
+                    nthPower = true;
+                    // All it takes is for one of the symbols to not have an even power
+                    // e.g. x^n1*y^n2 requires that both n1 and n2 are even
+                    this.each(function(x) {
+                        var isNth = x.isToNth(n);
+
+                        if(!isNth) {
+                            nthPower = false;
+                        }
+                    });
+                }
+                else {
+                    // Check if the power is divisible by n if it's not a number.
+                    nthPower = this.group === N ? true : isInt(_.divide(_.parse(this.power), _.parse(n)));
+                }
+                            
+                return nthMultiplier && nthPower;
+            },
+            /**
+             * Checks if a symbol is square
+             * @return {Boolean}
+             */
+            isSquare: function() {
+                return this.isToNth(2);
+            },
+            /**
+             * Checks if a symbol is cube
+             * @return {Boolean}
+             */
+            isCube: function() {
+                return this.isToNth(3);
+            },
+            /**
+             * Checks if a symbol is a bare variable
+             * @return {Boolean}
+             */
             isSimple: function () {
                 return this.power.equals(1) && this.multiplier.equals(1);
             },
-            //returns a clone.
+            /**
+             * Simplifies the power of the symbol
+             * @returns {Symbol} a clone of the symbol
+             */
             powSimp: function () {
                 if (this.group === CB) {
                     var powers = [],
@@ -38682,7 +38742,7 @@ var viewer = (function (exports) {
                             m = this.multiplier.clone().abs(),
                             mfactors = Math2.ifactor(m);
                     //if we have a multiplier of 6750 and a min of 2 then the factors are 5^3*5^3*2
-                    //we can then reduce it to 2*3*5*(15)^2 
+                    //we can then reduce it to 2*3*5*(15)^2
                     var out_ = new Frac(1);
                     var in_ = new Frac(1);
 
@@ -38753,7 +38813,7 @@ var viewer = (function (exports) {
                         this.isConstant() && symbol.isConstant() && this.multiplier.lessThan(symbol.multiplier);
             },
             /**
-             * Because nerdamer doesn't group symbols by polynomials but 
+             * Because nerdamer doesn't group symbols by polynomials but
              * rather a custom grouping method, this has to be
              * reinserted in order to make use of most algorithms. This function
              * checks if the symbol meets the criteria of a polynomial.
@@ -38845,8 +38905,8 @@ var viewer = (function (exports) {
                     retval = new Symbol(this.multiplier);
                 }
                 else
-                    //wth? This should technically be the multiplier. 
-                    //Unfortunately this method wasn't very well thought out :`(.   
+                    //wth? This should technically be the multiplier.
+                    //Unfortunately this method wasn't very well thought out :`(.
                     //should be: retval = new Symbol(this.multiplier);
                     //use: ((1+x^2)*sqrt(-1+x^2))^(-1) for correction.
                     //this will break a bunch of unit tests so be ready to for the long haul
@@ -38855,7 +38915,7 @@ var viewer = (function (exports) {
 
                 return retval;
             },
-            //returns symbol in array form with x as base e.g. a*x^2+b*x+c = [c, b, a]. 
+            //returns symbol in array form with x as base e.g. a*x^2+b*x+c = [c, b, a].
             toArray: function (v, arr) {
                 arr = arr || {
                     arr: [],
@@ -38922,7 +38982,7 @@ var viewer = (function (exports) {
                         a_is_unit_multiplier = a.multiplier.equals(1),
                         m = this.multiplier.clone(),
                         retval;
-                /* 
+                /*
                  * In order to make the substitution the bases have to first match take
                  * (x+1)^x -> (x+1)=y || x^2 -> x=y^6
                  * In both cases the first condition is that the bases match so we begin there
@@ -38948,11 +39008,13 @@ var viewer = (function (exports) {
                     this.each(function (x) {
                         var subbed = _.parse(x.sub(a, b)); //parse it again for safety
                         retval = _.multiply(retval, subbed);
-                        
+
                     });
                 }
-                else if (this.isComposite()) {
-                    if (a.isComposite() && this.isComposite() && this.isLinear() && a.isLinear()) {
+                else if (this.isComposite()) {                   
+                    var symbol = this.clone();
+                    
+                    if (a.isComposite() && symbol.isComposite() && symbol.isLinear() && a.isLinear()) {
                         var find = function (stack, needle) {
                             for (var x in stack.symbols) {
                                 var sym = stack.symbols[x];
@@ -38964,14 +39026,14 @@ var viewer = (function (exports) {
                         };
                         //go fish
                         for (var x in a.symbols) {
-                            if (!find(this, a.symbols[x]))
-                                return this.clone();
+                            if (!find(symbol, a.symbols[x]))
+                                return symbol.clone();
                         }
-                        retval = _.add(_.subtract(this.clone(), a), b);
+                        retval = _.add(_.subtract(symbol.clone(), a), b);
                     }
                     else {
                         retval = new Symbol(0);
-                        this.each(function (x) {
+                        symbol.each(function (x) {
                             retval = _.add(retval, x.sub(a, b));
                         });
                     }
@@ -39001,6 +39063,7 @@ var viewer = (function (exports) {
 
                     //transfer the multiplier
                     retval.multiplier = retval.multiplier.multiply(m);
+                    
                     //done
                     return retval;
                 }
@@ -39039,9 +39102,22 @@ var viewer = (function (exports) {
                     }
                 }
                 
-                if (check_all === 'all' && (this.isPi() || this.isE()))
+                if(check_all === 'functions' && this.isComposite()) {
+                    var isConstant = true;
+                    
+                    this.each(function(x) {
+                        if(!x.isConstant(check_all, check_symbols)) {
+                            isConstant = false;
+                        }
+                    }, true);
+                    
+                    return isConstant;
+                }
+
+                if (check_all === 'all' && (this.isPi() || this.isE())) {
                     return true;
-                
+                }
+
                 if (check_all && this.group === FN) {
                     for (var i = 0; i < this.args.length; i++) {
                         if (!this.args[i].isConstant(check_all))
@@ -39049,12 +39125,12 @@ var viewer = (function (exports) {
                     }
                     return true;
                 }
-                
+
                 if(check_all)
                     return isNumericSymbol(this);
                 return this.value === CONST_HASH;
             },
-            //the symbols is imaginary if 
+            //the symbols is imaginary if
             //1. n*i
             //2. a+b*i
             //3. a*i
@@ -39230,10 +39306,10 @@ var viewer = (function (exports) {
                 return this.power < 0;
             },
             /**
-             * Make a duplicate of a symbol by copying a predefined list of items. 
+             * Make a duplicate of a symbol by copying a predefined list of items.
              * The name 'copy' would probably be a more appropriate name.
              * to a new symbol
-             * @param {Symbol} c 
+             * @param {Symbol} c
              * @returns {Symbol}
              */
             clone: function (c) {
@@ -39287,7 +39363,7 @@ var viewer = (function (exports) {
             /**
              * Iterates over all the sub-symbols. If no sub-symbols exist then it's called on itself
              * @param {Function} fn
-             * @@param {Boolean} deep If true it will itterate over the sub-symbols their symbols as well 
+             * @@param {Boolean} deep If true it will itterate over the sub-symbols their symbols as well
              */
             each: function (fn, deep) {
                 if (!this.symbols) {
@@ -39307,7 +39383,7 @@ var viewer = (function (exports) {
                 }
             },
             /**
-             * A numeric value to be returned for Javascript. It will try to 
+             * A numeric value to be returned for Javascript. It will try to
              * return a number as far a possible but in case of a pure symbolic
              * symbol it will just return its text representation
              * @returns {String|Number}
@@ -39331,8 +39407,8 @@ var viewer = (function (exports) {
              * which aren't check by default.
              * @example var s = _.parse('x+y+z'); s.contains('y');
              * //returns true
-             * @param {any} variable 
-             * @param {boolean} all 
+             * @param {any} variable
+             * @param {boolean} all
              * @returns {boolean}
              */
             contains: function (variable, all) {
@@ -39402,8 +39478,8 @@ var viewer = (function (exports) {
                 return this;
             },
             /**
-             * Symbols of group CP or PL may have the multiplier being carried by 
-             * the top level symbol at any given time e.g. 2*(x+y+z). This is 
+             * Symbols of group CP or PL may have the multiplier being carried by
+             * the top level symbol at any given time e.g. 2*(x+y+z). This is
              * convenient in many cases, however in some cases the multiplier needs
              * to be carried individually e.g. 2*x+2*y+2*z.
              * This method distributes the multiplier over the entire symbol
@@ -39446,11 +39522,11 @@ var viewer = (function (exports) {
             },
             /**
              * This method will attempt to up-convert or down-convert one symbol
-             * from one group to another. Not all symbols are convertible from one 
-             * group to another however. In that case the symbol will remain 
+             * from one group to another. Not all symbols are convertible from one
+             * group to another however. In that case the symbol will remain
              * unchanged.
              * @param {int} group
-             * @param {string} imaginary 
+             * @param {string} imaginary
              */
             convert: function (group, imaginary) {
                 if (group > FN) {
@@ -39521,12 +39597,12 @@ var viewer = (function (exports) {
             },
             /**
              * This method is one of the principal methods to make it all possible.
-             * It performs cleanup and prep operations whenever a symbols is 
-             * inserted. If the symbols results in a 1 in a CB (multiplication) 
+             * It performs cleanup and prep operations whenever a symbols is
+             * inserted. If the symbols results in a 1 in a CB (multiplication)
              * group for instance it will remove the redundant symbol. Similarly
              * in a symbol of group PL or CP (symbols glued by multiplication) it
-             * will remove any dangling zeroes from the symbol. It will also 
-             * up-convert or down-convert a symbol if it detects that it's 
+             * will remove any dangling zeroes from the symbol. It will also
+             * up-convert or down-convert a symbol if it detects that it's
              * incorrectly grouped. It should be noted that this method is not
              * called directly but rather by the 'attach' method for addition groups
              * and the 'combine' method for multiplication groups.
@@ -39635,7 +39711,7 @@ var viewer = (function (exports) {
             },
             /**
              * This method should be called after any major "surgery" on a symbol.
-             * It updates the hash of the symbol for example if the fname of a 
+             * It updates the hash of the symbol for example if the fname of a
              * function has changed it will update the hash of the symbol.
              */
             updateHash: function () {
@@ -39656,9 +39732,9 @@ var viewer = (function (exports) {
                 }
             },
             /**
-             * this function defines how every group in stored within a group of 
-             * higher order think of it as the switchboard for the library. It 
-             * defines the hashes for symbols. 
+             * this function defines how every group in stored within a group of
+             * higher order think of it as the switchboard for the library. It
+             * defines the hashes for symbols.
              * @param {int} group
              */
             keyForGroup: function (group) {
@@ -39721,16 +39797,16 @@ var viewer = (function (exports) {
 
                 return key;
             },
-            /** 
+            /**
              * Symbols are typically stored in an object which works fine for most
              * cases but presents a problem when the order of the symbols makes
-             * a difference. This function simply collects all the symbols and 
-             * returns them as an array. If a function is supplied then that 
+             * a difference. This function simply collects all the symbols and
+             * returns them as an array. If a function is supplied then that
              * function is called on every symbol contained within the object.
              * @param {Function} fn
              * @param {Object} opt
              * @param {Function} sort_fn
-             * @@param {Boolean} expand_symbol 
+             * @@param {Boolean} expand_symbol
              * @returns {Array}
              */
             collectSymbols: function (fn, opt, sort_fn, expand_symbol) {
@@ -39770,7 +39846,7 @@ var viewer = (function (exports) {
             },
             /**
              * Checks if the function evaluates to 1. e.g. x^0 or 1 :)
-             * @@param {bool} abs Compares the absolute value 
+             * @@param {bool} abs Compares the absolute value
              */
             isOne: function (abs) {
                 var f = abs ? 'absEquals' : 'equals';
@@ -39797,7 +39873,7 @@ var viewer = (function (exports) {
             },
             /**
              * Get's the denominator of the symbol if the symbol is of class CB (multiplication)
-             * with other classes the symbol is either the denominator or not. 
+             * with other classes the symbol is either the denominator or not.
              * Take x^-1+x^-2. If the symbol was to be mixed such as x+x^-2 then the symbol doesn't have have an exclusive
              * denominator and has to be found by looking at the actual symbols themselves.
              */
@@ -39853,7 +39929,7 @@ var viewer = (function (exports) {
             }
         };
 
-    //Parser =======================================================================     
+    //Parser =======================================================================
         //Uses modified Shunting-yard algorithm. http://en.wikipedia.org/wiki/Shunting-yard_algorithm
         function Parser() {
             //Point to the local parser instead of the global one
@@ -40381,7 +40457,7 @@ var viewer = (function (exports) {
                             else if(d == 6) {
                                 retval = new Symbol(2); c = true;
                             }
-                            else 
+                            else
                                 retval = _.multiply(new Symbol(sign), _.symfunction('csc', [symbol]));
                         }
                     }
@@ -41061,8 +41137,8 @@ var viewer = (function (exports) {
             };
 
             /**
-             * Generates library's representation of a function. It's a fancy way of saying a symbol with 
-             * a few extras. The most important thing is that that it gives a fname and 
+             * Generates library's representation of a function. It's a fancy way of saying a symbol with
+             * a few extras. The most important thing is that that it gives a fname and
              * an args property to the symbols in addition to changing its group to FN
              * @param {String} fn_name
              * @param {Array} params
@@ -41081,8 +41157,8 @@ var viewer = (function (exports) {
             };
 
             /**
-             * An internal function call for the Parser. This will either trigger a real 
-             * function call if it can do so or just return a symbolic representation of the 
+             * An internal function call for the Parser. This will either trigger a real
+             * function call if it can do so or just return a symbolic representation of the
              * function using symfunction.
              * @param {String} fn_name
              * @param {Array} args
@@ -41149,7 +41225,7 @@ var viewer = (function (exports) {
                 return retval;
             };
             /**
-             * Build a regex based on the operators currently loaded. These operators are to be ignored when 
+             * Build a regex based on the operators currently loaded. These operators are to be ignored when
              * substituting spaces for multiplication
              */
             this.operator_filter_regex = (function () {
@@ -41167,7 +41243,7 @@ var viewer = (function (exports) {
             /**
              * Replaces nerdamer.setOperator
              * @param {object} operator
-             * @param {boolean} shift         
+             * @param {boolean} shift
              */
             this.setOperator = function (operator, action, shift) {
                 var name = operator.operator; //take the name to be the symbol
@@ -41192,7 +41268,7 @@ var viewer = (function (exports) {
                     }
                 }
             };
-            
+
             /**
              * Gets an opererator by its symbol
              * @param {String} operator
@@ -41201,7 +41277,7 @@ var viewer = (function (exports) {
             this.getOperator = function(operator) {
                 return operators[operator];
             };
-            
+
             this.aliasOperator = function(o, n) {
                 var t = {};
                 var operator = operators[o];
@@ -41211,10 +41287,10 @@ var viewer = (function (exports) {
                 }
                 //update the symbol
                 t.operator = n;
-                
+
                 this.setOperator(t);
             };
-            
+
             /**
              * Returns the list of operators. Caution! Can break parser!
              * @returns {object}
@@ -41228,14 +41304,14 @@ var viewer = (function (exports) {
                 return brackets;
             };
             /*
-             * Preforms preprocessing on the string. Useful for making early modification before 
+             * Preforms preprocessing on the string. Useful for making early modification before
              * sending to the parser
              * @param {String} e
              */
             var prepare_expression = function (e) {
                 /*
                  * Since variables cannot start with a number, the assumption is made that when this occurs the
-                 * user intents for this to be a coefficient. The multiplication symbol in then added. The same goes for 
+                 * user intents for this to be a coefficient. The multiplication symbol in then added. The same goes for
                  * a side-by-side close and open parenthesis
                  */
                 e = String(e);
@@ -41262,19 +41338,19 @@ var viewer = (function (exports) {
                     }
                 }
                 */
-                
+
                 //e = e.split(' ').join('');//strip empty spaces
                 //replace multiple spaces with one space
                 e = e.replace(/\s+/g, ' ');
-                
+
                 //only even bother to check if the string contains e. This regex is painfully slow and might need a better solution. e.g. hangs on (0.06/3650))^(365)
                 if(/e/gi.test(e)) {
-                    e = e.replace(/\-*\d+\.*\d*e\+?\-?\d+/gi, function (x) { 
+                    e = e.replace(/\-*\d+\.*\d*e\+?\-?\d+/gi, function (x) {
                         return scientificToDecimal(x);
                     });
                 }
                 //replace scientific numbers
-                
+
                 //allow omission of multiplication after coefficients
                 e = e.replace(/([\+\-\/\*]*[0-9]+)([a-z_αAβBγΓδΔϵEζZηHθΘιIκKλΛμMνNξΞoOπΠρPσΣτTυϒϕΦχXψΨωΩ]+[\+\-\/\*]*)/gi, function () {
                     var str = arguments[4],
@@ -41343,7 +41419,7 @@ var viewer = (function (exports) {
                 pre_function: [],
                 post_function: []
             };
-            
+
             this.callPeekers = function(name) {
     			if (Settings.callPeekers) {
     				var peekers = this.peekers[name];
@@ -41393,14 +41469,14 @@ var viewer = (function (exports) {
                  if(e.charAt(i) === ' ')
                  return i;
                  }
-                 
+
                  return L; //assume the end of the string instead
                  };
                  */
                 /**
                  * Adds a scope to tokens
-                 * @param {String} scope_type 
-                 * @param {int} column 
+                 * @param {String} scope_type
+                 * @param {int} column
                  * @returns {undefined}
                  */
                 var addScope = function (scope_type, column) {
@@ -41456,7 +41532,7 @@ var viewer = (function (exports) {
                     for (var i = 1, L = operator_str.length; i < L; i++) {
                         var ch = operator_str.charAt(i);
                         var o = operator + ch;
-                        //since the operator now is undefined then the last operator 
+                        //since the operator now is undefined then the last operator
                         //was the largest possible combination.
                         if (!(o in operators)) {
                             _operators.push(new Token(operator, Token.OPERATOR, start + i));
@@ -41516,10 +41592,10 @@ var viewer = (function (exports) {
                     if (ch in operators) {
                         add_token(col);
                         //is the last token numeric?
-                        var last_token_is_numeric = target[0] && isNumber(target[0]); 
+                        var last_token_is_numeric = target[0] && isNumber(target[0]);
                         //is this character multiplication?
                         var is_multiplication = last_token_is_numeric && ch === MULT;
-                        //if we're in a new scope then go up by one but if the space 
+                        //if we're in a new scope then go up by one but if the space
                         //is right befor an operator then it makes no sense to go up in scope
                         //consider sin -x. The last position = current position at the minus sign
                         //this means that we're going for sin(x) -x which is wrong
@@ -41528,7 +41604,7 @@ var viewer = (function (exports) {
                             has_space = false;
                             goUp();
                         }
-                        //mark the last position that a 
+                        //mark the last position that a
                         set_last_position(col + 1);
                         var operator_str = get_operator_str(col);
 
@@ -41581,7 +41657,7 @@ var viewer = (function (exports) {
                                 add_token(undefined, prev);
                                 //we're at the closing space
                                 goUp(); //go up in scope if we're at a space
-                                
+
                                 //assume multiplication if it's not an operator except for minus
                                 var is_operator = nxt in operators;
 
@@ -41612,7 +41688,7 @@ var viewer = (function (exports) {
 
                                 //If it's a number then add the multiplication operator to the stack but make sure that the next character
                                 //is not an operator
-                                
+
                                 if(prev !== EMPTY_STRING && nxt !== EMPTY_STRING && !(prev in operators) && !(nxt in operators))
                                     target.push(new Token(MULT, Token.OPERATOR, col));
                             }
@@ -41630,7 +41706,7 @@ var viewer = (function (exports) {
                              }
                              */
                         }
-                        set_last_position(col); //mark this location    
+                        set_last_position(col); //mark this location
                     }
                 }
                 //check that all brackets were closed
@@ -41673,7 +41749,7 @@ var viewer = (function (exports) {
                     var e = tokens[i];
                     if (e.type === Token.OPERATOR) {
                         var operator = e;
-    		    
+
     		    //create the option for the operator being overloaded
                         if (operator.overloaded) {
                             var next = tokens[i + 1];
@@ -41685,7 +41761,7 @@ var viewer = (function (exports) {
     			    operator.leftAssoc = operator.overloadLeftAssoc;
                             }
                         }
-    			
+
                         //if the stack is not empty
                         while (stack.length) {
                             var last = stack[stack.length - 1];
@@ -41696,7 +41772,7 @@ var viewer = (function (exports) {
                                 break;
                             output.push(stack.pop());
                         }
-                        
+
                         //change the behavior of the operator if it's a vector and we've been asked to do so
                         if ((fn === 'vector' || fn === 'set') && 'vectorFn' in operator)
                             operator.action = operator.vectorFn;
@@ -41739,7 +41815,7 @@ var viewer = (function (exports) {
                         //if it's a prefix it should be on a special stack called prefixes
                         //we do this to hold on to prefixes because of left associative operators.
                         //they belong to the variable/literal but if placed on either the stack
-                        //or output there's no way of knowing this. I might be wrong so I welcome 
+                        //or output there's no way of knowing this. I might be wrong so I welcome
                         //any discussion about this.
 
                         if (operator.is_prefix) //ADD ALL EXCEPTIONS FOR ADDING TO PREFIX STACK HERE. !!!
@@ -41787,7 +41863,7 @@ var viewer = (function (exports) {
                 return output;
             };
             /*
-             * Parses the tokens  
+             * Parses the tokens
              * @param {Tokens[]} rpn
              * @param {object} substitutions
              * @returns {Symbol}
@@ -41802,7 +41878,7 @@ var viewer = (function (exports) {
                         substitutions[x] = _.parse(substitutions[x], {});
                     //Although technically constants,
                     //pi and e are only available when evaluating the expression so add to the subs.
-                    //Doing this avoids rounding errors 
+                    //Doing this avoids rounding errors
                     //link e and pi
                     if (Settings.PARSE2NUMBER) {
                         //use the value provided if the individual for some strange reason prefers this.
@@ -41815,7 +41891,7 @@ var viewer = (function (exports) {
 
                     var Q = [];
                     for (var i = 0, l = rpn.length; i < l; i++) {
-                        var e = rpn[i]; 
+                        var e = rpn[i];
 
                         //Arrays indicate a new scope so parse that out
                         if (Array.isArray(e)) {
@@ -41842,14 +41918,14 @@ var viewer = (function (exports) {
                                     if(b instanceof Set && !is_comma)
                                         b = Vector.fromSet(b);
 
-                                    //call all the pre-operators 
+                                    //call all the pre-operators
                                     this.callPeekers('pre_operator', a, b, e);
-                                    
+
                                     var ans = _[e.action](a, b);
-                                    
+
                                     //call all the pre-operators
                                     this.callPeekers('post_operator', ans, a, b, e);
-                                    
+
                                     Q.push(ans);
                                 }
                             }
@@ -41867,15 +41943,15 @@ var viewer = (function (exports) {
                                 //call the function. This is the _.callfunction method in nerdamer
                                 var fn_name = e.value;
                                 var fn_args = args.getItems();
-                                
+
                                 //call the pre-function peekers
                                 this.callPeekers('pre_function', fn_name, fn_args);
-                                
-                                var ret = _.callfunction(fn_name, fn_args);                             
-                                
+
+                                var ret = _.callfunction(fn_name, fn_args);
+
                                 //call the post-function peekers
                                 this.callPeekers('post_function', ret, fn_name, fn_args);
-                                
+
                                 var last = Q[Q.length - 1];
                                 var next = rpn[i + 1];
                                 var next_is_comma = next && next.type === Token.OPERATOR && next.value === ',';
@@ -41905,12 +41981,12 @@ var viewer = (function (exports) {
                                         if (index < 0 || index >= il) //index should no longer be negative since it's been reset above
                                             //range error
                                             throw new OutOfRangeError('Index out of range ' + (e.column + 1));
-                                        
+
                                         var element = item.elements[index];
                                         //cyclic but we need to mark this for future reference
                                         item.getter = index;
-                                        element.parent = item; 
-                                        
+                                        element.parent = item;
+
                                         Q.push(element);
                                     }
                                 }
@@ -41943,7 +42019,7 @@ var viewer = (function (exports) {
                                     e = new Symbol(_.CONSTANTS[v]);
                                 }
                                 //next substitutions. This allows declared variable to be overridden
-                                //check if the values match to avoid erasing the multiplier. 
+                                //check if the values match to avoid erasing the multiplier.
                                 //Example:/e = 3*a. substutiting a for a will wipe out the multiplier.
                                 else if (v in substitutions && v !== substitutions[v].value) {
                                     subbed = e;
@@ -41970,11 +42046,11 @@ var viewer = (function (exports) {
                 }
             };
             /**
-             * This is the method that triggers the parsing of the string. It generates a parse tree but processes 
+             * This is the method that triggers the parsing of the string. It generates a parse tree but processes
              * it right away. The operator functions are called when their respective operators are reached. For instance
-             * + with cause this.add to be called with the left and right hand values. It works by walking along each 
+             * + with cause this.add to be called with the left and right hand values. It works by walking along each
              * character of the string and placing the operators on the stack and values on the output. When an operator
-             * having a lower order than the last is reached then the stack is processed from the last operator on the 
+             * having a lower order than the last is reached then the stack is processed from the last operator on the
              * stack.
              * @param {String} token
              */
@@ -42268,7 +42344,7 @@ var viewer = (function (exports) {
             };
 
     //Parser.functions ==============================================================
-            /* Although parens is not a "real" function it is important in some cases when the 
+            /* Although parens is not a "real" function it is important in some cases when the
              * symbol must carry parenthesis. Once set you don't have to worry about it anymore
              * as the parser will get rid of it at the first opportunity
              */
@@ -42280,14 +42356,14 @@ var viewer = (function (exports) {
             }
 
             function abs(symbol) {
-                
-                //|-∞| = ∞ 
+
+                //|-∞| = ∞
                 if(symbol.isInfinity) {
                     return Symbol.infinity();
                 }
                 if (symbol.multiplier.lessThan(0))
                     symbol.multiplier.negate();
-                
+
                 if (symbol.isImaginary()) {
                     var re = symbol.realpart();
                     var im = symbol.imagpart();
@@ -42297,7 +42373,7 @@ var viewer = (function (exports) {
                 else if (isNumericSymbol(symbol) || even(symbol.power)) {
                     return symbol;
                 }
-                
+
                 if (symbol.isComposite()) {
                     var ms = [];
                     symbol.each(function (x) {
@@ -42309,11 +42385,11 @@ var viewer = (function (exports) {
                         symbol.distributeMultiplier();
                     }
                 }
-                
+
                 //convert |n*x| to n*|x|
                 var m = _.parse(symbol.multiplier);
                 symbol.toUnitMultiplier();
-                
+
                 return _.multiply(m, _.symfunction(ABS, [symbol]));
             }
             /**
@@ -42424,7 +42500,7 @@ var viewer = (function (exports) {
                 return b;
             }
             /**
-             * 
+             *
              * @param {Matrix|Vector|Set|Collection} obj
              * @param {Symbol} item
              * @returns {Boolean}
@@ -42445,10 +42521,10 @@ var viewer = (function (exports) {
                             return new Symbol(1);
                     }
                 }
-                
+
                 return new Symbol(0);
             }
-            
+
             /**
              * A symbolic extension for sinc
              * @param {Symbol} symbol
@@ -42473,7 +42549,7 @@ var viewer = (function (exports) {
             function exp(symbol) {
                 return _.parse(format('e^({0})', symbol));
             }
-            
+
             /**
              * Converts value degrees to radians
              * @param {Symbol} symbol
@@ -42482,7 +42558,7 @@ var viewer = (function (exports) {
             function radians(symbol) {
                 return _.parse(format('({0})*pi/180', symbol));
             }
-            
+
             /**
              * Converts value from radians to degrees
              * @param {Symbol} symbol
@@ -42491,7 +42567,7 @@ var viewer = (function (exports) {
             function degrees(symbol) {
                 return _.parse(format('({0})*180/pi', symbol));
             }
-            
+
             /**
              * Rationalizes a symbol
              * @param {Symbol} symbol
@@ -42512,18 +42588,22 @@ var viewer = (function (exports) {
                         d = _.multiply(retden, den);
                         retval = _.divide(n, d);
                     }, true);
-                    
+
                     return retval;
                 }
                 return symbol;
             }
-            
+
             /**
              * The square root function
              * @param {Symbol} symbol
              * @returns {Symbol}
              */
             function sqrt(symbol) {
+                if(!isSymbol(symbol)) {
+                    symbol = _.parse(symbol);
+                }
+                
                 if (symbol.fname === '' && symbol.power.equals(1))
                     symbol = symbol.args[0];
 
@@ -42575,6 +42655,7 @@ var viewer = (function (exports) {
                     retval = _.multiply(_.symfunction(Settings.SQRT, [b]), sqrt(a));
                 }
                 else {
+
                     //Related to issue #401. Since sqrt(a)*sqrt(b^-1) relates in issues, we'll change the form
                     //to sqrt(a)*sqrt(b)^1 for better simplification
                     //the sign of the power
@@ -42582,7 +42663,7 @@ var viewer = (function (exports) {
                     //remove the sign
                     symbol.power = symbol.power.abs();
 
-                    //if the symbols is imagary then we place in the imaginary part. We'll return it 
+                    //if the symbols is imagary then we place in the imaginary part. We'll return it
                     //as a product
                     if (isConstant && symbol.multiplier.lessThan(0)) {
                         img = Symbol.imaginary();
@@ -42619,7 +42700,7 @@ var viewer = (function (exports) {
                         var sq = [new Symbol(1), new Symbol(1)];
                         for (var i = 0; i < 2; i++) {
                             var n = c[i];
-                            //get the prime factors and loop through each. 
+                            //get the prime factors and loop through each.
                             pfactor(n).each(function (x) {
                                 x = Symbol.unwrapPARENS(x);
                                 var b = x.clone().toLinear();
@@ -42665,7 +42746,7 @@ var viewer = (function (exports) {
                 
                 return retval;
             }
-            
+
             /**
              * The cube root function
              * @param {Symbol} symbol
@@ -42674,13 +42755,13 @@ var viewer = (function (exports) {
             function cbrt(symbol) {
                 if(!symbol.isConstant(true)) {
                     var retval;
-                    
+
                     var n = symbol.power/3;
                     //take the cube root of the multplier
                     var m = _.pow(_.parse(symbol.multiplier), new Symbol(1/3));
                     //strip the multiplier
                     var sym = symbol.toUnitMultiplier();
-                    
+
                     //simplify the power
                     if(isInt(n)) {
                         retval = _.pow(sym.toLinear(), _.parse(n));
@@ -42696,21 +42777,21 @@ var viewer = (function (exports) {
                             retval = _.symfunction('cbrt', [sym]);
                         }
                     }
-                    
+
                     return _.multiply(m, retval);
                 }
                 return nthroot(symbol, new Symbol(3));
             }
-            
+
             function scientific(symbol, sigfigs) {
-                //Just set the flag and keep it moving. Symbol.toString will deal with how to 
+                //Just set the flag and keep it moving. Symbol.toString will deal with how to
                 //display this
                 symbol.scientific = sigfigs || 10;
                 return symbol;
             }
 
             /**
-             * 
+             *
              * @param {Symbol} num - the number being raised
              * @param {Symbol} p - the exponent
              * @param {type} prec - the precision wanted
@@ -42720,40 +42801,40 @@ var viewer = (function (exports) {
             function nthroot(num, p, prec, asbig) {
                 //clone p and convert to a number if possible
                 p = evaluate(_.parse(p));
-                
+
                 //cannot calculate if p = 0. nthroot(0, 0) => 0^(1/0) => undefined
                 if(p.equals(0)) {
                     throw new UndefinedError('Unable to calculate nthroots of zero');
                 }
-                
+
                 //Stop computation if it negative and even since we have an imaginary result
-                if(num < 0 && even(p)) 
+                if(num < 0 && even(p))
                     throw new Error('Cannot calculate nthroot of negative number for even powers');
-                
+
                 //return non numeric values unevaluated
                 if(!num.isConstant(true)) {
                     return _.symfunction('nthroot', arguments);
                 }
-                
+
                 //evaluate numeric values
                 if(num.group !== N) {
                     num = evaluate(num);
                 }
-                
+
                 //default is to return a big value
                 if (typeof asbig === 'undefined')
                     asbig = true;
-                
+
                 prec = prec || 25;
-                
+
                 var sign = num.sign();
                 var retval;
                 var ans;
-                
+
                 if(sign < 0) {
                     num = abs(num); //remove the sign
                 }
-                
+
                 if (isInt(num) && p.isConstant()) {
 
                     if (num < 18446744073709551616) {
@@ -42784,7 +42865,6 @@ var viewer = (function (exports) {
                     return new Symbol(Math.PI);
                 //evaluate the symbol to merge constants
                 symbol = evaluate(symbol.clone());
-
 
                 if (symbol.isConstant()) {
                     var retval = new Symbol(1);
@@ -42903,7 +42983,7 @@ var viewer = (function (exports) {
                     d = q.getDenom(true);
                     n = q.getNum();
                     h = Symbol.hyp(n, d);
-                    //check 
+                    //check
                     if (h.equals(f.a)) {
                         return _.add(d, _.multiply(Symbol.imaginary(), n));
                     }
@@ -43007,13 +43087,22 @@ var viewer = (function (exports) {
              * @returns {Symbol}
              */
             function log(symbol, base) {
+                
                 if(symbol.equals(1)) {
                     return new Symbol(0);
                 }
-                
+
                 var retval;
+                
                 if (symbol.fname === SQRT && symbol.multiplier.equals(1)) {
-                    return _.divide(log(symbol.args[0]), new Symbol(2));
+                    retval = _.divide(log(symbol.args[0]), new Symbol(2));
+                    
+                    if(symbol.power.sign() < 0) {
+                        retval.negate();
+                    }
+                    
+                    // Exit early
+                    return retval;
                 }
 
                 //log(0) is undefined so complain
@@ -43024,20 +43113,9 @@ var viewer = (function (exports) {
                 //deal with imaginary values
                 if (symbol.isImaginary()) {
                     return complex.evaluate(symbol, Settings.LOG);
-                    /*
-                     var a = format('log(sqrt(({0})^2+({1})^2))-({2})*atan2(({1}),({0}))', symbol.imagpart(), symbol.realpart(), Settings.IMAGINARY),
-                     b = format('({0})*PI/2', Settings.IMAGINARY);
-                     
-                     return _.add(_.parse(a), _.parse(b));
-                     */
                 }
 
                 if (symbol.isConstant() && typeof base !== 'undefined' && base.isConstant()) {
-                    /*
-                     var log_sym = Math2.bigLog(symbol.multiplier);
-                     var log_base = Math2.bigLog(base.multiplier);
-                     retval = new Symbol(log_sym.divide());
-                     */
                     var log_sym = Math.log(symbol);
                     var log_base = Math.log(base);
                     retval = new Symbol(log_sym / log_base);
@@ -43047,7 +43125,7 @@ var viewer = (function (exports) {
                     //move the negative outside but keep the positive inside :)
                     retval = log(symbol).negate();
                 }
-                else if (symbol.value === 'e' && symbol.multiplier.equals(1)) {
+                else if (symbol.value === 'e' && symbol.multiplier.equals(1)) { 
                     var p = symbol.power;
                     retval = isSymbol(p) ? p : new Symbol(p);
                 }
@@ -43070,20 +43148,23 @@ var viewer = (function (exports) {
                 }
                 else {
                     var s;
-                    if (!symbol.power.equals(1)) {
+                    if (!symbol.power.equals(1) && !symbol.contains('e')) {
                         s = symbol.group === EX ? symbol.power : new Symbol(symbol.power);
                         symbol.toLinear();
                     }
-                    //log(a,a) = 1 since the base is allowed to be changed. 
+                    //log(a,a) = 1 since the base is allowed to be changed.
                     //This was pointed out by Happypig375 in issue #280
-                    if (arguments.length > 1 && allSame(arguments))
+                    if (arguments.length > 1 && allSame(arguments)) {
                         retval = new Symbol(1);
-                    else
+                    }
+                    else {
                         retval = _.symfunction(Settings.LOG, arguments);
+                    }
 
                     if (s)
                         retval = _.multiply(s, retval);
                 }
+      
                 return retval;
             }
 
@@ -43144,7 +43225,7 @@ var viewer = (function (exports) {
             /*
              * Serves as a bridge between numbers and bigNumbers
              * @param {Frac|Number} n
-             * @returns {Symbol} 
+             * @returns {Symbol}
              */
             function bigConvert(n) {
                 if (!isFinite(n)) {
@@ -43290,7 +43371,7 @@ var viewer = (function (exports) {
                             var t = new Symbol(0);
                             for (var x in f.symbols) {
                                 var a = f.symbols[x];
-                                //we now loop through the 
+                                //we now loop through the
                                 for (var y in result.symbols) {
                                     var b = _.multiply(a.clone(), result.symbols[y]);
                                     //the result must always be a composite. If not expand
@@ -43412,7 +43493,7 @@ var viewer = (function (exports) {
 
                 return symbol;
             }
-            
+
             /**
              * Returns an identity matrix of nxn
              * @param {Number} n
@@ -43421,7 +43502,7 @@ var viewer = (function (exports) {
             function imatrix(n) {
                 return Matrix.identity(n);
             }
-            
+
             /**
              * Retrieves and item from a vector
              * @param {Vector} vector
@@ -43433,7 +43514,7 @@ var viewer = (function (exports) {
                     return vector.elements[index];
                 return _.symfunction('vecget', arguments);
             }
-            
+
             /**
              * Removes duplicates from a vector
              * @param {Vector} vector
@@ -43442,9 +43523,9 @@ var viewer = (function (exports) {
              */
             function vectrim(vector, tolerance) {
                 tolerance = typeof tolerance === 'undefined' ? 1e-14 : tolerance;
-                
+
                 vector = vector.clone();
-                
+
                 tolerance = Number(tolerance);
                 //place algebraic solutions first
                 vector.elements.sort(function(a, b) {
@@ -43456,10 +43537,10 @@ var viewer = (function (exports) {
                     var diff = Number(_.subtract(evaluate(a), evaluate(b)).abs());
                     return diff <= tolerance;
                 });
-                
+
                 return vector;
             }
-            
+
             /**
              * Set a value for a vector at a given index
              * @param {Vector} vector
@@ -43539,7 +43620,7 @@ var viewer = (function (exports) {
             function matrix() {
                 return Matrix.fromArray(arguments);
             }
-            
+
             //the constructor for sets
             function set() {
                 return Set.fromArray(arguments);
@@ -43556,7 +43637,7 @@ var viewer = (function (exports) {
                 var retval;
                 if (isMatrix(symbol))
                     retval = [new Symbol(symbol.cols()), new Symbol(symbol.rows())];
-                else if(isVector(symbol) || isSet(symbol)) 
+                else if(isVector(symbol) || isSet(symbol))
                     retval = new Symbol(symbol.elements.length);
                 else
                     err('size expects a matrix or a vector');
@@ -43586,38 +43667,38 @@ var viewer = (function (exports) {
                     return mat.invert();
                 err('invert expects a matrix');
             }
-            
+
             //basic set functions
             function union(set1, set2) {
                 return set1.union(set2);
             }
-            
+
             function intersection(set1, set2) {
                 return set1.intersection(set2);
             }
-            
+
             function contains(set1, e) {
                 return set1.contains(e);
             }
-            
+
             function difference(set1, set2) {
                 return set1.difference(set2);
             }
-            
+
             function intersects(set1, set2) {
                 return new Symbol(Number(set1.intersects(set2)));
             }
-            
+
             function is_subset(set1, set2) {
                 return new Symbol(Number(set1.is_subset(set2)));
             }
-            
+
             function print() {
                 arguments2Array(arguments).map(function(x) {
                     console.log(x.toString());
                 });
             }
-            
+
             function testSQRT(symbol) {
                 //wrap the symbol in sqrt. This eliminates one more check down the line.
                 if (!isSymbol(symbol.power) && symbol.power.absEquals(0.5)) {
@@ -43637,7 +43718,7 @@ var viewer = (function (exports) {
             function testPow(symbol) {
                 if (symbol.group === P) {
                     var v = symbol.value;
-                    
+
                     var fct = primeFactors(v)[0];
                     
                     //safety
@@ -43645,11 +43726,11 @@ var viewer = (function (exports) {
                         warn('Unable to compute prime factors. This should not happen. Please review and report.');
                         return symbol;
                     }
-                    
+
                     var n = new Frac(Math.log(v) / Math.log(fct)),
                         p = n.multiply(symbol.power);
-                    
-                    //we don't want a more complex number than before 
+
+                    //we don't want a more complex number than before
                     if (p.den > symbol.power.den)
                         return symbol;
 
@@ -43677,7 +43758,7 @@ var viewer = (function (exports) {
             this.conjugate = conjugate;
             this.imagpart = imagpart;
             this.realpart = realpart;
-            
+
             //TODO:
             //Utilize the function below instead of the linked function
             this.getFunction = function(name) {
@@ -43790,7 +43871,7 @@ var viewer = (function (exports) {
                             ap = a.power.toString(),
                             bp = b.power.toString();
 
-                    //always keep the greater group on the left. 
+                    //always keep the greater group on the left.
                     if (g1 < g2 || (g1 === g2 && ap > bp && bp > 0)) {
                         return this.add(b, a);
                     }
@@ -43929,7 +44010,7 @@ var viewer = (function (exports) {
                     return result;
                 }
                 else {
-                    //keep symbols to the right 
+                    //keep symbols to the right
                     if (bIsSymbol && !aIsSymbol) {
                         var t = a;
                         a = b;
@@ -43946,7 +44027,7 @@ var viewer = (function (exports) {
                         b.eachElement(function (e, i, j) {
                             M.set(i, j, _.add(a.clone(), e));
                         });
-                        
+
                         b = M;
                     }
                     else {
@@ -44147,7 +44228,8 @@ var viewer = (function (exports) {
                     if (g1 === FN && a.fname === SQRT && !b.isConstant() && a.args[0].value === b.value && !a.args[0].multiplier.lessThan(0)) {
                         //unwrap sqrt
                         var a_pow = a.power;
-                        a = a.args[0].clone();
+                        var a_multiplier = _.parse(a.multiplier);
+                        a = _.multiply(a_multiplier, a.args[0].clone());
                         a.setPower(new Frac(0.5).multiply(a_pow));
                         g1 = a.group;
                     }
@@ -44179,19 +44261,17 @@ var viewer = (function (exports) {
                                 b = new Symbol(1);
                             }
                         }
-                        //simplify factorial but only if 
+                        //simplify factorial but only if
                         //1 - It's division so b will have a negative power
                         //2 - We're not dealing with factorials of numbers
-                        else if (a.fname === FACTORIAL && b.fname === FACTORIAL && !u.isConstant() && !v.isConstant() && b.power < 0) {                         
+                        else if (a.fname === FACTORIAL && b.fname === FACTORIAL && !u.isConstant() && !v.isConstant() && b.power < 0) {
                             //assume that n = positive
                             var d = _.subtract(u.clone(), v.clone());
-                            
+
                             //if it's not numeric then we don't know if we can simplify so just return
-                            if(!d.isConstant()) {
-                                b = new Symbol(1);
-                            }
-                            else {
-                                //there will never be a case where d == 0 since this will already have 
+                            if(d.isConstant()) {
+
+                                //there will never be a case where d == 0 since this will already have
                                 //been handled at the beginning of this function
                                 t = new Symbol(1);
                                 if(d < 0) {
@@ -44200,9 +44280,9 @@ var viewer = (function (exports) {
                                         var s = _.add(u.clone(), new Symbol(i));
                                         t = _.multiply(t, s);
                                     }
-                                   
+
                                     result = _.multiply(_.pow(u, new Symbol(a.power)), _.pow(t, new Symbol(b.power)));
-                                    
+
                                     b = new Symbol(1);
                                 }
                                 else {
@@ -44211,9 +44291,9 @@ var viewer = (function (exports) {
                                         var s = _.add(v.clone(), new Symbol(i));
                                         t = _.multiply(t, s);
                                     }
-                                    
+
                                     result = _.multiply(_.pow(t, new Symbol(a.power)), _.pow(v, new Symbol(b.power)));
-                                    
+
                                     b = new Symbol(1);
                                 }
                             }
@@ -44364,7 +44444,7 @@ var viewer = (function (exports) {
                 }
                 else {
                     //****** Matrices & Vector *****//
-                    if (bIsSymbol && !aIsSymbol) { //keep symbols to the right 
+                    if (bIsSymbol && !aIsSymbol) { //keep symbols to the right
                         t = a;
                         a = b;
                         b = t; //swap
@@ -44379,7 +44459,7 @@ var viewer = (function (exports) {
                         b.eachElement(function (e, i, j) {
                             M.set(i, j, _.multiply(a.clone(), e));
                         });
-                        
+
                         b = M;
                     }
                     else {
@@ -44533,7 +44613,7 @@ var viewer = (function (exports) {
                     if (a.unit || b.unit) {
                         return _.Unit.pow(a, b);
                     }
-                    //handle infinity
+                    // Handle infinity
                     if (a.isInfinity || b.isInfinity) {
                         if (a.isInfinity && b.isInfinity)
                             throw new UndefinedError('(' + a + ')^(' + b + ') is undefined!');
@@ -44567,7 +44647,8 @@ var viewer = (function (exports) {
                     var bIsZero = b.equals(0);
                     if (aIsZero && bIsZero)
                         throw new UndefinedError('0^0 is undefined!');
-                    //return 0 right away if possible
+                    
+                    // Return 0 right away if possible
                     if (aIsZero && b.isConstant() && b.multiplier.greaterThan(0))
                         return new Symbol(0);
 
@@ -44579,10 +44660,12 @@ var viewer = (function (exports) {
                             bIsInt = b.isInteger(),
                             m = a.multiplier,
                             result = a.clone();
+                    
+                    // 0^0, 1/0, etc. Complain.
                     if (aIsConstant && bIsConstant && a.equals(0) && b.lessThan(0))
                         throw new UndefinedError('Division by zero is not allowed!');
 
-                    //compute imaginary numbers right away
+                    // Compute imaginary numbers right away
                     if (Settings.PARSE2NUMBER && aIsConstant && bIsConstant && a.sign() < 0 && evenFraction(b)) {
                         var k, re, im;
                         k = Math.PI * b;
@@ -44591,7 +44674,7 @@ var viewer = (function (exports) {
                         return _.add(re, im);
                     }
 
-                    //imaginary number under negative nthroot or to the n
+                    // Imaginary number under negative nthroot or to the n
                     if (Settings.PARSE2NUMBER && a.isImaginary() && bIsConstant && isInt(b) && !b.lessThan(0)) {
                         var re, im, r, theta, nre, nim;
                         re = a.realpart();
@@ -44605,30 +44688,7 @@ var viewer = (function (exports) {
                         }
                     }
 
-                    /*
-                     if(a.isImaginary() && bIsConstant && b.multiplier.num.abs().equals(1) && !b.multiplier.den.equals(1)) { 
-                     var sign = b.sign();
-                     b = abs(b);
-                     var p, re, im, theta, n, ai, bi, di, ei, ii, th;
-                     p = Symbol.toPolarFormArray(a);
-                     theta = _.multiply(b.clone(), arg(a));
-                     di = _.pow(p[0], b);
-                     ai = _.trig.cos(theta.clone());
-                     bi = _.trig.sin(theta);
-                     
-                     if(sign < 0) {
-                     re = _.divide(ai, di.clone());
-                     im = _.divide(bi, di);
-                     }
-                     else {
-                     re = _.multiply(ai, di.clone());
-                     im = _.multiply(bi, di);
-                     }
-                     return _.add(re, _.multiply(im, Symbol.imaginary()));
-                     }
-                     */
-
-                    //take care of the symbolic part
+                    // Take care of the symbolic part
                     result.toUnitMultiplier();
                     //simpifly sqrt
                     if (result.group === FN && result.fname === SQRT && !bIsConstant) {
@@ -44642,15 +44702,15 @@ var viewer = (function (exports) {
                         var sign = m.sign();
                         //handle cases such as (-a^3)^(1/4)
                         if (evenFraction(b) && sign < 0) {
-                            //swaperoo
-                            //first put the sign back on the symbol
+                            // Swaperoo
+                            // First put the sign back on the symbol
                             result.negate();
-                            //wrap it in brackets
+                            // Wrap it in brackets
                             result = _.symfunction(PARENTHESIS, [result]);
-                            //move the sign back the exterior and let nerdamer handle the rest
+                            // Move the sign back the exterior and let nerdamer handle the rest
                             result.negate();
                         }
-                        
+
                         result.multiplyPower(b);
                     }
 
@@ -44668,7 +44728,7 @@ var viewer = (function (exports) {
                                     else
                                         c = new Symbol(-1);
                                 }
-                                else if (!even(b.multiplier.den)) { 
+                                else if (!even(b.multiplier.den)) {
                                     c = new Symbol(Math.pow(sign, b.multiplier.num));
                                 }
                                 else {
@@ -44677,14 +44737,14 @@ var viewer = (function (exports) {
                             }
 
                             result = new Symbol(Math.pow(a.multiplier.toDecimal(), b.multiplier.toDecimal()));
-                            
+
                             //result = new Symbol(Math2.bigpow(a.multiplier, b.multiplier));
                             //put the back sign
                             if (c)
                                 result = _.multiply(result, c);
                     }
                     else if (bIsInt && !m.equals(1)) {
-                        var abs_b = b.abs();     
+                        var abs_b = b.abs();
                         // Provide fall back to JS until big number implementation is improved
                         if(abs_b.gt(Settings.MAX_EXP)) {
                             if(b.sign() < 0)
@@ -44704,7 +44764,7 @@ var viewer = (function (exports) {
                             result.multiplier = result.multiplier.multiply(multiplier);
                         }
                     }
-                    else { 
+                    else {
                         var sign = a.sign();
                         if (b.isConstant() && a.isConstant() && !b.multiplier.den.equals(1) && sign < 0) {
                             //we know the sign is negative so if the denominator for b == 2 then it's i
@@ -44720,11 +44780,6 @@ var viewer = (function (exports) {
                                 result = _.multiply(_.pow(a, b), i);
                             }
                             else {
-    //                            if(a.equals(-1)) {
-    //                                var theta = _.multiply(b, _.parse('pi'));
-    //                                result = evaluate(_.add(trig.cos(theta), _.multiply(Symbol.imaginary(), trig.sin(theta))));
-    //                            }
-    //                            else {
                                 var aa = a.clone();
                                 aa.multiplier.negate();
                                 result = _.pow(_.symfunction(PARENTHESIS, [new Symbol(sign)]), b.clone());
@@ -44732,7 +44787,6 @@ var viewer = (function (exports) {
                                 var _b = _.pow(new Symbol(aa.multiplier.den), b.clone());
                                 var r = _.divide(_a, _b);
                                 result = _.multiply(result, r);
-    //                            }  
                             }
                         }
                         else if (Settings.PARSE2NUMBER && b.isImaginary()) {
@@ -44813,11 +44867,11 @@ var viewer = (function (exports) {
 
                     result = testSQRT(result);
 
-                    //don't multiply until we've tested the remaining symbol
+                    // Don't multiply until we've tested the remaining symbol
                     if (num && den)
                         result = _.multiply(result, testPow(_.multiply(num, den)));
 
-                    //reduce square root
+                    // Reduce square root
                     if (result.fname === SQRT) {
                         var isEX = result.group === EX;
                         var t = isEX ? result.power.multiplier.toString() : result.power.toString();
@@ -44828,18 +44882,13 @@ var viewer = (function (exports) {
                             result.multiplier = result.multiplier.multiply(m);
                         }
                     }
-                    //detect Euler's identity
+                    // Detect Euler's identity
                     else if (!Settings.IGNORE_E && result.isE() && result.group === EX && result.power.contains('pi')
                             && result.power.contains(Settings.IMAGINARY)) {
                         var theta = b.stripVar(Settings.IMAGINARY);
                         result = _.add(trig.cos(theta), _.multiply(Symbol.imaginary(), trig.sin(theta)));
-    //                    //we have a match
-    //                    var m1 = result.multiplier,
-    //                            m2 = result.power.multiplier;
-    //                    result = new Symbol(even(m2.num) ? m1 : m1.negate());
-    //                    result = _.pow(result, new Symbol(m2.den).invert());
                     }
-                    
+
                     return result;
                 }
                 else {
@@ -44865,35 +44914,35 @@ var viewer = (function (exports) {
                     return a;
                 }
             };
-            //gets called when the parser finds the , operator. 
-            //Commas return a Collector object which roughly an array
+            // Gets called when the parser finds the , operator.
+            // Commas return a Collector object which is roughly an array
             this.comma = function (a, b) {
                 if (!(a instanceof Collection))
                     a = Collection.create(a);
                 a.append(b);
                 return a;
             };
-            //link to modulus
+            // Link to modulus
             this.mod = function (a, b) {
                 return mod(a, b);
             };
-            //used to slice elements from arrays
+            // Used to slice elements from arrays
             this.slice = function (a, b) {
                 return new Slice(a, b);
             };
-            //the equality setter
+            // The equality setter
             this.equals = function (a, b) {
-                //equality can only be set for group S so complain it's not
+                // Equality can only be set for group S so complain it's not
                 if (a.group !== S && !a.isLinear())
                     err('Cannot set equality for ' + a.toString());
                 VARS[a.value] = b.clone();
                 return b;
             };
-            //percent
+            // Percent
             this.percent = function (a) {
                 return _.divide(a, new Symbol(100));
             };
-            //set variable
+            // Set variable
             this.assign = function (a, b) {
                 if (a instanceof Collection && b instanceof Collection) {
                     a.elements.map(function (x, i) {
@@ -44902,13 +44951,13 @@ var viewer = (function (exports) {
                     return Vector.fromArray(b.elements);
                 }
                 if(a.parent) {
-                    //it's referring to the parent instead. The current item can be discarded
+                    // It's referring to the parent instead. The current item can be discarded
                     var e = a.parent;
                     e.elements[e.getter] = b;
                     delete e.getter;
                     return e;
                 }
-                
+
                 if (a.group !== S)
                     throw new NerdamerValueError('Cannot complete operation. Incorrect LH value for ' + a);
                 VARS[a.value] = b;
@@ -44918,7 +44967,7 @@ var viewer = (function (exports) {
                 var f = a.elements.pop();
                 return setFunction(f, a.elements, b);
             };
-            //function to quickly convert bools to Symbols
+            // Function to quickly convert bools to Symbols
             var bool2Symbol = function (x) {
                 return new Symbol(x === true ? 1 : 0);
             };
@@ -44942,18 +44991,18 @@ var viewer = (function (exports) {
             this.lte = function (a, b) {
                 return bool2Symbol(a.lte(b));
             };
-            //wraps the factorial
+            // wraps the factorial
             this.factorial = function (a) {
                 return this.symfunction(FACTORIAL, [a]);
             };
-            //wraps the double factorial
+            // wraps the double factorial
             this.dfactorial = function (a) {
                 return this.symfunction(DOUBLEFACTORIAL, [a]);
             };
         }
 
         /* "STATIC" */
-        //converts a number to a fraction. 
+        // converts a number to a fraction.
         var Fraction = {
             /**
              * Converts a decimal to a fraction
@@ -44994,7 +45043,7 @@ var viewer = (function (exports) {
                 var x = (dec.toExponential() + '').split('e');
                 var d = x[0].split('.')[1];// get the number of places after the decimal
                 var l = (d ? d.length : 0)-parseInt(x[1]); // maybe the coefficient is an integer;
-                //call Math.round to avoid rounding error
+                // call Math.round to avoid rounding error
                 return [Math.round(Math.pow(10, l) * x[0]), Math.pow(10, Math.abs(x[1]) + l)];
             },
             /**
@@ -45007,7 +45056,7 @@ var viewer = (function (exports) {
              */
             fullConversion: function (dec) {
                 var done = false;
-                //you can adjust the epsilon to a larger number if you don't need very high precision
+                // you can adjust the epsilon to a larger number if you don't need very high precision
                 var n1 = 0, d1 = 1, n2 = 1, d2 = 0, n = 0, q = dec, epsilon = 1e-16;
                 while (!done) {
                     n++;
@@ -45038,14 +45087,14 @@ var viewer = (function (exports) {
         //The latex generator
         var LaTeX = {
             parser: (function () {
-                //create a parser and strip it from everything except the items that you need
+                // create a parser and strip it from everything except the items that you need
                 var keep = ['classes', 'setOperator', 'getOperators', 'getBrackets', 'tokenize', 'toRPN', 'tree', 'units'];
                 var parser = new Parser();
                 for (var x in parser) {
                     if (keep.indexOf(x) === -1)
                         delete parser[x];
                 }
-                //declare the operators
+                // declare the operators
                 parser.setOperator({
                     precedence: 8,
                     operator: '\\',
@@ -45054,7 +45103,7 @@ var viewer = (function (exports) {
                     postfix: false,
                     leftAssoc: true,
                     operation: function (e) {
-                        return e; //bypass the slash
+                        return e; // bypass the slash
                     }
                 });
                 parser.setOperator({
@@ -45065,22 +45114,22 @@ var viewer = (function (exports) {
                     postfix: false,
                     leftAssoc: true,
                     operation: function (e) {
-                        return e; //bypass the slash
+                        return e; // bypass the slash
                     }
                 });
-                //have braces not map to anything. We want them to be return as-is
+                // have braces not map to anything. We want them to be return as-is
                 var brackets = parser.getBrackets();
                 brackets['{'].maps_to = undefined;
                 return parser;
             })(),
             space: '~',
             dot: ' \\cdot ',
-            //grab a list of supported functions but remove the excluded ones found in exclFN
+            // grab a list of supported functions but remove the excluded ones found in exclFN
 
             latex: function (symbol, option) {
-                //it might be an array
+                // it might be an array
                 if (symbol.clone) {
-                    symbol = symbol.clone(); //leave original as-is
+                    symbol = symbol.clone(); // leave original as-is
                 }
                 if (symbol instanceof _.classes.Collection)
                     symbol = symbol.elements;
@@ -45122,7 +45171,7 @@ var viewer = (function (exports) {
                     TeX += '\\right]';
                     return TeX;
                 }
-                
+
                 else if(isSet(symbol)) {
                     var TeX = '\\{';
                     for (var i = 0; i < symbol.elements.length; i++) {
@@ -45144,50 +45193,50 @@ var viewer = (function (exports) {
                 else {
                     symbol.multiplier = symbol.multiplier.abs();
 
-                    //if the user wants the result in decimal format then return it as such by placing it at the top part
+                    // if the user wants the result in decimal format then return it as such by placing it at the top part
                     var m_array;
 
                     if (decimal) {
                         var m = String(symbol.multiplier.toDecimal());
-                        //if(String(m) === '1' && !decimal) m = '';
+                        // if(String(m) === '1' && !decimal) m = '';
                         m_array = [m, ''];
                     }
                     else {
                         m_array = [symbol.multiplier.num, symbol.multiplier.den];
                     }
-                    //get the value as a two part array
+                    // get the value as a two part array
                     var v_array = this.value(symbol, invert, option, negative),
                             p;
-                    //make it all positive since we know whether to push the power to the numerator or denominator already.
+                    // make it all positive since we know whether to push the power to the numerator or denominator already.
                     if (invert)
                         power.negate();
-                    //the power is simple since it requires no additional formatting. We can get it to a
-                    //string right away. pass in true to neglect unit powers
+                    // the power is simple since it requires no additional formatting. We can get it to a
+                    // string right away. pass in true to neglect unit powers
                     if (decimal) {
                         p = isSymbol(power) ? LaTeX.latex(power, option) : String(power.toDecimal());
                         if (String(p) === '1')
                             p = '';
                     }
-                    //get the latex representation
+                    // get the latex representation
                     else if (isSymbol(power))
                         p = this.latex(power, option);
-                    //get it as a fraction
+                    // get it as a fraction
                     else
                         p = this.formatFrac(power, true);
-                    //use this array to specify if the power is getting attached to the top or the bottom
+                    // use this array to specify if the power is getting attached to the top or the bottom
                     var p_array = ['', ''],
-                            //stick it to the top or the bottom. If it's negative then the power gets placed on the bottom
+                            // stick it to the top or the bottom. If it's negative then the power gets placed on the bottom
                             index = invert ? 1 : 0;
                     p_array[index] = p;
 
-                    //special case group P and decimal
+                    // special case group P and decimal
                     var retval = (negative ? '-' : '') + this.set(m_array, v_array, p_array, symbol.group === CB);
 
                     return retval.replace(/\+\-/gi, '-');
                 }
 
             },
-            //greek mapping
+            // greek mapping
             greek: {
                 alpha: '\\alpha',
                 beta: '\\beta',
@@ -45261,13 +45310,13 @@ var viewer = (function (exports) {
                 sin: '\\sin',
                 tanh: '\\tanh'
             },
-            //get the raw value of the symbol as an array
+            // get the raw value of the symbol as an array
             value: function (symbol, inverted, option, negative) {
                 var group = symbol.group,
                         previousGroup = symbol.previousGroup,
                         v = ['', ''],
                         index = inverted ? 1 : 0;
-                /*if(group === N) //do nothing since we want to return top & bottom blank; */
+                /*if(group === N) // do nothing since we want to return top & bottom blank; */
                 if (symbol.isInfinity) {
                     v[index] = '\\infty';
                 }
@@ -45275,7 +45324,7 @@ var viewer = (function (exports) {
                     var value = symbol.value;
                     if (value.replace)
                         value = value.replace(/(.+)_$/, '$1\\_');
-                    //split it so we can check for instances of alpha as well as alpha_b
+                    // split it so we can check for instances of alpha as well as alpha_b
                     var t_varray = String(value).split('_');
                     var greek = this.greek[t_varray[0]];
                     if (greek) {
@@ -45293,7 +45342,7 @@ var viewer = (function (exports) {
                     var name,
                             input = [],
                             fname = symbol.fname;
-                    //collect the arguments
+                    // collect the arguments
                     for (var i = 0; i < symbol.args.length; i++) {
                         var arg = symbol.args[i], item;
                         if (typeof arg === 'string')
@@ -45335,11 +45384,11 @@ var viewer = (function (exports) {
                     else if (fname === 'ceil') {
                         v[index] = '\\left \\lceil' + this.braces(input[0]) + '\\right \\rceil';
                     }
-                    //capture log(a, b)
+                    // capture log(a, b)
                     else if (fname === Settings.LOG && input.length > 1) {
                         v[index] = '\\mathrm' + this.braces(Settings.LOG) + '_' + this.braces(input[1]) + this.brackets(input[0]);
                     }
-                    //capture log(a, b)
+                    // capture log(a, b)
                     else if (fname === Settings.LOG10) {
                         v[index] = '\\mathrm' + this.braces(Settings.LOG) + '_' + this.braces(10) + this.brackets(input[0]);
                     }
@@ -45401,12 +45450,12 @@ var viewer = (function (exports) {
                 else if (group === CB || previousGroup === EX || previousGroup === CB) {
                     if (group === CB)
                         symbol.distributeExponent();
-                    //this almost feels a little like cheating but I need to know if I should be wrapping the symbol
-                    //in brackets or not. We'll do this by checking the value of the numerator and then comparing it 
-                    //to whether the symbol value is "simple" or not.
+                    // This almost feels a little like cheating but I need to know if I should be wrapping the symbol
+                    // in brackets or not. We'll do this by checking the value of the numerator and then comparing it
+                    // to whether the symbol value is "simple" or not.
                     var denominator = [],
                             numerator = [];
-                    //generate a profile
+                    // Generate a profile
                     var den_map = [], num_map = [], num_c = 0, den_c = 0;
                     var setBrackets = function (container, map, counter) {
                         if (counter > 1 && map.length > 0) {
@@ -45421,7 +45470,7 @@ var viewer = (function (exports) {
                         return container;
                     };
 
-                    //generate latex for each of them
+                    // Generate latex for each of them
                     symbol.each(function (x) {
                         var isDenom = isNegative(x.power),
                                 laTex;
@@ -45432,7 +45481,7 @@ var viewer = (function (exports) {
                             if (x.isComposite()) {
                                 if (symbol.multiplier.den != 1 && Math.abs(x.power) == 1)
                                     laTex = LaTeX.brackets(laTex, 'parens');
-                                den_map.push(denominator.length); //make a note of where the composite was found 
+                                den_map.push(denominator.length); // make a note of where the composite was found
                             }
 
                             denominator.push(laTex);
@@ -45443,15 +45492,15 @@ var viewer = (function (exports) {
                             if (x.isComposite()) {
                                 if (symbol.multiplier.num != 1 && Math.abs(x.power) == 1)
                                     laTex = LaTeX.brackets(laTex, 'parens');
-                                num_map.push(numerator.length);   //make a note of where the composite was found 
+                                num_map.push(numerator.length);   // make a note of where the composite was found
                             }
                             numerator.push(laTex);
                         }
                     });
 
-                    //apply brackets
+                    // Apply brackets
                     setBrackets(numerator, num_map, num_c);
-                    v[0] = numerator.join(this.dot); //collapse the numerator into one string
+                    v[0] = numerator.join(this.dot); // collapse the numerator into one string
 
                     setBrackets(denominator, den_map, den_c);
                     v[1] = denominator.join(this.dot);
@@ -45463,42 +45512,42 @@ var viewer = (function (exports) {
                 var isBracketed = function (v) {
                     return /^\\left\(.+\\right\)$/.test(v);
                 };
-                //format the power if it exists
+                // format the power if it exists
                 if (p)
                     p = this.formatP(p);
-                //group CB will have to be wrapped since the power applies to both it's numerator and denominator
+                // group CB will have to be wrapped since the power applies to both it's numerator and denominator
                 if (combine_power) {
-                    //POSSIBLE BUG: If powers for group CB format wrong, investigate this since I might have overlooked something
-                    //the assumption is that in every case the denonimator should be empty when dealing with CB. I can't think
-                    //of a case where this isn't true
+                    // POSSIBLE BUG: If powers for group CB format wrong, investigate this since I might have overlooked something
+                    // the assumption is that in every case the denonimator should be empty when dealing with CB. I can't think
+                    // of a case where this isn't true
                     var tp = p[0];
-                    p[0] = ''; //temporarily make p blank
+                    p[0] = ''; // temporarily make p blank
                 }
 
-                //merge v and p. Not that v MUST be first since the order matters
+                // merge v and p. Not that v MUST be first since the order matters
                 v = this.merge(v, p);
                 var mn = m[0], md = m[1], vn = v[0], vd = v[1];
-                //filters
-                //if the top has a variable but the numerator is one drop it
+                // filters
+                // if the top has a variable but the numerator is one drop it
                 if (vn && Number(mn) === 1)
                     mn = '';
-                //if denominator is 1 drop it always
+                // if denominator is 1 drop it always
                 if (Number(md) === 1)
                     md = '';
-                //prepare the top portion but check that it's not already bracketed. If it is then leave out the cdot
+                // prepare the top portion but check that it's not already bracketed. If it is then leave out the cdot
                 var top = this.join(mn, vn, !isBracketed(vn) ? this.dot : '');
 
-                //prepare the bottom portion but check that it's not already bracketed. If it is then leave out the cdot
+                // prepare the bottom portion but check that it's not already bracketed. If it is then leave out the cdot
                 var bottom = this.join(md, vd, !isBracketed(vd) ? this.dot : '');
-                //format the power if it exists
-                //make it a fraction if both top and bottom exists
+                // format the power if it exists
+                // make it a fraction if both top and bottom exists
                 if (top && bottom) {
                     var frac = this.frac(top, bottom);
                     if (combine_power && tp)
                         frac = this.brackets(frac) + tp;
                     return frac;
                 }
-                //otherwise only the top exists so return that
+                // otherwise only the top exists so return that
                 else
                     return top;
             },
@@ -45508,7 +45557,7 @@ var viewer = (function (exports) {
                     r[i] = a[i] + b[i];
                 return r;
             },
-            //joins together two strings if both exist
+            // joins together two strings if both exist
             join: function (n, d, glue) {
                 if (!n && !d)
                     return '';
@@ -45534,10 +45583,10 @@ var viewer = (function (exports) {
             formatFrac: function (f, is_pow) {
                 var n = f.num.toString(),
                         d = f.den.toString();
-                //no need to have x^1
+                // no need to have x^1
                 if (is_pow && n === '1' && d === '1')
                     return '';
-                //no need to have x/1
+                // no need to have x/1
                 if (d === '1')
                     return n;
                 return this.frac(n, d);
@@ -45567,7 +45616,7 @@ var viewer = (function (exports) {
              */
             filterTokens: function (tokens) {
                 var filtered = [];
-                //the items that need to be disposed
+                // the items that need to be disposed
                 var d = ['\\', 'left', 'right', 'big', 'Big', 'large', 'Large'];
                 for (var i = 0, l = tokens.length; i < l; i++) {
                     var token = tokens[i];
@@ -45592,7 +45641,7 @@ var viewer = (function (exports) {
                     'times': '',
                     'infty': 'Infinity'
                 };
-                //get the next token
+                // get the next token
                 var next = function () {
                     return tokens[++i];
                 };
@@ -45605,12 +45654,12 @@ var viewer = (function (exports) {
                     return token;
                 };
 
-                //start parsing the tokens
+                // start parsing the tokens
                 for (i = 0, l = tokens.length; i < l; i++) {
                     var token = tokens[i];
-                    //fractions
+                    // fractions
                     if (token.value === 'frac') {
-                        //parse and wrap it in brackets
+                        // parse and wrap it in brackets
                         var n = parse_next();
                         var d = parse_next();
                         retval += n + '/' + d;
@@ -45620,9 +45669,9 @@ var viewer = (function (exports) {
                     }
                     else if (token.value === 'int') {
                         var f = parse_next();
-                        //skip the comma
+                        // skip the comma
                         i++;
-                        //get the variable of integration
+                        // get the variable of integration
                         var dx = next().value;
                         dx = get(dx.substring(1, dx.length));
                         retval += 'integrate' + inBrackets(f + ',' + dx);
@@ -45631,11 +45680,11 @@ var viewer = (function (exports) {
                         var f = tokens[++i][0].value;
                         retval += f + parse_next();
                     }
-                    //sum and product
+                    // sum and product
                     else if (token.value === 'sum_' || token.value === 'prod_') {
                         var fn = token.value === 'sum_' ? 'sum' : 'product';
                         var nxt = next();
-                        i++; //skip the caret
+                        i++; // skip the caret
                         var end = parse_next();
                         var f = parse_next();
                         retval += fn + inBrackets([f, get(nxt[0]), get(nxt[2]), get(end)].join(','));
@@ -45655,7 +45704,7 @@ var viewer = (function (exports) {
                 return inBrackets(retval);
             }
         };
-    //Vector =======================================================================    
+    //Vector =======================================================================
         function Vector(v) {
             if (isVector(v))
                 this.elements = v.items.slice(0);
@@ -45687,7 +45736,7 @@ var viewer = (function (exports) {
             v.elements = a;
             return v;
         };
-        
+
         /**
          * Convert a Set to a Vector
          * @param {Set} set
@@ -45696,7 +45745,7 @@ var viewer = (function (exports) {
         Vector.fromSet = function(set) {
             return Vector.fromArray(set.elements);
         };
-        
+
         //Ported from Sylvester.js
         Vector.prototype = {
             custom: true,
@@ -45798,8 +45847,8 @@ var viewer = (function (exports) {
                     // Work things out in parallel to save time
                     this.each(function (x, i) {
                         dot = _.add(dot, _.multiply(x, V[i - 1]));
-                        mod1 = _.add(mod1, _.multiply(x, x));//will not conflict in safe block
-                        mod2 = _.add(mod2, _.multiply(V[i - 1], V[i - 1]));//will not conflict in safe block
+                        mod1 = _.add(mod1, _.multiply(x, x));// will not conflict in safe block
+                        mod2 = _.add(mod2, _.multiply(V[i - 1], V[i - 1]));// will not conflict in safe block
                     });
                     mod1 = _.pow(mod1, new Symbol(0.5));
                     mod2 = _.pow(mod2, new Symbol(0.5));
@@ -45958,7 +46007,7 @@ var viewer = (function (exports) {
         function Matrix() {
             var m = arguments,
                     l = m.length, i, el = [];
-            if (isMatrix(m)) { //if it's a matrix then make a clone
+            if (isMatrix(m)) { // if it's a matrix then make a clone
                 for (i = 0; i < l; i++) {
                     el.push(m[i].slice(0));
                 }
@@ -46006,7 +46055,7 @@ var viewer = (function (exports) {
             return m;
         };
         Matrix.prototype = {
-            //needs be true to let the parser know not to try to cast it to a symbol
+            // needs be true to let the parser know not to try to cast it to a symbol
             custom: true,
             get: function (row, column) {
                 if (!this.elements[row])
@@ -46055,7 +46104,7 @@ var viewer = (function (exports) {
                     }
                 }
             },
-            //ported from Sylvester.js
+            // ported from Sylvester.js
             determinant: function () {
                 if (!this.isSquare()) {
                     return null;
@@ -46097,7 +46146,7 @@ var viewer = (function (exports) {
                 }
                 return m;
             },
-            //ported from Sylvester.js
+            // ported from Sylvester.js
             invert: function () {
                 if (!this.isSquare())
                     err('Matrix is not square!');
@@ -46145,7 +46194,7 @@ var viewer = (function (exports) {
                     return Matrix.fromArray(inverse_elements);
                 }, undefined, this);
             },
-            //ported from Sylvester.js
+            // ported from Sylvester.js
             toRightTriangular: function () {
                 return block('SAFE', function () {
                     var M = this.clone(), els, fel, nel,
@@ -46327,24 +46376,24 @@ var viewer = (function (exports) {
                 });
             }
         };
-        //aliases
+        // aliases
         Matrix.prototype.each = Matrix.prototype.eachElement;
 
 
         function Set(set) {
             this.elements = [];
-            //if the first object isn't an array, convert it to one.
+            // if the first object isn't an array, convert it to one.
             if(!isVector(set))
                 set = Vector.fromArray(arguments);
-            
-            if(set) { 
+
+            if(set) {
                 var elements = set.elements;
                 for(var i=0, l=elements.length; i<l; i++) {
                     this.add(elements[i]);
                 }
             }
         }
-        
+
         Set.fromArray = function (arr) {
             function F(args) {
                 return Set.apply(this, args);
@@ -46353,7 +46402,7 @@ var viewer = (function (exports) {
 
             return new F(arr);
         };
-        
+
         Set.prototype = {
             add: function(x) {
                 if(!this.contains(x))
@@ -46388,7 +46437,7 @@ var viewer = (function (exports) {
                 set.each(function(e) {
                     _union.add(e);
                 });
-                
+
                 return _union;
             },
             difference: function(set) {
@@ -46408,14 +46457,14 @@ var viewer = (function (exports) {
                 }
                 return false;
             },
-            intersection: function(set) { 
+            intersection: function(set) {
                 var _intersection = new Set();
                 var A = this;
                 set.each(function(e) {
                     if(A.contains(e)) {
                         _intersection.add(e);
                     }            });
-                
+
                 return _intersection;
             },
             intersects: function(set) {
@@ -46481,11 +46530,11 @@ var viewer = (function (exports) {
                     'even': even
                 }
             },
-            /* Some functions need to be made numeric safe. Build checks if there's a 
+            /* Some functions need to be made numeric safe. Build checks if there's a
              * reformat option and calls that instead when compiling the function string.
              */
             reformat: {
-                //this simply extends the build function
+                // this simply extends the build function
                 diff: function(symbol, deps) {
                     var f = 'var f = '+Build.build(symbol.args[0].toString())+';';
                     deps[1] += 'var diff = '+Math2.diff.toString()+';';
@@ -46500,27 +46549,27 @@ var viewer = (function (exports) {
                 };
                 return map[f] || f;
             },
-            //assumes that dependences are at max 2 levels
+            // assumes that dependences are at max 2 levels
             compileDependencies: function(f, deps) {
-                //grab the predefined dependiences
+                // grab the predefined dependiences
                 var dependencies = Build.dependencies[f];
 
-                //the dependency string
+                // the dependency string
                 var dep_string = deps && deps[1] ? deps[1] : '';
-                
-                //the functions to be replaced
+
+                // the functions to be replaced
                 var replacements = deps && deps[0] ? deps[0] : {};
-                
-                //loop through them and add them to the list
+
+                // loop through them and add them to the list
                 for(var x in dependencies) {
                     if(typeof dependencies[x] === 'object')
-                        continue; //skip object
+                        continue; // skip object
                     var components = x.split('.'); //Math.f becomes f
-                    //if the function isn't part of an object then reference the function itself
+                    // if the function isn't part of an object then reference the function itself
                     dep_string += 'var '+(components.length > 1 ? components[1] : components[0])+'='+dependencies[x]+';';
                     replacements[x] = components.pop();
                 }
-                
+
                 return [replacements, dep_string];
             },
             getArgsDeps: function(symbol, dependencies) {
@@ -46541,6 +46590,10 @@ var viewer = (function (exports) {
                 var supplements = [];
                 var dependencies = [];
                 var ftext = function (symbol, xports) {
+                    //Fix for #545 - Parentheses confuse build.
+                    if(symbol.fname === '') {
+                        symbol = Symbol.unwrapPARENS(symbol);
+                    }
                     xports = xports || [];
                     var c = [],
                             group = symbol.group,
@@ -46553,7 +46606,7 @@ var viewer = (function (exports) {
                         for (var x in symbol.symbols) {
                             var sym = symbol.symbols[x],
                                     ft = ftext(sym, xports)[0];
-                            //wrap it in brackets if it's group PL or CP
+                            // wrap it in brackets if it's group PL or CP
                             if (sym.isComposite())
                                 ft = inBrackets(ft);
                             cc.push(ft);
@@ -46568,7 +46621,7 @@ var viewer = (function (exports) {
                             retval = 'Math.' + bn;
                         else {
                             bn = Build.getProperName(bn);
-                            if (supplements.indexOf(bn) === -1) { //make sure you're not adding the function twice
+                            if (supplements.indexOf(bn) === -1) { // make sure you're not adding the function twice
                                 //Math2 functions aren't part of the standard javascript
                                 //Math library and must be exported.
                                 xports.push('var ' + bn + ' = ' + Math2[bn].toString() + '; ');
@@ -46582,15 +46635,15 @@ var viewer = (function (exports) {
 
                         return retval;
                     };
-                    
-                    //the multiplier
+
+                    // the multiplier
                     if (group === N)
                         c.push(symbol.multiplier.toDecimal());
                     else if (symbol.multiplier.equals(-1))
                         prefix = '-';
                     else if (!symbol.multiplier.equals(1))
                         c.push(symbol.multiplier.toDecimal());
-                    //the value
+                    // the value
                     var value;
 
                     if (group === S || group === P)
@@ -46606,7 +46659,7 @@ var viewer = (function (exports) {
                         else {
                             value =  ftext_function(symbol.fname);
                         }
-                        
+
                     }
                     else if (group === EX) {
                         var pg = symbol.previousGroup;
@@ -46645,8 +46698,8 @@ var viewer = (function (exports) {
                 }
 
                 var f_array = ftext(symbol);
-                
-                //make all the substitutions;
+
+                // make all the substitutions;
                 for(var x in dependencies[0]) {
                     var alias = dependencies[0][x];
                     f_array[1] = f_array[1].replace(x, alias);
@@ -46654,12 +46707,12 @@ var viewer = (function (exports) {
                 }
 
                 var f = new Function(args, (dependencies[1] || '') + f_array[1] + ' return ' + f_array[0] + ';');
-                
+
                 return f;
             }
         };
-        
-        
+
+
     //finalize =====================================================================
         /* FINALIZE */
         (function () {
@@ -46669,15 +46722,15 @@ var viewer = (function (exports) {
             //bug fix for error but needs to be revisited
             if (!_.error)
                 _.error = err;
-            
+
             //Store the log and log10 functions
             Settings.LOG_FNS = {
                 log: _.functions['log'],
                 log10: _.functions['log10']
             };
-            
+
         })();
-        
+
         /* END FINALIZE */
 
     //Core =========================================================================
@@ -46763,15 +46816,15 @@ var viewer = (function (exports) {
             exceptions: exceptions
         };
 
-    //libExports ===================================================================  
+    //libExports ===================================================================
         /**
-         * 
+         *
          * @param {String} expression the expression to be evaluated
          * @param {Object} subs the object containing the variable values
-         * @param {Integer} location a specific location in the equation list to 
+         * @param {Integer} location a specific location in the equation list to
          * insert the evaluated expression
          * @param {String} option additional options
-         * @returns {Expression} 
+         * @returns {Expression}
          */
         var libExports = function (expression, subs, option, location) {
             //is the user declaring a function?
@@ -46863,9 +46916,9 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * @param {String} constant The name of the constant to be set
-         * @param {mixed} value The value of the constant 
+         * @param {mixed} value The value of the constant
          * @returns {Object} Returns the nerdamer object
          */
         libExports.setConstant = function (constant, value) {
@@ -46894,7 +46947,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * @param {String} name The name of the function
          * @param {Array} params_array A list containing the parameter name of the functions
          * @param {String} body The body of the function
@@ -46904,7 +46957,7 @@ var viewer = (function (exports) {
         libExports.setFunction = setFunction;
 
         /**
-         * 
+         *
          * @returns {C} Exports the nerdamer core functions and objects
          */
         libExports.getCore = function () {
@@ -46914,7 +46967,7 @@ var viewer = (function (exports) {
         libExports.getExpression = libExports.getEquation = Expression.getExpression;
 
         /**
-         * 
+         *
          * @param {Boolean} asArray The returned names are returned as an array if this is set to true;
          * @returns {String|Array}
          */
@@ -46926,8 +46979,8 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
-         * @param {Integer} equation_number the number of the equation to clear. 
+         *
+         * @param {Integer} equation_number the number of the equation to clear.
          * If 'all' is supplied then all equations are cleared
          * @param {Boolean} keep_EXPRESSIONS_fixed use true if you don't want to keep EXPRESSIONS length fixed
          * @returns {Object} Returns the nerdamer object
@@ -46958,10 +47011,10 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * @param {Boolean} asObject
          * @param {Boolean} asLaTeX
-         * @param {String|String[]} option 
+         * @param {String|String[]} option
          * @returns {Array}
          */
         libExports.expressions = function (asObject, asLaTeX, option) {
@@ -47028,7 +47081,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * @returns {Array} Array of functions currently supported by nerdamer
          */
         libExports.supported = function () {
@@ -47036,7 +47089,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * @returns {Number} The number equations/expressions currently loaded
          */
         libExports.numEquations = libExports.numExpressions = function () {
@@ -47045,7 +47098,7 @@ var viewer = (function (exports) {
         /* END EXPORTS */
 
         /**
-         * 
+         *
          * @param {String} v variable to be set
          * @param {String} val value of variable. This can be a variable expression or number
          * @returns {Object} Returns the nerdamer object
@@ -47081,7 +47134,7 @@ var viewer = (function (exports) {
         };
 
         /**
-         * 
+         *
          * @param {Function} loader
          * @returns {nerdamer}
          */
@@ -47116,7 +47169,7 @@ var viewer = (function (exports) {
         /**
          * Set the value of a setting
          * @param {String} setting The setting to be changed
-         * @param {boolean} value 
+         * @param {boolean} value
          */
         libExports.set = function (setting, value) {
             //current options:
@@ -47146,7 +47199,7 @@ var viewer = (function (exports) {
                     return _.symfunction(Settings.LOG10, [x]);
                 };
                 _.functions['LN'] = Settings.LOG_FNS.log; //LN is now log
-                
+
                 //remove log10
                 delete _.functions['log10'];
             }
@@ -47165,7 +47218,7 @@ var viewer = (function (exports) {
 
         /**
          * This functions makes internal functions available externally
-         * @param {bool} override Override the functions when calling api if it exists 
+         * @param {bool} override Override the functions when calling api if it exists
          */
         libExports.api = function (override) {
             //Map internal functions to external ones
@@ -47194,7 +47247,7 @@ var viewer = (function (exports) {
         libExports.setOperator = function (operator, shift) {
             _.setOperator(operator, shift);
         };
-        
+
         libExports.getOperator = function(operator) {
             return _.getOperator(operator);
         };
@@ -47218,16 +47271,16 @@ var viewer = (function (exports) {
                     '    </ul>\n' +
                     '</div>';
         };
-        
+
         libExports.addPeeker = function(name, f) {
             if(_.peekers[name])
                 _.peekers[name].push(f);
         };
-        
+
         libExports.removePeeker = function(name, f) {
             remove(_.peekers[name], f);
         };
-        
+
         libExports.parse = function(e) {
             return String(e).split(';').map(function(x) {
                 return _.parse(x);
@@ -50225,6 +50278,8 @@ var viewer = (function (exports) {
     exports.alignZ = alignZ;
     exports.rot = rot;
     exports.viewerMain = viewerMain;
+
+    Object.defineProperty(exports, '__esModule', { value: true });
 
     return exports;
 

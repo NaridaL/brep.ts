@@ -52,14 +52,14 @@ class Demo extends Component<DemoProps, DemoDesc> {
     props.args.forEach((arg) => (arg.value = "" + arg.def))
   }
 
-  container: HTMLDivElement
+  container!: HTMLDivElement
   argInputs: InputComponent[] = []
-  sourceContainer: HTMLElement
+  sourceContainer!: HTMLElement
   onChange = () => {
     const demo = this.state
     update(
       demo,
-      this.props.args.map((a) => a.value),
+      this.props.args.map((a) => a.value!),
     )
     this.forceUpdate()
   }

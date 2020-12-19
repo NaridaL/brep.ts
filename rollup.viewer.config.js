@@ -1,15 +1,15 @@
-import sourcemaps from "rollup-plugin-sourcemaps"
-import typescriptPlugin from "rollup-plugin-typescript"
-import commonjs from "rollup-plugin-commonjs"
-import nodeResolve from "rollup-plugin-node-resolve"
-import serve from "rollup-plugin-serve"
-import livereload from "rollup-plugin-livereload"
-import replace from "rollup-plugin-replace"
+import sourcemapsPlugin from "rollup-plugin-sourcemaps"
+import typescriptPlugin from "@rollup/plugin-typescript"
+import commonjsPlugin from "@rollup/plugin-commonjs"
+import nodeResolvePlugin from "@rollup/plugin-node-resolve"
+import servePlugin from "rollup-plugin-serve"
+import livereloadPlugin from "rollup-plugin-livereload"
+import replacePlugin from "@rollup/plugin-replace"
 import glsl from "rollup-plugin-glsl"
 import * as typescript from "typescript"
 import * as fs from "fs"
 
-const pkg = JSON.parse(fs.readFileSync("package.json"))
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"))
 export default {
   input: "src/viewer.ts",
   output: {
@@ -27,7 +27,10 @@ export default {
   },
   external: [],
   plugins: [
-    nodeResolve({
+    typescriptPlugin({
+      typescript,
+    }),
+    nodeResolvePlugin({
       mainFields: ["module", "jsnext:main", "main"],
 
       // some package.json files have a `browser` field which
@@ -57,7 +60,7 @@ export default {
       // 	moduleDirectory: 'js_modules'
       //   }
     }),
-    commonjs({
+    commonjsPlugin({
       // non-CommonJS modules will be ignored, but you can also
       // specifically include/exclude files
       // include: 'node_modules/**',  // Default: undefined
@@ -87,13 +90,10 @@ export default {
       // option if you know what you're doing!
       // ignore: [ 'conditional-runtime-dependency' ]
     }),
-    replace({
+    replacePlugin({
       "process.env.NODE_ENV": JSON.stringify("development"),
     }),
-    sourcemaps(),
-    typescriptPlugin({
-      typescript,
-    }),
+    sourcemapsPlugin(),
     glsl({
       // By default, everything gets included
       include: "src/**/*.glslx",
@@ -104,14 +104,14 @@ export default {
       // Source maps are on by default
       // sourceMap: false
     }),
-    process.env.ROLLUP_WATCH && serve({}),
+    process.env.ROLLUP_WATCH && servePlugin({}),
     // {
     // 	contentBase: '.',
     // 	open: true,
     // 	host: 'localhost',
     // 	port: 10002
     // }
-    process.env.ROLLUP_WATCH && livereload(),
+    process.env.ROLLUP_WATCH && livereloadPlugin(),
   ].filter((x) => x),
   onwarn: function (warning, warn) {
     // Suppress this error message... there are hundreds of them. Angular team says to ignore it.
