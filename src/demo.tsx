@@ -168,7 +168,8 @@ class InputComponent extends Component<
         {...atts}
         defaultValue={"" + value}
         className={classnames(this.props.className, step && "scrollable")}
-        onWheel={step && this.onWheel}
+        onWheel={step ? this.onWheel : undefined}
+        onScroll={step ? (e) => e.preventDefault() : undefined}
         onBlur={(e) => change((e.target as any).value)}
       />
     )
