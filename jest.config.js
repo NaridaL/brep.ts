@@ -4,10 +4,7 @@ module.exports = {
   testEnvironment: "node",
   globals: {
     "ts-jest": {
-      tsConfig: {
-        sourceMap: true,
-        inlineSourceMap: true,
-      },
+      tsconfig: "tests/tsconfig.json",
       diagnostics: false,
     },
   },

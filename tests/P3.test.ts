@@ -83,7 +83,7 @@ describe("P3", () => {
       M4.projectPlanePoint(
         M4.FOO.transformPoint(V3.Z.negated()),
         P3.XY.transform(M4.FOO),
-      ),
-    ).toBeLike(M4.product(M4.FOO, m4, M4.BAR))
+      ).normalized2(),
+    ).toBeLike(M4.product(M4.FOO, m4, M4.FOO_INV).normalized2())
   })
 })

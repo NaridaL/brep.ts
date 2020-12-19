@@ -319,10 +319,10 @@ export function testISCurves(
   surface1: Surface | P3,
   surface2: Surface | P3,
   expectedCurveCount: int,
-) {
+): Curve[] | undefined {
   surface1 instanceof P3 && (surface1 = new PlaneSurface(surface1))
   surface2 instanceof P3 && (surface2 = new PlaneSurface(surface2))
-  let isCurves
+  let isCurves: Curve[] | undefined
   try {
     isCurves = surface1.isCurvesWithSurface(surface2)
   } finally {

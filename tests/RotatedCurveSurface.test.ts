@@ -77,8 +77,9 @@ describe("RotatedCurveSurface", () => {
     const cs = testISCurves(torusSurface, P3.ZX.rotateZ(20 * DEG), 1)
     expect(cs[0]).toBeInstanceOf(EllipseCurve)
   })
-  test("is curves with plane ", () =>
-    testISCurves(torusSurface, new P3(V3.XYZ.unit(), 4), 1))
+  test("is curves with plane ", () => {
+    testISCurves(torusSurface, new P3(V3.XYZ.unit(), 4), 1)
+  })
   test("is curves with plane 2", () => {
     const torus = new RotatedCurveSurface(
       new EllipseCurve(
