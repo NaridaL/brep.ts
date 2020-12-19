@@ -31,7 +31,7 @@
     "cross-env": "^5.1.5",
     "debounce": "^1.1.0",
     "deepmerge": "^2.1.0",
-    "highlight.js": "^9.12.0",
+    "highlight.js": "^10.4.1",
     "material-ui": "^0.20.1",
     "mocha": "^5.1.1",
     "mock-require": "^3.0.2",
