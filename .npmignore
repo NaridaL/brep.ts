@@ -1,9 +1,7 @@
-*~
-*.swp
-node_modules/
-.git
-.coveralls.yml
-tests/results
+*
 
-# WebStorm
-.idea
+!lib/**/*
+!src/**/*
+src/shaders
+src/ignore
+!README.md

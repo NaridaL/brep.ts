@@ -1,111 +1,116 @@
 <!DOCTYPE html>//
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>QUnit Example</title>
-	<script type="text/javascript" src="sylvester.src.js"></script>
-	<script type="text/javascript" src="MooTools-Core-1.5.2.js"></script>
-	<script type="text/javascript" src="src/lightgl.js"></script>
-	<script type="text/javascript" src="csg.js"></script>
+  <head>
+    <meta charset="utf-8" />
+    <title>QUnit Example</title>
+    <script type="text/javascript" src="sylvester.src.js"></script>
+    <script type="text/javascript" src="MooTools-Core-1.5.2.js"></script>
+    <script type="text/javascript" src="src/lightgl.js"></script>
+    <script type="text/javascript" src="csg.js"></script>
 
-	<script type="text/javascript" src="src/NLA.js"></script>
-	<script type="text/javascript" src="src/js3d.js"></script>
-  <link rel="stylesheet" href="qunit-2.0.0.css">
-</head>
-<body>
-	<script type="text/javascript">
-		var count = 500000
-		var start = new Date().getTime();
+    <script type="text/javascript" src="src/NLA.js"></script>
+    <script type="text/javascript" src="src/js3d.js"></script>
+    <link rel="stylesheet" href="qunit-2.0.0.css" />
+  </head>
+  <body>
+    <script type="text/javascript">
+      var count = 500000
+      var start = new Date().getTime()
 
-			var a = Vector.random(3), b = Vector.random(3), c = Vector.random(3)
-		while (count--) {
-		//	console.log(b.times(a.plus(b).dot(c)))
-			var d = b.times(a.plus(b).dot(c)).cross(a).length()
-		}		console.log( b.times(a.plus(b).dot(c)).cross(a).length());
+      var a = Vector.random(3),
+        b = Vector.random(3),
+        c = Vector.random(3)
+      while (count--) {
+        //	console.log(b.times(a.plus(b).dot(c)))
+        var d = b.times(a.plus(b).dot(c)).cross(a).length()
+      }
+      console.log(b.times(a.plus(b).dot(c)).cross(a).length())
 
-		var end = new Date().getTime();
-		var time = end - start;
-		console.log('Execution time: ' + time + "ms");
+      var end = new Date().getTime()
+      var time = end - start
+      console.log("Execution time: " + time + "ms")
 
+      var count = 500000
+      var start = new Date().getTime()
 
-		var count = 500000
-		var start = new Date().getTime();
+      var a = Vector.Random(3),
+        b = Vector.Random(3),
+        c = Vector.Random(3)
+      while (count--) {
+        var d = b.times(a.add(b).dot(c)).cross(a).modulus()
+      }
+      var end = new Date().getTime()
+      var time = end - start
+      console.log("Execution time: " + time + "ms")
 
-			var a = Vector.Random(3), b = Vector.Random(3), c = Vector.Random(3)
-		while (count--) {
-			var d = b.times(a.add(b).dot(c)).cross(a).modulus()
-		}
-		var end = new Date().getTime();
-		var time = end - start;
-		console.log('Execution time: ' + time + "ms");
+      var count = 500000
+      var start = new Date().getTime()
 
+      var a = GL.Vector.randomDirection(),
+        b = GL.Vector.randomDirection(),
+        c = GL.Vector.randomDirection()
+      while (count--) {
+        var d = b.times(a.add(b).dot(c)).cross(a).length()
+      }
+      console.log(b.times(a.add(b).dot(c)).cross(a).length())
+      var end = new Date().getTime()
+      var time = end - start
+      console.log("Execution time: " + time + "ms")
 
-		var count = 500000
-		var start = new Date().getTime();
+      var count = 500000
+      var start = new Date().getTime()
 
-			var a = GL.Vector.randomDirection(), b = GL.Vector.randomDirection(), c = GL.Vector.randomDirection()
-		while (count--) {
-			var d = b.times(a.add(b).dot(c)).cross(a).length()
-		}
-		console.log( b.times(a.add(b).dot(c)).cross(a).length());
-		var end = new Date().getTime();
-		var time = end - start;
-		console.log('Execution time: ' + time + "ms");
+      var a = NLA.V3.random(),
+        b = NLA.V3.random(),
+        c = NLA.V3.random()
+      while (count--) {
+        var d = b.times(a.plus(b).dot(c)).cross(a).length()
+      }
+      var end = new Date().getTime()
+      var time = end - start
+      console.log("nla.v3: Execution time: " + time + "ms")
 
+      function vAdd(a, b) {
+        var v = new Float64Array(3)
+        v[0] = a[0] + a[0]
+        v[1] = a[1] + a[1]
+        v[2] = a[2] + a[2]
+        return new Vector(v)
+      }
+      function vCross(a, v) {
+        var n = new Float64Array(3)
+        n[0] = a[1] * b[2] - a[2] * b[1]
+        n[1] = a[2] * b[0] - a[0] * b[2]
+        n[2] = a[0] * b[1] - a[1] * b[0]
 
-		var count = 500000
-		var start = new Date().getTime();
+        return new Vector(n)
+      }
+      function vTimes(a, val) {
+        var v = new Float64Array(3)
+        v[0] = a[0] * val
+        v[1] = a[1] * val
+        v[2] = a[2] * val
+        return new Vector(v)
+      }
+      function vDot(u, v) {
+        return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+      }
+      function vLength(u) {
+        return Math.sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2])
+      }
 
-			var a = NLA.V3.random(), b = NLA.V3.random(), c = NLA.V3.random()
-		while (count--) {
-			var d = b.times(a.plus(b).dot(c)).cross(a).length()
-		}
-		var end = new Date().getTime();
-		var time = end - start;
-		console.log('nla.v3: Execution time: ' + time + "ms");
+      var count = 500000
+      var start = new Date().getTime()
 
-        function vAdd(a, b) {
-            var v = new Float64Array(3);
-            v[0]= a[0] + a[0]
-            v[1]= a[1] + a[1]
-            v[2]= a[2] + a[2]
-            return new Vector(v)
-        }
-        function vCross(a, v) {
-            var n = new Float64Array(3)
-            n[0] = a[1] * b[2] - a[2] * b[1]
-            n[1] = a[2] * b[0] - a[0] * b[2]
-            n[2] = a[0] * b[1] - a[1] * b[0]
-
-            return new Vector(n)
-        }
-        function vTimes(a, val) {
-            var v = new Float64Array(3);
-            v[0]= a[0] * val
-            v[1]= a[1] * val
-            v[2]= a[2] * val
-            return new Vector(v)
-        }
-        function vDot(u,v) {
-            return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
-        }
-        function vLength(u) {  return Math.sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2])
-        }
-
-
-		var count = 500000
-		var start = new Date().getTime();
-
-			var a = new Float64Array([Math.random(), Math.random(), Math.random()]),
-                b = new Float64Array([Math.random(), Math.random(), Math.random()]),
-                c = new Float64Array([Math.random(), Math.random(), Math.random()])
-		while (count--) {
-			var d = vLength(vCross(vTimes(b, vDot(vAdd(a, b), c), a)))
-		}
-		var end = new Date().getTime();
-		var time = end - start;
-		console.log('Execution time: ' + time + "ms");
-
-	</script>
-</body>
+      var a = new Float64Array([Math.random(), Math.random(), Math.random()]),
+        b = new Float64Array([Math.random(), Math.random(), Math.random()]),
+        c = new Float64Array([Math.random(), Math.random(), Math.random()])
+      while (count--) {
+        var d = vLength(vCross(vTimes(b, vDot(vAdd(a, b), c), a)))
+      }
+      var end = new Date().getTime()
+      var time = end - start
+      console.log("Execution time: " + time + "ms")
+    </script>
+  </body>
 </html>

@@ -1,187 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BREP.ts</title>
 
-<head>
-	<meta charset="utf-8">
-	<title>BREP.ts</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css"
+    />
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script> -->
 
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
-	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script> -->
+    <script type="text/javascript" src="/lib/earcut.dev.js"></script>
 
-	<script type="text/javascript" src="/lib/earcut.dev.js"></script>
+    <script type="text/javascript" src="/dist/viewer.js"></script>
 
-	<script type="text/javascript" src="/dist/viewer.js"></script>
+    <script type="text/javascript">
+      window.onload = viewer.viewerMain
+    </script>
 
-	<script type="text/javascript">
-		window.onload = viewer.viewerMain
-	</script>
+    <style type="text/css">
+      body {
+        font-family: Verdana, sans-serif;
+        padding: 0;
+        margin: 0;
+      }
 
-	<style type="text/css">
-		body {
-			font-family: Verdana, sans-serif;
-			padding: 0;
-			margin: 0;
-		}
+      .selector {
+        border: 1px solid black;
+        cursor: pointer;
+        display: inline-block;
+        width: 10em;
+      }
 
-		.selector {
-			border: 1px solid black;
-			cursor: pointer;
-			display: inline-block;
-			width: 10em;
-		}
+      .selecting {
+        border-color: darkred;
+        color: darkgreen;
+      }
 
-		.selecting {
-			border-color: darkred;
-			color: darkgreen;
-		}
+      .icon-link {
+        text-decoration: none;
+        color: darkred;
+      }
 
-		.icon-link {
-			text-decoration: none;
-			color: darkred;
-		}
+      .editorBox {
+        background: #eeeeee;
+        padding: 4px;
+        display: none;
+        margin: 8px;
+      }
 
-		.editorBox {
-			background: #eeeeee;
-			padding: 4px;
-			display: none;
-			margin: 8px;
-		}
+      .editorBox .header {
+        font-weight: bold;
+      }
 
-		.editorBox .header {
-			font-weight: bold;
-		}
+      label {
+        display: block;
+      }
 
-		label {
-			display: block;
-		}
+      label span {
+        display: inline-block;
+        width: 7em;
+      }
 
-		label span {
-			display: inline-block;
-			width: 7em;
-		}
+      .featureHide.hidden {
+        text-decoration: line-through;
+        color: darkgrey;
+      }
 
-		.featureHide.hidden {
-			text-decoration: line-through;
-			color: darkgrey;
-		}
+      .rebuildLimit {
+        font-size: smaller;
+        background-color: #de7c58;
+        text-align: center;
+      }
 
+      .isDependedOn {
+        background-color: #9fde60;
+      }
 
-		.rebuildLimit {
-			font-size: smaller;
-			background-color: #de7c58;
-			text-align: center;
-		}
+      .hasDependents {
+        background-color: #8dc3de;
+      }
 
-		.isDependedOn {
-			background-color: #9fde60;
-		}
+      #tip-wrap {
+        z-index: 3000;
+      }
 
-		.hasDependents {
-			background-color: #8dc3de;
-		}
+      #tip {
+        position: relative;
+        color: #fcffd2;
+        min-width: 250px;
+        max-width: 512px;
+        height: 120px;
+        padding: 8px;
+        background: #61bbff;
+        font-size: small;
+      }
 
-		#tip-wrap {
-			z-index: 3000;
-		}
+      #tip-arrow {
+        position: absolute;
+        border-style: solid;
+        border-color: #61bbff transparent;
+        display: block;
+        width: 0;
+        z-index: 1;
+        top: -16px;
+        left: 16px;
+      }
 
-		#tip {
-			position: relative;
-			color: #fcffd2;
-			min-width: 250px;
-			max-width: 512px;
-			height: 120px;
-			padding: 8px;
-			background: #61bbff;
-			font-size: small;
-		}
+      #buttonbar {
+        background-color: #8f8e93;
+        font-size: 0;
+      }
 
-		#tip-arrow {
-			position: absolute;
-			border-style: solid;
-			border-color: #61bbff transparent;
-			display: block;
-			width: 0;
-			z-index: 1;
-			top: -16px;
-			left: 16px;
-		}
+      #buttonbar button {
+        background-color: transparent;
+        color: white;
+        border: none;
+        line-height: 2.5em;
+        font-size: 12pt;
+        margin: 0;
+        padding: 0 0.5em;
+      }
 
-		#buttonbar {
-			background-color: #8f8e93;
-			font-size: 0;
-		}
+      #buttonbar button:hover {
+        /*border-bottom: 4px solid white;*/
+        background-color: #4354ed;
+        cursor: pointer;
+      }
 
-		#buttonbar button {
-			background-color: transparent;
-			color: white;
-			border: none;
-			line-height: 2.5em;
-			font-size: 12pt;
-			margin: 0;
-			padding: 0 0.5em;
-		}
+      #buttonbar button:disabled {
+        background-color: #bbbabf;
+        color: #d9d8de;
+        display: none;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
 
-		#buttonbar button:hover {
-			/*border-bottom: 4px solid white;*/
-			background-color: #4354ed;
-			cursor: pointer;
-		}
+  <body>
+    <script>
+      var BREPTS_ROOT = ""
+      function INIT_HTML() {
+        /*INSERT*/
+        return {}
+      }
+    </script>
+    <canvas id="testcanvas" width="1000px" height="500px"></canvas>
+    <div
+      id="tip-wrap"
+      style="position: absolute; z-index: 6000; left: 8px; top: 8px"
+    >
+      <a class="waves-effect waves-light btn red" onClick="viewer.alignX(1)"
+        >+X</a
+      >
+      <a class="waves-effect waves-light btn red" onClick="viewer.alignX(-1)"
+        >-X</a
+      >
+      <a class="waves-effect waves-light btn green" onClick="viewer.alignY(1)"
+        >+Y</a
+      >
+      <a class="waves-effect waves-light btn green" onClick="viewer.alignY(-1)"
+        >-Y</a
+      >
+      <a class="waves-effect waves-light btn blue" onClick="viewer.alignZ(1)"
+        >+Z</a
+      >
+      <a class="waves-effect waves-light btn blue" onClick="viewer.alignZ(-1)"
+        >-Z</a
+      >
+      <a class="waves-effect waves-light btn" onClick="viewer.rot(22.5)">↺</a>
+      <a class="waves-effect waves-light btn" onClick="viewer.rot(-22.5)">↻</a>
 
-		#buttonbar button:disabled {
-			background-color: #bbbabf;
-			color: #d9d8de;
-			display: none;
-			cursor: not-allowed;
-		}
-	</style>
-</head>
-
-<body>
-	<script>
-		var BREPTS_ROOT = ''
-		function INIT_HTML() {
-			/*INSERT*/
-			return {}
-		}
-	</script>
-	<canvas id="testcanvas" width="1000px" height="500px"></canvas>
-	<div id="tip-wrap" style="position: absolute;z-index: 6000; left: 8px; top:8px;">
-		<a class="waves-effect waves-light btn red" onClick="viewer.alignX(1)">+X</a>
-		<a class="waves-effect waves-light btn red" onClick="viewer.alignX(-1)">-X</a>
-		<a class="waves-effect waves-light btn green" onClick="viewer.alignY(1)">+Y</a>
-		<a class="waves-effect waves-light btn green" onClick="viewer.alignY(-1)">-Y</a>
-		<a class="waves-effect waves-light btn blue" onClick="viewer.alignZ(1)">+Z</a>
-		<a class="waves-effect waves-light btn blue" onClick="viewer.alignZ(-1)">-Z</a>
-		<a class="waves-effect waves-light btn" onClick="viewer.rot(22.5)">↺</a>
-		<a class="waves-effect waves-light btn" onClick="viewer.rot(-22.5)">↻</a>
-
-		<div class="switch" style="display: inline-block">
-			<input type="checkbox" class="filled-in" id="paint-mesh-normals" />
-				<label for="paint-mesh-normals" >
-					mesh normals
-				</label>
-			<!-- <label>
+      <div class="switch" style="display: inline-block">
+        <input type="checkbox" class="filled-in" id="paint-mesh-normals" />
+        <label for="paint-mesh-normals"> mesh normals </label>
+        <!-- <label>
 				<input type="checkbox" id="paint-mesh-normals">
 				<span class="lever"></span>
 				mesh normals
 			</label> -->
-		</div>
-		<div class="switch" style="display: inline-block">
-			<input type="checkbox" class="filled-in" id="paint-wireframe" />
-				<label for="paint-wireframe" >
-					wireframe
-				</label>
-		</div>
-		<div class="switch" style="display: inline-block">
-			<input type="checkbox" class="filled-in" id="paint-curvedebug" />
-				<label for="paint-curvedebug" >
-					curve debug
-				</label>
-		</div>
+      </div>
+      <div class="switch" style="display: inline-block">
+        <input type="checkbox" class="filled-in" id="paint-wireframe" />
+        <label for="paint-wireframe"> wireframe </label>
+      </div>
+      <div class="switch" style="display: inline-block">
+        <input type="checkbox" class="filled-in" id="paint-curvedebug" />
+        <label for="paint-curvedebug"> curve debug </label>
+      </div>
 
-		<!-- <div id="tip">This should be visible.</div>
+      <!-- <div id="tip">This should be visible.</div>
 		<div id="tip-arrow"></div> -->
-	</div>
-</body>
-
+    </div>
+  </body>
 </html>

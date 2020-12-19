@@ -2,9 +2,12 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es6",
+    "lib": ["ES2019"],
     "sourceMap": true,
     "noEmit": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
-  }
+  },
+  "exclude": ["../node_modules"],
+  "include": ["./**/*"]
 }
