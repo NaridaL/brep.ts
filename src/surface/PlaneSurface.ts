@@ -1,7 +1,7 @@
 import {
   assert,
   assertInst,
-  callsce,
+  callSource,
   hasConstructor,
   isCCW,
   M4,
@@ -39,7 +39,7 @@ export class PlaneSurface extends ParametricSurface implements ImplicitSurface {
   }
 
   toSource(rounder: (x: number) => number = (x) => x): string {
-    return callsce.call(
+    return callSource.call(
       undefined,
       "new PlaneSurface",
       ...this.getConstructorParameters(),

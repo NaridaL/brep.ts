@@ -18,7 +18,7 @@ import {
   CylinderSurface,
   EllipseCurve,
   EllipsoidSurface,
-} from ".."
+} from "../src"
 
 describe("PICurve", () => {
   describe("pointT", () => {

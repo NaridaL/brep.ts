@@ -2,7 +2,7 @@ import { Equalable } from "javasetmap.ts"
 import {
   arrayEquals,
   arrayHashCode,
-  callsce,
+  callSource,
   eq,
   eq0,
   int,
@@ -205,7 +205,7 @@ export abstract class Surface
   }
 
   toSource(rounder: (x: number) => number = (x) => x): string {
-    return callsce.call(
+    return callSource.call(
       undefined,
       "new " + this.constructor.name,
       ...this.getConstructorParameters(),

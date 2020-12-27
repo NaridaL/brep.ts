@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/brepts.iml" filepath="$PROJECT_DIR$/.idea/brepts.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../tsgl/.idea/tsgl.iml" filepath="$PROJECT_DIR$/../tsgl/.idea/tsgl.iml" />
     </modules>
   </component>
 </project>

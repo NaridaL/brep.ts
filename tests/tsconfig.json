@@ -6,7 +6,11 @@
     "sourceMap": true,
     "noEmit": true,
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": "..",
+    "paths": {
+      "brepts": ["src/index.ts"]
+    }
   },
   "exclude": ["../node_modules"],
   "include": ["./**/*"]

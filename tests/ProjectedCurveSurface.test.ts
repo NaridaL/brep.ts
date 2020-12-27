@@ -27,7 +27,7 @@ import {
   ProjectedCurveSurface,
   RotationFace,
   StraightEdge,
-} from ".."
+} from "../src"
 
 describe("ProjectedCurveSurface", () => {
   const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, 0, 2)

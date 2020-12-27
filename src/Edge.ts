@@ -7,7 +7,7 @@ import {
   assertInst,
   assertNumbers,
   assertVectors,
-  callsce,
+  callSource,
   clamp,
   eq,
   fuzzyBetween,
@@ -30,7 +30,7 @@ export abstract class Edge extends Transformable {
 
   abstract get bDir(): V3
 
-  constructor(
+  protected constructor(
     readonly curve: Curve,
     readonly a: V3,
     readonly b: V3,
@@ -43,7 +43,7 @@ export abstract class Edge extends Transformable {
     assertNumbers(aT, bT)
     assert(!eq(aT, bT))
     assertVectors(a, b)
-    assertf(() => curve instanceof Curve, curve)
+    assertInst(Curve, curve)
     assertf(
       () => !curve.isValidT || (curve.isValidT(aT) && curve.isValidT(bT)),
       aT,
@@ -135,7 +135,7 @@ export abstract class Edge extends Transformable {
   abstract tangentAt(t: number): V3
 
   toString(): string {
-    return callsce(
+    return callSource(
       "new " + this.constructor.name,
       this.curve,
       this.a,

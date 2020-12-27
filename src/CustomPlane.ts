@@ -1,4 +1,4 @@
-import { callsce, min, V3 } from "ts3dutils"
+import { callSource, min, V3 } from "ts3dutils"
 
 import * as chroma from "chroma.ts"
 import { GL_COLOR, GL_COLOR_BLACK } from "tsgl"
@@ -46,7 +46,7 @@ export class CustomPlane extends P3 {
   }
 
   toSource() {
-    return callsce(
+    return callSource(
       "new CustomPlane",
       this.anchor,
       this.right,

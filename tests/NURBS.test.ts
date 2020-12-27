@@ -23,7 +23,7 @@ import {
   NURBS,
   P3,
   XiEtaCurve,
-} from ".."
+} from "../src"
 import { PI, SQRT1_2, SQRT2 } from "../src/math"
 
 describe("NURBS", () => {
@@ -137,7 +137,7 @@ describe("NURBS", () => {
   })
 
   test("UnitCircle", () => {
-    console.log(NURBS.UnitCircle().str)
+    console.log(NURBS.UnitCircle().toString())
     testCurve(NURBS.UnitCircle(), undefined, "half circle in 2 segments")
     testCurve(
       NURBS.UnitCircle(5, -PI, PI),

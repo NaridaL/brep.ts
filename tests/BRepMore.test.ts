@@ -20,7 +20,7 @@ import {
   EllipseCurve,
   StraightEdge,
   edgeForCurveAndTs,
-} from ".."
+} from "../src"
 
 function doTest(
   assert: Assert,

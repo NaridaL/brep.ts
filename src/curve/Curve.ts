@@ -5,8 +5,8 @@ import {
   arrayFromFunction,
   arrayHashCode,
   assert,
-  assertNumbers,
-  callsce,
+  assertReals,
+  callSource,
   clamp,
   eq,
   eq0,
@@ -24,7 +24,6 @@ import {
   newtonIterateWithDerivative,
   NLA_PRECISION,
   Transformable,
-  Tuple3,
   V,
   V3,
   withMax,
@@ -78,9 +77,7 @@ export abstract class Curve
 
   constructor(readonly tMin: number, readonly tMax: number) {
     super()
-    assertNumbers(tMin, tMax)
-    assert("number" === typeof tMin && !isNaN(tMin))
-    assert("number" === typeof tMax && !isNaN(tMax))
+    assertReals(tMin, tMax)
     assert(tMin < tMax, "tMin < tMax " + tMin + " < " + tMax)
   }
 
@@ -346,7 +343,7 @@ export abstract class Curve
   }
 
   toSource(rounder: (x: number) => number = (x) => x): string {
-    return callsce.call(
+    return callSource.call(
       undefined,
       "new " + this.constructor.name,
       ...this.getConstructorParameters(),

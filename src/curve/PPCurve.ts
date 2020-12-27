@@ -1,7 +1,7 @@
 import {
   assert,
   assertVectors,
-  callsce,
+  callSource,
   getLast,
   M4,
   newtonIterate,
@@ -151,7 +151,7 @@ export class PPCurve extends ImplicitCurve {
   }
 
   toSource(): string {
-    return callsce(
+    return callSource(
       "PPCurve.forStartEnd",
       this.parametricSurface1,
       this.parametricSurface2,

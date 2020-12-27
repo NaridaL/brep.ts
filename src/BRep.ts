@@ -24,7 +24,7 @@ import {
   newtonIterateWithDerivative,
   NLA_DEBUG,
   NLA_PRECISION,
-  SCE,
+  toSource,
   snap,
   snap0,
   sum,
@@ -362,8 +362,8 @@ export class BRep extends Transformable {
         minT = Infinity
       for (const face of this.faces) {
         assert(!face.surface.containsCurve(testLine))
-        const ists = face.surface.isTsForLine(testLine)
-        for (const t of ists) {
+        const isTs = face.surface.isTsForLine(testLine)
+        for (const t of isTs) {
           const p = testLine.at(t)
           const pvf = face.containsPoint2(p)
           //assert(pvf != PointVsFace.ON_EDGE)
@@ -458,12 +458,12 @@ export class BRep extends Transformable {
     const mesh = new Mesh()
       .addVertexBuffer("normals", "ts_Normal")
       .addIndexBuffer("TRIANGLES")
-      .addIndexBuffer("LINES") as any
-    mesh.faceIndexes = new Map()
+      .addIndexBuffer("LINES")
+    const faceIndexes = new Map()
     for (const face of this.faces) {
       const triangleStart = mesh.TRIANGLES.length
       face.addToMesh(mesh)
-      mesh.faceIndexes.set(face, {
+      faceIndexes.set(face, {
         start: triangleStart,
         count: mesh.TRIANGLES.length - triangleStart,
       })
@@ -472,7 +472,7 @@ export class BRep extends Transformable {
     //for (const edge of this.edgeFaces.keys()) {
     //
     //}
-    return mesh
+    return Object.assign(mesh, { faceIndexes })
   }
 
   minus(other: BRep, infoFactory?: FaceInfoFactory<any>): BRep {
@@ -580,9 +580,10 @@ export class BRep extends Transformable {
   toSource(useGenerator: boolean = true): string {
     return (
       (useGenerator && this.generator) ||
-      `new BRep([\n${this.faces.map(SCE).join(",\n").replace(/^/gm, "\t")}], ${
-        this.infiniteVolume
-      })`
+      `new BRep([\n${this.faces
+        .map(toSource)
+        .join(",\n")
+        .replace(/^/gm, "\t")}], ${this.infiniteVolume})`
     )
   }
 
@@ -984,7 +985,7 @@ export class BRep extends Transformable {
    *              e.g. box(5, 5, 5) - box(3, 3, 3).rotateZ([0, 1, 2] * PI / 2).translate(0, 1, 1)
    *          4.  edge/edge Two edges are colinear.
    *              implies vertex of A lying in edge of B
-   *           5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
+   *          5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
    *          6.  vertex/vertex with/without edge/edge, edge/face and face/face intersections
    *          7.  vertex lies in face
    *
@@ -1003,9 +1004,9 @@ export class BRep extends Transformable {
     this.buildAdjacencies()
     other.buildAdjacencies()
 
-    const faceMap = new Map()
-    const thisEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>(),
-      otherEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>()
+    const faceMap: Map<Face, Edge[]> = new Map()
+    const thisEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>()
+    const otherEdgePoints = new JavaMap<Edge, IntersectionPointInfo[]>()
 
     const checkedPairs = new CustomSet<Pair<any, any>>()
 

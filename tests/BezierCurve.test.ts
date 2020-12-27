@@ -17,7 +17,7 @@ import {
   EllipsoidSurface,
   Edge,
   edgeForCurveAndTs,
-} from ".."
+} from "../src"
 
 import { PI } from "../src/math"
 

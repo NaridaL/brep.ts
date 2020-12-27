@@ -1,4 +1,4 @@
-var viewer = (function (exports) {
+var viewer = (function (exports, javasetmap_ts) {
     'use strict';
 
     /*! *****************************************************************************
@@ -1900,150 +1900,6 @@ var viewer = (function (exports) {
 
     var debounce_1 = debounce;
 
-    /**
-     * Java style map.
-     */
-    class JavaMap {
-        constructor() {
-            this[Symbol.toStringTag] = "Map";
-            this._map = new Map();
-            this._size = 0;
-        }
-        toString() {
-            return ("{" +
-                Array.from(this.entries2())
-                    .map(({ key, value }) => key + ":" + value)
-                    .join(", ") +
-                "}");
-        }
-        forEach(callbackfn, thisArg) {
-            for (const bucket of this._map.values()) {
-                for (const { key, value } of bucket) {
-                    callbackfn.call(thisArg, value, key, this);
-                }
-            }
-        }
-        *keys() {
-            for (const bucket of this._map.values()) {
-                for (const { key } of bucket) {
-                    yield key;
-                }
-            }
-        }
-        *values() {
-            for (const bucket of this._map.values()) {
-                for (const { value } of bucket) {
-                    yield value;
-                }
-            }
-        }
-        [Symbol.iterator]() {
-            return this.entries();
-        }
-        set(key, value) {
-            this.set2(key, value);
-            return this;
-        }
-        /**
-         * Like {@link #set} except it returns true if key was new and false if the value was only updated.
-         *
-         */
-        set2(key, val) {
-            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
-            //assert(hashCode === (hashCode | 0))
-            if (bucket) {
-                const pairIndex = bucket.findIndex((pair) => pair.key.equals(key));
-                if (-1 == pairIndex) {
-                    bucket.push({ key: key, value: val });
-                }
-                else {
-                    bucket[pairIndex].value = val;
-                    return false;
-                }
-            }
-            else {
-                this._map.set(hashCode, [{ key: key, value: val }]);
-            }
-            this._size++;
-            return true;
-        }
-        has(key) {
-            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
-            //assert(hashCode === (hashCode | 0))
-            return undefined !== bucket && bucket.some((pair) => pair.key.equals(key));
-        }
-        get(key) {
-            const hashCode = key.hashCode(), bucket = this._map.get(hashCode), pair = bucket && bucket.find((pair) => pair.key.equals(key));
-            return pair && pair.value;
-        }
-        getLike(key) {
-            for (const hashCode of key.hashCodes()) {
-                const bucket = this._map.get(hashCode);
-                const canonVal = bucket && bucket.find((x) => x.key.like(key));
-                if (canonVal)
-                    return canonVal;
-            }
-        }
-        setLike(key, val) {
-            return !this.getLike(key) && this.set(key, val);
-        }
-        delete(key) {
-            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
-            if (bucket) {
-                const index = bucket.findIndex((x) => x.key.equals(key));
-                if (-1 != index) {
-                    if (1 == bucket.length) {
-                        this._map.delete(hashCode);
-                    }
-                    else {
-                        bucket.splice(index, 1);
-                    }
-                    this._size--;
-                    return true;
-                }
-            }
-            return false;
-        }
-        deleteLike(key) {
-            for (const hashCode of key.hashCodes()) {
-                const bucket = this._map.get(hashCode);
-                if (bucket) {
-                    const index = bucket.findIndex((x) => x.key.like(key));
-                    if (-1 != index) {
-                        const deleted = bucket[index];
-                        if (1 == bucket.length) {
-                            this._map.delete(hashCode);
-                        }
-                        else {
-                            bucket.splice(index, 1);
-                        }
-                        this._size--;
-                        return deleted;
-                    }
-                }
-            }
-        }
-        *entries2() {
-            for (const bucket of this._map.values()) {
-                yield* bucket;
-            }
-        }
-        *entries() {
-            for (const bucket of this._map.values()) {
-                for (const { key, value } of bucket) {
-                    yield [key, value];
-                }
-            }
-        }
-        clear() {
-            this._map.clear();
-            this._size = 0;
-        }
-        get size() {
-            return this._size;
-        }
-    }
-
     const PI$1 = Math.PI;
     const TAU = 2 * PI$1;
     /** Use rollup-plugin-replace or similar to avoid error in browser. */
@@ -3598,7 +3454,7 @@ var viewer = (function (exports) {
     V3.XYZ = new V3(1, 1, 1);
     V3.INF = new V3(Infinity, Infinity, Infinity);
     V3.UNITS = [V3.X, V3.Y, V3.Z];
-    V3.NAMEMAP = new JavaMap()
+    V3.NAMEMAP = new javasetmap_ts.JavaMap()
         .set(V3.O, "V3.O")
         .set(V3.X, "V3.X")
         .set(V3.Y, "V3.Y")
@@ -6147,7 +6003,7 @@ var viewer = (function (exports) {
     M4.temp0 = new M4();
     M4.temp1 = new M4();
     M4.temp2 = new M4();
-    M4.NAMEMAP = new JavaMap()
+    M4.NAMEMAP = new javasetmap_ts.JavaMap()
         .set(M4.IDENTITY3, "M4.IDENTITY3")
         .set(M4.FOO, "M4.FOO")
         .set(M4.O, "M4.O")
@@ -32711,7 +32567,7 @@ var viewer = (function (exports) {
     /**
      * Java style map.
      */
-    class JavaMap$1 {
+    class JavaMap {
         constructor() {
             this[Symbol.toStringTag] = "Map";
             this._map = new Map();
@@ -47756,7 +47612,7 @@ var viewer = (function (exports) {
             newFaces.push(...oldFaces.filter((face) => oldFaceStatuses.get(face) == "inside"));
         }
         static getLooseEdgeSegments(edgePointInfoss, edgeFaces) {
-            const result = new JavaMap$1();
+            const result = new JavaMap();
             // if there are no point info, the original edge will be kept, so we should return nothing
             // otherwise, something will be returned, even if it a new edge identical to the base edge
             for (const [canonEdge, pointInfos] of edgePointInfoss) {
@@ -47791,7 +47647,7 @@ var viewer = (function (exports) {
             return result;
         }
         getIntersectionEdges(brep2) {
-            const faceMap = new Map(), thisEdgePoints = new JavaMap$1(), otherEdgePoints = new JavaMap$1();
+            const faceMap = new Map(), thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
             const checkedPairs = new JavaSet();
             this.faces.forEach((face) => {
                 //console.log('face', face.toString())
@@ -47908,7 +47764,7 @@ var viewer = (function (exports) {
         buildAdjacencies() {
             if (this.edgeFaces)
                 return this;
-            this.edgeFaces = new JavaMap$1();
+            this.edgeFaces = new JavaMap();
             for (const face of this.faces) {
                 for (const edge of face.getAllEdges()) {
                     const canon = edge.getCanon();
@@ -47968,7 +47824,7 @@ var viewer = (function (exports) {
             this.buildAdjacencies();
             other.buildAdjacencies();
             const faceMap = new Map();
-            const thisEdgePoints = new JavaMap$1(), otherEdgePoints = new JavaMap$1();
+            const thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
             const checkedPairs = new JavaSet();
             for (const thisFace of this.faces) {
                 for (const otherFace of other.faces) {
@@ -50283,5 +50139,5 @@ var viewer = (function (exports) {
 
     return exports;
 
-}({}));
+}({}, javasetmap_ts));
 //# sourceMappingURL=viewer.js.map

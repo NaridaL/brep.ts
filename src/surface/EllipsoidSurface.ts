@@ -49,12 +49,6 @@ import {
 
 import { abs, cos, max, min, PI, sign, sin, sqrt } from "../math"
 
-class ArrayExt {}
-
-declare global {
-  interface Array<T> extends ArrayExt {}
-}
-
 export class EllipsoidSurface
   extends ParametricSurface
   implements ImplicitSurface {
@@ -645,11 +639,10 @@ export class EllipsoidSurface
   uvPFunc() {
     return (pWC: V3) => {
       const pLC = this.matrixInverse.transformPoint(pWC)
-      const alpha = abs(pLC.angleXY())
-      const beta = Math.asin(clamp(pLC.z, -1, 1))
-      assert(isFinite(alpha))
-      assert(isFinite(beta))
-      return new V3(alpha, beta, 0)
+      const u = abs(pLC.angleXY())
+      const v = Math.asin(clamp(pLC.z, -1, 1))
+      assert(this.validUV(u, v), u, v)
+      return new V3(u, v, 0)
     }
   }
 

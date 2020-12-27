@@ -6,7 +6,7 @@ import {
   assertInst,
   assertNumbers,
   assertVectors,
-  callsce,
+  callSource,
   eq,
   eq0,
   getLast,
@@ -262,7 +262,7 @@ export namespace B2T {
       new V3(width, height, 0),
       new V3(width, 0, 0),
     ]
-    const generator = callsce("B2T.box", width, height, depth, name)
+    const generator = callSource("B2T.box", width, height, depth, name)
     return B2T.extrudeVertices(
       baseVertices,
       P3.XY.flipped(),
@@ -394,7 +394,7 @@ export namespace B2T {
     faces.push(bottomFace, topFace)
     gen =
       gen ||
-      callsce("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name)
+      callSource("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name)
     return new BRep(
       faces,
       baseFacePlane.normal1.dot(offset) > 0,
@@ -447,7 +447,7 @@ export namespace B2T {
       new V3(radius, 0, 0),
       new V3(-radius, 0, 0),
     )
-    const generator = callsce("B2T.sphere", radius, name, rot)
+    const generator = callSource("B2T.sphere", radius, name, rot)
     return rotateEdges(
       [StraightEdge.throughPoints(ee.b, ee.a), ee],
       rot,
@@ -838,7 +838,7 @@ export namespace B2T {
       new PlaneSurface(P3.XY),
       PlaneFace as any,
     )
-    const generator = callsce("B2T.text", text, size, depth)
+    const generator = callSource("B2T.text", text, size, depth)
     return BRep.join(
       faces.map((face) => B2T.extrudeFace(face as PlaneFace, V(0, 0, -depth))),
       generator,
@@ -1134,7 +1134,13 @@ export namespace B2T {
     const edges = StraightEdge.chain(baseVertices, true)
     generator =
       generator ||
-      callsce("B2T.extrudeVertices", baseVertices, baseFacePlane, offset, name)
+      callSource(
+        "B2T.extrudeVertices",
+        baseVertices,
+        baseFacePlane,
+        offset,
+        name,
+      )
     return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator)
   }
 
@@ -1195,7 +1201,7 @@ export namespace B2T {
         name + "cda",
       ),
     ]
-    const gen = callsce("B2T.tetrahedron", a, b, c, d)
+    const gen = callSource("B2T.tetrahedron", a, b, c, d)
     return new BRep(faces, false, gen)
   }
 
@@ -1229,9 +1235,9 @@ export namespace B2T {
     new V3(-1, -c, 0),
     new V3(1, -c, 0),
   ].map((v) => v.unit())
-  export const DODECAHEDRON_FACE_VERTICES: ReadonlyArray<ReadonlyArray<
-    number
-  >> = [
+  export const DODECAHEDRON_FACE_VERTICES: ReadonlyArray<
+    ReadonlyArray<number>
+  > = [
     [4, 3, 2, 1, 0],
     [7, 6, 5, 0, 1],
     [12, 11, 10, 9, 8],
@@ -1254,9 +1260,9 @@ export namespace B2T {
     new V3(0, 0, 1),
     new V3(0, 0, -1),
   ]
-  export const OCTAHEDRON_FACE_VERTICES: ReadonlyArray<ReadonlyArray<
-    number
-  >> = [
+  export const OCTAHEDRON_FACE_VERTICES: ReadonlyArray<
+    ReadonlyArray<number>
+  > = [
     [0, 2, 4],
     [2, 1, 4],
     [1, 3, 4],
@@ -1285,9 +1291,9 @@ export namespace B2T {
     new V3(-t, 0, -s),
     new V3(-t, 0, s),
   ]
-  export const ICOSAHEDRON_FACE_VERTICES: ReadonlyArray<ReadonlyArray<
-    number
-  >> = [
+  export const ICOSAHEDRON_FACE_VERTICES: ReadonlyArray<
+    ReadonlyArray<number>
+  > = [
     // 5 faces around point 0
     [0, 11, 5],
     [0, 5, 1],
@@ -1415,7 +1421,7 @@ export namespace B2T {
     const baseSurface = new PlaneSurface(P3.XY).flipped()
     const bottomFace = Face.create(baseSurface, Edge.reversePath(baseEdges))
     faces.push(bottomFace)
-    const generator = callsce("B2T.pyramidEdges", baseEdges, apex, name)
+    const generator = callSource("B2T.pyramidEdges", baseEdges, apex, name)
     return new BRep(faces, false, generator)
   }
 

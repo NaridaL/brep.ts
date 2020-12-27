@@ -9,4 +9,8 @@ module.exports = {
     },
   },
   setupFilesAfterEnv: ["jest-expect-message"],
+  transformIgnorePatterns: ["node_modules/(?!(ts3dutils)/)"],
+  moduleNameMapper: {
+    //"../src": "<rootDir>/lib/index.umd.min.js",
+  },
 }

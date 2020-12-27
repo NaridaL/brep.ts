@@ -10,7 +10,14 @@ import {
   V3,
   Vector,
 } from "ts3dutils"
-import { GL_COLOR, GL_COLOR_BLACK, Mesh, Shader, TSGLContext } from "tsgl"
+import {
+  GL_COLOR,
+  GL_COLOR_BLACK,
+  Mesh,
+  Shader,
+  TSGLContext,
+  TSGLContextBase,
+} from "tsgl"
 
 import {
   B2T,
@@ -54,7 +61,7 @@ export const COLORS = {
   PP_STROKE: chroma.color("#EB81B4"),
 }
 
-export interface BREPGLContext extends TSGLContext {}
+export interface BREPGLContext extends TSGLContextBase {}
 
 export class BREPGLContext {
   shaders: SHADERS_TYPE
@@ -362,7 +369,7 @@ export const CURVE_PAINTERS: {
       })
       .draw(gl.meshes.pipe)
   },
-  [L3.name](gl, curve: L3, color, startT, endT, width = 2, normal = V3.Z) {
+  [L3.name](gl, curve: L3, color, startT, endT, width = 2) {
     gl.pushMatrix()
     const a = curve.at(startT),
       b = curve.at(endT)

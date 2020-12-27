@@ -26,7 +26,7 @@ import {
   EllipsoidSurface,
   StraightEdge,
   edgeForCurveAndTs,
-} from ".."
+} from "../src"
 import { PI, sin } from "../src/math"
 
 describe("CylinderSurface", () => {

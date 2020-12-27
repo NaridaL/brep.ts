@@ -1,7 +1,7 @@
 import { testParametricSurface } from "./manager"
 
 import { M4, TAU } from "ts3dutils"
-import { RotationREqFOfZ } from ".."
+import { RotationREqFOfZ } from "../src"
 
 import { sin, cos } from "../src/math"
 

@@ -1,7 +1,7 @@
 import { testCurve, testCurveTransform, testISTs } from "./manager"
 
 import { DEG, M4, V } from "ts3dutils"
-import { HyperbolaCurve, intersectionUnitHyperbolaLine, P3 } from ".."
+import { HyperbolaCurve, intersectionUnitHyperbolaLine, P3 } from "../src"
 
 import { sqrt } from "../src/math"
 

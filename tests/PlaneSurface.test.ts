@@ -10,7 +10,7 @@ import {
   EllipseCurve,
   StraightEdge,
   edgeForCurveAndTs,
-} from ".."
+} from "../src"
 
 import { assert, DEG, V, V3 } from "ts3dutils"
 

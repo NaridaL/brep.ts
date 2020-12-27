@@ -24,7 +24,7 @@ import {
   PointVsFace,
   RotationFace,
   StraightEdge,
-} from ".."
+} from "../src"
 import { PI } from "../src/math"
 
 describe("ConicSurface", () => {

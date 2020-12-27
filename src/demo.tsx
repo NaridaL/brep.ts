@@ -8,7 +8,18 @@ import React, {
   WheelEvent,
 } from "react"
 import ReactDOM from "react-dom"
-import { clamp, DEG, emod, int, round10, TAU, V, V3 } from "ts3dutils"
+import {
+  assertf,
+  clamp,
+  DEG,
+  emod,
+  int,
+  NLA_DEBUG,
+  round10,
+  TAU,
+  V,
+  V3,
+} from "ts3dutils"
 import { TSGLContext } from "tsgl"
 
 import {
@@ -160,6 +171,15 @@ class InputComponent extends Component<
     this.props.change(target.value)
     e.preventDefault()
   }
+  private input!: HTMLInputElement
+
+  componentDidMount() {
+    this.input.addEventListener("keypress", this.onWheel, { passive: false })
+  }
+
+  componentWillUnmount() {
+    this.input.removeEventListener("keypress", this.onWheel)
+  }
 
   render() {
     const { step, value, change, ...atts } = this.props
@@ -168,9 +188,8 @@ class InputComponent extends Component<
         {...atts}
         defaultValue={"" + value}
         className={classnames(this.props.className, step && "scrollable")}
-        onWheel={step ? this.onWheel : undefined}
-        onScroll={step ? (e) => e.preventDefault() : undefined}
         onBlur={(e) => change((e.target as any).value)}
+        ref={(ref) => (this.input = ref!)}
       />
     )
   }
@@ -274,7 +293,6 @@ const demoPlanes = [
     -5,
     5,
   ),
-  //	sketchPlane
 ]
 const hovering: any = undefined
 
@@ -293,7 +311,6 @@ function paintDemo(demo: DemoDesc) {
   for (let i = 0; i < demo.meshes.length; i++) {
     const mesh = demo.meshes[i],
       b2 = demo.b2s[i]
-    if (!mesh) continue
     gl.pushMatrix()
     //viewerGL.translate(30, 0, 0)
     gl.projectionMatrix.m[11] -= 1 / (1 << 22) // prevent Z-fighting
@@ -348,15 +365,16 @@ function update(demo: DemoDesc, params: string[]) {
   //	console.log(e.message)
   //}
   demo.gl.makeCurrent()
-  demo.meshes =
-    demo.b2s &&
-    demo.b2s.map((b2) => {
-      try {
-        return b2.toMesh().compile()
-      } catch (e) {
-        return undefined
-      }
-    })
+  demo.meshes = demo.b2s.flatMap((b2, i) => {
+    try {
+      const m = b2.toMesh()
+      assertf(() => m.faceIndexes.size == b2.faces.length)
+      return [b2.toMesh().compile()]
+    } catch (e) {
+      console.error(`Error creating mesh from brep ${i}`, e, b2.toSource())
+      return []
+    }
+  })
   paintDemo(demo)
 }
 
@@ -407,6 +425,11 @@ const Body = () => (
         },
       ]}
     />
+  </div>
+)
+
+const x = (
+  <>
     <h3>Functionality this library implements</h3>
     <ul>
       <li>
@@ -567,5 +590,5 @@ const Body = () => (
         },
       ]}
     />
-  </div>
+  </>
 )

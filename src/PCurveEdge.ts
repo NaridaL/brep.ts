@@ -2,7 +2,7 @@ import {
   assert,
   assertf,
   assertVectors,
-  callsce,
+  callSource,
   int,
   M4,
   snap2,
@@ -84,7 +84,7 @@ export class PCurveEdge extends Edge {
   }
 
   toSource(): string {
-    return callsce(
+    return callSource(
       "new PCurveEdge",
       this.curve,
       this.a,

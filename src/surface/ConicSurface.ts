@@ -6,7 +6,6 @@ import {
   eq,
   eq0,
   getIntervals,
-  ilog,
   M4,
   newtonIterate,
   pqFormula,
@@ -429,8 +428,8 @@ export class ConicSurface extends ParametricSurface implements ImplicitSurface {
       )
       const aabb = AABB.forAABBs([x.getAABB(), y.getAABB()])
       console.log("aabb", aabb)
-      console.log(matrixInv.str)
-      console.log(x.str, y.str)
+      console.log(matrixInv.toString())
+      console.log(x.toString(), y.toString())
       return new ConicSurface(
         c,
         f1,

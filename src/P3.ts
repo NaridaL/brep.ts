@@ -4,7 +4,7 @@ import {
   assertInst,
   assertNumbers,
   assertVectors,
-  callsce,
+  callSource,
   eq,
   eq0,
   floatHashCode,
@@ -248,7 +248,7 @@ export class P3 extends Transformable {
   }
 
   toSource(): string {
-    return callsce("new P3", this.normal1, this.w)
+    return callSource("new P3", this.normal1, this.w)
   }
 
   translated(offset: V3): P3 {

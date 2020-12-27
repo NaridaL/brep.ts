@@ -137,7 +137,7 @@ export abstract class ParametricSurface extends Surface {
     return this.normalUVFunc()(u, v)
   }
 
-  parametersValid(u: number, v: number): boolean {
+  validUV(u: number, v: number): boolean {
     return between(u, this.uMin, this.uMax) && between(v, this.vMin, this.vMax)
   }
 

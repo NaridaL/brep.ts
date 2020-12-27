@@ -3,7 +3,7 @@ import {
   assertf,
   assertInst,
   assertVectors,
-  callsce,
+  callSource,
   eq0,
   M4,
   snap2,
@@ -70,7 +70,7 @@ export class StraightEdge extends Edge {
   }
 
   toSource(): string {
-    return callsce(
+    return callSource(
       "new StraightEdge",
       this.curve,
       this.a,

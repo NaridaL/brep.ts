@@ -461,7 +461,7 @@ export class BezierCurve extends Curve {
 
   transform(m4: M4) {
     // perspective projection turn bezier curve into rational spline
-    assert(m4.isNoProj(), m4.str)
+    assert(m4.isNoProj(), m4.toString())
     return new BezierCurve(
       m4.transformPoint(this.p0),
       m4.transformPoint(this.p1),

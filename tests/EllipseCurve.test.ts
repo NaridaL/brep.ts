@@ -25,7 +25,7 @@ import {
   PlaneSurface,
   parabola4Projection,
   edgeForCurveAndTs,
-} from ".."
+} from "../src"
 
 const { PI } = Math
 
@@ -179,7 +179,7 @@ describe("EllipseCurve", () => {
       ),
       M4.translate(0, 1),
     )
-    console.log(m.str)
+    console.log(m.toString())
     testCurveTransform(c, m)
   })
 
@@ -191,11 +191,11 @@ describe("EllipseCurve", () => {
     const P = M4.product(m2.as3x3().inversed())
     console.log(m.rank())
     console.log("P")
-    console.log(P.str)
+    console.log(P.toString())
     console.log("m2")
-    console.log(m2.str)
+    console.log(m2.toString())
     console.log("P * m")
-    console.log(P.times(m).str)
+    console.log(P.times(m).toString())
     console.log()
 
     // prettier-ignore
@@ -206,7 +206,7 @@ describe("EllipseCurve", () => {
     //    0, 0, 1, 0,
     //    0, 1, 0, -1
     //),M4.translate(0, 1))
-    //console.log(m.str)
+    //console.log(m.toString())
     testCurveTransform(c, m)
   })
   test("transform4 at(0) on vanishing plane", () => {
@@ -240,7 +240,7 @@ describe("EllipseCurve", () => {
     const ss = arraySamples(c.tMin, c.tMax, 16).flatMap((t) =>
       ((p) => [p, p.div(p.z)])(pm.transformPoint(c.at(t))),
     )
-    console.log(pm.str)
+    console.log(pm.toString())
     outputLink({
       edges: [c, parabola4Projection(pm, c.tMin, c.tMax)].map((c) =>
         edgeForCurveAndTs(c),

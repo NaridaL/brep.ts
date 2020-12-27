@@ -17,7 +17,7 @@ import {
   P3,
   PointProjectedSurface,
   ProjectedCurveSurface,
-} from ".."
+} from "../src"
 
 test.skip("PointProjectedSurface", () => {
   const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, -1, 2)

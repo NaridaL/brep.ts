@@ -2,7 +2,7 @@ import { outputLink, testCurveCentralProjection } from "./manager"
 
 import { M4, V, V3 } from "ts3dutils"
 import { Mesh } from "tsgl"
-import { Curve, L3, edgeForCurveAndTs } from ".."
+import { Curve, L3, edgeForCurveAndTs } from "../src"
 
 describe("L3", () => {
   test("isInfosWithLine", () => {

@@ -3,7 +3,7 @@ import {
   assert,
   assertVectors,
   bisect,
-  callsce,
+  callSource,
   clamp,
   fuzzyUniques,
   getLast,
@@ -524,7 +524,7 @@ export class PICurve extends ImplicitCurve {
   }
 
   toSource(rounder: (x: number) => number = (x) => x): string {
-    const result = callsce(
+    const result = callSource(
       "PICurve.forParametricStartEnd",
       this.parametricSurface,
       this.implicitSurface,

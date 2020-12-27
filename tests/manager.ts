@@ -25,7 +25,7 @@ import {
   V3,
 } from "ts3dutils"
 
-export * from "ts3dutils/tests/manager"
+export * from "ts3dutils/lib/manager"
 import * as fs from "fs"
 import slug from "slug"
 
@@ -49,8 +49,8 @@ import {
   rotateCurve,
   StraightEdge,
   Surface,
-} from ".."
-import * as brepts from ".."
+} from "../src"
+import * as brepts from "../src"
 import * as ts3dutils from "ts3dutils"
 
 declare global {
@@ -301,6 +301,7 @@ export function outputLink(
     "}"
   const o =
     sanitizeFilename(expect.getState().currentTestName + "_" + msg) + ".html"
+  fs.mkdirSync(__dirname + "/results", { recursive: true })
   fs.writeFileSync(
     __dirname + "/results/" + o,
     demoFile.replace("/*INSERT*/", script),
@@ -336,11 +337,17 @@ export function testISCurves(
       for (const curve of isCurves) {
         expect(
           surface1.containsCurve(curve),
-          "surface1.containsCurve(curve) " + surface1.str + " " + curve.str,
+          "surface1.containsCurve(curve) " +
+            surface1.toString() +
+            " " +
+            curve.toString(),
         ).toBeTruthy()
         expect(
           surface2.containsCurve(curve),
-          "surface2.containsCurve(curve) " + surface2.str + " " + curve.str,
+          "surface2.containsCurve(curve) " +
+            surface2.toString() +
+            " " +
+            curve.toString(),
         ).toBeTruthy()
         const t = lerp(curve.tMin, curve.tMax, 0.5),
           p = curve.at(t),
@@ -829,9 +836,9 @@ export function testISTs(
       // assert.ok(
       //   surface.containsPoint(p),
       //   "surface.containsPoint(p) " +
-      //     surface.str +
+      //     surface.toString() +
       //     " " +
-      //     p.str +
+      //     p.toString() +
       //     " t: " +
       //     t +
       //     (ImplicitSurface.is(surface)

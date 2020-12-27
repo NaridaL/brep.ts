@@ -3,7 +3,7 @@ import { b2equals, inDifferentSystems } from "./manager"
 import { JavaSet as CustomSet } from "javasetmap.ts"
 import { DEG, M4, V, V3 } from "ts3dutils"
 import * as ts3dutils from "ts3dutils"
-import * as brepts from ".."
+import * as brepts from "../src"
 import {
   B2T,
   BezierCurve,
@@ -13,7 +13,7 @@ import {
   EllipseCurve,
   intersectionCircleLine,
   intersectionUnitCircleLine,
-} from ".."
+} from "../src"
 
 import { cos, PI } from "../src/math"
 
@@ -118,14 +118,16 @@ describe("NLA", () => {
             )
             console.log(test.t, test.s, 1 - cos(test.t), 1 - cos(test.s))
             console.log(
-              test.c.times(test.result).str,
-              offsetCentroid.str,
+              test.c.times(test.result).toString(),
+              offsetCentroid.toString(),
               offsetArea,
-              offsetCentroid.times(offsetArea).str,
-              test.c.times(test.result).plus(offsetCentroid.times(offsetArea))
-                .str,
+              offsetCentroid.times(offsetArea).toString(),
+              test.c
+                .times(test.result)
+                .plus(offsetCentroid.times(offsetArea))
+                .toString(),
               totalArea,
-              expectedCentroid.str,
+              expectedCentroid.toString(),
             )
             expect(result.area).toFuzzyEqual(expectedArea)
 
@@ -181,7 +183,7 @@ describe("NLA", () => {
   // 0), f2 = V(-a.y, a.x) const curve = new EllipseCurve(center, f1, f2) const seamCurve =
   // EllipseCurve.UNIT.rotateX(-PI / 2) const edge = edgeForCurveAndTs(curve, -PI, PI) assert.ok(true, `<html><a
   // style='color: #0000ff text-decoration: underline' target='blank'
-  // href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[${edge.str}]'>view</a>`) const [front,
+  // href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1, -1)]&edges=[${edge.toString()}]'>view</a>`) const [front,
   // back] = EllipsoidSurface.splitOnPlaneLoop([edge], true)  assert.ok(true, `<html><a style='color: #0000ff
   // text-decoration: underline' target='blank' href='viewer.html?mesh=${es.sce}.toMesh()&points=[V(-5, 1,
   // -1)]&edges=${back.sce}'>view</a>`) console.log(front, back) const expectedFront = [] const expectedBack =

@@ -1,7 +1,7 @@
 import { inDifferentSystems } from "./manager"
 
 import { M4, P3XY, snap0, V, V3 } from "ts3dutils"
-import { L3, P3 } from ".."
+import { L3, P3 } from "../src"
 import { sign } from "../src/math"
 
 describe("P3", () => {
@@ -71,7 +71,7 @@ describe("P3", () => {
         proj.transformVector(p2).isPerpendicularTo(plane.normal1),
       ).toBeTruthy()
       console.log(proj.transformPoint(p2).sce)
-      console.log(proj.str)
+      console.log(proj.toString())
     })
   })
   test("M4.projectPlanePoint()", () => {

@@ -430,7 +430,7 @@ export function parabola4Projection(
     wx0(tMin) * wx0(tMax) < 0 ||
     extremas.some((x) => wx0(x) * (wx0(tMin) + wx0(tMax)) < 0)
   ) {
-    console.log(m.str)
+    console.log(m.toString())
     throw new Error(
       "The entire interval must be on one side of the vanishing plane. P=" +
         toSource(P3.vanishingPlane(m)),

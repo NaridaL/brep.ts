@@ -1,5 +1,6 @@
 import viewerConfig from "./rollup.viewer.config"
 import merge from "deepmerge"
+import servePlugin from "rollup-plugin-serve"
 
 const config = merge(viewerConfig, {
   input: "src/demo.tsx",
@@ -13,8 +14,13 @@ const config = merge(viewerConfig, {
     },
   },
   external: ["highlight.js"],
-  // plugins: [
-  // 	uglify({}, minify),
-  // ],
+  plugins: [
+    process.env.ROLLUP_WATCH &&
+      servePlugin({
+        port: 9995,
+        open: true,
+        openPage: "/demo.html",
+      }),
+  ],
 })
 export default config

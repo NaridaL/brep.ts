@@ -22,7 +22,7 @@ import {
   EllipseCurve,
   StraightEdge,
   edgeForCurveAndTs,
-} from ".."
+} from "../src"
 import { cos, PI, sin } from "../src/math"
 
 describe("RotatedCurveSurface", () => {

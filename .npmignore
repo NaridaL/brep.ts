@@ -5,3 +5,4 @@
 src/shaders
 src/ignore
 !README.md
+!index.d.ts

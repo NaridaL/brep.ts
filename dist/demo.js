@@ -1,3 +1,5 @@
+
+(function(l, r) { if (l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (window.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(window.document);
 var demo = (function (exports, hljs) {
     'use strict';
 
@@ -32030,22 +32032,7 @@ var demo = (function (exports, hljs) {
 
     const PI$1 = Math.PI;
     const TAU = 2 * PI$1;
-    /** Use rollup-plugin-replace or similar to avoid error in browser. */
-    // @ts-ignore
-    const NLA_DEBUG = "development" != "production";
     const NLA_PRECISION = 1 / (1 << 26);
-    console.log("NLA_PRECISION", NLA_PRECISION);
-    console.log("NLA_DEBUG", NLA_DEBUG);
-    let oldConsole = undefined;
-    function disableConsole() {
-        oldConsole = console.log;
-        console.log = function () { };
-    }
-    function enableConsole() {
-        if (oldConsole) {
-            console.log = oldConsole;
-        }
-    }
     function hasConstructor(instance, cons) {
         return instance.constructor == cons;
     }
@@ -32073,7 +32060,6 @@ var demo = (function (exports, hljs) {
                 }
             }
         }
-        return true;
     }
     function assertInts(...numbers) {
         {
@@ -32083,7 +32069,17 @@ var demo = (function (exports, hljs) {
                 }
             }
         }
-        return true;
+    }
+    function assertReals(...numbers) {
+        {
+            for (let i = 0; i < numbers.length; i++) {
+                const x = numbers[i];
+                //noinspection SuspiciousTypeOfGuard
+                if ("number" !== typeof x || isNaN(x) || !isFinite(x)) {
+                    throw new Error(`assertNumbers arguments[${i}] = ${x} is not a real.`);
+                }
+            }
+        }
     }
     function assert(value, ...messages) {
         if ( !value) {
@@ -32095,7 +32091,7 @@ var demo = (function (exports, hljs) {
         return true;
     }
     function assertNever(value) {
-        throw new Error();
+        throw new Error(value);
     }
     function assertf(f, ...messages) {
         if ( !f()) {
@@ -32125,11 +32121,10 @@ var demo = (function (exports, hljs) {
     const snap = (x, to) => Math.abs(x - to) <= NLA_PRECISION ? to : x;
     const snap2 = (x, ...to) => to.reduce((x, to) => (Math.abs(x - to) <= NLA_PRECISION ? to : x), x);
     const snap0 = (x, EPS = NLA_PRECISION) => Math.abs(x) <= EPS ? 0 : x;
-    /** @deprecated */ const eq2 = eq;
     /**
      * Decimal adjustment of a number.
      *
-     * @param f  The type of adjustment.
+     * @param f The type of adjustment.
      * @param value The number.
      * @param exp The exponent (the 10 logarithm of the adjustment base).
      * @returns The adjusted value.
@@ -32225,8 +32220,8 @@ var demo = (function (exports, hljs) {
         return ~~(f * (1 << 28));
     }
     /**
-     * combinations(2) will generate
-     * [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
+     * @example
+     *   combinations(2) // [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
      */
     function* combinations(n) {
         for (let i = 0; i < n; i++) {
@@ -32235,9 +32230,7 @@ var demo = (function (exports, hljs) {
             }
         }
     }
-    /**
-     * One degree in radians. Use like Math.sin(30 * DEG).
-     */
+    /** One degree in radians. Use like Math.sin(30 * DEG). */
     const DEG = 0.017453292519943295;
     Object.map = function (o, f, context = undefined) {
         const result = {};
@@ -32270,39 +32263,20 @@ var demo = (function (exports, hljs) {
     String.prototype.equals = function (x) {
         return this == x;
     };
-    function SCE(o) {
-        switch (typeof o) {
-            case "undefined":
-                return "undefined";
-            case "function":
-                return o.toString();
-            case "number":
-                return "" + o;
-            case "string":
-                return JSON.stringify(o);
-            case "object":
-                if (null == o) {
-                    return "null";
-                }
-                else {
-                    return o.sce;
-                }
-            default:
-                throw new Error();
-        }
-    }
     Object.defineProperty(Object.prototype, "sce", {
         get: function () {
             return this.toSource();
         },
         configurable: true,
     });
+    /*
     Object.defineProperty(Object.prototype, "str", {
-        get: function () {
-            return this.toString();
-        },
-        configurable: true,
-    });
+      get: function () {
+        return this.toString()
+      },
+      configurable: true,
+    })
+     */
     function ilog(x) {
         console.log(x);
         return x;
@@ -32313,9 +32287,7 @@ var demo = (function (exports, hljs) {
     //    assert(!NLA[nlaName])
     //    NLA[nlaName] = (arr, ...rest) => ARRAY_UTILITIES[key].apply(arr, rest)
     //}
-    /**
-     * solves x² + px + q = 0
-     */
+    /** Solves x² + px + q = 0 */
     function pqFormula(p, q) {
         // 4 times the discriminant:in
         const discriminantX4 = (p * p) / 4 - q;
@@ -32331,9 +32303,8 @@ var demo = (function (exports, hljs) {
         }
     }
     /**
-     * from pomax' library
-     * solves ax³ + bx² + cx + d = 0
-     * This function from pomax' utils
+     * From pomax' library solves ax³ + bx² + cx + d = 0 This function from pomax' utils
+     *
      * @returns 0-3 roots
      */
     function solveCubicReal2(a, b, c, d) {
@@ -32382,7 +32353,7 @@ var demo = (function (exports, hljs) {
         for (let t = a; t < b; t += (b - a) / 100) {
             const dfdt = df(t);
             const df2 = (f(t + eps) - f(t)) / eps;
-            assert((faults += +!eq2(df2, dfdt, 0.1)) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`);
+            assert((faults += +!eq(df2, dfdt, 0.1)) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`);
         }
     }
     function bisect$1(f, a, b, steps) {
@@ -32405,3793 +32376,8 @@ var demo = (function (exports, hljs) {
         assert(b >= (b + a) / 2);
         return lerp$1(a, b, 0.5);
     }
-    function callsce(name, ...params) {
-        return name + "(" + params.map(SCE).join(",") + ")";
-    }
-
-    function arraySwap(arr, i, j) {
-        const temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-    }
-    function arrayCopy(src, sstart, dst, dstart, length) {
-        assertInts(sstart, dstart, length);
-        dstart += length;
-        length += sstart;
-        while (length-- > sstart) {
-            dst[--dstart] = src[length];
-        }
-        return dst;
-    }
-    /**
-     * Copies a number of items from one array to another, with a definable step size between items in the source and
-     * destination array.
-     *
-     * @param src The source array.
-     * @param sstart The location of the first item in the source array.
-     * @param sstep The offset between items in the source array.
-     * @param dst The destination array.
-     * @param dstart The location of the first item in the destination array.
-     * @param dstep The offset between items in the destination array.
-     * @param count The number of items to copy.
-     */
-    function arrayCopyStep(src, sstart, sstep, dst, dstart, dstep, count) {
-        let srcIndex = sstart + count * sstep;
-        let dIndex = dstart + count * dstep;
-        while (srcIndex > sstart) {
-            dst[(dIndex -= dstep)] = src[(srcIndex -= sstep)];
-        }
-    }
-    /**
-     * Copies a number of contiguous, evenly-spaced blocks from one array to another.
-     *
-     * @param src The source array.
-     * @param sstart The start of the first block in the source array.
-     * @param sstep The offset from the start of one block to the start of the next block in the source array.
-     * @param dst The destination array.
-     * @param dstart The start of the first block in the destination array.
-     * @param dstep The offset from the start of one block to the start of the next block in the destination array.
-     * @param blockSize The length of one block.
-     * @param blockCount The number of blocks to copy.
-     */
-    function arrayCopyBlocks(src, sstart, sstep, dst, dstart, dstep, blockSize, blockCount) {
-        for (let i = 0; i < blockCount; i++) {
-            arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize);
-        }
-    }
-    function arrayRange(startInclusive, endExclusive, step = 1) {
-        assertNumbers(startInclusive, step);
-        //console.log(Math.ceil((endExclusive - startInclusive) / step))
-        const arrLength = Math.ceil((endExclusive - startInclusive) / step);
-        const result = new Array(arrLength); // '- startInclusive' so that chunk in the last row will also be selected, even
-        // if the row is not complete
-        for (let i = startInclusive, index = 0; index < arrLength; i += step, index++) {
-            result[index] = i;
-        }
-        return result;
-    }
-    /**
-     * Returns a number of evenly-spaced values between t0 and t1 (inclusive).
-     * @param t0 First value.
-     * @param t1 Last value.
-     * @param count Total number of values.
-     */
-    function arraySamples(t0, t1, count = 64) {
-        return arrayFromFunction(count, (i) => lerp$1(t0, t1, i / (count - 1)));
-    }
-    function arrayFromFunction(length, f) {
-        assertNumbers(length);
-        assert("function" == typeof f);
-        const a = new Array(length);
-        let elIndex = length;
-        while (elIndex--) {
-            a[elIndex] = f(elIndex, length);
-        }
-        return a;
-    }
-    /**
-     * Return the element in the array for which f(el) is highest. There is no `withMin`, call withMax(x => -f(x))
-     * instead.
-     *
-     * @param arr The array to search.
-     * @param f
-     */
-    function withMax$1(arr, f) {
-        let i = arr.length, result = undefined, maxVal = -Infinity;
-        while (i--) {
-            const el = arr[i], val = f(el, i, arr);
-            if (val > maxVal) {
-                maxVal = val;
-                result = el;
-            }
-        }
-        return result;
-    }
-    function emod(arr, i) {
-        return arr[mod(i, arr.length)];
-    }
-    function sliceStep(arr, start, end, step, chunkSize = 1) {
-        assertNumbers(start, step);
-        start < 0 && (start = arr.length + start);
-        end <= 0 && (end = arr.length + end);
-        const resultLength = Math.ceil((end - start) / step);
-        const result = new Array(resultLength); // '- start' so that chunk in the last row
-        // will also be selected, even if the row is
-        // not complete
-        let index = 0;
-        for (let i = start; i < end; i += step) {
-            for (let j = i; j < Math.min(i + chunkSize, end); j++) {
-                result[index++] = arr[j];
-            }
-        }
-        assert(resultLength == index);
-        return result;
-    }
-    function arrayEquals(arr, obj) {
-        if (arr === obj)
-            return true;
-        if (Object.getPrototypeOf(obj) !== Array.prototype)
-            return false;
-        if (arr.length !== obj.length)
-            return false;
-        for (let i = 0; i < arr.length; i++) {
-            if (!equals(arr[i], obj[i]))
-                return false;
-        }
-        return true;
-    }
-    function equals(a, b) {
-        return Array.isArray(a)
-            ? arrayEquals(a, b)
-            : "object" === typeof a
-                ? a.equals(b)
-                : a === b;
-    }
-    /**
-     * arr.map(f).filter((x) => x)
-     */
-    function mapFilter(arr, f) {
-        const length = arr.length;
-        const result = [];
-        for (let i = 0; i < length; i++) {
-            if (i in arr) {
-                const val = f(arr[i], i, arr);
-                if (val) {
-                    result.push(val);
-                }
-            }
-        }
-        return result;
-    }
-    /**
-     *
-     * @returns function concat.apply([], arr)
-     */
-    function concatenated(arr) {
-        return Array.prototype.concat.apply([], arr);
-    }
-    function min$1(arr) {
-        let i = arr.length, max = Infinity;
-        while (i--) {
-            const val = arr[i];
-            if (max > val)
-                max = val;
-        }
-        return max;
-    }
-    function max$1(arr) {
-        // faster and no limit on array size, see https://jsperf.com/math-max-apply-vs-loop/2
-        let i = arr.length, max = -Infinity;
-        while (i--) {
-            const val = arr[i];
-            if (max < val)
-                max = val;
-        }
-        return max;
-    }
-    function indexWithMax(arr, f) {
-        if (arr.length == 0) {
-            return -1;
-        }
-        let i = arr.length, result = -1, maxVal = -Infinity;
-        while (i--) {
-            const val = f(arr[i], i, arr);
-            if (val > maxVal) {
-                maxVal = val;
-                result = i;
-            }
-        }
-        return result;
-    }
-    function sum(arr) {
-        let i = arr.length;
-        let result = 0;
-        while (i--) {
-            result += arr[i];
-        }
-        return result;
-    }
-    function sumInPlaceTree(arr) {
-        if (0 == arr.length)
-            return 0;
-        let l = arr.length;
-        while (l != 1) {
-            const lHalfFloor = Math.floor(l / 2);
-            const lHalfCeil = Math.ceil(l / 2);
-            for (let i = 0; i < lHalfFloor; i++) {
-                arr[i] += arr[i + lHalfCeil];
-            }
-            l = lHalfCeil;
-        }
-        return arr[0];
-    }
-    function bagRemoveIndex(arr, i) {
-        const result = arr[i];
-        if (i == arr.length - 1) {
-            arr.pop();
-        }
-        else {
-            arr[i] = arr.pop();
-        }
-        return result;
-    }
-    function binaryIndexOf(arr, searchElement, cmp = (a, b) => a - b) {
-        let minIndex = 0;
-        let maxIndex = arr.length - 1;
-        let currentIndex;
-        let currentElement;
-        while (minIndex <= maxIndex) {
-            currentIndex = ((minIndex + maxIndex) / 2) | 0;
-            currentElement = arr[currentIndex];
-            if (cmp(currentElement, searchElement) < 0) {
-                minIndex = currentIndex + 1;
-            }
-            else if (cmp(currentElement, searchElement) > 0) {
-                maxIndex = currentIndex - 1;
-            }
-            else {
-                return currentIndex;
-            }
-        }
-        return -minIndex - 1;
-    }
-    function binaryInsert(arr, el, cmp = MINUS) {
-        let minIndex = 0;
-        let maxIndex = arr.length;
-        let currentIndex;
-        let currentElement;
-        while (minIndex < maxIndex) {
-            currentIndex = ~~((minIndex + maxIndex) / 2);
-            currentElement = arr[currentIndex];
-            if (cmp(currentElement, el) < 0) {
-                minIndex = currentIndex + 1;
-            }
-            else {
-                maxIndex = currentIndex;
-            }
-        }
-        arr.splice(minIndex, 0, el);
-    }
-    function firstUnsorted(arr, cmp) {
-        for (let i = 1; i < arr.length; i++) {
-            if (cmp(arr[i - 1], arr[i]) > 0)
-                return i;
-        }
-        return -1;
-    }
-    function getLast(arr) {
-        return arr[arr.length - 1];
-    }
-    function setLast(arr, val) {
-        return (arr[arr.length - 1] = val);
-    }
-
-    /**
-     * Immutable 3d-vector/point.
-     */
-    class V3 {
-        constructor(x, y, z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            assertNumbers(x, y, z);
-        }
-        static random() {
-            return new V3(Math.random(), Math.random(), Math.random());
-        }
-        static parallel(a, b) {
-            return a.dot(b) - a.length() * b.length();
-        }
-        /**
-         * See http://math.stackexchange.com/questions/44689/how-to-find-a-random-axis-or-unit-vector-in-3d
-         * @returns A random point on the unit sphere with uniform distribution across the surface.
-         */
-        static randomUnit() {
-            const zRotation = Math.random() * 2 * Math.PI;
-            const z = Math.random() * 2 - 1;
-            const zRadius = Math.sqrt(1 - Math.pow(z, 2));
-            return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z);
-        }
-        //noinspection JSUnusedLocalSymbols
-        /**
-         * Documentation stub. You want {@see V3#sphere}
-         */
-        static fromAngles(theta, phi) {
-            throw new Error();
-        }
-        static fromFunction(f) {
-            return new V3(f(0), f(1), f(2));
-        }
-        static min(a, b) {
-            return new V3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z));
-        }
-        static max(a, b) {
-            return new V3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z));
-        }
-        static lerp(a, b, t) {
-            return new V3(a.x * (1 - t) + b.x * t, a.y * (1 - t) + b.y * t, a.z * (1 - t) + b.z * t);
-        }
-        static fromArray(a) {
-            return new V3(a[0], a[1], a[2]);
-        }
-        static angleBetween(a, b) {
-            return a.angleTo(b);
-        }
-        static zip(f, ...args) {
-            assert(f instanceof Function);
-            return new V3(f.apply(undefined, args.map((x) => x.x)), f.apply(undefined, args.map((x) => x.y)), f.apply(undefined, args.map((x) => x.z)));
-        }
-        static normalOnPoints(a, b, c) {
-            assertVectors(a, b, c);
-            return a.to(b).cross(a.to(c));
-        }
-        static add(...vs) {
-            assertVectors(...vs);
-            let x = 0, y = 0, z = 0;
-            let i = vs.length;
-            while (i--) {
-                x += vs[i].x;
-                y += vs[i].y;
-                z += vs[i].z;
-            }
-            return new V3(x, y, z);
-        }
-        static sub(...vs) {
-            assertVectors(...vs);
-            let x = vs[0].x, y = vs[0].y, z = vs[0].z;
-            let i = vs.length;
-            while (i--) {
-                x -= vs[i].x;
-                y -= vs[i].y;
-                z -= vs[i].z;
-            }
-            return new V3(x, y, z);
-        }
-        /**
-         * Pack an array of V3s into an array of numbers (Float32Array by default).
-         *
-         * @param v3arr source array
-         * @param dest destination array. If provided, must be large enough to fit v3count items.
-         * @param srcStart starting index in source array
-         * @param destStart starting index in destination array
-         * @param v3count Number of V3s to copy.
-         * @returns Packed array.
-         */
-        static pack(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const result = dest || new Float32Array(3 * v3count); // TODO
-            assert(result.length - destStart >= v3count * 3, "dest.length - destStart >= v3count * 3", result.length, destStart, v3count * 3);
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                const v = v3arr[srcIndex++];
-                result[destIndex++] = v.x;
-                result[destIndex++] = v.y;
-                result[destIndex++] = v.z;
-            }
-            return result;
-        }
-        static unpack(packedArray, dest, srcStart = 0, destStart = 0, v3count = (packedArray.length - srcStart) / 3) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            dest = dest || new Array(v3count);
-            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                dest[destIndex++] = new V3(packedArray[srcIndex++], packedArray[srcIndex++], packedArray[srcIndex++]);
-            }
-            return dest;
-        }
-        static packXY(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const result = dest || new Float32Array(2 * v3count);
-            assert(result.length - destStart >= v3count, "dest.length - destStart >= v3count");
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                const v = v3arr[srcIndex++];
-                result[destIndex++] = v.x;
-                result[destIndex++] = v.y;
-            }
-            return result;
-        }
-        static unpackXY(src, dest, srcStart = 0, destStart = 0, v3count = Math.min(src.length / 2, (dest && dest.length) || Infinity) -
-            destStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            dest = dest || new Array(v3count);
-            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
-            assert(src.length - srcStart >= v3count * 2, "dest.length - destStart >= v3count");
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                dest[destIndex++] = new V3(src[srcIndex++], src[srcIndex++], 0);
-            }
-            return dest;
-        }
-        static perturbed(v, delta) {
-            return v.perturbed(delta);
-        }
-        static polar(radius, phi, z = 0) {
-            return new V3(radius * Math.cos(phi), radius * Math.sin(phi), z);
-        }
-        /**
-         *
-         * @param longitude angle in XY plane
-         * @param latitude "height"/z dir angle
-         */
-        static sphere(longitude, latitude, length = 1) {
-            return new V3(length * Math.cos(latitude) * Math.cos(longitude), length * Math.cos(latitude) * Math.sin(longitude), length * Math.sin(latitude));
-        }
-        static inverseLerp(a, b, x) {
-            const ab = a.to(b);
-            return a.to(x).dot(ab) / ab.squared();
-        }
-        get [0]() {
-            return this.x;
-        }
-        get [1]() {
-            return this.y;
-        }
-        get [2]() {
-            return this.z;
-        }
-        get u() {
-            return this.x;
-        }
-        get v() {
-            return this.y;
-        }
-        perturbed(delta = NLA_PRECISION * 0.8) {
-            return this.map((x) => x + (Math.random() - 0.5) * delta);
-        }
-        *[Symbol.iterator]() {
-            yield this.x;
-            yield this.y;
-            yield this.z;
-        }
-        e(index) {
-            assert(index >= 0 && index < 3);
-            return 0 == index ? this.x : 1 == index ? this.y : this.z;
-        }
-        negated() {
-            return new V3(-this.x, -this.y, -this.z);
-        }
-        abs() {
-            return new V3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
-        }
-        plus(a) {
-            assertVectors(a);
-            return new V3(this.x + a.x, this.y + a.y, this.z + a.z);
-        }
-        /**
-         * Hadarmard product (or Schur product)
-         * Element-wise multiplication of two vectors.
-         * @see https://en.wikipedia.org/wiki/Hadamard_product_(matrices)
-         *
-         */
-        schur(a) {
-            return new V3(this.x * a.x, this.y * a.y, this.z * a.z);
-        }
-        /**
-         * Element-wise division.
-         */
-        divv(a) {
-            return new V3(this.x / a.x, this.y / a.y, this.z / a.z);
-        }
-        /**
-         * See also {@link to} which is a.minus(this)
-         */
-        minus(a) {
-            assertVectors(a);
-            return new V3(this.x - a.x, this.y - a.y, this.z - a.z);
-        }
-        to(a) {
-            assertVectors(a);
-            return a.minus(this);
-        }
-        times(factor) {
-            assertNumbers(factor);
-            return new V3(this.x * factor, this.y * factor, this.z * factor);
-        }
-        div(a) {
-            assertNumbers(a);
-            return new V3(this.x / a, this.y / a, this.z / a);
-        }
-        /**
-         * Dot product.
-         * @see https://en.wikipedia.org/wiki/Dot_product
-         */
-        dot(a) {
-            assertInst(V3, a);
-            return this.x * a.x + this.y * a.y + this.z * a.z;
-        }
-        /**
-         * Linearly interpolate
-         */
-        lerp(b, t) {
-            assertVectors(b);
-            assertNumbers(t);
-            return V3.lerp(this, b, t);
-        }
-        squared() {
-            return this.dot(this);
-        }
-        distanceTo(a) {
-            assertVectors(a);
-            //return this.minus(a).length()
-            return Math.hypot(this.x - a.x, this.y - a.y, this.z - a.z);
-        }
-        distanceToSquared(a) {
-            assertVectors(a);
-            return this.minus(a).squared();
-        }
-        ///**
-        // * See also {@see #setTo} for the individual
-        // *
-        // * @param v
-        // */
-        //assign(v) {
-        //	assertVectors(v)
-        //	this.x = v.x
-        //	this.y = v.y
-        //	this.z = v.z
-        //}
-        //
-        ///**
-        // * See also {@see #assign} for the V3 version
-        // *
-        // * @param x
-        // * @param y
-        // * @param z
-        // */
-        //setTo(x, y, z = 0) {
-        //	this.x = x
-        //	this.y = y
-        //	this.z = z
-        //}
-        toSource() {
-            return V3.NAMEMAP.get(this) || this.toString();
-        }
-        nonParallelVector() {
-            const abs = this.abs();
-            if (abs.x <= abs.y && abs.x <= abs.z) {
-                return V3.X;
-            }
-            else if (abs.y <= abs.x && abs.y <= abs.z) {
-                return V3.Y;
-            }
-            else {
-                return V3.Z;
-            }
-        }
-        slerp(b, t) {
-            assertVectors(b);
-            assertNumbers(t);
-            const sin = Math.sin;
-            const omega = this.angleTo(b);
-            return this.times(sin((1 - t) * omega) / sin(omega)).plus(b.times(sin(t * omega) / sin(omega)));
-        }
-        min(b) {
-            return new V3(Math.min(this.x, b.x), Math.min(this.y, b.y), Math.min(this.z, b.z));
-        }
-        max(b) {
-            return new V3(Math.max(this.x, b.x), Math.max(this.y, b.y), Math.max(this.z, b.z));
-        }
-        equals(v) {
-            return this == v || (this.x == v.x && this.y == v.y && this.z == v.z);
-        }
-        /**
-         *
-         * The cross product is defined as:
-         * a x b = |a| * |b| * sin(phi) * n
-         * where |.| is the euclidean norm, phi is the angle between the vectors
-         * and n is a unit vector perpendicular to both a and b.
-         *
-         * The cross product is zero for parallel vectors.
-         * @see https://en.wikipedia.org/wiki/Cross_product
-         */
-        cross(v) {
-            return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x);
-        }
-        minElement() {
-            return Math.min(this.x, this.y, this.z);
-        }
-        maxElement() {
-            return Math.max(this.x, this.y, this.z);
-        }
-        toArray(n = 3) {
-            return [this.x, this.y, this.z].slice(0, n);
-        }
-        /**
-         * Get a perpendicular vector.
-         * For vectors in the XY-Plane, returns vector rotated 90° CCW.
-         */
-        getPerpendicular() {
-            if (eq0(this.x) && eq0(this.y)) {
-                if (eq0(this.z)) {
-                    throw new Error("zero vector");
-                }
-                // v is Vector(0, 0, v.z)
-                return V3.Y;
-            }
-            return new V3(-this.y, this.x, 0);
-        }
-        //noinspection JSMethodCanBeStatic
-        dim() {
-            return 3;
-        }
-        els() {
-            return [this.x, this.y, this.z];
-        }
-        angleXY() {
-            return Math.atan2(this.y, this.x);
-        }
-        lengthXY() {
-            return Math.hypot(this.x, this.y);
-            //return Math.sqrt(this.x * this.x + this.y * this.y)
-        }
-        squaredXY() {
-            return this.x * this.x + this.y * this.y;
-        }
-        xy() {
-            return new V3(this.x, this.y, 0);
-        }
-        /**
-         * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
-         * @param f function to apply to elements (number -> number)
-         */
-        map(f) {
-            return new V3(f(this.x, "x"), f(this.y, "y"), f(this.z, "z"));
-        }
-        toString(roundFunction) {
-            roundFunction = roundFunction || defaultRoundFunction;
-            return (V3.NAMEMAP.get(this) ||
-                "V(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"); //+ this.id
-        }
-        angleTo(b) {
-            assert(1 == arguments.length);
-            assertVectors(b);
-            assert(!this.likeO());
-            assert(!b.likeO());
-            return Math.acos(Math.min(1, this.dot(b) / this.length() / b.length()));
-        }
-        /**
-         *
-         * phi = angle between A and B
-         * alpha = angle between n and normal1
-         *
-         * A . B = ||A|| * ||B|| * cos(phi)
-         * A x B = ||A|| * ||B|| * sin(phi) * n (n = unit vector perpendicular)
-         * (A x B) . normal1 = ||A|| * ||B|| * sin(phi) * cos(alpha)
-         */
-        angleRelativeNormal(vector, normal1) {
-            assert(2 == arguments.length);
-            assertVectors(vector, normal1);
-            assertf(() => normal1.hasLength(1));
-            //assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
-            //assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector)) //
-            // -0.000053600770598683675
-            return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector));
-        }
-        /**
-         * Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a positive or negative number,
-         * using eq. Throw a DebugError
-         * - if vector is not a Vector or
-         * - if this has a length of 0 or
-         * - if vector has a length of 0
-         */
-        isParallelTo(vector) {
-            assertVectors(vector);
-            assert(!this.likeO());
-            assert(!vector.likeO());
-            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
-            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
-            const dot = this.dot(vector);
-            return eq(this.squared() * vector.squared(), dot * dot);
-        }
-        isPerpendicularTo(vector) {
-            assertVectors(vector);
-            assert(!this.likeO(), "!this.likeO()");
-            assert(!vector.likeO(), "!vector.likeO()");
-            return eq0(this.dot(vector));
-        }
-        isReverseDirTo(other) {
-            assertVectors(other);
-            assert(!this.likeO());
-            assert(!other.likeO());
-            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
-            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
-            const dot = this.dot(other);
-            return eq(Math.sqrt(this.squared() * other.squared()), dot);
-        }
-        /**
-         * Returns the length of this Vector, i.e. the euclidean norm.
-         *
-         * Note that the partial derivatives of the euclidean norm at point x are equal to the
-         * components of the unit vector x.
-         */
-        length() {
-            return Math.hypot(this.x, this.y, this.z);
-            //return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
-        }
-        /**
-         * Definition: V3.likeO == V3.like(V3.O)
-         */
-        likeO() {
-            return this.like(V3.O);
-        }
-        /**
-         * eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z)
-         * @param obj
-         */
-        like(obj) {
-            if (obj === this)
-                return true;
-            if (!(obj instanceof V3))
-                return false;
-            return eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z);
-        }
-        /**
-         * equivalent to this.like(v) || this.negated().like(v)
-         */
-        likeOrReversed(v) {
-            return eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()));
-        }
-        /**
-         * Returns a new unit Vector (.length() === 1) with the same direction as this vector. Throws a
-         * DebugError if this has a length of 0.
-         */
-        unit() {
-            assert(!this.likeO(), "cannot normalize zero vector");
-            return this.div(this.length());
-        }
-        /**
-         * Documentation stub. You want {@link unit}
-         */
-        normalized() {
-            throw new Error("documentation stub. use .unit()");
-        }
-        /**
-         * Returns a new V3 equal to this scaled so that its length is equal to newLength.
-         *
-         * Passing a negative newLength will flip the vector.
-         */
-        toLength(newLength) {
-            assertNumbers(newLength);
-            return this.times(newLength / this.length());
-        }
-        /**
-         * Returns a new Vector which is the projection of this vector onto the passed vector.
-         * Examples
-         *
-         * 	V(3, 4).projectedOn(V(1, 0)) // returns V(3, 0)
-         * 	V(3, 4).projectedOn(V(2, 0)) // returns V(3, 0)
-         * 	V(3, 4).projectedOn(V(-1, 0)) // returns V(-3, 0)
-         * 	V(3, 4).projectedOn(V(0, 1)) // returns V(0, 4)
-         * 	V(3, 4).projectedOn(V(1, 1)) // returns
-         */
-        projectedOn(b) {
-            assertVectors(b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return b.times(this.dot(b) / b.dot(b));
-        }
-        rejectedFrom(b) {
-            assertVectors(b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return this.minus(b.times(this.dot(b) / b.dot(b)));
-        }
-        rejectedFrom1(b1) {
-            assertVectors(b1);
-            assert(b1.hasLength(1));
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return this.minus(b1.times(this.dot(b1)));
-        }
-        /**
-         * Returns the length of this vector rejected from the unit vector b.
-         *
-         *       /|
-         * this / |    ^
-         *     /__|    | b
-         *      r
-         *  Returns length of r (r === this.rejectedFrom(b))
-         */
-        rejectedLength(b) {
-            assertVectors(b);
-            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b), 2) / b.dot(b));
-        }
-        /**
-         * Returns the length of this vector rejected from the unit vector b1.
-         *
-         *       /|
-         * this / |    ^
-         *     /__|    | b1
-         *      r
-         *  Returns length of r (r === this.rejectedFrom(b1))
-         */
-        rejected1Length(b1) {
-            assertVectors(b1);
-            assert(b1.hasLength(1));
-            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b1), 2));
-        }
-        /**
-         * Returns true iff the length() of this vector is equal to 'length', using eq
-         * @example
-         * V(3, 4).hasLength(5) === true
-         * @example
-         * V(1, 1).hasLength(1) === false
-         */
-        hasLength(length) {
-            assertNumbers(length);
-            return eq(length, this.length());
-        }
-        /**
-         * Returns the sum of the absolute values of the components of this vector.
-         * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
-         */
-        absSum() {
-            return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
-        }
-        /**
-         * returns min(|x|, |y|, |z|)
-         */
-        minAbsElement() {
-            return Math.min(Math.abs(this.x), Math.abs(this.y), Math.min(this.z));
-        }
-        /**
-         * returns max(|x|, |y|, |z|)
-         */
-        maxAbsElement() {
-            return Math.max(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
-        }
-        maxAbsDim() {
-            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
-            return xAbs >= yAbs ? (xAbs >= zAbs ? 0 : 2) : yAbs >= zAbs ? 1 : 2;
-        }
-        minAbsDim() {
-            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
-            return xAbs < yAbs ? (xAbs < zAbs ? 0 : 2) : yAbs < zAbs ? 1 : 2;
-        }
-        withElement(dim, el) {
-            assert(["x", "y", "z"].includes(dim), "" + dim);
-            assertNumbers(el);
-            if ("x" == dim) {
-                return new V3(el, this.y, this.z);
-            }
-            if ("y" == dim) {
-                return new V3(this.x, el, this.z);
-            }
-            return new V3(this.x, this.y, el);
-        }
-        hashCode() {
-            function floatHashCode(f) {
-                return ~~(f * (1 << 28));
-            }
-            return ~~((floatHashCode(this.x) * 31 + floatHashCode(this.y)) * 31 +
-                floatHashCode(this.z));
-        }
-        /**
-         * as sadjkh akjhs djkahsd kjahs k skjhdakjh dkjash dkjahs kjdhas kj dhkjahsd kjahs dkjahs dkjhas kjdkajs
-         * hdkljhfkjahdslfghal dasd
-         *
-         * * asdjklas dasds
-         */
-        hashCodes() {
-            //function floatHashCode(f) {
-            //	return ~~(f * (1 << 28))
-            //}
-            // compare hashCode.floatHashCode
-            // the following ops are equivalent to
-            // floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
-            // this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
-            // the other 7 can be calculated by adding constants
-            const xHC = ~~(this.x * (1 << 28) - 0.5), yHC = ~~(this.y * (1 << 28) - 0.5), zHC = ~~(this.z * (1 << 28) - 0.5), hc = ~~((xHC * 31 + yHC) * 31 + zHC);
-            return [
-                ~~hc,
-                ~~(hc + 961),
-                ~~(hc + 31),
-                ~~(hc + 31 + 961),
-                ~~(hc + 1),
-                ~~(hc + 1 + 961),
-                ~~(hc + 1 + 31),
-                ~~(hc + 1 + 31 + 961),
-            ];
-        }
-        //static areDisjoint(it: Iterable<V3>): boolean {
-        //	const vSet = new CustomSet
-        //	for (const v of it) {
-        //		if (!v.equals(vSet.canonicalizeLike(v))) {
-        //			// like value already in set
-        //			return false
-        //		}
-        //	}
-        //	return true
-        //}
-        compareTo(other) {
-            if (this.x != other.x) {
-                return this.x - other.x;
-            }
-            else if (this.y != other.y) {
-                return this.y - other.y;
-            }
-            else {
-                return this.z - other.z;
-            }
-        }
-        compareTo2(other, eps = NLA_PRECISION) {
-            if (!eq2(this.x, other.x, eps)) {
-                return this.x - other.x;
-            }
-            else if (!eq2(this.y, other.y, eps)) {
-                return this.y - other.y;
-            }
-            else if (!eq2(this.z, other.z, eps)) {
-                return this.z - other.z;
-            }
-            else {
-                return 0;
-            }
-        }
-        toAngles() {
-            return {
-                theta: Math.atan2(this.y, this.x),
-                phi: Math.asin(this.z / this.length()),
-            };
-        }
-    }
-    V3.O = new V3(0, 0, 0);
-    V3.X = new V3(1, 0, 0);
-    V3.Y = new V3(0, 1, 0);
-    V3.Z = new V3(0, 0, 1);
-    V3.XY = new V3(1, 1, 0);
-    V3.XYZ = new V3(1, 1, 1);
-    V3.INF = new V3(Infinity, Infinity, Infinity);
-    V3.UNITS = [V3.X, V3.Y, V3.Z];
-    V3.NAMEMAP = new JavaMap()
-        .set(V3.O, "V3.O")
-        .set(V3.X, "V3.X")
-        .set(V3.Y, "V3.Y")
-        .set(V3.Z, "V3.Z")
-        .set(V3.XYZ, "V3.XYZ")
-        .set(V3.INF, "V3.INF");
-    function V(a, b, c) {
-        if (arguments.length == 3) {
-            return new V3(parseFloat(a), parseFloat(b), parseFloat(c));
-        }
-        else if (arguments.length == 2) {
-            return new V3(parseFloat(a), parseFloat(b), 0);
-        }
-        else if (arguments.length == 1) {
-            if (typeof a == "object") {
-                if (a instanceof V3) {
-                    // immutable, so
-                    return a;
-                }
-                else if (a instanceof Array ||
-                    a instanceof Float32Array ||
-                    a instanceof Float64Array) {
-                    if (2 == a.length) {
-                        return new V3(parseFloat(a[0]), parseFloat(a[1]), 0);
-                    }
-                    else if (3 == a.length) {
-                        return new V3(parseFloat(a[0]), parseFloat(a[1]), parseFloat(a[2]));
-                    }
-                }
-                else if ("x" in a && "y" in a) {
-                    return new V3(parseFloat(a.x), parseFloat(a.y), "z" in a ? parseFloat(a.z) : 0);
-                }
-            }
-        }
-        throw new Error("invalid arguments" + arguments);
-    }
-
-    const P3YZ = { normal1: V3.X, w: 0 };
-    const P3ZX = { normal1: V3.Y, w: 0 };
-    const P3XY = { normal1: V3.Z, w: 0 };
-    class Transformable {
-        mirror(plane) {
-            return this.transform(M4.mirror(plane));
-        }
-        mirroredX() {
-            return this.mirror(P3YZ);
-        }
-        mirrorY() {
-            return this.mirror(P3ZX);
-        }
-        mirrorZ() {
-            return this.mirror(P3XY);
-        }
-        project(plane) {
-            return this.transform(M4.project(plane));
-        }
-        projectXY() {
-            return this.transform(M4.project(P3XY));
-        }
-        projectYZ() {
-            return this.transform(M4.project(P3YZ));
-        }
-        projectZX() {
-            return this.transform(M4.project(P3ZX));
-        }
-        translate(...args) {
-            return this.transform(M4.translate.apply(undefined, args), callsce.call(undefined, ".translate", ...args));
-        }
-        scale(...args) {
-            return this.transform(M4.scale.apply(undefined, args), callsce.call(undefined, ".scale", ...args));
-        }
-        rotateX(radians) {
-            return this.transform(M4.rotateX(radians), `.rotateX(${radians})`);
-        }
-        rotateY(radians) {
-            return this.transform(M4.rotateY(radians), `.rotateY(${radians})`);
-        }
-        rotateZ(radians) {
-            return this.transform(M4.rotateZ(radians), `.rotateZ(${radians})`);
-        }
-        rotate(rotationCenter, rotationAxis, radians) {
-            return this.transform(M4.rotateLine(rotationCenter, rotationAxis, radians), callsce(".rotate", rotationCenter, rotationAxis, radians));
-        }
-        rotateAB(from, to) {
-            return this.transform(M4.rotateAB(from, to), callsce(".rotateAB", from, to));
-        }
-        eulerZXZ(alpha, beta, gamma) {
-            throw new Error();
-            //return this.transform(M4.eulerZXZ(alpha, beta, gamma))
-        }
-        shearX(y, z) {
-            // prettier-ignore
-            return this.transform(new M4([
-                1, y, z, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1
-            ]));
-        }
-        foo() {
-            return this.transform(M4.FOO);
-        }
-        fooInv() {
-            return this.transform(M4.FOO_INV);
-        }
-        visit(visitor, ...args) {
-            let proto = Object.getPrototypeOf(this);
-            // walk up the prototype chain until we find a defined function in o
-            while (!visitor.hasOwnProperty(proto.constructor.name) &&
-                proto !== Transformable.prototype) {
-                proto = Object.getPrototypeOf(proto);
-            }
-            if (visitor.hasOwnProperty(proto.constructor.name)) {
-                return visitor[proto.constructor.name].apply(this, args);
-            }
-            else {
-                throw new Error("No implementation for " + this.constructor.name);
-            }
-        }
-    }
-
-    class Vector {
-        constructor(v) {
-            this.v = v;
-            assertInst(Float64Array, v);
-        }
-        static fromFunction(dims, f) {
-            assertNumbers(dims);
-            const e = new Float64Array(dims);
-            let i = dims;
-            while (i--) {
-                e[i] = f(i);
-            }
-            return new Vector(e);
-        }
-        static random(dims) {
-            return Vector.fromFunction(dims, (i) => Math.random());
-        }
-        static from(...args) {
-            assert(args[0] instanceof Float64Array ||
-                args.every((a) => "number" == typeof a), 'args[0] instanceof Float64Array || args.every(a => "number" == typeof a)');
-            return new Vector(args[0] instanceof Float64Array ? args[0] : Float64Array.from(args));
-        }
-        static Zero(dims) {
-            assertNumbers(dims);
-            let i = 0;
-            const n = new Float64Array(dims);
-            while (i--) {
-                n[i] = 0;
-            }
-            return new Vector(n);
-        }
-        static Unit(dims, dir) {
-            assertNumbers(dims, dir);
-            let i = 0;
-            const n = new Float64Array(dims);
-            while (i--) {
-                n[i] = +(i == dir); // +true === 1, +false === 0
-            }
-            return new Vector(n);
-        }
-        /**
-         * Pack an array of Vectors into an array of numbers (Float32Array by default).
-         *
-         * @param vectors source array
-         * @param dest destination array. If provided, must be large enough to fit v3count items.
-         * @param srcStart starting index in source array
-         * @param destStart starting index in destination array
-         * @param vectorCount Number of V3s to copy.
-         * @returns Packed array.
-         */
-        static pack(vectors, dest, srcStart = 0, destStart = 0, vectorCount = vectors.length - srcStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const dim = vectors[0].dim();
-            const result = dest || new Float32Array(dim * vectorCount); // TODO
-            assert(result.length - destStart >= vectorCount * dim, "dest.length - destStart >= v3count * 3", result.length, destStart, vectorCount * 3);
-            let i = vectorCount, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                const v = vectors[srcIndex++];
-                for (let d = 0; d < dim; d++) {
-                    result[destIndex++] = v.v[d];
-                }
-            }
-            return result;
-        }
-        static lerp(a, b, t) {
-            assert(a.dim() == b.dim());
-            const n = new Float64Array(a.v.length);
-            let i = a.v.length;
-            while (i--) {
-                n[i] = a.v[i] * (1 - t) + b.v[i] * t;
-            }
-            return new Vector(n);
-        }
-        static add(...vs) {
-            const dim = vs[0].v.length;
-            const result = new Float64Array(dim);
-            let i = vs.length;
-            while (i--) {
-                let d = dim;
-                while (d--) {
-                    result[d] += vs[i].v[d];
-                }
-            }
-            return new Vector(result);
-        }
-        /**
-         * Create a new 4D Vector from a V3 and a weight.
-         * @param v3
-         * @param weight
-         */
-        static fromV3AndWeight(v3, weight) {
-            return new Vector(new Float64Array([v3.x * weight, v3.y * weight, v3.z * weight, weight]));
-        }
-        get x() {
-            return this.v[0];
-        }
-        get y() {
-            return this.v[1];
-        }
-        get z() {
-            return this.v[2];
-        }
-        get w() {
-            return this.v[3];
-        }
-        [Symbol.iterator]() {
-            return this.v[Symbol.iterator]();
-        }
-        dim() {
-            return this.v.length;
-        }
-        e(index) {
-            if (0 > index || index >= this.v.length) {
-                throw new Error("array index out of bounds");
-            }
-            return this.v[index];
-        }
-        plus(vector) {
-            const u = this.v, v = vector.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] + v[i];
-            }
-            return new Vector(n);
-        }
-        minus(vector) {
-            const u = this.v, v = vector.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] - v[i];
-            }
-            return new Vector(n);
-        }
-        times(factor) {
-            const u = this.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] * factor;
-            }
-            return new Vector(n);
-        }
-        div(val) {
-            const u = this.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] / val;
-            }
-            return new Vector(n);
-        }
-        dot(vector) {
-            assert(this.dim == vector.dim, "passed vector must have the same dim");
-            let result = 0;
-            const u = this.v, v = vector.v;
-            let i = u.length;
-            while (i--) {
-                result += u[i] * v[i];
-            }
-            return result;
-        }
-        cross(vector) {
-            assertInst(Vector, vector);
-            const n = new Float64Array(3);
-            n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1];
-            n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2];
-            n[2] = this.v[0] * vector.v[1] - this.v[1] * vector.v[0];
-            return new Vector(n);
-        }
-        schur(vector) {
-            assertInst(Vector, vector);
-            const u = this.v, v = vector.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] * v[i];
-            }
-            return new Vector(n);
-        }
-        equals(obj) {
-            if (obj === this)
-                return true;
-            if (obj.constructor !== Vector)
-                return false;
-            if (this.v.length != obj.v.length)
-                return false;
-            let i = this.v.length;
-            while (i--) {
-                if (this.v[i] !== obj.v[i])
-                    return false;
-            }
-            return true;
-        }
-        like(obj) {
-            if (obj === this)
-                return true;
-            if (obj.constructor !== Vector)
-                return false;
-            if (this.v.length != obj.v.length)
-                return false;
-            let i = this.v.length;
-            while (i--) {
-                if (!eq(this.v[i], obj.v[i]))
-                    return false;
-            }
-            return true;
-        }
-        map(f) {
-            return new Vector(this.v.map(f));
-        }
-        toString(roundFunction) {
-            roundFunction = roundFunction || ((v) => +v.toFixed(6));
-            return "Vector(" + this.v.map(roundFunction).join(", ") + ")";
-        }
-        toSource() {
-            return callsce("VV", ...this.v);
-        }
-        angleTo(vector) {
-            assertInst(Vector, vector);
-            assert(!this.isZero(), "!this.likeO()");
-            assert(!vector.isZero(), "!vector.likeO()");
-            return Math.acos(clamp$1(this.dot(vector) / this.length() / vector.length(), -1, 1));
-        }
-        /**
-         * Returns true iff this is parallel to vector, using eq
-         * Throw a DebugError
-         * - if vector is not a Vector or
-         * - if this has a length of 0 or
-         * - if vector has a length of 0
-         */
-        isParallelTo(vector) {
-            assertInst(Vector, vector);
-            assert(!this.isZero(), "!this.likeO()");
-            assert(!vector.isZero(), "!vector.likeO()");
-            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
-            // in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
-            return eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)));
-        }
-        isPerpendicularTo(vector) {
-            assertInst(Vector, vector);
-            assert(!this.isZero(), "!this.likeO()");
-            assert(!vector.isZero(), "!vector.likeO()");
-            return eq0(this.dot(vector));
-        }
-        /**
-         * Returns true iff the length of this vector is 0, as returned by NLA.isZero.
-         * Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
-         */
-        isZero() {
-            return eq0(this.length());
-        }
-        /*/ Returns the length of this Vector, i.e. the euclidian norm.*/
-        length() {
-            return Math.hypot.apply(undefined, this.v);
-            //return Math.sqrt(this.lengthSquared())
-        }
-        lengthSquared() {
-            let result = 0;
-            const u = this.v;
-            let i = u.length;
-            while (i--) {
-                result += u[i] * u[i];
-            }
-            return result;
-        }
-        /**
-         * Returns a new unit Vector (.length() === 1) with the same direction as this vector. Throws a
-         */
-        unit() {
-            const length = this.length();
-            if (eq0(length)) {
-                throw new Error("cannot normalize zero vector");
-            }
-            return this.div(this.length());
-        }
-        /**
-         * Documentation stub. You want {@link unit}
-         */
-        normalized() {
-            throw new Error("documentation stub. use .unit()");
-        }
-        asRowMatrix() {
-            return new Matrix(this.v.length, 1, this.v);
-        }
-        asColMatrix() {
-            return new Matrix(1, this.v.length, this.v);
-        }
-        /**
-         * Returns a new Vector which is the projection of this vector onto the passed vector.
-         * @example
-         * VV(3, 4).projectedOn(VV(1, 0)) // returns VV(3, 0)
-         * @example
-         * VV(3, 4).projectedOn(VV(2, 0)) // returns VV(3, 0)
-         * @example
-         * VV(3, 4).projectedOn(VV(-1, 0)) // returns VV(-3, 0)
-         * @example
-         * VV(3, 4).projectedOn(VV(0, 1)) // returns VV(0, 4)
-         * @example
-         * VV(3, 4).projectedOn(VV(1, 1)) // returns
-         */
-        projectedOn(b) {
-            assertInst(Vector, b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return b.times(this.dot(b) / b.dot(b));
-        }
-        rejectedOn(b) {
-            assertInst(Vector, b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return this.minus(b.times(this.dot(b) / b.dot(b)));
-        }
-        to(a) {
-            return a.minus(this);
-        }
-        /**
-         * Returns true iff the length() of this vector is equal to 'length', using equals
-         * E.g. NLA.V(3, 4).hasLength(5) === true
-         * NLA.V(1, 1).hasLength(1) === false
-         */
-        hasLength(length) {
-            assertNumbers(length);
-            return eq(length, this.length());
-        }
-        V3() {
-            //assert(this.dim() == 3)
-            return new V3(this.v[0], this.v[1], this.v[2]);
-        }
-        /**
-         * Project into 3 dimensions.
-         */
-        p3() {
-            assert(this.v.length == 4);
-            const w = this.v[3];
-            return new V3(this.v[0] / w, this.v[1] / w, this.v[2] / w);
-        }
-        transposed() {
-            return new Matrix(this.v.length, 1, this.v);
-        }
-    }
-    function VV(...values) {
-        return new Vector(new Float64Array(values));
-    }
-    function vArrGet(vArr, dim, i) {
-        assert(vArr.length % dim == 0);
-        return new Vector(Float64Array.prototype.slice.call(vArr, i * dim, (i + 1) * dim));
-    }
-
-    class Matrix {
-        constructor(width, height, m) {
-            this.width = width;
-            this.height = height;
-            this.m = m;
-            assertInts(width, height);
-            assertf(() => 0 < width);
-            assertf(() => 0 < height);
-            assert(width * height == m.length, "width * height == m.length", width, height, m.length);
-        }
-        static random(width, height) {
-            return Matrix.fromFunction(width, height, () => Math.random());
-        }
-        static fromFunction(width, height, f) {
-            const m = new Float64Array(height * width);
-            let elIndex = height * width;
-            while (elIndex--) {
-                m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
-            }
-            return new Matrix(width, height, m);
-        }
-        static identityN(dim) {
-            assertInts(dim);
-            const m = new Float64Array(dim * dim);
-            // Float64Arrays are init to 0
-            let elIndex = dim * (dim + 1);
-            while (elIndex) {
-                elIndex -= dim + 1;
-                m[elIndex] = 1;
-            }
-            return new Matrix(dim, dim, m);
-        }
-        /**
-         * Create new dim x dim matrix equal to an identity matrix with rows/colums i and k swapped. Note that i and k
-         * are 0-indexed.
-         */
-        static permutation(dim, i, k) {
-            assertInts(dim, i, k);
-            assertf(() => 0 <= i && i < dim);
-            assertf(() => 0 <= k && k < dim);
-            const m = new Float64Array(dim * dim);
-            // Float64Array are init to 0
-            let elIndex = dim * (dim + 1);
-            while (elIndex) {
-                elIndex -= dim + 1;
-                m[elIndex] = 1;
-            }
-            m[i * dim + i] = 0;
-            m[k * dim + k] = 0;
-            m[i * dim + k] = 1;
-            m[k * dim + i] = 1;
-            return new Matrix(dim, dim, m);
-        }
-        static fromRowArrays(...rowArrays) {
-            if (0 == rowArrays.length) {
-                throw new Error("cannot have 0 vector");
-            }
-            const height = rowArrays.length;
-            const width = rowArrays[0].length;
-            const m = new Float64Array(height * width);
-            arrayCopy(rowArrays[0], 0, m, 0, width);
-            for (let rowIndex = 1; rowIndex < height; rowIndex++) {
-                if (rowArrays[rowIndex].length != width) {
-                    throw new Error("all row arrays must be the same length");
-                }
-                arrayCopy(rowArrays[rowIndex], 0, m, rowIndex * width, width);
-            }
-            return this.new(width, height, m);
-        }
-        static fromColVectors(colVectors) {
-            return Matrix.fromColArrays(...colVectors.map((v) => v.v));
-        }
-        static forWidthHeight(width, height) {
-            return new Matrix(width, height, new Float64Array(width * height));
-        }
-        static fromColArrays(...colArrays) {
-            if (0 == colArrays.length) {
-                throw new Error("cannot have 0 vector");
-            }
-            const width = colArrays.length;
-            const height = colArrays[0].length;
-            const m = new Float64Array(height * width);
-            arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height);
-            for (let colIndex = 1; colIndex < width; colIndex++) {
-                if (colArrays[colIndex].length != height) {
-                    throw new Error("all col arrays must be the same length");
-                }
-                arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height);
-            }
-            return this.new(width, height, m);
-        }
-        static product(...args) {
-            const [ms, result] = Array.isArray(args[0])
-                ? [args[0], args[1]]
-                : [args, undefined];
-            if (0 == ms.length)
-                throw new Error("Can't guess matrix size.");
-            if (1 == ms.length)
-                return Matrix.copy(ms[0], result);
-            return Matrix.copy(ms.reduce((a, b) => a.times(b)), result);
-        }
-        /**
-         * Numerically calculate all the partial derivatives of f at x0.
-         *
-         * @param f
-         * @param x0
-         * @param fx0 f(x0), pass it if you have it already
-         * @param EPSILON
-         */
-        static jacobi(f, x0, fx0 = f(x0), EPSILON = 1e-6) {
-            const jacobi = Matrix.forWidthHeight(x0.length, fx0.length);
-            for (let colIndex = 0; colIndex < x0.length; colIndex++) {
-                x0[colIndex] += EPSILON;
-                const fx = f(x0);
-                for (let rowIndex = 0; rowIndex < fx0.length; rowIndex++) {
-                    const value = (fx[rowIndex] - fx0[rowIndex]) / EPSILON;
-                    jacobi.setEl(rowIndex, colIndex, value);
-                }
-                x0[colIndex] -= EPSILON;
-            }
-            return jacobi;
-        }
-        static copy(src, result = src.new()) {
-            assertInst(Matrix, src, result);
-            assert(src.width == result.width);
-            assert(src.height == result.height);
-            assert(result != src, "result != src");
-            const s = src.m, d = result.m;
-            let i = s.length;
-            while (i--) {
-                d[i] = s[i];
-            }
-            return result;
-        }
-        static new(width, height, m) {
-            return new Matrix(width, height, m);
-        }
-        copy() {
-            return Matrix.copy(this);
-        }
-        e(rowIndex, colIndex) {
-            assertInts(rowIndex, colIndex);
-            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
-            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
-            return this.m[rowIndex * this.width + colIndex];
-        }
-        setEl(rowIndex, colIndex, val) {
-            assertInts(rowIndex, colIndex);
-            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
-            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
-            assertNumbers(val);
-            this.m[rowIndex * this.width + colIndex] = val;
-        }
-        plus(m) {
-            assert(this.width == m.width);
-            assert(this.height == m.height);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] + m.m[i];
-            return r;
-        }
-        minus(m) {
-            assert(this.width == m.width);
-            assert(this.height == m.height);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] - m.m[i];
-            return r;
-        }
-        mulScalar(scalar) {
-            assertNumbers(scalar);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] * scalar;
-            return r;
-        }
-        divScalar(scalar) {
-            assertNumbers(scalar);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] / scalar;
-            return r;
-        }
-        new() {
-            return new Matrix(this.width, this.height, new Float64Array(this.width * this.height));
-        }
-        toString(f, colNames, rowNames) {
-            f = f || ((v) => v.toFixed(6));
-            assert(typeof f(0) == "string", "" + typeof f(0));
-            assert(!colNames || colNames.length == this.width);
-            assert(!rowNames || rowNames.length == this.height);
-            const rounded = Array.from(this.m).map(f);
-            const rows = arrayFromFunction(this.height, (rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width)); // select matrix row
-            if (colNames) {
-                rows.unshift(Array.from(colNames));
-            }
-            if (rowNames) {
-                rows.forEach((row, rowIndex) => row.unshift(rowNames[rowIndex - (colNames ? 1 : 0)] || ""));
-            }
-            const colWidths = arrayFromFunction(this.width, (colIndex) => max$1(rows.map((row) => row[colIndex].length)));
-            return rows
-                .map((row, rowIndex) => row
-                .map((x, colIndex) => {
-                // pad numbers with spaces to col width
-                const padder = (rowIndex == 0 && colNames) || (colIndex == 0 && rowNames)
-                    ? String.prototype.padEnd
-                    : String.prototype.padStart;
-                return padder.call(x, colWidths[colIndex]);
-            })
-                .join("  "))
-                .map((x) => x + "\n")
-                .join(""); // join rows
-        }
-        row(rowIndex) {
-            assertInts(rowIndex);
-            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
-            const v = new Float64Array(this.width);
-            arrayCopy(this.m, rowIndex * this.width, v, 0, this.width);
-            return new Vector(v);
-        }
-        col(colIndex) {
-            assertInts(colIndex);
-            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
-            const v = new Float64Array(this.height);
-            arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height);
-            return new Vector(v);
-        }
-        dim() {
-            return { width: this.width, height: this.height };
-        }
-        dimString() {
-            return this.width + "x" + this.height;
-        }
-        equals(obj) {
-            if (obj.constructor != this.constructor)
-                return false;
-            if (this.width != obj.width || this.height != obj.height)
-                return false;
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                if (this.m[elIndex] != obj.m[elIndex])
-                    return false;
-            }
-            return true;
-        }
-        equalsMatrix(matrix, precision = NLA_PRECISION) {
-            assertInst(Matrix, matrix);
-            if (this.width != matrix.width || this.height != matrix.height)
-                return false;
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) > precision)
-                    return false;
-            }
-            return true;
-        }
-        hashCode() {
-            let result = 0;
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                result = result * 31 + floatHashCode(this.m[elIndex]);
-            }
-            return result;
-        }
-        // todo rename
-        isZero() {
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                if (!eq0(this.m[elIndex])) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        isOrthogonal() {
-            return (this.isSquare() &&
-                this.transposed().times(this).equalsMatrix(Matrix.identityN(this.width)));
-        }
-        /**
-         * Returns L, U, P such that L * U == P * this
-         */
-        luDecomposition() {
-            assertf(() => this.isSquare(), this.dim().toSource());
-            const dim = this.width;
-            const uRowArrays = this.asRowArrays(Float64Array);
-            const lRowArrays = arrayFromFunction(dim, (row) => new Float64Array(dim));
-            const pRowArrays = Matrix.identityN(dim).asRowArrays(Float64Array);
-            let currentRowIndex = 0;
-            for (let colIndex = 0; colIndex < dim; colIndex++) {
-                // find largest value in colIndex
-                let maxAbsValue = 0, pivotRowIndex = -1, numberOfNonZeroRows = 0;
-                for (let rowIndex = currentRowIndex; rowIndex < dim; rowIndex++) {
-                    const el = uRowArrays[rowIndex][colIndex];
-                    numberOfNonZeroRows += +(0 != el);
-                    if (Math.abs(el) > maxAbsValue) {
-                        maxAbsValue = Math.abs(el);
-                        pivotRowIndex = rowIndex;
-                    }
-                }
-                // TODO: check with isZero
-                if (0 == maxAbsValue) {
-                    // column contains only zeros
-                    continue;
-                }
-                assert(-1 !== pivotRowIndex);
-                // swap rows
-                arraySwap(uRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(lRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(pRowArrays, currentRowIndex, pivotRowIndex);
-                lRowArrays[colIndex][colIndex] = 1;
-                if (1 < numberOfNonZeroRows) {
-                    // subtract pivot (now current) row from all below it
-                    for (let rowIndex = currentRowIndex + 1; rowIndex < dim; rowIndex++) {
-                        const l = uRowArrays[rowIndex][colIndex] /
-                            uRowArrays[currentRowIndex][colIndex];
-                        lRowArrays[rowIndex][colIndex] = l;
-                        // subtract pivot row * l from row 'rowIndex'
-                        for (let colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
-                            uRowArrays[rowIndex][colIndex2] -=
-                                l * uRowArrays[currentRowIndex][colIndex2];
-                        }
-                    }
-                }
-                currentRowIndex++; // this doesn't increase if pivot was zero
-            }
-            return {
-                L: Matrix.fromRowArrays(...lRowArrays),
-                U: Matrix.fromRowArrays(...uRowArrays),
-                P: Matrix.fromRowArrays(...pRowArrays),
-            };
-        }
-        gauss() {
-            const width = this.width, height = this.height;
-            const uRowArrays = this.asRowArrays(Float64Array);
-            const lRowArrays = arrayFromFunction(height, (row) => new Float64Array(width));
-            const pRowArrays = Matrix.identityN(height).asRowArrays(Float64Array);
-            let currentRowIndex = 0;
-            for (let colIndex = 0; colIndex < width; colIndex++) {
-                // console.log('currentRowIndex', currentRowIndex)	// find largest value in colIndex
-                let maxAbsValue = 0, pivotRowIndex = -1, numberOfNonZeroRows = 0;
-                for (let rowIndex = currentRowIndex; rowIndex < height; rowIndex++) {
-                    const el = uRowArrays[rowIndex][colIndex];
-                    numberOfNonZeroRows += +(0 != el);
-                    if (Math.abs(el) > maxAbsValue) {
-                        maxAbsValue = Math.abs(el);
-                        pivotRowIndex = rowIndex;
-                    }
-                }
-                // TODO: check with isZero
-                if (0 == maxAbsValue) {
-                    // column contains only zeros
-                    continue;
-                }
-                assert(-1 !== pivotRowIndex);
-                // swap rows
-                arraySwap(uRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(lRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(pRowArrays, currentRowIndex, pivotRowIndex);
-                lRowArrays[currentRowIndex][colIndex] = 1;
-                if (1 < numberOfNonZeroRows) {
-                    // subtract pivot (now current) row from all below it
-                    for (let rowIndex = currentRowIndex + 1; rowIndex < height; rowIndex++) {
-                        const l = uRowArrays[rowIndex][colIndex] /
-                            uRowArrays[currentRowIndex][colIndex];
-                        lRowArrays[rowIndex][colIndex] = l;
-                        // subtract pivot row * l from row 'rowIndex'
-                        for (let colIndex2 = colIndex; colIndex2 < width; colIndex2++) {
-                            uRowArrays[rowIndex][colIndex2] -=
-                                l * uRowArrays[currentRowIndex][colIndex2];
-                        }
-                    }
-                }
-                currentRowIndex++; // this doesn't increase if pivot was zero
-            }
-            return {
-                L: Matrix.fromRowArrays(...lRowArrays),
-                U: Matrix.fromRowArrays(...uRowArrays),
-                P: Matrix.fromRowArrays(...pRowArrays),
-            };
-        }
-        qrDecompositionGivensRotation() {
-            // function sigma(c: number, s: number) {
-            // 	if (0 == c) {
-            // 		return 1
-            // 	}
-            // 	if (Math.abs(s) < Math.abs(c)) {
-            // 		return 0.5 * Math.sign(c) * s
-            // 	}
-            // 	return (2 * Math.sign(s)) / c
-            // }
-            const R = this.copy();
-            function matrixForCS(dim, i, k, c, s) {
-                const m = Matrix.identityN(dim);
-                m.setEl(i, i, c);
-                m.setEl(k, k, c);
-                m.setEl(i, k, s);
-                m.setEl(k, i, -s);
-                return m;
-            }
-            let qTransposed = Matrix.identityN(this.height);
-            for (let colIndex = 0; colIndex < this.width; colIndex++) {
-                // find largest value in colIndex
-                for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
-                    //console.log('row ', rowIndex, 'col ', colIndex)
-                    const xi = R.e(colIndex, colIndex);
-                    const xk = R.e(rowIndex, colIndex);
-                    if (xk == 0) {
-                        continue;
-                    }
-                    const r = Math.hypot(xi, xk);
-                    const c = xi / r;
-                    const s = xk / r;
-                    // apply transformation on every column:
-                    for (let col2 = colIndex; col2 < this.width; col2++) {
-                        const x1 = R.e(colIndex, col2) * c + R.e(rowIndex, col2) * s;
-                        const x2 = R.e(rowIndex, col2) * c - R.e(colIndex, col2) * s;
-                        R.setEl(colIndex, col2, x1);
-                        R.setEl(rowIndex, col2, x2);
-                    }
-                    //console.log('r ', r, 'c ', c, 's ', s, 'sigma', sigma(c, s))
-                    //console.log(this.toString(),'cs\n', matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
-                    qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed);
-                }
-            }
-            //console.log(qTransposed.transposed().toString(), this.toString(),
-            // qTransposed.transposed().times(this).toString())
-            return { Q: qTransposed.transposed(), R };
-        }
-        isPermutation() {
-            if (!this.isSquare())
-                return false;
-            if (this.m.some((value) => !eq0(value) && !eq(1, value)))
-                return false;
-            const rows = this.asRowArrays(Array);
-            if (rows.some((row) => row.filter((value) => eq(1, value)).length != 1))
-                return false;
-            const cols = this.asColArrays(Array);
-            if (cols.some((col) => col.filter((value) => eq(1, value)).length != 1))
-                return false;
-            return true;
-        }
-        isDiagonal(precision) {
-            let i = this.m.length;
-            while (i--) {
-                if (0 !== i % (this.width + 1) && !eq0(this.m[i]))
-                    return false;
-            }
-            return true;
-        }
-        isIdentity(precision) {
-            return (this.isLowerUnitriangular(precision) && this.isUpperTriangular(precision));
-        }
-        isUpperTriangular(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 1; rowIndex < this.height; rowIndex++) {
-                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
-                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        isSymmetric(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    const a = this.m[rowIndex * this.width + colIndex];
-                    const b = this.m[colIndex * this.width + rowIndex];
-                    if (!eq(a, b, precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        /**
-         * Returns x, so that this * x = b
-         * More efficient than calculating the inverse for few (~ <= this.height) values
-         */
-        solveLinearSystem(b) {
-            assertInst(Vector, b);
-            const { L, U, P } = this.luDecomposition();
-            const y = L.solveForwards(P.timesVector(b));
-            const x = U.solveBackwards(y);
-            return x;
-        }
-        isLowerUnitriangular(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-                for (let colIndex = rowIndex; colIndex < this.width; colIndex++) {
-                    const el = this.m[rowIndex * this.width + colIndex];
-                    if (rowIndex == colIndex ? !eq(1, el, precision) : !eq0(el, precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        isLowerTriangular(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        solveBackwards(x) {
-            assertVectors(x);
-            assert(this.height == x.dim(), "this.height == x.dim()");
-            assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.str);
-            const v = new Float64Array(this.width);
-            let rowIndex = this.height;
-            while (rowIndex--) {
-                let temp = x.v[rowIndex];
-                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
-                }
-                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
-            }
-            return new Vector(v);
-        }
-        solveBackwardsMatrix(matrix) {
-            const colVectors = new Array(matrix.width);
-            let i = matrix.width;
-            while (i--) {
-                colVectors[i] = this.solveBackwards(matrix.col(i));
-            }
-            return Matrix.fromColVectors(colVectors);
-        }
-        solveForwardsMatrix(matrix) {
-            const colVectors = new Array(matrix.width);
-            let i = matrix.width;
-            while (i--) {
-                colVectors[i] = this.solveForwards(matrix.col(i));
-            }
-            return Matrix.fromColVectors(colVectors);
-        }
-        solveForwards(x) {
-            assertVectors(x);
-            assert(this.height == x.dim(), "this.height == x.dim()");
-            assertf(() => this.isLowerTriangular(), this.toString());
-            const v = new Float64Array(this.width);
-            for (let rowIndex = 0; rowIndex < this.height; rowIndex++) {
-                let temp = x.v[rowIndex];
-                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
-                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
-                }
-                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
-            }
-            return new Vector(v);
-        }
-        /**
-         * Calculates rank of matrix.
-         * Number of linearly independant row/column vectors.
-         * Is equal to the unmber of dimensions the image of the affine transformation represented this matrix has.
-         */
-        rank() {
-            const U = this.gauss().U;
-            let rowIndex = this.height;
-            while (rowIndex-- && U.row(rowIndex).isZero()) { }
-            return rowIndex + 1;
-        }
-        rowsIndependent() {
-            return this.height == this.rank();
-        }
-        colsIndependent() {
-            return this.width == this.rank();
-        }
-        asRowArrays(arrayConstructor = Float64Array) {
-            return arrayFromFunction(this.height, (rowIndex) => this.rowArray(rowIndex, arrayConstructor));
-        }
-        asColArrays(arrayConstructor = Float64Array) {
-            return arrayFromFunction(this.width, (colIndex) => this.colArray(colIndex, arrayConstructor));
-        }
-        rowArray(rowIndex, arrayConstructor = Float64Array) {
-            const result = new arrayConstructor(this.width);
-            return arrayCopy(this.m, rowIndex * this.width, result, 0, this.width);
-        }
-        colArray(colIndex, arrayConstructor = Float64Array) {
-            const result = new arrayConstructor(this.width);
-            arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height);
-            return result;
-        }
-        subMatrix(firstColIndex, subWidth, firstRowIndex, subHeight) {
-            assert(0 < firstColIndex && 0 < subWidth && 0 < firstRowIndex && 0 < subHeight);
-            assert(firstColIndex + subWidth <= this.width &&
-                firstRowIndex + subHeight <= this.height);
-            const m = new Float64Array(subWidth * subHeight);
-            arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth);
-            return new Matrix(subWidth, subHeight, m);
-        }
-        map(fn) {
-            return new Matrix(this.width, this.height, this.m.map(fn));
-        }
-        dimEquals(matrix) {
-            assertInst(Matrix, matrix);
-            return this.width == matrix.width && this.height == matrix.height;
-        }
-        inversed() {
-            if (this.isSquare()) {
-                if (2 == this.width)
-                    return this.inversed2();
-                if (3 == this.width)
-                    return this.inversed3();
-                if (4 == this.width)
-                    return this.inversed4();
-            }
-            const { L, U, P } = this.luDecomposition();
-            const y = L.solveForwardsMatrix(P);
-            const inverse = U.solveBackwardsMatrix(y);
-            return inverse;
-        }
-        inversed2() {
-            assertf(() => 2 == this.width && 2 == this.height);
-            const result = Matrix.forWidthHeight(2, 2), m = this.m, r = result.m;
-            const det = m[0] * m[3] - m[1] * r[2];
-            r[0] = m[3] / det;
-            r[1] = -m[2] / det;
-            r[2] = -m[1] / det;
-            r[3] = m[0] / det;
-            return result;
-        }
-        inversed3(result = Matrix.forWidthHeight(3, 3)) {
-            assertInst(Matrix, result);
-            assertf(() => 3 == this.width && 3 == this.height);
-            assertf(() => 3 == result.width && 3 == result.height);
-            assert(() => this != result);
-            const m = this.m, r = result.m;
-            r[0] = m[4] * m[8] - m[5] * m[7];
-            r[1] = -m[1] * m[8] + m[2] * m[7];
-            r[2] = m[1] * m[5] - m[2] * m[4];
-            r[3] = -m[3] * m[8] + m[5] * m[6];
-            r[4] = m[0] * m[8] - m[2] * m[6];
-            r[5] = -m[0] * m[5] + m[2] * m[3];
-            r[6] = m[3] * m[7] - m[4] * m[6];
-            r[7] = -m[0] * m[7] + m[1] * m[6];
-            r[8] = m[0] * m[4] - m[1] * m[3];
-            const det = m[0] * r[0] + m[1] * r[3] + m[2] * r[6];
-            let i = 9;
-            while (i--) {
-                r[i] /= det;
-            }
-            return result;
-        }
-        // prettier-ignore
-        inversed4(result = Matrix.forWidthHeight(4, 4)) {
-            assertInst(Matrix, result);
-            assertf(() => 4 == this.width && 4 == this.height);
-            assertf(() => 4 == result.width && 4 == result.height);
-            assert(() => this != result);
-            const m = this.m, r = result.m;
-            // first compute transposed cofactor matrix:
-            // cofactor of an element is the determinant of the 3x3 matrix gained by removing the column and row belonging
-            // to the element
-            r[0] = m[5] * m[10] * m[15] - m[5] * m[14] * m[11] - m[6] * m[9] * m[15]
-                + m[6] * m[13] * m[11] + m[7] * m[9] * m[14] - m[7] * m[13] * m[10];
-            r[1] = -m[1] * m[10] * m[15] + m[1] * m[14] * m[11] + m[2] * m[9] * m[15]
-                - m[2] * m[13] * m[11] - m[3] * m[9] * m[14] + m[3] * m[13] * m[10];
-            r[2] = m[1] * m[6] * m[15] - m[1] * m[14] * m[7] - m[2] * m[5] * m[15]
-                + m[2] * m[13] * m[7] + m[3] * m[5] * m[14] - m[3] * m[13] * m[6];
-            r[3] = -m[1] * m[6] * m[11] + m[1] * m[10] * m[7] + m[2] * m[5] * m[11]
-                - m[2] * m[9] * m[7] - m[3] * m[5] * m[10] + m[3] * m[9] * m[6];
-            r[4] = -m[4] * m[10] * m[15] + m[4] * m[14] * m[11] + m[6] * m[8] * m[15]
-                - m[6] * m[12] * m[11] - m[7] * m[8] * m[14] + m[7] * m[12] * m[10];
-            r[5] = m[0] * m[10] * m[15] - m[0] * m[14] * m[11] - m[2] * m[8] * m[15]
-                + m[2] * m[12] * m[11] + m[3] * m[8] * m[14] - m[3] * m[12] * m[10];
-            r[6] = -m[0] * m[6] * m[15] + m[0] * m[14] * m[7] + m[2] * m[4] * m[15]
-                - m[2] * m[12] * m[7] - m[3] * m[4] * m[14] + m[3] * m[12] * m[6];
-            r[7] = m[0] * m[6] * m[11] - m[0] * m[10] * m[7] - m[2] * m[4] * m[11]
-                + m[2] * m[8] * m[7] + m[3] * m[4] * m[10] - m[3] * m[8] * m[6];
-            r[8] = m[4] * m[9] * m[15] - m[4] * m[13] * m[11] - m[5] * m[8] * m[15]
-                + m[5] * m[12] * m[11] + m[7] * m[8] * m[13] - m[7] * m[12] * m[9];
-            r[9] = -m[0] * m[9] * m[15] + m[0] * m[13] * m[11] + m[1] * m[8] * m[15]
-                - m[1] * m[12] * m[11] - m[3] * m[8] * m[13] + m[3] * m[12] * m[9];
-            r[10] = m[0] * m[5] * m[15] - m[0] * m[13] * m[7] - m[1] * m[4] * m[15]
-                + m[1] * m[12] * m[7] + m[3] * m[4] * m[13] - m[3] * m[12] * m[5];
-            r[11] = -m[0] * m[5] * m[11] + m[0] * m[9] * m[7] + m[1] * m[4] * m[11]
-                - m[1] * m[8] * m[7] - m[3] * m[4] * m[9] + m[3] * m[8] * m[5];
-            r[12] = -m[4] * m[9] * m[14] + m[4] * m[13] * m[10] + m[5] * m[8] * m[14]
-                - m[5] * m[12] * m[10] - m[6] * m[8] * m[13] + m[6] * m[12] * m[9];
-            r[13] = m[0] * m[9] * m[14] - m[0] * m[13] * m[10] - m[1] * m[8] * m[14]
-                + m[1] * m[12] * m[10] + m[2] * m[8] * m[13] - m[2] * m[12] * m[9];
-            r[14] = -m[0] * m[5] * m[14] + m[0] * m[13] * m[6] + m[1] * m[4] * m[14]
-                - m[1] * m[12] * m[6] - m[2] * m[4] * m[13] + m[2] * m[12] * m[5];
-            r[15] = m[0] * m[5] * m[10] - m[0] * m[9] * m[6] - m[1] * m[4] * m[10]
-                + m[1] * m[8] * m[6] + m[2] * m[4] * m[9] - m[2] * m[8] * m[5];
-            // calculate determinant using laplace expansion (cf https://en.wikipedia.org/wiki/Laplace_expansion),
-            // as we already have the cofactors. We multiply a column by a row as the cofactor matrix is transposed.
-            const det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12];
-            // assert(!isZero(det), 'det may not be zero, i.e. the matrix is not invertible')
-            let i = 16;
-            while (i--) {
-                r[i] /= det;
-            }
-            return result;
-        }
-        canMultiply(matrix) {
-            assertInst(Matrix, matrix);
-            return this.width == matrix.height;
-        }
-        times(matrix) {
-            assertInst(Matrix, matrix);
-            assert(this.canMultiply(matrix), `Cannot multiply this {this.dimString()} by matrix {matrix.dimString()}`);
-            const nWidth = matrix.width, nHeight = this.height, n = this.width;
-            const nM = new Float64Array(nWidth * nHeight);
-            let nRowIndex = nHeight;
-            while (nRowIndex--) {
-                let nColIndex = nWidth;
-                while (nColIndex--) {
-                    let result = 0;
-                    let i = n;
-                    while (i--) {
-                        result += this.m[nRowIndex * n + i] * matrix.m[i * nWidth + nColIndex];
-                    }
-                    nM[nRowIndex * nWidth + nColIndex] = result;
-                }
-            }
-            return new Matrix(nWidth, nHeight, nM);
-        }
-        timesVector(v) {
-            assertVectors(v);
-            assert(this.width == v.dim());
-            const nHeight = this.height, n = this.width;
-            const nM = new Float64Array(nHeight);
-            let nRowIndex = nHeight;
-            while (nRowIndex--) {
-                let result = 0;
-                let i = n;
-                while (i--) {
-                    result += this.m[nRowIndex * n + i] * v.v[i];
-                }
-                nM[nRowIndex] = result;
-            }
-            return new Vector(nM);
-        }
-        transposed() {
-            const tWidth = this.height, tHeight = this.width;
-            const tM = new Float64Array(tWidth * tHeight);
-            let tRowIndex = tHeight;
-            while (tRowIndex--) {
-                let tColIndex = tWidth;
-                while (tColIndex--) {
-                    tM[tRowIndex * tWidth + tColIndex] = this.m[tColIndex * tHeight + tRowIndex];
-                }
-            }
-            return new Matrix(tWidth, tHeight, tM);
-        }
-        /**
-         * In-place transpose.
-         */
-        transpose() {
-            const h = this.height, w = this.width, tM = this.m;
-            let tRowIndex = h;
-            while (tRowIndex--) {
-                let tColIndex = Math.min(tRowIndex, w);
-                while (tColIndex--) {
-                    const temp = tM[tRowIndex * w + tColIndex];
-                    tM[tRowIndex * w + tColIndex] = tM[tColIndex * h + tRowIndex];
-                    tM[tColIndex * h + tRowIndex] = temp;
-                }
-            }
-            this.width = h;
-            this.height = w;
-        }
-        isSquare() {
-            return this.height == this.width;
-        }
-        diagonal() {
-            if (!this.isSquare()) {
-                throw new Error("!!");
-            }
-            const v = new Float64Array(this.width);
-            let elIndex = this.width * (this.width + 1);
-            let vIndex = this.width;
-            while (vIndex--) {
-                elIndex -= this.width + 1;
-                v[vIndex] = this.m[elIndex];
-            }
-            return new Vector(v);
-        }
-        maxEl() {
-            return max$1(this.m);
-        }
-        minEl() {
-            return min$1(this.m);
-        }
-        maxAbsColSum() {
-            let result = 0;
-            let colIndex = this.width;
-            while (colIndex--) {
-                let absSum = 0;
-                let rowIndex = this.height;
-                while (rowIndex--) {
-                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
-                }
-                result = Math.max(result, absSum);
-            }
-            return result;
-        }
-        maxAbsRowSum() {
-            let result = 0;
-            let rowIndex = this.height;
-            while (rowIndex--) {
-                let absSum = 0;
-                let colIndex = this.width;
-                while (colIndex--) {
-                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
-                }
-                result = Math.max(result, absSum);
-            }
-            return result;
-        }
-        getTriangularDeterminant() {
-            assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix");
-            let product = 1;
-            let elIndex = this.width * (this.width + 1);
-            while (elIndex) {
-                elIndex -= this.width + 1;
-                product *= this.m[elIndex];
-            }
-            return product;
-        }
-        /**
-         * Calculates the determinant by first calculating the LU decomposition. If you already have that, use
-         * U.getTriangularDeterminant()
-         */
-        getDeterminant() {
-            // PA = LU
-            // det(A) * det(B) = det(A * B)
-            // det(P) == 1 (permutation matrix)
-            // det(L) == 1 (main diagonal is 1s
-            // =>  det(A) == det(U)
-            return this.luDecomposition().U.getTriangularDeterminant();
-        }
-        hasFullRank() {
-            return Math.min(this.width, this.height) == this.rank();
-        }
-        permutationAsIndexMap() {
-            assertf(() => this.isPermutation());
-            const result = new Array(this.height);
-            let i = this.height;
-            while (i--) {
-                const searchIndexStart = i * this.width;
-                let searchIndex = searchIndexStart;
-                while (this.m[searchIndex] < 0.5)
-                    searchIndex++;
-                result[i] = searchIndex - searchIndexStart;
-            }
-            return result;
-        }
-        getDependentRowIndexes(gauss = this.gauss()) {
-            const { L, U, P } = gauss;
-            // rows which end up as zero vectors in U are not linearly independent
-            const dependents = new Array(this.height);
-            let uRowIndex = this.height;
-            while (uRowIndex--) {
-                const uRow = U.row(uRowIndex);
-                if (uRow.length() < NLA_PRECISION) {
-                    dependents[uRowIndex] = true;
-                }
-                else {
-                    break;
-                }
-            }
-            // figure out from which other rows the rows which end up as zero vectors are created by
-            let lRowIndex = this.height;
-            while (lRowIndex--) {
-                if (dependents[lRowIndex]) {
-                    let lColIndex = Math.min(lRowIndex, this.width);
-                    while (lColIndex--) {
-                        if (0 !== L.e(lRowIndex, lColIndex)) {
-                            dependents[lColIndex] = true;
-                        }
-                    }
-                }
-            }
-            console.log("m\n", this.toString((x) => "" + x));
-            console.log("L\n", L.toString((x) => "" + x));
-            console.log("U\n", U.toString((x) => "" + x));
-            console.log("P\n", P.toString((x) => "" + x));
-            // gauss algorithm permutes the order of the rows, so map our results back to the original indices
-            const indexMap = P.permutationAsIndexMap();
-            const dependentRowIndexes = dependents
-                .map((b, index) => b && indexMap[index])
-                .filter((x) => x != undefined);
-            return dependentRowIndexes;
-        }
-        lerp(b, t, result = this.new()) {
-            assertInst(Matrix, b, result);
-            assertNumbers(t);
-            assert(this.width == b.width && this.height == b.height);
-            const s = 1 - t;
-            let i = this.m.length;
-            while (i--) {
-                result.m[i] = s * this.m[i] + t * b.m[i];
-            }
-            return result;
-        }
-    }
-
-    const { PI: PI$1$1, abs: abs$1 } = Math;
-    // tslint:enable:member-ordering
-    class M4 extends Matrix {
-        /**
-         * Takes 16 arguments in row-major order, which can be passed individually, as a list, or even as
-         * four lists, one for each row. If the arguments are omitted then the identity matrix is constructed instead.
-         *
-         *  0  1  2  3
-         *  4  5  6  7
-         *  8  9 10 11
-         * 12 13 14 15
-         */
-        constructor(...var_args) {
-            let m;
-            if (0 == var_args.length) {
-                m = new Float64Array(16);
-            }
-            else {
-                const flattened = concatenated(var_args);
-                assert(flattened.length == 16, "flattened.length == 16 " + flattened.length);
-                m = new Float64Array(flattened);
-            }
-            super(4, 4, m);
-        }
-        /**
-         * Returns the matrix that when multiplied with `matrix` results in the
-         * identity matrix. You can optionally pass an existing matrix in `result`
-         * to avoid allocating a new matrix. This implementation is from the Mesa
-         * OpenGL function `__gluInvertMatrixd()` found in `project.c`.
-         */
-        static inverse(matrix, result = new M4()) {
-            return matrix.inversed4(result);
-        }
-        /**
-         * Create new dim x dim matrix equal to an identity matrix with rows/colums i and k swapped. Note that i and k
-         * are 0-indexed.
-         */
-        static permutation4(i, k, result = new M4()) {
-            assertInts(i, k);
-            assertf(() => 0 <= i && i < 4);
-            assertf(() => 0 <= k && k < 4);
-            const m = result.m;
-            M4.identity(result);
-            m[i * 4 + i] = 0;
-            m[k * 4 + k] = 0;
-            m[i * 4 + k] = 1;
-            m[k * 4 + i] = 1;
-            return result;
-        }
-        /**
-         * Returns `matrix`, exchanging columns for rows. You can optionally pass an
-         * existing matrix in `result` to avoid allocating a new matrix.
-         */
-        static transpose(matrix, result = new M4()) {
-            assertInst(M4, matrix);
-            assertInst(M4, result);
-            assert(matrix != result, "matrix != result");
-            const m = matrix.m, r = result.m;
-            r[0] = m[0];
-            r[1] = m[4];
-            r[2] = m[8];
-            r[3] = m[12];
-            r[4] = m[1];
-            r[5] = m[5];
-            r[6] = m[9];
-            r[7] = m[13];
-            r[8] = m[2];
-            r[9] = m[6];
-            r[10] = m[10];
-            r[11] = m[14];
-            r[12] = m[3];
-            r[13] = m[7];
-            r[14] = m[11];
-            r[15] = m[15];
-            return result;
-        }
-        /**
-         * Returns the concatenation of the transforms for `left` and `right`.
-         */
-        static multiply(left, right, result = new M4()) {
-            assertInst(M4, left, right);
-            assertInst(M4, result);
-            assert(left != result, "left != result");
-            assert(right != result, "right != result");
-            const a = left.m, b = right.m, r = result.m;
-            r[0] = a[0] * b[0] + a[1] * b[4] + (a[2] * b[8] + a[3] * b[12]);
-            r[1] = a[0] * b[1] + a[1] * b[5] + (a[2] * b[9] + a[3] * b[13]);
-            r[2] = a[0] * b[2] + a[1] * b[6] + (a[2] * b[10] + a[3] * b[14]);
-            r[3] = a[0] * b[3] + a[1] * b[7] + (a[2] * b[11] + a[3] * b[15]);
-            r[4] = a[4] * b[0] + a[5] * b[4] + (a[6] * b[8] + a[7] * b[12]);
-            r[5] = a[4] * b[1] + a[5] * b[5] + (a[6] * b[9] + a[7] * b[13]);
-            r[6] = a[4] * b[2] + a[5] * b[6] + (a[6] * b[10] + a[7] * b[14]);
-            r[7] = a[4] * b[3] + a[5] * b[7] + (a[6] * b[11] + a[7] * b[15]);
-            r[8] = a[8] * b[0] + a[9] * b[4] + (a[10] * b[8] + a[11] * b[12]);
-            r[9] = a[8] * b[1] + a[9] * b[5] + (a[10] * b[9] + a[11] * b[13]);
-            r[10] = a[8] * b[2] + a[9] * b[6] + (a[10] * b[10] + a[11] * b[14]);
-            r[11] = a[8] * b[3] + a[9] * b[7] + (a[10] * b[11] + a[11] * b[15]);
-            r[12] = a[12] * b[0] + a[13] * b[4] + (a[14] * b[8] + a[15] * b[12]);
-            r[13] = a[12] * b[1] + a[13] * b[5] + (a[14] * b[9] + a[15] * b[13]);
-            r[14] = a[12] * b[2] + a[13] * b[6] + (a[14] * b[10] + a[15] * b[14]);
-            r[15] = a[12] * b[3] + a[13] * b[7] + (a[14] * b[11] + a[15] * b[15]);
-            return result;
-        }
-        static product(...args) {
-            const [m4s, result] = Array.isArray(args[0])
-                ? [args[0], args[1]]
-                : [args, new M4()];
-            if (0 == m4s.length)
-                return M4.identity(result);
-            if (1 == m4s.length)
-                return M4.copy(m4s[0], result);
-            if (2 == m4s.length)
-                return M4.multiply(m4s[0], m4s[1], result);
-            let a = M4.temp0, b = M4.temp1;
-            M4.multiply(m4s[0], m4s[1], a);
-            for (let i = 2; i < m4s.length - 1; i++) {
-                M4.multiply(a, m4s[i], b);
-                [a, b] = [b, a];
-            }
-            return M4.multiply(a, getLast(m4s), result);
-        }
-        static forSys(e0, e1, e2 = e0.cross(e1), origin = V3.O) {
-            assertVectors(e0, e1, e2, origin);
-            // prettier-ignore
-            return new M4(e0.x, e1.x, e2.x, origin.x, e0.y, e1.y, e2.y, origin.y, e0.z, e1.z, e2.z, origin.z, 0, 0, 0, 1);
-        }
-        static forRows(n0, n1, n2, n3 = V3.O) {
-            assertVectors(n0, n1, n2, n3);
-            // prettier-ignore
-            return new M4(n0.x, n0.y, n0.z, 0, n1.x, n1.y, n1.z, 0, n2.x, n2.y, n2.z, 0, n3.x, n3.y, n3.z, 1);
-        }
-        /**
-         * Returns an identity matrix. You can optionally pass an existing matrix in `result` to avoid allocating a new
-         * matrix. This emulates the OpenGL function `glLoadIdentity()`
-         *
-         * Unless initializing a matrix to be modified, use M4.IDENTITY
-         */
-        static identity(result = new M4()) {
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = m[5] = m[10] = m[15] = 1;
-            m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = m[12] = m[13] = m[14] = 0;
-            return result;
-        }
-        /**
-         * Creates a new M4 initialized by a user defined callback function
-         *
-         * @param f signature: (elRow, elCol, elIndex) =>
-         *     el, where elIndex is the row-major index, i.e. eLindex == elRow * 4 + elCol
-         * @param result
-         */
-        static fromFunction4(f, result = new M4()) {
-            assert(typeof f == "function");
-            assertInst(M4, result);
-            const m = result.m;
-            let i = 16;
-            while (i--) {
-                m[i] = f(Math.floor(i / 4), i % 4, i);
-            }
-            return result;
-        }
-        /**
-         * Returns a perspective transform matrix, which makes far away objects appear smaller than nearby objects. The
-         * `aspect` argument should be the width divided by the height of your viewport and `fov` is the top-to-bottom angle
-         * of the field of view in degrees. You can optionally pass an existing matrix in `result` to avoid allocating a new
-         * matrix. This emulates the OpenGL function `gluPerspective()`.
-         * {@see perspectiveRad}
-         * perspectiveRad
-         * @param fovDegrees in degrees
-         * @param aspect aspect ratio = width/height of viewport
-         * @param near near plane
-         * @param far far plane
-         * @param result A new M4 as described.
-         */
-        static perspective(fovDegrees, aspect, near, far, result = new M4()) {
-            return M4.perspectiveRad(fovDegrees * DEG, aspect, near, far, result);
-        }
-        static perspectiveRad(fov, aspect, near, far, result = new M4()) {
-            assertInst(M4, result);
-            assertNumbers(fov, aspect, near, far);
-            const y = Math.tan(fov / 2) * near;
-            const x = y * aspect;
-            return M4.frustum(-x, x, -y, y, near, far, result);
-        }
-        static perspectivePlane(vanishingPlane, result = new M4()) {
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = 1;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = 0;
-            m[4] = 0;
-            m[5] = 1;
-            m[6] = 0;
-            m[7] = 0;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = 1;
-            m[11] = 0;
-            m[12] = vanishingPlane.normal1.x;
-            m[13] = vanishingPlane.normal1.y;
-            m[14] = vanishingPlane.normal1.z;
-            m[15] = -vanishingPlane.w;
-            return result;
-        }
-        // the OpenGL function `glFrustum()`.
-        static frustum(left, right, bottom, top, near, far, result = new M4()) {
-            assertNumbers(left, right, bottom, top, near, far);
-            assert(0 < near, "0 < near");
-            assert(near < far, "near < far");
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = (2 * near) / (right - left);
-            m[1] = 0;
-            m[2] = (right + left) / (right - left);
-            m[3] = 0;
-            m[4] = 0;
-            m[5] = (2 * near) / (top - bottom);
-            m[6] = (top + bottom) / (top - bottom);
-            m[7] = 0;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = -(far + near) / (far - near);
-            m[11] = (-2 * far * near) / (far - near);
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = -1;
-            m[15] = 0;
-            return result;
-        }
-        /**
-         * Returns a new M4 representing the a projection through/towards a point onto a plane.
-         */
-        static projectPlanePoint(p, plane, result = new M4()) {
-            assertVectors(p, plane.normal1);
-            assertInst(M4, result);
-            const m = result.m;
-            const n = plane.normal1, w = plane.w;
-            const np = n.dot(p);
-            m[0] = p.x * n.x + w - np;
-            m[1] = p.x * n.y;
-            m[2] = p.x * n.z;
-            m[3] = -w * p.x;
-            m[4] = p.y * n.x;
-            m[5] = p.y * n.y + w - np;
-            m[6] = p.y * n.z;
-            m[7] = -w * p.y;
-            m[8] = p.z * n.x;
-            m[9] = p.z * n.y;
-            m[10] = p.z * n.z + w - np;
-            m[11] = -w * p.z;
-            m[12] = n.x;
-            m[13] = n.y;
-            m[14] = n.z;
-            m[15] = -np;
-            return result;
-        }
-        /**
-         * Orthographic/orthogonal projection. Transforms the cuboid with the dimensions X: [left right] Y: [bottom, top]
-         * Z: [near far] to the cuboid X: [-1, 1] Y [-1, 1] Z [-1, 1]
-         */
-        static ortho(left, right, bottom, top, near, far, result = new M4()) {
-            assertNumbers(left, right, bottom, top, near, far);
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = 2 / (right - left);
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = -(right + left) / (right - left);
-            m[4] = 0;
-            m[5] = 2 / (top - bottom);
-            m[6] = 0;
-            m[7] = -(top + bottom) / (top - bottom);
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = -2 / (far - near);
-            m[11] = -(far + near) / (far - near);
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static scale(...args) {
-            let x, y, z, result;
-            if (args[0] instanceof V3) {
-                assert(args.length <= 2);
-                ({ x, y, z } = args[0]);
-                result = args[1];
-            }
-            else if ("number" != typeof args[1]) {
-                x = y = z = args[0];
-                result = args[1];
-            }
-            else {
-                assert(args.length <= 4);
-                x = args[0];
-                y = args[1];
-                z = undefined != args[2] ? args[2] : 1;
-                result = args[3];
-            }
-            undefined == result && (result = new M4());
-            assertInst(M4, result);
-            assertNumbers(x, y, z);
-            const m = result.m;
-            m[0] = x;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = 0;
-            m[4] = 0;
-            m[5] = y;
-            m[6] = 0;
-            m[7] = 0;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = z;
-            m[11] = 0;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static translate(...args) {
-            let x, y, z, result;
-            if (args[0] instanceof V3) {
-                assert(args.length <= 2);
-                ({ x, y, z } = args[0]);
-                result = args[1];
-            }
-            else {
-                assert(args.length <= 4);
-                x = args[0];
-                y = undefined != args[1] ? args[1] : 0;
-                z = undefined != args[2] ? args[2] : 0;
-                result = args[3];
-            }
-            undefined == result && (result = new M4());
-            assertInst(M4, result);
-            assertNumbers(x, y, z);
-            const m = result.m;
-            m[0] = 1;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = x;
-            m[4] = 0;
-            m[5] = 1;
-            m[6] = 0;
-            m[7] = y;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = 1;
-            m[11] = z;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Returns a matrix that rotates by `a` degrees around the vector (x, y, z). You can optionally pass an existing
-         * matrix in `result` to avoid allocating a new matrix. This emulates the OpenGL function `glRotate()`.
-         */
-        //static rotation(radians: raddd, x: number, y: number, z: number, result?: M4): M4
-        static rotate(radians, v, result) {
-            undefined == result && (result = new M4());
-            assertInst(M4, result);
-            let { x, y, z } = v;
-            assert(!new V3(x, y, z).likeO(), "!V(x, y, z).likeO()");
-            const m = result.m;
-            const d = Math.sqrt(x * x + y * y + z * z);
-            x /= d;
-            y /= d;
-            z /= d;
-            const cos = Math.cos(radians), sin = Math.sin(radians), t = 1 - cos;
-            m[0] = x * x * t + cos;
-            m[1] = x * y * t - z * sin;
-            m[2] = x * z * t + y * sin;
-            m[3] = 0;
-            m[4] = y * x * t + z * sin;
-            m[5] = y * y * t + cos;
-            m[6] = y * z * t - x * sin;
-            m[7] = 0;
-            m[8] = z * x * t - y * sin;
-            m[9] = z * y * t + x * sin;
-            m[10] = z * z * t + cos;
-            m[11] = 0;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Returns a matrix that puts the camera at the eye point `ex, ey, ez` looking
-         * toward the center point `cx, cy, cz` with an up direction of `ux, uy, uz`.
-         * You can optionally pass an existing matrix in `result` to avoid allocating
-         * a new matrix. This emulates the OpenGL function `gluLookAt()`.
-         */
-        static lookAt(eye, focus, up, result = new M4()) {
-            assertVectors(eye, focus, up);
-            assertInst(M4, result);
-            const m = result.m;
-            const f = eye.minus(focus).unit();
-            const s = up.cross(f).unit();
-            const t = f.cross(s).unit();
-            m[0] = s.x;
-            m[1] = s.y;
-            m[2] = s.z;
-            m[3] = -s.dot(eye);
-            m[4] = t.x;
-            m[5] = t.y;
-            m[6] = t.z;
-            m[7] = -t.dot(eye);
-            m[8] = f.x;
-            m[9] = f.y;
-            m[10] = f.z;
-            m[11] = -f.dot(eye);
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Create a rotation matrix for rotating around the X axis
-         */
-        static rotateX(radians) {
-            assertNumbers(radians);
-            const sin = Math.sin(radians), cos = Math.cos(radians);
-            const els = [1, 0, 0, 0, 0, cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1];
-            return new M4(els);
-        }
-        /**
-         * Create a rotation matrix for rotating around the Y axis
-         */
-        static rotateY(radians) {
-            const sin = Math.sin(radians), cos = Math.cos(radians);
-            const els = [cos, 0, sin, 0, 0, 1, 0, 0, -sin, 0, cos, 0, 0, 0, 0, 1];
-            return new M4(els);
-        }
-        /**
-         * Create a rotation matrix for rotating around the Z axis
-         */
-        static rotateZ(radians) {
-            const sin = Math.sin(radians), cos = Math.cos(radians);
-            const els = [cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-            return new M4(els);
-        }
-        /**
-         * New rotation matrix such that result.transformVector(a).isParallelTo(b) through smallest rotation.
-         * Performs no scaling.
-         */
-        static rotateAB(a, b, result = new M4()) {
-            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
-            assertVectors(a, b);
-            assertInst(M4, result);
-            const rotationAxis = a.cross(b), rotationAxisLength = rotationAxis.length();
-            if (eq0(rotationAxisLength)) {
-                return M4.identity(result);
-            }
-            const radians = Math.atan2(rotationAxisLength, a.dot(b));
-            return M4.rotateLine(V3.O, rotationAxis, radians, result);
-        }
-        /**
-         * Matrix for rotation about arbitrary line defined by an anchor point and direction.
-         * rotationAxis does not need to be unit
-         */
-        static rotateLine(rotationAnchor, rotationAxis, radians, result = new M4()) {
-            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
-            assertVectors(rotationAnchor, rotationAxis);
-            assertNumbers(radians);
-            assertInst(M4, result);
-            rotationAxis = rotationAxis.unit();
-            const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z, dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z;
-            const m = result.m, cos = Math.cos(radians), sin = Math.sin(radians);
-            m[0] = dx * dx + (dy * dy + dz * dz) * cos;
-            m[1] = dx * dy * (1 - cos) - dz * sin;
-            m[2] = dx * dz * (1 - cos) + dy * sin;
-            m[3] =
-                (ax * (dy * dy + dz * dz) - dx * (ay * dy + az * dz)) * (1 - cos) +
-                    (ay * dz - az * dy) * sin;
-            m[4] = dx * dy * (1 - cos) + dz * sin;
-            m[5] = dy * dy + (dx * dx + dz * dz) * cos;
-            m[6] = dy * dz * (1 - cos) - dx * sin;
-            m[7] =
-                (ay * (dx * dx + dz * dz) - dy * (ax * dx + az * dz)) * (1 - cos) +
-                    (az * dx - ax * dz) * sin;
-            m[8] = dx * dz * (1 - cos) - dy * sin;
-            m[9] = dy * dz * (1 - cos) + dx * sin;
-            m[10] = dz * dz + (dx * dx + dy * dy) * cos;
-            m[11] =
-                (az * (dx * dx + dy * dy) - dz * (ax * dx + ay * dy)) * (1 - cos) +
-                    (ax * dy - ay * dx) * sin;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Create an affine matrix for mirroring into an arbitrary plane:
-         */
-        static mirror(plane, result = new M4()) {
-            assertVectors(plane.normal1);
-            assertInst(M4, result);
-            const [nx, ny, nz] = plane.normal1;
-            const w = plane.w;
-            const m = result.m;
-            m[0] = 1.0 - 2.0 * nx * nx;
-            m[1] = -2.0 * ny * nx;
-            m[2] = -2.0 * nz * nx;
-            m[3] = 2.0 * nx * w;
-            m[4] = -2.0 * nx * ny;
-            m[5] = 1.0 - 2.0 * ny * ny;
-            m[6] = -2.0 * nz * ny;
-            m[7] = 2.0 * ny * w;
-            m[8] = -2.0 * nx * nz;
-            m[9] = -2.0 * ny * nz;
-            m[10] = 1.0 - 2.0 * nz * nz;
-            m[11] = 2.0 * nz * w;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         *
-         * @param plane
-         * @param dir Projection direction. Optional, if not specified plane normal1 will be used.
-         * @param result {@see M4}
-         */
-        static project(plane, dir = plane.normal1, result = new M4()) {
-            // TODO: doc
-            // plane.normal1 DOT (p + lambda * dir) = w (1)
-            // extract lambda:
-            // plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
-            // lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
-            // result = p + lambda * dir
-            // result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
-            // result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
-            //  a + d * (w - n . a) / (nd)
-            //  a + dw - d * na
-            assertVectors(dir, plane.normal1);
-            assertInst(M4, result);
-            const w = plane.w;
-            const m = result.m;
-            const nd = plane.normal1.dot(dir);
-            const { x: nx, y: ny, z: nz } = plane.normal1;
-            const { x: dx, y: dy, z: dz } = dir.div(nd);
-            /*
-                 rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
-                 return M4.forSys(
-                 V3.X.rejectedFrom(plane.normal1),
-                 V3.Y.rejectedFrom(plane.normal1),
-                 V3.Z.rejectedFrom(plane.normal1),
-                 plane.anchor,
-                 result
-                 )
-                 */
-            m[0] = 1.0 - nx * dx;
-            m[1] = -ny * dx;
-            m[2] = -nz * dx;
-            m[3] = dx * w;
-            m[4] = -nx * dy;
-            m[5] = 1.0 - ny * dy;
-            m[6] = -nz * dy;
-            m[7] = dy * w;
-            m[8] = -nx * dz;
-            m[9] = -ny * dz;
-            m[10] = 1.0 - nz * dz;
-            m[11] = dz * w;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static lineProjection(line, result = new M4()) {
-            assertVectors(line.anchor, line.dir1);
-            assertInst(M4, result);
-            const ax = line.anchor.x, ay = line.anchor.y, az = line.anchor.z;
-            const dx = line.dir1.x, dy = line.dir1.y, dz = line.dir1.z;
-            const m = result.m;
-            /*
-                 projectedOn: return b.times(this.dot(b) / b.dot(b))
-                 */
-            m[0] = dx * dx;
-            m[1] = dx * dy;
-            m[2] = dx * dz;
-            m[3] = ax;
-            m[4] = dy * dx;
-            m[5] = dy * dy;
-            m[6] = dy * dz;
-            m[7] = ay;
-            m[8] = dz * dx;
-            m[9] = dz * dy;
-            m[10] = dz * dz;
-            m[11] = az;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static pointInversion(p, result = new M4()) {
-            assertVectors(p);
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = -1;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = 2 * p.x;
-            m[4] = 0;
-            m[5] = -1;
-            m[6] = 0;
-            m[7] = 2 * p.y;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = -1;
-            m[11] = 2 * p.z;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static new(width, height, m) {
-            assert(4 == width && 4 == height);
-            return new M4(...m);
-        }
-        get X() {
-            return this.transformVector(V3.X);
-        }
-        get Y() {
-            return this.transformVector(V3.Y);
-        }
-        get Z() {
-            return this.transformVector(V3.Z);
-        }
-        get O() {
-            return this.getTranslation();
-        }
-        isMirror(precision = NLA_PRECISION) {
-            const m = this.m;
-            const nx = Math.sqrt((1 - m[0]) / 2);
-            const ny = Math.sqrt((1 - m[5]) / 2);
-            const nz = Math.sqrt((1 - m[10]) / 2);
-            return (eq(m[1], -2.0 * ny * nx, precision) &&
-                eq(m[2], -2.0 * nz * nx, precision) &&
-                eq(m[4], -2.0 * nx * ny, precision) &&
-                eq(m[6], -2.0 * nz * ny, precision) &&
-                eq(m[8], -2.0 * nx * nz, precision) &&
-                eq(m[9], -2.0 * ny * nz, precision) &&
-                eq(m[12], 0, precision) &&
-                eq(m[13], 0, precision) &&
-                eq(m[14], 0, precision) &&
-                eq(m[15], 1, precision) &&
-                eq(m[3] * ny, m[7] * nx, precision) &&
-                eq(m[7] * nz, m[11] * ny, precision) &&
-                eq(m[11] * nx, m[3] * nz, precision));
-        }
-        // ### GL.Matrix.frustum(left, right, bottom, top, near, far[, result])
-        //
-        // Sets up a viewing frustum, which is shaped like a truncated pyramid with the
-        // camera where the point of the pyramid would be. You can optionally pass an
-        // existing matrix in `result` to avoid allocating a new matrix. This emulates
-        /**
-         * Returns a new M4 which is equal to the inverse of this.
-         */
-        inversed(result) {
-            return M4.inverse(this, result);
-        }
-        /**
-         * Matrix trace is defined as the sum of the elements of the main diagonal.
-         */
-        trace() {
-            return this.m[0] + this.m[5] + this.m[10] + this.m[15];
-        }
-        as3x3(result) {
-            result = M4.copy(this, result);
-            const m = result.m;
-            m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        transform(m4) {
-            return m4.times(this);
-        }
-        realEigenValues3() {
-            const m = this.m;
-            assert(0 == m[12] && 0 == m[13] && 0 == m[14]);
-            // determinant of (this - λI):
-            // | a-λ  b   c  |
-            // |  d  e-λ  f  | = -λ^3 + λ^2 (a+e+i) + λ (-a e-a i+b d+c g-e i+f h) + a(ei - fh) - b(di - fg) + c(dh - eg)
-            // |  g   h  i-λ |
-            const [a, b, c, , d, e, f, , g, h, i] = m;
-            // det(this - λI) = -λ^3 +λ^2 (a+e+i) + λ (-a e-a i-b d+c g-e i+f h)+ (a e i-a f h-b d i+b f g+c d h-c e g)
-            const s = -1;
-            const t = a + e + i; // equivalent to trace of matrix
-            const u = -a * e - a * i + b * d + c * g - e * i + f * h; // equivalent to 1/2 (trace(this²) - trace²(A))
-            const w = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g); // equivalent to matrix determinant
-            console.log(s, t, u, w);
-            return solveCubicReal2(s, t, u, w);
-        }
-        realEigenVectors3() {
-            const eigenValues = this.realEigenValues3();
-            const this3x3 = this.times(M4.IDENTITY3);
-            console.log(this.toString());
-            console.log(this3x3.toString());
-            let mats = eigenValues.map((ev) => M4.IDENTITY3.scale(-ev).plus(this3x3));
-            console.log(mats.map((m) => m.determinant3()));
-            console.log(mats.map((m) => "" + m.toString((v) => "" + v)).join("\n\n"));
-            console.log(mats.map((m) => "" + m.gauss().U.toString((v) => "" + v)).join("\n\n"));
-            console.log("mats.map(m=>m.rank())", mats.map((m) => m.rank()));
-            if (1 == eigenValues.length) {
-                console.log(mats[0].toString());
-                assertf(() => 0 == mats[0].rank());
-                // col vectors
-                return arrayFromFunction(3, (col) => new V3(this.m[col], this.m[4 + col], this.m[8 + col]));
-            }
-            if (2 == eigenValues.length) {
-                // one matrix should have rank 1, the other rank 2
-                if (1 == mats[0].rank()) {
-                    mats = [mats[1], mats[0]];
-                }
-                assertf(() => 2 == mats[0].rank());
-                assertf(() => 1 == mats[1].rank());
-                // mat[0] has rank 2, mat[1] has rank 1
-                const gauss0 = mats[0].gauss().U;
-                const eigenVector0 = gauss0.row(0).cross(gauss0.row(1)).V3().unit();
-                const planeNormal = mats[1].gauss().U.row(0).V3();
-                const eigenVector1 = planeNormal.getPerpendicular().unit();
-                const eigenVector2 = eigenVector0
-                    .cross(eigenVector1)
-                    .rejectedFrom(planeNormal);
-                return [eigenVector0, eigenVector1, eigenVector2];
-            }
-            if (3 == eigenValues.length) {
-                mats.forEach((mat, i) => assert(2 == mat.rank(), i + ": " + mat.rank()));
-                // the (A - lambda I) matrices map to a plane. This means, that there is an entire line in R³ which maps to
-                // the point V3.O
-                return mats.map((mat) => {
-                    const gauss = mat.gauss().U;
-                    return gauss.row(0).cross(gauss.row(1)).V3().unit();
-                });
-            }
-            throw new Error("there cannot be more than 3 eigen values");
-        }
-        /**
-         * U * SIGMA * VSTAR = this
-         * U and VSTAR are orthogonal matrices
-         * SIGMA is a diagonal matrix
-         */
-        svd3() {
-            function matrixForCS(i, k, c, s) {
-                const m = M4.identity();
-                m.setEl(i, i, c);
-                m.setEl(k, k, c);
-                m.setEl(i, k, s);
-                m.setEl(k, i, -s);
-                return m;
-            }
-            const A = this.as3x3();
-            let S = A.transposed().times(A), V = M4.identity();
-            console.log(S.str);
-            for (let it = 0; it < 16; it++) {
-                console.log("blahg\n", V.times(S).times(V.transposed()).str);
-                assert(V.times(S).times(V.transposed()).likeM4(A.transposed().times(A)), V.times(S).times(V.transposed()).str, A.transposed().times(A).str);
-                let maxOffDiagonal = 0, maxOffDiagonalIndex = 1, j = 10;
-                while (j--) {
-                    const val = Math.abs(S.m[j]);
-                    if (j % 4 != Math.floor(j / 4) && val > maxOffDiagonal) {
-                        maxOffDiagonal = val;
-                        maxOffDiagonalIndex = j;
-                    }
-                }
-                const i = Math.floor(maxOffDiagonalIndex / 4), k = maxOffDiagonalIndex % 4;
-                const a_ii = S.m[5 * i], a_kk = S.m[5 * k], a_ik = S.m[maxOffDiagonalIndex];
-                const phi = a_ii === a_kk ? PI$1$1 / 4 : Math.atan((2 * a_ik) / (a_ii - a_kk)) / 2;
-                console.log(maxOffDiagonalIndex, i, k, "phi", phi);
-                const cos = Math.cos(phi), sin = Math.sin(phi);
-                const givensRotation = matrixForCS(i, k, cos, -sin);
-                assert(givensRotation.transposed().times(givensRotation).likeIdentity());
-                console.log(givensRotation.str);
-                V = V.times(givensRotation);
-                S = M4.product(givensRotation.transposed(), S, givensRotation);
-                console.log(S.str);
-            }
-            const sigma = S.map((el, elIndex) => (elIndex % 5 == 0 ? Math.sqrt(el) : 0));
-            return {
-                U: M4.product(A, V, sigma.map((el, elIndex) => (elIndex % 5 == 0 ? 1 / el : 0))),
-                SIGMA: sigma,
-                VSTAR: V.transposed(),
-            };
-        }
-        map(fn) {
-            return M4.fromFunction4((x, y, i) => fn(this.m[i], i, this.m));
-        }
-        likeM4(m4) {
-            assertInst(M4, m4);
-            return this.m.every((el, index) => eq(el, m4.m[index]));
-        }
-        /**
-         * Returns a new M4 equal to the transpose of this.
-         */
-        transposed(result) {
-            return M4.transpose(this, result);
-        }
-        /**
-         * Returns a new M4 which equal to (this * matrix) (in that order)
-         */
-        times(matrix) {
-            return M4.multiply(this, matrix);
-        }
-        /**
-         * In a perspective projection, parallel lines meet in a vanishing point.
-         *
-         * Returns undefined if there is no vanishing point, either because this is not a perspective transform,
-         * or because the passed dir is perpendicular to the projections direction.
-         *
-         * @param dir
-         */
-        vanishingPoint(dir) {
-            assertVectors(dir);
-            const m = this.m;
-            const vx = dir.x, vy = dir.y, vz = dir.z;
-            const w = vx * m[12] + vy * m[13] + vz * m[14];
-            if (eq0(w))
-                return undefined;
-            const x = vx * m[0] + vy * m[1] + vz * m[2];
-            const y = vx * m[4] + vy * m[5] + vz * m[6];
-            const z = vx * m[8] + vy * m[9] + vz * m[10];
-            return new V3(x / w, y / w, z / w);
-        }
-        /**
-         * Transforms the vector as a point with a w coordinate of 1. This means translations will have an effect, for
-         * example.
-         */
-        transformPoint(v) {
-            assertVectors(v);
-            const m = this.m;
-            const vx = v.x, vy = v.y, vz = v.z;
-            const x = vx * m[0] + vy * m[1] + vz * m[2] + m[3];
-            const y = vx * m[4] + vy * m[5] + vz * m[6] + m[7];
-            const z = vx * m[8] + vy * m[9] + vz * m[10] + m[11];
-            const w = vx * m[12] + vy * m[13] + vz * m[14] + m[15];
-            // scale such that fourth element becomes 1:
-            return new V3(x / w, y / w, z / w);
-        }
-        /**
-         * Transforms the vector as a vector with a w coordinate of 0. This means translations will have no effect, for
-         * example. Will throw an exception if the calculated w component != 0. This occurs for example when attempting
-         * to transform a vector with a perspective matrix.
-         */
-        transformVector(v, checkW = true) {
-            assertVectors(v);
-            const m = this.m;
-            const w = v.x * m[12] + v.y * m[13] + v.z * m[14];
-            checkW &&
-                assert(eq0(w), () => "w === 0 needs to be true for this to make sense (w =" + w + this.str);
-            return new V3(m[0] * v.x + m[1] * v.y + m[2] * v.z, m[4] * v.x + m[5] * v.y + m[6] * v.z, m[8] * v.x + m[9] * v.y + m[10] * v.z);
-        }
-        transformVector2(v, anchor) {
-            // v and anchor define a line(t) = anchor + t v
-            // we can view the calculation of the transformed vector as the derivative of the transformed line at t = 0
-            // d/dt (this * line(t)) (0)
-            assertVectors(v, anchor);
-            const transformedAnchor = this.timesVector(VV(anchor.x, anchor.y, anchor.z, 1));
-            const transformedVector = this.timesVector(VV(v.x, v.y, v.z, 0));
-            return transformedVector
-                .times(transformedAnchor.w)
-                .minus(transformedAnchor.times(transformedVector.w))
-                .div(Math.pow(transformedAnchor.w, 2))
-                .V3();
-        }
-        transformedPoints(vs) {
-            return vs.map((v) => this.transformPoint(v));
-        }
-        transformedVectors(vs) {
-            return vs.map((v) => this.transformVector(v));
-        }
-        new() {
-            return new M4();
-        }
-        isRegular() {
-            return !eq0(this.determinant());
-        }
-        isAxisAligned() {
-            const m = this.m;
-            return (1 >= +!eq0(m[0]) + +!eq0(m[1]) + +!eq0(m[2]) &&
-                1 >= +!eq0(m[4]) + +!eq0(m[5]) + +!eq0(m[6]) &&
-                1 >= +!eq0(m[8]) + +!eq0(m[9]) + +!eq0(m[10]));
-        }
-        /**
-         * A matrix M is orthogonal iff M * M^T = I
-         * I being the identity matrix.
-         *
-         * @returns If this matrix is orthogonal or very close to it. Comparison of the identity matrix and
-         * this * this^T is done with {@link #likeM4}
-         */
-        isOrthogonal() {
-            // return this.transposed().times(this).likeM4(M4.IDENTITY)
-            M4.transpose(this, M4.temp0);
-            M4.multiply(this, M4.temp0, M4.temp1);
-            return M4.IDENTITY.likeM4(M4.temp1);
-        }
-        /**
-         * A matrix M is symmetric iff M == M^T
-         * I being the identity matrix.
-         *
-         * @returns If this matrix is symmetric or very close to it. Comparison of the identity matrix and
-         * this * this^T is done with {@link #likeM4}
-         */
-        isSymmetric() {
-            M4.transpose(this, M4.temp0);
-            return this.likeM4(M4.temp0);
-        }
-        /**
-         * A matrix M is skew symmetric iff M = -M^T
-         */
-        isSkewSymmetric(precision) {
-            return (eq0(this.m[0], precision) &&
-                eq0(this.m[5], precision) &&
-                eq0(this.m[10], precision) &&
-                eq0(this.m[15], precision) &&
-                eq(this.m[1], this.m[4], precision) &&
-                eq(this.m[2], this.m[8], precision) &&
-                eq(this.m[3], this.m[12], precision) &&
-                eq(this.m[6], this.m[9], precision) &&
-                eq(this.m[7], this.m[13], precision) &&
-                eq(this.m[11], this.m[14], precision));
-        }
-        /**
-         * A matrix M is normal1 iff M * M^-T == M^T * M TODO: ^-T?
-         * I being the identity matrix.
-         *
-         * @returns If this matrix is symmetric or very close to it. Comparison of the identity matrix and
-         * this * this^T is done with {@link #likeM4}
-         */
-        isNormal() {
-            M4.transpose(this, M4.temp0); // temp0 = this^-T
-            M4.multiply(this, M4.temp0, M4.temp1); // temp1 = this * this^-T
-            M4.multiply(M4.temp0, this, M4.temp2); // temp2 = this^-T * this
-            return M4.temp1.likeM4(M4.temp2);
-        }
-        /**
-         * Determinant of matrix.
-         *
-         * Notes:
-         *      For matrices A and B
-         *      det(A * B) = det(A) * det(B)
-         *      det(A^-1) = 1 / det(A)
-         */
-        determinant() {
-            // | a b c d |
-            // | e f g h |
-            // | i j k l |
-            // | m n o p |
-            const $ = this.m, a = $[0], b = $[1], c = $[2], d = $[3], e = $[4], f = $[5], g = $[6], h = $[7], i = $[8], j = $[9], k = $[10], l = $[11], m = $[12], n = $[13], o = $[14], p = $[15], klop = k * p - l * o, jlnp = j * p - l * n, jkno = j * o - k * n, ilmp = i * p - l * m, ikmo = i * o - k * m, ijmn = i * n - j * m;
-            return (a * (f * klop - g * jlnp + h * jkno) -
-                b * (e * klop - g * ilmp + h * ikmo) +
-                c * (e * jlnp - f * ilmp + h * ijmn) -
-                d * (e * jkno - f * ikmo + g * ijmn));
-        }
-        determinant3() {
-            const [a, b, c, , d, e, f, , g, h, i] = this.m;
-            const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
-            return det;
-        }
-        /**
-         * determine whether this matrix is a mirroring transformation
-         */
-        isMirroring() {
-            /*
-                 var u = V(this.m[0], this.m[4], this.m[8])
-                 var v = V(this.m[1], this.m[5], this.m[9])
-                 var w = V(this.m[2], this.m[6], this.m[10])
-        
-                 // for a true orthogonal, non-mirrored base, u.cross(v) == w
-                 // If they have an opposite direction then we are mirroring
-                 var mirrorvalue = u.cross(v).dot(w)
-                 var ismirror = (mirrorvalue < 0)
-                 return ismirror
-                 */
-            return this.determinant() < 0; // TODO: also valid for 4x4?
-        }
-        /**
-         * Get the translation part of this matrix, i.e. the result of this.transformPoint(V3.O)
-         */
-        getTranslation() {
-            const m = this.m, w = m[15];
-            return new V3(m[3] / w, m[7] / w, m[11] / w);
-        }
-        /**
-         * Returns this matrix scaled so that the determinant is 1.
-         * det(c * A) = (c ** n) * det(A) for n x n matrices,
-         * so we need to divide by the 4th root of the determinant
-         */
-        normalized() {
-            const detAbs = abs$1(this.determinant());
-            return 1 == detAbs ? this : this.divScalar(Math.pow(detAbs, 0.25));
-        }
-        /**
-         * Returns this matrix scaled so that the determinant is 1.
-         * det(c * A) = (c ** n) * det(A) for n x n matrices,
-         * so we need to divide by the 4th root of the determinant
-         */
-        normalized2() {
-            const div = this.m[15];
-            return 1 == div ? this : this.divScalar(div);
-        }
-        /**
-         * Returns if the matrix has the following form (within NLA_PRECISION):
-         * a b c 0
-         * c d e 0
-         * f g h 0
-         * 0 0 0 1
-         */
-        like3x3() {
-            const m = this.m;
-            return (eq(1, m[15]) &&
-                eq0(m[12]) &&
-                eq0(m[13]) &&
-                eq0(m[14]) &&
-                eq0(m[3]) &&
-                eq0(m[7]) &&
-                eq0(m[11]));
-        }
-        isNoProj() {
-            const m = this.m;
-            return 0 == m[12] && 0 == m[13] && 0 == m[14] && 1 == m[15];
-        }
-        likeIdentity() {
-            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? eq(1, val) : eq0(val));
-        }
-        isIdentity() {
-            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? 1 == val : 0 == val);
-        }
-        toString(f = (v) => v.toFixed(6).replace(/([0.])(?=0*$)/g, " ")) {
-            assert(typeof f(0) == "string", "" + typeof f(0));
-            // slice this.m to convert it to an Array (from TypeArray)
-            const rounded = Array.prototype.slice.call(this.m).map(f);
-            const colWidths = [0, 1, 2, 3].map((colIndex) => max$1(sliceStep(rounded, colIndex, 0, 4).map((x) => x.length)));
-            return [0, 1, 2, 3]
-                .map((rowIndex) => rounded
-                .slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
-                .map((x, colIndex) => " ".repeat(colWidths[colIndex] - x.length) + x) // pad numbers with
-                // spaces to col width
-                .join(" "))
-                .join("\n"); // join rows
-        }
-        /**
-         * Wether this matrix is a translation matrix, i.e. of the form
-         * ```
-         *  1, 0, 0, x,
-         *  0, 1, 0, y,
-         *  0, 0, 1, z,
-         *  0, 0, 0, 1
-         * ```
-         */
-        isTranslation() {
-            // 2: any value, otherwise same value
-            // prettier-ignore
-            const mask = [
-                1, 0, 0, 2,
-                0, 1, 0, 2,
-                0, 0, 1, 2,
-                0, 0, 0, 1
-            ];
-            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
-        }
-        /**
-         * Wether this matrix is a translation matrix, i.e. of the form
-         * ```
-         *  s, 0, 0, 0,
-         *  0, t, 0, 0,
-         *  0, 0, v, 0,
-         *  0, 0, 0, 1
-         * ```
-         */
-        isScaling() {
-            // prettier-ignore
-            const mask = [
-                2, 0, 0, 0,
-                0, 2, 0, 0,
-                0, 0, 2, 0,
-                0, 0, 0, 1
-            ];
-            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
-        }
-        isZRotation() {
-            // prettier-ignore
-            const mask = [
-                2, 2, 0, 0,
-                2, 2, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1
-            ];
-            return (mask.every((expected, index) => expected == 2 || expected == this.m[index]) &&
-                eq(1, Math.pow(this.m[0], 2) + Math.pow(this.m[1], 2)) &&
-                this.m[0] == this.m[5] &&
-                this.m[1] == -this.m[4]);
-        }
-        toSource() {
-            const name = M4.NAMEMAP.get(this);
-            if (name) {
-                return name;
-            }
-            else if (this.isTranslation()) {
-                return callsce("M4.translate", this.O);
-            }
-            else if (this.isScaling()) {
-                return callsce("M4.scale", this.m[0], this.m[5], this.m[10]);
-            }
-            else if (this.isNoProj()) {
-                return !this.O.equals(V3.O)
-                    ? callsce("M4.forSys", this.X, this.Y, this.Z, this.O)
-                    : callsce("M4.forSys", this.X, this.Y, this.Z);
-            }
-            else if (this.isMirror(0)) {
-                const m = this.m;
-                const nx = Math.sqrt((1 - m[0]) / 2);
-                const ny = Math.sqrt((1 - m[5]) / 2);
-                const nz = Math.sqrt((1 - m[10]) / 2);
-                const w = m[3] / 2.0 / nx;
-                return callsce("M4.mirror", { normal1: new V3(nx, ny, nz), w });
-            }
-            else {
-                const m = this.m;
-                return ("new M4(" +
-                    ("\n\t" + m[0] + ",\t" + m[1] + ",\t" + m[2] + ",\t" + m[3] + ",") +
-                    ("\n\t" + m[4] + ",\t" + m[5] + ",\t" + m[6] + ",\t" + m[7] + ",") +
-                    ("\n\t" + m[8] + ",\t" + m[9] + ",\t" + m[10] + ",\t" + m[11] + ",") +
-                    ("\n\t" + m[12] + ",\t" + m[13] + ",\t" + m[14] + ",\t" + m[15] + ")"));
-            }
-        }
-        xyAreaFactor() {
-            return this.transformVector(V3.X).cross(this.transformVector(V3.Y)).length();
-        }
-    }
-    /**
-     * A simple (consists of integers), regular, non-orthogonal matrix, useful mainly for testing.
-     * M4.FOO_INV = M4.FOO.inverse()
-     */
-    // prettier-ignore
-    M4.FOO = new M4(0, 1, 1, 2, 0.3, 0.4, 0.8, 13, 2.1, 3.4, 5.5, 8.9, 0, 0, 0, 1);
-    M4.FOO_INV = M4.FOO.inversed();
-    M4.IDENTITY = M4.identity();
-    // prettier-ignore
-    M4.O = new M4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    M4.YZX = M4.forSys(V3.Y, V3.Z, V3.X);
-    M4.ZXY = M4.forSys(V3.Z, V3.X, V3.Y);
-    // prettier-ignore
-    M4.IDENTITY3 = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
-    M4.temp0 = new M4();
-    M4.temp1 = new M4();
-    M4.temp2 = new M4();
-    M4.NAMEMAP = new JavaMap()
-        .set(M4.IDENTITY3, "M4.IDENTITY3")
-        .set(M4.FOO, "M4.FOO")
-        .set(M4.O, "M4.O")
-        .set(M4.FOO_INV, "M4.FOO_INV")
-        .set(M4.IDENTITY, "M4.IDENTITY")
-        .set(M4.ZXY, "M4.ZXY")
-        .set(M4.YZX, "M4.YZX");
-    M4.prototype.height = 4;
-    M4.prototype.width = 4;
-    addOwnProperties(M4.prototype, Transformable.prototype, "constructor");
-
-    const KEYWORD_REGEXP = new RegExp("^(" +
-        "abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|" +
-        "default|delete|do|double|else|enum|export|extends|false|final|finally|" +
-        "float|for|function|goto|if|implements|import|in|instanceof|int|interface|" +
-        "long|native|new|null|package|private|protected|public|return|short|static|" +
-        "super|switch|synchronized|this|throw|throws|transient|true|try|typeof|" +
-        "undefined|var|void|volatile|while|with" +
-        ")$");
-    function stringIsLegalKey(key) {
-        return /^[a-z_$][0-9a-z_$]*$/gi.test(key) && !KEYWORD_REGEXP.test(key);
-    }
-    const seen = [];
-    function toSource(o, indent = 0) {
-        if (undefined === o)
-            return "undefined";
-        if (null === o)
-            return "null";
-        return o.toSource();
-    }
-    function addToSourceMethodToPrototype(clazz, method) {
-        if (!clazz.prototype.toSource) {
-            Object.defineProperty(clazz.prototype, "toSource", {
-                value: method,
-                writable: true,
-                configurable: true,
-                enumerable: false,
-            });
-        }
-    }
-    addToSourceMethodToPrototype(Boolean, Boolean.prototype.toString);
-    addToSourceMethodToPrototype(Function, Function.prototype.toString);
-    addToSourceMethodToPrototype(Number, Number.prototype.toString);
-    addToSourceMethodToPrototype(RegExp, RegExp.prototype.toString);
-    addToSourceMethodToPrototype(Date, function () {
-        return "new Date(" + this.getTime() + ")";
-    });
-    addToSourceMethodToPrototype(String, function () {
-        return JSON.stringify(this);
-    });
-    addToSourceMethodToPrototype(Array, function () {
-        if (seen.includes(this)) {
-            return "CIRCULAR_REFERENCE";
-        }
-        seen.push(this);
-        let result = "[";
-        for (let i = 0; i < this.length; i++) {
-            result += "\n\t" + toSource(this[i]).replace(/\r\n|\n|\r/g, "$&\t");
-            if (i !== this.length - 1) {
-                result += ",";
-            }
-        }
-        result += 0 === this.length ? "]" : "\n]";
-        seen.pop();
-        return result;
-    });
-    addToSourceMethodToPrototype(Object, function () {
-        if (seen.includes(this)) {
-            return "CIRCULAR_REFERENCE";
-        }
-        seen.push(this);
-        let result = "{";
-        const keys = Object.keys(this).sort();
-        for (let i = 0; i < keys.length; i++) {
-            const k = keys[i];
-            result +=
-                "\n\t" +
-                    (stringIsLegalKey(k) ? k : JSON.stringify(k)) +
-                    ": " +
-                    toSource(this[k]).replace(/\r\n|\n|\r/g, "$&\t");
-            if (i !== keys.length - 1) {
-                result += ",";
-            }
-        }
-        result += 0 === keys.length ? "}" : "\n}";
-        seen.pop();
-        return result;
-    });
-
-    class AABB extends Transformable {
-        constructor(min = V3.INF, max = V3.INF.negated()) {
-            super();
-            this.min = min;
-            this.max = max;
-            assertVectors(min, max);
-        }
-        static forXYZ(x, y, z) {
-            return new AABB(V3.O, new V3(x, y, z));
-        }
-        static forAABBs(aabbs) {
-            const result = new AABB();
-            for (const aabb of aabbs) {
-                result.addAABB(aabb);
-            }
-            return result;
-        }
-        addPoint(p) {
-            assertVectors(p);
-            this.min = this.min.min(p);
-            this.max = this.max.max(p);
-            return this;
-        }
-        addPoints(ps) {
-            ps.forEach((p) => this.addPoint(p));
-            return this;
-        }
-        addAABB(aabb) {
-            assertInst(AABB, aabb);
-            this.addPoint(aabb.min);
-            this.addPoint(aabb.max);
-            return this;
-        }
-        /**
-         * Returns the largest AABB contained in this which doesn't overlap with aabb
-         * @param aabb
-         */
-        withoutAABB(aabb) {
-            assertInst(AABB, aabb);
-            let min, max;
-            const volume = this.volume(), size = this.size();
-            let remainingVolume = -Infinity;
-            for (let i = 0; i < 3; i++) {
-                const dim = ["x", "y", "z"][i];
-                const cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim];
-                const dimMin = cond
-                    ? this.min[dim]
-                    : Math.max(this.min[dim], aabb.max[dim]);
-                const dimMax = !cond
-                    ? this.max[dim]
-                    : Math.min(this.max[dim], aabb.min[dim]);
-                const newRemainingVolume = ((dimMax - dimMin) * volume) / size[dim];
-                if (newRemainingVolume > remainingVolume) {
-                    remainingVolume = newRemainingVolume;
-                    min = this.min.withElement(dim, dimMin);
-                    max = this.max.withElement(dim, dimMax);
-                }
-            }
-            return new AABB(min, max);
-        }
-        getIntersectionAABB(aabb) {
-            assertInst(AABB, aabb);
-            return new AABB(this.min.max(aabb.min), this.max.min(aabb.max));
-        }
-        touchesAABB(aabb) {
-            assertInst(AABB, aabb);
-            return !(this.min.x > aabb.max.x ||
-                this.max.x < aabb.min.x ||
-                this.min.y > aabb.max.y ||
-                this.max.y < aabb.min.y ||
-                this.min.z > aabb.max.z ||
-                this.max.z < aabb.min.z);
-        }
-        touchesAABBfuzzy(aabb, precisision = NLA_PRECISION) {
-            assertInst(AABB, aabb);
-            return !(lt(aabb.max.x, this.min.x, precisision) ||
-                lt(this.max.x, aabb.min.x, precisision) ||
-                lt(aabb.max.y, this.min.y, precisision) ||
-                lt(this.max.y, aabb.min.y, precisision) ||
-                lt(aabb.max.z, this.min.z, precisision) ||
-                lt(this.max.z, aabb.min.z, precisision));
-        }
-        intersectsAABB(aabb) {
-            assertInst(AABB, aabb);
-            return !(this.min.x >= aabb.max.x ||
-                this.max.x <= aabb.min.x ||
-                this.min.y >= aabb.max.y ||
-                this.max.y <= aabb.min.y ||
-                this.min.z >= aabb.max.z ||
-                this.max.z <= aabb.min.z);
-        }
-        intersectsAABB2d(aabb) {
-            assertInst(AABB, aabb);
-            return !(this.min.x >= aabb.max.x ||
-                this.max.x <= aabb.min.x ||
-                this.min.y >= aabb.max.y ||
-                this.max.y <= aabb.min.y);
-        }
-        containsPoint(p) {
-            assertVectors(p);
-            return (this.min.x <= p.x &&
-                this.min.y <= p.y &&
-                this.min.z <= p.z &&
-                this.max.x >= p.x &&
-                this.max.y >= p.y &&
-                this.max.z >= p.z);
-        }
-        containsSphere(center, radius) {
-            assertVectors(center);
-            assertNumbers(radius);
-            return this.distanceToPoint(center) > radius;
-        }
-        intersectsSphere(center, radius) {
-            assertVectors(center);
-            assertNumbers(radius);
-            return this.distanceToPoint(center) <= radius;
-        }
-        distanceToPoint(p) {
-            assertVectors(p);
-            const x = p.x, y = p.y, z = p.z;
-            const min = this.min, max = this.max;
-            if (this.containsPoint(p)) {
-                return Math.max(min.x - x, x - max.x, min.y - y, y - max.y, min.z - z, z - max.z);
-            }
-            return p.distanceTo(new V3(clamp$1(x, min.x, max.x), clamp$1(y, min.y, max.y), clamp$1(z, min.z, max.z)));
-        }
-        containsAABB(aabb) {
-            assertInst(AABB, aabb);
-            return this.containsPoint(aabb.min) && this.containsPoint(aabb.max);
-        }
-        likeAABB(aabb) {
-            assertInst(AABB, aabb);
-            return this.min.like(aabb.min) && this.max.like(aabb.max);
-        }
-        intersectsLine(line) {
-            assertVectors(line.anchor, line.dir1);
-            const dir = line.dir1.map((el) => el || Number.MIN_VALUE);
-            const minTs = this.min.minus(line.anchor).divv(dir);
-            const maxTs = this.max.minus(line.anchor).divv(dir);
-            const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(maxTs).minElement();
-            return tMin <= tMax && !(tMax < line.tMin || line.tMax < tMin);
-        }
-        hasVolume() {
-            return (this.min.x <= this.max.x &&
-                this.min.y <= this.max.y &&
-                this.min.z <= this.max.z);
-        }
-        volume() {
-            if (!this.hasVolume()) {
-                return -1;
-            }
-            const v = this.max.minus(this.min);
-            return v.x * v.y * v.z;
-        }
-        size() {
-            return this.max.minus(this.min);
-        }
-        getCenter() {
-            return this.min.plus(this.max).div(2);
-        }
-        transform(m4) {
-            assertInst(M4, m4);
-            assert(m4.isAxisAligned());
-            const aabb = new AABB();
-            aabb.addPoint(m4.transformPoint(this.min));
-            aabb.addPoint(m4.transformPoint(this.max));
-            return aabb;
-        }
-        ofTransformed(m4) {
-            assertInst(M4, m4);
-            const aabb = new AABB();
-            aabb.addPoints(m4.transformedPoints(this.corners()));
-            return aabb;
-        }
-        corners() {
-            const { min, max } = this;
-            return [
-                min,
-                new V3(min.x, min.y, max.z),
-                new V3(min.x, max.y, min.z),
-                new V3(min.x, max.y, max.z),
-                new V3(max.x, min.y, min.z),
-                new V3(max.x, min.y, max.z),
-                new V3(max.x, max.y, min.z),
-                max,
-            ];
-        }
-        toString() {
-            return callsce("new AABB", this.min, this.max);
-        }
-        toSource() {
-            return this.toString();
-        }
-        /**
-         * Return the matrix which transforms the AABB from V3.O to V3.XYZ to this AABB.
-         */
-        getM4() {
-            return M4.translate(this.min).times(M4.scale(this.size()));
-        }
+    function callSource(name, ...params) {
+        return name + "(" + params.map(toSource).join(",") + ")";
     }
 
     const gaussLegendre24Xs = [
@@ -36281,6 +32467,7 @@ var demo = (function (exports, hljs) {
     }
     /**
      * Calculate the integral of f in the interval [-1;1].
+     *
      * @param f
      */
     function glq24_11(f) {
@@ -36492,6 +32679,5492 @@ var demo = (function (exports, hljs) {
         return results;
     }
 
+    function arraySwap(arr, i, j) {
+        const temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+    function arrayCopy(src, sstart, dst, dstart, length) {
+        assertInts(sstart, dstart, length);
+        dstart += length;
+        length += sstart;
+        while (length-- > sstart) {
+            dst[--dstart] = src[length];
+        }
+        return dst;
+    }
+    /**
+     * Copies a number of items from one array to another, with a definable step
+     * size between items in the source and destination array.
+     *
+     * @param src The source array.
+     * @param sstart The location of the first item in the source array.
+     * @param sstep The offset between items in the source array.
+     * @param dst The destination array.
+     * @param dstart The location of the first item in the destination array.
+     * @param dstep The offset between items in the destination array.
+     * @param count The number of items to copy.
+     */
+    function arrayCopyStep(src, sstart, sstep, dst, dstart, dstep, count) {
+        let srcIndex = sstart + count * sstep;
+        let dIndex = dstart + count * dstep;
+        while (srcIndex > sstart) {
+            dst[(dIndex -= dstep)] = src[(srcIndex -= sstep)];
+        }
+    }
+    /**
+     * Copies a number of contiguous, evenly-spaced blocks from one array to another.
+     *
+     * @param src The source array.
+     * @param sstart The start of the first block in the source array.
+     * @param sstep The offset from the start of one block to the start of the next
+     *     block in the source array.
+     * @param dst The destination array.
+     * @param dstart The start of the first block in the destination array.
+     * @param dstep The offset from the start of one block to the start of the next
+     *     block in the destination array.
+     * @param blockSize The length of one block.
+     * @param blockCount The number of blocks to copy.
+     */
+    function arrayCopyBlocks(src, sstart, sstep, dst, dstart, dstep, blockSize, blockCount) {
+        for (let i = 0; i < blockCount; i++) {
+            arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize);
+        }
+    }
+    function arrayRange(startInclusive, endExclusive, step = 1) {
+        assertNumbers(startInclusive, step);
+        //console.log(Math.ceil((endExclusive - startInclusive) / step))
+        const arrLength = Math.ceil((endExclusive - startInclusive) / step);
+        const result = new Array(arrLength); // '- startInclusive' so that chunk in the last row will also be selected, even
+        // if the row is not complete
+        for (let i = startInclusive, index = 0; index < arrLength; i += step, index++) {
+            result[index] = i;
+        }
+        return result;
+    }
+    /**
+     * Returns a number of evenly-spaced values between t0 and t1 (inclusive).
+     *
+     * @param t0 First value.
+     * @param t1 Last value.
+     * @param count Total number of values.
+     */
+    function arraySamples(t0, t1, count = 64) {
+        return arrayFromFunction(count, (i) => lerp$1(t0, t1, i / (count - 1)));
+    }
+    function arrayFromFunction(length, f) {
+        assertNumbers(length);
+        assert("function" == typeof f);
+        const a = new Array(length);
+        let elIndex = length;
+        while (elIndex--) {
+            a[elIndex] = f(elIndex, length);
+        }
+        return a;
+    }
+    /**
+     * Return the element in the array for which f(el) is highest. There is no
+     * `withMin`, call `withMax(x => -f(x))` instead.
+     *
+     * @param arr The array to search.
+     * @param f
+     */
+    function withMax$1(arr, f) {
+        let i = arr.length, result = undefined, maxVal = -Infinity;
+        while (i--) {
+            const el = arr[i], val = f(el, i, arr);
+            if (val > maxVal) {
+                maxVal = val;
+                result = el;
+            }
+        }
+        return result;
+    }
+    function emod(arr, i) {
+        return arr[mod(i, arr.length)];
+    }
+    function sliceStep(arr, start, end, step, chunkSize = 1) {
+        assertNumbers(start, step);
+        start < 0 && (start = arr.length + start);
+        end <= 0 && (end = arr.length + end);
+        const resultLength = Math.ceil((end - start) / step);
+        const result = new Array(resultLength); // '- start' so that chunk in the last row
+        // will also be selected, even if the row is
+        // not complete
+        let index = 0;
+        for (let i = start; i < end; i += step) {
+            for (let j = i; j < Math.min(i + chunkSize, end); j++) {
+                result[index++] = arr[j];
+            }
+        }
+        assert(resultLength == index);
+        return result;
+    }
+    function arrayEquals(arr, obj) {
+        if (arr === obj)
+            return true;
+        if (Object.getPrototypeOf(obj) !== Array.prototype)
+            return false;
+        if (arr.length !== obj.length)
+            return false;
+        for (let i = 0; i < arr.length; i++) {
+            if (!equals(arr[i], obj[i]))
+                return false;
+        }
+        return true;
+    }
+    function equals(a, b) {
+        return Array.isArray(a)
+            ? arrayEquals(a, b)
+            : "object" === typeof a
+                ? a.equals(b)
+                : a === b;
+    }
+    /** Equivalent to `arr.map(f).filter((x) => x)`. */
+    function mapFilter(arr, f) {
+        const length = arr.length;
+        const result = [];
+        for (let i = 0; i < length; i++) {
+            if (i in arr) {
+                const val = f(arr[i], i, arr);
+                if (val) {
+                    result.push(val);
+                }
+            }
+        }
+        return result;
+    }
+    function concatenated(arr) {
+        return Array.prototype.concat.apply([], arr);
+    }
+    function min$1(arr) {
+        let i = arr.length, max = Infinity;
+        while (i--) {
+            const val = arr[i];
+            if (max > val)
+                max = val;
+        }
+        return max;
+    }
+    function max$1(arr) {
+        // faster and no limit on array size, see https://jsperf.com/math-max-apply-vs-loop/2
+        let i = arr.length, max = -Infinity;
+        while (i--) {
+            const val = arr[i];
+            if (max < val)
+                max = val;
+        }
+        return max;
+    }
+    function indexWithMax(arr, f) {
+        if (arr.length == 0) {
+            return -1;
+        }
+        let i = arr.length, result = -1, maxVal = -Infinity;
+        while (i--) {
+            const val = f(arr[i], i, arr);
+            if (val > maxVal) {
+                maxVal = val;
+                result = i;
+            }
+        }
+        return result;
+    }
+    function sum(arr) {
+        let i = arr.length;
+        let result = 0;
+        while (i--) {
+            result += arr[i];
+        }
+        return result;
+    }
+    function sumInPlaceTree(arr) {
+        if (0 == arr.length)
+            return 0;
+        let l = arr.length;
+        while (l != 1) {
+            const lHalfFloor = Math.floor(l / 2);
+            const lHalfCeil = Math.ceil(l / 2);
+            for (let i = 0; i < lHalfFloor; i++) {
+                arr[i] += arr[i + lHalfCeil];
+            }
+            l = lHalfCeil;
+        }
+        return arr[0];
+    }
+    function bagRemoveIndex(arr, i) {
+        const result = arr[i];
+        if (i == arr.length - 1) {
+            arr.pop();
+        }
+        else {
+            arr[i] = arr.pop();
+        }
+        return result;
+    }
+    function binaryIndexOf(arr, searchElement, cmp = (a, b) => a - b) {
+        let minIndex = 0;
+        let maxIndex = arr.length - 1;
+        let currentIndex;
+        let currentElement;
+        while (minIndex <= maxIndex) {
+            currentIndex = ((minIndex + maxIndex) / 2) | 0;
+            currentElement = arr[currentIndex];
+            if (cmp(currentElement, searchElement) < 0) {
+                minIndex = currentIndex + 1;
+            }
+            else if (cmp(currentElement, searchElement) > 0) {
+                maxIndex = currentIndex - 1;
+            }
+            else {
+                return currentIndex;
+            }
+        }
+        return -minIndex - 1;
+    }
+    function binaryInsert(arr, el, cmp = MINUS) {
+        let minIndex = 0;
+        let maxIndex = arr.length;
+        let currentIndex;
+        let currentElement;
+        while (minIndex < maxIndex) {
+            currentIndex = ~~((minIndex + maxIndex) / 2);
+            currentElement = arr[currentIndex];
+            if (cmp(currentElement, el) < 0) {
+                minIndex = currentIndex + 1;
+            }
+            else {
+                maxIndex = currentIndex;
+            }
+        }
+        arr.splice(minIndex, 0, el);
+    }
+    function firstUnsorted(arr, cmp) {
+        for (let i = 1; i < arr.length; i++) {
+            if (cmp(arr[i - 1], arr[i]) > 0)
+                return i;
+        }
+        return -1;
+    }
+    function getLast(arr) {
+        return arr[arr.length - 1];
+    }
+    function setLast(arr, val) {
+        return (arr[arr.length - 1] = val);
+    }
+
+    /** Immutable 3d-vector/point. */
+    class V3 {
+        constructor(x, y, z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            assertNumbers(x, y, z);
+        }
+        static random() {
+            return new V3(Math.random(), Math.random(), Math.random());
+        }
+        static parallel(a, b) {
+            return a.dot(b) - a.length() * b.length();
+        }
+        /**
+         * See
+         * http://math.stackexchange.com/questions/44689/how-to-find-a-random-axis-or-unit-vector-in-3d
+         *
+         *
+         * @returns A random point on the unit sphere with uniform distribution across
+         *     the surface.
+         */
+        static randomUnit() {
+            const zRotation = Math.random() * 2 * Math.PI;
+            const z = Math.random() * 2 - 1;
+            const zRadius = Math.sqrt(1 - Math.pow(z, 2));
+            return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z);
+        }
+        //noinspection JSUnusedLocalSymbols
+        /** Documentation stub. You want {@see V3#sphere} */
+        static fromAngles(theta, phi) {
+            throw new Error();
+        }
+        static fromFunction(f) {
+            return new V3(f(0), f(1), f(2));
+        }
+        static min(a, b) {
+            return new V3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z));
+        }
+        static max(a, b) {
+            return new V3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z));
+        }
+        static lerp(a, b, t) {
+            return new V3(a.x * (1 - t) + b.x * t, a.y * (1 - t) + b.y * t, a.z * (1 - t) + b.z * t);
+        }
+        static fromArray(a) {
+            return new V3(a[0], a[1], a[2]);
+        }
+        static angleBetween(a, b) {
+            return a.angleTo(b);
+        }
+        static zip(f, ...args) {
+            assert(f instanceof Function);
+            return new V3(f.apply(undefined, args.map((x) => x.x)), f.apply(undefined, args.map((x) => x.y)), f.apply(undefined, args.map((x) => x.z)));
+        }
+        static normalOnPoints(a, b, c) {
+            assertVectors(a, b, c);
+            return a.to(b).cross(a.to(c));
+        }
+        static add(...vs) {
+            assertVectors(...vs);
+            let x = 0, y = 0, z = 0;
+            let i = vs.length;
+            while (i--) {
+                x += vs[i].x;
+                y += vs[i].y;
+                z += vs[i].z;
+            }
+            return new V3(x, y, z);
+        }
+        static sub(...vs) {
+            assertVectors(...vs);
+            let x = vs[0].x, y = vs[0].y, z = vs[0].z;
+            let i = vs.length;
+            while (i--) {
+                x -= vs[i].x;
+                y -= vs[i].y;
+                z -= vs[i].z;
+            }
+            return new V3(x, y, z);
+        }
+        /**
+         * Pack an array of V3s into an array of numbers (Float32Array by default).
+         *
+         * @param v3arr Source array
+         * @param dest Destination array. If provided, must be large enough to fit
+         *     v3count items.
+         * @param srcStart Starting index in source array
+         * @param destStart Starting index in destination array
+         * @param v3count Number of V3s to copy.
+         * @returns Packed array.
+         */
+        static pack(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            const result = dest || new Float32Array(3 * v3count); // TODO
+            assert(result.length - destStart >= v3count * 3, "dest.length - destStart >= v3count * 3", result.length, destStart, v3count * 3);
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                const v = v3arr[srcIndex++];
+                result[destIndex++] = v.x;
+                result[destIndex++] = v.y;
+                result[destIndex++] = v.z;
+            }
+            return result;
+        }
+        static unpack(packedArray, dest, srcStart = 0, destStart = 0, v3count = (packedArray.length - srcStart) / 3) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            dest = dest || new Array(v3count);
+            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                dest[destIndex++] = new V3(packedArray[srcIndex++], packedArray[srcIndex++], packedArray[srcIndex++]);
+            }
+            return dest;
+        }
+        static packXY(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            const result = dest || new Float32Array(2 * v3count);
+            assert(result.length - destStart >= v3count, "dest.length - destStart >= v3count");
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                const v = v3arr[srcIndex++];
+                result[destIndex++] = v.x;
+                result[destIndex++] = v.y;
+            }
+            return result;
+        }
+        static unpackXY(src, dest, srcStart = 0, destStart = 0, v3count = Math.min(src.length / 2, (dest && dest.length) || Infinity) -
+            destStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            dest = dest || new Array(v3count);
+            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
+            assert(src.length - srcStart >= v3count * 2, "dest.length - destStart >= v3count");
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                dest[destIndex++] = new V3(src[srcIndex++], src[srcIndex++], 0);
+            }
+            return dest;
+        }
+        static perturbed(v, delta) {
+            return v.perturbed(delta);
+        }
+        static polar(radius, phi, z = 0) {
+            return new V3(radius * Math.cos(phi), radius * Math.sin(phi), z);
+        }
+        /**
+         * @param longitude Angle in XY plane
+         * @param latitude "height"/z dir angle
+         */
+        static sphere(longitude, latitude, length = 1) {
+            return new V3(length * Math.cos(latitude) * Math.cos(longitude), length * Math.cos(latitude) * Math.sin(longitude), length * Math.sin(latitude));
+        }
+        static inverseLerp(a, b, x) {
+            const ab = a.to(b);
+            return a.to(x).dot(ab) / ab.squared();
+        }
+        get [0]() {
+            return this.x;
+        }
+        get [1]() {
+            return this.y;
+        }
+        get [2]() {
+            return this.z;
+        }
+        get u() {
+            return this.x;
+        }
+        get v() {
+            return this.y;
+        }
+        perturbed(delta = NLA_PRECISION * 0.8) {
+            return this.map((x) => x + (Math.random() - 0.5) * delta);
+        }
+        *[Symbol.iterator]() {
+            yield this.x;
+            yield this.y;
+            yield this.z;
+        }
+        e(index) {
+            assert(index >= 0 && index < 3);
+            return 0 == index ? this.x : 1 == index ? this.y : this.z;
+        }
+        negated() {
+            return new V3(-this.x, -this.y, -this.z);
+        }
+        abs() {
+            return new V3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
+        }
+        plus(a) {
+            assertVectors(a);
+            return new V3(this.x + a.x, this.y + a.y, this.z + a.z);
+        }
+        /**
+         * Hadarmard product (or Schur product): element-wise multiplication of two vectors.
+         *
+         * @see https://en.wikipedia.org/wiki/Hadamard_product_(matrices)
+         */
+        schur(a) {
+            return new V3(this.x * a.x, this.y * a.y, this.z * a.z);
+        }
+        /** Element-wise division. */
+        divv(a) {
+            return new V3(this.x / a.x, this.y / a.y, this.z / a.z);
+        }
+        /** See also {@link to} which is a.minus(this) */
+        minus(a) {
+            assertVectors(a);
+            return new V3(this.x - a.x, this.y - a.y, this.z - a.z);
+        }
+        to(a) {
+            assertVectors(a);
+            return a.minus(this);
+        }
+        times(factor) {
+            assertNumbers(factor);
+            return new V3(this.x * factor, this.y * factor, this.z * factor);
+        }
+        div(a) {
+            assertNumbers(a);
+            return new V3(this.x / a, this.y / a, this.z / a);
+        }
+        /**
+         * Dot product.
+         *
+         * @see https://en.wikipedia.org/wiki/Dot_product
+         */
+        dot(a) {
+            assertInst(V3, a);
+            return this.x * a.x + this.y * a.y + this.z * a.z;
+        }
+        /** Linearly interpolate */
+        lerp(b, t) {
+            assertVectors(b);
+            assertNumbers(t);
+            return V3.lerp(this, b, t);
+        }
+        squared() {
+            return this.dot(this);
+        }
+        distanceTo(a) {
+            assertVectors(a);
+            //return this.minus(a).length()
+            return Math.hypot(this.x - a.x, this.y - a.y, this.z - a.z);
+        }
+        distanceToSquared(a) {
+            assertVectors(a);
+            return this.minus(a).squared();
+        }
+        ///**
+        // * See also {@see #setTo} for the individual
+        // *
+        // * @param v
+        // */
+        //assign(v) {
+        //	assertVectors(v)
+        //	this.x = v.x
+        //	this.y = v.y
+        //	this.z = v.z
+        //}
+        //
+        ///**
+        // * See also {@see #assign} for the V3 version
+        // *
+        // * @param x
+        // * @param y
+        // * @param z
+        // */
+        //setTo(x, y, z = 0) {
+        //	this.x = x
+        //	this.y = y
+        //	this.z = z
+        //}
+        toSource() {
+            return V3.NAMEMAP.get(this) || this.toString();
+        }
+        nonParallelVector() {
+            const abs = this.abs();
+            if (abs.x <= abs.y && abs.x <= abs.z) {
+                return V3.X;
+            }
+            else if (abs.y <= abs.x && abs.y <= abs.z) {
+                return V3.Y;
+            }
+            else {
+                return V3.Z;
+            }
+        }
+        slerp(b, t) {
+            assertVectors(b);
+            assertNumbers(t);
+            const sin = Math.sin;
+            const omega = this.angleTo(b);
+            return this.times(sin((1 - t) * omega) / sin(omega)).plus(b.times(sin(t * omega) / sin(omega)));
+        }
+        min(b) {
+            return new V3(Math.min(this.x, b.x), Math.min(this.y, b.y), Math.min(this.z, b.z));
+        }
+        max(b) {
+            return new V3(Math.max(this.x, b.x), Math.max(this.y, b.y), Math.max(this.z, b.z));
+        }
+        equals(v) {
+            return this == v || (this.x == v.x && this.y == v.y && this.z == v.z);
+        }
+        /**
+         * The cross product is defined as: a x b = |a| * |b| * sin(phi) * n where |.|
+         * is the euclidean norm, phi is the angle between the vectors and n is a
+         * unit vector perpendicular to both a and b.
+         *
+         * The cross product is zero for parallel vectors.
+         *
+         * @see https://en.wikipedia.org/wiki/Cross_product
+         */
+        cross(v) {
+            return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x);
+        }
+        minElement() {
+            return Math.min(this.x, this.y, this.z);
+        }
+        maxElement() {
+            return Math.max(this.x, this.y, this.z);
+        }
+        toArray(n = 3) {
+            return [this.x, this.y, this.z].slice(0, n);
+        }
+        /**
+         * Get a perpendicular vector.
+         *
+         * For vectors in the XY-Plane, returns vector rotated 90° CCW.
+         */
+        getPerpendicular() {
+            if (eq0(this.x) && eq0(this.y)) {
+                if (eq0(this.z)) {
+                    throw new Error("zero vector");
+                }
+                // v is Vector(0, 0, v.z)
+                return V3.Y;
+            }
+            return new V3(-this.y, this.x, 0);
+        }
+        //noinspection JSMethodCanBeStatic
+        dim() {
+            return 3;
+        }
+        els() {
+            return [this.x, this.y, this.z];
+        }
+        angleXY() {
+            return Math.atan2(this.y, this.x);
+        }
+        lengthXY() {
+            return Math.hypot(this.x, this.y);
+            //return Math.sqrt(this.x * this.x + this.y * this.y)
+        }
+        squaredXY() {
+            return this.x * this.x + this.y * this.y;
+        }
+        xy() {
+            return new V3(this.x, this.y, 0);
+        }
+        /**
+         * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
+         *
+         * @param f Function to apply to elements (number -> number)
+         */
+        map(f) {
+            return new V3(f(this.x, "x"), f(this.y, "y"), f(this.z, "z"));
+        }
+        toString(roundFunction) {
+            roundFunction = roundFunction || defaultRoundFunction;
+            return (V3.NAMEMAP.get(this) ||
+                "V(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"); //+ this.id
+        }
+        angleTo(b) {
+            assert(1 == arguments.length);
+            assertVectors(b);
+            assert(!this.likeO());
+            assert(!b.likeO());
+            return Math.acos(Math.min(1, this.dot(b) / this.length() / b.length()));
+        }
+        /**
+         * Phi = angle between A and B alpha = angle between n and normal1
+         *
+         * A . B = ||A|| * ||B|| * cos(phi) A x B = ||A|| * ||B|| * sin(phi) * n (n =
+         * unit vector perpendicular) (A x B) . normal1 = ||A|| * ||B|| * sin(phi) * cos(alpha)
+         */
+        angleRelativeNormal(vector, normal1) {
+            assert(2 == arguments.length);
+            assertVectors(vector, normal1);
+            assertf(() => normal1.hasLength(1));
+            //assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
+            //assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector)) //
+            // -0.000053600770598683675
+            return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector));
+        }
+        /**
+         * Returns true iff this is parallel to vector, i.e. this * s == vector, where
+         * s is a positive or negative number, using eq. Throw a DebugError - if
+         * vector is not a Vector or - if this has a length of 0 or - if vector has a
+         * length of 0
+         */
+        isParallelTo(vector) {
+            assertVectors(vector);
+            assert(!this.likeO());
+            assert(!vector.likeO());
+            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
+            const dot = this.dot(vector);
+            return eq(this.squared() * vector.squared(), dot * dot);
+        }
+        isPerpendicularTo(vector) {
+            assertVectors(vector);
+            assert(!this.likeO(), "!this.likeO()");
+            assert(!vector.likeO(), "!vector.likeO()");
+            return eq0(this.dot(vector));
+        }
+        isReverseDirTo(other) {
+            assertVectors(other);
+            assert(!this.likeO());
+            assert(!other.likeO());
+            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
+            const dot = this.dot(other);
+            return eq(Math.sqrt(this.squared() * other.squared()), dot);
+        }
+        /**
+         * Returns the length of this Vector, i.e. the euclidean norm.
+         *
+         * Note that the partial derivatives of the euclidean norm at point x are
+         * equal to the components of the unit vector x.
+         */
+        length() {
+            return Math.hypot(this.x, this.y, this.z);
+            //return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
+        }
+        /** Definition: V3.likeO == V3.like(V3.O) */
+        likeO() {
+            return this.like(V3.O);
+        }
+        /**
+         * Eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z)
+         *
+         * @param obj
+         */
+        like(obj) {
+            if (obj === this)
+                return true;
+            if (!(obj instanceof V3))
+                return false;
+            return eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z);
+        }
+        /** Equivalent to this.like(v) || this.negated().like(v) */
+        likeOrReversed(v) {
+            return eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()));
+        }
+        /**
+         * Returns a new unit Vector (.length() === 1) with the same direction as this
+         * vector. Throws a DebugError if this has a length of 0.
+         */
+        unit() {
+            assert(!this.likeO(), "cannot normalize zero vector");
+            return this.div(this.length());
+        }
+        /** Documentation stub. You want {@link unit} */
+        normalized() {
+            throw new Error("documentation stub. use .unit()");
+        }
+        /**
+         * Returns a new V3 equal to this scaled so that its length is equal to newLength.
+         *
+         * Passing a negative newLength will flip the vector.
+         */
+        toLength(newLength) {
+            assertNumbers(newLength);
+            return this.times(newLength / this.length());
+        }
+        /**
+         * Returns a new Vector which is the projection of this vector onto the passed
+         * vector. Examples
+         *
+         * V(3, 4).projectedOn(V(1, 0)) // returns V(3, 0) V(3, 4).projectedOn(V(2,
+         * 0)) // returns V(3, 0) V(3, 4).projectedOn(V(-1, 0)) // returns V(-3, 0)
+         * V(3, 4).projectedOn(V(0, 1)) // returns V(0, 4) V(3, 4).projectedOn(V(1,
+         * 1)) // returns
+         */
+        projectedOn(b) {
+            assertVectors(b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return b.times(this.dot(b) / b.dot(b));
+        }
+        rejectedFrom(b) {
+            assertVectors(b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return this.minus(b.times(this.dot(b) / b.dot(b)));
+        }
+        rejectedFrom1(b1) {
+            assertVectors(b1);
+            assert(b1.hasLength(1));
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return this.minus(b1.times(this.dot(b1)));
+        }
+        /**
+         * Returns the length of this vector rejected from the unit vector b.
+         *
+         *     /| this / | ^
+         *     /__| | b
+         *     r Returns length of r (r === this.rejectedFrom(b))
+         */
+        rejectedLength(b) {
+            assertVectors(b);
+            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b), 2) / b.dot(b));
+        }
+        /**
+         * Returns the length of this vector rejected from the unit vector b1.
+         *
+         *     /| this / | ^
+         *     /__| | b1
+         *     r Returns length of r (r === this.rejectedFrom(b1))
+         */
+        rejected1Length(b1) {
+            assertVectors(b1);
+            assert(b1.hasLength(1));
+            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b1), 2));
+        }
+        /**
+         * Returns true iff the length() of this vector is equal to 'length', using eq
+         *
+         * @example
+         *   V(3, 4).hasLength(5) === true
+         *
+         * @example
+         *   V(1, 1).hasLength(1) === false
+         */
+        hasLength(length) {
+            assertNumbers(length);
+            return eq(length, this.length());
+        }
+        /**
+         * Returns the sum of the absolute values of the components of this vector.
+         * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
+         */
+        absSum() {
+            return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
+        }
+        /** @returns `min(|x|, |y|, |z|)` */
+        minAbsElement() {
+            return Math.min(Math.abs(this.x), Math.abs(this.y), Math.min(this.z));
+        }
+        /** @returns `max(|x|, |y|, |z|)` */
+        maxAbsElement() {
+            return Math.max(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
+        }
+        maxAbsDim() {
+            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
+            return xAbs >= yAbs ? (xAbs >= zAbs ? 0 : 2) : yAbs >= zAbs ? 1 : 2;
+        }
+        minAbsDim() {
+            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
+            return xAbs < yAbs ? (xAbs < zAbs ? 0 : 2) : yAbs < zAbs ? 1 : 2;
+        }
+        withElement(dim, el) {
+            assert(["x", "y", "z"].includes(dim), "" + dim);
+            assertNumbers(el);
+            if ("x" == dim) {
+                return new V3(el, this.y, this.z);
+            }
+            if ("y" == dim) {
+                return new V3(this.x, el, this.z);
+            }
+            return new V3(this.x, this.y, el);
+        }
+        hashCode() {
+            function floatHashCode(f) {
+                return ~~(f * (1 << 28));
+            }
+            return ~~((floatHashCode(this.x) * 31 + floatHashCode(this.y)) * 31 +
+                floatHashCode(this.z));
+        }
+        hashCodes() {
+            //function floatHashCode(f) {
+            //	return ~~(f * (1 << 28))
+            //}
+            // compare hashCode.floatHashCode
+            // the following ops are equivalent to
+            // floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
+            // this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
+            // the other 7 can be calculated by adding constants
+            const xHC = ~~(this.x * (1 << 28) - 0.5), yHC = ~~(this.y * (1 << 28) - 0.5), zHC = ~~(this.z * (1 << 28) - 0.5), hc = ~~((xHC * 31 + yHC) * 31 + zHC);
+            return [
+                ~~hc,
+                ~~(hc + 961),
+                ~~(hc + 31),
+                ~~(hc + 31 + 961),
+                ~~(hc + 1),
+                ~~(hc + 1 + 961),
+                ~~(hc + 1 + 31),
+                ~~(hc + 1 + 31 + 961),
+            ];
+        }
+        //static areDisjoint(it: Iterable<V3>): boolean {
+        //	const vSet = new CustomSet
+        //	for (const v of it) {
+        //		if (!v.equals(vSet.canonicalizeLike(v))) {
+        //			// like value already in set
+        //			return false
+        //		}
+        //	}
+        //	return true
+        //}
+        compareTo(other) {
+            if (this.x != other.x) {
+                return this.x - other.x;
+            }
+            else if (this.y != other.y) {
+                return this.y - other.y;
+            }
+            else {
+                return this.z - other.z;
+            }
+        }
+        compareTo2(other, eps = NLA_PRECISION) {
+            if (!eq(this.x, other.x, eps)) {
+                return this.x - other.x;
+            }
+            else if (!eq(this.y, other.y, eps)) {
+                return this.y - other.y;
+            }
+            else if (!eq(this.z, other.z, eps)) {
+                return this.z - other.z;
+            }
+            else {
+                return 0;
+            }
+        }
+        toAngles() {
+            return {
+                theta: Math.atan2(this.y, this.x),
+                phi: Math.asin(this.z / this.length()),
+            };
+        }
+    }
+    V3.O = new V3(0, 0, 0);
+    V3.X = new V3(1, 0, 0);
+    V3.Y = new V3(0, 1, 0);
+    V3.Z = new V3(0, 0, 1);
+    V3.XY = new V3(1, 1, 0);
+    V3.XYZ = new V3(1, 1, 1);
+    V3.INF = new V3(Infinity, Infinity, Infinity);
+    V3.UNITS = [V3.X, V3.Y, V3.Z];
+    V3.NAMEMAP = new JavaMap()
+        .set(V3.O, "V3.O")
+        .set(V3.X, "V3.X")
+        .set(V3.Y, "V3.Y")
+        .set(V3.Z, "V3.Z")
+        .set(V3.XYZ, "V3.XYZ")
+        .set(V3.INF, "V3.INF");
+    function V(a, b, c) {
+        if (arguments.length == 3) {
+            return new V3(parseFloat(a), parseFloat(b), parseFloat(c));
+        }
+        else if (arguments.length == 2) {
+            return new V3(parseFloat(a), parseFloat(b), 0);
+        }
+        else if (arguments.length == 1) {
+            if (typeof a == "object") {
+                if (a instanceof V3) {
+                    // immutable, so
+                    return a;
+                }
+                else if (a instanceof Array ||
+                    a instanceof Float32Array ||
+                    a instanceof Float64Array) {
+                    if (2 == a.length) {
+                        return new V3(parseFloat(a[0]), parseFloat(a[1]), 0);
+                    }
+                    else if (3 == a.length) {
+                        return new V3(parseFloat(a[0]), parseFloat(a[1]), parseFloat(a[2]));
+                    }
+                }
+                else if ("x" in a && "y" in a) {
+                    return new V3(parseFloat(a.x), parseFloat(a.y), "z" in a ? parseFloat(a.z) : 0);
+                }
+            }
+        }
+        throw new Error("invalid arguments" + arguments);
+    }
+
+    const P3YZ = { normal1: V3.X, w: 0 };
+    const P3ZX = { normal1: V3.Y, w: 0 };
+    const P3XY = { normal1: V3.Z, w: 0 };
+    class Transformable {
+        mirror(plane) {
+            return this.transform(M4.mirror(plane));
+        }
+        mirroredX() {
+            return this.mirror(P3YZ);
+        }
+        mirrorY() {
+            return this.mirror(P3ZX);
+        }
+        mirrorZ() {
+            return this.mirror(P3XY);
+        }
+        project(plane) {
+            return this.transform(M4.project(plane));
+        }
+        projectXY() {
+            return this.transform(M4.project(P3XY));
+        }
+        projectYZ() {
+            return this.transform(M4.project(P3YZ));
+        }
+        projectZX() {
+            return this.transform(M4.project(P3ZX));
+        }
+        translate(...args) {
+            return this.transform(M4.translate.apply(undefined, args), callSource.call(undefined, ".translate", ...args));
+        }
+        scale(...args) {
+            return this.transform(M4.scale.apply(undefined, args), callSource.call(undefined, ".scale", ...args));
+        }
+        rotateX(radians) {
+            return this.transform(M4.rotateX(radians), `.rotateX(${radians})`);
+        }
+        rotateY(radians) {
+            return this.transform(M4.rotateY(radians), `.rotateY(${radians})`);
+        }
+        rotateZ(radians) {
+            return this.transform(M4.rotateZ(radians), `.rotateZ(${radians})`);
+        }
+        rotate(rotationCenter, rotationAxis, radians) {
+            return this.transform(M4.rotateLine(rotationCenter, rotationAxis, radians), callSource(".rotate", rotationCenter, rotationAxis, radians));
+        }
+        rotateAB(from, to) {
+            return this.transform(M4.rotateAB(from, to), callSource(".rotateAB", from, to));
+        }
+        eulerZXZ(alpha, beta, gamma) {
+            throw new Error();
+            //return this.transform(M4.eulerZXZ(alpha, beta, gamma))
+        }
+        shearX(y, z) {
+            // prettier-ignore
+            return this.transform(new M4([
+                1, y, z, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ]));
+        }
+        foo() {
+            return this.transform(M4.FOO);
+        }
+        fooInv() {
+            return this.transform(M4.FOO_INV);
+        }
+        visit(visitor, ...args) {
+            let proto = Object.getPrototypeOf(this);
+            // walk up the prototype chain until we find a defined function in o
+            while (!visitor.hasOwnProperty(proto.constructor.name) &&
+                proto !== Transformable.prototype) {
+                proto = Object.getPrototypeOf(proto);
+            }
+            if (visitor.hasOwnProperty(proto.constructor.name)) {
+                return visitor[proto.constructor.name].apply(this, args);
+            }
+            else {
+                throw new Error("No implementation for " + this.constructor.name);
+            }
+        }
+    }
+
+    class Matrix {
+        constructor(width, height, m) {
+            this.width = width;
+            this.height = height;
+            this.m = m;
+            assertInts(width, height);
+            assertf(() => 0 < width);
+            assertf(() => 0 < height);
+            assert(width * height == m.length, "width * height == m.length", width, height, m.length);
+        }
+        static random(width, height) {
+            return Matrix.fromFunction(width, height, () => Math.random());
+        }
+        static fromFunction(width, height, f) {
+            const m = new Float64Array(height * width);
+            let elIndex = height * width;
+            while (elIndex--) {
+                m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
+            }
+            return new Matrix(width, height, m);
+        }
+        static identityN(dim) {
+            assertInts(dim);
+            const m = new Float64Array(dim * dim);
+            // Float64Arrays are init to 0
+            let elIndex = dim * (dim + 1);
+            while (elIndex) {
+                elIndex -= dim + 1;
+                m[elIndex] = 1;
+            }
+            return new Matrix(dim, dim, m);
+        }
+        /**
+         * Create new dim x dim matrix equal to an identity matrix with rows/colums i
+         * and k swapped. Note that i and k are 0-indexed.
+         */
+        static permutation(dim, i, k) {
+            assertInts(dim, i, k);
+            assertf(() => 0 <= i && i < dim);
+            assertf(() => 0 <= k && k < dim);
+            const m = new Float64Array(dim * dim);
+            // Float64Array are init to 0
+            let elIndex = dim * (dim + 1);
+            while (elIndex) {
+                elIndex -= dim + 1;
+                m[elIndex] = 1;
+            }
+            m[i * dim + i] = 0;
+            m[k * dim + k] = 0;
+            m[i * dim + k] = 1;
+            m[k * dim + i] = 1;
+            return new Matrix(dim, dim, m);
+        }
+        static fromRowArrays(...rowArrays) {
+            if (0 == rowArrays.length) {
+                throw new Error("cannot have 0 vector");
+            }
+            const height = rowArrays.length;
+            const width = rowArrays[0].length;
+            const m = new Float64Array(height * width);
+            arrayCopy(rowArrays[0], 0, m, 0, width);
+            for (let rowIndex = 1; rowIndex < height; rowIndex++) {
+                if (rowArrays[rowIndex].length != width) {
+                    throw new Error("all row arrays must be the same length");
+                }
+                arrayCopy(rowArrays[rowIndex], 0, m, rowIndex * width, width);
+            }
+            return this.new(width, height, m);
+        }
+        static fromColVectors(colVectors) {
+            return Matrix.fromColArrays(...colVectors.map((v) => v.v));
+        }
+        static forWidthHeight(width, height) {
+            return new Matrix(width, height, new Float64Array(width * height));
+        }
+        static fromColArrays(...colArrays) {
+            if (0 == colArrays.length) {
+                throw new Error("cannot have 0 vector");
+            }
+            const width = colArrays.length;
+            const height = colArrays[0].length;
+            const m = new Float64Array(height * width);
+            arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height);
+            for (let colIndex = 1; colIndex < width; colIndex++) {
+                if (colArrays[colIndex].length != height) {
+                    throw new Error("all col arrays must be the same length");
+                }
+                arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height);
+            }
+            return this.new(width, height, m);
+        }
+        static product(...args) {
+            const [ms, result] = Array.isArray(args[0])
+                ? [args[0], args[1]]
+                : [args, undefined];
+            if (0 == ms.length)
+                throw new Error("Can't guess matrix size.");
+            if (1 == ms.length)
+                return Matrix.copy(ms[0], result);
+            return Matrix.copy(ms.reduce((a, b) => a.times(b)), result);
+        }
+        /**
+         * Numerically calculate all the partial derivatives of f at x0.
+         *
+         * @param f
+         * @param x0
+         * @param fx0 F(x0), pass it if you have it already
+         * @param EPSILON
+         */
+        static jacobi(f, x0, fx0 = f(x0), EPSILON = 1e-6) {
+            const jacobi = Matrix.forWidthHeight(x0.length, fx0.length);
+            for (let colIndex = 0; colIndex < x0.length; colIndex++) {
+                x0[colIndex] += EPSILON;
+                const fx = f(x0);
+                for (let rowIndex = 0; rowIndex < fx0.length; rowIndex++) {
+                    const value = (fx[rowIndex] - fx0[rowIndex]) / EPSILON;
+                    jacobi.setEl(rowIndex, colIndex, value);
+                }
+                x0[colIndex] -= EPSILON;
+            }
+            return jacobi;
+        }
+        static copy(src, result = src.new()) {
+            assertInst(Matrix, src, result);
+            assert(src.width == result.width);
+            assert(src.height == result.height);
+            assert(result != src, "result != src");
+            const s = src.m, d = result.m;
+            let i = s.length;
+            while (i--) {
+                d[i] = s[i];
+            }
+            return result;
+        }
+        static new(width, height, m) {
+            return new Matrix(width, height, m);
+        }
+        copy() {
+            return Matrix.copy(this);
+        }
+        e(rowIndex, colIndex) {
+            assertInts(rowIndex, colIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
+            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
+            return this.m[rowIndex * this.width + colIndex];
+        }
+        setEl(rowIndex, colIndex, val) {
+            assertInts(rowIndex, colIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
+            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
+            assertNumbers(val);
+            this.m[rowIndex * this.width + colIndex] = val;
+        }
+        plus(m) {
+            assert(this.width == m.width);
+            assert(this.height == m.height);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] + m.m[i];
+            return r;
+        }
+        minus(m) {
+            assert(this.width == m.width);
+            assert(this.height == m.height);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] - m.m[i];
+            return r;
+        }
+        mulScalar(scalar) {
+            assertNumbers(scalar);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] * scalar;
+            return r;
+        }
+        divScalar(scalar) {
+            assertNumbers(scalar);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] / scalar;
+            return r;
+        }
+        new() {
+            return new Matrix(this.width, this.height, new Float64Array(this.width * this.height));
+        }
+        toString(f, colNames, rowNames) {
+            f = f || ((v) => v.toFixed(6));
+            assert(typeof f(0) == "string", "" + typeof f(0));
+            assert(!colNames || colNames.length == this.width);
+            assert(!rowNames || rowNames.length == this.height);
+            const rounded = Array.from(this.m).map(f);
+            const rows = arrayFromFunction(this.height, (rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width)); // select matrix row
+            if (colNames) {
+                rows.unshift(Array.from(colNames));
+            }
+            if (rowNames) {
+                rows.forEach((row, rowIndex) => row.unshift(rowNames[rowIndex - (colNames ? 1 : 0)] || ""));
+            }
+            const colWidths = arrayFromFunction(this.width, (colIndex) => max$1(rows.map((row) => row[colIndex].length)));
+            return rows
+                .map((row, rowIndex) => row
+                .map((x, colIndex) => {
+                // pad numbers with spaces to col width
+                const padder = (rowIndex == 0 && colNames) || (colIndex == 0 && rowNames)
+                    ? String.prototype.padEnd
+                    : String.prototype.padStart;
+                return padder.call(x, colWidths[colIndex]);
+            })
+                .join("  "))
+                .map((x) => x + "\n")
+                .join(""); // join rows
+        }
+        row(rowIndex) {
+            assertInts(rowIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
+            const v = new Float64Array(this.width);
+            arrayCopy(this.m, rowIndex * this.width, v, 0, this.width);
+            return new Vector(v);
+        }
+        col(colIndex) {
+            assertInts(colIndex);
+            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
+            const v = new Float64Array(this.height);
+            arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height);
+            return new Vector(v);
+        }
+        dim() {
+            return { width: this.width, height: this.height };
+        }
+        dimString() {
+            return this.width + "x" + this.height;
+        }
+        equals(obj) {
+            if (obj.constructor != this.constructor)
+                return false;
+            if (this.width != obj.width || this.height != obj.height)
+                return false;
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                if (this.m[elIndex] != obj.m[elIndex])
+                    return false;
+            }
+            return true;
+        }
+        equalsMatrix(matrix, precision = NLA_PRECISION) {
+            assertInst(Matrix, matrix);
+            if (this.width != matrix.width || this.height != matrix.height)
+                return false;
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) > precision)
+                    return false;
+            }
+            return true;
+        }
+        hashCode() {
+            let result = 0;
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                result = result * 31 + floatHashCode(this.m[elIndex]);
+            }
+            return result;
+        }
+        // todo rename
+        isZero() {
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                if (!eq0(this.m[elIndex])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        isOrthogonal() {
+            return (this.isSquare() &&
+                this.transposed().times(this).equalsMatrix(Matrix.identityN(this.width)));
+        }
+        /** Returns L, U, P such that L * U == P * this */
+        luDecomposition() {
+            const width = this.width;
+            const height = this.height;
+            const uRowArrays = this.asRowArrays(Float64Array);
+            const lRowArrays = arrayFromFunction(height, () => new Float64Array(height));
+            const pRowArrays = Matrix.identityN(height).asRowArrays(Float64Array);
+            let currentRowIndex = 0;
+            for (let colIndex = 0; colIndex < width; colIndex++) {
+                currentRowIndex = colIndex;
+                // console.log('currentRowIndex', currentRowIndex)	// find largest value in colIndex
+                let maxAbsValue = 0, pivotRowIndex = -1, numberOfNonZeroRows = 0;
+                for (let rowIndex = currentRowIndex; rowIndex < height; rowIndex++) {
+                    const el = uRowArrays[rowIndex][colIndex];
+                    numberOfNonZeroRows += +(0 != el);
+                    if (Math.abs(el) > maxAbsValue) {
+                        maxAbsValue = Math.abs(el);
+                        pivotRowIndex = rowIndex;
+                    }
+                }
+                // TODO: check with isZero
+                if (0 == maxAbsValue) {
+                    // column contains only zeros
+                    continue;
+                }
+                assert(-1 !== pivotRowIndex);
+                // swap rows
+                arraySwap(uRowArrays, currentRowIndex, pivotRowIndex);
+                arraySwap(lRowArrays, currentRowIndex, pivotRowIndex);
+                arraySwap(pRowArrays, currentRowIndex, pivotRowIndex);
+                lRowArrays[currentRowIndex][colIndex] = 1;
+                if (1 < numberOfNonZeroRows) {
+                    // subtract pivot (now current) row from all below it
+                    for (let rowIndex = currentRowIndex + 1; rowIndex < height; rowIndex++) {
+                        const l = uRowArrays[rowIndex][colIndex] /
+                            uRowArrays[currentRowIndex][colIndex];
+                        lRowArrays[rowIndex][colIndex] = l;
+                        // subtract pivot row * l from row 'rowIndex'
+                        for (let colIndex2 = colIndex; colIndex2 < width; colIndex2++) {
+                            uRowArrays[rowIndex][colIndex2] -=
+                                l * uRowArrays[currentRowIndex][colIndex2];
+                        }
+                    }
+                }
+                //  currentRowIndex++ // this doesn't increase if pivot was zero
+            }
+            return {
+                L: Matrix.fromRowArrays(...lRowArrays),
+                U: Matrix.fromRowArrays(...uRowArrays),
+                P: Matrix.fromRowArrays(...pRowArrays),
+            };
+        }
+        qrDecompositionGivensRotation() {
+            // function sigma(c: number, s: number) {
+            // 	if (0 == c) {
+            // 		return 1
+            // 	}
+            // 	if (Math.abs(s) < Math.abs(c)) {
+            // 		return 0.5 * Math.sign(c) * s
+            // 	}
+            // 	return (2 * Math.sign(s)) / c
+            // }
+            const R = this.copy();
+            function matrixForCS(dim, i, k, c, s) {
+                const m = Matrix.identityN(dim);
+                m.setEl(i, i, c);
+                m.setEl(k, k, c);
+                m.setEl(i, k, s);
+                m.setEl(k, i, -s);
+                return m;
+            }
+            let qTransposed = Matrix.identityN(this.height);
+            for (let colIndex = 0; colIndex < this.width; colIndex++) {
+                // find largest value in colIndex
+                for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
+                    //console.log('row ', rowIndex, 'col ', colIndex)
+                    const xi = R.e(colIndex, colIndex);
+                    const xk = R.e(rowIndex, colIndex);
+                    if (xk == 0) {
+                        continue;
+                    }
+                    const r = Math.hypot(xi, xk);
+                    const c = xi / r;
+                    const s = xk / r;
+                    // apply transformation on every column:
+                    for (let col2 = colIndex; col2 < this.width; col2++) {
+                        const x1 = R.e(colIndex, col2) * c + R.e(rowIndex, col2) * s;
+                        const x2 = R.e(rowIndex, col2) * c - R.e(colIndex, col2) * s;
+                        R.setEl(colIndex, col2, x1);
+                        R.setEl(rowIndex, col2, x2);
+                    }
+                    //console.log('r ', r, 'c ', c, 's ', s, 'sigma', sigma(c, s))
+                    //console.log(this.toString(),'cs\n', matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
+                    qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed);
+                }
+            }
+            //console.log(qTransposed.transposed().toString(), this.toString(),
+            // qTransposed.transposed().times(this).toString())
+            return { Q: qTransposed.transposed(), R };
+        }
+        isPermutation() {
+            if (!this.isSquare())
+                return false;
+            if (this.m.some((value) => !eq0(value) && !eq(1, value)))
+                return false;
+            const rows = this.asRowArrays(Array);
+            if (rows.some((row) => row.filter((value) => eq(1, value)).length != 1))
+                return false;
+            const cols = this.asColArrays(Array);
+            return !cols.some((col) => col.filter((value) => eq(1, value)).length != 1);
+        }
+        isDiagonal(precision) {
+            let i = this.m.length;
+            while (i--) {
+                if (0 !== i % (this.width + 1) && !eq0(this.m[i], precision))
+                    return false;
+            }
+            return true;
+        }
+        isIdentity(precision) {
+            return (this.isLowerUnitriangular(precision) && this.isUpperTriangular(precision));
+        }
+        /**
+         * @example
+         *   Matrix.fromRowArrays(
+         *     [1, 2, 3], //
+         *     [0, 4, 5],
+         *     [0, 0, 5],
+         *   ).isUpperTriangular() // true
+         *
+         * @param precision {@link eq}
+         */
+        isUpperTriangular(precision) {
+            return this.isSquare() && this.isUpperTrapezoidal(precision);
+        }
+        isUpperTrapezoidal(precision = NLA_PRECISION) {
+            for (let rowIndex = 1; rowIndex < this.height; rowIndex++) {
+                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
+                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        isSymmetric(precision = NLA_PRECISION) {
+            if (!this.isSquare())
+                return false;
+            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+                    const a = this.m[rowIndex * this.width + colIndex];
+                    const b = this.m[colIndex * this.width + rowIndex];
+                    if (!eq(a, b, precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        /**
+         * Returns x, so that this * x = b More efficient than calculating the inverse
+         * for few (~ <= this.height) values
+         */
+        solveLinearSystem(b) {
+            assertInst(Vector, b);
+            const { L, U, P } = this.luDecomposition();
+            const y = L.solveForwards(P.timesVector(b));
+            return U.solveBackwards(y);
+        }
+        isLowerUnitriangular(precision = NLA_PRECISION) {
+            if (!this.isSquare())
+                return false;
+            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+                for (let colIndex = rowIndex; colIndex < this.width; colIndex++) {
+                    const el = this.m[rowIndex * this.width + colIndex];
+                    if (rowIndex == colIndex ? !eq(1, el, precision) : !eq0(el, precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        isLowerTriangular(precision) {
+            return this.isSquare() && this.isLowerTrapezoidal(precision);
+        }
+        isLowerTrapezoidal(precision = NLA_PRECISION) {
+            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        solveBackwards(x) {
+            assertVectors(x);
+            assert(this.height == x.dim(), "this.height == x.dim()");
+            assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.toString());
+            const v = new Float64Array(this.width);
+            let rowIndex = this.height;
+            while (rowIndex--) {
+                let temp = x.v[rowIndex];
+                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
+                }
+                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
+            }
+            return new Vector(v);
+        }
+        solveBackwardsMatrix(matrix) {
+            const colVectors = new Array(matrix.width);
+            let i = matrix.width;
+            while (i--) {
+                colVectors[i] = this.solveBackwards(matrix.col(i));
+            }
+            return Matrix.fromColVectors(colVectors);
+        }
+        solveForwardsMatrix(matrix) {
+            const colVectors = new Array(matrix.width);
+            let i = matrix.width;
+            while (i--) {
+                colVectors[i] = this.solveForwards(matrix.col(i));
+            }
+            return Matrix.fromColVectors(colVectors);
+        }
+        solveForwards(x) {
+            assertVectors(x);
+            assert(this.height == x.dim(), "this.height == x.dim()");
+            assertf(() => this.isLowerTriangular(), this.toString());
+            const v = new Float64Array(this.width);
+            for (let rowIndex = 0; rowIndex < this.height; rowIndex++) {
+                let temp = x.v[rowIndex];
+                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
+                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
+                }
+                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
+            }
+            return new Vector(v);
+        }
+        /**
+         * Calculates rank of matrix. Number of linearly independant row/column
+         * vectors. Is equal to the unmber of dimensions the image of the affine
+         * transformation represented this matrix has.
+         */
+        rank() {
+            const U = this.luDecomposition().U;
+            let rowIndex = this.height;
+            let rank = this.height;
+            while (rowIndex--) {
+                rank -= +U.row(rowIndex).isZero();
+            }
+            return rank;
+        }
+        rowsIndependent() {
+            return this.height == this.rank();
+        }
+        colsIndependent() {
+            return this.width == this.rank();
+        }
+        asRowArrays(arrayConstructor = Float64Array) {
+            return arrayFromFunction(this.height, (rowIndex) => this.rowArray(rowIndex, arrayConstructor));
+        }
+        asColArrays(arrayConstructor = Float64Array) {
+            return arrayFromFunction(this.width, (colIndex) => this.colArray(colIndex, arrayConstructor));
+        }
+        rowArray(rowIndex, arrayConstructor = Float64Array) {
+            const result = new arrayConstructor(this.width);
+            return arrayCopy(this.m, rowIndex * this.width, result, 0, this.width);
+        }
+        colArray(colIndex, arrayConstructor = Float64Array) {
+            const result = new arrayConstructor(this.width);
+            arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height);
+            return result;
+        }
+        subMatrix(firstColIndex, subWidth, firstRowIndex, subHeight) {
+            assert(0 < firstColIndex && 0 < subWidth && 0 < firstRowIndex && 0 < subHeight);
+            assert(firstColIndex + subWidth <= this.width &&
+                firstRowIndex + subHeight <= this.height);
+            const m = new Float64Array(subWidth * subHeight);
+            arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth);
+            return new Matrix(subWidth, subHeight, m);
+        }
+        map(fn) {
+            return new Matrix(this.width, this.height, this.m.map(fn));
+        }
+        dimEquals(matrix) {
+            assertInst(Matrix, matrix);
+            return this.width == matrix.width && this.height == matrix.height;
+        }
+        inversed() {
+            if (this.isSquare()) {
+                if (2 == this.width)
+                    return this.inversed2();
+                if (3 == this.width)
+                    return this.inversed3();
+                if (4 == this.width)
+                    return this.inversed4();
+            }
+            const { L, U, P } = this.luDecomposition();
+            const y = L.solveForwardsMatrix(P);
+            return U.solveBackwardsMatrix(y);
+        }
+        inversed2() {
+            assertf(() => 2 == this.width && 2 == this.height);
+            const result = Matrix.forWidthHeight(2, 2), m = this.m, r = result.m;
+            const det = m[0] * m[3] - m[1] * r[2];
+            r[0] = m[3] / det;
+            r[1] = -m[2] / det;
+            r[2] = -m[1] / det;
+            r[3] = m[0] / det;
+            return result;
+        }
+        inversed3(result = Matrix.forWidthHeight(3, 3)) {
+            assertInst(Matrix, result);
+            assertf(() => 3 == this.width && 3 == this.height);
+            assertf(() => 3 == result.width && 3 == result.height);
+            assert(() => this != result);
+            const m = this.m, r = result.m;
+            r[0] = m[4] * m[8] - m[5] * m[7];
+            r[1] = -m[1] * m[8] + m[2] * m[7];
+            r[2] = m[1] * m[5] - m[2] * m[4];
+            r[3] = -m[3] * m[8] + m[5] * m[6];
+            r[4] = m[0] * m[8] - m[2] * m[6];
+            r[5] = -m[0] * m[5] + m[2] * m[3];
+            r[6] = m[3] * m[7] - m[4] * m[6];
+            r[7] = -m[0] * m[7] + m[1] * m[6];
+            r[8] = m[0] * m[4] - m[1] * m[3];
+            const det = m[0] * r[0] + m[1] * r[3] + m[2] * r[6];
+            let i = 9;
+            while (i--) {
+                r[i] /= det;
+            }
+            return result;
+        }
+        // prettier-ignore
+        inversed4(result = Matrix.forWidthHeight(4, 4)) {
+            assertInst(Matrix, result);
+            assertf(() => 4 == this.width && 4 == this.height);
+            assertf(() => 4 == result.width && 4 == result.height);
+            assert(() => this != result);
+            const m = this.m, r = result.m;
+            // first compute transposed cofactor matrix:
+            // cofactor of an element is the determinant of the 3x3 matrix gained by removing the column and row belonging
+            // to the element
+            r[0] = m[5] * m[10] * m[15] - m[5] * m[14] * m[11] - m[6] * m[9] * m[15]
+                + m[6] * m[13] * m[11] + m[7] * m[9] * m[14] - m[7] * m[13] * m[10];
+            r[1] = -m[1] * m[10] * m[15] + m[1] * m[14] * m[11] + m[2] * m[9] * m[15]
+                - m[2] * m[13] * m[11] - m[3] * m[9] * m[14] + m[3] * m[13] * m[10];
+            r[2] = m[1] * m[6] * m[15] - m[1] * m[14] * m[7] - m[2] * m[5] * m[15]
+                + m[2] * m[13] * m[7] + m[3] * m[5] * m[14] - m[3] * m[13] * m[6];
+            r[3] = -m[1] * m[6] * m[11] + m[1] * m[10] * m[7] + m[2] * m[5] * m[11]
+                - m[2] * m[9] * m[7] - m[3] * m[5] * m[10] + m[3] * m[9] * m[6];
+            r[4] = -m[4] * m[10] * m[15] + m[4] * m[14] * m[11] + m[6] * m[8] * m[15]
+                - m[6] * m[12] * m[11] - m[7] * m[8] * m[14] + m[7] * m[12] * m[10];
+            r[5] = m[0] * m[10] * m[15] - m[0] * m[14] * m[11] - m[2] * m[8] * m[15]
+                + m[2] * m[12] * m[11] + m[3] * m[8] * m[14] - m[3] * m[12] * m[10];
+            r[6] = -m[0] * m[6] * m[15] + m[0] * m[14] * m[7] + m[2] * m[4] * m[15]
+                - m[2] * m[12] * m[7] - m[3] * m[4] * m[14] + m[3] * m[12] * m[6];
+            r[7] = m[0] * m[6] * m[11] - m[0] * m[10] * m[7] - m[2] * m[4] * m[11]
+                + m[2] * m[8] * m[7] + m[3] * m[4] * m[10] - m[3] * m[8] * m[6];
+            r[8] = m[4] * m[9] * m[15] - m[4] * m[13] * m[11] - m[5] * m[8] * m[15]
+                + m[5] * m[12] * m[11] + m[7] * m[8] * m[13] - m[7] * m[12] * m[9];
+            r[9] = -m[0] * m[9] * m[15] + m[0] * m[13] * m[11] + m[1] * m[8] * m[15]
+                - m[1] * m[12] * m[11] - m[3] * m[8] * m[13] + m[3] * m[12] * m[9];
+            r[10] = m[0] * m[5] * m[15] - m[0] * m[13] * m[7] - m[1] * m[4] * m[15]
+                + m[1] * m[12] * m[7] + m[3] * m[4] * m[13] - m[3] * m[12] * m[5];
+            r[11] = -m[0] * m[5] * m[11] + m[0] * m[9] * m[7] + m[1] * m[4] * m[11]
+                - m[1] * m[8] * m[7] - m[3] * m[4] * m[9] + m[3] * m[8] * m[5];
+            r[12] = -m[4] * m[9] * m[14] + m[4] * m[13] * m[10] + m[5] * m[8] * m[14]
+                - m[5] * m[12] * m[10] - m[6] * m[8] * m[13] + m[6] * m[12] * m[9];
+            r[13] = m[0] * m[9] * m[14] - m[0] * m[13] * m[10] - m[1] * m[8] * m[14]
+                + m[1] * m[12] * m[10] + m[2] * m[8] * m[13] - m[2] * m[12] * m[9];
+            r[14] = -m[0] * m[5] * m[14] + m[0] * m[13] * m[6] + m[1] * m[4] * m[14]
+                - m[1] * m[12] * m[6] - m[2] * m[4] * m[13] + m[2] * m[12] * m[5];
+            r[15] = m[0] * m[5] * m[10] - m[0] * m[9] * m[6] - m[1] * m[4] * m[10]
+                + m[1] * m[8] * m[6] + m[2] * m[4] * m[9] - m[2] * m[8] * m[5];
+            // calculate determinant using laplace expansion (cf https://en.wikipedia.org/wiki/Laplace_expansion),
+            // as we already have the cofactors. We multiply a column by a row as the cofactor matrix is transposed.
+            const det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12];
+            // assert(!isZero(det), 'det may not be zero, i.e. the matrix is not invertible')
+            let i = 16;
+            while (i--) {
+                r[i] /= det;
+            }
+            return result;
+        }
+        canMultiply(matrix) {
+            assertInst(Matrix, matrix);
+            return this.width == matrix.height;
+        }
+        times(matrix) {
+            assertInst(Matrix, matrix);
+            assert(this.canMultiply(matrix), `Cannot multiply this ${this.dimString()} by matrix ${matrix.dimString()}`);
+            const nWidth = matrix.width, nHeight = this.height, n = this.width;
+            const nM = new Float64Array(nWidth * nHeight);
+            let nRowIndex = nHeight;
+            while (nRowIndex--) {
+                let nColIndex = nWidth;
+                while (nColIndex--) {
+                    let result = 0;
+                    let i = n;
+                    while (i--) {
+                        result += this.m[nRowIndex * n + i] * matrix.m[i * nWidth + nColIndex];
+                    }
+                    nM[nRowIndex * nWidth + nColIndex] = result;
+                }
+            }
+            return new Matrix(nWidth, nHeight, nM);
+        }
+        timesVector(v) {
+            assertVectors(v);
+            assert(this.width == v.dim());
+            const nHeight = this.height, n = this.width;
+            const nM = new Float64Array(nHeight);
+            let nRowIndex = nHeight;
+            while (nRowIndex--) {
+                let result = 0;
+                let i = n;
+                while (i--) {
+                    result += this.m[nRowIndex * n + i] * v.v[i];
+                }
+                nM[nRowIndex] = result;
+            }
+            return new Vector(nM);
+        }
+        transposed() {
+            const tWidth = this.height, tHeight = this.width;
+            const tM = new Float64Array(tWidth * tHeight);
+            let tRowIndex = tHeight;
+            while (tRowIndex--) {
+                let tColIndex = tWidth;
+                while (tColIndex--) {
+                    tM[tRowIndex * tWidth + tColIndex] = this.m[tColIndex * tHeight + tRowIndex];
+                }
+            }
+            return new Matrix(tWidth, tHeight, tM);
+        }
+        /** In-place transpose. */
+        transpose() {
+            const h = this.height, w = this.width, tM = this.m;
+            let tRowIndex = h;
+            while (tRowIndex--) {
+                let tColIndex = Math.min(tRowIndex, w);
+                while (tColIndex--) {
+                    const temp = tM[tRowIndex * w + tColIndex];
+                    tM[tRowIndex * w + tColIndex] = tM[tColIndex * h + tRowIndex];
+                    tM[tColIndex * h + tRowIndex] = temp;
+                }
+            }
+            this.width = h;
+            this.height = w;
+        }
+        isSquare() {
+            return this.height == this.width;
+        }
+        diagonal() {
+            if (!this.isSquare()) {
+                throw new Error("!!");
+            }
+            const v = new Float64Array(this.width);
+            let elIndex = this.width * (this.width + 1);
+            let vIndex = this.width;
+            while (vIndex--) {
+                elIndex -= this.width + 1;
+                v[vIndex] = this.m[elIndex];
+            }
+            return new Vector(v);
+        }
+        maxEl() {
+            return max$1(this.m);
+        }
+        minEl() {
+            return min$1(this.m);
+        }
+        //noinspection DuplicatedCode
+        maxAbsColSum() {
+            let result = 0;
+            let colIndex = this.width;
+            while (colIndex--) {
+                let absSum = 0;
+                let rowIndex = this.height;
+                while (rowIndex--) {
+                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
+                }
+                result = Math.max(result, absSum);
+            }
+            return result;
+        }
+        //noinspection DuplicatedCode
+        maxAbsRowSum() {
+            let result = 0;
+            let rowIndex = this.height;
+            while (rowIndex--) {
+                let absSum = 0;
+                let colIndex = this.width;
+                while (colIndex--) {
+                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
+                }
+                result = Math.max(result, absSum);
+            }
+            return result;
+        }
+        getTriangularDeterminant() {
+            assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix");
+            let product = 1;
+            let elIndex = this.width * (this.width + 1);
+            while (elIndex) {
+                elIndex -= this.width + 1;
+                product *= this.m[elIndex];
+            }
+            return product;
+        }
+        /**
+         * Calculates the determinant by first calculating the LU decomposition. If
+         * you already have that, use U.getTriangularDeterminant()
+         */
+        getDeterminant() {
+            // PA = LU
+            // det(A) * det(B) = det(A * B)
+            // det(P) == 1 (permutation matrix)
+            // det(L) == 1 (main diagonal is 1s
+            // =>  det(A) == det(U)
+            return this.luDecomposition().U.getTriangularDeterminant();
+        }
+        hasFullRank() {
+            return Math.min(this.width, this.height) == this.rank();
+        }
+        permutationAsIndexMap() {
+            assertf(() => this.isPermutation());
+            const result = new Array(this.height);
+            let i = this.height;
+            while (i--) {
+                const searchIndexStart = i * this.width;
+                let searchIndex = searchIndexStart;
+                while (this.m[searchIndex] < 0.5)
+                    searchIndex++;
+                result[i] = searchIndex - searchIndexStart;
+            }
+            return result;
+        }
+        getDependentRowIndexes(gauss = this.luDecomposition()) {
+            const { L, U, P } = gauss;
+            // rows which end up as zero vectors in U are not linearly independent
+            const dependents = new Array(this.height);
+            let uRowIndex = this.height;
+            while (uRowIndex--) {
+                const uRow = U.row(uRowIndex);
+                if (uRow.length() < NLA_PRECISION) {
+                    dependents[uRowIndex] = true;
+                }
+                else {
+                    break;
+                }
+            }
+            // figure out from which other rows the rows which end up as zero vectors are created by
+            let lRowIndex = this.height;
+            while (lRowIndex--) {
+                if (dependents[lRowIndex]) {
+                    let lColIndex = Math.min(lRowIndex, this.width);
+                    while (lColIndex--) {
+                        if (0 !== L.e(lRowIndex, lColIndex)) {
+                            dependents[lColIndex] = true;
+                        }
+                    }
+                }
+            }
+            console.log("m\n", this.toString((x) => "" + x));
+            console.log("L\n", L.toString((x) => "" + x));
+            console.log("U\n", U.toString((x) => "" + x));
+            console.log("P\n", P.toString((x) => "" + x));
+            // gauss algorithm permutes the order of the rows, so map our results back to the original indices
+            const indexMap = P.permutationAsIndexMap();
+            return dependents
+                .map((b, index) => b && indexMap[index])
+                .filter((x) => x != undefined);
+        }
+        lerp(b, t, result = this.new()) {
+            assertInst(Matrix, b, result);
+            assertNumbers(t);
+            assert(this.width == b.width && this.height == b.height);
+            const s = 1 - t;
+            let i = this.m.length;
+            while (i--) {
+                result.m[i] = s * this.m[i] + t * b.m[i];
+            }
+            return result;
+        }
+    }
+
+    const { PI: PI$1$1, abs: abs$1 } = Math;
+    // tslint:enable:member-ordering
+    class M4 extends Matrix {
+        /**
+         * Takes 16 arguments in row-major order, which can be passed individually, as
+         * a list, or even as four lists, one for each row. If the arguments are
+         * omitted then the identity matrix is constructed instead.
+         *
+         *     ```
+         *     0 1 2 3
+         *     4 5 6 7
+         *     8 9 10 11
+         *     12 13 14 15
+         *     ```
+         */
+        constructor(...var_args) {
+            let m;
+            if (0 == var_args.length) {
+                m = new Float64Array(16);
+            }
+            else {
+                const flattened = concatenated(var_args);
+                assert(flattened.length == 16, "flattened.length == 16 " + flattened.length);
+                m = new Float64Array(flattened);
+            }
+            super(4, 4, m);
+        }
+        /**
+         * Returns the matrix that when multiplied with `matrix` results in the
+         * identity matrix. You can optionally pass an existing matrix in `result` to
+         * avoid allocating a new matrix. This implementation is from the Mesa OpenGL
+         * function `__gluInvertMatrixd()` found in `project.c`.
+         */
+        static inverse(matrix, result = new M4()) {
+            return matrix.inversed4(result);
+        }
+        /**
+         * Create new dim x dim matrix equal to an identity matrix with rows/colums i
+         * and k swapped. Note that i and k are 0-indexed.
+         */
+        static permutation4(i, k, result = new M4()) {
+            assertInts(i, k);
+            assertf(() => 0 <= i && i < 4);
+            assertf(() => 0 <= k && k < 4);
+            const m = result.m;
+            M4.identity(result);
+            m[i * 4 + i] = 0;
+            m[k * 4 + k] = 0;
+            m[i * 4 + k] = 1;
+            m[k * 4 + i] = 1;
+            return result;
+        }
+        /**
+         * Returns `matrix`, exchanging columns for rows. You can optionally pass an
+         * existing matrix in `result` to avoid allocating a new matrix.
+         */
+        static transpose(matrix, result = new M4()) {
+            assertInst(M4, matrix);
+            assertInst(M4, result);
+            assert(matrix != result, "matrix != result");
+            const m = matrix.m, r = result.m;
+            r[0] = m[0];
+            r[1] = m[4];
+            r[2] = m[8];
+            r[3] = m[12];
+            r[4] = m[1];
+            r[5] = m[5];
+            r[6] = m[9];
+            r[7] = m[13];
+            r[8] = m[2];
+            r[9] = m[6];
+            r[10] = m[10];
+            r[11] = m[14];
+            r[12] = m[3];
+            r[13] = m[7];
+            r[14] = m[11];
+            r[15] = m[15];
+            return result;
+        }
+        /** Returns the concatenation of the transforms for `left` and `right`. */
+        static multiply(left, right, result = new M4()) {
+            assertInst(M4, left, right);
+            assertInst(M4, result);
+            assert(left != result, "left != result");
+            assert(right != result, "right != result");
+            const a = left.m, b = right.m, r = result.m;
+            r[0] = a[0] * b[0] + a[1] * b[4] + (a[2] * b[8] + a[3] * b[12]);
+            r[1] = a[0] * b[1] + a[1] * b[5] + (a[2] * b[9] + a[3] * b[13]);
+            r[2] = a[0] * b[2] + a[1] * b[6] + (a[2] * b[10] + a[3] * b[14]);
+            r[3] = a[0] * b[3] + a[1] * b[7] + (a[2] * b[11] + a[3] * b[15]);
+            r[4] = a[4] * b[0] + a[5] * b[4] + (a[6] * b[8] + a[7] * b[12]);
+            r[5] = a[4] * b[1] + a[5] * b[5] + (a[6] * b[9] + a[7] * b[13]);
+            r[6] = a[4] * b[2] + a[5] * b[6] + (a[6] * b[10] + a[7] * b[14]);
+            r[7] = a[4] * b[3] + a[5] * b[7] + (a[6] * b[11] + a[7] * b[15]);
+            r[8] = a[8] * b[0] + a[9] * b[4] + (a[10] * b[8] + a[11] * b[12]);
+            r[9] = a[8] * b[1] + a[9] * b[5] + (a[10] * b[9] + a[11] * b[13]);
+            r[10] = a[8] * b[2] + a[9] * b[6] + (a[10] * b[10] + a[11] * b[14]);
+            r[11] = a[8] * b[3] + a[9] * b[7] + (a[10] * b[11] + a[11] * b[15]);
+            r[12] = a[12] * b[0] + a[13] * b[4] + (a[14] * b[8] + a[15] * b[12]);
+            r[13] = a[12] * b[1] + a[13] * b[5] + (a[14] * b[9] + a[15] * b[13]);
+            r[14] = a[12] * b[2] + a[13] * b[6] + (a[14] * b[10] + a[15] * b[14]);
+            r[15] = a[12] * b[3] + a[13] * b[7] + (a[14] * b[11] + a[15] * b[15]);
+            return result;
+        }
+        static product(...args) {
+            const [m4s, result] = Array.isArray(args[0])
+                ? [args[0], args[1]]
+                : [args, new M4()];
+            if (0 == m4s.length)
+                return M4.identity(result);
+            if (1 == m4s.length)
+                return M4.copy(m4s[0], result);
+            if (2 == m4s.length)
+                return M4.multiply(m4s[0], m4s[1], result);
+            let a = M4.temp0, b = M4.temp1;
+            M4.multiply(m4s[0], m4s[1], a);
+            for (let i = 2; i < m4s.length - 1; i++) {
+                M4.multiply(a, m4s[i], b);
+                [a, b] = [b, a];
+            }
+            return M4.multiply(a, getLast(m4s), result);
+        }
+        static forSys(e0, e1, e2 = e0.cross(e1), origin = V3.O) {
+            assertVectors(e0, e1, e2, origin);
+            // prettier-ignore
+            return new M4(e0.x, e1.x, e2.x, origin.x, e0.y, e1.y, e2.y, origin.y, e0.z, e1.z, e2.z, origin.z, 0, 0, 0, 1);
+        }
+        static forRows(n0, n1, n2, n3 = V3.O) {
+            assertVectors(n0, n1, n2, n3);
+            // prettier-ignore
+            return new M4(n0.x, n0.y, n0.z, 0, n1.x, n1.y, n1.z, 0, n2.x, n2.y, n2.z, 0, n3.x, n3.y, n3.z, 1);
+        }
+        /**
+         * Returns an identity matrix. You can optionally pass an existing matrix in
+         * `result` to avoid allocating a new matrix. This emulates the OpenGL
+         * function `glLoadIdentity()`
+         *
+         * Unless initializing a matrix to be modified, use M4.IDENTITY
+         */
+        static identity(result = new M4()) {
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = m[5] = m[10] = m[15] = 1;
+            m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = m[12] = m[13] = m[14] = 0;
+            return result;
+        }
+        /**
+         * Creates a new M4 initialized by a user defined callback function
+         *
+         * @param f Signature: (elRow, elCol, elIndex) =>
+         *     el, where elIndex is the row-major index, i.e. eLindex == elRow * 4 + elCol
+         * @param result
+         */
+        static fromFunction4(f, result = new M4()) {
+            assert(typeof f == "function");
+            assertInst(M4, result);
+            const m = result.m;
+            let i = 16;
+            while (i--) {
+                m[i] = f(Math.floor(i / 4), i % 4, i);
+            }
+            return result;
+        }
+        /**
+         * Returns a perspective transform matrix, which makes far away objects appear
+         * smaller than nearby objects. The `aspect` argument should be the width
+         * divided by the height of your viewport and `fov` is the top-to-bottom
+         * angle of the field of view in degrees. You can optionally pass an existing
+         * matrix in `result` to avoid allocating a new matrix. This emulates the
+         * OpenGL function `gluPerspective()`. {@see perspectiveRad} perspectiveRad
+         *
+         * @param fovDegrees In degrees
+         * @param aspect Aspect ratio = width/height of viewport
+         * @param near Near plane
+         * @param far Far plane
+         * @param result A new M4 as described.
+         */
+        static perspective(fovDegrees, aspect, near, far, result = new M4()) {
+            return M4.perspectiveRad(fovDegrees * DEG, aspect, near, far, result);
+        }
+        static perspectiveRad(fov, aspect, near, far, result = new M4()) {
+            assertInst(M4, result);
+            assertNumbers(fov, aspect, near, far);
+            const y = Math.tan(fov / 2) * near;
+            const x = y * aspect;
+            return M4.frustum(-x, x, -y, y, near, far, result);
+        }
+        static perspectivePlane(vanishingPlane, result = new M4()) {
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = 1;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = 0;
+            m[4] = 0;
+            m[5] = 1;
+            m[6] = 0;
+            m[7] = 0;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = 1;
+            m[11] = 0;
+            m[12] = vanishingPlane.normal1.x;
+            m[13] = vanishingPlane.normal1.y;
+            m[14] = vanishingPlane.normal1.z;
+            m[15] = -vanishingPlane.w;
+            return result;
+        }
+        // the OpenGL function `glFrustum()`.
+        static frustum(left, right, bottom, top, near, far, result = new M4()) {
+            assertNumbers(left, right, bottom, top, near, far);
+            assert(0 < near, "0 < near");
+            assert(near < far, "near < far");
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = (2 * near) / (right - left);
+            m[1] = 0;
+            m[2] = (right + left) / (right - left);
+            m[3] = 0;
+            m[4] = 0;
+            m[5] = (2 * near) / (top - bottom);
+            m[6] = (top + bottom) / (top - bottom);
+            m[7] = 0;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = -(far + near) / (far - near);
+            m[11] = (-2 * far * near) / (far - near);
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = -1;
+            m[15] = 0;
+            return result;
+        }
+        /** Returns a new M4 representing the a projection through/towards a point onto a plane. */
+        static projectPlanePoint(p, plane, result = new M4()) {
+            assertVectors(p, plane.normal1);
+            assertInst(M4, result);
+            const m = result.m;
+            const n = plane.normal1, w = plane.w;
+            const np = n.dot(p);
+            m[0] = p.x * n.x + w - np;
+            m[1] = p.x * n.y;
+            m[2] = p.x * n.z;
+            m[3] = -w * p.x;
+            m[4] = p.y * n.x;
+            m[5] = p.y * n.y + w - np;
+            m[6] = p.y * n.z;
+            m[7] = -w * p.y;
+            m[8] = p.z * n.x;
+            m[9] = p.z * n.y;
+            m[10] = p.z * n.z + w - np;
+            m[11] = -w * p.z;
+            m[12] = n.x;
+            m[13] = n.y;
+            m[14] = n.z;
+            m[15] = -np;
+            return result;
+        }
+        /**
+         * Orthographic/orthogonal projection. Transforms the cuboid with the
+         * dimensions X: [left right] Y: [bottom, top] Z: [near far] to the cuboid X:
+         * [-1, 1] Y [-1, 1] Z [-1, 1]
+         */
+        static ortho(left, right, bottom, top, near, far, result = new M4()) {
+            assertNumbers(left, right, bottom, top, near, far);
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = 2 / (right - left);
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = -(right + left) / (right - left);
+            m[4] = 0;
+            m[5] = 2 / (top - bottom);
+            m[6] = 0;
+            m[7] = -(top + bottom) / (top - bottom);
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = -2 / (far - near);
+            m[11] = -(far + near) / (far - near);
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static scale(...args) {
+            let x, y, z, result;
+            if (args[0] instanceof V3) {
+                assert(args.length <= 2);
+                ({ x, y, z } = args[0]);
+                result = args[1];
+            }
+            else if ("number" != typeof args[1]) {
+                x = y = z = args[0];
+                result = args[1];
+            }
+            else {
+                assert(args.length <= 4);
+                x = args[0];
+                y = args[1];
+                z = undefined != args[2] ? args[2] : 1;
+                result = args[3];
+            }
+            undefined == result && (result = new M4());
+            assertInst(M4, result);
+            assertNumbers(x, y, z);
+            const m = result.m;
+            m[0] = x;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = 0;
+            m[4] = 0;
+            m[5] = y;
+            m[6] = 0;
+            m[7] = 0;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = z;
+            m[11] = 0;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static translate(...args) {
+            let x, y, z, result;
+            if (args[0] instanceof V3) {
+                assert(args.length <= 2);
+                ({ x, y, z } = args[0]);
+                result = args[1];
+            }
+            else {
+                assert(args.length <= 4);
+                x = args[0];
+                y = undefined != args[1] ? args[1] : 0;
+                z = undefined != args[2] ? args[2] : 0;
+                result = args[3];
+            }
+            undefined == result && (result = new M4());
+            assertInst(M4, result);
+            assertNumbers(x, y, z);
+            const m = result.m;
+            m[0] = 1;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = x;
+            m[4] = 0;
+            m[5] = 1;
+            m[6] = 0;
+            m[7] = y;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = 1;
+            m[11] = z;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /**
+         * Returns a matrix that rotates by `a` degrees around the vector (x, y, z).
+         * You can optionally pass an existing matrix in `result` to avoid allocating
+         * a new matrix. This emulates the OpenGL function `glRotate()`.
+         */
+        //static rotation(radians: raddd, x: number, y: number, z: number, result?: M4): M4
+        static rotate(radians, v, result) {
+            undefined == result && (result = new M4());
+            assertInst(M4, result);
+            let { x, y, z } = v;
+            assert(!new V3(x, y, z).likeO(), "!V(x, y, z).likeO()");
+            const m = result.m;
+            const d = Math.sqrt(x * x + y * y + z * z);
+            x /= d;
+            y /= d;
+            z /= d;
+            const cos = Math.cos(radians), sin = Math.sin(radians), t = 1 - cos;
+            m[0] = x * x * t + cos;
+            m[1] = x * y * t - z * sin;
+            m[2] = x * z * t + y * sin;
+            m[3] = 0;
+            m[4] = y * x * t + z * sin;
+            m[5] = y * y * t + cos;
+            m[6] = y * z * t - x * sin;
+            m[7] = 0;
+            m[8] = z * x * t - y * sin;
+            m[9] = z * y * t + x * sin;
+            m[10] = z * z * t + cos;
+            m[11] = 0;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /**
+         * Returns a matrix that puts the camera at the eye point `ex, ey, ez` looking
+         * toward the center point `cx, cy, cz` with an up direction of `ux, uy, uz`.
+         * You can optionally pass an existing matrix in `result` to avoid allocating
+         * a new matrix. This emulates the OpenGL function `gluLookAt()`.
+         */
+        static lookAt(eye, focus, up, result = new M4()) {
+            assertVectors(eye, focus, up);
+            assertInst(M4, result);
+            const m = result.m;
+            const f = eye.minus(focus).unit();
+            const s = up.cross(f).unit();
+            const t = f.cross(s).unit();
+            m[0] = s.x;
+            m[1] = s.y;
+            m[2] = s.z;
+            m[3] = -s.dot(eye);
+            m[4] = t.x;
+            m[5] = t.y;
+            m[6] = t.z;
+            m[7] = -t.dot(eye);
+            m[8] = f.x;
+            m[9] = f.y;
+            m[10] = f.z;
+            m[11] = -f.dot(eye);
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /** Create a rotation matrix for rotating around the X axis */
+        static rotateX(radians) {
+            assertNumbers(radians);
+            const sin = Math.sin(radians), cos = Math.cos(radians);
+            const els = [1, 0, 0, 0, 0, cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1];
+            return new M4(els);
+        }
+        /** Create a rotation matrix for rotating around the Y axis */
+        static rotateY(radians) {
+            const sin = Math.sin(radians), cos = Math.cos(radians);
+            const els = [cos, 0, sin, 0, 0, 1, 0, 0, -sin, 0, cos, 0, 0, 0, 0, 1];
+            return new M4(els);
+        }
+        /** Create a rotation matrix for rotating around the Z axis */
+        static rotateZ(radians) {
+            const sin = Math.sin(radians), cos = Math.cos(radians);
+            const els = [cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+            return new M4(els);
+        }
+        /**
+         * New rotation matrix such that result.transformVector(a).isParallelTo(b)
+         * through smallest rotation. Performs no scaling.
+         */
+        static rotateAB(a, b, result = new M4()) {
+            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
+            assertVectors(a, b);
+            assertInst(M4, result);
+            const rotationAxis = a.cross(b), rotationAxisLength = rotationAxis.length();
+            if (eq0(rotationAxisLength)) {
+                return M4.identity(result);
+            }
+            const radians = Math.atan2(rotationAxisLength, a.dot(b));
+            return M4.rotateLine(V3.O, rotationAxis, radians, result);
+        }
+        /**
+         * Matrix for rotation about arbitrary line defined by an anchor point and
+         * direction. rotationAxis does not need to be unit
+         */
+        static rotateLine(rotationAnchor, rotationAxis, radians, result = new M4()) {
+            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
+            assertVectors(rotationAnchor, rotationAxis);
+            assertNumbers(radians);
+            assertInst(M4, result);
+            rotationAxis = rotationAxis.unit();
+            const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z, dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z;
+            const m = result.m, cos = Math.cos(radians), sin = Math.sin(radians);
+            m[0] = dx * dx + (dy * dy + dz * dz) * cos;
+            m[1] = dx * dy * (1 - cos) - dz * sin;
+            m[2] = dx * dz * (1 - cos) + dy * sin;
+            m[3] =
+                (ax * (dy * dy + dz * dz) - dx * (ay * dy + az * dz)) * (1 - cos) +
+                    (ay * dz - az * dy) * sin;
+            m[4] = dx * dy * (1 - cos) + dz * sin;
+            m[5] = dy * dy + (dx * dx + dz * dz) * cos;
+            m[6] = dy * dz * (1 - cos) - dx * sin;
+            m[7] =
+                (ay * (dx * dx + dz * dz) - dy * (ax * dx + az * dz)) * (1 - cos) +
+                    (az * dx - ax * dz) * sin;
+            m[8] = dx * dz * (1 - cos) - dy * sin;
+            m[9] = dy * dz * (1 - cos) + dx * sin;
+            m[10] = dz * dz + (dx * dx + dy * dy) * cos;
+            m[11] =
+                (az * (dx * dx + dy * dy) - dz * (ax * dx + ay * dy)) * (1 - cos) +
+                    (ax * dy - ay * dx) * sin;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /** Create an affine matrix for mirroring into an arbitrary plane: */
+        static mirror(plane, result = new M4()) {
+            assertVectors(plane.normal1);
+            assertInst(M4, result);
+            const [nx, ny, nz] = plane.normal1;
+            const w = plane.w;
+            const m = result.m;
+            m[0] = 1.0 - 2.0 * nx * nx;
+            m[1] = -2.0 * ny * nx;
+            m[2] = -2.0 * nz * nx;
+            m[3] = 2.0 * nx * w;
+            m[4] = -2.0 * nx * ny;
+            m[5] = 1.0 - 2.0 * ny * ny;
+            m[6] = -2.0 * nz * ny;
+            m[7] = 2.0 * ny * w;
+            m[8] = -2.0 * nx * nz;
+            m[9] = -2.0 * ny * nz;
+            m[10] = 1.0 - 2.0 * nz * nz;
+            m[11] = 2.0 * nz * w;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /**
+         * @param plane
+         * @param dir Projection direction. Optional, if not specified plane normal1
+         *     will be used.
+         * @param result {@see M4}
+         */
+        static project(plane, dir = plane.normal1, result = new M4()) {
+            // TODO: doc
+            // plane.normal1 DOT (p + lambda * dir) = w (1)
+            // extract lambda:
+            // plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
+            // lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+            // result = p + lambda * dir
+            // result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+            // result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
+            //  a + d * (w - n . a) / (nd)
+            //  a + dw - d * na
+            assertVectors(dir, plane.normal1);
+            assertInst(M4, result);
+            const w = plane.w;
+            const m = result.m;
+            const nd = plane.normal1.dot(dir);
+            const { x: nx, y: ny, z: nz } = plane.normal1;
+            const { x: dx, y: dy, z: dz } = dir.div(nd);
+            /*
+             rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
+             return M4.forSys(
+             V3.X.rejectedFrom(plane.normal1),
+             V3.Y.rejectedFrom(plane.normal1),
+             V3.Z.rejectedFrom(plane.normal1),
+             plane.anchor,
+             result
+             )
+             */
+            m[0] = 1.0 - nx * dx;
+            m[1] = -ny * dx;
+            m[2] = -nz * dx;
+            m[3] = dx * w;
+            m[4] = -nx * dy;
+            m[5] = 1.0 - ny * dy;
+            m[6] = -nz * dy;
+            m[7] = dy * w;
+            m[8] = -nx * dz;
+            m[9] = -ny * dz;
+            m[10] = 1.0 - nz * dz;
+            m[11] = dz * w;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static lineProjection(line, result = new M4()) {
+            assertVectors(line.anchor, line.dir1);
+            assertInst(M4, result);
+            const ax = line.anchor.x, ay = line.anchor.y, az = line.anchor.z;
+            const dx = line.dir1.x, dy = line.dir1.y, dz = line.dir1.z;
+            const m = result.m;
+            /*
+             projectedOn: return b.times(this.dot(b) / b.dot(b))
+             */
+            m[0] = dx * dx;
+            m[1] = dx * dy;
+            m[2] = dx * dz;
+            m[3] = ax;
+            m[4] = dy * dx;
+            m[5] = dy * dy;
+            m[6] = dy * dz;
+            m[7] = ay;
+            m[8] = dz * dx;
+            m[9] = dz * dy;
+            m[10] = dz * dz;
+            m[11] = az;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static pointInversion(p, result = new M4()) {
+            assertVectors(p);
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = -1;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = 2 * p.x;
+            m[4] = 0;
+            m[5] = -1;
+            m[6] = 0;
+            m[7] = 2 * p.y;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = -1;
+            m[11] = 2 * p.z;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static new(width, height, m) {
+            assert(4 == width && 4 == height);
+            return new M4(...m);
+        }
+        get X() {
+            return this.transformVector(V3.X);
+        }
+        get Y() {
+            return this.transformVector(V3.Y);
+        }
+        get Z() {
+            return this.transformVector(V3.Z);
+        }
+        get O() {
+            return this.getTranslation();
+        }
+        isMirror(precision = NLA_PRECISION) {
+            const m = this.m;
+            const nx = Math.sqrt((1 - m[0]) / 2);
+            const ny = Math.sqrt((1 - m[5]) / 2);
+            const nz = Math.sqrt((1 - m[10]) / 2);
+            return (eq(m[1], -2.0 * ny * nx, precision) &&
+                eq(m[2], -2.0 * nz * nx, precision) &&
+                eq(m[4], -2.0 * nx * ny, precision) &&
+                eq(m[6], -2.0 * nz * ny, precision) &&
+                eq(m[8], -2.0 * nx * nz, precision) &&
+                eq(m[9], -2.0 * ny * nz, precision) &&
+                eq(m[12], 0, precision) &&
+                eq(m[13], 0, precision) &&
+                eq(m[14], 0, precision) &&
+                eq(m[15], 1, precision) &&
+                eq(m[3] * ny, m[7] * nx, precision) &&
+                eq(m[7] * nz, m[11] * ny, precision) &&
+                eq(m[11] * nx, m[3] * nz, precision));
+        }
+        // ### GL.Matrix.frustum(left, right, bottom, top, near, far[, result])
+        //
+        // Sets up a viewing frustum, which is shaped like a truncated pyramid with the
+        // camera where the point of the pyramid would be. You can optionally pass an
+        // existing matrix in `result` to avoid allocating a new matrix. This emulates
+        /** Returns a new M4 which is equal to the inverse of this. */
+        inversed(result) {
+            return M4.inverse(this, result);
+        }
+        /** Matrix trace is defined as the sum of the elements of the main diagonal. */
+        trace() {
+            return this.m[0] + this.m[5] + this.m[10] + this.m[15];
+        }
+        as3x3(result) {
+            result = M4.copy(this, result);
+            const m = result.m;
+            m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        transform(m4) {
+            return m4.times(this);
+        }
+        realEigenValues3() {
+            const m = this.m;
+            assert(0 == m[12] && 0 == m[13] && 0 == m[14]);
+            // determinant of (this - λI):
+            // | a-λ  b   c  |
+            // |  d  e-λ  f  | = -λ^3 + λ^2 (a+e+i) + λ (-a e-a i+b d+c g-e i+f h) + a(ei - fh) - b(di - fg) + c(dh - eg)
+            // |  g   h  i-λ |
+            const [a, b, c, , d, e, f, , g, h, i] = m;
+            // det(this - λI) = -λ^3 +λ^2 (a+e+i) + λ (-a e-a i-b d+c g-e i+f h)+ (a e i-a f h-b d i+b f g+c d h-c e g)
+            const s = -1;
+            const t = a + e + i; // equivalent to trace of matrix
+            const u = -a * e - a * i + b * d + c * g - e * i + f * h; // equivalent to 1/2 (trace(this²) - trace²(A))
+            const w = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g); // equivalent to matrix determinant
+            console.log(s, t, u, w);
+            return solveCubicReal2(s, t, u, w);
+        }
+        realEigenVectors3() {
+            const eigenValues = this.realEigenValues3();
+            const this3x3 = this.times(M4.IDENTITY3);
+            console.log(this.toString());
+            console.log(this3x3.toString());
+            let mats = eigenValues.map((ev) => M4.IDENTITY3.scale(-ev).plus(this3x3));
+            console.log(mats.map((m) => m.determinant3()));
+            console.log(mats.map((m) => "" + m.toString((v) => "" + v)).join("\n\n"));
+            console.log(mats
+                .map((m) => "" + m.luDecomposition().U.toString((v) => "" + v))
+                .join("\n\n"));
+            console.log("mats.map(m=>m.rank())", mats.map((m) => m.rank()));
+            if (1 == eigenValues.length) {
+                console.log(mats[0].toString());
+                assertf(() => 0 == mats[0].rank());
+                // col vectors
+                return arrayFromFunction(3, (col) => new V3(this.m[col], this.m[4 + col], this.m[8 + col]));
+            }
+            if (2 == eigenValues.length) {
+                // one matrix should have rank 1, the other rank 2
+                if (1 == mats[0].rank()) {
+                    mats = [mats[1], mats[0]];
+                }
+                assertf(() => 2 == mats[0].rank());
+                assertf(() => 1 == mats[1].rank());
+                // mat[0] has rank 2, mat[1] has rank 1
+                const gauss0 = mats[0].luDecomposition().U;
+                const eigenVector0 = gauss0.row(0).cross(gauss0.row(1)).V3().unit();
+                const planeNormal = mats[1].luDecomposition().U.row(0).V3();
+                const eigenVector1 = planeNormal.getPerpendicular().unit();
+                const eigenVector2 = eigenVector0
+                    .cross(eigenVector1)
+                    .rejectedFrom(planeNormal);
+                return [eigenVector0, eigenVector1, eigenVector2];
+            }
+            if (3 == eigenValues.length) {
+                mats.forEach((mat, i) => assert(2 == mat.rank(), i + ": " + mat.rank()));
+                // the (A - lambda I) matrices map to a plane. This means, that there is an entire line in R³ which maps to
+                // the point V3.O
+                return mats.map((mat) => {
+                    const gauss = mat.luDecomposition().U;
+                    return gauss.row(0).cross(gauss.row(1)).V3().unit();
+                });
+            }
+            throw new Error("there cannot be more than 3 eigen values");
+        }
+        /**
+         * U * SIGMA * VSTAR = this
+         *
+         * U and VSTAR are orthogonal matrices
+         *
+         * SIGMA is a diagonal matrix
+         */
+        svd3() {
+            function matrixForCS(i, k, c, s) {
+                const m = M4.identity();
+                m.setEl(i, i, c);
+                m.setEl(k, k, c);
+                m.setEl(i, k, s);
+                m.setEl(k, i, -s);
+                return m;
+            }
+            const A = this.as3x3();
+            let S = A.transposed().times(A), V = M4.identity();
+            console.log(S.toString());
+            for (let it = 0; it < 16; it++) {
+                console.log("blahg\n", V.times(S).times(V.transposed()).toString());
+                assert(V.times(S).times(V.transposed()).likeM4(A.transposed().times(A)), V.times(S).times(V.transposed()).toString(), A.transposed().times(A).toString());
+                let maxOffDiagonal = 0, maxOffDiagonalIndex = 1, j = 10;
+                while (j--) {
+                    const val = Math.abs(S.m[j]);
+                    if (j % 4 != Math.floor(j / 4) && val > maxOffDiagonal) {
+                        maxOffDiagonal = val;
+                        maxOffDiagonalIndex = j;
+                    }
+                }
+                const i = Math.floor(maxOffDiagonalIndex / 4), k = maxOffDiagonalIndex % 4;
+                const a_ii = S.m[5 * i], a_kk = S.m[5 * k], a_ik = S.m[maxOffDiagonalIndex];
+                const phi = a_ii === a_kk ? PI$1$1 / 4 : Math.atan((2 * a_ik) / (a_ii - a_kk)) / 2;
+                console.log(maxOffDiagonalIndex, i, k, "phi", phi);
+                const cos = Math.cos(phi), sin = Math.sin(phi);
+                const givensRotation = matrixForCS(i, k, cos, -sin);
+                assert(givensRotation.transposed().times(givensRotation).likeIdentity());
+                console.log(givensRotation.toString());
+                V = V.times(givensRotation);
+                S = M4.product(givensRotation.transposed(), S, givensRotation);
+                console.log(S.toString());
+            }
+            const sigma = S.map((el, elIndex) => (elIndex % 5 == 0 ? Math.sqrt(el) : 0));
+            return {
+                U: M4.product(A, V, sigma.map((el, elIndex) => (elIndex % 5 == 0 ? 1 / el : 0))),
+                SIGMA: sigma,
+                VSTAR: V.transposed(),
+            };
+        }
+        map(fn) {
+            return M4.fromFunction4((x, y, i) => fn(this.m[i], i, this.m));
+        }
+        likeM4(m4) {
+            assertInst(M4, m4);
+            return this.m.every((el, index) => eq(el, m4.m[index]));
+        }
+        /** Returns a new M4 equal to the transpose of this. */
+        transposed(result) {
+            return M4.transpose(this, result);
+        }
+        /** Returns a new M4 which equal to (this * matrix) (in that order) */
+        times(matrix) {
+            return M4.multiply(this, matrix);
+        }
+        /**
+         * In a perspective projection, parallel lines meet in a vanishing point.
+         *
+         * Returns undefined if there is no vanishing point, either because this is
+         * not a perspective transform, or because the passed dir is perpendicular to
+         * the projections direction.
+         *
+         * @param dir
+         */
+        vanishingPoint(dir) {
+            assertVectors(dir);
+            const m = this.m;
+            const vx = dir.x, vy = dir.y, vz = dir.z;
+            const w = vx * m[12] + vy * m[13] + vz * m[14];
+            if (eq0(w))
+                return undefined;
+            const x = vx * m[0] + vy * m[1] + vz * m[2];
+            const y = vx * m[4] + vy * m[5] + vz * m[6];
+            const z = vx * m[8] + vy * m[9] + vz * m[10];
+            return new V3(x / w, y / w, z / w);
+        }
+        /**
+         * Transforms the vector as a point with a w coordinate of 1. This means
+         * translations will have an effect, for example.
+         */
+        transformPoint(v) {
+            assertVectors(v);
+            const m = this.m;
+            const vx = v.x, vy = v.y, vz = v.z;
+            const x = vx * m[0] + vy * m[1] + vz * m[2] + m[3];
+            const y = vx * m[4] + vy * m[5] + vz * m[6] + m[7];
+            const z = vx * m[8] + vy * m[9] + vz * m[10] + m[11];
+            const w = vx * m[12] + vy * m[13] + vz * m[14] + m[15];
+            // scale such that fourth element becomes 1:
+            return new V3(x / w, y / w, z / w);
+        }
+        /**
+         * Transforms the vector as a vector with a w coordinate of 0. This means
+         * translations will have no effect, for example. Will throw an exception if
+         * the calculated w component != 0. This occurs for example when attempting
+         * to transform a vector with a perspective matrix.
+         */
+        transformVector(v, checkW = true) {
+            assertVectors(v);
+            const m = this.m;
+            const w = v.x * m[12] + v.y * m[13] + v.z * m[14];
+            checkW &&
+                assert(eq0(w), () => "w === 0 needs to be true for this to make sense (w =" +
+                    w +
+                    this.toString());
+            return new V3(m[0] * v.x + m[1] * v.y + m[2] * v.z, m[4] * v.x + m[5] * v.y + m[6] * v.z, m[8] * v.x + m[9] * v.y + m[10] * v.z);
+        }
+        transformVector2(v, anchor) {
+            // v and anchor define a line(t) = anchor + t v
+            // we can view the calculation of the transformed vector as the derivative of the transformed line at t = 0
+            // d/dt (this * line(t)) (0)
+            assertVectors(v, anchor);
+            const transformedAnchor = this.timesVector(VV(anchor.x, anchor.y, anchor.z, 1));
+            const transformedVector = this.timesVector(VV(v.x, v.y, v.z, 0));
+            return transformedVector
+                .times(transformedAnchor.w)
+                .minus(transformedAnchor.times(transformedVector.w))
+                .div(Math.pow(transformedAnchor.w, 2))
+                .V3();
+        }
+        transformedPoints(vs) {
+            return vs.map((v) => this.transformPoint(v));
+        }
+        transformedVectors(vs) {
+            return vs.map((v) => this.transformVector(v));
+        }
+        new() {
+            return new M4();
+        }
+        isRegular() {
+            return !eq0(this.determinant());
+        }
+        isAxisAligned() {
+            const m = this.m;
+            return (1 >= +!eq0(m[0]) + +!eq0(m[1]) + +!eq0(m[2]) &&
+                1 >= +!eq0(m[4]) + +!eq0(m[5]) + +!eq0(m[6]) &&
+                1 >= +!eq0(m[8]) + +!eq0(m[9]) + +!eq0(m[10]));
+        }
+        /**
+         * A matrix M is orthogonal iff M * M^T = I I being the identity matrix.
+         *
+         * @returns If this matrix is orthogonal or very close to it. Comparison of
+         *     the identity matrix and this * this^T is done with {@link #likeM4}
+         */
+        isOrthogonal() {
+            // return this.transposed().times(this).likeM4(M4.IDENTITY)
+            M4.transpose(this, M4.temp0);
+            M4.multiply(this, M4.temp0, M4.temp1);
+            return M4.IDENTITY.likeM4(M4.temp1);
+        }
+        /**
+         * A matrix M is symmetric iff M == M^T I being the identity matrix.
+         *
+         * @returns If this matrix is symmetric or very close to it. Comparison of the
+         *     identity matrix and this * this^T is done with {@link #likeM4}
+         */
+        isSymmetric() {
+            M4.transpose(this, M4.temp0);
+            return this.likeM4(M4.temp0);
+        }
+        /** A matrix M is skew symmetric iff M = -M^T */
+        isSkewSymmetric(precision) {
+            return (eq0(this.m[0], precision) &&
+                eq0(this.m[5], precision) &&
+                eq0(this.m[10], precision) &&
+                eq0(this.m[15], precision) &&
+                eq(this.m[1], this.m[4], precision) &&
+                eq(this.m[2], this.m[8], precision) &&
+                eq(this.m[3], this.m[12], precision) &&
+                eq(this.m[6], this.m[9], precision) &&
+                eq(this.m[7], this.m[13], precision) &&
+                eq(this.m[11], this.m[14], precision));
+        }
+        /**
+         * A matrix M is normal1 iff M * M^-T == M^T * M TODO: ^-T? I being the identity matrix.
+         *
+         * @returns If this matrix is symmetric or very close to it. Comparison of the
+         *     identity matrix and this * this^T is done with {@link #likeM4}
+         */
+        isNormal() {
+            M4.transpose(this, M4.temp0); // temp0 = this^-T
+            M4.multiply(this, M4.temp0, M4.temp1); // temp1 = this * this^-T
+            M4.multiply(M4.temp0, this, M4.temp2); // temp2 = this^-T * this
+            return M4.temp1.likeM4(M4.temp2);
+        }
+        /**
+         * Determinant of matrix.
+         *
+         * Notes:
+         *     For matrices A and B
+         *     det(A * B) = det(A) * det(B)
+         *     det(A^-1) = 1 / det(A)
+         */
+        determinant() {
+            // | a b c d |
+            // | e f g h |
+            // | i j k l |
+            // | m n o p |
+            const $ = this.m, a = $[0], b = $[1], c = $[2], d = $[3], e = $[4], f = $[5], g = $[6], h = $[7], i = $[8], j = $[9], k = $[10], l = $[11], m = $[12], n = $[13], o = $[14], p = $[15], klop = k * p - l * o, jlnp = j * p - l * n, jkno = j * o - k * n, ilmp = i * p - l * m, ikmo = i * o - k * m, ijmn = i * n - j * m;
+            return (a * (f * klop - g * jlnp + h * jkno) -
+                b * (e * klop - g * ilmp + h * ikmo) +
+                c * (e * jlnp - f * ilmp + h * ijmn) -
+                d * (e * jkno - f * ikmo + g * ijmn));
+        }
+        determinant3() {
+            const [a, b, c, , d, e, f, , g, h, i] = this.m;
+            return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+        }
+        /** Determine whether this matrix is a mirroring transformation */
+        isMirroring() {
+            /*
+             var u = V(this.m[0], this.m[4], this.m[8])
+             var v = V(this.m[1], this.m[5], this.m[9])
+             var w = V(this.m[2], this.m[6], this.m[10])
+        
+             // for a true orthogonal, non-mirrored base, u.cross(v) == w
+             // If they have an opposite direction then we are mirroring
+             var mirrorvalue = u.cross(v).dot(w)
+             var ismirror = (mirrorvalue < 0)
+             return ismirror
+             */
+            return this.determinant() < 0; // TODO: also valid for 4x4?
+        }
+        /** Get the translation part of this matrix, i.e. the result of this.transformPoint(V3.O) */
+        getTranslation() {
+            const m = this.m, w = m[15];
+            return new V3(m[3] / w, m[7] / w, m[11] / w);
+        }
+        /**
+         * Returns this matrix scaled so that the determinant is 1. det(c * A) = (c **
+         * n) * det(A) for n x n matrices, so we need to divide by the 4th root of
+         * the determinant
+         */
+        normalized() {
+            const detAbs = abs$1(this.determinant());
+            return 1 == detAbs ? this : this.divScalar(Math.pow(detAbs, 0.25));
+        }
+        /** Returns this matrix scaled so that the bottom-right element is 1. */
+        normalized2() {
+            const div = this.m[15];
+            return 1 == div ? this : this.divScalar(div);
+        }
+        /**
+         * Returns if the matrix has the following form (within NLA_PRECISION): a b c
+         * 0 c d e 0 f g h 0 0 0 0 1
+         */
+        like3x3() {
+            const m = this.m;
+            return (eq(1, m[15]) &&
+                eq0(m[12]) &&
+                eq0(m[13]) &&
+                eq0(m[14]) &&
+                eq0(m[3]) &&
+                eq0(m[7]) &&
+                eq0(m[11]));
+        }
+        isNoProj() {
+            const m = this.m;
+            return 0 == m[12] && 0 == m[13] && 0 == m[14] && 1 == m[15];
+        }
+        likeIdentity() {
+            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? eq(1, val) : eq0(val));
+        }
+        isIdentity() {
+            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? 1 == val : 0 == val);
+        }
+        toString(f = (v) => v.toFixed(6).replace(/([0.])(?=0*$)/g, " ")) {
+            assert(typeof f(0) == "string", "" + typeof f(0));
+            // slice this.m to convert it to an Array (from TypeArray)
+            const rounded = Array.prototype.slice.call(this.m).map(f);
+            const colWidths = [0, 1, 2, 3].map((colIndex) => max$1(sliceStep(rounded, colIndex, 0, 4).map((x) => x.length)));
+            return [0, 1, 2, 3]
+                .map((rowIndex) => rounded
+                .slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
+                .map((x, colIndex) => " ".repeat(colWidths[colIndex] - x.length) + x) // pad numbers with
+                // spaces to col width
+                .join(" "))
+                .join("\n"); // join rows
+        }
+        /**
+         * Wether this matrix is a translation matrix, i.e. of the form
+         *
+         *     1, 0, 0, x,
+         *     0, 1, 0, y,
+         *     0, 0, 1, z,
+         *     0, 0, 0, 1
+         */
+        isTranslation() {
+            // 2: any value, otherwise same value
+            // prettier-ignore
+            const mask = [
+                1, 0, 0, 2,
+                0, 1, 0, 2,
+                0, 0, 1, 2,
+                0, 0, 0, 1
+            ];
+            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
+        }
+        /**
+         * Wether this matrix is a translation matrix, i.e. of the form
+         *
+         *     S, 0, 0, 0,
+         *     0, t, 0, 0,
+         *     0, 0, v, 0,
+         *     0, 0, 0, 1
+         */
+        isScaling() {
+            // prettier-ignore
+            const mask = [
+                2, 0, 0, 0,
+                0, 2, 0, 0,
+                0, 0, 2, 0,
+                0, 0, 0, 1
+            ];
+            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
+        }
+        isZRotation() {
+            // prettier-ignore
+            const mask = [
+                2, 2, 0, 0,
+                2, 2, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ];
+            return (mask.every((expected, index) => expected == 2 || expected == this.m[index]) &&
+                eq(1, Math.pow(this.m[0], 2) + Math.pow(this.m[1], 2)) &&
+                this.m[0] == this.m[5] &&
+                this.m[1] == -this.m[4]);
+        }
+        toSource() {
+            const name = M4.NAMEMAP.get(this);
+            if (name) {
+                return name;
+            }
+            else if (this.isTranslation()) {
+                return callSource("M4.translate", this.O);
+            }
+            else if (this.isScaling()) {
+                return callSource("M4.scale", this.m[0], this.m[5], this.m[10]);
+            }
+            else if (this.isNoProj()) {
+                return !this.O.equals(V3.O)
+                    ? callSource("M4.forSys", this.X, this.Y, this.Z, this.O)
+                    : callSource("M4.forSys", this.X, this.Y, this.Z);
+            }
+            else if (this.isMirror(0)) {
+                const m = this.m;
+                const nx = Math.sqrt((1 - m[0]) / 2);
+                const ny = Math.sqrt((1 - m[5]) / 2);
+                const nz = Math.sqrt((1 - m[10]) / 2);
+                const w = m[3] / 2.0 / nx;
+                return callSource("M4.mirror", { normal1: new V3(nx, ny, nz), w });
+            }
+            else {
+                const m = this.m;
+                return ("new M4(" +
+                    ("\n\t" + m[0] + ",\t" + m[1] + ",\t" + m[2] + ",\t" + m[3] + ",") +
+                    ("\n\t" + m[4] + ",\t" + m[5] + ",\t" + m[6] + ",\t" + m[7] + ",") +
+                    ("\n\t" + m[8] + ",\t" + m[9] + ",\t" + m[10] + ",\t" + m[11] + ",") +
+                    ("\n\t" + m[12] + ",\t" + m[13] + ",\t" + m[14] + ",\t" + m[15] + ")"));
+            }
+        }
+        xyAreaFactor() {
+            return this.transformVector(V3.X).cross(this.transformVector(V3.Y)).length();
+        }
+    }
+    /**
+     * A simple (consists of integers), regular, non-orthogonal matrix, useful
+     * mainly for testing. M4.FOO_INV = M4.FOO.inverse()
+     */
+    // prettier-ignore
+    M4.FOO = new M4(0, 1, 1, 2, 0.3, 0.4, 0.8, 13, 2.1, 3.4, 5.5, 8.9, 0, 0, 0, 1);
+    M4.FOO_INV = M4.FOO.inversed();
+    M4.IDENTITY = M4.identity();
+    // prettier-ignore
+    M4.O = new M4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    M4.YZX = M4.forSys(V3.Y, V3.Z, V3.X);
+    M4.ZXY = M4.forSys(V3.Z, V3.X, V3.Y);
+    // prettier-ignore
+    M4.IDENTITY3 = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
+    M4.temp0 = new M4();
+    M4.temp1 = new M4();
+    M4.temp2 = new M4();
+    M4.NAMEMAP = new JavaMap()
+        .set(M4.IDENTITY3, "M4.IDENTITY3")
+        .set(M4.FOO, "M4.FOO")
+        .set(M4.O, "M4.O")
+        .set(M4.FOO_INV, "M4.FOO_INV")
+        .set(M4.IDENTITY, "M4.IDENTITY")
+        .set(M4.ZXY, "M4.ZXY")
+        .set(M4.YZX, "M4.YZX");
+    M4.prototype.height = 4;
+    M4.prototype.width = 4;
+    addOwnProperties(M4.prototype, Transformable.prototype, "constructor");
+
+    class Vector {
+        constructor(v) {
+            this.v = v;
+            assertInst(Float64Array, v);
+        }
+        static fromFunction(dims, f) {
+            assertNumbers(dims);
+            const e = new Float64Array(dims);
+            let i = dims;
+            while (i--) {
+                e[i] = f(i);
+            }
+            return new Vector(e);
+        }
+        static random(dims) {
+            return Vector.fromFunction(dims, (_i) => Math.random());
+        }
+        static from(...args) {
+            assert(args[0] instanceof Float64Array ||
+                args.every((a) => "number" == typeof a), 'args[0] instanceof Float64Array || args.every(a => "number" == typeof a)');
+            return new Vector(args[0] instanceof Float64Array ? args[0] : Float64Array.from(args));
+        }
+        static Zero(dims) {
+            assertNumbers(dims);
+            let i = 0;
+            const n = new Float64Array(dims);
+            while (i--) {
+                n[i] = 0;
+            }
+            return new Vector(n);
+        }
+        static Unit(dims, dir) {
+            assertNumbers(dims, dir);
+            let i = 0;
+            const n = new Float64Array(dims);
+            while (i--) {
+                n[i] = +(i == dir); // +true === 1, +false === 0
+            }
+            return new Vector(n);
+        }
+        /**
+         * Pack an array of Vectors into an array of numbers (Float32Array by default).
+         *
+         * @param vectors Source array
+         * @param dest Destination array. If provided, must be large enough to fit
+         *     v3count items.
+         * @param srcStart Starting index in source array
+         * @param destStart Starting index in destination array
+         * @param vectorCount Number of V3s to copy.
+         * @returns Packed array.
+         */
+        static pack(vectors, dest, srcStart = 0, destStart = 0, vectorCount = vectors.length - srcStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            const dim = vectors[0].dim();
+            const result = dest || new Float32Array(dim * vectorCount); // TODO
+            assert(result.length - destStart >= vectorCount * dim, "dest.length - destStart >= v3count * 3", result.length, destStart, vectorCount * 3);
+            let i = vectorCount, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                const v = vectors[srcIndex++];
+                for (let d = 0; d < dim; d++) {
+                    result[destIndex++] = v.v[d];
+                }
+            }
+            return result;
+        }
+        static lerp(a, b, t) {
+            assert(a.dim() == b.dim());
+            const n = new Float64Array(a.v.length);
+            let i = a.v.length;
+            while (i--) {
+                n[i] = a.v[i] * (1 - t) + b.v[i] * t;
+            }
+            return new Vector(n);
+        }
+        static add(...vs) {
+            const dim = vs[0].v.length;
+            const result = new Float64Array(dim);
+            let i = vs.length;
+            while (i--) {
+                let d = dim;
+                while (d--) {
+                    result[d] += vs[i].v[d];
+                }
+            }
+            return new Vector(result);
+        }
+        /**
+         * Create a new 4D Vector from a V3 and a weight.
+         *
+         * @param v3
+         * @param weight
+         */
+        static fromV3AndWeight(v3, weight) {
+            return new Vector(new Float64Array([v3.x * weight, v3.y * weight, v3.z * weight, weight]));
+        }
+        get x() {
+            return this.v[0];
+        }
+        get y() {
+            return this.v[1];
+        }
+        get z() {
+            return this.v[2];
+        }
+        get w() {
+            return this.v[3];
+        }
+        [Symbol.iterator]() {
+            return this.v[Symbol.iterator]();
+        }
+        dim() {
+            return this.v.length;
+        }
+        e(index) {
+            if (0 > index || index >= this.v.length) {
+                throw new Error("array index out of bounds");
+            }
+            return this.v[index];
+        }
+        plus(vector) {
+            const u = this.v, v = vector.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] + v[i];
+            }
+            return new Vector(n);
+        }
+        minus(vector) {
+            const u = this.v, v = vector.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] - v[i];
+            }
+            return new Vector(n);
+        }
+        times(factor) {
+            const u = this.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] * factor;
+            }
+            return new Vector(n);
+        }
+        div(val) {
+            const u = this.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] / val;
+            }
+            return new Vector(n);
+        }
+        dot(vector) {
+            assert(this.dim == vector.dim, "passed vector must have the same dim");
+            let result = 0;
+            const u = this.v, v = vector.v;
+            let i = u.length;
+            while (i--) {
+                result += u[i] * v[i];
+            }
+            return result;
+        }
+        cross(vector) {
+            assertInst(Vector, vector);
+            const n = new Float64Array(3);
+            n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1];
+            n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2];
+            n[2] = this.v[0] * vector.v[1] - this.v[1] * vector.v[0];
+            return new Vector(n);
+        }
+        schur(vector) {
+            assertInst(Vector, vector);
+            const u = this.v, v = vector.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] * v[i];
+            }
+            return new Vector(n);
+        }
+        equals(obj) {
+            if (obj === this)
+                return true;
+            if (obj.constructor !== Vector)
+                return false;
+            if (this.v.length != obj.v.length)
+                return false;
+            let i = this.v.length;
+            while (i--) {
+                if (this.v[i] !== obj.v[i])
+                    return false;
+            }
+            return true;
+        }
+        like(obj, precision) {
+            if (obj === this)
+                return true;
+            if (obj.constructor !== Vector)
+                return false;
+            if (this.v.length != obj.v.length)
+                return false;
+            let i = this.v.length;
+            while (i--) {
+                if (!eq(this.v[i], obj.v[i], precision))
+                    return false;
+            }
+            return true;
+        }
+        map(f) {
+            return new Vector(this.v.map(f));
+        }
+        toString(roundFunction) {
+            roundFunction = roundFunction || ((v) => +v.toFixed(6));
+            return "Vector(" + this.v.map(roundFunction).join(", ") + ")";
+        }
+        toSource() {
+            return callSource("VV", ...this.v);
+        }
+        angleTo(vector) {
+            assertInst(Vector, vector);
+            assert(!this.isZero(), "!this.likeO()");
+            assert(!vector.isZero(), "!vector.likeO()");
+            return Math.acos(clamp$1(this.dot(vector) / this.length() / vector.length(), -1, 1));
+        }
+        /**
+         * Returns true iff this is parallel to vector, using eq Throw a DebugError -
+         * if vector is not a Vector or - if this has a length of 0 or - if vector
+         * has a length of 0
+         */
+        isParallelTo(vector) {
+            assertInst(Vector, vector);
+            assert(!this.isZero(), "!this.likeO()");
+            assert(!vector.isZero(), "!vector.likeO()");
+            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+            // in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
+            return eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)));
+        }
+        isPerpendicularTo(vector) {
+            assertInst(Vector, vector);
+            assert(!this.isZero(), "!this.likeO()");
+            assert(!vector.isZero(), "!vector.likeO()");
+            return eq0(this.dot(vector));
+        }
+        /**
+         * Returns true iff the length of this vector is 0, as returned by NLA.isZero.
+         * Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
+         */
+        isZero() {
+            return eq0(this.length());
+        }
+        /*/ Returns the length of this Vector, i.e. the euclidian norm.*/
+        length() {
+            return Math.hypot.apply(undefined, this.v);
+            //return Math.sqrt(this.lengthSquared())
+        }
+        lengthSquared() {
+            let result = 0;
+            const u = this.v;
+            let i = u.length;
+            while (i--) {
+                result += u[i] * u[i];
+            }
+            return result;
+        }
+        /**
+         * Returns a new unit Vector (.length() === 1) with the same direction as this
+         * vector. Throws a
+         */
+        unit() {
+            const length = this.length();
+            if (eq0(length)) {
+                throw new Error("cannot normalize zero vector");
+            }
+            return this.div(this.length());
+        }
+        /** Documentation stub. You want {@link unit} */
+        normalized() {
+            throw new Error("documentation stub. use .unit()");
+        }
+        asRowMatrix() {
+            return new Matrix(this.v.length, 1, this.v);
+        }
+        asColMatrix() {
+            return new Matrix(1, this.v.length, this.v);
+        }
+        /**
+         * Returns a new Vector which is the projection of this vector onto the passed vector.
+         *
+         * @example
+         *   VV(3, 4).projectedOn(VV(1, 0)) // VV(3, 0)
+         *   VV(3, 4).projectedOn(VV(2, 0)) // VV(3, 0)
+         *   VV(3, 4).projectedOn(VV(-1, 0)) // VV(-3, 0)
+         *   VV(3, 4).projectedOn(VV(0, 1)) // VV(0, 4)
+         *   VV(3, 4).projectedOn(VV(1, 1)) //
+         */
+        projectedOn(b) {
+            assertInst(Vector, b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return b.times(this.dot(b) / b.dot(b));
+        }
+        rejectedOn(b) {
+            assertInst(Vector, b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return this.minus(b.times(this.dot(b) / b.dot(b)));
+        }
+        to(a) {
+            return a.minus(this);
+        }
+        /**
+         * Returns true iff the length() of this vector is equal to 'length', using equals
+         *
+         * @example
+         *   V(3, 4).hasLength(5) // true
+         *   V(1, 1).hasLength(1) // false
+         */
+        hasLength(length) {
+            assertNumbers(length);
+            return eq(length, this.length());
+        }
+        V3() {
+            //assert(this.dim() == 3)
+            return new V3(this.v[0], this.v[1], this.v[2]);
+        }
+        /** Project into 3 dimensions. */
+        p3() {
+            assert(this.v.length == 4);
+            const w = this.v[3];
+            return new V3(this.v[0] / w, this.v[1] / w, this.v[2] / w);
+        }
+        transposed() {
+            return new Matrix(this.v.length, 1, this.v);
+        }
+    }
+    function VV(...values) {
+        return new Vector(new Float64Array(values));
+    }
+    function vArrGet(vArr, dim, i) {
+        assert(vArr.length % dim == 0);
+        return new Vector(Float64Array.prototype.slice.call(vArr, i * dim, (i + 1) * dim));
+    }
+
+    const KEYWORD_REGEXP = new RegExp("^(" +
+        "abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|" +
+        "default|delete|do|double|else|enum|export|extends|false|final|finally|" +
+        "float|for|function|goto|if|implements|import|in|instanceof|int|interface|" +
+        "long|native|new|null|package|private|protected|public|return|short|static|" +
+        "super|switch|synchronized|this|throw|throws|transient|true|try|typeof|" +
+        "undefined|var|void|volatile|while|with" +
+        ")$");
+    function stringIsLegalKey(key) {
+        return /^[a-z_$][0-9a-z_$]*$/gi.test(key) && !KEYWORD_REGEXP.test(key);
+    }
+    const seen = [];
+    function toSource(o, indent = 0) {
+        switch (typeof o) {
+            case "undefined":
+                return "undefined";
+            case "function":
+                return o.toString();
+            case "number":
+                return "" + o;
+            case "string":
+                return JSON.stringify(o);
+            case "object":
+                if (null == o) {
+                    return "null";
+                }
+                else {
+                    return o.sce;
+                }
+            default:
+                throw new Error();
+        }
+    }
+    function addToSourceMethodToPrototype(clazz, method) {
+        if (!clazz.prototype.toSource) {
+            Object.defineProperty(clazz.prototype, "toSource", {
+                value: method,
+                writable: true,
+                configurable: true,
+                enumerable: false,
+            });
+        }
+    }
+    addToSourceMethodToPrototype(Boolean, Boolean.prototype.toString);
+    addToSourceMethodToPrototype(Function, Function.prototype.toString);
+    addToSourceMethodToPrototype(Number, Number.prototype.toString);
+    addToSourceMethodToPrototype(RegExp, RegExp.prototype.toString);
+    addToSourceMethodToPrototype(Date, function () {
+        return "new Date(" + this.getTime() + ")";
+    });
+    addToSourceMethodToPrototype(String, function () {
+        return JSON.stringify(this);
+    });
+    addToSourceMethodToPrototype(Array, function () {
+        if (seen.includes(this)) {
+            return "CIRCULAR_REFERENCE";
+        }
+        seen.push(this);
+        let result = "[";
+        for (let i = 0; i < this.length; i++) {
+            result += "\n\t" + toSource(this[i]).replace(/\r\n|\n|\r/g, "$&\t");
+            if (i !== this.length - 1) {
+                result += ",";
+            }
+        }
+        result += 0 === this.length ? "]" : "\n]";
+        seen.pop();
+        return result;
+    });
+    addToSourceMethodToPrototype(Object, function () {
+        if (seen.includes(this)) {
+            return "CIRCULAR_REFERENCE";
+        }
+        seen.push(this);
+        let result = "{";
+        const keys = Object.keys(this).sort();
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            result +=
+                "\n\t" +
+                    (stringIsLegalKey(k) ? k : JSON.stringify(k)) +
+                    ": " +
+                    toSource(this[k]).replace(/\r\n|\n|\r/g, "$&\t");
+            if (i !== keys.length - 1) {
+                result += ",";
+            }
+        }
+        result += 0 === keys.length ? "}" : "\n}";
+        seen.pop();
+        return result;
+    });
+
+    class AABB extends Transformable {
+        constructor(min = V3.INF, max = V3.INF.negated()) {
+            super();
+            this.min = min;
+            this.max = max;
+            assertVectors(min, max);
+        }
+        static forXYZ(x, y, z) {
+            return new AABB(V3.O, new V3(x, y, z));
+        }
+        static forAABBs(aabbs) {
+            const result = new AABB();
+            for (const aabb of aabbs) {
+                result.addAABB(aabb);
+            }
+            return result;
+        }
+        addPoint(p) {
+            assertVectors(p);
+            this.min = this.min.min(p);
+            this.max = this.max.max(p);
+            return this;
+        }
+        addPoints(ps) {
+            ps.forEach((p) => this.addPoint(p));
+            return this;
+        }
+        addAABB(aabb) {
+            assertInst(AABB, aabb);
+            this.addPoint(aabb.min);
+            this.addPoint(aabb.max);
+            return this;
+        }
+        /**
+         * Returns the largest AABB contained in this which doesn't overlap with aabb
+         *
+         * @param aabb
+         */
+        withoutAABB(aabb) {
+            assertInst(AABB, aabb);
+            let min, max;
+            const volume = this.volume(), size = this.size();
+            let remainingVolume = -Infinity;
+            for (let i = 0; i < 3; i++) {
+                const dim = ["x", "y", "z"][i];
+                const cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim];
+                const dimMin = cond
+                    ? this.min[dim]
+                    : Math.max(this.min[dim], aabb.max[dim]);
+                const dimMax = !cond
+                    ? this.max[dim]
+                    : Math.min(this.max[dim], aabb.min[dim]);
+                const newRemainingVolume = ((dimMax - dimMin) * volume) / size[dim];
+                if (newRemainingVolume > remainingVolume) {
+                    remainingVolume = newRemainingVolume;
+                    min = this.min.withElement(dim, dimMin);
+                    max = this.max.withElement(dim, dimMax);
+                }
+            }
+            return new AABB(min, max);
+        }
+        getIntersectionAABB(aabb) {
+            assertInst(AABB, aabb);
+            return new AABB(this.min.max(aabb.min), this.max.min(aabb.max));
+        }
+        touchesAABB(aabb) {
+            assertInst(AABB, aabb);
+            return !(this.min.x > aabb.max.x ||
+                this.max.x < aabb.min.x ||
+                this.min.y > aabb.max.y ||
+                this.max.y < aabb.min.y ||
+                this.min.z > aabb.max.z ||
+                this.max.z < aabb.min.z);
+        }
+        touchesAABBfuzzy(aabb, precisision = NLA_PRECISION) {
+            assertInst(AABB, aabb);
+            return !(lt(aabb.max.x, this.min.x, precisision) ||
+                lt(this.max.x, aabb.min.x, precisision) ||
+                lt(aabb.max.y, this.min.y, precisision) ||
+                lt(this.max.y, aabb.min.y, precisision) ||
+                lt(aabb.max.z, this.min.z, precisision) ||
+                lt(this.max.z, aabb.min.z, precisision));
+        }
+        intersectsAABB(aabb) {
+            assertInst(AABB, aabb);
+            return !(this.min.x >= aabb.max.x ||
+                this.max.x <= aabb.min.x ||
+                this.min.y >= aabb.max.y ||
+                this.max.y <= aabb.min.y ||
+                this.min.z >= aabb.max.z ||
+                this.max.z <= aabb.min.z);
+        }
+        intersectsAABB2d(aabb) {
+            assertInst(AABB, aabb);
+            return !(this.min.x >= aabb.max.x ||
+                this.max.x <= aabb.min.x ||
+                this.min.y >= aabb.max.y ||
+                this.max.y <= aabb.min.y);
+        }
+        containsPoint(p) {
+            assertVectors(p);
+            return (this.min.x <= p.x &&
+                this.min.y <= p.y &&
+                this.min.z <= p.z &&
+                this.max.x >= p.x &&
+                this.max.y >= p.y &&
+                this.max.z >= p.z);
+        }
+        containsSphere(center, radius) {
+            assertVectors(center);
+            assertNumbers(radius);
+            return this.distanceToPoint(center) > radius;
+        }
+        intersectsSphere(center, radius) {
+            assertVectors(center);
+            assertNumbers(radius);
+            return this.distanceToPoint(center) <= radius;
+        }
+        distanceToPoint(p) {
+            assertVectors(p);
+            const x = p.x, y = p.y, z = p.z;
+            const min = this.min, max = this.max;
+            if (this.containsPoint(p)) {
+                return Math.max(min.x - x, x - max.x, min.y - y, y - max.y, min.z - z, z - max.z);
+            }
+            return p.distanceTo(new V3(clamp$1(x, min.x, max.x), clamp$1(y, min.y, max.y), clamp$1(z, min.z, max.z)));
+        }
+        containsAABB(aabb) {
+            assertInst(AABB, aabb);
+            return this.containsPoint(aabb.min) && this.containsPoint(aabb.max);
+        }
+        likeAABB(aabb) {
+            assertInst(AABB, aabb);
+            return this.min.like(aabb.min) && this.max.like(aabb.max);
+        }
+        intersectsLine(line) {
+            assertVectors(line.anchor, line.dir1);
+            const dir = line.dir1.map((el) => el || Number.MIN_VALUE);
+            const minTs = this.min.minus(line.anchor).divv(dir);
+            const maxTs = this.max.minus(line.anchor).divv(dir);
+            const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(maxTs).minElement();
+            return tMin <= tMax && !(tMax < line.tMin || line.tMax < tMin);
+        }
+        hasVolume() {
+            return (this.min.x <= this.max.x &&
+                this.min.y <= this.max.y &&
+                this.min.z <= this.max.z);
+        }
+        volume() {
+            if (!this.hasVolume()) {
+                return -1;
+            }
+            const v = this.max.minus(this.min);
+            return v.x * v.y * v.z;
+        }
+        size() {
+            return this.max.minus(this.min);
+        }
+        getCenter() {
+            return this.min.plus(this.max).div(2);
+        }
+        transform(m4) {
+            assertInst(M4, m4);
+            assert(m4.isAxisAligned());
+            const aabb = new AABB();
+            aabb.addPoint(m4.transformPoint(this.min));
+            aabb.addPoint(m4.transformPoint(this.max));
+            return aabb;
+        }
+        ofTransformed(m4) {
+            assertInst(M4, m4);
+            const aabb = new AABB();
+            aabb.addPoints(m4.transformedPoints(this.corners()));
+            return aabb;
+        }
+        corners() {
+            const { min, max } = this;
+            return [
+                min,
+                new V3(min.x, min.y, max.z),
+                new V3(min.x, max.y, min.z),
+                new V3(min.x, max.y, max.z),
+                new V3(max.x, min.y, min.z),
+                new V3(max.x, min.y, max.z),
+                new V3(max.x, max.y, min.z),
+                max,
+            ];
+        }
+        toString() {
+            return callSource("new AABB", this.min, this.max);
+        }
+        toSource() {
+            return this.toString();
+        }
+        /** Return the matrix which transforms the AABB from V3.O to V3.XYZ to this AABB. */
+        getM4() {
+            return M4.translate(this.min).times(M4.scale(this.size()));
+        }
+    }
+
+    /**
+     * @license
+     *
+     * js - JavaScript library for color conversions
+     *
+     * Copyright (c) 2011-2017, Gregor Aisch
+     * All rights reserved.
+     *
+     * Redistribution and use in source and binary forms, with or without
+     * modification, are permitted provided that the following conditions are met:
+     *
+     * 1. Redistributions of source code must retain the above copyright notice, this
+     *    list of conditions and the following disclaimer.
+     *
+     * 2. Redistributions in binary form must reproduce the above copyright notice,
+     *    this list of conditions and the following disclaimer in the documentation
+     *    and/or other materials provided with the distribution.
+     *
+     * 3. The name Gregor Aisch may not be used to endorse or promote products
+     *    derived from this software without specific prior written permission.
+     *
+     * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+     * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+     * DISCLAIMED. IN NO EVENT SHALL GREGOR AISCH OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+     * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+     * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+     * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+     * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+     * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+     * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+     */
+    // tslint:disable:no-unnecessary-qualifier
+    const { abs: abs$2, atan2: atan2$1, cos: cos$1, floor: floor$1, log: log$1, min: min$2, max: max$2, round: round$1, sign: sign$1, sin: sin$1, sqrt: sqrt$1, cbrt: cbrt$1, PI: PI$2, hypot: hypot$1 } = Math;
+    function lerp$2(a, b, f) {
+        return a + (b - a) * f;
+    }
+    function lerpInv$1(a, b, f) {
+        return (f - a) / (b - a);
+    }
+    function clamp$2(x, min = 0, max = 1) {
+        return x < min ? min : x > max ? max : x;
+    }
+    function newtonIterate1d$2(f, xStart, max_steps, eps = 1e-8) {
+        let x = xStart, fx;
+        while (max_steps-- && abs$2((fx = f(x))) > eps) {
+            const dfdx = (f(x + eps) - fx) / eps;
+            console.log("fx / dfdx", fx / dfdx, "fx", fx, "x", x);
+            x = x - fx / dfdx;
+        }
+        return x;
+    }
+    function bisect$2(f, a, b, steps) {
+        //assert(a < b)
+        let fA = f(a);
+        // let fB = f(b)
+        //assert(fA * fB < 0)
+        while (steps--) {
+            const c = (a + b) / 2;
+            const fC = f(c);
+            // console.log("fC", fC, "c", c)
+            if (sign$1(fA) == sign$1(fC)) {
+                a = c;
+                fA = fC;
+            }
+            else {
+                b = c;
+                // fB = fC
+            }
+        }
+        //assert(a <= (b + a) / 2)
+        //assert(b >= (b + a) / 2)
+        return (a + b) / 2;
+    }
+    const DEG2RAD$1 = PI$2 / 180;
+    const RAD2DEG$1 = 180 / PI$2;
+    function color$1(...args) {
+        if (args[0] instanceof Color$1) {
+            return args[0];
+        }
+        if (args.length > 1 && "string" == typeof args[args.length - 1]) {
+            return guess$1(args.slice(0, args.length - 1), args[args.length - 1]);
+        }
+        else if (Array.isArray(args[0])) {
+            return guess$1(args[0]);
+        }
+        else {
+            return guess$1(args);
+        }
+    }
+    class Color$1 {
+        /** @internal */
+        constructor(r, g, b, a = 1) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a;
+        }
+        // public shade() {
+        // 	const shades: [string, string, number][] = [
+        // 		["ff0000", "red"],
+        // 		["ffa500", "orange"],
+        // 		["ffff00", "yellow"],
+        // 		["008000", "green"],
+        // 		["0000ff", "blue"],
+        // 		["ee82ee", "violet"],
+        // 		["a52a2a", "brown"],
+        // 		["000000", "black"],
+        // 		["808080", "grey"],
+        // 		["ffffff", "white"],
+        // 	] as any
+        // 	function angleDiff(a: number, b: number) {
+        // 		const d = (a - b) % 360
+        // 		if (d > 180) return d - 360
+        // 		if (d < -180) return d + 360
+        // 		return d
+        // 	}
+        // 	shades.forEach(arr => arr.push(color(arr[0]).hsl()[0]))
+        // 	const [h, s, l] = this.hsl()
+        // 	if (l > 0.9) return "white"
+        // 	if (l > 0.8 && s < 0.2) return "white"
+        // 	if (s < 0.1) return "grey"
+        // 	if (s < 0.4 && h > 0 && h < 48) return "brown"
+        // 	const distanceInXYZ: { [hue: number]: number } = { 0: 0 }
+        // 	for (let i = 60; i <= 360; i += 60) {
+        // 		distanceInXYZ[i] =
+        // 			distanceInXYZ[i - 60] + distance(hsl(i - 60, 1, 0.5), hsl(i, 1, 0.5), "xyz")
+        // 	}
+        // 	// console.log(distanceInXYZ)
+        // 	const shadeEnds: { [hue: number]: number } = {
+        // 		0: 9,
+        // 		38: 48,
+        // 		60: 65,
+        // 		120: 165,
+        // 		240: 245,
+        // 		300: 338,
+        // 		360: 369,
+        // 	}
+        // 	const getColorDistanceAlongXYZHue = (hueDegrees: number) => {
+        // 		const base = hueDegrees - (hueDegrees % 60)
+        // 		return (
+        // 			distanceInXYZ[base] + distance(hsl(base, 1, 0.5), hsl(hueDegrees, 1, 0.5), "xyz")
+        // 		)
+        // 	}
+        // 	const colorXYZD = getColorDistanceAlongXYZHue(this.hsl()[0])
+        // 	const md = distanceInXYZ[360]
+        // 	const shadeHue =
+        // 		(Object.keys(shadeEnds) as any[]).find(shadeHue => shadeEnds[shadeHue | 0] >= this.hsl()[0])! % 360
+        // 	return shades.find(([_hex, _name, _hue]) => (_hue | 0) === shadeHue)![1]
+        // 	// process.exit()
+        // 	return withMax(shades, ([_hex, _name, _hue]) => {
+        // 		return -abs(angleDiff(this.hsl()[0], _hue))
+        // 	})[1]
+        // 	return withMax(shades, ([_hex, _name, _hue]) => {
+        // 		const [thisL, thisA, thisB] = this.lab()
+        // 		const [L, A, B] = color(_hex).lab()
+        // 		return -hypot(thisL - L, thisA - A, thisB - B)
+        // 	})[1]
+        // }
+        /**
+         * @see [[mix]]
+         */
+        mix(col2, f, m = "rgb") {
+            return mix$1(this, col2, f, m);
+        }
+        rgb(doRound = true, clamp_ = true) {
+            const f = (t) => {
+                if (doRound)
+                    t = round$1(t);
+                if (clamp_)
+                    t = clamp$2(t, 0, 255);
+                return t;
+            };
+            const { r, g, b } = this;
+            return [f(r), f(g), f(b)];
+        }
+        rgba(doRound = true, clamp_ = true) {
+            const f = (t) => {
+                if (doRound)
+                    t = round$1(t);
+                if (clamp_)
+                    t = clamp$2(t, 0, 255);
+                return t;
+            };
+            const { r, g, b, a } = this;
+            return [f(r), f(g), f(b), a];
+        }
+        /**
+         * Return a hex-string representation of this color.
+         *
+         * @param mode
+         * @see #num for a hex-number representation.
+         * @example chroma.color('yellow').alpha(0.7).hex()
+         * @example chroma.color('yellow').alpha(0.7).hex('rgba')
+         * @example chroma.color('yellow').alpha(0.7).hex('argb')
+         */
+        hex(mode = "rgb") {
+            const { r, g, b, a } = this;
+            return rgb2hex$1(r, g, b, a, mode);
+        }
+        /**
+         * Returns the [HSL] representation of this color. hue will always be in [0;360). Values are never NaN.
+         *
+         * @example chroma.color('purple').hsl()
+         */
+        hsl() {
+            const { r, g, b } = this;
+            return rgb2hsl$1(r, g, b);
+        }
+        /**
+         * Returns the [HSL] representation of this color. hue will always be in [0;360). Values are never NaN.
+         *
+         * @example chroma.color('purple').hsv()
+         */
+        hsv() {
+            const { r, g, b } = this;
+            return rgb2hsv$1(r, g, b);
+        }
+        /**
+         * Returns the [HSL] representation of this color. hue will always be in [0;360). Values are never NaN.
+         *
+         * @example chroma.color('purple').hcg()
+         */
+        hcg() {
+            const { r, g, b } = this;
+            return rgb2hcg$1(r, g, b);
+        }
+        /**
+         * Returns a CSS `rgb(...)` or `hsl(...)` string representation that can be used as CSS-color definition. The alpha
+         * value is not output if it 1.
+         * @example chroma.color('teal').css() // == "rgb(0,128,128)"
+         * @example chroma.color('teal').alpha(0.5).css() // == "rgba(0,128,128,0.5)"
+         * @example chroma.color('teal').css('hsl') // == "hsl(180,100%,25.1%)"
+         */
+        css(mode = "rgb") {
+            if ("rgb" == mode) {
+                const { r, g, b, a } = this;
+                return rgb2css$1(r, g, b, a);
+            }
+            else if ("hsl" == mode) {
+                return hsl2css$1(this.hsl(), this.alpha());
+            }
+            else {
+                throw new Error();
+            }
+        }
+        name(closest = false) {
+            const thisNum = this.num();
+            const name = Object.keys(w3cx11$1).find((name) => w3cx11$1[name] == thisNum);
+            if (!name && closest) {
+                const [thisLStar, thisAStar, thisBStar] = this.lab();
+                return withMax$2(Object.keys(w3cx11$1), (name) => {
+                    const [lStar, aStar, bStar] = num$1(w3cx11$1[name]).lab();
+                    return -hypot$1(thisLStar - lStar, thisAStar - aStar, thisBStar - bStar);
+                });
+            }
+            return name;
+        }
+        /**
+         * Get the [CMYK](#CMYK) representation of this color.
+         *
+         * @example chroma.color('red').cmyk()
+         */
+        cmyk() {
+            const { r, g, b } = this;
+            return rgb2cmyk$1(r, g, b);
+        }
+        /**
+         * Returns the [GL] representation of this color.
+         * @example chroma.color('33cc00').gl()
+         */
+        gl() {
+            const { r, g, b, a } = this;
+            return [r / 255, g / 255, b / 255, a];
+        }
+        luminance(lum1) {
+            const { r, g, b, a } = this;
+            const [, Y] = rgb2xyz$1(r, g, b);
+            if (undefined === lum1) {
+                return Y;
+            }
+            const inverseLerp = (a, b, val) => (val - a) / (b - a);
+            if (lum1 > Y) {
+                // lerp to white
+                return mix$1(this, white$1, inverseLerp(Y, 1, lum1), "xyz").alpha(a);
+            }
+            else {
+                // lerp to black
+                return mix$1(black$1, this, inverseLerp(0, Y, lum1), "xyz").alpha(a);
+            }
+        }
+        /**
+         * Get color temperature of this color in Kelvin. This only makes sense for colors close to those output by
+         * kelvin
+         *
+         * @example [c = chroma.color('#ff3300'), c.temperature()]
+         * @example [c = chroma.color('#ffe3cd'), c.temperature()]
+         * @example [c = chroma.color('#b3ccff'), c.temperature()]
+         */
+        temperature() {
+            const { r, g, b } = this;
+            return rgb2kelvin$1(r, g, b);
+        }
+        /**
+         * Returns a new [Color] with a channel changed.
+         * @example chroma.color('skyblue').set('hsl.h', 0) // change hue to 0 deg (=red)
+         * @example chroma.color('hotpink').set('lch.c', 30) // set chromaticity to 30
+         * @example chroma.color('orangered').set('lab.l', x => x / 2) // half Lab lightness
+         * @example chroma.color('darkseagreen').set('lch.c', x => x * 2) // double Lch saturation
+         */
+        set(modeAndChannel, value) {
+            const [mode, channel] = modeAndChannel.split(".");
+            const src = this[mode]();
+            const i = mode.indexOf(channel);
+            if (-1 == i)
+                throw new Error("invalid channel");
+            src[i] = "number" == typeof value ? value : value(src[i]);
+            return color$1(src, mode).alpha(this.a);
+        }
+        /**
+         * Returns whether this color is outside the RGB color cube and will be clipped/clamped when calling .rgb()
+         *
+         * @example [c = chroma.lch( 20, 40, 50), c.clipped()]
+         * @example [c = chroma.lch( 40, 40, 50), c.clipped()]
+         * @example [c = chroma.lch( 60, 40, 50), c.clipped()]
+         * @example [c = chroma.lch( 80, 40, 50), c.clipped()]
+         * @example [c = chroma.lch(100, 40, 50), c.clipped()]
+         */
+        clipped() {
+            const { r, g, b } = this;
+            return !(0 <= r && r <= 255 && 0 <= g && g <= 255 && 0 <= b && b <= 255);
+        }
+        /**
+         * Returns black or white, whichever has the highest contrast to `this`.
+         * In the readme you should see the result of this.
+         *
+         * @example chroma.color('red')
+         * @example chroma.color('yellow')
+         */
+        textColor() {
+            return this.luminance() > 0.5 ? black$1 : white$1;
+        }
+        alpha(alpha1) {
+            if (undefined === alpha1) {
+                return this.a;
+            }
+            const { r, g, b } = this;
+            return rgb$1(r, g, b, alpha1);
+        }
+        darker(amount = 1) {
+            const [l, a, b] = this.lab();
+            return lab$1(l - LAB_Kn$1 * amount, a, b, this.alpha());
+        }
+        /**
+         *
+         * @param amount
+         * @example chroma.color('hotpink')
+         * @example chroma.color('hotpink').brighter()
+         * @example chroma.color('hotpink').brighter(2)
+         * @example chroma.color('hotpink').brighter(3)
+         */
+        brighter(amount = 1) {
+            return this.darker(-amount);
+        }
+        /**
+         * Returns a new [Color] with increased saturation.
+         * @param amount How much.
+         * @example chroma.color('slategray')
+         * @example chroma.color('slategray').saturate()
+         * @example chroma.color('slategray').saturate(2)
+         * @example chroma.color('slategray').saturate(3)
+         */
+        saturate(amount = 1) {
+            const [l, c, h] = this.lch();
+            return lch$1(l, max$2(0, c + amount * LAB_Kn$1), h, this.alpha());
+        }
+        /**
+         * Equivalent to `saturate(-amount)`.
+         * @see #saturate
+         */
+        desaturate(amount = 1) {
+            return this.saturate(-amount);
+        }
+        premultiplied() {
+            const { r, g, b, a } = this;
+            return rgb$1(r * a, g * a, b * a, a);
+        }
+        /**
+         * Returns the [HSI] representation of this color. hue will always be in [0; 360). Values are never NaN.
+         *
+         * @example chroma.color('purple').hsi()
+         */
+        hsi() {
+            const { r, g, b } = this;
+            return rgb2hsi$1(r, g, b);
+        }
+        /**
+         * Returns the [LAB] representation of this color.
+         *
+         * @example chroma.color('purple').lab()
+         */
+        lab() {
+            const { r, g, b } = this;
+            return rgb2lab$1(r, g, b);
+        }
+        /**
+         * Return a hex-num of this color.
+         *
+         * @param mode
+         * @see #num for a hex-number representation.
+         * @example chroma.color('yellow').alpha(0.7).hex()
+         * @example chroma.color('yellow').alpha(0.7).hex('rgba')
+         * @example chroma.color('yellow').alpha(0.7).hex('argb')
+         */
+        num(mode = "rgb") {
+            const { r, g, b, a } = this;
+            return rgb2num$1(r, g, b, a, mode);
+        }
+        /**
+         * Returns the [LCH] representation of this color. hue will always be in [0; 360). Values are never NaN.
+         *
+         * @example chroma.color('purple').lch()
+         */
+        lch() {
+            const { r, g, b } = this;
+            return rgb2lch$1(r, g, b);
+        }
+        /**
+         * Returns the [XYZ] representation of this color. hue will always be in [0; 360). Values are never NaN.
+         *
+         * @example chroma.color('purple').xyz()
+         */
+        xyz() {
+            const { r, g, b } = this;
+            return rgb2xyz$1(r, g, b);
+        }
+        /**
+         * Whether this [Color](#Color) is identical (strict equality of r, g, b, a) to `color`.
+         */
+        equals(color) {
+            const { r, g, b, a } = this;
+            const { r: r2, g: g2, b: b2, a: a2 } = color;
+            return r == r2 && g == g2 && b == b2 && a == a2;
+        }
+        hashCode() {
+            return this.num("rgba");
+        }
+        /**
+         * @example chroma.color('red').toSource() // == "rgb(255, 0, 0)"
+         * @example chroma.rgb(-2, 100.02, 200, 0.5).toSource() // == "rgb(-2, 100.02, 200, 0.5)"
+         */
+        toSource() {
+            const { r, g, b, a } = this;
+            return "chroma.rgb(" + r + ", " + g + ", " + b + (a === 1 ? ")" : ", " + a + ")");
+        }
+    }
+    Color$1.prototype.toString = Color$1.prototype.css;
+    Color$1.prototype.kelvin = Color$1.prototype.temperature;
+    /**
+     * @example chroma.black
+     */
+    const black$1 = new Color$1(0, 0, 0, 1);
+    /**
+     * @example chroma.black
+     */
+    const white$1 = new Color$1(255, 255, 255, 1);
+    const brewer$1 = {
+        OrRd: [0xfff7ec, 0xfee8c8, 0xfdd49e, 0xfdbb84, 0xfc8d59, 0xef6548, 0xd7301f, 0xb30000, 0x7f0000],
+        PuBu: [0xfff7fb, 0xece7f2, 0xd0d1e6, 0xa6bddb, 0x74a9cf, 0x3690c0, 0x0570b0, 0x045a8d, 0x023858],
+        BuPu: [0xf7fcfd, 0xe0ecf4, 0xbfd3e6, 0x9ebcda, 0x8c96c6, 0x8c6bb1, 0x88419d, 0x810f7c, 0x4d004b],
+        Oranges: [0xfff5eb, 0xfee6ce, 0xfdd0a2, 0xfdae6b, 0xfd8d3c, 0xf16913, 0xd94801, 0xa63603, 0x7f2704],
+        BuGn: [0xf7fcfd, 0xe5f5f9, 0xccece6, 0x99d8c9, 0x66c2a4, 0x41ae76, 0x238b45, 0x006d2c, 0x00441b],
+        YlOrBr: [0xffffe5, 0xfff7bc, 0xfee391, 0xfec44f, 0xfe9929, 0xec7014, 0xcc4c02, 0x993404, 0x662506],
+        YlGn: [0xffffe5, 0xf7fcb9, 0xd9f0a3, 0xaddd8e, 0x78c679, 0x41ab5d, 0x238443, 0x006837, 0x004529],
+        Reds: [0xfff5f0, 0xfee0d2, 0xfcbba1, 0xfc9272, 0xfb6a4a, 0xef3b2c, 0xcb181d, 0xa50f15, 0x67000d],
+        RdPu: [0xfff7f3, 0xfde0dd, 0xfcc5c0, 0xfa9fb5, 0xf768a1, 0xdd3497, 0xae017e, 0x7a0177, 0x49006a],
+        Greens: [0xf7fcf5, 0xe5f5e0, 0xc7e9c0, 0xa1d99b, 0x74c476, 0x41ab5d, 0x238b45, 0x006d2c, 0x00441b],
+        YlGnBu: [0xffffd9, 0xedf8b1, 0xc7e9b4, 0x7fcdbb, 0x41b6c4, 0x1d91c0, 0x225ea8, 0x253494, 0x081d58],
+        Purples: [0xfcfbfd, 0xefedf5, 0xdadaeb, 0xbcbddc, 0x9e9ac8, 0x807dba, 0x6a51a3, 0x54278f, 0x3f007d],
+        GnBu: [0xf7fcf0, 0xe0f3db, 0xccebc5, 0xa8ddb5, 0x7bccc4, 0x4eb3d3, 0x2b8cbe, 0x0868ac, 0x084081],
+        Greys: [0xffffff, 0xf0f0f0, 0xd9d9d9, 0xbdbdbd, 0x969696, 0x737373, 0x525252, 0x252525, 0x000000],
+        YlOrRd: [0xffffcc, 0xffeda0, 0xfed976, 0xfeb24c, 0xfd8d3c, 0xfc4e2a, 0xe31a1c, 0xbd0026, 0x800026],
+        PuRd: [0xf7f4f9, 0xe7e1ef, 0xd4b9da, 0xc994c7, 0xdf65b0, 0xe7298a, 0xce1256, 0x980043, 0x67001f],
+        Blues: [0xf7fbff, 0xdeebf7, 0xc6dbef, 0x9ecae1, 0x6baed6, 0x4292c6, 0x2171b5, 0x08519c, 0x08306b],
+        PuBuGn: [0xfff7fb, 0xece2f0, 0xd0d1e6, 0xa6bddb, 0x67a9cf, 0x3690c0, 0x02818a, 0x016c59, 0x014636],
+        Viridis: [0x440154, 0x482777, 0x3f4a8a, 0x31678e, 0x26838f, 0x1f9d8a, 0x6cce5a, 0xb6de2b, 0xfee825],
+        Spectral: [
+            0x9e0142,
+            0xd53e4f,
+            0xf46d43,
+            0xfdae61,
+            0xfee08b,
+            0xffffbf,
+            0xe6f598,
+            0xabdda4,
+            0x66c2a5,
+            0x3288bd,
+            0x5e4fa2,
+        ],
+        RdYlGn: [
+            0xa50026,
+            0xd73027,
+            0xf46d43,
+            0xfdae61,
+            0xfee08b,
+            0xffffbf,
+            0xd9ef8b,
+            0xa6d96a,
+            0x66bd63,
+            0x1a9850,
+            0x006837,
+        ],
+        RdBu: [
+            0x67001f,
+            0xb2182b,
+            0xd6604d,
+            0xf4a582,
+            0xfddbc7,
+            0xf7f7f7,
+            0xd1e5f0,
+            0x92c5de,
+            0x4393c3,
+            0x2166ac,
+            0x053061,
+        ],
+        PiYG: [
+            0x8e0152,
+            0xc51b7d,
+            0xde77ae,
+            0xf1b6da,
+            0xfde0ef,
+            0xf7f7f7,
+            0xe6f5d0,
+            0xb8e186,
+            0x7fbc41,
+            0x4d9221,
+            0x276419,
+        ],
+        PRGn: [
+            0x40004b,
+            0x762a83,
+            0x9970ab,
+            0xc2a5cf,
+            0xe7d4e8,
+            0xf7f7f7,
+            0xd9f0d3,
+            0xa6dba0,
+            0x5aae61,
+            0x1b7837,
+            0x00441b,
+        ],
+        RdYlBu: [
+            0xa50026,
+            0xd73027,
+            0xf46d43,
+            0xfdae61,
+            0xfee090,
+            0xffffbf,
+            0xe0f3f8,
+            0xabd9e9,
+            0x74add1,
+            0x4575b4,
+            0x313695,
+        ],
+        BrBG: [
+            0x543005,
+            0x8c510a,
+            0xbf812d,
+            0xdfc27d,
+            0xf6e8c3,
+            0xf5f5f5,
+            0xc7eae5,
+            0x80cdc1,
+            0x35978f,
+            0x01665e,
+            0x003c30,
+        ],
+        RdGy: [
+            0x67001f,
+            0xb2182b,
+            0xd6604d,
+            0xf4a582,
+            0xfddbc7,
+            0xffffff,
+            0xe0e0e0,
+            0xbababa,
+            0x878787,
+            0x4d4d4d,
+            0x1a1a1a,
+        ],
+        PuOr: [
+            0x7f3b08,
+            0xb35806,
+            0xe08214,
+            0xfdb863,
+            0xfee0b6,
+            0xf7f7f7,
+            0xd8daeb,
+            0xb2abd2,
+            0x8073ac,
+            0x542788,
+            0x2d004b,
+        ],
+        Set2: [0x66c2a5, 0xfc8d62, 0x8da0cb, 0xe78ac3, 0xa6d854, 0xffd92f, 0xe5c494, 0xb3b3b3],
+        Accent: [0x7fc97f, 0xbeaed4, 0xfdc086, 0xffff99, 0x386cb0, 0xf0027f, 0xbf5b17, 0x666666],
+        Set1: [0xe41a1c, 0x377eb8, 0x4daf4a, 0x984ea3, 0xff7f00, 0xffff33, 0xa65628, 0xf781bf, 0x999999],
+        Set3: [
+            0x8dd3c7,
+            0xffffb3,
+            0xbebada,
+            0xfb8072,
+            0x80b1d3,
+            0xfdb462,
+            0xb3de69,
+            0xfccde5,
+            0xd9d9d9,
+            0xbc80bd,
+            0xccebc5,
+            0xffed6f,
+        ],
+        Dark2: [0x1b9e77, 0xd95f02, 0x7570b3, 0xe7298a, 0x66a61e, 0xe6ab02, 0xa6761d, 0x666666],
+        Paired: [
+            0xa6cee3,
+            0x1f78b4,
+            0xb2df8a,
+            0x33a02c,
+            0xfb9a99,
+            0xe31a1c,
+            0xfdbf6f,
+            0xff7f00,
+            0xcab2d6,
+            0x6a3d9a,
+            0xffff99,
+            0xb15928,
+        ],
+        Pastel2: [0xb3e2cd, 0xfdcdac, 0xcbd5e8, 0xf4cae4, 0xe6f5c9, 0xfff2ae, 0xf1e2cc, 0xcccccc],
+        Pastel1: [0xfbb4ae, 0xb3cde3, 0xccebc5, 0xdecbe4, 0xfed9a6, 0xffffcc, 0xe5d8bd, 0xfddaec, 0xf2f2f2],
+    };
+    /**
+     * X11 color names
+     * http://www.w3.org/TR/css3-color/#svg-color
+     *
+     * @example chroma.Object.keys(w3cx11).slice(0, 4)
+     */
+    const w3cx11$1 = {
+        aliceblue: 0xf0f8ff,
+        antiquewhite: 0xfaebd7,
+        aqua: 0x00ffff,
+        aquamarine: 0x7fffd4,
+        azure: 0xf0ffff,
+        beige: 0xf5f5dc,
+        bisque: 0xffe4c4,
+        black: 0x000000,
+        blanchedalmond: 0xffebcd,
+        blue: 0x0000ff,
+        blueviolet: 0x8a2be2,
+        brown: 0xa52a2a,
+        burlywood: 0xdeb887,
+        cadetblue: 0x5f9ea0,
+        chartreuse: 0x7fff00,
+        chocolate: 0xd2691e,
+        coral: 0xff7f50,
+        cornflower: 0x6495ed,
+        cornflowerblue: 0x6495ed,
+        cornsilk: 0xfff8dc,
+        crimson: 0xdc143c,
+        cyan: 0x00ffff,
+        darkblue: 0x00008b,
+        darkcyan: 0x008b8b,
+        darkgoldenrod: 0xb8860b,
+        darkgray: 0xa9a9a9,
+        darkgreen: 0x006400,
+        darkgrey: 0xa9a9a9,
+        darkkhaki: 0xbdb76b,
+        darkmagenta: 0x8b008b,
+        darkolivegreen: 0x556b2f,
+        darkorange: 0xff8c00,
+        darkorchid: 0x9932cc,
+        darkred: 0x8b0000,
+        darksalmon: 0xe9967a,
+        darkseagreen: 0x8fbc8f,
+        darkslateblue: 0x483d8b,
+        darkslategray: 0x2f4f4f,
+        darkslategrey: 0x2f4f4f,
+        darkturquoise: 0x00ced1,
+        darkviolet: 0x9400d3,
+        deeppink: 0xff1493,
+        deepskyblue: 0x00bfff,
+        dimgray: 0x696969,
+        dimgrey: 0x696969,
+        dodgerblue: 0x1e90ff,
+        firebrick: 0xb22222,
+        floralwhite: 0xfffaf0,
+        forestgreen: 0x228b22,
+        fuchsia: 0xff00ff,
+        gainsboro: 0xdcdcdc,
+        ghostwhite: 0xf8f8ff,
+        gold: 0xffd700,
+        goldenrod: 0xdaa520,
+        gray: 0x808080,
+        green: 0x008000,
+        greenyellow: 0xadff2f,
+        grey: 0x808080,
+        honeydew: 0xf0fff0,
+        hotpink: 0xff69b4,
+        indianred: 0xcd5c5c,
+        indigo: 0x4b0082,
+        ivory: 0xfffff0,
+        khaki: 0xf0e68c,
+        laserlemon: 0xffff54,
+        lavender: 0xe6e6fa,
+        lavenderblush: 0xfff0f5,
+        lawngreen: 0x7cfc00,
+        lemonchiffon: 0xfffacd,
+        lightblue: 0xadd8e6,
+        lightcoral: 0xf08080,
+        lightcyan: 0xe0ffff,
+        lightgoldenrod: 0xfafad2,
+        lightgoldenrodyellow: 0xfafad2,
+        lightgray: 0xd3d3d3,
+        lightgreen: 0x90ee90,
+        lightgrey: 0xd3d3d3,
+        lightpink: 0xffb6c1,
+        lightsalmon: 0xffa07a,
+        lightseagreen: 0x20b2aa,
+        lightskyblue: 0x87cefa,
+        lightslategray: 0x778899,
+        lightslategrey: 0x778899,
+        lightsteelblue: 0xb0c4de,
+        lightyellow: 0xffffe0,
+        lime: 0x00ff00,
+        limegreen: 0x32cd32,
+        linen: 0xfaf0e6,
+        magenta: 0xff00ff,
+        maroon: 0x800000,
+        maroon2: 0x7f0000,
+        maroon3: 0xb03060,
+        mediumaquamarine: 0x66cdaa,
+        mediumblue: 0x0000cd,
+        mediumorchid: 0xba55d3,
+        mediumpurple: 0x9370db,
+        mediumseagreen: 0x3cb371,
+        mediumslateblue: 0x7b68ee,
+        mediumspringgreen: 0x00fa9a,
+        mediumturquoise: 0x48d1cc,
+        mediumvioletred: 0xc71585,
+        midnightblue: 0x191970,
+        mintcream: 0xf5fffa,
+        mistyrose: 0xffe4e1,
+        moccasin: 0xffe4b5,
+        navajowhite: 0xffdead,
+        navy: 0x000080,
+        oldlace: 0xfdf5e6,
+        olive: 0x808000,
+        olivedrab: 0x6b8e23,
+        orange: 0xffa500,
+        orangered: 0xff4500,
+        orchid: 0xda70d6,
+        palegoldenrod: 0xeee8aa,
+        palegreen: 0x98fb98,
+        paleturquoise: 0xafeeee,
+        palevioletred: 0xdb7093,
+        papayawhip: 0xffefd5,
+        peachpuff: 0xffdab9,
+        peru: 0xcd853f,
+        pink: 0xffc0cb,
+        plum: 0xdda0dd,
+        powderblue: 0xb0e0e6,
+        purple: 0x800080,
+        purple2: 0x7f007f,
+        purple3: 0xa020f0,
+        rebeccapurple: 0x663399,
+        red: 0xff0000,
+        rosybrown: 0xbc8f8f,
+        royalblue: 0x4169e1,
+        saddlebrown: 0x8b4513,
+        salmon: 0xfa8072,
+        sandybrown: 0xf4a460,
+        seagreen: 0x2e8b57,
+        seashell: 0xfff5ee,
+        sienna: 0xa0522d,
+        silver: 0xc0c0c0,
+        skyblue: 0x87ceeb,
+        slateblue: 0x6a5acd,
+        slategray: 0x708090,
+        slategrey: 0x708090,
+        snow: 0xfffafa,
+        springgreen: 0x00ff7f,
+        steelblue: 0x4682b4,
+        tan: 0xd2b48c,
+        teal: 0x008080,
+        thistle: 0xd8bfd8,
+        tomato: 0xff6347,
+        turquoise: 0x40e0d0,
+        violet: 0xee82ee,
+        wheat: 0xf5deb3,
+        white: 0xffffff,
+        whitesmoke: 0xf5f5f5,
+        yellow: 0xffff00,
+        yellowgreen: 0x9acd32,
+    };
+    /**
+     * Create a valid RGB color (`.clipped() == false`) from a random point in the CIELAB color space. This results in
+     * more colors in the RGB color space where humans can perceive more differences.
+     * @param randomSource A function which returns random `number`s in the interval [0; 1). Useful if you want to
+     *     create a deterministic sequence of "random" colors. Defaults to `Math.random`.
+     * @example chroma.random((() => { let i = 0; return () => (i = (i *Math.SQRT2) % 1); })())
+     */
+    // export function randomLab(randomSource = Math.random) {
+    // 	const labAMin = -87,
+    // 		labAMax = 99,
+    // 		labBMin = -108,
+    // 		labBMax = 95
+    // 	let maxIterations = 100
+    // 	while (maxIterations--) {
+    // 		const u = randomSource(),
+    // 			v = randomSource(),
+    // 			w = randomSource()
+    // 		// The following matrix multiplication transform the random point (u v w) in the unit cube into the
+    // 		// oriented bounding box (OBB) of the projection of the RGB space into the LAB space. This is necessary to
+    // 		// avoid a huge number of misses.
+    // 		const color = lab(
+    // 			u * -53.903 + v * -88.755 + w * 71.7 + 99.707,
+    // 			u * -82.784 + v * 187.036 + w * -2.422 + -28.17,
+    // 			u * -75.813 + v * -141.406 + w * -48.261 + 152.469,
+    // 		)
+    // 		console.log(color.lab())
+    // 		console.log(color.rgba(false, false))
+    // 		if (!color.clipped()) return color
+    // 	}
+    // 	throw new Error("Could find a random color in 100 iterations")
+    // }
+    /**
+     * Mixes two colors. The mix ratio is a value between 0 and 1.
+     * The color mixing produces different results based the color space used for interpolation.
+     *
+     * @param col2
+     * @param f
+     * @param m
+     * @example chroma.mix('red', 'blue')
+     * @example chroma.mix('red', 'blue', 0.25)
+     * @example chroma.mix('red', 'blue', 0.75)
+     *
+     * @example chroma.mix('red', 'blue', 0.5, 'rgb')
+     * @example chroma.mix('red', 'blue', 0.5, 'hsl')
+     * @example chroma.mix('red', 'blue', 0.5, 'lab')
+     * @example chroma.mix('red', 'blue', 0.5, 'lch')
+     * @example chroma.mix('red', 'blue', 0.5, 'lrgb')
+     */
+    function mix$1(col1, col2, f = 0.5, m = "rgb") {
+        const c1 = color$1(col1);
+        const c2 = color$1(col2);
+        const res = interpolators$1[m] && interpolators$1[m](c1, c2, f, m);
+        if (!res) {
+            throw new Error("color mode " + m + " is not supported");
+        }
+        return res.alpha(lerp$2(c1.alpha(), c2.alpha(), f));
+    }
+    function lch$1(...args) {
+        return guess$1(args, "lch");
+    }
+    function hsl$1(...args) {
+        return guess$1(args, "hsl");
+    }
+    function lab$1(...args) {
+        return guess$1(args, "lab");
+    }
+    /**
+     * @example chroma.num(0x663399) // rebeccapurple
+     */
+    function num$1(num) {
+        const [r, g, b] = num2rgb$1(num);
+        return new Color$1(r, g, b);
+    }
+    function rgb$1(...args) {
+        return guess$1(args, "rgb");
+    }
+    function scale$1(...args) {
+        const f = ((t) => f._at(t));
+        Object.getOwnPropertyNames(Scale$1.prototype).forEach((key) => (f[key] = Scale$1.prototype[key]));
+        if (Array.isArray(args[0]))
+            args = args[0];
+        if (args.length == 1 && "string" == typeof args[0])
+            args = brewer$1[args[0]];
+        f._init("function" == typeof args[0] ? args[0] : args.map((a) => color$1(a)));
+        //f.setColors(args.length > 1 ? args : args[0])
+        return f;
+    }
+    class Scale$1 {
+        classes(classes) {
+            if (undefined === classes) {
+                return this._classes;
+            }
+            if (Array.isArray(classes)) {
+                this._classes = classes;
+                this.domain(classes[0], classes[classes.length - 1]);
+            }
+            else {
+                if (classes % 1 != 0 || classes < 1)
+                    throw new Error("invalid classes param");
+                // const d = analyze(this.domain())
+                this._classes = limits$1(this.domain(), "e", classes);
+            }
+            return this;
+        }
+        domain(...domain) {
+            if (undefined === domain[0]) {
+                return "function" !== typeof this._colors
+                    ? this._pos.map((p) => lerp$2(this._min, this._max, p))
+                    : [this._min, this._max];
+            }
+            this._min = domain[0];
+            this._max = domain[domain.length - 1];
+            if (2 == domain.length) {
+                if ("function" !== typeof this._colors) {
+                    // equidistant positions
+                    this._pos = this._colors.map((_, c) => c / (this._colors.length - 1));
+                }
+            }
+            else if ("function" !== typeof this._colors && domain.length == this._colors.length) {
+                this._pos = domain.map((d) => lerpInv$1(this._min, this._max, d));
+            }
+            else {
+                throw new Error("invalid domain " + domain);
+            }
+            return this;
+        }
+        mode(mode) {
+            if (undefined === mode) {
+                return this._mode;
+            }
+            this._mode = mode;
+            this._resetCache();
+            return this;
+        }
+        /**
+         * Set the output format return by `this(x)` and `this.colors(n)`.
+         * @param outputFormat The color format to use. Pass `undefined` to return [Color] objects.
+         * @return `this`
+         * @example chroma.scale("red", "white").out("hex")(0) // == "#ff0000"
+         * @example chroma.scale("red", "white").out("num").colors(2) // == [0xff0000, 0xffffff]
+         */
+        out(outputFormat) {
+            this._out = outputFormat;
+            return this;
+        }
+        /**
+         * This makes sure the lightness range is spread evenly across a color scale. Especially useful when working
+         * with [multi-hue color scales](https://www.vis4.net/blog/2013/09/mastering-multi-hued-color-scales/), where
+         * simple gamma correction can't help you very much.
+         *
+         * @example chroma.scale('black','red','yellow','white')
+         * @example chroma.scale('black','red','yellow','white').correctLightness()
+         */
+        correctLightness(enableCorrectLightness = true) {
+            if (this._correctLightness != enableCorrectLightness) {
+                this._resetCache();
+                const colors = this._colors;
+                if (enableCorrectLightness && "function" !== typeof colors) {
+                    // make sure that the colors have ascending or descending lightnesses
+                    let sign = 0;
+                    for (let i = 1; i < colors.length; i++) {
+                        const sign2 = colors[i].lab()[0] - colors[i - 1].lab()[0];
+                        if (0 == sign) {
+                            sign = sign2;
+                        }
+                        else if (sign * sign2 < 0) {
+                            throw new Error("scale color lightnesses must be monotonic");
+                        }
+                    }
+                }
+            }
+            this._correctLightness = enableCorrectLightness;
+            return this;
+        }
+        padding(paddingLeft, paddingRight = paddingLeft) {
+            if (!paddingLeft) {
+                return [this._paddingLeft, this._paddingRight];
+            }
+            this._paddingLeft = paddingLeft;
+            this._paddingRight = paddingRight;
+            return this;
+        }
+        /**
+         * Get a number of equidistant colors.
+         * @param numColors The number of colors to return.
+         * @param format Output format. Defaults to `"hex"`. Pass `"color"` to get {@link Color} objects.
+         * @returns If `numColors` is `undefined`, the colors which define this [Scale]. If `numColors` is 1,
+         * `[this((min + max) / 2)]`. Otherwise, an array where the first element is `this(min)`, the last one is
+         * `this(max)` and the rest are equidistant samples between min and max.
+         * @example chroma.scale('OrRd').colors(5)
+         * @example chroma.scale(['white', 'black']).colors(12)
+         */
+        colors(numColors, format = "hex") {
+            let result;
+            if (undefined === numColors) {
+                result = this._colors.slice();
+            }
+            else if (numColors == 1) {
+                result = [this._color((this._min + this._max) / 2)];
+            }
+            else if (numColors > 1) {
+                result = Array.from({ length: numColors }, (_, i) => this._color(lerp$2(this._min, this._max, i / (numColors - 1))));
+            }
+            else {
+                // returns all colors based on the defined classes
+                let samples;
+                if (this._classes && this._classes.length > 2) {
+                    samples = Array.from({ length: this._classes.length - 1 }, (_, i) => (this._classes[i] + this._classes[i + 1]) * 0.5);
+                }
+                else {
+                    samples = this.domain(); // TODO?!
+                }
+                result = samples.map((s) => this._color(s));
+            }
+            return (format != "color" ? result.map((c) => c[format]()) : result);
+        }
+        cache(enableCache) {
+            if (undefined === enableCache) {
+                return !!this._cache;
+            }
+            this._cache = enableCache ? this._cache || new Map() : undefined;
+            return this;
+        }
+        gamma(gamma) {
+            if (undefined === gamma) {
+                return this._gamma;
+            }
+            this._gamma = gamma;
+            return this;
+        }
+        /**
+         * @ignore
+         */
+        _at(t) {
+            const c = this._color(t);
+            return this._out ? c[this._out]() : c;
+        }
+        /**
+         * @ignore
+         */
+        _init(colorsOrFunction) {
+            this._colors = colorsOrFunction;
+            if ("function" != typeof colorsOrFunction) {
+                this._pos = colorsOrFunction.map((_, i) => i / (colorsOrFunction.length - 1));
+            }
+            this._mode = "rgb";
+            this.domain(0, 1);
+            this._paddingLeft = 0;
+            this._paddingRight = 0;
+            this._correctLightness = false;
+            this._cache = new Map();
+            this._gamma = 1;
+        }
+        _getClass(value) {
+            return this._classes.findIndex((cls) => value <= cls) - 1;
+        }
+        _color(val, bypassMap = false) {
+            let t;
+            if (!bypassMap) {
+                const min = this._min, max = this._max;
+                if (this._classes && this._classes.length > 2) {
+                    const c = this._getClass(val);
+                    t = c / (this._classes.length - 2);
+                }
+                else if (max !== min) {
+                    t = (val - min) / (max - min);
+                }
+                else {
+                    t = 1;
+                }
+                if (this._correctLightness) {
+                    t = this._tCorrectedLightness(t);
+                }
+            }
+            else {
+                t = val;
+            }
+            t = t ** this._gamma;
+            t = (this._paddingLeft + t) / (1 + this._paddingLeft + this._paddingRight);
+            //	t = this._paddingLeft + t * (1 - this._paddingLeft - this._paddingRight)
+            t = clamp$2(t, 0, 1);
+            const tHash = t;
+            const cacheResult = this._cache && this._cache.get(tHash);
+            if (cacheResult) {
+                return cacheResult;
+            }
+            else {
+                let col;
+                if (Array.isArray(this._colors)) {
+                    for (let i = 0; i < this._pos.length; i++) {
+                        const p = this._pos[i];
+                        if (t <= p) {
+                            col = this._colors[i];
+                            break;
+                        }
+                        if (t >= p && i == this._pos.length - 1) {
+                            col = this._colors[i];
+                            break;
+                        }
+                        if (t > p && t < this._pos[i + 1]) {
+                            t = (t - p) / (this._pos[i + 1] - p);
+                            col = mix$1(this._colors[i], this._colors[i + 1], t, this._mode);
+                            break;
+                        }
+                    }
+                }
+                else {
+                    col = this._colors(t);
+                }
+                if (this._cache) {
+                    // tslint:disable-next-line
+                    this._cache.set(tHash, col);
+                }
+                // tslint:disable-next-line
+                return col;
+            }
+        }
+        _tCorrectedLightness(t0_1) {
+            const L0 = this._color(0, true).lab()[0];
+            const L1 = this._color(1, true).lab()[0];
+            const L_ideal = lerp$2(L0, L1, t0_1);
+            return bisect$2((t) => this._color(t, true).lab()[0] - L_ideal, 0, 1, 8);
+        }
+        _resetCache() {
+            if (this._cache)
+                this._cache.clear();
+        }
+    }
+    var scales$1;
+    (function (scales) {
+        /**
+         * @example chroma.scales.cool()
+         */
+        function cool() {
+            return scale$1([hsl$1(180, 1, 0.9), hsl$1(250, 0.7, 0.4)]);
+        }
+        scales.cool = cool;
+        /**
+         * @example chroma.scales.hot()
+         */
+        function hot() {
+            return scale$1(["#000", "#f00", "#ff0", "#fff"]).mode("rgb");
+        }
+        scales.hot = hot;
+    })(scales$1 || (scales$1 = {}));
+    function analyze$1(data) {
+        const r = {
+            min: Infinity,
+            max: -Infinity,
+            sum: 0,
+            values: [],
+            count: 0,
+        };
+        function add(val) {
+            if (val != undefined && !isNaN(val)) {
+                r.values.push(val);
+                r.sum += val;
+                if (val < r.min)
+                    r.min = val;
+                if (val > r.max)
+                    r.max = val;
+                r.count += 1;
+            }
+        }
+        data.forEach((val) => add(val));
+        r.domain = [r.min, r.max];
+        r.limits = function (mode, num) {
+            return limits$1(this, mode, num);
+        };
+        return r;
+    }
+    function limits$1(data, mode = "e", num = 7) {
+        const info = Array.isArray(data) ? analyze$1(data) : data;
+        const { min, max, values } = info;
+        values.sort((a, b) => a - b);
+        if (num == 1) {
+            return [min, max];
+        }
+        if (mode.startsWith("c")) {
+            return [min, max];
+        }
+        else if (mode.startsWith("e")) {
+            return Array.from({ length: num + 1 }, (_, i) => lerp$2(min, max, i / num));
+        }
+        else if (mode.startsWith("l")) {
+            if (min <= 0) {
+                throw new Error("Logarithmic scales are only possible for values > 0");
+            }
+            const min_log = Math.LOG10E * log$1(min);
+            const max_log = Math.LOG10E * log$1(max);
+            return Array.from({ length: num + 1 }, (_, i) => 10 ** lerp$2(min_log, max_log, i / num));
+        }
+        else if (mode.startsWith("q")) {
+            return Array.from({ length: num + 1 }, (_, i) => {
+                const p = ((values.length - 1) * i) / num;
+                const pb = floor$1(p);
+                return pb == p ? values[pb] : lerp$2(values[pb], values[pb + 1], p - pb);
+            });
+        }
+        else if (mode.startsWith("k")) {
+            // implementation based on
+            // http://code.google.com/p/figue/source/browse/trunk/figue.js#336
+            // simplified for 1-d input values
+            const n = values.length;
+            const assignments = new Array(n);
+            const clusterSizes = new Array(num);
+            let repeat = true;
+            let nb_iters = 0;
+            let centroids = Array.from({ length: num + 1 }, (_, i) => lerp$2(min, max, i / num));
+            do {
+                // assignment step
+                clusterSizes.fill(0);
+                for (let i = 0; i < values.length; i++) {
+                    const value = values[i];
+                    const minDistIndex = indexOfMax$1(centroids, (c) => -abs$2(c - value));
+                    clusterSizes[minDistIndex]++;
+                    assignments[i] = minDistIndex;
+                }
+                // update centroids step
+                const newCentroids = new Array(num).fill(0);
+                for (let i = 0; i < assignments.length; i++) {
+                    const cluster = assignments[i];
+                    newCentroids[cluster] += values[i];
+                }
+                for (let j = 0; j < newCentroids.length; j++) {
+                    newCentroids[j] /= clusterSizes[j];
+                }
+                // check convergence
+                repeat = newCentroids.some((nc, j) => nc != centroids[j]);
+                centroids = newCentroids;
+            } while (nb_iters++ < 200 && repeat);
+            // finished k-means clustering
+            // the next part is borrowed from gabrielflor.it
+            const kClusters = Array.from({ length: num }, () => []);
+            for (let i = 0; i < assignments.length; i++) {
+                const cluster = assignments[i];
+                kClusters[cluster].push(values[i]);
+            }
+            const tmpKMeansBreaks = [];
+            for (const kCluster of kClusters) {
+                tmpKMeansBreaks.push(kCluster[0], kCluster[kCluster.length - 1]);
+            }
+            tmpKMeansBreaks.sort((a, b) => a - b);
+            const limits = [];
+            limits.push(tmpKMeansBreaks[0]);
+            for (let i = 1; i < tmpKMeansBreaks.length; i += 2) {
+                const v = tmpKMeansBreaks[i];
+                if (!isNaN(v) && limits.indexOf(v) == -1) {
+                    limits.push(v);
+                }
+            }
+            return limits;
+        }
+        else {
+            throw new Error("unknown mode");
+        }
+    }
+    const interpolators$1 = {};
+    // const _guess_formats: { p: number; test: (args: any[]) => ColorFormat | undefined }[] = []
+    const _input$1 = {};
+    function linear_interpolator$1(col1, col2, f, m) {
+        const xyz1 = col1[m]();
+        const xyz2 = col2[m]();
+        return guess$1([
+            lerp$2(xyz1[0], xyz2[0], f),
+            lerp$2(xyz1[1], xyz2[1], f),
+            lerp$2(xyz1[2], xyz2[2], f),
+            lerp$2(col1.alpha(), col2.alpha(), f),
+        ], m);
+    }
+    interpolators$1.xyz = interpolators$1.rgb = interpolators$1.lab = linear_interpolator$1;
+    interpolators$1.num = function (col1, col2, f) {
+        const n1 = col1.num();
+        const n2 = col2.num();
+        return num$1(lerp$2(n1, n2, f));
+    };
+    interpolators$1.lrgb = function (col1, col2, f) {
+        const [r1, g1, b1, a1] = col1.rgba(false, false);
+        const [r2, g2, b2, a2] = col2.rgba(false, false);
+        return new Color$1(sqrt$1(r1 ** 2 * (1 - f) + r2 ** 2 * f), sqrt$1(g1 ** 2 * (1 - f) + g2 ** 2 * f), sqrt$1(b1 ** 2 * (1 - f) + b2 ** 2 * f), lerp$2(a1, a2, f));
+    };
+    function guess$1(args, mode) {
+        if (Array.isArray(args[0]))
+            args = args[0];
+        if (!mode) {
+            if (args.length == 1 && args[0] in w3cx11$1) {
+                mode = "name";
+            }
+            else if (args.length == 1 && "string" == typeof args[0]) {
+                mode = "css";
+            }
+            else if (args.length == 3) {
+                mode = "rgb";
+            }
+            else if (args.length == 4 && "number" == typeof args[3] && args[3] >= 0 && args[3] <= 1) {
+                mode = "rgb";
+            }
+            else if (args.length == 1 && "number" == typeof args[0] && args[0] >= 0 && args[0] <= 0xffffff) {
+                mode = "num";
+            }
+            else
+                throw new Error("could not guess mode. args " + JSON.stringify(args));
+        }
+        const channels = _input$1[mode](...args);
+        return new Color$1(channels[0], channels[1], channels[2], undefined !== channels[3] ? channels[3] : 1);
+    }
+    function hex2rgb$1(hex) {
+        let m;
+        if ((m = hex.match(/^#?([A-F\d]{2})([A-F\d]{2})([A-F\d]{2})([A-F\d]{2})?$/i))) {
+            return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16), m[4] ? parseInt(m[4], 16) / 255 : 1];
+        }
+        else if ((m = hex.match(/^#?([A-F\d])([A-F\d])([A-F\d])([A-F\d])?$/i))) {
+            return [
+                parseInt(m[1], 16) * 0x11,
+                parseInt(m[2], 16) * 0x11,
+                parseInt(m[3], 16) * 0x11,
+                m[4] ? (parseInt(m[4], 16) * 0x11) / 255 : 1,
+            ];
+        }
+        throw new Error("invalid hex color: " + hex);
+    }
+    // interface ColorModes {
+    // 	cmyk: CMYK
+    // 	gl: GL
+    // 	rgb: RGB
+    // 	rgba: RGBA
+    // 	lab: LAB
+    // 	hsl: HSL
+    // 	hsv: HSV
+    // 	hsi: HSI
+    // 	xyz: XYZ
+    // 	hcg: HCG
+    // 	lch: LCH
+    // 	hex: string
+    // 	num: number
+    // 	name: string
+    // 	kelvin: number
+    // 	css: string
+    // }
+    function rgb2hex$1(r255, g255, b255, a1, mode = "rgb") {
+        r255 = clamp$2(round$1(r255), 0, 255);
+        g255 = clamp$2(round$1(g255), 0, 255);
+        b255 = clamp$2(round$1(b255), 0, 255);
+        const rgb = (r255 << 16) | (g255 << 8) | b255;
+        const rgbString = rgb.toString(16).padStart(6, "0");
+        const alphaString = round$1(clamp$2(a1) * 255)
+            .toString(16)
+            .padStart(2, "0");
+        return "#" + ("argb" == mode ? alphaString + rgbString : "rgba" == mode ? rgbString + alphaString : rgbString);
+    }
+    _input$1.lrgb = _input$1.rgb;
+    _input$1.hex = hex2rgb$1;
+    _input$1.hsl = hsl2rgb$1;
+    function norm360$1(degrees) {
+        return ((degrees % 360) + 360) % 360;
+    }
+    _input$1.hsv = hsv2rgb$1;
+    function num2rgb$1(num) {
+        if (!("number" == typeof num && num >= 0 && num <= 0xffffff)) {
+            throw new Error("unknown num color: " + num);
+        }
+        const r = num >> 16;
+        const g = (num >> 8) & 0xff;
+        const b = num & 0xff;
+        return [r, g, b, 1];
+    }
+    function rgb2num$1(r255, g255, b255, a1 = 1, mode = "rgb") {
+        const rgbNum = (round$1(r255) << 16) | (round$1(g255) << 8) | round$1(b255);
+        if ("rgb" === mode) {
+            return rgbNum;
+        }
+        else if ("rgba" === mode) {
+            return (rgbNum << 8) | (round$1(a1 * 255) << 24);
+        }
+        else {
+            return (round$1(a1 * 255) << 24) | rgbNum;
+        }
+    }
+    _input$1.num = num2rgb$1;
+    const WS$1 = "\\s*";
+    const FLOAT$1 = "([+-]?(?:\\d*\\.?)?\\d+(?:[eE][+-]?\\d+)?)";
+    const CSS_RGB_REGEX$1 = new RegExp(["^rgba?\\(", FLOAT$1, ",", FLOAT$1, ",", FLOAT$1, "(?:,", FLOAT$1 + "(%)?", ")?\\)$"].join(WS$1), "i");
+    const CSS_RGB_WS_REGEX$1 = new RegExp(["^rgba?\\(", FLOAT$1, FLOAT$1, FLOAT$1, "(?:/", FLOAT$1 + "(%)?", ")?\\)$"].join(WS$1), "i");
+    const CSS_RGB_PERCENT_REGEX$1 = new RegExp(["^rgba?\\(", FLOAT$1 + "%", ",", FLOAT$1 + "%", ",", FLOAT$1 + "%", "(?:,", FLOAT$1 + "(%)?", ")?\\)$"].join(WS$1), "i");
+    const CSS_RGB_WS_PERCENT_REGEX$1 = new RegExp(["^rgba?\\(", FLOAT$1 + "%", FLOAT$1 + "%", FLOAT$1 + "%", "(?:/", FLOAT$1 + "(%)?", ")?\\)$"].join(WS$1), "i");
+    const CSS_HSL_REGEX$1 = new RegExp(["^hsla?\\(", FLOAT$1 + "(deg|rad|turn)?", ",", FLOAT$1 + "%", ",", FLOAT$1 + "%", "(?:,", FLOAT$1 + "(%)?", ")?\\)$"].join(WS$1), "i");
+    const CSS_HSL_WS_REGEX$1 = new RegExp(["^hsla?\\(", FLOAT$1 + "(deg|rad|turn)?\\s+" + FLOAT$1 + "%", FLOAT$1 + "%", "(?:/", FLOAT$1 + "(%)?", ")?\\)$"].join(WS$1), "i");
+    function css2rgb$1(css) {
+        if (w3cx11$1 && w3cx11$1.hasOwnProperty(css)) {
+            return num2rgb$1(w3cx11$1[css.toLowerCase()]);
+        }
+        let m;
+        if ((m = css.match(CSS_RGB_REGEX$1) || css.match(CSS_RGB_WS_REGEX$1))) {
+            return [
+                clamp$2(+m[1], 0, 255),
+                clamp$2(+m[2], 0, 255),
+                clamp$2(+m[3], 0, 255),
+                m[4] ? clamp$2(m[5] ? +m[4] / 100 : +m[4]) : 1,
+            ];
+        }
+        else if ((m = css.match(CSS_RGB_PERCENT_REGEX$1) || css.match(CSS_RGB_WS_PERCENT_REGEX$1))) {
+            return [
+                clamp$2(+m[1] / 100) * 255,
+                clamp$2(+m[2] / 100) * 255,
+                clamp$2(+m[3] / 100) * 255,
+                m[4] ? clamp$2(m[5] ? +m[4] / 100 : +m[4]) : 1,
+            ];
+        }
+        else if ((m = css.match(CSS_HSL_REGEX$1) || css.match(CSS_HSL_WS_REGEX$1))) {
+            const CONVERSION = { deg: 1, rad: RAD2DEG$1, turn: 360 };
+            const angleUnit = (m[2] ? m[2].toLowerCase() : "deg");
+            return hsl2rgb$1((((+m[1] * CONVERSION[angleUnit]) % 360) + 360) % 360, clamp$2(+m[3] / 100), clamp$2(+m[4] / 100), m[5] ? clamp$2(m[6] ? +m[5] / 100 : +m[5]) : 1);
+        }
+        else {
+            return hex2rgb$1(css);
+        }
+    }
+    function rgb2css$1(r, g, b, a = 1) {
+        if (a >= 1) {
+            return "rgb(" + [r, g, b].map(round$1).join(",") + ")";
+        }
+        else {
+            return "rgba(" + [r, g, b].map(round$1).join(",") + "," + a + ")";
+        }
+    }
+    function rnd$1(a) {
+        return round$1(a * 100) / 100;
+    }
+    function hsl2css$1([h, s, l], alpha) {
+        const mode = alpha < 1 ? "hsla" : "hsl";
+        return (mode +
+            "(" +
+            rnd$1(h) +
+            "," +
+            rnd$1(s * 100) +
+            "%" +
+            "," +
+            rnd$1(l * 100) +
+            "%" +
+            ("hsla" == mode ? "," + rnd$1(alpha) : "") +
+            ")");
+    }
+    _input$1.css = css2rgb$1;
+    _input$1.name = function (name) {
+        return num2rgb$1(w3cx11$1[name]);
+    };
+    function lch2lab$1(l, c, hueDegrees) {
+        /*
+        Convert from a qualitative parameter h and a quantitative parameter l to a 24-bit pixel.
+        These formulas were invented by David Dalrymple to obtain maximum contrast without going
+        out of gamut if the parameters are in the range 0-1.
+
+        A saturation multiplier was added by Gregor Aisch
+         */
+        return [l, cos$1(hueDegrees * DEG2RAD$1) * c, sin$1(hueDegrees * DEG2RAD$1) * c];
+    }
+    function lch2rgb$1(l, c, hDegrees, alpha1 = 1) {
+        const [, a, b] = lch2lab$1(l, c, hDegrees);
+        return cielab2rgb$1(l, a, b, alpha1);
+    }
+    function lab2lch$1(l, a, b) {
+        const c = hypot$1(a, b);
+        const h = (atan2$1(b, a) * RAD2DEG$1 + 360) % 360;
+        return [l, c, h];
+    }
+    function rgb2lch$1(r255, g255, b255) {
+        const [l, a, b2] = rgb2lab$1(r255, g255, b255);
+        return lab2lch$1(l, a, b2);
+    }
+    _input$1.lch = lch2rgb$1;
+    function rgb2cmyk$1(r255, g255, b255) {
+        r255 /= 255;
+        g255 /= 255;
+        b255 /= 255;
+        const k = 1 - max$2(r255, g255, b255);
+        if (1 == k)
+            return [0, 0, 0, 1];
+        const c = (1 - r255 - k) / (1 - k);
+        const m = (1 - g255 - k) / (1 - k);
+        const y = (1 - b255 - k) / (1 - k);
+        return [c, m, y, k];
+    }
+    function cmyk2rgb$1(c1, m1, y1, k1, alpha1 = 1) {
+        if (k1 == 1) {
+            return [0, 0, 0, alpha1];
+        }
+        const r255 = 255 * (1 - c1) * (1 - k1);
+        const g255 = 255 * (1 - m1) * (1 - k1);
+        const b255 = 255 * (1 - y1) * (1 - k1);
+        return [r255, g255, b255, alpha1];
+    }
+    _input$1.cmyk = cmyk2rgb$1;
+    _input$1.gl = function (r, g, b, a = 1) {
+        return [r * 255, g * 255, b * 255, a];
+    };
+    //function rgb2luminance(r: number, g: number, b: number) {
+    //	// https://en.wikipedia.org/wiki/Relative_luminance
+    //	const [, Y] = rgb2xyz(r, g, b)
+    //	return Y
+    //}
+    function rgbChannel2RgbLinear$1(x255) {
+        const x1 = x255 / 255;
+        // http://entropymine.com/imageworsener/srgbformula/
+        if (x1 <= 0.04045) {
+            return x1 / 12.92;
+        }
+        else {
+            return ((x1 + 0.055) / 1.055) ** 2.4;
+        }
+    }
+    function rgbLinearChannel2Rgb$1(xLinear1) {
+        if (xLinear1 <= 0.0031308) {
+            return 255 * (12.92 * xLinear1);
+        }
+        else {
+            return 255 * ((1 + 0.055) * xLinear1 ** (1 / 2.4) - 0.055);
+        }
+    }
+    function kelvin2rgb$1(kelvin) {
+        const t = kelvin / 100;
+        let r, g, b;
+        if (t < 66) {
+            r = 255;
+            g = -155.25485562709179 - 0.44596950469579133 * (t - 2) + 104.49216199393888 * log$1(t - 2);
+            b = t < 20 ? 0 : -254.76935184120902 + 0.8274096064007395 * (t - 10) + 115.67994401066147 * log$1(t - 10);
+        }
+        else {
+            r = 351.97690566805693 + 0.114206453784165 * (t - 55) - 40.25366309332127 * log$1(t - 55);
+            g = 325.4494125711974 + 0.07943456536662342 * (t - 50) - 28.0852963507957 * log$1(t - 50);
+            b = 255;
+        }
+        return [r, g, b];
+    }
+    _input$1.rgb = (...args) => args;
+    function rgb2kelvin$1(r255, g255, b255) {
+        console.log(b255 - r255);
+        if (g255 + b255 < 158.61) {
+            console.log("0 < t < 20");
+            // calc from green
+            return round$1(newtonIterate1d$2((t) => g255 - (-155.25485562709179 - 0.44596950469579133 * (t - 2) + 104.49216199393888 * log$1(t - 2)), 15, 4) * 100);
+        }
+        else if (b255 - r255 < 0) {
+            console.log("20 < t < 66");
+            return round$1(newtonIterate1d$2((t) => b255 - (-254.76935184120902 + 0.8274096064007395 * (t - 10) + 115.67994401066147 * log$1(t - 10)), 43, 4) * 100);
+        }
+        else {
+            console.log("0 < t < 400, start= " + (-1.4 * (r255 + g255) + 755));
+            return round$1(newtonIterate1d$2((t) => r255 - (351.97690566805693 + 0.114206453784165 * (t - 55) - 40.25366309332127 * log$1(t - 55)), -1.4 * (r255 + g255) + 755, 8) * 100);
+        }
+    }
+    _input$1.temperature = _input$1.kelvin = _input$1.K = kelvin2rgb$1;
+    /**
+     * r, g, b can be in any interval (0-1 or 0-255)
+     * @param r
+     * @param g
+     * @param b
+     */
+    function rgb2hexhue$1(r, g, b) {
+        const m = min$2(r, g, b);
+        const M = max$2(r, g, b);
+        const delta = M - m;
+        let hueTurnX6; // angle as value between 0 and 6
+        if (0 == delta) {
+            hueTurnX6 = 0;
+        }
+        else if (r == M) {
+            // second term to make sure the value is > 0
+            hueTurnX6 = (g - b) / delta + (g < b ? 6 : 0);
+        }
+        else if (g == M) {
+            hueTurnX6 = 2 + (b - r) / delta;
+        }
+        else {
+            hueTurnX6 = 4 + (r - g) / delta;
+        }
+        return [hueTurnX6 * 60, m, M];
+    }
+    function hcxm2rgb$1(hueDegrees, c1, x1, m1, alpha1) {
+        const m255 = m1 * 255;
+        const cm255 = c1 * 255 + m255;
+        const xm255 = x1 * 255 + m255;
+        if (hueDegrees < 60) {
+            return [cm255, xm255, m255, alpha1];
+        }
+        else if (hueDegrees < 120) {
+            return [xm255, cm255, m255, alpha1];
+        }
+        else if (hueDegrees < 180) {
+            return [m255, cm255, xm255, alpha1];
+        }
+        else if (hueDegrees < 240) {
+            return [m255, xm255, cm255, alpha1];
+        }
+        else if (hueDegrees < 300) {
+            return [xm255, m255, cm255, alpha1];
+        }
+        else {
+            return [cm255, m255, xm255, alpha1];
+        }
+    }
+    /**
+     * https://en.wikipedia.org/w/index.php?title=HSL_and_HSV&oldid=856714654#From_HSL
+     */
+    function hsl2rgb$1(hueDegrees, s1, l1, alpha1 = 1) {
+        hueDegrees = norm360$1(hueDegrees);
+        const c1 = (1 - abs$2(2 * l1 - 1)) * s1;
+        return hcxm2rgb$1(hueDegrees, c1, c1 * (1 - abs$2(((hueDegrees / 60) % 2) - 1)), l1 - c1 / 2, alpha1);
+    }
+    function rgb2hsl$1(r255, g255, b255) {
+        const [hue, min1, max1] = rgb2hexhue$1(r255 / 255, g255 / 255, b255 / 255);
+        const l1 = (max1 + min1) / 2;
+        let s1;
+        if (max1 == min1) {
+            s1 = 0;
+        }
+        else {
+            s1 = l1 < 0.5 ? (max1 - min1) / (max1 + min1) : (max1 - min1) / (2 - max1 - min1);
+        }
+        return [hue, s1, l1];
+    }
+    function hsv2rgb$1(hueDegrees, s1, v1, alpha1 = 1) {
+        hueDegrees = norm360$1(hueDegrees);
+        const c1 = v1 * s1;
+        return hcxm2rgb$1(hueDegrees, c1, c1 * (1 - abs$2(((hueDegrees / 60) % 2) - 1)), v1 - c1, alpha1);
+    }
+    function rgb2hsv$1(r255, g255, b255) {
+        const [hue, min255, max255] = rgb2hexhue$1(r255, g255, b255);
+        const delta255 = max255 - min255;
+        const v1 = max255 / 255.0;
+        const s1 = max255 == 0 ? 0 : delta255 / max255;
+        return [hue, s1, v1];
+    }
+    function hcg2rgb$1(hueDegrees, c1, g1, alpha1 = 1) {
+        hueDegrees = norm360$1(hueDegrees);
+        const p = g1 * (1 - c1);
+        return hcxm2rgb$1(hueDegrees, c1, c1 * (1 - abs$2(((hueDegrees / 60) % 2) - 1)), p, alpha1);
+    }
+    function rgb2hcg$1(r255, g255, b255) {
+        const [hue, min255, max255] = rgb2hexhue$1(r255, g255, b255);
+        const c1 = (max255 - min255) / 255;
+        const _g1 = c1 < 1 ? min255 / 255 / (1 - c1) : 0;
+        return [hue, c1, _g1];
+    }
+    _input$1.hcg = hcg2rgb$1;
+    function cielab2rgb$1(LStar100, aStar, bStar, alpha = 1) {
+        const [x, y, z] = cielab2xyz$1(LStar100, aStar, bStar);
+        return xyz2rgb$1(x, y, z, alpha);
+    }
+    function cielab2xyz$1(LStar100, aStar, bStar) {
+        function fInv(t) {
+            if (t > LAB_delta$1) {
+                return t ** 3;
+            }
+            else {
+                return LAB_3DeltaPow2$1 * (t - 4 / 29);
+            }
+        }
+        return [
+            LAB_Xn$1 * fInv((LStar100 + 16) / 116 + aStar / 500),
+            LAB_Yn$1 * fInv((LStar100 + 16) / 116),
+            LAB_Zn$1 * fInv((LStar100 + 16) / 116 - bStar / 200),
+        ];
+    }
+    function xyz2cielab$1(x, y, z) {
+        // https://en.wikipedia.org/w/index.php?title=CIELAB_color_space&oldid=849576085#Forward_transformation
+        function f(t) {
+            if (t > LAB_deltaPow3$1) {
+                return cbrt$1(t);
+            }
+            else {
+                return t / LAB_3DeltaPow2$1 + 4 / 29;
+            }
+        }
+        return [116 * f(y / LAB_Yn$1) - 16, 500 * (f(x / LAB_Xn$1) - f(y / LAB_Yn$1)), 200 * (f(y / LAB_Yn$1) - f(z / LAB_Zn$1))];
+    }
+    // const LAB_CONSTANTS = {
+    const LAB_Kn$1 = 18;
+    const LAB_Xn$1 = 0.95047;
+    const LAB_Yn$1 = 1;
+    const LAB_Zn$1 = 1.08883;
+    const LAB_delta$1 = 0.206896552; // delta = 6 / 29
+    const LAB_3DeltaPow2$1 = 0.12841855; // 3 * delta ** 2
+    const LAB_deltaPow3$1 = 0.008856452; // delta ** 3
+    // }
+    function rgb2lab$1(r255, g255, b255) {
+        const [x, y, z] = rgb2xyz$1(r255, g255, b255);
+        return xyz2cielab$1(x, y, z);
+    }
+    function rgb2xyz$1(r255, g255, b255) {
+        // https://en.wikipedia.org/wiki/SRGB#The_reverse_transformation
+        const r1Linear = rgbChannel2RgbLinear$1(r255);
+        const g1Linear = rgbChannel2RgbLinear$1(g255);
+        const b1Linear = rgbChannel2RgbLinear$1(b255);
+        const X = 0.4124564 * r1Linear + 0.3575761 * g1Linear + 0.1804375 * b1Linear;
+        const Y = 0.2126729 * r1Linear + 0.7151522 * g1Linear + 0.072175 * b1Linear;
+        const Z = 0.0193339 * r1Linear + 0.119192 * g1Linear + 0.9503041 * b1Linear;
+        return [X, Y, Z];
+    }
+    function xyz2rgb$1(X1, Y1, Z1, alpha1 = 1) {
+        // https://en.wikipedia.org/wiki/SRGB#The_forward_transformation_(CIE_XYZ_to_sRGB)
+        const r1Linear = 3.2404542 * X1 - 1.5371385 * Y1 - 0.4985314 * Z1;
+        const g1Linear = -0.969266 * X1 + 1.8760108 * Y1 + 0.041556 * Z1;
+        const b1Linear = 0.0556434 * X1 - 0.2040259 * Y1 + 1.0572252 * Z1;
+        return [rgbLinearChannel2Rgb$1(r1Linear), rgbLinearChannel2Rgb$1(g1Linear), rgbLinearChannel2Rgb$1(b1Linear), alpha1];
+    }
+    _input$1.xyz = xyz2rgb$1;
+    _input$1.lab = cielab2rgb$1;
+    /**
+     * For HSI, we use the direct angle calculation. I.e. atan2(beta, alpha). See wikipedia link. This is why we don't use
+     * hcxm2rgb.
+     */
+    function hsi2rgb$1(hueDegrees, s1, i1, alpha1 = 1) {
+        /*
+        borrowed from here:
+        http://hummer.stanford.edu/museinfo/doc/examples/humdrum/keyscape2/hsi2rgb.cpp
+         */
+        let r, g, b;
+        let hRad = hueDegrees * DEG2RAD$1;
+        if (hRad < (2 * PI$2) / 3) {
+            b = (1 - s1) / 3;
+            r = (1 + (s1 * cos$1(hRad)) / cos$1(PI$2 / 3 - hRad)) / 3;
+            g = 1 - (b + r);
+        }
+        else if (hRad < (4 * PI$2) / 3) {
+            hRad -= (2 * PI$2) / 3;
+            r = (1 - s1) / 3;
+            g = (1 + (s1 * cos$1(hRad)) / cos$1(PI$2 / 3 - hRad)) / 3;
+            b = 1 - (r + g);
+        }
+        else {
+            hRad -= (4 * PI$2) / 3;
+            g = (1 - s1) / 3;
+            b = (1 + (s1 * cos$1(hRad)) / cos$1(PI$2 / 3 - hRad)) / 3;
+            r = 1 - (g + b);
+        }
+        return [3 * i1 * r * 255, 3 * i1 * g * 255, 3 * i1 * b * 255, alpha1];
+    }
+    /**
+     * For HSI, we use the direct angle calculation. I.e. atan2(beta, alpha). See wikipedia link. This is why we don't use
+     * rgb2hexhue.
+     */
+    function rgb2hsi$1(r255, g255, b255) {
+        // See https://en.wikipedia.org/wiki/HSL_and_HSV#Hue_and_chroma
+        // See https://en.wikipedia.org/wiki/HSL_and_HSV#Lightness
+        const r1 = r255 / 255;
+        const g1 = g255 / 255;
+        const b1 = b255 / 255;
+        const i1 = (r1 + g1 + b1) / 3;
+        if (r1 == g1 && g1 == b1) {
+            return [0, 0, i1];
+        }
+        else {
+            const alpha = (1 / 2) * (2 * r1 - g1 - b1);
+            const beta = (sqrt$1(3) / 2) * (g1 - b1);
+            const hRad = atan2$1(beta, alpha);
+            const min1 = min$2(r1, g1, b1);
+            const s1 = 1 - min1 / i1;
+            return [(hRad < 0 ? 2 * PI$2 + hRad : hRad) * RAD2DEG$1, s1, i1];
+        }
+    }
+    _input$1.hsi = hsi2rgb$1;
+    interpolators$1.hsv = interpolators$1.hsl = interpolators$1.hsi = interpolators$1.lch = interpolators$1.hcg = function interpolate_hsx(color1, color2, f, m) {
+        const [a1, b1, c1] = color1[m]();
+        const [a2, b2, c2] = color2[m]();
+        function lerpHue(hue1, hue2, f) {
+            const dh = norm360$1(hue2 - hue1 + 180) - 180;
+            return hue1 + f * dh;
+        }
+        return color$1(("h" == m.charAt(0) ? lerpHue : lerp$2)(a1, a2, f), lerp$2(b1, b2, f), ("h" == m.charAt(2) ? lerpHue : lerp$2)(c1, c2, f), m);
+    };
+    function indexOfMax$1(arr, f) {
+        let maxValue = -Infinity, maxValueIndex = -1;
+        for (let i = 0; i < arr.length; i++) {
+            const value = f(arr[i]);
+            if (value > maxValue) {
+                maxValue = value;
+                maxValueIndex = i;
+            }
+        }
+        return maxValueIndex;
+    }
+    function withMax$2(arr, f) {
+        return arr[indexOfMax$1(arr, f)];
+    }
+
     /// <reference types="webgl-strict-types" />
     const WGL = WebGLRenderingContext;
     class Buffer$1 {
@@ -36521,8 +38194,8 @@ var demo = (function (exports, hljs) {
             /** Space between elements in buffer. 3 for V3s. */
             this.spacing = 1;
             this.hasBeenCompiled = false;
-            assert(target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER, 'target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER');
-            assert(type == Float32Array || type == Uint16Array || type == Uint32Array, 'type == Float32Array || type == Uint16Array || type == Uint32Array');
+            assert(target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER, "target == WGL.ARRAY_BUFFER || target == WGL.ELEMENT_ARRAY_BUFFER");
+            assert(type == Float32Array || type == Uint16Array || type == Uint32Array, "type == Float32Array || type == Uint16Array || type == Uint32Array");
             if (Uint16Array == type) {
                 this.bindSize = WGL.UNSIGNED_SHORT;
             }
@@ -36541,11 +38214,11 @@ var demo = (function (exports, hljs) {
          * @param usage Either `WGL.STATIC_DRAW` or `WGL.DYNAMIC_DRAW`. Defaults to `WGL.STATIC_DRAW`
          */
         compile(usage = WGL.STATIC_DRAW, gl = currentGL()) {
-            assert(WGL.STATIC_DRAW == usage || WGL.DYNAMIC_DRAW == usage, 'WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type');
+            assert(WGL.STATIC_DRAW == usage || WGL.DYNAMIC_DRAW == usage, "WGL.STATIC_DRAW == type || WGL.DYNAMIC_DRAW == type");
             this.buffer = this.buffer || gl.createBuffer();
             let buffer;
             if (this.data.length == 0) {
-                console.warn('empty buffer ' + this.name);
+                console.warn("empty buffer " + this.name);
                 //console.trace()
             }
             if (this.data.length == 0 || this.data[0] instanceof V3) {
@@ -36575,7 +38248,8 @@ var demo = (function (exports, hljs) {
                     buffer = new this.type(this.data);
                 }
                 const spacing = this.data.length ? buffer.length / this.data.length : 0;
-                assert(spacing % 1 == 0, `buffer ${this.name} elements not of consistent size, average size is ` + spacing);
+                assert(spacing % 1 == 0, `buffer ${this.name} elements not of consistent size, average size is ` +
+                    spacing);
                 {
                     if (10000 <= buffer.length) {
                         this.maxValue = 0;
@@ -36594,7 +38268,7 @@ var demo = (function (exports, hljs) {
         }
     }
 
-    const { cos: cos$1, sin: sin$1, PI: PI$2, min: min$2, max: max$2 } = Math;
+    const { cos: cos$2, sin: sin$2, PI: PI$3, min: min$3, max: max$3 } = Math;
     const WGL$1 = WebGLRenderingContext;
     const tempM4_1 = new M4();
     const tempM4_2 = new M4();
@@ -36610,7 +38284,7 @@ var demo = (function (exports, hljs) {
             this.hasBeenCompiled = false;
             this.vertexBuffers = {};
             this.indexBuffers = {};
-            this.addVertexBuffer('vertices', 'ts_Vertex');
+            this.addVertexBuffer("vertices", "ts_Vertex");
         }
         /**
          * Calculate area, volume and centroid of the mesh.
@@ -36659,7 +38333,9 @@ var demo = (function (exports, hljs) {
             const volume = totalVolumeX2 / 2;
             return {
                 volume,
-                centroid: eq0(volume) ? V3.O : totalCentroidWithZX2.div(24 * volume).schur(new V3(1, 1, 0.5)),
+                centroid: eq0(volume)
+                    ? V3.O
+                    : totalCentroidWithZX2.div(24 * volume).schur(new V3(1, 1, 0.5)),
                 area: totalAreaX2 / 2,
             };
         }
@@ -36669,11 +38345,11 @@ var demo = (function (exports, hljs) {
          * @example new Mesh().addVertexBuffer('coords', 'ts_TexCoord')
          */
         addVertexBuffer(name, attribute) {
-            assert(!this.vertexBuffers[attribute], 'Buffer ' + attribute + ' already exists.');
+            assert(!this.vertexBuffers[attribute], "Buffer " + attribute + " already exists.");
             //assert(!this[name])
             this.hasBeenCompiled = false;
-            assert('string' == typeof name);
-            assert('string' == typeof attribute);
+            assert("string" == typeof name);
+            assert("string" == typeof attribute);
             const buffer = (this.vertexBuffers[attribute] = new Buffer$1(WGL$1.ARRAY_BUFFER, Float32Array));
             buffer.name = name;
             this[name] = [];
@@ -36698,7 +38374,7 @@ var demo = (function (exports, hljs) {
             Object.getOwnPropertyNames(this.vertexBuffers).forEach((attribute) => {
                 assert(others.every((other) => !!other.vertexBuffers[attribute]));
                 const bufferName = this.vertexBuffers[attribute].name;
-                if ('ts_Vertex' !== attribute) {
+                if ("ts_Vertex" !== attribute) {
                     result.addVertexBuffer(bufferName, attribute);
                 }
                 result[bufferName] = [].concat(...allMeshes.map((mesh) => mesh[bufferName]));
@@ -36753,7 +38429,7 @@ var demo = (function (exports, hljs) {
         static fromBinarySTL(stl) {
             return __awaiter(this, void 0, void 0, function* () {
                 return new Promise((resolve, reject) => {
-                    const mesh = new Mesh().addVertexBuffer('normals', 'ts_Normal');
+                    const mesh = new Mesh().addVertexBuffer("normals", "ts_Normal");
                     const fileReader = new FileReader();
                     fileReader.onerror = reject;
                     fileReader.onload = function (_progressEvent) {
@@ -36791,7 +38467,7 @@ var demo = (function (exports, hljs) {
         }
         toBinarySTL() {
             if (!this.TRIANGLES)
-                throw new Error('TRIANGLES must be defined.');
+                throw new Error("TRIANGLES must be defined.");
             const HEADER_BYTE_SIZE = 80, FLOAT_BYTE_SIZE = 4;
             const triangles = this.TRIANGLES;
             const triangleCount = triangles.length / 3;
@@ -36815,8 +38491,8 @@ var demo = (function (exports, hljs) {
                 // skip 2 bytes, already initalized to zero
                 bufferPtr += 2;
             }
-            assert(bufferPtr == buffer.byteLength, bufferPtr + ' ' + buffer.byteLength);
-            return new Blob([buffer], { type: 'application/octet-stream' });
+            assert(bufferPtr == buffer.byteLength, bufferPtr + " " + buffer.byteLength);
+            return new Blob([buffer], { type: "application/octet-stream" });
         }
         /**
          * Returns a new Mesh with transformed vertices.
@@ -36829,8 +38505,11 @@ var demo = (function (exports, hljs) {
             const mesh = new Mesh();
             mesh.vertices = m4.transformedPoints(this.vertices);
             if (this.normals) {
-                mesh.addVertexBuffer('normals', 'ts_Normal');
-                const invTrans = m4.as3x3(tempM4_1).inversed(tempM4_2).transposed(tempM4_1);
+                mesh.addVertexBuffer("normals", "ts_Normal");
+                const invTrans = m4
+                    .as3x3(tempM4_1)
+                    .inversed(tempM4_2)
+                    .transposed(tempM4_1);
                 mesh.normals = this.normals.map((n) => invTrans.transformVector(n).unit());
                 // mesh.normals.forEach(n => assert(n.hasLength(1)))
             }
@@ -36839,7 +38518,7 @@ var demo = (function (exports, hljs) {
                 mesh[name] = this[name];
             }
             for (const attribute in this.vertexBuffers) {
-                if ('ts_Vertex' !== attribute && 'ts_Normal' !== attribute) {
+                if ("ts_Vertex" !== attribute && "ts_Normal" !== attribute) {
                     const name = this.vertexBuffers[attribute].name;
                     mesh.addVertexBuffer(name, attribute);
                     mesh[name] = this[name];
@@ -36854,7 +38533,7 @@ var demo = (function (exports, hljs) {
          */
         computeNormalsFromFlatTriangles() {
             if (!this.normals)
-                this.addVertexBuffer('normals', 'ts_Normal');
+                this.addVertexBuffer("normals", "ts_Normal");
             // tslint:disable:no-string-literal
             //this.vertexBuffers['ts_Normal'].data = arrayFromFunction(this.vertices.length, i => V3.O)
             const TRIANGLES = this.TRIANGLES, vertices = this.vertices, normals = this.normals;
@@ -36865,9 +38544,9 @@ var demo = (function (exports, hljs) {
                 const b = vertices[bi];
                 const c = vertices[ci];
                 const normal = b.minus(a).cross(c.minus(a)).unit();
-                normals[ai] = normals[ai].plus(normal);
-                normals[bi] = normals[bi].plus(normal);
-                normals[ci] = normals[ci].plus(normal);
+                normals[ai] = normals[ai] ? normals[ai].plus(normal) : normal;
+                normals[bi] = normals[bi] ? normals[bi].plus(normal) : normal;
+                normals[ci] = normals[ci] ? normals[ci].plus(normal) : normal;
             }
             for (let i = 0; i < vertices.length; i++) {
                 normals[i] = normals[i].unit();
@@ -36875,12 +38554,12 @@ var demo = (function (exports, hljs) {
             this.hasBeenCompiled = false;
             return this;
         }
-        computeWireframeFromFlatTriangles(indexBufferName = 'LINES') {
+        computeWireframeFromFlatTriangles(indexBufferName = "LINES") {
             if (!this.TRIANGLES)
-                throw new Error('TRIANGLES must be defined.');
+                throw new Error("TRIANGLES must be defined.");
             const canonEdges = new Set();
             function canonEdge(i0, i1) {
-                const iMin = min$2(i0, i1), iMax = max$2(i0, i1);
+                const iMin = min$3(i0, i1), iMax = max$3(i0, i1);
                 return (iMin << 16) | iMax;
             }
             // function uncanonEdge(key) {
@@ -36900,11 +38579,11 @@ var demo = (function (exports, hljs) {
             this.hasBeenCompiled = false;
             return this;
         }
-        computeWireframeFromFlatTrianglesClosedMesh(indexBufferName = 'LINES') {
+        computeWireframeFromFlatTrianglesClosedMesh(indexBufferName = "LINES") {
             if (!this.TRIANGLES)
-                throw new Error('TRIANGLES must be defined.');
+                throw new Error("TRIANGLES must be defined.");
             if (!this.LINES)
-                this.addIndexBuffer('LINES');
+                this.addIndexBuffer("LINES");
             const tris = this.TRIANGLES;
             if (!this[indexBufferName])
                 this.addIndexBuffer(indexBufferName);
@@ -36920,9 +38599,9 @@ var demo = (function (exports, hljs) {
             this.hasBeenCompiled = false;
             return this;
         }
-        computeNormalLines(length = 1, indexBufferName = 'LINES') {
+        computeNormalLines(length = 1, indexBufferName = "LINES") {
             if (!this.normals) {
-                throw new Error('normals must be defined.');
+                throw new Error("normals must be defined.");
             }
             const vs = this.vertices, si = this.vertices.length;
             if (!this[indexBufferName])
@@ -36965,10 +38644,10 @@ var demo = (function (exports, hljs) {
             const width = options.width || 1;
             const height = options.height || 1;
             const mesh = new Mesh()
-                .addIndexBuffer('LINES')
-                .addIndexBuffer('TRIANGLES')
-                .addVertexBuffer('normals', 'ts_Normal')
-                .addVertexBuffer('coords', 'ts_TexCoord');
+                .addIndexBuffer("LINES")
+                .addIndexBuffer("TRIANGLES")
+                .addVertexBuffer("normals", "ts_Normal")
+                .addVertexBuffer("coords", "ts_TexCoord");
             for (let j = 0; j <= detailY; j++) {
                 const t = j / detailY;
                 for (let i = 0; i <= detailX; i++) {
@@ -36978,7 +38657,7 @@ var demo = (function (exports, hljs) {
                     mesh.normals.push(V3.Z);
                     if (i < detailX && j < detailY) {
                         const offset = i + j * (detailX + 1);
-                        mesh.TRIANGLES.push(offset, offset + detailX + 1, offset + 1, offset + detailX + 1, offset + detailX + 2, offset + 1);
+                        mesh.TRIANGLES.push(offset, offset + 1, offset + detailX + 1, offset + detailX + 1, offset + 1, offset + detailX + 2);
                     }
                 }
             }
@@ -36995,12 +38674,16 @@ var demo = (function (exports, hljs) {
         }
         static box(xDetail = 1, yDetail = 1, zDetail = 1) {
             const mesh = new Mesh()
-                .addIndexBuffer('LINES')
-                .addIndexBuffer('TRIANGLES')
-                .addVertexBuffer('normals', 'ts_Normal');
+                .addIndexBuffer("LINES")
+                .addIndexBuffer("TRIANGLES")
+                .addVertexBuffer("normals", "ts_Normal");
             mesh.vertices.length = mesh.normals.length =
-                2 * ((xDetail + 1) * (yDetail + 1) + (yDetail + 1) * (zDetail + 1) + (zDetail + 1) * (xDetail + 1));
-            mesh.TRIANGLES.length = 4 * (xDetail * yDetail + yDetail * zDetail + zDetail * xDetail);
+                2 *
+                    ((xDetail + 1) * (yDetail + 1) +
+                        (yDetail + 1) * (zDetail + 1) +
+                        (zDetail + 1) * (xDetail + 1));
+            mesh.TRIANGLES.length =
+                4 * (xDetail * yDetail + yDetail * zDetail + zDetail * xDetail);
             let vi = 0, ti = 0;
             function x(detailX, detailY, m, startX = 0, width = 1, startY = 0, height = 1) {
                 const normal = m.transformVector(V3.Z);
@@ -37038,42 +38721,54 @@ var demo = (function (exports, hljs) {
          */
         static cube() {
             const mesh = new Mesh()
-                .addVertexBuffer('normals', 'ts_Normal')
-                .addIndexBuffer('TRIANGLES')
-                .addIndexBuffer('LINES');
+                .addVertexBuffer("normals", "ts_Normal")
+                .addIndexBuffer("TRIANGLES")
+                .addIndexBuffer("LINES");
             // basically indexes for faces of the cube. vertices each need to be added 3 times,
             // as they have different normals depending on the face being rendered
-            // prettier-ignore
             const VERTEX_CORNERS = [
-                0, 1, 2, 3,
-                4, 5, 6, 7,
-                0, 4, 1, 5,
-                2, 6, 3, 7,
-                2, 6, 0, 4,
-                3, 7, 1, 5,
+                [0, 4, 6, 2],
+                [1, 3, 7, 5],
+                [0, 1, 5, 4],
+                [2, 6, 7, 3],
+                [0, 2, 3, 1],
+                [4, 5, 7, 6],
             ];
-            mesh.vertices = VERTEX_CORNERS.map((i) => Mesh.UNIT_CUBE_CORNERS[i]);
-            mesh.normals = [V3.X.negated(), V3.X, V3.Y.negated(), V3.Y, V3.Z.negated(), V3.Z].flatMap((v) => [v, v, v, v]);
-            for (let i = 0; i < 6 * 4; i += 4) {
-                pushQuad(mesh.TRIANGLES, 0 != i % 8, VERTEX_CORNERS[i], VERTEX_CORNERS[i + 1], VERTEX_CORNERS[i + 2], VERTEX_CORNERS[i + 3]);
+            const VERTEX_NORMALS = [
+                V3.X.negated(),
+                V3.X,
+                V3.Y.negated(),
+                V3.Y,
+                V3.Z.negated(),
+                V3.Z,
+            ];
+            for (let i = 0; i < 6; i++) {
+                pushQuad(mesh.TRIANGLES, true, mesh.vertices.length, mesh.vertices.length + 1, mesh.vertices.length + 3, mesh.vertices.length + 2);
+                mesh.vertices.push(...VERTEX_CORNERS[i].map((j) => Mesh.UNIT_CUBE_CORNERS[j]));
+                mesh.normals.push(VERTEX_NORMALS[i], VERTEX_NORMALS[i], VERTEX_NORMALS[i], VERTEX_NORMALS[i]);
             }
             // indexes of LINES relative to UNIT_CUBE_CORNERS. Mapped to VERTEX_CORNERS.indexOf
             // so they make sense in the context of the mesh
-            // prettier-ignore
             mesh.LINES = [
-                0, 1,
-                0, 2,
-                1, 3,
-                2, 3,
-                0, 4,
-                1, 5,
-                2, 6,
-                3, 7,
-                4, 5,
-                4, 6,
-                5, 7,
-                6, 7,
-            ].map(i => VERTEX_CORNERS.indexOf(i));
+                [0, 1],
+                [0, 2],
+                [1, 3],
+                [2, 3],
+                [0, 4],
+                [1, 5],
+                [2, 6],
+                [3, 7],
+                [4, 5],
+                [4, 6],
+                [5, 7],
+                [6, 7],
+            ]
+                .flatMap((x) => x)
+                .map((i) => {
+                let fvi = 0;
+                const fi = VERTEX_CORNERS.findIndex((faceVertexIndexes) => (fvi = faceVertexIndexes.indexOf(i)) != -1);
+                return fi * 4 + fvi;
+            });
             mesh.compile();
             return mesh;
         }
@@ -37082,10 +38777,15 @@ var demo = (function (exports, hljs) {
         }
         static sphere2(latitudes, longitudes) {
             const baseVertices = arrayFromFunction(latitudes, (i) => {
-                const angle = (i / (latitudes - 1)) * PI$2 - PI$2 / 2;
-                return new V3(0, cos$1(angle), sin$1(angle));
+                const angle = (i / (latitudes - 1)) * PI$3 - PI$3 / 2;
+                return new V3(0, cos$2(angle), sin$2(angle));
             });
-            return Mesh.rotation(baseVertices, { anchor: V3.O, dir1: V3.Z }, 2 * PI$2, longitudes, true, baseVertices);
+            const vqs = arrayFromFunction(latitudes, (i) => {
+                const angle = (i / (latitudes - 1)) * PI$3 - PI$3 / 2;
+                const q = cos$2(angle);
+                return [(i / (latitudes - 1)) * q, q];
+            });
+            return Mesh.rotation(baseVertices, { anchor: V3.O, dir1: V3.Z }, 2 * PI$3, longitudes, true, baseVertices, vqs);
         }
         /**
          * Returns a sphere mesh with radius 1 created by subdividing the faces of a isocahedron (20-sided) recursively
@@ -37171,9 +38871,9 @@ var demo = (function (exports, hljs) {
                 }
             }
             const mesh = new Mesh()
-                .addVertexBuffer('normals', 'ts_Normal')
-                .addIndexBuffer('TRIANGLES')
-                .addIndexBuffer('LINES');
+                .addVertexBuffer("normals", "ts_Normal")
+                .addIndexBuffer("TRIANGLES")
+                .addIndexBuffer("LINES");
             mesh.vertices.push(...vertices);
             subdivisions = undefined == subdivisions ? 4 : subdivisions;
             for (let i = 0; i < 20; i++) {
@@ -37195,11 +38895,16 @@ var demo = (function (exports, hljs) {
         static offsetVertices(vertices, offset, close, normals) {
             assertVectors.apply(undefined, vertices);
             assertVectors(offset);
-            const mesh = new Mesh().addIndexBuffer('TRIANGLES').addVertexBuffer('coords', 'ts_TexCoord');
-            normals && mesh.addVertexBuffer('normals', 'ts_Normal');
+            const mesh = new Mesh()
+                .addIndexBuffer("TRIANGLES")
+                .addVertexBuffer("coords", "ts_TexCoord");
+            normals && mesh.addVertexBuffer("normals", "ts_Normal");
             mesh.vertices = vertices.concat(vertices.map((v) => v.plus(offset)));
             const vl = vertices.length;
-            mesh.coords = arrayFromFunction(vl * 2, (i) => [(i % vl) / vl, (i / vl) | 0]);
+            mesh.coords = arrayFromFunction(vl * 2, (i) => [
+                (i % vl) / vl,
+                (i / vl) | 0,
+            ]);
             const triangles = mesh.TRIANGLES;
             for (let i = 0; i < vertices.length - 1; i++) {
                 pushQuad(triangles, false, i, i + 1, vertices.length + i, vertices.length + i + 1);
@@ -37218,18 +38923,25 @@ var demo = (function (exports, hljs) {
         // should be connected by triangles. If $normals is set (pass an array of V3s of the same length as $vertices),
         // these will also be rotated and correctly added to the mesh.
         // @example const precious = Mesh.rotation([V(10, 0, -2), V(10, 0, 2), V(11, 0, 2), V(11, 0, -2)], , L3.Z, 512)
-        static rotation(vertices, lineAxis, totalRads, steps, close = true, normals) {
-            const mesh = new Mesh().addIndexBuffer('TRIANGLES');
-            normals && mesh.addVertexBuffer('normals', 'ts_Normal');
+        static rotation(vertices, lineAxis, totalRads, steps, close = true, normals, vqs) {
+            const mesh = new Mesh().addIndexBuffer("TRIANGLES");
+            normals && mesh.addVertexBuffer("normals", "ts_Normal");
+            vqs && mesh.addVertexBuffer("coordsUVQ", "ts_TexCoordUVQ");
             const vc = vertices.length, vTotal = vc * steps;
             const rotMat = new M4();
             const triangles = mesh.TRIANGLES;
             for (let i = 0; i < steps; i++) {
                 // add triangles
-                const rads = (totalRads / steps) * i;
+                const rads = totalRads * (i / steps);
                 M4.rotateLine(lineAxis.anchor, lineAxis.dir1, rads, rotMat);
                 mesh.vertices.push(...rotMat.transformedPoints(vertices));
                 normals && mesh.normals.push(...rotMat.transformedVectors(normals));
+                vqs &&
+                    mesh.coordsUVQ.push(...vqs.map(([v, q]) => [
+                        (i / steps) * q,
+                        v,
+                        q,
+                    ]));
                 if (close || i !== steps - 1) {
                     for (let j = 0; j < vc - 1; j++) {
                         pushQuad(triangles, false, i * vc + j + 1, i * vc + j, ((i + 1) * vc + j + 1) % vTotal, ((i + 1) * vc + j) % vTotal);
@@ -37239,8 +38951,40 @@ var demo = (function (exports, hljs) {
             mesh.compile();
             return mesh;
         }
+        static spiral(vertices, lineAxis, totalRads, steps, gradient, normals, vqs) {
+            const mesh = new Mesh().addIndexBuffer("TRIANGLES");
+            normals && mesh.addVertexBuffer("normals", "ts_Normal");
+            vqs && mesh.addVertexBuffer("coordsUVQ", "ts_TexCoordUVQ");
+            const vc = vertices.length, vTotal = vc * steps;
+            const rotMat = new M4();
+            const triangles = mesh.TRIANGLES;
+            for (let i = 0; i < steps; i++) {
+                // add triangles
+                const rads = totalRads * (i / steps);
+                M4.rotateLine(lineAxis.anchor, lineAxis.dir1, rads, rotMat);
+                mesh.vertices.push(...rotMat
+                    .translate(lineAxis.dir1.toLength((totalRads / TAU) * (i / steps) * gradient))
+                    .transformedPoints(vertices));
+                normals && mesh.normals.push(...rotMat.transformedVectors(normals));
+                vqs &&
+                    mesh.coordsUVQ.push(...vqs.map(([v, q]) => [
+                        (i / steps) * q,
+                        v,
+                        q,
+                    ]));
+                if (i !== steps - 1) {
+                    for (let j = 0; j < vc - 1; j++) {
+                        pushQuad(triangles, false, i * vc + j + 1, i * vc + j, ((i + 1) * vc + j + 1) % vTotal, ((i + 1) * vc + j) % vTotal);
+                    }
+                }
+            }
+            mesh.compile();
+            return mesh;
+        }
         static parametric(pF, pN, sMin, sMax, tMin, tMax, sRes, tRes) {
-            const mesh = new Mesh().addIndexBuffer('TRIANGLES').addVertexBuffer('normals', 'ts_Normal');
+            const mesh = new Mesh()
+                .addIndexBuffer("TRIANGLES")
+                .addVertexBuffer("normals", "ts_Normal");
             for (let si = 0; si <= sRes; si++) {
                 const s = lerp$1(sMin, sMax, si / sRes);
                 for (let ti = 0; ti <= tRes; ti++) {
@@ -37264,11 +39008,11 @@ var demo = (function (exports, hljs) {
                 throw new Error();
             }
             if (json.triangles) {
-                mesh.addIndexBuffer('TRIANGLES');
+                mesh.addIndexBuffer("TRIANGLES");
                 mesh.TRIANGLES = json.triangles;
             }
             if (json.normals) {
-                mesh.addVertexBuffer('normals', 'ts_Normal');
+                mesh.addVertexBuffer("normals", "ts_Normal");
                 mesh.normals = json.normals;
             }
             mesh.compile();
@@ -37282,6 +39026,15 @@ var demo = (function (exports, hljs) {
         }
     }
     // unique corners of a unit cube. Used by Mesh.cube to generate a cube mesh.
+    //  Z            Y
+    //  ^  6      7 /
+    //  |  +------+
+    //  4/ |   5 /|
+    //  +------+  |
+    //  |  +---|--+
+    //  | /2   | /3
+    //  +------+     --> X
+    //  0      1
     Mesh.UNIT_CUBE_CORNERS = [
         V3.O,
         new V3(0, 0, 1),
@@ -37299,13 +39052,13 @@ var demo = (function (exports, hljs) {
      * These are all the draw modes usable in OpenGL ES
      */
     const DRAW_MODE_NAMES = {
-        [WGL$2.POINTS]: 'POINTS',
-        [WGL$2.LINES]: 'LINES',
-        [WGL$2.LINE_STRIP]: 'LINE_STRIP',
-        [WGL$2.LINE_LOOP]: 'LINE_LOOP',
-        [WGL$2.TRIANGLES]: 'TRIANGLES',
-        [WGL$2.TRIANGLE_STRIP]: 'TRIANGLE_STRIP',
-        [WGL$2.TRIANGLE_FAN]: 'TRIANGLE_FAN',
+        [WGL$2.POINTS]: "POINTS",
+        [WGL$2.LINES]: "LINES",
+        [WGL$2.LINE_STRIP]: "LINE_STRIP",
+        [WGL$2.LINE_LOOP]: "LINE_LOOP",
+        [WGL$2.TRIANGLES]: "TRIANGLES",
+        [WGL$2.TRIANGLE_STRIP]: "TRIANGLE_STRIP",
+        [WGL$2.TRIANGLE_FAN]: "TRIANGLE_FAN",
     };
     const DRAW_MODE_CHECKS = {
         [WGL$2.POINTS]: (_) => true,
@@ -37319,47 +39072,58 @@ var demo = (function (exports, hljs) {
     function isFloatArray(obj) {
         return (Float32Array == obj.constructor ||
             Float64Array == obj.constructor ||
-            (Array.isArray(obj) && obj.every((x) => 'number' == typeof x)));
+            (Array.isArray(obj) && obj.every((x) => "number" == typeof x)));
     }
     function isIntArray(x) {
-        if ([Int8Array, Uint8Array, Uint8ClampedArray, Int16Array, Uint16Array, Int32Array, Uint32Array].some((y) => x instanceof y)) {
+        if ([
+            Int8Array,
+            Uint8Array,
+            Uint8ClampedArray,
+            Int16Array,
+            Uint16Array,
+            Int32Array,
+            Uint32Array,
+        ].some((y) => x instanceof y)) {
             return true;
         }
-        return ((x instanceof Float32Array || x instanceof Float64Array || Array.isArray(x)) &&
+        return ((x instanceof Float32Array ||
+            x instanceof Float64Array ||
+            Array.isArray(x)) &&
             x.every((x) => Number.isInteger(x)));
     }
     //const x:UniformTypes = undefined as 'FLOAT_VEC4' | 'FLOAT_VEC3'
     class Shader {
         /**
-         * Provides a convenient wrapper for WebGL shaders. A few uniforms and attributes,
-         * prefixed with `gl_`, are automatically added to all shader sources to make
-         * simple shaders easier to write.
-         * Headers for the following variables are automatically prepended to the passed source. The correct variables
-         * are also automatically passed to the shader when drawing.
-         *
-         * For vertex and fragment shaders:
-         uniform mat3 ts_NormalMatrix;
-         uniform mat4 ts_ModelViewMatrix;
-         uniform mat4 ts_ProjectionMatrix;
-         uniform mat4 ts_ModelViewProjectionMatrix;
-         uniform mat4 ts_ModelViewMatrixInverse;
-         uniform mat4 ts_ProjectionMatrixInverse;
-         uniform mat4 ts_ModelViewProjectionMatrixInverse;
-         *
-         *
-         * Example usage:
-         *
-         *  const shader = new GL.Shader(
-         *      `void main() { gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex; }`,
-         *      `uniform vec4 color; void main() { gl_FragColor = color; }`)
-         *
-         *  shader.uniforms({ color: [1, 0, 0, 1] }).draw(mesh)
-         *
-         * Compiles a shader program using the provided vertex and fragment shaders.
-         */
+           * Provides a convenient wrapper for WebGL shaders. A few uniforms and attributes,
+           * prefixed with `gl_`, are automatically added to all shader sources to make
+           * simple shaders easier to write.
+           * Headers for the following variables are automatically prepended to the passed source. The correct variables
+           * are also automatically passed to the shader when drawing.
+           *
+           * For vertex and fragment shaders:
+           uniform mat3 ts_NormalMatrix;
+           uniform mat4 ts_ModelViewMatrix;
+           uniform mat4 ts_ProjectionMatrix;
+           uniform mat4 ts_ModelViewProjectionMatrix;
+           uniform mat4 ts_ModelViewMatrixInverse;
+           uniform mat4 ts_ProjectionMatrixInverse;
+           uniform mat4 ts_ModelViewProjectionMatrixInverse;
+           *
+           *
+           * Example usage:
+           *
+           *  const shader = new GL.Shader(
+           *      `void main() { gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex; }`,
+           *      `uniform vec4 color; void main() { gl_FragColor = color; }`)
+           *
+           *  shader.uniforms({ color: [1, 0, 0, 1] }).draw(mesh)
+           *
+           * Compiles a shader program using the provided vertex and fragment shaders.
+           */
         constructor(vertexSource, fragmentSource, gl = currentGL()) {
             this.projectionMatrixVersion = -1;
             this.modelViewMatrixVersion = -1;
+            this.outputWarnings = {};
             // const versionRegex = /^(?:\s+|\/\/[\s\S]*?[\r\n]+|\/\*[\s\S]*?\*\/)+(#version\s+(\d+)\s+es)/
             // Headers are prepended to the sources to provide some automatic functionality.
             const header = `
@@ -37378,7 +39142,7 @@ var demo = (function (exports, hljs) {
                 gl.shaderSource(shader, source);
                 gl.compileShader(shader);
                 if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                    throw new Error('compile error: ' + gl.getShaderInfoLog(shader));
+                    throw new Error("compile error: " + gl.getShaderInfoLog(shader));
                 }
                 return shader;
             }
@@ -37388,7 +39152,7 @@ var demo = (function (exports, hljs) {
             gl.attachShader(this.program, compileSource(gl.FRAGMENT_SHADER, fragmentSource));
             gl.linkProgram(this.program);
             if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-                throw new Error('link error: ' + gl.getProgramInfoLog(this.program));
+                throw new Error("link error: " + gl.getProgramInfoLog(this.program));
             }
             this.attributeLocations = {};
             this.uniformLocations = {};
@@ -37430,22 +39194,35 @@ var demo = (function (exports, hljs) {
                 let value = uniforms[name];
                 const info = this.uniformInfos[name];
                 {
+                    if (!info) {
+                        throw new Error(`uniform ${name} is not defined (available = ${Object.keys(this.uniformInfos).join(",")})`);
+                    }
                     // TODO: better errors
-                    if (gl.SAMPLER_2D == info.type || gl.SAMPLER_CUBE == info.type || gl.INT == info.type) {
+                    if (gl.SAMPLER_2D == info.type ||
+                        gl.SAMPLER_CUBE == info.type ||
+                        gl.INT == info.type) {
                         if (1 == info.size) {
                             assert(Number.isInteger(value));
                         }
                         else {
-                            assert(isIntArray(value) && value.length == info.size, 'value must be int array if info.size != 1');
+                            assert(isIntArray(value) && value.length == info.size, "value must be int array if info.size != 1");
                         }
                     }
-                    assert(gl.FLOAT != info.type || (1 == info.size && 'number' === typeof value) || isFloatArray(value));
+                    assert(gl.FLOAT != info.type ||
+                        (1 == info.size && "number" === typeof value) ||
+                        isFloatArray(value));
                     assert(gl.FLOAT_VEC3 != info.type ||
                         (1 == info.size && value instanceof V3) ||
-                        (Array.isArray(value) && info.size == value.length && assertVectors(...value)));
-                    assert(gl.FLOAT_VEC4 != info.type || 1 != info.size || (isFloatArray(value) && value.length == 4));
+                        (Array.isArray(value) &&
+                            info.size == value.length &&
+                            assertVectors(...value)));
+                    assert(gl.FLOAT_VEC4 != info.type ||
+                        1 != info.size ||
+                        (isFloatArray(value) && value.length == 4));
                     assert(gl.FLOAT_MAT4 != info.type || value instanceof M4, () => value.toSource());
-                    assert(gl.FLOAT_MAT3 != info.type || value.length == 9 || value instanceof M4);
+                    assert(gl.FLOAT_MAT3 != info.type ||
+                        value.length == 9 ||
+                        value instanceof M4);
                 }
                 if (value instanceof V3) {
                     value = value.toArray();
@@ -37455,7 +39232,7 @@ var demo = (function (exports, hljs) {
                         gl.uniform4fv(location, value instanceof Float32Array ? value : Float32Array.from(value));
                     }
                     else {
-                        gl.uniform4fv(location, value.concatenated());
+                        gl.uniform4fv(location, value.flatMap((x) => x));
                     }
                 }
                 else if (gl.FLOAT == info.type && info.size != 1) {
@@ -37498,18 +39275,23 @@ var demo = (function (exports, hljs) {
                             ]));
                             break;
                         default:
-                            throw new Error('don\'t know how to load uniform "' + name + '" of length ' + value.length);
+                            throw new Error("don't know how to load uniform \"" +
+                                name +
+                                '" of length ' +
+                                value.length);
                     }
                 }
-                else if ('number' == typeof value) {
-                    if (gl.SAMPLER_2D == info.type || gl.SAMPLER_CUBE == info.type || gl.INT == info.type) {
+                else if ("number" == typeof value) {
+                    if (gl.SAMPLER_2D == info.type ||
+                        gl.SAMPLER_CUBE == info.type ||
+                        gl.INT == info.type) {
                         gl.uniform1i(location, value);
                     }
                     else {
                         gl.uniform1f(location, value);
                     }
                 }
-                else if ('boolean' == typeof value) {
+                else if ("boolean" == typeof value) {
                     gl.uniform1i(location, +value);
                 }
                 else if (value instanceof M4) {
@@ -37552,9 +39334,10 @@ var demo = (function (exports, hljs) {
             const gl = this.gl;
             gl.useProgram(this.program);
             for (const name in attributes) {
-                const location = this.attributeLocations[name] || gl.getAttribLocation(this.program, name);
+                const location = this.attributeLocations[name] ||
+                    gl.getAttribLocation(this.program, name);
                 if (location == -1) {
-                    if (!name.startsWith('ts_')) {
+                    if (!name.startsWith("ts_")) {
                         console.warn(`Vertex buffer ${name} was not bound because the attribute is not active.`);
                     }
                     continue;
@@ -37566,7 +39349,7 @@ var demo = (function (exports, hljs) {
                     // TODO: figure out the types here...
                     value = value.toArray();
                 }
-                if ('number' === typeof value) {
+                if ("number" === typeof value) {
                     gl.vertexAttrib1f(location, value);
                 }
                 else {
@@ -37601,7 +39384,7 @@ var demo = (function (exports, hljs) {
          * @param count int
          */
         draw(mesh, mode = WGL$2.TRIANGLES, start, count) {
-            assert(mesh.hasBeenCompiled, 'mesh.hasBeenCompiled');
+            assert(mesh.hasBeenCompiled, "mesh.hasBeenCompiled");
             assert(undefined != DRAW_MODE_NAMES[mode]);
             const modeName = DRAW_MODE_NAMES[mode];
             // assert(mesh.indexBuffers[modeStr], `mesh.indexBuffers[${modeStr}] undefined`)
@@ -37622,32 +39405,36 @@ var demo = (function (exports, hljs) {
             Object.keys(vertexBuffers).forEach((key) => assertInst(Buffer$1, vertexBuffers[key]));
             // Only varruct up the built-in matrices that are active in the shader
             const on = this.activeMatrices;
-            const modelViewMatrixInverse = (on['ts_ModelViewMatrixInverse'] || on['ts_NormalMatrix']) &&
+            const modelViewMatrixInverse = (on["ts_ModelViewMatrixInverse"] || on["ts_NormalMatrix"]) &&
                 //&& this.modelViewMatrixVersion != gl.modelViewMatrixVersion
                 gl.modelViewMatrix.inversed();
-            const projectionMatrixInverse = on['ts_ProjectionMatrixInverse'] &&
+            const projectionMatrixInverse = on["ts_ProjectionMatrixInverse"] &&
                 //&& this.projectionMatrixVersion != gl.projectionMatrixVersion
                 gl.projectionMatrix.inversed();
-            const modelViewProjectionMatrix = (on['ts_ModelViewProjectionMatrix'] || on['ts_ModelViewProjectionMatrixInverse']) &&
+            const modelViewProjectionMatrix = (on["ts_ModelViewProjectionMatrix"] ||
+                on["ts_ModelViewProjectionMatrixInverse"]) &&
                 //&& (this.projectionMatrixVersion != gl.projectionMatrixVersion || this.modelViewMatrixVersion !=
                 // gl.modelViewMatrixVersion)
                 gl.projectionMatrix.times(gl.modelViewMatrix);
             const uni = {}; // Uniform Matrices
-            on['ts_ModelViewMatrix'] &&
+            on["ts_ModelViewMatrix"] &&
                 this.modelViewMatrixVersion != gl.modelViewMatrixVersion &&
-                (uni['ts_ModelViewMatrix'] = gl.modelViewMatrix);
-            on['ts_ModelViewMatrixInverse'] && (uni['ts_ModelViewMatrixInverse'] = modelViewMatrixInverse);
-            on['ts_ProjectionMatrix'] &&
+                (uni["ts_ModelViewMatrix"] = gl.modelViewMatrix);
+            on["ts_ModelViewMatrixInverse"] &&
+                (uni["ts_ModelViewMatrixInverse"] = modelViewMatrixInverse);
+            on["ts_ProjectionMatrix"] &&
                 this.projectionMatrixVersion != gl.projectionMatrixVersion &&
-                (uni['ts_ProjectionMatrix'] = gl.projectionMatrix);
-            projectionMatrixInverse && (uni['ts_ProjectionMatrixInverse'] = projectionMatrixInverse);
-            modelViewProjectionMatrix && (uni['ts_ModelViewProjectionMatrix'] = modelViewProjectionMatrix);
+                (uni["ts_ProjectionMatrix"] = gl.projectionMatrix);
+            projectionMatrixInverse &&
+                (uni["ts_ProjectionMatrixInverse"] = projectionMatrixInverse);
             modelViewProjectionMatrix &&
-                on['ts_ModelViewProjectionMatrixInverse'] &&
-                (uni['ts_ModelViewProjectionMatrixInverse'] = modelViewProjectionMatrix.inversed());
-            on['ts_NormalMatrix'] &&
+                (uni["ts_ModelViewProjectionMatrix"] = modelViewProjectionMatrix);
+            modelViewProjectionMatrix &&
+                on["ts_ModelViewProjectionMatrixInverse"] &&
+                (uni["ts_ModelViewProjectionMatrixInverse"] = modelViewProjectionMatrix.inversed());
+            on["ts_NormalMatrix"] &&
                 this.modelViewMatrixVersion != gl.modelViewMatrixVersion &&
-                (uni['ts_NormalMatrix'] = modelViewMatrixInverse.transposed());
+                (uni["ts_NormalMatrix"] = modelViewMatrixInverse.transposed());
             this.uniforms(uni);
             this.projectionMatrixVersion = gl.projectionMatrixVersion;
             this.modelViewMatrixVersion = gl.modelViewMatrixVersion;
@@ -37656,9 +39443,10 @@ var demo = (function (exports, hljs) {
             for (const attribute in vertexBuffers) {
                 const buffer = vertexBuffers[attribute];
                 assert(buffer.hasBeenCompiled);
-                const location = this.attributeLocations[attribute] || gl.getAttribLocation(this.program, attribute);
+                const location = this.attributeLocations[attribute] ||
+                    gl.getAttribLocation(this.program, attribute);
                 if (location == -1 || !buffer.buffer) {
-                    if (!attribute.startsWith('ts_')) {
+                    if (!attribute.startsWith("ts_")) {
                         console.warn(`Vertex buffer ${attribute} was not bound because the attribute is not active.`);
                     }
                     continue;
@@ -37681,8 +39469,12 @@ var demo = (function (exports, hljs) {
                     const buffer = gl.getVertexAttrib(i, gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING);
                     if (!buffer) {
                         const info = gl.getActiveAttrib(this.program, i);
-                        if (!this.constantAttributes[info.name]) {
-                            console.warn('No buffer is bound to attribute ' + info.name + ' and it was not set with .attributes()');
+                        if (!this.constantAttributes[info.name] &&
+                            !this.outputWarnings[info.name]) {
+                            this.outputWarnings[info.name] = true;
+                            console.warn("No buffer is bound to attribute " +
+                                info.name +
+                                " and it was not set with .attributes()");
                         }
                     }
                     // console.log('name:', info.name, 'type:', info.type, 'size:', info.size)
@@ -37693,11 +39485,11 @@ var demo = (function (exports, hljs) {
                 if (undefined === count) {
                     count = indexBuffer ? indexBuffer.count : minVertexBufferLength;
                 }
-                assert(DRAW_MODE_CHECKS[mode](count), 'count ' +
+                assert(DRAW_MODE_CHECKS[mode](count), "count " +
                     count +
                     "doesn't fulfill requirement +" +
                     DRAW_MODE_CHECKS[mode].toString() +
-                    ' for mode ' +
+                    " for mode " +
                     DRAW_MODE_NAMES[mode]);
                 if (indexBuffer) {
                     assert(indexBuffer.hasBeenCompiled);
@@ -37705,11 +39497,11 @@ var demo = (function (exports, hljs) {
                     assert(count % indexBuffer.spacing == 0);
                     assert(start % indexBuffer.spacing == 0);
                     if (start + count > indexBuffer.count) {
-                        throw new Error('Buffer not long enough for passed parameters start/length/buffer length ' +
+                        throw new Error("Buffer not long enough for passed parameters start/length/buffer length " +
                             start +
-                            ' ' +
+                            " " +
                             count +
-                            ' ' +
+                            " " +
                             indexBuffer.count);
                     }
                     gl.bindBuffer(WGL$2.ELEMENT_ARRAY_BUFFER, indexBuffer.buffer);
@@ -37718,7 +39510,7 @@ var demo = (function (exports, hljs) {
                 }
                 else {
                     if (start + count > minVertexBufferLength) {
-                        throw new Error('invalid');
+                        throw new Error("invalid");
                     }
                     gl.drawArrays(mode, start, count);
                 }
@@ -37763,21 +39555,21 @@ var demo = (function (exports, hljs) {
             const magFilter = options.filter || options.magFilter || gl.LINEAR;
             const minFilter = options.filter || options.minFilter || gl.LINEAR;
             if (this.type === gl.FLOAT) {
-                if (gl.version != 2 && !gl.getExtension('OES_texture_float')) {
-                    throw new Error('OES_texture_float is required but not supported');
+                if (gl.version != 2 && !gl.getExtension("OES_texture_float")) {
+                    throw new Error("OES_texture_float is required but not supported");
                 }
                 if ((minFilter !== gl.NEAREST || magFilter !== gl.NEAREST) &&
-                    !gl.getExtension('OES_texture_float_linear')) {
-                    throw new Error('OES_texture_float_linear is required but not supported');
+                    !gl.getExtension("OES_texture_float_linear")) {
+                    throw new Error("OES_texture_float_linear is required but not supported");
                 }
             }
             else if (this.type === gl.HALF_FLOAT_OES) {
-                if (!gl.getExtension('OES_texture_half_float')) {
-                    throw new Error('OES_texture_half_float is required but not supported');
+                if (!gl.getExtension("OES_texture_half_float")) {
+                    throw new Error("OES_texture_half_float is required but not supported");
                 }
                 if ((minFilter !== gl.NEAREST || magFilter !== gl.NEAREST) &&
-                    !gl.getExtension('OES_texture_half_float_linear')) {
-                    throw new Error('OES_texture_half_float_linear is required but not supported');
+                    !gl.getExtension("OES_texture_half_float_linear")) {
+                    throw new Error("OES_texture_half_float_linear is required but not supported");
                 }
             }
             this.texture = gl.createTexture();
@@ -37791,6 +39583,17 @@ var demo = (function (exports, hljs) {
         setData(data) {
             this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
             this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.internalFormat, this.width, this.height, 0, this.format, this.type, data);
+        }
+        downloadData(data) {
+            if (!this.framebuffer) {
+                throw new Error("No framebuffer. You need to draw to this texture before it makes sense to read from it.");
+            }
+            const gl = this.gl;
+            const prevFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+            this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.framebuffer);
+            this.gl.readPixels(0, 0, this.width, this.height, this.format, this.type, data);
+            prevFramebuffer !== this.framebuffer &&
+                gl.bindFramebuffer(gl.FRAMEBUFFER, prevFramebuffer);
         }
         bind(unit) {
             this.gl.activeTexture((this.gl.TEXTURE0 + unit));
@@ -37817,7 +39620,7 @@ var demo = (function (exports, hljs) {
                 gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.texture, 0);
                 gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthRenderbuffer);
                 if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
-                    throw new Error('Rendering to this texture is not supported (incomplete this.framebuffer)');
+                    throw new Error("Rendering to this texture is not supported (incomplete this.framebuffer)");
                 }
             }
             else if (prevFramebuffer !== this.framebuffer) {
@@ -37827,7 +39630,8 @@ var demo = (function (exports, hljs) {
             gl.viewport(0, 0, this.width, this.height);
             render(gl);
             // restore previous state
-            prevFramebuffer !== this.framebuffer && gl.bindFramebuffer(gl.FRAMEBUFFER, prevFramebuffer);
+            prevFramebuffer !== this.framebuffer &&
+                gl.bindFramebuffer(gl.FRAMEBUFFER, prevFramebuffer);
             gl.viewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         }
         swapWith(other) {
@@ -37842,6 +39646,9 @@ var demo = (function (exports, hljs) {
             temp = other.height;
             other.height = this.height;
             this.height = temp;
+            temp = other.framebuffer;
+            other.framebuffer = this.framebuffer;
+            this.framebuffer = temp;
         }
         /**
          * Return a new texture created from `imgElement`, an `<img>` tag.
@@ -37852,15 +39659,17 @@ var demo = (function (exports, hljs) {
                 gl.texImage2D(gl.TEXTURE_2D, 0, texture.format, texture.format, texture.type, imgElement);
             }
             catch (e) {
-                if (location.protocol == 'file:') {
+                if (location.protocol == "file:") {
                     throw new Error('imgElement not loaded for security reasons (serve this page over "http://" instead)');
                 }
                 else {
-                    throw new Error('imgElement not loaded for security reasons (imgElement must originate from the same ' +
-                        'domain as this page or use Cross-Origin Resource Sharing)');
+                    throw new Error("imgElement not loaded for security reasons (imgElement must originate from the same " +
+                        "domain as this page or use Cross-Origin Resource Sharing)");
                 }
             }
-            if (options.minFilter && options.minFilter != gl.NEAREST && options.minFilter != gl.LINEAR) {
+            if (options.minFilter &&
+                options.minFilter != gl.NEAREST &&
+                options.minFilter != gl.LINEAR) {
                 gl.generateMipmap(gl.TEXTURE_2D);
             }
             return texture;
@@ -37872,14 +39681,14 @@ var demo = (function (exports, hljs) {
             Texture.checkerBoardCanvas =
                 Texture.checkerBoardCanvas ||
                     (function () {
-                        const c = document.createElement('canvas').getContext('2d');
+                        const c = document.createElement("canvas").getContext("2d");
                         if (!c)
-                            throw new Error('Could not create 2d canvas.');
+                            throw new Error("Could not create 2d canvas.");
                         c.canvas.width = c.canvas.height = 128;
                         for (let y = 0; y < c.canvas.height; y += 16) {
                             for (let x = 0; x < c.canvas.width; x += 16) {
                                 //noinspection JSBitwiseOperatorUsage
-                                c.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD';
+                                c.fillStyle = (x ^ y) & 16 ? "#FFF" : "#DDD";
                                 c.fillRect(x, y, 16, 16);
                             }
                         }
@@ -37890,7 +39699,7 @@ var demo = (function (exports, hljs) {
             image.onload = () => Texture.fromImage(image, options, gl).swapWith(texture);
             // error event doesn't return a reason. Most likely a 404.
             image.onerror = () => {
-                throw new Error('Could not load image ' + image.src + '. 404?');
+                throw new Error("Could not load image " + image.src + ". 404?");
             };
             image.src = url;
             return texture;
@@ -37899,7 +39708,7 @@ var demo = (function (exports, hljs) {
             return new Promise((resolve, reject) => {
                 const image = new Image();
                 image.onload = () => resolve(Texture.fromImage(image, options, gl));
-                image.onerror = (ev) => reject('Could not load image ' + image.src + '. 404?' + ev);
+                image.onerror = (ev) => reject("Could not load image " + image.src + ". 404?" + ev);
                 image.src = url;
             });
         }
@@ -37913,7 +39722,7 @@ var demo = (function (exports, hljs) {
      * Wrapped logging function.
      * @param msg Message to log.
      */
-    function log$1(msg) {
+    function log$2(msg) {
         if (window.console && window.console.log) {
             window.console.log(msg);
         }
@@ -37927,7 +39736,7 @@ var demo = (function (exports, hljs) {
             window.console.error(msg);
         }
         else {
-            log$1(msg);
+            log$2(msg);
         }
     }
     /**
@@ -37986,7 +39795,17 @@ var demo = (function (exports, hljs) {
         getRenderbufferParameter: { 2: { 0: true, 1: true } },
         renderbufferStorage: { 4: { 0: true, 1: true } },
         // Frame buffer operations (clear, blend, depth test, stencil)
-        clear: { 1: { 0: { enumBitwiseOr: ['COLOR_BUFFER_BIT', 'DEPTH_BUFFER_BIT', 'STENCIL_BUFFER_BIT'] } } },
+        clear: {
+            1: {
+                0: {
+                    enumBitwiseOr: [
+                        "COLOR_BUFFER_BIT",
+                        "DEPTH_BUFFER_BIT",
+                        "STENCIL_BUFFER_BIT",
+                    ],
+                },
+            },
+        },
         depthFunc: { 1: { 0: true } },
         blendFunc: { 2: { 0: true, 1: true } },
         blendFuncSeparate: { 4: { 0: true, 1: true, 2: true, 3: true } },
@@ -38020,7 +39839,16 @@ var demo = (function (exports, hljs) {
         getBufferSubData: { 3: { 0: true }, 4: { 0: true }, 5: { 0: true } },
         // WebGL 2 Framebuffer objects
         blitFramebuffer: {
-            10: { 8: { enumBitwiseOr: ['COLOR_BUFFER_BIT', 'DEPTH_BUFFER_BIT', 'STENCIL_BUFFER_BIT'] }, 9: true },
+            10: {
+                8: {
+                    enumBitwiseOr: [
+                        "COLOR_BUFFER_BIT",
+                        "DEPTH_BUFFER_BIT",
+                        "STENCIL_BUFFER_BIT",
+                    ],
+                },
+                9: true,
+            },
         },
         framebufferTextureLayer: { 5: { 0: true, 1: true } },
         invalidateFramebuffer: { 2: { 0: true } },
@@ -38098,7 +39926,9 @@ var demo = (function (exports, hljs) {
         getSamplerParameter: { 2: { 1: true } },
         // WebGL 2 Sync objects
         fenceSync: { 2: { 0: true, 1: { enumBitwiseOr: [] } } },
-        clientWaitSync: { 3: { 1: { enumBitwiseOr: ['SYNC_FLUSH_COMMANDS_BIT'] } } },
+        clientWaitSync: {
+            3: { 1: { enumBitwiseOr: ["SYNC_FLUSH_COMMANDS_BIT"] } },
+        },
         waitSync: { 3: { 1: { enumBitwiseOr: [] } } },
         getSyncParameter: { 2: { 1: true } },
         // WebGL 2 Transform Feedback
@@ -38132,12 +39962,13 @@ var demo = (function (exports, hljs) {
         if (null === glEnums) {
             glEnums = {};
             enumStringToValue = {};
-            const c = window.WebGL2RenderingContext || window.WebGLRenderingContext;
+            const c = window.WebGL2RenderingContext ||
+                window.WebGLRenderingContext;
             if (!c)
-                throw new Error('Neither WebGL2RenderingContext nor WebGLRenderingContext exists on window.');
+                throw new Error("Neither WebGL2RenderingContext nor WebGLRenderingContext exists on window.");
             for (const propertyName in c) {
                 const prop = c[propertyName];
-                if ('number' === typeof prop) {
+                if ("number" === typeof prop) {
                     glEnums[prop] = propertyName;
                     enumStringToValue[propertyName] = prop;
                 }
@@ -38156,7 +39987,9 @@ var demo = (function (exports, hljs) {
     function glEnumToString(value) {
         init();
         var name = glEnums[value];
-        return name !== undefined ? 'gl.' + name : '/*UNKNOWN WebGL ENUM*/ 0x' + value.toString(16) + '';
+        return name !== undefined
+            ? "gl." + name
+            : "/*UNKNOWN WebGL ENUM*/ 0x" + value.toString(16) + "";
     }
     /**
      * Converts the argument of a WebGL function to a string.
@@ -38181,7 +40014,7 @@ var demo = (function (exports, hljs) {
             if (funcOverloadInfo !== undefined) {
                 const argInfo = funcOverloadInfo[argumentIndex];
                 if (argInfo) {
-                    if (typeof argInfo === 'object') {
+                    if (typeof argInfo === "object") {
                         const enums = argInfo.enumBitwiseOr;
                         const orEnums = [];
                         let orResult = 0;
@@ -38193,7 +40026,7 @@ var demo = (function (exports, hljs) {
                             }
                         }
                         if (orResult === value) {
-                            return orEnums.join(' | ');
+                            return orEnums.join(" | ");
                         }
                         else {
                             return glEnumToString(value);
@@ -38206,10 +40039,10 @@ var demo = (function (exports, hljs) {
             }
         }
         if (value === null) {
-            return 'null';
+            return "null";
         }
         else if (value === undefined) {
-            return 'undefined';
+            return "undefined";
         }
         else {
             return value.toString();
@@ -38259,12 +40092,20 @@ var demo = (function (exports, hljs) {
             opt_onErrorFunc ||
                 function (err, functionName, args) {
                     // apparently we can't do args.join(',')
-                    var argStr = '';
+                    var argStr = "";
                     var numArgs = args.length;
                     for (let i = 0; i < numArgs; ++i) {
-                        argStr += (i == 0 ? '' : ', ') + glFunctionArgToString(functionName, numArgs, i, args[i]);
+                        argStr +=
+                            (i == 0 ? "" : ", ") +
+                                glFunctionArgToString(functionName, numArgs, i, args[i]);
                     }
-                    error('WebGL error ' + glEnumToString(err) + ' in ' + functionName + '(' + argStr + ')');
+                    error("WebGL error " +
+                        glEnumToString(err) +
+                        " in " +
+                        functionName +
+                        "(" +
+                        argStr +
+                        ")");
                 };
         // Holds booleans for each GL error so after we get the error ourselves
         // we can still return it to the client app.
@@ -38289,8 +40130,8 @@ var demo = (function (exports, hljs) {
         const wrapper = {};
         for (let propertyName in ctx) {
             const prop = ctx[propertyName];
-            if ('function' === typeof prop) {
-                if (propertyName != 'getExtension') {
+            if ("function" === typeof prop) {
+                if (propertyName != "getExtension") {
                     wrapper[propertyName] = makeErrorWrapper(ctx, propertyName);
                 }
                 else {
@@ -38332,7 +40173,9 @@ var demo = (function (exports, hljs) {
     }
     class TSGLContextBase {
         constructor(gl, immediate = {
-            mesh: new Mesh().addVertexBuffer('coords', 'ts_TexCoord').addVertexBuffer('colors', 'ts_Color'),
+            mesh: new Mesh()
+                .addVertexBuffer("coords", "ts_TexCoord")
+                .addVertexBuffer("colors", "ts_Color"),
             mode: -1,
             coord: [0, 0],
             color: [1, 1, 1, 1],
@@ -38381,31 +40224,37 @@ var demo = (function (exports, hljs) {
         matrixMode(mode) {
             switch (mode) {
                 case this.MODELVIEW:
-                    this.currentMatrixName = 'modelViewMatrix';
+                    this.currentMatrixName = "modelViewMatrix";
                     this.stack = this.modelViewStack;
                     break;
                 case this.PROJECTION:
-                    this.currentMatrixName = 'projectionMatrix';
+                    this.currentMatrixName = "projectionMatrix";
                     this.stack = this.projectionStack;
                     break;
                 default:
-                    throw new Error('invalid matrix mode ' + mode);
+                    throw new Error("invalid matrix mode " + mode);
             }
         }
         loadIdentity() {
             M4.identity(this[this.currentMatrixName]);
-            this.currentMatrixName == 'projectionMatrix' ? this.projectionMatrixVersion++ : this.modelViewMatrixVersion++;
+            this.currentMatrixName == "projectionMatrix"
+                ? this.projectionMatrixVersion++
+                : this.modelViewMatrixVersion++;
         }
         loadMatrix(m4) {
             M4.copy(m4, this[this.currentMatrixName]);
-            this.currentMatrixName == 'projectionMatrix' ? this.projectionMatrixVersion++ : this.modelViewMatrixVersion++;
+            this.currentMatrixName == "projectionMatrix"
+                ? this.projectionMatrixVersion++
+                : this.modelViewMatrixVersion++;
         }
         multMatrix(m4) {
             M4.multiply(this[this.currentMatrixName], m4, this.resultMatrix);
             const temp = this.resultMatrix;
             this.resultMatrix = this[this.currentMatrixName];
             this[this.currentMatrixName] = temp;
-            this.currentMatrixName == 'projectionMatrix' ? this.projectionMatrixVersion++ : this.modelViewMatrixVersion++;
+            this.currentMatrixName == "projectionMatrix"
+                ? this.projectionMatrixVersion++
+                : this.modelViewMatrixVersion++;
         }
         mirror(plane) {
             this.multMatrix(M4.mirror(plane));
@@ -38446,7 +40295,9 @@ var demo = (function (exports, hljs) {
             const pop = this.stack.pop();
             assert(undefined !== pop);
             this[this.currentMatrixName] = pop;
-            this.currentMatrixName == 'projectionMatrix' ? this.projectionMatrixVersion++ : this.modelViewMatrixVersion++;
+            this.currentMatrixName == "projectionMatrix"
+                ? this.projectionMatrixVersion++
+                : this.modelViewMatrixVersion++;
         }
         /**
          * World coordinates (WC) to screen/window coordinates matrix
@@ -38478,7 +40329,7 @@ var demo = (function (exports, hljs) {
         }
         begin(mode) {
             if (this.immediate.mode != -1)
-                throw new Error('mismatched viewerGL.begin() and viewerGL.end() calls');
+                throw new Error("mismatched viewerGL.begin() and viewerGL.end() calls");
             this.immediate.mode = mode;
             this.immediate.mesh.colors = [];
             this.immediate.mesh.coords = [];
@@ -38488,10 +40339,10 @@ var demo = (function (exports, hljs) {
             this.immediate.color =
                 1 == args.length && Array.isArray(args[0])
                     ? args[0]
-                    : 1 == args.length && 'number' == typeof args[0]
+                    : 1 == args.length && "number" == typeof args[0]
                         ? hexIntToGLColor(args[0])
-                        : 1 == args.length && 'string' == typeof args[0]
-                            ? color(args[0]).gl()
+                        : 1 == args.length && "string" == typeof args[0]
+                            ? color$1(args[0]).gl()
                             : [args[0], args[1], args[2], args[3] || 1];
         }
         texCoord(...args) {
@@ -38504,7 +40355,7 @@ var demo = (function (exports, hljs) {
         }
         end() {
             if (this.immediate.mode == -1)
-                throw new Error('mismatched viewerGL.begin() and viewerGL.end() calls');
+                throw new Error("mismatched viewerGL.begin() and viewerGL.end() calls");
             this.immediate.mesh.compile();
             this.immediate.shader
                 .uniforms({
@@ -38563,19 +40414,24 @@ var demo = (function (exports, hljs) {
             const bottom = options.paddingBottom || 0;
             if (!document.body) {
                 throw new Error("document.body doesn't exist yet (call viewerGL.fullscreen() from " +
-                    'window.onload() or from inside the <body> tag)');
+                    "window.onload() or from inside the <body> tag)");
             }
             document.body.appendChild(this.canvas);
-            document.body.style.overflow = 'hidden';
-            this.canvas.style.position = 'absolute';
-            this.canvas.style.left = left + 'px';
-            this.canvas.style.top = top + 'px';
-            this.canvas.style.width = window.innerWidth - left - right + 'px';
-            this.canvas.style.bottom = window.innerHeight - top - bottom + 'px';
+            document.body.style.overflow = "hidden";
+            this.canvas.style.position = "absolute";
+            this.canvas.style.left = left + "px";
+            this.canvas.style.top = top + "px";
+            this.canvas.style.width = window.innerWidth - left - right + "px";
+            this.canvas.style.bottom = window.innerHeight - top - bottom + "px";
+            this.addResizeListener();
+            return this;
+        }
+        addResizeListener(options = {}) {
             const gl = this;
             function windowOnResize() {
-                gl.canvas.width = (window.innerWidth - left - right) * window.devicePixelRatio;
-                gl.canvas.height = (window.innerHeight - top - bottom) * window.devicePixelRatio;
+                const bb = gl.canvas.getBoundingClientRect();
+                gl.canvas.width = bb.width * window.devicePixelRatio;
+                gl.canvas.height = bb.height * window.devicePixelRatio;
                 gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
                 if (options.camera) {
                     gl.matrixMode(TSGLContextBase.PROJECTION);
@@ -38584,7 +40440,7 @@ var demo = (function (exports, hljs) {
                     gl.matrixMode(TSGLContextBase.MODELVIEW);
                 }
             }
-            window.addEventListener('resize', windowOnResize);
+            window.addEventListener("resize", windowOnResize);
             windowOnResize();
             return this;
         }
@@ -38624,14 +40480,16 @@ var demo = (function (exports, hljs) {
             return (this.cachedSDFMeshes[str] ||
                 (this.cachedSDFMeshes[str] = createTextMesh(this.textMetrics, this.textAtlas, str)));
         }
-        renderText(string, color, size = 1, xAlign = 'left', baseline = 'bottom', gamma = 0.05, lineHeight = 1.2) {
+        renderText(string, color, size = 1, xAlign = "left", baseline = "bottom", gamma = 0.05, lineHeight = 1.2) {
             const strMesh = this.getSDFMeshForString(string);
             this.pushMatrix();
             this.scale(size);
             const xTranslate = { left: 0, center: -0.5, right: -1 };
             const yTranslate = {
                 top: -this.textMetrics.ascender / this.textMetrics.size,
-                middle: (-this.textMetrics.ascender - this.textMetrics.descender) / 2 / this.textMetrics.size,
+                middle: (-this.textMetrics.ascender - this.textMetrics.descender) /
+                    2 /
+                    this.textMetrics.size,
                 alphabetic: 0,
                 bottom: -this.textMetrics.descender / this.textMetrics.size,
             };
@@ -38640,7 +40498,13 @@ var demo = (function (exports, hljs) {
             this.multMatrix(M4.forSys(V3.X, V3.Y, new V3(0, -lineHeight, 0)));
             this.textAtlas.bind(0);
             this.textRenderShader
-                .uniforms({ texture: 0, u_color: color, u_debug: 0, u_gamma: gamma, u_buffer: 192 / 256 })
+                .uniforms({
+                texture: 0,
+                u_color: color,
+                u_debug: 0,
+                u_gamma: gamma,
+                u_buffer: 192 / 256,
+            })
                 .draw(strMesh);
             this.popMatrix();
             // gl.uniform1f(shader.u_debug, debug ? 1 : 0)
@@ -38653,31 +40517,33 @@ var demo = (function (exports, hljs) {
             // gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numItems)
         }
         static create(options = {}) {
-            const canvas = options.canvas || document.createElement('canvas');
+            const canvas = options.canvas || document.createElement("canvas");
             if (!options.canvas) {
                 canvas.width = 800;
                 canvas.height = 600;
             }
-            if (!('alpha' in options))
+            if (!("alpha" in options))
                 options.alpha = false;
             let newGL = undefined;
             try {
-                newGL = canvas.getContext('webgl2', options);
+                newGL = canvas.getContext("webgl2", options);
                 newGL && (newGL.version = 2);
                 if (!newGL) {
-                    newGL = canvas.getContext('webgl', options) || canvas.getContext('experimental-webgl', options);
+                    newGL =
+                        canvas.getContext("webgl", options) ||
+                            canvas.getContext("experimental-webgl", options);
                     newGL && (newGL.version = 1);
                 }
-                console.log('getting context');
+                console.log("getting context");
             }
             catch (e) {
-                console.log(e, 'Failed to get context');
+                console.log(e, "Failed to get context");
             }
             if (!newGL)
-                throw new Error('WebGL not supported');
+                throw new Error("WebGL not supported");
             if (options.throwOnError) {
                 newGL = makeDebugContext(newGL, (err, funcName) => {
-                    throw new Error(glEnumToString(err) + ' was caused by ' + funcName);
+                    throw new Error(glEnumToString(err) + " was caused by " + funcName);
                 });
             }
             TSGLContextBase.gl = newGL;
@@ -38692,9 +40558,33 @@ var demo = (function (exports, hljs) {
          * @param maxPixelRatio A limit for the pixelRatio. Useful for very high DPI devices such as mobile devices.
          */
         fixCanvasRes(maxPixelRatio = Infinity) {
-            this.canvas.width = this.canvas.clientWidth * Math.min(window.devicePixelRatio, maxPixelRatio);
-            this.canvas.height = this.canvas.clientHeight * Math.min(window.devicePixelRatio, maxPixelRatio);
+            this.canvas.width =
+                this.canvas.clientWidth * Math.min(window.devicePixelRatio, maxPixelRatio);
+            this.canvas.height =
+                this.canvas.clientHeight *
+                    Math.min(window.devicePixelRatio, maxPixelRatio);
             this.viewport(0, 0, this.canvas.width, this.canvas.height);
+        }
+        drawVector(vector, anchor, color = GL_COLOR_BLACK, size = 1) {
+            if (vector.likeO())
+                return;
+            this.pushMatrix();
+            const headLength = size * 4;
+            if (headLength > vector.length())
+                return;
+            const vT = vector.getPerpendicular().unit();
+            this.multMatrix(M4.forSys(vector.unit(), vT, vector.cross(vT).unit(), anchor));
+            this.scale(vector.length() - headLength, size / 2, size / 2);
+            this.shaders.singleColor
+                .uniforms({
+                color: color,
+            })
+                .draw(this.meshes.vectorShaft);
+            this.scale(1 / (vector.length() - headLength), 1, 1);
+            this.translate(vector.length() - headLength, 0, 0);
+            this.scale(headLength / 2, 1, 1);
+            this.shaders.singleColor.draw(this.meshes.vectorHead);
+            this.popMatrix();
         }
     }
     TSGLContextBase.MODELVIEW = 0;
@@ -38739,7 +40629,12 @@ var demo = (function (exports, hljs) {
         }
     }
     function hexIntToGLColor(color) {
-        return [(color >> 16) / 255.0, ((color >> 8) & 0xff) / 255.0, (color & 0xff) / 255.0, 1.0];
+        return [
+            (color >> 16) / 255.0,
+            ((color >> 8) & 0xff) / 255.0,
+            (color & 0xff) / 255.0,
+            1.0,
+        ];
     }
     // function measureText(metrics: FontJsonMetrics, text: string, size: number) {
     // 	const dimensions = {
@@ -38759,14 +40654,16 @@ var demo = (function (exports, hljs) {
     // const vertexBuffer = gl.createBuffer()
     // const textureBuffer = gl.createBuffer()
     function createTextMesh(fontMetrics, fontTextureAtlas, str, lineHeight = 1) {
-        const mesh = new Mesh().addIndexBuffer('TRIANGLES').addVertexBuffer('coords', 'ts_TexCoord');
+        const mesh = new Mesh()
+            .addIndexBuffer("TRIANGLES")
+            .addVertexBuffer("coords", "ts_TexCoord");
         let cursorX = 0;
         let cursorY = 0;
         function drawGlyph(chr) {
             const metric = fontMetrics.chars[chr];
             if (!metric)
                 return;
-            const [width, height, horiBearingX, horiBearingY, horiAdvance, posX, posY] = metric;
+            const [width, height, horiBearingX, horiBearingY, horiAdvance, posX, posY,] = metric;
             const { size, buffer } = fontMetrics;
             const quadStartIndex = mesh.vertices.length;
             // buffer = margin on texture
@@ -38790,7 +40687,7 @@ var demo = (function (exports, hljs) {
         }
         for (let i = 0; i < str.length; i++) {
             const chr = str[i];
-            if ('\n' == chr) {
+            if ("\n" == chr) {
                 cursorX = 0;
                 cursorY += lineHeight * fontMetrics.size;
             }
@@ -38798,10 +40695,13 @@ var demo = (function (exports, hljs) {
                 drawGlyph(chr);
             }
         }
-        return Object.assign(mesh.compile(), { width: cursorX / fontMetrics.size, lineCount: cursorY + 1 });
+        return Object.assign(mesh.compile(), {
+            width: cursorX / fontMetrics.size,
+            lineCount: cursorY + 1,
+        });
     }
 
-    const { abs: abs$2, acos, acosh, asin, asinh, atan, atanh, atan2: atan2$1, ceil, cbrt: cbrt$1, expm1, clz32, cos: cos$2, cosh, exp, floor: floor$1, fround, hypot: hypot$1, imul, log: log$2, log1p, log2, log10, max: max$3, min: min$3, pow, random: random$1, round: round$1, sign: sign$1, sin: sin$2, sinh, sqrt: sqrt$1, tan, tanh, trunc, E: E$1, LN10, LN2, LOG10E, LOG2E, PI: PI$3, SQRT1_2, SQRT2, } = Math;
+    const { abs: abs$3, acos, acosh, asin, asinh, atan, atanh, atan2: atan2$2, ceil, cbrt: cbrt$2, expm1, clz32, cos: cos$3, cosh, exp, floor: floor$2, fround, hypot: hypot$2, imul, log: log$3, log1p, log2, log10, max: max$4, min: min$4, pow, random: random$1, round: round$2, sign: sign$2, sin: sin$3, sinh, sqrt: sqrt$2, tan, tanh, trunc, E: E$1, LN10, LN2, LOG10E, LOG2E, PI: PI$4, SQRT1_2, SQRT2, } = Math;
 
     let insideIsInfosWithCurve = false;
     class Curve extends Transformable {
@@ -38809,9 +40709,7 @@ var demo = (function (exports, hljs) {
             super();
             this.tMin = tMin;
             this.tMax = tMax;
-            assertNumbers(tMin, tMax);
-            assert("number" === typeof tMin && !isNaN(tMin));
-            assert("number" === typeof tMax && !isNaN(tMax));
+            assertReals(tMin, tMax);
             assert(tMin < tMax, "tMin < tMax " + tMin + " < " + tMax);
         }
         static integrate(curve, startT, endT, steps) {
@@ -38921,7 +40819,7 @@ var demo = (function (exports, hljs) {
                         u -= scale * dfpdx;
                         v -= scale * dfpdy;
                     }
-                    const li = floor$1((u - uMin) / uStep), lj = floor$1((v - vMin) / vStep);
+                    const li = floor$2((u - uMin) / uStep), lj = floor$2((v - vMin) / vStep);
                     logTable.push({
                         i,
                         j,
@@ -38970,7 +40868,7 @@ var demo = (function (exports, hljs) {
             return this.toSource();
         }
         toSource(rounder = (x) => x) {
-            return callsce.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters(), this.tMin, this.tMax);
+            return callSource.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters(), this.tMin, this.tMax);
         }
         withBounds(tMin = this.tMin, tMax = this.tMax) {
             //assert(this.tMin <= tMin && tMin <= this.tMax)
@@ -39117,7 +41015,7 @@ var demo = (function (exports, hljs) {
                 const result = [];
                 for (let startT = this.tMin; startT <= this.tMax; startT += stepSize) {
                     const dt = stepSize * thisOC.tangentAt(startT).length();
-                    if (abs$2(f(startT)) <= dt) {
+                    if (abs$3(f(startT)) <= dt) {
                         //const t = newtonIterate1d(f, startT, 16)
                         let t = newtonIterateWithDerivative(f, startT, 16, df);
                         if (!eq0(f(t)) || eq0(df(t))) {
@@ -39191,12 +41089,12 @@ var demo = (function (exports, hljs) {
         // checkDerivate(t => implicitCurve(0, t), t => didv(0, t), -1, 1, 0)
         const { points, tangents } = followAlgorithm2d(implicitCurve, start, stepSize, bounds, validUV);
         if (points.length > 4 &&
-            points[0].distanceTo(getLast(points)) <= abs$2(stepSize)) {
+            points[0].distanceTo(getLast(points)) <= abs$3(stepSize)) {
             // this is a loop: split it
             for (let i = 0; i < points.length - 1; i++) {
                 assert(!points[i].equals(points[i + 1]));
             }
-            const half = floor$1(points.length / 2);
+            const half = floor$2(points.length / 2);
             const points1 = points.slice(0, half), points2 = points.slice(half - 1, points.length);
             const tangents1 = tangents.slice(0, half), tangents2 = tangents.slice(half - 1, tangents.length);
             //tangents2[tangents2.length - 1] = tangents1[0]
@@ -39244,7 +41142,7 @@ var demo = (function (exports, hljs) {
                     continue search;
                 }
                 const { p: startP, st1: { x: u, y: v }, st2: { x: u2, y: v2 }, } = curvePointPPResult;
-                const li = floor$1((u - uMin) / uStep), lj = floor$1((v - vMin) / vStep);
+                const li = floor$2((u - uMin) / uStep), lj = floor$2((v - vMin) / vStep);
                 logTable.push({
                     i,
                     j,
@@ -39298,7 +41196,7 @@ var demo = (function (exports, hljs) {
             for (let i = 0; i < points.length - 1; i++) {
                 assert(!points[i].equals(points[i + 1]));
             }
-            const half = floor$1(points.length / 2);
+            const half = floor$2(points.length / 2);
             const points1 = points.slice(0, half), points2 = points.slice(half - 1, points.length);
             const tangents1 = tangents.slice(0, half), tangents2 = tangents.slice(half - 1, tangents.length);
             const st1s1 = st1s.slice(0, half), st1s2 = st1s.slice(half - 1, tangents.length);
@@ -39354,7 +41252,7 @@ var demo = (function (exports, hljs) {
             const dfpdy = mf.y(p.x, p.y);
             const scale = fp / (dfpdx * dfpdx + dfpdy * dfpdy);
             p = p.minus(new V3(scale * dfpdx, scale * dfpdy, 0));
-            if (abs$2(fp) <= eps)
+            if (abs$3(fp) <= eps)
                 break;
         }
         return p;
@@ -39626,10 +41524,10 @@ var demo = (function (exports, hljs) {
         // want to avoid. Hence, we must check that the entire interval [tMin, tMax] is on one side of the vanishing plane.
         // Checking tMax, tMin and the extremas is enough.
         const extremas = solveCubicReal2(0, w2, w1, wc);
-        const wx0 = (x) => Number.isFinite(x) ? snap0(Math.pow(x, 2) * w2 + x * w1 + wc) : sign$1(w2) * Infinity;
+        const wx0 = (x) => Number.isFinite(x) ? snap0(Math.pow(x, 2) * w2 + x * w1 + wc) : sign$2(w2) * Infinity;
         if (wx0(tMin) * wx0(tMax) < 0 ||
             extremas.some((x) => wx0(x) * (wx0(tMin) + wx0(tMax)) < 0)) {
-            console.log(m.str);
+            console.log(m.toString());
             throw new Error("The entire interval must be on one side of the vanishing plane. P=" +
                 toSource(P3.vanishingPlane(m)));
         }
@@ -39671,7 +41569,7 @@ var demo = (function (exports, hljs) {
             const center = new V3((-w1 * wc) / delta, (2 * Math.pow(wc, 2)) / delta, 0);
             // f2 is parallel to P'(0), i.e. horizontal. Solve Py(t2) = Cy = Py(t1) / 2 for t2 and simplify
             // f2x = Px(t2) - Cx = Px(t2) - Px(t1) / 2 to get the x-component of f2:
-            const f2x = 1 / sqrt$1(abs$2(delta)) / wc;
+            const f2x = 1 / sqrt$2(abs$3(delta)) / wc;
             const f2 = new V3(f2x, 0, 0);
             let result;
             if (eq0(delta)) {
@@ -39701,7 +41599,7 @@ var demo = (function (exports, hljs) {
                 result = EllipseCurve.andFixTs(center, center.negated(), f2, tMapInv(tMin), tMapInv(tMax));
             }
             else {
-                const tMapInv = (t) => sign$1(t) *
+                const tMapInv = (t) => sign$2(t) *
                     acosh(1 -
                         (delta / 2 / Math.pow(wc, 2)) *
                             (Number.isFinite(t)
@@ -39751,11 +41649,11 @@ var demo = (function (exports, hljs) {
         }
         tangentAt(t) {
             t = clamp$1(t, this.tMin, this.tMax);
-            return V3.lerp(this.tangents[floor$1(t)], this.tangents[ceil(t)], t % 1);
+            return V3.lerp(this.tangents[floor$2(t)], this.tangents[ceil(t)], t % 1);
         }
         at(t) {
             assert(isFinite(t));
-            return V3.lerp(this.points[floor$1(t)], this.points[ceil(t)], t % 1);
+            return V3.lerp(this.points[floor$2(t)], this.points[ceil(t)], t % 1);
         }
         getConstructorParameters() {
             throw new Error();
@@ -39806,12 +41704,12 @@ var demo = (function (exports, hljs) {
             return roots;
         }
         pointT(pWC) {
-            const startT = withMax$1(arrayRange(floor$1(this.tMin), ceil(this.tMax), 1), (t) => -pWC.distanceTo(this.points[t]));
+            const startT = withMax$1(arrayRange(floor$2(this.tMin), ceil(this.tMax), 1), (t) => -pWC.distanceTo(this.points[t]));
             if (undefined === startT)
                 throw new Error();
             if (this.points[startT].like(pWC))
                 return startT;
-            const a = max$3(0, startT - 1), b = min$3(this.points.length - 1, startT + 1);
+            const a = max$4(0, startT - 1), b = min$4(this.points.length - 1, startT + 1);
             const tangent = this.tangentAt(startT);
             const f = (t) => this.at(t).to(pWC).dot(tangent);
             // const df = (t: number) => -this.tangentAt(clamp(t, 0, this.points.length - 1)).dot(tangent)
@@ -39892,7 +41790,7 @@ var demo = (function (exports, hljs) {
          */
         static approximateUnitArc(phi) {
             const f = (4 / 3) * Math.tan(phi / 4);
-            return new BezierCurve(V3.X, new V3(1, f, 0), new V3(cos$2(phi) + f * sin$2(phi), sin$2(phi) - f * cos$2(phi), 0), V3.sphere(phi, 0), 0, 1);
+            return new BezierCurve(V3.X, new V3(1, f, 0), new V3(cos$3(phi) + f * sin$3(phi), sin$3(phi) - f * cos$3(phi), 0), V3.sphere(phi, 0), 0, 1);
         }
         getConstructorParameters() {
             return [this.p0, this.p1, this.p2, this.p3];
@@ -40132,7 +42030,7 @@ var demo = (function (exports, hljs) {
         }
         transform(m4) {
             // perspective projection turn bezier curve into rational spline
-            assert(m4.isNoProj(), m4.str);
+            assert(m4.isNoProj(), m4.toString());
             return new BezierCurve(m4.transformPoint(this.p0), m4.transformPoint(this.p1), m4.transformPoint(this.p2), m4.transformPoint(this.p3), this.tMin, this.tMax);
         }
         transform4(m4) {
@@ -40358,8 +42256,8 @@ var demo = (function (exports, hljs) {
             if (!abLine.containsPoint(pMid) &&
                 between(abLine.pointT(pMid), 0, abLine.pointT(b))) {
                 const arc = EllipseCurve.circleThroughPoints(a, pMid, b), arcRadius = arc.f1.length(), pTest1 = this.at(lerp$1(t0, t1, 0.25)), pTest2 = this.at(lerp$1(t0, t1, 0.75));
-                if (abs$2(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERROR &&
-                    abs$2(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERROR) {
+                if (abs$3(arc.center.distanceTo(pTest1) / arcRadius - 1) <= REL_ERROR &&
+                    abs$3(arc.center.distanceTo(pTest2) / arcRadius - 1) <= REL_ERROR) {
                     result.push(arc);
                     return result;
                 }
@@ -40377,7 +42275,7 @@ var demo = (function (exports, hljs) {
      */
     BezierCurve.EX2D = BezierCurve.graphXY(2, -3, -3, 2);
     BezierCurve.EX3D = new BezierCurve(V3.O, V(-0.1, -1, 1), V(1.1, 1, 1), V3.X);
-    BezierCurve.QUARTER_CIRCLE = BezierCurve.approximateUnitArc(PI$3 / 2);
+    BezierCurve.QUARTER_CIRCLE = BezierCurve.approximateUnitArc(PI$4 / 2);
     BezierCurve.prototype.hlol = Curve.hlol++;
     BezierCurve.prototype.tIncrement = 1 / 80;
 
@@ -40411,11 +42309,11 @@ var demo = (function (exports, hljs) {
                 const eta1 = Math.sqrt(sqrtVal);
                 return [-Math.asinh(eta1), Math.asinh(eta1)];
             }
-            else if (eq(abs$2(a), abs$2(b))) {
+            else if (eq(abs$3(a), abs$3(b))) {
                 if (le(c * a, 0)) {
                     return [];
                 }
-                const eta = (sign$1(a * b) * (Math.pow(c, 2) - Math.pow(a, 2))) / 2 / a / c;
+                const eta = (sign$2(a * b) * (Math.pow(c, 2) - Math.pow(a, 2))) / 2 / a / c;
                 return [Math.asinh(eta)];
             }
             else {
@@ -40495,14 +42393,14 @@ var demo = (function (exports, hljs) {
             });
         }
         transform4(m4) {
-            const tMap = (t) => sign$1(t) * min$3(10, sqrt$1(-(1 - cosh(t)) / (1 + cosh(t))));
+            const tMap = (t) => sign$2(t) * min$4(10, sqrt$2(-(1 - cosh(t)) / (1 + cosh(t))));
             // prettier-ignore
             const parabolaToUnitHyperbola = new M4(0, 1, 0, 1, 2, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 1);
             return parabola4Projection(M4.product(m4, this.matrix, parabolaToUnitHyperbola), tMap(this.tMin), tMap(this.tMax));
         }
     }
     HyperbolaCurve.XY = new HyperbolaCurve(V3.O, V3.X, V3.Y);
-    HyperbolaCurve.prototype.tIncrement = PI$3 / 16;
+    HyperbolaCurve.prototype.tIncrement = PI$4 / 16;
 
     /**
      * A 3-dimensional line. Defined by an anchor and a normalized direction vector.
@@ -40974,7 +42872,7 @@ var demo = (function (exports, hljs) {
             assert(!isNaN(t));
             if (0 === t % 1)
                 return this.points[t];
-            const startParams = V3.lerp(this.pmPoints[floor$1(t)], this.pmPoints[ceil(t)], t % 1);
+            const startParams = V3.lerp(this.pmPoints[floor$2(t)], this.pmPoints[ceil(t)], t % 1);
             return this.closestPointToParams(startParams);
         }
         uvT(t) {
@@ -40982,7 +42880,7 @@ var demo = (function (exports, hljs) {
             //TODO: use elerp
             if (0 === t % 1)
                 return this.pmPoints[t];
-            const startParams = V3.lerp(this.pmPoints[floor$1(t)], this.pmPoints[ceil(t)], t % 1);
+            const startParams = V3.lerp(this.pmPoints[floor$2(t)], this.pmPoints[ceil(t)], t % 1);
             return curvePoint(this.implicitCurve(), startParams, this.didu, this.didv);
         }
         closestTToPoint(p, tStart) {
@@ -41015,7 +42913,7 @@ var demo = (function (exports, hljs) {
                         const pF = this.parametricSurface.pUVFunc();
                         const dpdu = this.parametricSurface.dpdu();
                         const dpdv = this.parametricSurface.dpdv();
-                        const startUV = this.pmPoints[abs$2(prevSignedDistance) < abs$2(signedDistance) ? i - 1 : i];
+                        const startUV = this.pmPoints[abs$3(prevSignedDistance) < abs$3(signedDistance) ? i - 1 : i];
                         const isUV = newtonIterate2dWithDerivatives(this.implicitCurve(), (u, v) => iF(pF(u, v)), startUV.x, startUV.y, 4, this.didu, this.didv, (u, v) => dpdu(u, v).dot(surface.didp(pF(u, v))), (u, v) => dpdv(u, v).dot(surface.didp(pF(u, v))));
                         result.push(this.pointT(this.parametricSurface.pUV(isUV.x, isUV.y)));
                     }
@@ -41047,16 +42945,16 @@ var demo = (function (exports, hljs) {
             const pmPoint = this.parametricSurface.uvPFunc()(p);
             const ps = this.points, pmps = this.pmPoints;
             let t = 0, pmDistance = pmPoint.distanceTo(pmps[0]);
-            while (pmDistance > abs$2(this.stepSize) && t < ps.length - 1) {
+            while (pmDistance > abs$3(this.stepSize) && t < ps.length - 1) {
                 // TODO -1?
                 //console.log(t, pmps[t].$, pmDistance)
-                t = min$3(pmps.length - 1, t + max$3(1, Math.round(pmDistance / abs$2(this.stepSize) / 2 / 2)));
+                t = min$4(pmps.length - 1, t + max$4(1, Math.round(pmDistance / abs$3(this.stepSize) / 2 / 2)));
                 pmDistance = pmPoint.distanceTo(pmps[t]);
             }
             // if (t < this.pmPoints.length - 1 && pmDistance > pmPoint.distanceTo(pmps[t + 1])) {
             //     t++
             // }
-            if (pmDistance > abs$2(this.stepSize) * 1.1) {
+            if (pmDistance > abs$3(this.stepSize) * 1.1) {
                 // p is not on this curve
                 return NaN;
             }
@@ -41067,7 +42965,7 @@ var demo = (function (exports, hljs) {
                 return t;
             if (ps[t + 1].like(p))
                 return t + 1;
-            const startT = withMax$1(arrayRange(floor$1(this.tMin), ceil(this.tMax), 1), (t) => -pmPoint.distanceTo(pmps[t]));
+            const startT = withMax$1(arrayRange(floor$2(this.tMin), ceil(this.tMax), 1), (t) => -pmPoint.distanceTo(pmps[t]));
             if (undefined === startT)
                 throw new Error();
             if (ps[startT].like(p))
@@ -41079,7 +42977,7 @@ var demo = (function (exports, hljs) {
             //        : pmPoint.distanceTo(pmps[startT - 1]) < pmPoint.distanceTo(pmps[startT + 1])
             //            ? [startT - 1, startT]
             //            : [startT, startT + 1]
-            const a = max$3(0, startT - 1), b = min$3(this.points.length - 1, startT + 1);
+            const a = max$4(0, startT - 1), b = min$4(this.points.length - 1, startT + 1);
             const tangent = this.tangentAt(startT);
             const f = (t) => this.at(clamp$1(t, 0, this.points.length - 1))
                 .to(p)
@@ -41088,7 +42986,7 @@ var demo = (function (exports, hljs) {
             //checkDerivate(f, df, 0, this.points.length - 2, 3)
             // 8 steps necessary because df can currently be way off
             t = bisect$1(f, a, b, 32);
-            if (!isFinite(t) || this.at(t).distanceTo(p) > abs$2(this.stepSize)) {
+            if (!isFinite(t) || this.at(t).distanceTo(p) > abs$3(this.stepSize)) {
                 return NaN;
             }
             return t;
@@ -41126,7 +43024,7 @@ var demo = (function (exports, hljs) {
             return surfaceIsICurveIsInfosWithLine.call(this, this.implicitSurface, this.parametricSurface, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
         }
         toSource(rounder = (x) => x) {
-            const result = callsce("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], getLast(this.pmPoints), this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
+            const result = callSource("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], getLast(this.pmPoints), this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
             return result;
         }
     }
@@ -41150,7 +43048,7 @@ var demo = (function (exports, hljs) {
             assert(!isNaN(t));
             if (0 === t % 1)
                 return this.points[t];
-            const startPoint = V3.lerp(this.points[floor$1(t)], this.points[ceil(t)], t % 1);
+            const startPoint = V3.lerp(this.points[floor$2(t)], this.points[ceil(t)], t % 1);
             return curvePointPP(this.parametricSurface1, this.parametricSurface2, startPoint).p;
         }
         isColinearTo(curve) {
@@ -41219,7 +43117,7 @@ var demo = (function (exports, hljs) {
             return new PPCurve(m4.transformedPoints(this.points), m4.transformedVectors(this.tangents), this.parametricSurface1.transform(m4), this.parametricSurface2.transform(m4), this.st1s, undefined, this.stepSize, this.dir, undefined);
         }
         toSource() {
-            return callsce("PPCurve.forStartEnd", this.parametricSurface1, this.parametricSurface2, this.points[0], getLast(this.points), this.stepSize);
+            return callSource("PPCurve.forStartEnd", this.parametricSurface1, this.parametricSurface2, this.points[0], getLast(this.points), this.stepSize);
         }
         static forStartEnd(ps1, ps2, startPoint, end, stepSize = 0.02) {
             const { points, tangents, st1s } = followAlgorithmPP(ps1, ps2, startPoint, stepSize);
@@ -41239,7 +43137,7 @@ var demo = (function (exports, hljs) {
                     const point = this.points[i];
                     const signedDistance = iF(point);
                     if (prevSignedDistance * signedDistance <= 0) {
-                        const startIndex = abs$2(prevSignedDistance) < abs$2(signedDistance) ? i - 1 : i;
+                        const startIndex = abs$3(prevSignedDistance) < abs$3(signedDistance) ? i - 1 : i;
                         const startPoint = this.points[startIndex];
                         const startUV1 = this.st1s[startIndex];
                         const startUV2 = this.parametricSurface2.uvP(startPoint);
@@ -41410,20 +43308,20 @@ var demo = (function (exports, hljs) {
     ParabolaCurve.prototype.tIncrement = 1 / 32;
 
     class EllipseCurve extends XiEtaCurve {
-        constructor(center, f1, f2, tMin = 0, tMax = PI$3) {
+        constructor(center, f1, f2, tMin = 0, tMax = PI$4) {
             super(center, f1, f2, tMin, tMax);
-            assert(-PI$3 <= this.tMin && this.tMin < PI$3);
-            assert(-PI$3 < this.tMax && this.tMax <= PI$3);
+            assert(-PI$4 <= this.tMin && this.tMin < PI$4);
+            assert(-PI$4 < this.tMax && this.tMax <= PI$4);
         }
-        static andFixTs(center, f1, f2, tMin = 0, tMax = PI$3) {
-            if (-PI$3 <= tMin && tMax <= PI$3) {
+        static andFixTs(center, f1, f2, tMin = 0, tMax = PI$4) {
+            if (-PI$4 <= tMin && tMax <= PI$4) {
                 return new EllipseCurve(center, f1, f2, tMin, tMax);
             }
             if (0 <= tMin && tMax <= TAU) {
-                return new EllipseCurve(center, f1.negated(), f2.negated(), tMin - PI$3, tMax - PI$3);
+                return new EllipseCurve(center, f1.negated(), f2.negated(), tMin - PI$4, tMax - PI$4);
             }
             if (-TAU <= tMin && tMax <= 0) {
-                return new EllipseCurve(center, f1.negated(), f2.negated(), tMin + PI$3, tMax + PI$3);
+                return new EllipseCurve(center, f1.negated(), f2.negated(), tMin + PI$4, tMax + PI$4);
             }
             throw new Error("Method not implemented.");
         }
@@ -41433,7 +43331,7 @@ var demo = (function (exports, hljs) {
         }
         static XYLCPointT(pLC, tMin, tMax) {
             assertNumbers(tMin, tMax);
-            const t = atan2$1(pLC.y, pLC.x);
+            const t = atan2$2(pLC.y, pLC.x);
             const lowSplitter = lerp$1(tMin, tMax - TAU, 0.5);
             if (t < lowSplitter) {
                 return t + TAU;
@@ -41482,9 +43380,9 @@ var demo = (function (exports, hljs) {
         split(tMin = this.tMin, tMax = this.tMax) {
             const result = [];
             tMin < 0 &&
-                result.push(new EllipseCurve(this.center, this.f1.negated(), this.f2.negated(), tMin + PI$3, min$3(0, tMax) + PI$3));
+                result.push(new EllipseCurve(this.center, this.f1.negated(), this.f2.negated(), tMin + PI$4, min$4(0, tMax) + PI$4));
             tMax > 0 &&
-                result.push(new EllipseCurve(this.center, this.f1, this.f2, max$3(0, tMin), tMax));
+                result.push(new EllipseCurve(this.center, this.f1, this.f2, max$4(0, tMin), tMax));
             return result;
         }
         static forAB(a, b, center = V3.O) {
@@ -41499,7 +43397,7 @@ var demo = (function (exports, hljs) {
             const normal = a.to(b).cross(b.to(c));
             const center = new L3(a.lerp(b, 0.5), normal.cross(a.to(b)).unit()).isInfoWithLine(new L3(b.lerp(c, 0.5), normal.cross(b.to(c)).unit()));
             const f1 = center.to(a).negated();
-            return new EllipseCurve(center, f1, normal.unit().cross(f1), -PI$3, undefined === tMax
+            return new EllipseCurve(center, f1, normal.unit().cross(f1), -PI$4, undefined === tMax
                 ? f1.angleRelativeNormal(center.to(c), normal.unit())
                 : tMax);
         }
@@ -41626,7 +43524,7 @@ var demo = (function (exports, hljs) {
             return t;
         }
         reversed() {
-            return new EllipseCurve(this.center, this.f1.negated(), this.f2, PI$3 - this.tMax, PI$3 - this.tMin);
+            return new EllipseCurve(this.center, this.f1.negated(), this.f2, PI$4 - this.tMax, PI$4 - this.tMin);
         }
         eccentricity() {
             const mainAxes = this.rightAngled();
@@ -41683,7 +43581,7 @@ var demo = (function (exports, hljs) {
             const { x1: xi, y1: eta } = intersectionUnitCircleLine(g1, g2, 0);
             const f1RA = f1.times(xi).plus(f2.times(eta));
             const f2RA = f1.times(-eta).plus(f2.times(xi));
-            return new EllipseCurve(this.center, f1RA, f2RA, -PI$3, PI$3);
+            return new EllipseCurve(this.center, f1RA, f2RA, -PI$4, PI$4);
         }
         isInfosWithEllipse(ellipse) {
             if (this.normal.isParallelTo(ellipse.normal) &&
@@ -41691,7 +43589,7 @@ var demo = (function (exports, hljs) {
                 // ellipses are coplanar
                 const ellipseLCRA = ellipse.transform(this.matrixInverse).rightAngled();
                 const r1 = ellipseLCRA.f1.lengthXY(), r2 = ellipseLCRA.f2.lengthXY(), centerDist = ellipseLCRA.center.lengthXY();
-                const rMin = min$3(r1, r2), rMax = max$3(r1, r2);
+                const rMin = min$4(r1, r2), rMax = max$4(r1, r2);
                 if (lt(centerDist + rMax, 1) || // entirely inside unit circle
                     lt(1, centerDist - rMax) || // entirely outside unit circle
                     lt(1, rMin - centerDist) || // contains unit circle
@@ -41702,13 +43600,13 @@ var demo = (function (exports, hljs) {
                 const f = (t) => ellipseLCRA.at(t).lengthXY() - 1;
                 const df = (t) => ellipseLCRA.at(t).xy().dot(ellipseLCRA.tangentAt(t)) /
                     ellipseLCRA.at(t).lengthXY();
-                checkDerivate(f, df, -PI$3, PI$3, 1);
+                checkDerivate(f, df, -PI$4, PI$4, 1);
                 const ellipseLCRATs = [];
-                for (let startT = (-4 / 5) * PI$3; startT < PI$3; startT += PI$3 / 4) {
+                for (let startT = (-4 / 5) * PI$4; startT < PI$4; startT += PI$4 / 4) {
                     let t = newtonIterateSmart(f, startT, 16, df, 1e-4);
-                    le(t, -PI$3) && (t += TAU);
+                    le(t, -PI$4) && (t += TAU);
                     assert(!isNaN(t));
-                    if (between(t, -PI$3, PI$3) &&
+                    if (between(t, -PI$4, PI$4) &&
                         eq0(f(t)) &&
                         !ellipseLCRATs.some((r) => eq(t, r))) {
                         ellipseLCRATs.push(t);
@@ -41759,7 +43657,7 @@ var demo = (function (exports, hljs) {
             return super.isInfosWithCurve(curve);
         }
         transform4(m4) {
-            const tMap = (t) => sign$1(t) * sqrt$1((1 - cos$2(t)) / (1 + cos$2(t)));
+            const tMap = (t) => sign$2(t) * sqrt$2((1 - cos$3(t)) / (1 + cos$3(t)));
             // prettier-ignore
             const parabolaToUnitEllipse = new M4(0, -1, 0, 1, 2, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1);
             return parabola4Projection(M4.product(m4, this.matrix, parabolaToUnitEllipse), tMap(this.tMin), tMap(this.tMax));
@@ -42081,7 +43979,7 @@ var demo = (function (exports, hljs) {
             // => w * (p1 - X) = (X - M)
             // as p1, X and M are all on the same line, we can solve this equation with only the x
             const M = p0.lerp(p2, 0.5);
-            const Xx = 1 / sqrt$1(1 - Math.pow((M.y / M.x), 2));
+            const Xx = 1 / sqrt$2(1 - Math.pow((M.y / M.x), 2));
             const w = (Xx - M.x) / (p1.x - Xx);
             return NURBS.fromV3s([p0, p1, p2], 2, undefined, [1, w, 1]).transform(hyperbola.matrix);
         }
@@ -42097,7 +43995,7 @@ var demo = (function (exports, hljs) {
                 VV(-1, 0, 0, 1),
                 VV(-1, -1, 0, 1).times(SQRT1_2),
                 VV(0, -1, 0, 1),
-            ], 2, [0, 0, 0, PI$3 / 2, PI$3 / 2, PI$3, PI$3, (3 * PI$3) / 2, (3 * PI$3) / 2, 2 * PI$3]);
+            ], 2, [0, 0, 0, PI$4 / 2, PI$4 / 2, PI$4, PI$4, (3 * PI$4) / 2, (3 * PI$4) / 2, 2 * PI$4]);
             return unitSemiEllipse.transform(ellipse.matrix);
         }
         /**
@@ -42247,7 +44145,7 @@ var demo = (function (exports, hljs) {
             const delta = w0 * w2 - Math.pow(w1, 2);
             const cxy = (w0 * w2) / 2 / delta;
             const center = new V3(cxy, cxy, 0);
-            const k = (Math.pow(w1, 2) + delta - 2 * w1 * sqrt$1(abs$2(delta))) / 2 / delta;
+            const k = (Math.pow(w1, 2) + delta - 2 * w1 * sqrt$2(abs$3(delta))) / 2 / delta;
             const p = V3.X;
             const q = new V3(k, cxy, 0);
             // const q = new V3(cxy, k, 0)
@@ -42324,20 +44222,20 @@ var demo = (function (exports, hljs) {
             }
             throw new Error(t + " " + knots);
         }
-        static UnitCircle(sections = 2, tMin = 0, tMax = PI$3) {
+        static UnitCircle(sections = 2, tMin = 0, tMax = PI$4) {
             const dt = tMax - tMin;
             const tStep = dt / sections;
-            const w = sin$2(PI$3 / 2 - tStep / 2);
+            const w = sin$3(PI$4 / 2 - tStep / 2);
             // cos
-            const r = 1 / cos$2(tStep / 2);
+            const r = 1 / cos$3(tStep / 2);
             const points = arrayFromFunction(sections * 2 + 1, (i) => {
                 const t = lerp$1(tMin, tMax, i / 2 / sections);
                 if (i % 2 == 0) {
                     // control point on circle
-                    return VV(cos$2(t), sin$2(t), 0, 1);
+                    return VV(cos$3(t), sin$3(t), 0, 1);
                 }
                 else {
-                    return VV(r * w * cos$2(t), r * w * sin$2(t), 0, w);
+                    return VV(r * w * cos$3(t), r * w * sin$3(t), 0, w);
                 }
             });
             const knots = [];
@@ -42720,7 +44618,7 @@ var demo = (function (exports, hljs) {
             return eq0(this.normal1.dot(plane.normal1));
         }
         toSource() {
-            return callsce("new P3", this.normal1, this.w);
+            return callSource("new P3", this.normal1, this.w);
         }
         translated(offset) {
             return new P3(this.normal1, this.w + offset.dot(this.normal1));
@@ -42869,7 +44767,7 @@ var demo = (function (exports, hljs) {
                     }
                     // edge colinear to intersection
                     const nextInside = colinearEdges[nextEdgeIndex] ||
-                        dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
+                        dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$2(nextEdge.deltaT())) < 0;
                     if (!nextInside) {
                         if (logIS(edge.b))
                             return PointVsFace.ON_EDGE;
@@ -42885,9 +44783,9 @@ var demo = (function (exports, hljs) {
                                 // TODO: refactor, dont check for different sides, just logIs everything
                                 return PointVsFace.ON_EDGE;
                             }
-                            const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0;
+                            const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign$2(edge.deltaT())) < 0;
                             const nextInside = colinearEdges[nextEdgeIndex] ||
-                                dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
+                                dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$2(nextEdge.deltaT())) < 0;
                             if (edgeInside != nextInside) {
                                 if (logIS(edge.b))
                                     return PointVsFace.ON_EDGE;
@@ -42921,7 +44819,7 @@ var demo = (function (exports, hljs) {
                 if (eq(pT, isT)) {
                     return true;
                 }
-                else if (pT < isT && le(isT, PI$3)) {
+                else if (pT < isT && le(isT, PI$4)) {
                     inside = !inside;
                 }
                 return false;
@@ -42939,7 +44837,7 @@ var demo = (function (exports, hljs) {
                     }
                     // edge colinear to intersection
                     const nextInside = colinearEdges[nextEdgeIndex] ||
-                        dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
+                        dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$2(nextEdge.deltaT())) < 0;
                     if (!nextInside && testLine.containsPoint(edge.b)) {
                         if (logIS(edge.b))
                             return PointVsFace.ON_EDGE;
@@ -42951,9 +44849,9 @@ var demo = (function (exports, hljs) {
                             if (!testLine.containsPoint(edge.b))
                                 continue;
                             // endpoint lies on intersection testLine
-                            const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign$1(edge.deltaT())) < 0;
+                            const edgeInside = dotCurve2(edge.curve, edge.bT, lineOut, -sign$2(edge.deltaT())) < 0;
                             const nextInside = colinearEdges[nextEdgeIndex] ||
-                                dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$1(nextEdge.deltaT())) < 0;
+                                dotCurve2(nextEdge.curve, nextEdge.aT, lineOut, sign$2(nextEdge.deltaT())) < 0;
                             if (edgeInside != nextInside) {
                                 if (logIS(edge.b))
                                     return PointVsFace.ON_EDGE;
@@ -42977,7 +44875,7 @@ var demo = (function (exports, hljs) {
             return this.toSource();
         }
         toSource(rounder = (x) => x) {
-            return callsce.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters());
+            return callSource.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters());
         }
         /**
          * Return points which would touch AABB. Doesnt include borders due to parametric bounds, for example.
@@ -42996,7 +44894,7 @@ var demo = (function (exports, hljs) {
                 }
             }
             if (curve instanceof ImplicitCurve) {
-                for (let i = ceil(curve.tMin) + 1; i <= floor$1(curve.tMax) - 1; i++) {
+                for (let i = ceil(curve.tMin) + 1; i <= floor$2(curve.tMax) - 1; i++) {
                     if (!this.containsPoint(curve.points[i])) {
                         return false;
                     }
@@ -43082,7 +44980,7 @@ var demo = (function (exports, hljs) {
          * Positive values are inside bounds.
          */
         boundsSigned(u, v) {
-            return min$3(u - this.uMin, this.uMax - u, v - this.vMin, this.vMax - v);
+            return min$4(u - this.uMin, this.uMax - u, v - this.vMin, this.vMax - v);
         }
         normalP(p) {
             const pmPoint = this.uvPFunc()(p);
@@ -43094,7 +44992,7 @@ var demo = (function (exports, hljs) {
         normalUV(u, v) {
             return this.normalUVFunc()(u, v);
         }
-        parametersValid(u, v) {
+        validUV(u, v) {
             return between(u, this.uMin, this.uMax) && between(v, this.vMin, this.vMax);
         }
         toMesh(uStep = this.uStep, vStep = this.vStep) {
@@ -43143,18 +45041,18 @@ var demo = (function (exports, hljs) {
          * @param dir Direction in which the cone opens. The ellipse spanned by f1,
          *   f2 is contained at (apex + dir).
          */
-        constructor(center, f1, f2, dir, uMin = 0, uMax = PI$3, vMin = 0, vMax = 16) {
+        constructor(center, f1, f2, dir, uMin = 0, uMax = PI$4, vMin = 0, vMax = 16) {
             super(uMin, uMax, vMin, vMax);
             this.center = center;
             this.f1 = f1;
             this.f2 = f2;
             this.dir = dir;
             assertVectors(center, f1, f2, dir);
-            assert(-PI$3 <= uMin && uMax <= PI$3);
+            assert(-PI$4 <= uMin && uMax <= PI$4);
             assert(0 <= vMin, vMin);
             this.matrix = M4.forSys(f1, f2, dir, center);
             this.matrixInverse = this.matrix.inversed();
-            this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.dir));
+            this.normalDir = sign$2(this.f1.cross(this.f2).dot(this.dir));
             this.pLCNormalWCMatrix = this.matrix
                 .as3x3()
                 .inversed()
@@ -43179,7 +45077,7 @@ var demo = (function (exports, hljs) {
                 const pLC = this.matrixInverse.transformPoint(pWC);
                 const angle = pLC.angleXY();
                 if (undefined === startU) {
-                    startU = angle < -PI$3 / 2 ? angle + TAU : angle;
+                    startU = angle < -PI$4 / 2 ? angle + TAU : angle;
                 }
                 if (undefined === startV) {
                     startV = pLC.z + (pLC.lengthXY() - pLC.z) * SQRT1_2;
@@ -43230,7 +45128,7 @@ var demo = (function (exports, hljs) {
                 else {
                     // hyperbola
                     const center = new V3(d / a, 0, 0);
-                    const f1 = new V3(0, 0, abs$2(d / a)); // abs, because we always want the
+                    const f1 = new V3(0, 0, abs$3(d / a)); // abs, because we always want the
                     // hyperbola to be pointing up
                     const f2 = new V3(0, d / a, 0);
                     return [new HyperbolaCurve(center, f1, f2)];
@@ -43251,8 +45149,8 @@ var demo = (function (exports, hljs) {
                     }
                     else if (aa > cc) {
                         return [
-                            new L3(V3.O, new V3(c, sqrt$1(aa - cc), -a).unit()),
-                            new L3(V3.O, new V3(c, -sqrt$1(aa - cc), -a).unit()),
+                            new L3(V3.O, new V3(c, sqrt$2(aa - cc), -a).unit()),
+                            new L3(V3.O, new V3(c, -sqrt$2(aa - cc), -a).unit()),
                         ];
                     }
                 }
@@ -43274,9 +45172,9 @@ var demo = (function (exports, hljs) {
                             return [];
                         }
                         const p1 = new V3(d / (a - c), 0, -d / (a - c));
-                        const p2 = new V3((-a * d) / (cc - aa), d / sqrt$1(cc - aa), (d * c) / (cc - aa));
+                        const p2 = new V3((-a * d) / (cc - aa), d / sqrt$2(cc - aa), (d * c) / (cc - aa));
                         return [
-                            new EllipseCurve(center, center.to(p1), center.to(p2), -PI$3, PI$3),
+                            new EllipseCurve(center, center.to(p1), center.to(p2), -PI$4, PI$4),
                         ];
                     }
                     else if (aa > cc) {
@@ -43286,7 +45184,7 @@ var demo = (function (exports, hljs) {
                         // const p2 = new V3(-a * d / (cc - aa), d / sqrt(aa - cc), d * c /
                         // (cc - aa)) const f1 = center.to(p1)
                         const f1 = new V3((d * c) / (aa - cc), 0, (-d * a) / (aa - cc));
-                        const f2 = new V3(0, d / sqrt$1(aa - cc), 0);
+                        const f2 = new V3(0, d / sqrt$2(aa - cc), 0);
                         return [new HyperbolaCurve(center, f1.z > 0 ? f1 : f1.negated(), f2)];
                     }
                 }
@@ -43405,7 +45303,7 @@ var demo = (function (exports, hljs) {
                 eq(center.z, f1.x) &&
                 eq0(center.y) &&
                 eq0(f1.y) &&
-                eq(sqrt$1(abs$2(Math.pow(center.x, 2) - Math.pow(center.z, 2))), abs$2(f2.y)) &&
+                eq(sqrt$2(abs$3(Math.pow(center.x, 2) - Math.pow(center.z, 2))), abs$3(f2.y)) &&
                 eq0(f2.x) &&
                 eq0(f2.z));
         }
@@ -43442,8 +45340,8 @@ var demo = (function (exports, hljs) {
                 const y = isometricV(this.vMax).transform4(matrixInv.times(m4).times(this.matrix));
                 const aabb = AABB.forAABBs([x.getAABB(), y.getAABB()]);
                 console.log("aabb", aabb);
-                console.log(matrixInv.str);
-                console.log(x.str, y.str);
+                console.log(matrixInv.toString());
+                console.log(x.toString(), y.toString());
                 return new ConicSurface(c, f1, f2, dir, this.uMin, this.uMax, aabb.min.z, aabb.max.z);
             }
             else {
@@ -43453,7 +45351,7 @@ var demo = (function (exports, hljs) {
                 const aabb = isometricV(this.vMax)
                     .transform4(matrixInv.times(m4.times(this.matrix)))
                     .getAABB();
-                return new CylinderSurface(baseCurve, dir.unit(), this.uMin, this.uMax, min$3(0, aabb.min.z, aabb.max.z), max$3(0, aabb.min.z, aabb.max.z));
+                return new CylinderSurface(baseCurve, dir.unit(), this.uMin, this.uMax, min$4(0, aabb.min.z, aabb.max.z), max$4(0, aabb.min.z, aabb.max.z));
             }
         }
         flipped() {
@@ -43477,19 +45375,19 @@ var demo = (function (exports, hljs) {
         pUVFunc() {
             return (u, v) => {
                 // center + f1 v cos u + f2 v sin u + v dir
-                const resultLC = new V3(v * cos$2(u), v * sin$2(u), v);
+                const resultLC = new V3(v * cos$3(u), v * sin$3(u), v);
                 return this.matrix.transformPoint(resultLC);
             };
         }
         dpdu() {
             return (u, v) => {
-                const resultLC = new V3(v * -sin$2(u), v * cos$2(u), 0);
+                const resultLC = new V3(v * -sin$3(u), v * cos$3(u), 0);
                 return this.matrix.transformVector(resultLC);
             };
         }
         dpdv() {
             return (s) => {
-                const resultLC = new V3(cos$2(s), sin$2(s), 1);
+                const resultLC = new V3(cos$3(s), sin$3(s), 1);
                 return this.matrix.transformVector(resultLC);
             };
         }
@@ -43510,7 +45408,7 @@ var demo = (function (exports, hljs) {
         uvP(pWC) {
             const pLC = this.matrixInverse.transformPoint(pWC);
             const angle = pLC.angleXY();
-            return new V3(angle < -PI$3 / 2 ? angle + TAU : angle, pLC.z, 0);
+            return new V3(angle < -PI$4 / 2 ? angle + TAU : angle, pLC.z, 0);
         }
         isCurvesWithSurface(surface) {
             if (surface instanceof PlaneSurface) {
@@ -43544,7 +45442,7 @@ var demo = (function (exports, hljs) {
                 if (curve instanceof EllipseCurve) {
                     const curveLC = curve.transform(rotationMatrix);
                     const ts = curveLC.isTsWithPlane(P3.ZX);
-                    const intervals = getIntervals(ts, -PI$3, PI$3).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0);
+                    const intervals = getIntervals(ts, -PI$4, PI$4).filter(([a, b]) => curveLC.at((a + b) / 2).y > 0);
                     return intervals.flatMap(([a, b]) => curveWC.split(a, b));
                 }
                 const p = curveWC.at(0.2);
@@ -43570,7 +45468,7 @@ var demo = (function (exports, hljs) {
      * Unit cone. x² + y² = z², 0 <= z
      */
     ConicSurface.UNIT = new ConicSurface(V3.O, V3.X, V3.Y, V3.Z);
-    ConicSurface.prototype.uStep = PI$3 / 16;
+    ConicSurface.prototype.uStep = PI$4 / 16;
     ConicSurface.prototype.vStep = 256;
 
     /**
@@ -43671,7 +45569,7 @@ var demo = (function (exports, hljs) {
                     return ts.map((t) => {
                         const p = surface.baseCurve.at(t);
                         const correctDir = this.normalP(p).cross(surface.normalP(p));
-                        return new L3(p, dir1.times(sign$1(correctDir.dot(dir1))));
+                        return new L3(p, dir1.times(sign$2(correctDir.dot(dir1))));
                     });
                 }
                 else if (ImplicitSurface.is(surface)) {
@@ -43778,7 +45676,7 @@ var demo = (function (exports, hljs) {
      * Rotation surface with r = f(z)
      */
     class RotatedCurveSurface extends ParametricSurface {
-        constructor(curve, matrix = M4.IDENTITY, uMin = 0, uMax = PI$3, vMin = curve.tMin, vMax = curve.tMax) {
+        constructor(curve, matrix = M4.IDENTITY, uMin = 0, uMax = PI$4, vMin = curve.tMin, vMax = curve.tMax) {
             // d/dz (r(z))
             super(uMin, uMax, vMin, vMax);
             this.curve = curve;
@@ -43814,7 +45712,7 @@ var demo = (function (exports, hljs) {
         dpdu() {
             return (u, v) => {
                 const radius = this.curve.at(v).x;
-                const resultLC = new V3(radius * -sin$2(u), radius * cos$2(u), 0);
+                const resultLC = new V3(radius * -sin$3(u), radius * cos$3(u), 0);
                 return this.matrix.transformVector(resultLC);
             };
         }
@@ -43844,7 +45742,7 @@ var demo = (function (exports, hljs) {
         }
         pointFoot(pWC, startS, startT) {
             const pLC = this.matrixInverse.transformPoint(pWC);
-            const angle = abs$2(pLC.angleXY());
+            const angle = abs$3(pLC.angleXY());
             const radius = pLC.lengthXY();
             return new V3(angle, this.curve.closestTToPoint(new V3(radius, 0, pLC.z)), 0);
         }
@@ -44007,7 +45905,7 @@ var demo = (function (exports, hljs) {
             //assert(!baseCurve.normal1.isPerpendicularTo(dir1), !baseCurve.normal1.isPerpendicularTo(dir1))
             this.matrix = M4.forSys(baseCurve.f1, baseCurve.f2, dir1, baseCurve.center);
             this.matrixInverse = this.matrix.inversed();
-            this.normalDir = sign$1(this.baseCurve.normal.dot(this.dir));
+            this.normalDir = sign$2(this.baseCurve.normal.dot(this.dir));
             this.pLCNormalWCMatrix = this.matrix
                 .as3x3()
                 .inversed()
@@ -44124,7 +46022,7 @@ var demo = (function (exports, hljs) {
                 if (surface2.dir.isParallelTo(this.dir)) {
                     const projectedCurve = surface2.baseCurve.transform(M4.project(this.baseCurve.getPlane(), this.dir));
                     return this.baseCurve.isInfosWithCurve(projectedCurve).map((info) => {
-                        const lineDir = sign$1(this.normalP(info.p)
+                        const lineDir = sign$2(this.normalP(info.p)
                             .cross(surface2.normalP(info.p))
                             .dot(this.dir)) || 1;
                         return new L3(info.p, this.dir.times(lineDir));
@@ -44146,7 +46044,7 @@ var demo = (function (exports, hljs) {
         }
         getSeamPlane() {
             let normal = this.baseCurve.f1.cross(this.dir);
-            normal = normal.times(-sign$1(normal.dot(this.baseCurve.f2)));
+            normal = normal.times(-sign$2(normal.dot(this.baseCurve.f2)));
             return P3.normalOnAnchor(normal, this.baseCurve.center);
         }
         clipCurves(curves) {
@@ -44158,20 +46056,20 @@ var demo = (function (exports, hljs) {
     CylinderSurface.prototype.vStep = 256;
 
     class EllipsoidSurface extends ParametricSurface {
-        constructor(center, f1, f2, f3, uMin = 0, uMax = PI$3, vMin = -PI$3 / 2, vMax = PI$3 / 2) {
+        constructor(center, f1, f2, f3, uMin = 0, uMax = PI$4, vMin = -PI$4 / 2, vMax = PI$4 / 2) {
             super(uMin, uMax, vMin, vMax);
             this.center = center;
             this.f1 = f1;
             this.f2 = f2;
             this.f3 = f3;
-            assert(0 <= uMin && uMin <= PI$3, uMin);
-            assert(0 <= uMax && uMax <= PI$3, uMax);
-            assert(-PI$3 / 2 <= vMin && vMin <= PI$3 / 2);
-            assert(-PI$3 / 2 <= vMax && vMax <= PI$3 / 2);
+            assert(0 <= uMin && uMin <= PI$4, uMin);
+            assert(0 <= uMax && uMax <= PI$4, uMax);
+            assert(-PI$4 / 2 <= vMin && vMin <= PI$4 / 2);
+            assert(-PI$4 / 2 <= vMax && vMax <= PI$4 / 2);
             assertVectors(center, f1, f2, f3);
             this.matrix = M4.forSys(f1, f2, f3, center);
             this.matrixInverse = this.matrix.inversed();
-            this.normalDir = sign$1(this.f1.cross(this.f2).dot(this.f3));
+            this.normalDir = sign$2(this.f1.cross(this.f2).dot(this.f3));
             this.pLCNormalWCMatrix = this.matrix
                 .as3x3()
                 .inversed()
@@ -44186,14 +46084,14 @@ var demo = (function (exports, hljs) {
                     let sum = 0;
                     for (let i = 0; i < points.length - 1; i++) {
                         const p = points[i], ppp = points[i + 1];
-                        sum += ((abs$2(p.angleXY()) + abs$2(ppp.angleXY())) / 2) * (ppp.z - p.z);
+                        sum += ((abs$3(p.angleXY()) + abs$3(ppp.angleXY())) / 2) * (ppp.z - p.z);
                     }
                     return sum;
                 }
                 else if (edge.curve instanceof EllipseCurve) {
                     const f = (t) => {
                         const at = edge.curve.at(t), tangent = edge.curve.tangentAt(t);
-                        const angleXY = abs$2(at.angleXY());
+                        const angleXY = abs$3(at.angleXY());
                         //const arcLength = angleXY * Math.sqrt(1 - at.z ** 2) ( == at.lengthXY())
                         //const scaling = tangent.z / at.lengthXY()
                         return angleXY * tangent.z;
@@ -44234,7 +46132,7 @@ var demo = (function (exports, hljs) {
                 // distPlaneCenter²)
                 const isCircleRadius = Math.sqrt(1 - Math.pow(distPlaneCenter, 2));
                 const anchorY = plane.normal1.y * plane.w;
-                const d = abs$2(distPlaneCenter * isCircleRadius);
+                const d = abs$3(distPlaneCenter * isCircleRadius);
                 if (le(anchorY, -d) && !eq0(distPlaneCenter)) {
                     return [];
                 }
@@ -44243,17 +46141,17 @@ var demo = (function (exports, hljs) {
                         ? V3.Z
                         : plane.normal1.cross(V3.Y).toLength(isCircleRadius);
                     const f2 = f1.cross(plane.normal1);
-                    const minEta = -anchorY / f2.y, minT = max$3(0, Math.asin(minEta));
-                    return [new EllipseCurve(plane.anchor, f1, f2, minT, PI$3 - minT)];
+                    const minEta = -anchorY / f2.y, minT = max$4(0, Math.asin(minEta));
+                    return [new EllipseCurve(plane.anchor, f1, f2, minT, PI$4 - minT)];
                 }
                 else {
                     const f2 = (plane.normal1.isParallelTo(V3.Y)
                         ? V3.X
                         : plane.normal1.cross(V3.Y)).toLength(isCircleRadius);
                     const f1 = f2.cross(plane.normal1);
-                    const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max$3(-1, minXi - NLA_PRECISION));
+                    const minXi = eq0(f1.y) ? -1 : -anchorY / f1.y, maxT = Math.acos(max$4(-1, minXi - NLA_PRECISION));
                     return [
-                        new EllipseCurve(plane.anchor, f1.negated(), f2, PI$3 - maxT, PI$3),
+                        new EllipseCurve(plane.anchor, f1.negated(), f2, PI$4 - maxT, PI$4),
                         new EllipseCurve(plane.anchor, f1, f2.negated(), 0, maxT),
                     ];
                 }
@@ -44277,12 +46175,12 @@ var demo = (function (exports, hljs) {
                     // the distance from the origin to the lot point is the distance to the intersection plane
                     function heron(a, b, c) {
                         const p = (a + b + c) / 2;
-                        return sqrt$1(p * (p - a) * (p - b) * (p - c));
+                        return sqrt$2(p * (p - a) * (p - b) * (p - c));
                     }
                     const triangleArea = heron(1, surfaceRadius, surfaceCenterDist);
                     const radius = (triangleArea * 2) / surfaceCenterDist;
-                    const isCurvesCenterDist = sign$1(1 + Math.pow(surfaceCenterDist, 2) - Math.pow(surfaceRadius, 2)) *
-                        sqrt$1(1 - Math.pow(radius, 2));
+                    const isCurvesCenterDist = sign$2(1 + Math.pow(surfaceCenterDist, 2) - Math.pow(surfaceRadius, 2)) *
+                        sqrt$2(1 - Math.pow(radius, 2));
                     const plane = new P3(surface.center.unit(), isCurvesCenterDist);
                     return EllipsoidSurface.unitISCurvesWithPlane(plane.flipped());
                 }
@@ -44293,10 +46191,10 @@ var demo = (function (exports, hljs) {
             if (new L3(surface.baseCurve.center, surface.dir).containsPoint(V3.O)) {
                 const projEllipse = surface.baseCurve.transform(M4.project(new P3(surface.dir, 0)));
                 const f1Length = projEllipse.f1.length(), f2Length = projEllipse.f2.length();
-                if (lt(1, min$3(f1Length, f2Length)))
+                if (lt(1, min$4(f1Length, f2Length)))
                     return [];
                 if (projEllipse.isCircular()) {
-                    const distISCurveCenter = Math.sqrt(1 - Math.pow(min$3(1, f1Length), 2));
+                    const distISCurveCenter = Math.sqrt(1 - Math.pow(min$4(1, f1Length), 2));
                     const isCurveCenter = (surface.dir.y < 0
                         ? surface.dir.negated()
                         : surface.dir).times(distISCurveCenter);
@@ -44387,10 +46285,10 @@ var demo = (function (exports, hljs) {
         }
         dpdu() {
             // dp(u, v) = new V3(cos(t) * cos(s), cos(t) * sin(s), sin(t)
-            return (u, v) => this.matrix.transformVector(new V3(cos$2(v) * -sin$2(u), cos$2(v) * cos$2(u), 0));
+            return (u, v) => this.matrix.transformVector(new V3(cos$3(v) * -sin$3(u), cos$3(v) * cos$3(u), 0));
         }
         dpdv() {
-            return (u, v) => this.matrix.transformVector(new V3(-sin$2(v) * cos$2(u), -sin$2(v) * sin$2(u), cos$2(v)));
+            return (u, v) => this.matrix.transformVector(new V3(-sin$3(v) * cos$3(u), -sin$3(v) * sin$3(u), cos$3(v)));
         }
         isCurvesWithPCS(surface) {
             let curves2 = ParametricSurface.isCurvesParametricImplicitSurface(surface, this, 0.1, 0.1 / surface.dir.length(), 0.05);
@@ -44406,13 +46304,13 @@ var demo = (function (exports, hljs) {
             const projectedCurves = [0, 1].map((id) => {
                 return (t) => {
                     const atSqr = snap(baseCurveLC.at(t).squared(), 1);
-                    const lineISTs = /* +- */ sqrt$1(1 - atSqr);
+                    const lineISTs = /* +- */ sqrt$2(1 - atSqr);
                     //assert(!isNaN(lineISTs))
                     return eq0(lineISTs)
                         ? baseCurveLC.at(t)
                         : baseCurveLC
                             .at(t)
-                            .plus(surfaceLC.dir.times(sign$1(id - 0.5) * lineISTs));
+                            .plus(surfaceLC.dir.times(sign$2(id - 0.5) * lineISTs));
                 };
             });
             const dProjectedCurves = [0, 1].map((id) => {
@@ -44422,12 +46320,12 @@ var demo = (function (exports, hljs) {
                     const atSqr = snap(baseCurveLC.at(t).squared(), 1);
                     const lineISTs = /* +- */ baseCurveLC
                         .at(t)
-                        .times(-1 / sqrt$1(1 - atSqr))
+                        .times(-1 / sqrt$2(1 - atSqr))
                         .dot(baseCurveLC.tangentAt(t));
                     //assert(!isNaN(lineISTs))
                     return baseCurveLC
                         .tangentAt(t)
-                        .plus(surfaceLC.dir.times(sign$1(id - 0.5) * lineISTs));
+                        .plus(surfaceLC.dir.times(sign$2(id - 0.5) * lineISTs));
                 };
             });
             //const f2 = t => sqrt(1 - baseCurveLC.at(t).squared())
@@ -44590,11 +46488,10 @@ var demo = (function (exports, hljs) {
         uvPFunc() {
             return (pWC) => {
                 const pLC = this.matrixInverse.transformPoint(pWC);
-                const alpha = abs$2(pLC.angleXY());
-                const beta = Math.asin(clamp$1(pLC.z, -1, 1));
-                assert(isFinite(alpha));
-                assert(isFinite(beta));
-                return new V3(alpha, beta, 0);
+                const u = abs$3(pLC.angleXY());
+                const v = Math.asin(clamp$1(pLC.z, -1, 1));
+                assert(this.validUV(u, v), u, v);
+                return new V3(u, v, 0);
             };
         }
         pUVFunc() {
@@ -44662,7 +46559,7 @@ var demo = (function (exports, hljs) {
             return eq0(this.implicitFunction()(p));
         }
         boundsFunction() {
-            return (a, b) => between(a, 0, PI$3) && between(b, -PI$3, PI$3);
+            return (a, b) => between(a, 0, PI$4) && between(b, -PI$4, PI$4);
         }
         volume() {
             return (4 / 3) * Math.PI * this.f1.dot(this.f2.cross(this.f3));
@@ -44687,7 +46584,7 @@ var demo = (function (exports, hljs) {
             const mainAxes = this.mainAxes(), a = mainAxes.f1.length(), b = mainAxes.f2.length(), c = mainAxes.f3.length();
             const p = 1.6075;
             return (4 *
-                PI$3 *
+                PI$4 *
                 Math.pow((Math.pow(a * b, p) + Math.pow(b * c, p) + Math.pow(c * a, p)) / 3, 1 / p));
         }
         surfaceArea() {
@@ -44699,7 +46596,7 @@ var demo = (function (exports, hljs) {
                     const eccentricity2 = 1 - Math.pow(c, 2) / Math.pow(a, 2);
                     const eccentricity = Math.sqrt(eccentricity2);
                     return (2 *
-                        PI$3 *
+                        PI$4 *
                         Math.pow(a, 2) *
                         (1 +
                             ((1 - eccentricity2) / Math.sqrt(eccentricity)) *
@@ -44708,7 +46605,7 @@ var demo = (function (exports, hljs) {
                 else {
                     const eccentricity = Math.sqrt(1 - Math.pow(a, 2) / Math.pow(c, 2));
                     return (2 *
-                        PI$3 *
+                        PI$4 *
                         Math.pow(a, 2) *
                         (1 + (c / a / eccentricity) * Math.asin(eccentricity)));
                 }
@@ -44726,7 +46623,7 @@ var demo = (function (exports, hljs) {
             const kk = (Math.pow(a, 2) * (Math.pow(b, 2) - Math.pow(c, 2))) / (Math.pow(b, 2) * (Math.pow(a, 2) - Math.pow(c, 2)));
             const incompleteEllipticInt1 = gaussLegendreQuadrature24((phi) => Math.pow(1 - kk * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
             const incompleteEllipticInt2 = gaussLegendreQuadrature24((phi) => Math.pow(1 - kk * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
-            return ((2 * PI$3 * Math.pow(c, 2) + (2 * PI$3 * a * b) / Math.sin(phi)) *
+            return ((2 * PI$4 * Math.pow(c, 2) + (2 * PI$4 * a * b) / Math.sin(phi)) *
                 (incompleteEllipticInt2 * Math.pow(Math.sin(phi), 2) +
                     incompleteEllipticInt1 * Math.pow(Math.cos(phi), 2)));
         }
@@ -44735,7 +46632,7 @@ var demo = (function (exports, hljs) {
             return plane.normal1.dot(this.f2) < 0 ? plane : plane.flipped();
         }
         getExtremePoints() {
-            return getExtremePointsHelper.call(this, new EllipseCurve(V3.O, V3.X, V3.Z, -PI$3 / 2, PI$3 / 2));
+            return getExtremePointsHelper.call(this, new EllipseCurve(V3.O, V3.X, V3.Z, -PI$4 / 2, PI$4 / 2));
         }
         pointFoot(pWC, startS, startT) {
             console.log(pWC.sce);
@@ -44787,14 +46684,14 @@ var demo = (function (exports, hljs) {
             const c = pn.div(-pwSqrMinusPnSqr);
             const scale = pn.times((pw * pn.length()) / (pn.squared() * -pwSqrMinusPnSqr));
             const scale1 = pw / -pwSqrMinusPnSqr;
-            const scale2 = 1 / sqrt$1(pwSqrMinusPnSqr);
+            const scale2 = 1 / sqrt$2(pwSqrMinusPnSqr);
             const rotNX = M4.forSys(pn.unit(), pn.getPerpendicular().unit());
             return M4.product(m, Pinv, M4.translate(c), rotNX, M4.scale(scale1, scale2, scale2), rotNX.transposed());
         }
     }
     EllipsoidSurface.UNIT = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z);
-    EllipsoidSurface.prototype.uStep = PI$3 / 32;
-    EllipsoidSurface.prototype.vStep = PI$3 / 32;
+    EllipsoidSurface.prototype.uStep = PI$4 / 32;
+    EllipsoidSurface.prototype.vStep = PI$4 / 32;
 
     class PlaneSurface extends ParametricSurface {
         constructor(plane, right = plane.normal1.getPerpendicular().unit(), up = plane.normal1.cross(right).unit(), uMin = -100, uMax = 100, vMin = -100, vMax = 100) {
@@ -44807,7 +46704,7 @@ var demo = (function (exports, hljs) {
             this.matrix = M4.forSys(right, up, plane.normal1, plane.anchor);
         }
         toSource(rounder = (x) => x) {
-            return callsce.call(undefined, "new PlaneSurface", ...this.getConstructorParameters());
+            return callSource.call(undefined, "new PlaneSurface", ...this.getConstructorParameters());
         }
         static throughPoints(a, b, c) {
             return new PlaneSurface(P3.throughPoints(a, b, c));
@@ -45241,7 +47138,7 @@ var demo = (function (exports, hljs) {
             function eLerp(arr, t, lerp) {
                 if (0 === t % 1)
                     return arr[t];
-                return lerp(arr[floor$1(t)], arr[ceil(t)], t % 1);
+                return lerp(arr[floor$2(t)], arr[ceil(t)], t % 1);
             }
             return new V3(clamp$1(eLerp(this.knotsU, x + (this.degreeU + 1) / 2, lerp$1), this.uMin, this.uMax), clamp$1(eLerp(this.knotsV, y + (this.degreeV + 1) / 2, lerp$1), this.vMin, this.vMax), 0);
         }
@@ -45609,14 +47506,14 @@ var demo = (function (exports, hljs) {
                         return ((6 * (c * (-t0 + t1) + a * t4 - b * t5) * p +
                             3 *
                                 (3 * b * t0 - b * t1 + a * (t2 - t3) + 4 * c * t5) *
-                                cos$2(p) +
+                                cos$3(p) +
                             3 *
                                 (3 * a * t1 - a * t0 - b * (t2 - t3) + 4 * c * t4) *
-                                sin$2(p) +
-                            3 * (a * t5 - b * t4 + c * (t2 - t3)) * cos$2(2 * p) +
-                            3 * (a * t4 + b * t5 + c * (t0 + t1)) * sin$2(2 * p) +
-                            (a * (t2 - t3) - b * (t0 + t1)) * cos$2(3 * p) +
-                            (a * (t0 + t1) + b * (t2 - t3)) * sin$2(3 * p)) /
+                                sin$3(p) +
+                            3 * (a * t5 - b * t4 + c * (t2 - t3)) * cos$3(2 * p) +
+                            3 * (a * t4 + b * t5 + c * (t0 + t1)) * sin$3(2 * p) +
+                            (a * (t2 - t3) - b * (t0 + t1)) * cos$3(3 * p) +
+                            (a * (t0 + t1) + b * (t2 - t3)) * sin$3(3 * p)) /
                             12);
                     };
                     const dt = M4.forSys(dpdu(uvOfPWC.x, uvOfPWC.y), dpdv(uvOfPWC.x, uvOfPWC.y))
@@ -45740,10 +47637,10 @@ var demo = (function (exports, hljs) {
                     function fArea(t) {
                         return (0.25 *
                             (2 * (-b * d + a * e) * t +
-                                4 * c * d * cos$2(t) +
-                                4 * c * e * sin$2(t) +
-                                (a * d - b * e) * cos$2(2 * t) +
-                                (b * d + a * e) * sin$2(2 * t)));
+                                4 * c * d * cos$3(t) +
+                                4 * c * e * sin$3(t) +
+                                (a * d - b * e) * cos$3(2 * t) +
+                                (b * d + a * e) * sin$3(2 * t)));
                     }
                     edgeArea = -(fArea(edge.bT) - fArea(edge.aT));
                 }
@@ -45827,7 +47724,7 @@ var demo = (function (exports, hljs) {
                     const minT = edge.minT, maxT = edge.maxT;
                     let sum = 0;
                     const start = ceil(minT + NLA_PRECISION);
-                    const end = floor$1(maxT - NLA_PRECISION);
+                    const end = floor$2(maxT - NLA_PRECISION);
                     for (let i = start; i <= end; i++) {
                         const at = points[i], tangent = tangents[i]; //.toLength(edge.curve.stepSize)
                         const scaling = this.normalP(at).cross(thisDir1).unit().dot(tangent);
@@ -45840,7 +47737,7 @@ var demo = (function (exports, hljs) {
                     };
                     sum += f(minT) * (start - minT - 0.5);
                     sum += f(maxT) * (maxT - end - 0.5);
-                    return sum * sign$1(edge.deltaT());
+                    return sum * sign$2(edge.deltaT());
                 }
                 else {
                     const f = (t) => {
@@ -55875,7 +57772,7 @@ var demo = (function (exports, hljs) {
 
     // WS[] Write Store
     // 0x42
-    function WS$1(state) {
+    function WS$2(state) {
         var stack = state.stack;
         var store = state.store;
 
@@ -56732,7 +58629,7 @@ var demo = (function (exports, hljs) {
         /* 0x3F */ MIAP.bind(undefined, 1),
         /* 0x40 */ NPUSHB,
         /* 0x41 */ NPUSHW,
-        /* 0x42 */ WS$1,
+        /* 0x42 */ WS$2,
         /* 0x43 */ RS,
         /* 0x44 */ WCVTP,
         /* 0x45 */ RCVT,
@@ -60195,7 +62092,7 @@ var demo = (function (exports, hljs) {
                 new V3(width, height, 0),
                 new V3(width, 0, 0),
             ];
-            const generator = callsce("B2T.box", width, height, depth, name);
+            const generator = callSource("B2T.box", width, height, depth, name);
             return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, depth), name, generator);
         }
         B2T.box = box;
@@ -60269,7 +62166,7 @@ var demo = (function (exports, hljs) {
             faces.push(bottomFace, topFace);
             gen =
                 gen ||
-                    callsce("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name);
+                    callSource("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name);
             return new BRep(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames);
         }
         B2T.extrudeEdges = extrudeEdges;
@@ -60293,8 +62190,8 @@ var demo = (function (exports, hljs) {
         }
         B2T.cone = cone;
         function sphere(radius = 1, name = "sphere" + getGlobalId(), rot = TAU) {
-            const ee = new PCurveEdge(new EllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)), new V3(0, 0, -radius), new V3(0, 0, radius), 0, PI$3, undefined, new V3(radius, 0, 0), new V3(-radius, 0, 0));
-            const generator = callsce("B2T.sphere", radius, name, rot);
+            const ee = new PCurveEdge(new EllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)), new V3(0, 0, -radius), new V3(0, 0, radius), 0, PI$4, undefined, new V3(radius, 0, 0), new V3(-radius, 0, 0));
+            const generator = callSource("B2T.sphere", radius, name, rot);
             return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator);
         }
         B2T.sphere = sphere;
@@ -60367,7 +62264,7 @@ var demo = (function (exports, hljs) {
                 EllipseCurve.semicircle(rSmall, new V3(rLarge, 0, 0)),
                 EllipseCurve.semicircle(-rSmall, new V3(rLarge, 0, 0)),
             ];
-            const baseEdges = curves.map((c) => PCurveEdge.forCurveAndTs(c, 0, Math.PI).rotateX(PI$3 / 2));
+            const baseEdges = curves.map((c) => PCurveEdge.forCurveAndTs(c, 0, Math.PI).rotateX(PI$4 / 2));
             return B2T.rotateEdges(baseEdges, rads, name);
         }
         B2T.torus = torus;
@@ -60377,7 +62274,7 @@ var demo = (function (exports, hljs) {
          */
         function rotateEdges(baseLoop, totalRads, name = "rotateEdges" + getGlobalId(), generator, infoFactory) {
             assert(baseLoop.every((e) => new PlaneSurface(P3.ZX).containsCurve(e.curve)));
-            assert(!eq(PI$3, totalRads) || PI$3 == totalRads); // URHGJ
+            assert(!eq(PI$4, totalRads) || PI$4 == totalRads); // URHGJ
             assertf(() => lt(0, totalRads) && le(totalRads, TAU));
             totalRads = snap(totalRads, TAU);
             assertf(() => Edge.isLoop(baseLoop));
@@ -60386,7 +62283,7 @@ var demo = (function (exports, hljs) {
                 : new PlaneSurface(P3.ZX);
             // const rotationSteps = ceil((totalRads - NLA_PRECISION) / PI)
             // const angles = rotationSteps == 1 ? [-PI, -PI + totalRads] : [-PI, 0, totalRads - PI]
-            const open = !eq(totalRads, 2 * PI$3);
+            const open = !eq(totalRads, 2 * PI$4);
             const baseRibCurves = baseLoop.map((edge) => {
                 const a = edge.a, radius = a.lengthXY();
                 if (!eq0(radius)) {
@@ -60395,7 +62292,7 @@ var demo = (function (exports, hljs) {
                 return undefined;
             });
             const baseSurfaces = baseLoop.map((edge) => {
-                const s = rotateCurve(edge.curve, edge.minT, edge.maxT, PI$3, edge.deltaT() > 0);
+                const s = rotateCurve(edge.curve, edge.minT, edge.maxT, PI$4, edge.deltaT() > 0);
                 const t = lerp$1(edge.aT, edge.bT, 0.5);
                 s &&
                     assert(edge
@@ -60406,8 +62303,8 @@ var demo = (function (exports, hljs) {
             });
             let stepStartEdges = baseLoop, stepEndEdges;
             const faces = [];
-            for (let rot = 0; rot < totalRads; rot += PI$3) {
-                const aT = 0, bT = min$3(totalRads - rot, PI$3);
+            for (let rot = 0; rot < totalRads; rot += PI$4) {
+                const aT = 0, bT = min$4(totalRads - rot, PI$4);
                 const rotation = M4.rotateZ(rot + bT);
                 stepEndEdges =
                     rot + bT == TAU
@@ -60575,7 +62472,7 @@ var demo = (function (exports, hljs) {
                 return loop;
             });
             const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace);
-            const generator = callsce("B2T.text", text, size, depth);
+            const generator = callSource("B2T.text", text, size, depth);
             return BRep.join(faces.map((face) => B2T.extrudeFace(face, V(0, 0, -depth))), generator);
         }
         B2T.text = text;
@@ -60727,15 +62624,15 @@ var demo = (function (exports, hljs) {
         function fixEdges(edges) {
             return edges.flatMap((edge) => {
                 const c = edge.curve;
-                if (c instanceof EllipseCurve && c.tMin === -PI$3 && c.tMax === PI$3) {
+                if (c instanceof EllipseCurve && c.tMin === -PI$4 && c.tMax === PI$4) {
                     const splitEdges = edge.minT < 0 && edge.maxT > 0 ? edge.split(0) : [edge];
                     return splitEdges.map((edge) => {
                         if (edge.minT >= 0) {
-                            return createEdge(new EllipseCurve(c.center, c.f1, c.f2, max$3(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
+                            return createEdge(new EllipseCurve(c.center, c.f1, c.f2, max$4(0, c.tMin), c.tMax), edge.a, edge.b, edge.aT, edge.bT, undefined, edge.aDir, edge.bDir, edge.name);
                         }
                         else {
                             // "rotate" the curve
-                            return createEdge(new EllipseCurve(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI$3, min$3(PI$3, c.tMax + PI$3)), edge.a, edge.b, edge.aT + PI$3, edge.bT + PI$3, undefined, edge.aDir, edge.bDir, edge.name);
+                            return createEdge(new EllipseCurve(c.center, c.f1.negated(), c.f2.negated(), c.tMin + PI$4, min$4(PI$4, c.tMax + PI$4)), edge.a, edge.b, edge.aT + PI$4, edge.bT + PI$4, undefined, edge.aDir, edge.bDir, edge.name);
                         }
                     });
                 }
@@ -60765,7 +62662,7 @@ var demo = (function (exports, hljs) {
             const edges = StraightEdge.chain(baseVertices, true);
             generator =
                 generator ||
-                    callsce("B2T.extrudeVertices", baseVertices, baseFacePlane, offset, name);
+                    callSource("B2T.extrudeVertices", baseVertices, baseFacePlane, offset, name);
             return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator);
         }
         B2T.extrudeVertices = extrudeVertices;
@@ -60800,7 +62697,7 @@ var demo = (function (exports, hljs) {
                 new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + "bdc"),
                 new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + "cda"),
             ];
-            const gen = callsce("B2T.tetrahedron", a, b, c, d);
+            const gen = callSource("B2T.tetrahedron", a, b, c, d);
             return new BRep(faces, false, gen);
         }
         B2T.tetrahedron = tetrahedron;
@@ -60934,7 +62831,7 @@ var demo = (function (exports, hljs) {
                 const contour = arrayFromFunction(faceIndexes.length, (i) => {
                     const ipp = (i + 1) % faceIndexes.length;
                     const iA = faceIndexes[i], iB = faceIndexes[ipp];
-                    const iMin = min$3(iA, iB), iMax = max$3(iA, iB), edgeID = iMin * VS.length + iMax;
+                    const iMin = min$4(iA, iB), iMax = max$4(iA, iB), edgeID = iMin * VS.length + iMax;
                     let edge = edgeMap.get(edgeID);
                     !edge &&
                         edgeMap.set(edgeID, (edge = StraightEdge.throughPoints(VS[iMin], VS[iMax])));
@@ -60964,7 +62861,7 @@ var demo = (function (exports, hljs) {
             const baseSurface = new PlaneSurface(P3.XY).flipped();
             const bottomFace = Face.create(baseSurface, Edge.reversePath(baseEdges));
             faces.push(bottomFace);
-            const generator = callsce("B2T.pyramidEdges", baseEdges, apex, name);
+            const generator = callSource("B2T.pyramidEdges", baseEdges, apex, name);
             return new BRep(faces, false, generator);
         }
         B2T.pyramidEdges = pyramidEdges;
@@ -61013,7 +62910,7 @@ var demo = (function (exports, hljs) {
             return new PlaneSurface(this, this.right, this.up);
         }
         toSource() {
-            return callsce("new CustomPlane", this.anchor, this.right, this.up, this.name, this.color, this.uMin, this.uMax, this.vMin, this.vMax);
+            return callSource("new CustomPlane", this.anchor, this.right, this.up, this.name, this.color, this.uMin, this.uMax, this.vMin, this.vMax);
         }
         static forPlane(plane, color = GL_COLOR_BLACK, name) {
             //assert(!name)
@@ -61076,7 +62973,7 @@ var demo = (function (exports, hljs) {
             assertNumbers(aT, bT);
             assert(!eq(aT, bT));
             assertVectors(a, b);
-            assertf(() => curve instanceof Curve, curve);
+            assertInst(Curve, curve);
             assertf(() => !curve.isValidT || (curve.isValidT(aT) && curve.isValidT(bT)), aT, bT, curve);
             //if (curve instanceof PICurve) {
             //    assertf(() => curve.at(aT).to(a).length() < 0.1, ''+curve.at(aT)+a)
@@ -61132,7 +63029,7 @@ var demo = (function (exports, hljs) {
                 : path;
         }
         toString() {
-            return callsce("new " + this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir);
+            return callSource("new " + this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir);
         }
         colinearToLine(line) {
             return this.curve instanceof L3 && this.curve.isColinearTo(line);
@@ -61219,7 +63116,7 @@ var demo = (function (exports, hljs) {
             return this.bT - this.aT;
         }
         deltaTSign() {
-            return sign$1(this.bT - this.aT);
+            return sign$2(this.bT - this.aT);
         }
         atAvgT() {
             return this.curve.at((this.minT + this.maxT) / 2);
@@ -61265,7 +63162,7 @@ var demo = (function (exports, hljs) {
             return arrayFromFunction(closed ? vc : vc - 1, (i) => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]));
         }
         toSource() {
-            return callsce("new StraightEdge", this.curve, this.a, this.b, this.aT, this.bT);
+            return callSource("new StraightEdge", this.curve, this.a, this.b, this.aT, this.bT);
         }
         getVerticesNo0() {
             return [this.b];
@@ -61382,7 +63279,7 @@ var demo = (function (exports, hljs) {
             return new PCurveEdge(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated(), name);
         }
         toSource() {
-            return callsce("new PCurveEdge", this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir, this.name);
+            return callSource("new PCurveEdge", this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir, this.name);
         }
         getVerticesNo0() {
             return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, false);
@@ -61529,7 +63426,7 @@ var demo = (function (exports, hljs) {
     function edgeForCurveAndTs(curve, aT = curve.tMin, bT = curve.tMax) {
         return createEdge(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated());
     }
-    function round$2(edges, radius) {
+    function round$3(edges, radius) {
         if (eq0(radius)) {
             return edges;
         }
@@ -61598,10 +63495,10 @@ var demo = (function (exports, hljs) {
             const g1 = p1.plus(normal1.times(dist1));
             const g2 = p2.plus(normal2.times(dist2));
             assert(g1.like(g2));
-            return [abs$2(dist1) - radius, abs$2(dist2) - radius];
+            return [abs$3(dist1) - radius, abs$3(dist2) - radius];
         }
-        const startT1 = e1.bT - (radius * sign$1(e1.deltaT())) / e1.bDir.length();
-        const startT2 = e2.aT + (radius * sign$1(e2.deltaT())) / e2.aDir.length();
+        const startT1 = e1.bT - (radius * sign$2(e1.deltaT())) / e1.bDir.length();
+        const startT2 = e2.aT + (radius * sign$2(e2.deltaT())) / e2.aDir.length();
         const [t1, t2] = newtonIterate(f, [startT1, startT2]);
         const cornerA = e1.curve.at(t1);
         const cornerB = e2.curve.at(t2);
@@ -61930,17 +63827,17 @@ var demo = (function (exports, hljs) {
             this.info = info;
             this.aabb = undefined;
             //assert(name)
+            assertInst(Edge, ...contour);
             Edge.assertLoop(contour);
-            assert(contour.every((f) => f instanceof Edge), () => "contour.every(f => f instanceof Edge)" + contour);
             // contour.forEach(e => !surface.containsCurve(e.curve) &&
             // console.log('FAIL:'+surface.distanceToPoint(e.curve.anchor)))
             //contour.forEach(e => {
-            //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
-            //})
-            //assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
-            holes && holes.forEach((hole) => Edge.assertLoop(hole));
-            holes && holes.forEach((hole) => assert(!surface.edgeLoopCCW(hole)));
+            //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e +
+            // surface) }) assert(surface.edgeLoopCCW(contour), surface.toString() +
+            // contour.join('\n'))
             assert(!holes || holes.constructor == Array, holes && holes.toString());
+            holes.forEach((hole) => Edge.assertLoop(hole));
+            holes.forEach((hole) => assert(!surface.edgeLoopCCW(hole)));
             this.allEdges = Array.prototype.concat.apply(this.contour, this.holes);
         }
         static assembleFacesFromLoops(loops, surface, faceConstructor) {
@@ -61957,7 +63854,8 @@ var demo = (function (exports, hljs) {
                         // newLoopInfo isnt contained by any other subLoopInfo
                         for (let i = loopInfos.length; --i >= 0;) {
                             const subLoopInfo = loopInfos[i];
-                            //console.log('cheving subLoopInfo', surface.loopContainsPoint(newLoopInfo.edges,
+                            //console.log('cheving subLoopInfo',
+                            // surface.loopContainsPoint(newLoopInfo.edges,
                             // subLoopInfo.edges[0].a))
                             if (BRep.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                                 newLoopInfo.subloops.push(subLoopInfo);
@@ -61988,21 +63886,17 @@ var demo = (function (exports, hljs) {
         //		if (loopInfos.length == 0) {
         //			loopInfos.push(newLoopInfo)
         //		} else {
-        //			const subLoopInfo = loopInfos.find(loopInfo => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw,
-        // newLoopInfo.loop, newLoopInfo.ccw, surface)) if (subLoopInfo) { placeRecursively(newLoopInfo,
-        // subLoopInfo.subloops) } else { // newLoopInfo isnt contained by any other subLoopInfo for (let i =
-        // loopInfos.length; --i >= 0;) { const subLoopInfo = loopInfos[i] //console.log('cheving subLoopInfo',
+        //			const subLoopInfo = loopInfos.find(loopInfo =>
+        // BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop,
+        // newLoopInfo.ccw, surface)) if (subLoopInfo) {
+        // placeRecursively(newLoopInfo, subLoopInfo.subloops) } else { //
+        // newLoopInfo isnt contained by any other subLoopInfo for (let i =
+        // loopInfos.length; --i >= 0;) { const subLoopInfo = loopInfos[i]
+        // //console.log('cheving subLoopInfo',
         // surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a)) if
-        // (BRep.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) { newLoopInfo.subloops.push(subLoopInfo)
-        // loopInfos.splice(i, 1) // remove it } } loopInfos.push(newLoopInfo) } } }  function newFacesRecursive(loopInfo:
-        // LoopInfo): void { // CW loops can be top level, if they are holes in the original face not contained in the new
-        // face if (loopInfo.ccw) { if (loopInfo.subloops.every(sl => !sl.ccw)) { const newFace = new
-        // faceConstructor(surface, loopInfo.loop, loopInfo.subloops.map(sl => sl.loop)) newFaces.push(newFace)
-        // loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl))) } else {
-        // loopInfo.subloops.forEach(sl => sl.ccw && newFacesRecursive(sl)) } } }  const newFaces: Face[] = [] const
-        // topLevelLoops:LoopInfo[] = [] loops.forEach(loop => placeRecursively({loop: loop, ccw:
-        // surface.edgeLoopCCW(loop), subloops: []}, topLevelLoops)) topLevelLoops.forEach(tll => newFacesRecursive(tll))
-        // return newFaces }
+        // (BRep.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) {
+        // newLoopInfo.subloops.push(subLoopInfo) loopInfos.splice(i, 1) // remove it
+        // } } loopInfos.push(newLoopInfo) } } }  function newFacesRecursive(loopInfo: LoopInfo): void { // CW loops can be top level, if they are holes in the original face not contained in the new face if (loopInfo.ccw) { if (loopInfo.subloops.every(sl => !sl.ccw)) { const newFace = new faceConstructor(surface, loopInfo.loop, loopInfo.subloops.map(sl => sl.loop)) newFaces.push(newFace) loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl))) } else { loopInfo.subloops.forEach(sl => sl.ccw && newFacesRecursive(sl)) } } }  const newFaces: Face[] = [] const topLevelLoops:LoopInfo[] = [] loops.forEach(loop => placeRecursively({loop: loop, ccw: surface.edgeLoopCCW(loop), subloops: []}, topLevelLoops)) topLevelLoops.forEach(tll => newFacesRecursive(tll)) return newFaces }
         static create(surface, faceEdges, holes, faceName, info) {
             return surface instanceof PlaneSurface
                 ? new PlaneFace(surface, faceEdges, holes, faceName, info)
@@ -62026,7 +63920,8 @@ var demo = (function (exports, hljs) {
             }
             /**
              * @param newEdge generated segment
-             * @param col1 if newEdge is colinear to an edge of this, the edge in question
+             * @param col1 if newEdge is colinear to an edge of this, the edge in
+             *   question
              * @param col2 same for face2
              * @return whether new edge was added.
              */
@@ -62052,8 +63947,8 @@ var demo = (function (exports, hljs) {
                         const up = face.surface.normalP(p);
                         const sameDir = up.dot(face2.surface.normalP(p)) > 0;
                         const canonDir = plane.normal1.cross(up);
-                        const curve = face.surface.isCurvesWithPlane(plane)[0], curveT = curve.pointT(p), curveDir = sign$1(canonDir.dot(curve.tangentAt(curveT)));
-                        const curve2 = face2.surface.isCurvesWithPlane(plane)[0], curve2T = curve2.pointT(p), curve2Dir = sign$1(canonDir.dot(curve.tangentAt(curve2T)));
+                        const curve = face.surface.isCurvesWithPlane(plane)[0], curveT = curve.pointT(p), curveDir = sign$2(canonDir.dot(curve.tangentAt(curveT)));
+                        const curve2 = face2.surface.isCurvesWithPlane(plane)[0], curve2T = curve2.pointT(p), curve2Dir = sign$2(canonDir.dot(curve.tangentAt(curve2T)));
                         const foo = curve.diff(curveT, EPS * curveDir).dot(up);
                         const foo2 = curve2.diff(curve2T, EPS * curve2Dir).dot(up);
                         if (foo2 < foo) {
@@ -62079,9 +63974,10 @@ var demo = (function (exports, hljs) {
                             return false;
                         //add(col1.getCanon(), face2)
                         const surface2 = face2.surface;
-                        // NB: a new edge is inserted even though it may be the same as an old one
-                        // however it indicates that it intersects the other volume here, i.e. the old edge cannot
-                        // be counted as 'inside' for purposes of reconstitution
+                        // NB: a new edge is inserted even though it may be the same as an
+                        // old one however it indicates that it intersects the other volume
+                        // here, i.e. the old edge cannot be counted as 'inside' for purposes
+                        // of reconstitution
                         thisBrep.edgeFaces.get(col1.getCanon()).forEach((faceInfo) => {
                             //const dot = snap0(surface2.normal1.dot(faceInfo.inside))
                             //if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
@@ -62132,10 +64028,12 @@ var demo = (function (exports, hljs) {
                     addPair(col1.getCanon(), col2.getCanon());
                     function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside, thisEdgePoints, has, add) {
                         // not entirely sure for what i had the dirInsides in?
-                        //const aDirNegatedInside = (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) &&
-                        // splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE const
-                        // bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
-                        // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
+                        //const aDirNegatedInside = (newEdge.a.like(col2.a) ||
+                        // newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep,
+                        // newEdge.a, newEdge.aDir.negated()) == INSIDE const bDirInside =
+                        // (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
+                        // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) ==
+                        // INSIDE
                         for (const faceInfo of thisBrep.edgeFaces.get(col1.getCanon())) {
                             const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA);
                             const edgeInside = sVEF == INSIDE || (coplanarSameIsInside && sVEF == COPLANAR_SAME);
@@ -62173,10 +64071,12 @@ var demo = (function (exports, hljs) {
                 return false;
             }
             // what needs to be generated: new edges on face
-            // points on edges where they are cut by faces so that sub edges will be generated for loops
-            // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B
-            //         you don't want those to be marked as 'inside', otherwise invalid faces will be added
-            // if a face cuts a corner, nothing needs to be done, as that alone does not limit what adjacent faces will be
+            // points on edges where they are cut by faces so that sub edges will be
+            // generated for loops points on ends of edges where the edge will be an
+            // edge in the new volume where it goes from A to B you don't want those to
+            // be marked as 'inside', otherwise invalid faces will be added if a face
+            // cuts a corner, nothing needs to be done, as that alone does not limit
+            // what adjacent faces will be
             function handleEndPoint(a, b, newEdge) {
                 // ends in the middle of b's face
                 if (a && !b) {
@@ -62196,8 +64096,9 @@ var demo = (function (exports, hljs) {
                 }
                 if (a && b) {
                     assert(a.colinear || b.colinear || eq(a.t, b.t));
-                    // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
-                    // segment starts/ends on edge/edge intersection
+                    // if a or b is colinear the correct points will already have been
+                    // added to the edge by handleNewEdge segment starts/ends on edge/edge
+                    // intersection
                     function handleAB(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
                         if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                             //if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
@@ -62209,7 +64110,8 @@ var demo = (function (exports, hljs) {
                                 // face2brep corner on edge
                                 const sVEC1 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, 1);
                                 const sVEC2 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, -1);
-                                // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge
+                                // if either of these return ALONG_EDGE_OR_PLANE, then the breps
+                                // share a colinear edge
                                 if (INSIDE == sVEC1 || INSIDE == sVEC2) {
                                     mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                     assert(a.edge.isValidT(a.edgeT));
@@ -62217,8 +64119,8 @@ var demo = (function (exports, hljs) {
                             }
                             else {
                                 // edge / edge center intersection
-                                // todo: is this even necessary considering we add edges anyway? i think so...
-                                // const testVector =
+                                // todo: is this even necessary considering we add edges anyway?
+                                // i think so... const testVector =
                                 // a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
                                 // assert(!testVector.likeO())
                                 const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
@@ -62260,12 +64162,13 @@ var demo = (function (exports, hljs) {
                 const isCurve = isCurves[isCurveIndex];
                 const ps1 = face.edgeISPsWithSurface(isCurve, face2.surface);
                 const ps2 = face2.edgeISPsWithSurface(isCurve, face.surface);
-                // for non-endless curves, e.g. ellipses, the intersections of the faces can be non-zero, even if one of
-                // the faces doesn't register any points on the curve. For example, if a cylinder is cut entirely by a
-                // plane face (all its edges around the cylinder), then the face will contain the entire curve and
-                // 'ps' for the plane face will be empty
-                // TODO: behavior when curves touch face?
-                // !! start in does depend on insideDir... TODO
+                // for non-endless curves, e.g. ellipses, the intersections of the faces
+                // can be non-zero, even if one of the faces doesn't register any points
+                // on the curve. For example, if a cylinder is cut entirely by a plane
+                // face (all its edges around the cylinder), then the face will contain
+                // the entire curve and 'ps' for the plane face will be empty TODO:
+                // behavior when curves touch face? !! start in does depend on
+                // insideDir... TODO
                 assertf(() => 0 == ps1.length ||
                     !eq0(ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t))), () => ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t)));
                 assertf(() => 0 == ps2.length ||
@@ -62375,8 +64278,9 @@ var demo = (function (exports, hljs) {
             const ps = [];
             for (const loop of loops) {
                 const colinearEdges = loop.map((edge) => edge.curve.isColinearTo(isCurve));
-                //const colinearSides = loop.map((edge, edgeIndex) => -1 != colinearEdges[edgeIndex]
-                //            && -sign(isCurves[colinearEdges[edgeIndex]].tangentAt(edge.aT).dot(edge.aDir)))
+                //const colinearSides = loop.map((edge, edgeIndex) => -1 !=
+                // colinearEdges[edgeIndex] &&
+                // -sign(isCurves[colinearEdges[edgeIndex]].tangentAt(edge.aT).dot(edge.aDir)))
                 for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
                     const edge = loop[edgeIndex];
                     const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex];
@@ -62387,7 +64291,7 @@ var demo = (function (exports, hljs) {
                             const curveAT = isCurve.pointT(edge.a);
                             const colinearOutA = edge.aDir.cross(surface.normalP(edge.a));
                             if (!colinearEdges[prevEdgeIndex] &&
-                                dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -sign$1(prevEdge.deltaT())) > 0) {
+                                dotCurve2(prevEdge.curve, prevEdge.bT, colinearOutA, -sign$2(prevEdge.deltaT())) > 0) {
                                 ps.push({
                                     p: prevEdge.b,
                                     insideDir: edge.aDir.negated(),
@@ -62410,7 +64314,7 @@ var demo = (function (exports, hljs) {
                             const curveBT = isCurve.pointT(edge.b);
                             const colinearOutB = edge.bDir.cross(surface.normalP(edge.b));
                             if (!colinearEdges[nextEdgeIndex] &&
-                                dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, sign$1(nextEdge.deltaT())) > 0) {
+                                dotCurve2(nextEdge.curve, nextEdge.aT, colinearOutB, sign$2(nextEdge.deltaT())) > 0) {
                                 ps.push({
                                     p: edge.b,
                                     insideDir: edge.bDir,
@@ -62444,7 +64348,8 @@ var demo = (function (exports, hljs) {
                                 .negated();
                             const isTangent = isCurve.tangentAt(curveT);
                             //if(!eq0(insideDir.dot(isTangent))) {
-                            // Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
+                            // Edge.edgeISTsWithSurface returns snapped values, so comparison
+                            // with == is ok:
                             if (edgeT == edge.bT) {
                                 // endpoint lies on intersection line
                                 if (!colinearEdges[nextEdgeIndex]) {
@@ -62480,24 +64385,24 @@ var demo = (function (exports, hljs) {
                                     //if (eq0(thisSide)) {
                                     //    // advanced test
                                     //    const dir = -sign(edge.deltaT())
-                                    //    const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir * dirFactor *
-                                    // eps)).dot(normVector) const ecd = edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir
-                                    // * eps)).dot(normVector) thisSide = sign(ecd - iscd) } let nextSide =
-                                    // normVector.dot(nextEdge.aDir) if (eq0(nextSide)) { // advanced test const dirFactor
-                                    // = sign(snap0(isTangent.dot(nextEdge.curve.tangentAt(nextEdge.aT)))) assert(dirFactor
-                                    // !== 0) const dir = sign(nextEdge.deltaT()) const iscd =
-                                    // isCurve.at(curveT).to(isCurve.at(curveT + dir * dirFactor * eps)).dot(normVector)
-                                    // const ecd = nextEdge.curve.at(nextEdge.aT).to(nextEdge.curve.at(nextEdge.aT + dir *
-                                    // eps)).dot(normVector) nextSide = sign(ecd - iscd) } if (nextSide < 0 || thisSide <
-                                    // 0) { assert(!eq0(insideDir.dot(isTangent))) // next segment is not colinear and ends
-                                    // on different side ps.push({ p: edge.b, insideDir: insideDir, t: curveT, edge: edge,
-                                    // edgeT: edge.bT, colinear: false}) }
+                                    //    const iscd = isCurve.at(curveT).to(isCurve.at(curveT +
+                                    // dir * dirFactor * eps)).dot(normVector) const ecd =
+                                    // edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir *
+                                    // eps)).dot(normVector) thisSide = sign(ecd - iscd) } let
+                                    // nextSide = normVector.dot(nextEdge.aDir) if (eq0(nextSide))
+                                    // { // advanced test const dirFactor =
+                                    // sign(snap0(isTangent.dot(nextEdge.curve.tangentAt(nextEdge.aT))))
+                                    // assert(dirFactor !== 0) const dir = sign(nextEdge.deltaT())
+                                    // const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir *
+                                    // dirFactor * eps)).dot(normVector) const ecd =
+                                    // nextEdge.curve.at(nextEdge.aT).to(nextEdge.curve.at(nextEdge.aT + dir * eps)).dot(normVector) nextSide = sign(ecd - iscd) } if (nextSide < 0 || thisSide < 0) { assert(!eq0(insideDir.dot(isTangent))) // next segment is not colinear and ends on different side ps.push({ p: edge.b, insideDir: insideDir, t: curveT, edge: edge, edgeT: edge.bT, colinear: false}) }
                                 }
                             }
                             else if (edgeT != edge.aT) {
-                                // edge crosses/touches an intersection curve, neither starts nor ends on it
+                                // edge crosses/touches an intersection curve, neither starts nor
+                                // ends on it
                                 if (eq0(insideDir.dot(isTangent))) {
-                                    const dirFactor = sign$1(isTangent.dot(edge.curve.tangentAt(edgeT)));
+                                    const dirFactor = sign$2(isTangent.dot(edge.curve.tangentAt(edgeT)));
                                     const eps = 1e-4;
                                     for (const dir of [-1, 1]) {
                                         if ((-1 == dir * dirFactor && edgeT == edge.minT) ||
@@ -62538,25 +64443,23 @@ var demo = (function (exports, hljs) {
                             }
                             //} else {
                             //
-                            //	const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
-                            //	const eps = 1e-4
-                            //	const normVector = surface2.normalP(p)
-                            //	for (const dir of [-1, 1]) {
-                            //		if (-1 == dir * dirFactor && edgeT == edge.minT ||
-                            //			1 == dir * dirFactor && edgeT == edge.maxT ||
-                            //			-1 == dir && curveT == isCurve.tMin ||
-                            //			1 == dir && curveT == isCurve.tMax) continue
-                            //		const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir * eps)).dot(normVector)
-                            //		const ecd = edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir * dirFactor *
-                            // eps)).dot(normVector) if (iscd > ecd) { ps.push({p, insideDir: isTangent.times(dir *
-                            // dirFactor), t: curveT, edge: edge, edgeT: edgeT, colinear: false}) } }
-                            // curveVsSurface(isCurve, curveT, p, surface2) }
+                            //	const dirFactor =
+                            // sign(isTangent.dot(edge.curve.tangentAt(edgeT))) const eps =
+                            // 1e-4 const normVector = surface2.normalP(p) for (const dir of
+                            // [-1, 1]) { if (-1 == dir * dirFactor && edgeT == edge.minT || 1
+                            // == dir * dirFactor && edgeT == edge.maxT || -1 == dir && curveT
+                            // == isCurve.tMin || 1 == dir && curveT == isCurve.tMax) continue
+                            // const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir *
+                            // eps)).dot(normVector) const ecd =
+                            // edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir * dirFactor *
+                            // eps)).dot(normVector) if (iscd > ecd) { ps.push({p, insideDir:
+                            // isTangent.times(dir * dirFactor), t: curveT, edge: edge, edgeT: edgeT, colinear: false}) } } curveVsSurface(isCurve, curveT, p, surface2) }
                         }
                     }
                 }
             }
-            // duplicate 't's are ok, as sometimes a segment needs to stop and start again
-            // should be sorted so that back facing ones are first
+            // duplicate 't's are ok, as sometimes a segment needs to stop and start
+            // again should be sorted so that back facing ones are first
             ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isCurve.tangentAt(a.t)));
             return ps;
         }
@@ -62730,9 +64633,10 @@ var demo = (function (exports, hljs) {
                         return PointVsFace.ON_EDGE;
                     }
                     const edgeT = aEqP ? edge.aT : edge.bT;
-                    const edgeDir = (aEqP ? 1 : -1) * sign$1(edge.deltaT());
+                    const edgeDir = (aEqP ? 1 : -1) * sign$2(edge.deltaT());
                     const iscd = edge.curve.diff(edgeT, edgeDir * eps).dot(up);
-                    //const iscd = edge.curve.at(edgeT).to(curve.at(edgeT + edgeDir * eps)).dot(up)
+                    //const iscd = edge.curve.at(edgeT).to(curve.at(edgeT + edgeDir *
+                    // eps)).dot(up)
                     const diff = iscd - ecd;
                     if (diff > 0 && (!advanced || diff < minValue)) {
                         advanced = true;
@@ -62757,22 +64661,14 @@ var demo = (function (exports, hljs) {
             //const normal = this.surface.normalP(p)
             //let minAngle = Infinity, inOut = false
             //function test(v, b) {
-            //	const angle = (dir.angleRelativeNormal(v, normal) + TAU + NLA_PRECISION / 2) % TAU
-            //	if (angle <= 2 * NLA_PRECISION) {
-            //		return true
-            //	}
-            //	if (angle < minAngle) {
-            //		minAngle = angle
-            //		inOut = b
-            //	}
-            //}
-            //for (const edge of this.getAllEdges()) {
-            //	assert(edge.a.equals(p) || !edge.a.like(p))
-            //	assert(edge.b.equals(p) || !edge.b.like(p))
-            //	if (edge.a.equals(p) && test(edge.aDir, false)) return PointVsFace.ON_EDGE
-            //	if (edge.b.equals(p) && test(edge.bDir.negated(), true)) return PointVsFace.ON_EDGE
-            //}
-            //return inOut ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
+            //	const angle = (dir.angleRelativeNormal(v, normal) + TAU + NLA_PRECISION
+            // / 2) % TAU if (angle <= 2 * NLA_PRECISION) { return true } if (angle <
+            // minAngle) { minAngle = angle inOut = b } } for (const edge of
+            // this.getAllEdges()) { assert(edge.a.equals(p) || !edge.a.like(p))
+            // assert(edge.b.equals(p) || !edge.b.like(p)) if (edge.a.equals(p) &&
+            // test(edge.aDir, false)) return PointVsFace.ON_EDGE if (edge.b.equals(p)
+            // && test(edge.bDir.negated(), true)) return PointVsFace.ON_EDGE } return
+            // inOut ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
         }
     }
     class PlaneFace extends Face {
@@ -62818,107 +64714,17 @@ var demo = (function (exports, hljs) {
         //                   thisBrep: BRep,
         //                   face2Brep: BRep,
         //                   faceMap: Map<Face, Edge[]>,
-        //                   thisEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
-        //                   otherEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
-        //                   checkedPairs: CustomSet<Pair<Equalable, Equalable>>) {
-        //	assertInst(CustomMap, thisEdgePoints, otherEdgePoints)
-        //
-        //	function hasPair(a: Equalable, b: Equalable) {
-        //		return checkedPairs.has(new Pair(a, b))
-        //	}
-        //	function addPair(a: Equalable, b: Equalable) {
-        //		return checkedPairs.add(new Pair(a, b))
-        //	}
-        //
-        //	/**
-        //	 * @param newEdge generated segment
-        //	 * @param col1 if newEdge is colinear to an edge of this, the edge in question
-        //	 * @param col2 same for face2
-        //	 */
-        //	function handleNewEdge(newEdge: StraightEdge, col1: Edge, col2: Edge) {
-        //		if (!col1 && !col2) {
-        //			mapPush(faceMap, face, newEdge)
-        //			mapPush(faceMap, face2, newEdge.flipped())
-        //			return true
-        //		}
-        //		function handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, coplanarSameIsInside: boolean,
-        // has, add) { if (col1 && !col2) { if (hasPair(col1.getCanon(), face2)) return  //add(col1.getCanon(), face2)
-        // const face2Plane = face2.surface.plane  // NB: a new edge is inserted even though it may be the same as an old
-        // one // however it indicates that it intersects the other volume here, i.e. the old edge cannot // be counted as
-        // 'inside' for purposes of reconstitution thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { //const
-        // dot = snap0(face2Plane.normal1.dot(faceInfo.inside)) //if (dot == 0 ? !coplanarSameIsInside : dot < 0) { const
-        // pointsInsideFace = fff(faceInfo, face2.surface) const edgeInside = pointsInsideFace == INSIDE ||
-        // !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME const pushEdge =
-        // (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped()
-        // assert(faceInfo.edge.aDir.like(pushEdge.aDir)) edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) })  const
-        // newEdgeInside = face2Plane.normal1.cross(newEdge.aDir) const sVEF1 = splitsVolumeEnclosingFaces(thisBrep,
-        // col1.getCanon(), newEdgeInside, face2Plane.normal1) let addNewEdge, addNewEdgeFlipped if (addNewEdge = sVEF1 ==
-        // INSIDE || coplanarSameIsInside && sVEF1 == COPLANAR_SAME) { mapPush(faceMap, face2, newEdge) } const sVEF2 =
-        // splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside.negated(), face2Plane.normal1) if
-        // (addNewEdgeFlipped = sVEF2 == INSIDE || coplanarSameIsInside && sVEF2 == COPLANAR_SAME) { mapPush(faceMap,
-        // face2, newEdge.flipped()) } if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE ||
-        // sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE) { return true } } } const c1 = handleEdgeInFace(col1, col2, face,
-        // face2, thisBrep, face2Brep, false, hasPair, addPair) const c2 = handleEdgeInFace(col2, col1, face2, face,
-        // face2Brep, thisBrep, true, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) if (c1 || c2) return true  if (col1
-        // && col2) { if (hasPair(col1.getCanon(), col2.getCanon())) return  addPair(col1.getCanon(), col2.getCanon())
-        // function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean, thisEdgePoints,
-        // has, add) { // not entirely sure for what i had the dirInsides in? //const aDirNegatedInside =
-        // (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a,
-        // newEdge.aDir.negated()) == INSIDE //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
-        // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
-        // thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { const sVEF = splitsVolumeEnclosingFaces(face2Brep,
-        // col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA) const edgeInside = sVEF == INSIDE ||
-        // coplanarSameIsInside && sVEF == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge
-        // : newEdge.flipped() edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) }) } handleColinearEdgeFaces(col1,
-        // col2, thisBrep, face2Brep, true, thisEdgePoints, hasPair, addPair) handleColinearEdgeFaces(col2, col1,
-        // face2Brep, thisBrep, false, otherEdgePoints, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) } }   // what
-        // needs to be generated: new edges on face // points on edges where they are cut by faces so that sub edges will
-        // be generated for loops // points on ends of edges where the edge will be an edge in the new volume where it goes
-        // from A to B //         you don't want thos to be marked as 'inside', otherwise invalid faces will be added // if
-        // a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be
-        // function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) { // ends in the
-        // middle of b's face if (a && !b) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
-        // mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } // else colinear segment ends
-        // in middle of other face, do nothing } // ends in the middle of a's face if (b && !a) { if (!b.colinear &&
-        // b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) { mapPush(otherEdgePoints, b.edge.getCanon(), b)
-        // assert(b.edge.isValidT(b.edgeT)) } // else colinear segment ends in middle of other face, do nothing } if (a &&
-        // b) { // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge //
-        // segment starts/ends on edge/edge intersection function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep,
-        // face2Brep, first, thisEdgePoints) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { if
-        // (!hasPair(a.edge.getCanon(), b.edge.getCanon())) { addPair(a.edge.getCanon(), b.edge.getCanon()) // ends on a,
-        // on colinear segment b bT != a.edge.bT && // b can be colinear, so edgeT == aT is possible if (a.p.like(b.edge.a)
-        // || a.p.like(b.edge.b)) { const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b // face2brep corner on edge
-        // const sVEC1 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir) const sVEC2 =
-        // splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir.negated()) // if either of these return
-        // ALONG_EDGE_OR_PLANE, then the breps share a colinear edge  if (INSIDE == sVEC1 || INSIDE == sVEC2) {
-        // mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center
-        // intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const
-        // testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 =
-        // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector, thisPlane.normal1) const sVEF2 =
-        // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector.negated(), thisPlane.normal1) if (INSIDE ==
-        // sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } }
-        // } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2,
-        // face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2)
-        // const face: PlaneFace = this // get intersection const thisPlane = this.surface.plane, face2Plane =
-        // face2.surface.plane if (thisPlane.isParallelToPlane(face2Plane)) { if (thisPlane.like(face2Plane)) { // normal1
-        // same and same location in space // addLikeSurfaceFaces(likeSurfaceFaces, this, face2) } return } const isLine =
-        // L3.fromPlanes(thisPlane, face2Plane) // get intersections of newCurve with other edges of face and face2 const
-        // ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane) const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine,
-        // thisPlane) if (ps1.length == 0 || ps2.length == 0) { // faces to not intersect return }  let col1:
-        // IntersectionPointInfo, col2: IntersectionPointInfo let in1 = false, in2 = false let i = 0, j = 0, last let
-        // startP, startDir, startT, startA, startB while (i < ps1.length || j < ps2.length) { assert(i <= ps1.length)
-        // assert(j <= ps2.length) const a = ps1[i], b = ps2[j] assert(a || b) if (j == ps2.length || i < ps1.length &&
-        // lt(a.t, b.t)) { last = a in1 = !in1 a.used = true in1 && (col1 = a.colinear && a) i++ } else if (i == ps1.length
-        // || gt(a.t, b.t)) { last = b in2 = !in2 b.used = true in2 && (col2 = b.colinear && b) j++ } else { // TODO: this
-        // will break if 3 points on the same t last = a in1 = !in1 in2 = !in2 //if (in1 == in2) { a.used = true b.used =
-        // true in1 && (col1 = a.colinear && a) in2 && (col2 = b.colinear && b) //} i++ j++ } if (startP && !(in1 && in2))
-        // { // segment end const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' +
-        // getGlobalId()) startP = undefined last.used = true if (handleNewEdge(newEdge, col1 && col1.edge, col2 &&
-        // col2.edge)) { handleEndPoint(startA || col1, startB || col2, newEdge) handleEndPoint(a && a.used && a || col1, b
-        // && b.used && b || col2, newEdge) } } else if (in1 && in2) { // new segment just started startP = last.p startDir
-        // = last.insideDir startT = last.t startA = a && a.used && a startB = b && b.used && b } if (!in1 && a && last ==
-        // a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used)
-        // && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
+        //                   thisEdgePoints: CustomMap<Edge, { edge: Edge, edgeT:
+        // number, p: V3, passEdge?: Edge }[]>, otherEdgePoints: CustomMap<Edge, {
+        // edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>, checkedPairs:
+        // CustomSet<Pair<Equalable, Equalable>>) { assertInst(CustomMap,
+        // thisEdgePoints, otherEdgePoints)  function hasPair(a: Equalable, b:
+        // Equalable) { return checkedPairs.has(new Pair(a, b)) } function addPair(a:
+        // Equalable, b: Equalable) { return checkedPairs.add(new Pair(a, b)) }  /**
+        // * @param newEdge generated segment * @param col1 if newEdge is colinear to
+        // an edge of this, the edge in question * @param col2 same for face2 */
+        // function handleNewEdge(newEdge: StraightEdge, col1: Edge, col2: Edge) { if
+        // (!col1 && !col2) { mapPush(faceMap, face, newEdge) mapPush(faceMap, face2, newEdge.flipped()) return true } function handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, coplanarSameIsInside: boolean, has, add) { if (col1 && !col2) { if (hasPair(col1.getCanon(), face2)) return  //add(col1.getCanon(), face2) const face2Plane = face2.surface.plane  // NB: a new edge is inserted even though it may be the same as an old one // however it indicates that it intersects the other volume here, i.e. the old edge cannot // be counted as 'inside' for purposes of reconstitution thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { //const dot = snap0(face2Plane.normal1.dot(faceInfo.inside)) //if (dot == 0 ? !coplanarSameIsInside : dot < 0) { const pointsInsideFace = fff(faceInfo, face2.surface) const edgeInside = pointsInsideFace == INSIDE || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped() assert(faceInfo.edge.aDir.like(pushEdge.aDir)) edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) })  const newEdgeInside = face2Plane.normal1.cross(newEdge.aDir) const sVEF1 = splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside, face2Plane.normal1) let addNewEdge, addNewEdgeFlipped if (addNewEdge = sVEF1 == INSIDE || coplanarSameIsInside && sVEF1 == COPLANAR_SAME) { mapPush(faceMap, face2, newEdge) } const sVEF2 = splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside.negated(), face2Plane.normal1) if (addNewEdgeFlipped = sVEF2 == INSIDE || coplanarSameIsInside && sVEF2 == COPLANAR_SAME) { mapPush(faceMap, face2, newEdge.flipped()) } if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE || sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE) { return true } } } const c1 = handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, false, hasPair, addPair) const c2 = handleEdgeInFace(col2, col1, face2, face, face2Brep, thisBrep, true, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) if (c1 || c2) return true  if (col1 && col2) { if (hasPair(col1.getCanon(), col2.getCanon())) return  addPair(col1.getCanon(), col2.getCanon()) function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean, thisEdgePoints, has, add) { // not entirely sure for what i had the dirInsides in? //const aDirNegatedInside = (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA) const edgeInside = sVEF == INSIDE || coplanarSameIsInside && sVEF == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped() edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) }) } handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, true, thisEdgePoints, hasPair, addPair) handleColinearEdgeFaces(col2, col1, face2Brep, thisBrep, false, otherEdgePoints, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) } }   // what needs to be generated: new edges on face // points on edges where they are cut by faces so that sub edges will be generated for loops // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B //         you don't want thos to be marked as 'inside', otherwise invalid faces will be added // if a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) { // ends in the middle of b's face if (a && !b) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } // else colinear segment ends in middle of other face, do nothing } // ends in the middle of a's face if (b && !a) { if (!b.colinear && b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) { mapPush(otherEdgePoints, b.edge.getCanon(), b) assert(b.edge.isValidT(b.edgeT)) } // else colinear segment ends in middle of other face, do nothing } if (a && b) { // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge // segment starts/ends on edge/edge intersection function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) { addPair(a.edge.getCanon(), b.edge.getCanon()) // ends on a, on colinear segment b bT != a.edge.bT && // b can be colinear, so edgeT == aT is possible if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) { const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b // face2brep corner on edge const sVEC1 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir) const sVEC2 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir.negated()) // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge  if (INSIDE == sVEC1 || INSIDE == sVEC2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector, thisPlane.normal1) const sVEF2 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector.negated(), thisPlane.normal1) if (INSIDE == sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } } } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2, face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2) const face: PlaneFace = this // get intersection const thisPlane = this.surface.plane, face2Plane = face2.surface.plane if (thisPlane.isParallelToPlane(face2Plane)) { if (thisPlane.like(face2Plane)) { // normal1 same and same location in space // addLikeSurfaceFaces(likeSurfaceFaces, this, face2) } return } const isLine = L3.fromPlanes(thisPlane, face2Plane) // get intersections of newCurve with other edges of face and face2 const ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane) const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine, thisPlane) if (ps1.length == 0 || ps2.length == 0) { // faces to not intersect return }  let col1: IntersectionPointInfo, col2: IntersectionPointInfo let in1 = false, in2 = false let i = 0, j = 0, last let startP, startDir, startT, startA, startB while (i < ps1.length || j < ps2.length) { assert(i <= ps1.length) assert(j <= ps2.length) const a = ps1[i], b = ps2[j] assert(a || b) if (j == ps2.length || i < ps1.length && lt(a.t, b.t)) { last = a in1 = !in1 a.used = true in1 && (col1 = a.colinear && a) i++ } else if (i == ps1.length || gt(a.t, b.t)) { last = b in2 = !in2 b.used = true in2 && (col2 = b.colinear && b) j++ } else { // TODO: this will break if 3 points on the same t last = a in1 = !in1 in2 = !in2 //if (in1 == in2) { a.used = true b.used = true in1 && (col1 = a.colinear && a) in2 && (col2 = b.colinear && b) //} i++ j++ } if (startP && !(in1 && in2)) { // segment end const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' + getGlobalId()) startP = undefined last.used = true if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) { handleEndPoint(startA || col1, startB || col2, newEdge) handleEndPoint(a && a.used && a || col1, b && b.used && b || col2, newEdge) } } else if (in1 && in2) { // new segment just started startP = last.p startDir = last.insideDir startT = last.t startA = a && a.used && a startB = b && b.used && b } if (!in1 && a && last == a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used) && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
         withHole(holeEdges) {
             return new PlaneFace(this.surface, this.contour, [holeEdges]);
         }
@@ -62933,7 +64739,7 @@ var demo = (function (exports, hljs) {
             const ps = [];
             const loops = [face.contour].concat(face.holes);
             loops.forEach((loop) => {
-                const colinearEdges = loop.map((edge) => edge.colinearToLine(isLine) && -sign$1(edge.aDir.dot(isLine.dir1)));
+                const colinearEdges = loop.map((edge) => edge.colinearToLine(isLine) && -sign$2(edge.aDir.dot(isLine.dir1)));
                 const isLineOut = isLine.dir1.cross(plane.normal1);
                 loop.forEach((edge, edgeIndex, edges) => {
                     const nextEdgeIndex = (edgeIndex + 1) % edges.length, nextEdge = edges[nextEdgeIndex], colinearEdge = colinearEdges[edgeIndex];
@@ -62973,7 +64779,8 @@ var demo = (function (exports, hljs) {
                         }
                     }
                     else {
-                        // not necessarily a straight edge, so multiple intersections are possible
+                        // not necessarily a straight edge, so multiple intersections are
+                        // possible
                         const edgeTs = edge.edgeISTsWithPlane(plane2);
                         assert(edgeTs.every((t) => plane2.containsPoint(edge.curve.at(t))), edgeTs);
                         for (const edgeT of edgeTs) {
@@ -63013,8 +64820,8 @@ var demo = (function (exports, hljs) {
                     }
                 });
             });
-            // duplicate 't's are ok, as sometimes a segment needs to stop and start again
-            // should be sorted so that back facing ones are first
+            // duplicate 't's are ok, as sometimes a segment needs to stop and start
+            // again should be sorted so that back facing ones are first
             ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isLine.dir1));
             return ps;
         }
@@ -63099,12 +64906,12 @@ var demo = (function (exports, hljs) {
          */
         unrollEllipsoidLoops(edgeLoops) {
             const verticesUV = [], vertices = [], loopStarts = [];
-            const ellipsoid = this.surface;
-            const ptpf = ellipsoid.uvPFunc();
-            const testDegeneratePoint = ellipsoid instanceof EllipsoidSurface
-                ? (nextStart) => nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) ||
-                    nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
-                : (nextStart) => nextStart.like(this.surface.center);
+            const surface = this.surface;
+            const ptpf = surface.uvPFunc();
+            const testDegeneratePoint = surface instanceof EllipsoidSurface
+                ? (p) => p.like(surface.center.plus(surface.f3)) ||
+                    p.like(surface.center.minus(surface.f3))
+                : (p) => p.like(surface.center);
             for (const edgeLoop of edgeLoops) {
                 loopStarts.push(verticesUV.length);
                 // console.log(startEdgeIndex)
@@ -63114,13 +64921,18 @@ var demo = (function (exports, hljs) {
                     vertices.push(...verticesNo0);
                     verticesUV.push(...verticesNo0.map((v) => ptpf(v)));
                     const nextStart = edgeLoop[ipp].a;
-                    //console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
+                    //console.log('BLAH', nextStart.toString(),
+                    // surface.center.plus(surface.f3).toString())
                     if (testDegeneratePoint(nextStart)) {
-                        const bDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[ipp].aDir);
-                        const inAngle = Math.atan2(-bDirLC.y, -bDirLC.x);
-                        const outAngle = Math.atan2(aDirLC.y, aDirLC.x);
-                        const stLast = verticesUV.pop();
-                        verticesUV.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0));
+                        const bDirLC = surface.matrixInverse.transformVector(edgeLoop[i].bDir);
+                        const aDirLC = surface.matrixInverse.transformVector(edgeLoop[ipp].aDir);
+                        const fixAngle = (u) => abs$3(u) === PI$1 && !between(u, surface.uMin, surface.uMax) ? -u : u;
+                        const inAngle = fixAngle(Math.atan2(-bDirLC.y, -bDirLC.x));
+                        const outAngle = fixAngle(Math.atan2(aDirLC.y, aDirLC.x));
+                        const lastV = verticesUV.pop().y;
+                        assert(surface.validUV(inAngle, lastV), inAngle, lastV);
+                        assert(surface.validUV(outAngle, lastV), outAngle, lastV);
+                        verticesUV.push(new V3(inAngle, lastV, 0), new V3(outAngle, lastV, 0));
                         vertices.push(getLast(vertices));
                     }
                     verticesUV.forEach(({ u, v }) => {
@@ -63131,14 +64943,14 @@ var demo = (function (exports, hljs) {
             }
             let normals;
             if (this.surface instanceof EllipsoidSurface) {
-                normals = vertices.map((v) => ellipsoid.normalP(v));
+                normals = vertices.map((v) => surface.normalP(v));
             }
             else {
-                const normalUV = ellipsoid.normalUVFunc();
+                const normalUV = surface.normalUVFunc();
                 normals = verticesUV.map(({ u, v }) => normalUV(u, v));
             }
             assert(vertices.length == vertices.length);
-            //console.log(verticesUV.map(v => v.str).join('\n'))
+            //console.log(verticesUV.map(v => v.toString()).join('\n'))
             return {
                 verticesUV: verticesUV,
                 vertices: vertices,
@@ -63199,14 +65011,15 @@ var demo = (function (exports, hljs) {
             const triangles = [];
             const pMN = (m, n) => this.surface.pUVFunc()(m * uStep, n * vStep);
             const normalMN = (m, n) => this.surface.normalUVFunc()(m * uStep, n * vStep);
-            const loops = this.getLoops();
             const { vertices, verticesUV, normals, loopStarts } = this.surface instanceof EllipsoidSurface ||
                 this.surface instanceof ConicSurface
-                ? this.unrollEllipsoidLoops(loops)
-                : this.unrollCylinderLoops(loops);
+                ? this.unrollEllipsoidLoops(this.getLoops())
+                : this.unrollCylinderLoops(this.getLoops());
             loopStarts.push(vertices.length);
             const verticesMN = verticesUV.map(({ u, v }) => new V3(u / uStep, v / vStep, 0));
-            for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
+            console.table(verticesUV, ["x", "y"]);
+            // Add all loops as lines to the mesh.
+            for (let vertexLoopIndex = 0; vertexLoopIndex < this.getLoops().length; vertexLoopIndex++) {
                 const vertexLoopStart = loopStarts[vertexLoopIndex];
                 const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart;
                 const base = mesh.vertices.length + loopStarts[vertexLoopIndex];
@@ -63214,22 +65027,19 @@ var demo = (function (exports, hljs) {
                     mesh.LINES.push(base + i, base + ((i + 1) % vertexLoopLength));
                 }
             }
-            disableConsole();
+            // Figure out min/max m/n.
             let minM = Infinity, maxM = -Infinity, minN = Infinity, maxN = -Infinity;
-            //console.log('surface', this.surface.str)
-            //console.log(verticesMN)
-            //drPs.push(...verticesMN.map((v, i) => ({p: vertices[i], text: `${i} uv: ${v.toString(x => round10(x,
-            // -4))}`})))
             verticesMN.forEach(([m, n]) => {
                 assert(isFinite(m));
                 assert(isFinite(n));
-                minM = min$3(minM, m);
-                maxM = max$3(maxM, m);
-                minN = min$3(minN, n);
-                maxN = max$3(maxN, n);
+                minM = min$4(minM, m);
+                maxM = max$4(maxM, m);
+                minN = min$4(minN, n);
+                maxN = max$4(maxN, n);
             });
+            console.log(minM, maxM, minN, maxN);
             if (ParametricSurface.is(this.surface)) ;
-            const mOffset = floor$1(minM + NLA_PRECISION), nOffset = floor$1(minN + NLA_PRECISION);
+            const mOffset = floor$2(minM + NLA_PRECISION), nOffset = floor$2(minN + NLA_PRECISION);
             const mRes = ceil(maxM - NLA_PRECISION) - mOffset, nRes = ceil(maxN - NLA_PRECISION) - nOffset;
             console.log(uStep, vStep, mRes, nRes);
             if (mRes == 1 && nRes == 1) {
@@ -63238,27 +65048,27 @@ var demo = (function (exports, hljs) {
                 triangles.push(...polyTriangles);
             }
             else {
+                const completeParts = [];
                 const partss = new Array(mRes * nRes);
                 function fixUpPart(part, baseM, baseN) {
                     assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`);
-                    console.log("complete part", part, baseM, baseN);
+                    completeParts.push({ part, baseM, baseN });
                     //console.trace()
                     assert(part.length);
                     const cellM = baseM + mOffset, cellN = baseN + nOffset;
                     for (const index of part) {
                         assert(le(cellM, verticesMN[index].x) &&
-                            le(verticesMN[index].x, cellM + 1), `${index} ${verticesMN[index].str} ${cellM} ${cellM}`);
+                            le(verticesMN[index].x, cellM + 1), `${index} ${verticesMN[index]} ${cellM} ${cellM}`);
                         assert(le(cellN, verticesMN[index].y) &&
                             le(verticesMN[index].y, cellN + 1));
                     }
                     const pos = baseN * mRes + baseM;
                     (partss[pos] || (partss[pos] = [])).push(part);
-                    //const outline = partss[pos] || (partss[pos] = [minM + baseM * uStep, minN + baseN * vStep, minM +
-                    // (baseM + 1) * uStep, minN + (baseN + 1) * vStep])
+                    //const outline = partss[pos] || (partss[pos] = [minM + baseM * uStep,
+                    // minN + baseN * vStep, minM + (baseM + 1) * uStep, minN + (baseN + 1)
+                    // * vStep])
                 }
-                // 'some' instead of forEach so we can return out of the entire function if this.edges crosses no borders
-                // and
-                for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
+                for (let vertexLoopIndex = 0; vertexLoopIndex < this.getLoops().length; vertexLoopIndex++) {
                     let part = undefined;
                     let firstPart = undefined;
                     let firstPartBaseM = -1;
@@ -63268,31 +65078,35 @@ var demo = (function (exports, hljs) {
                     const vertexLoopStart = loopStarts[vertexLoopIndex];
                     const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart;
                     for (let vlvi = 0; vlvi < vertexLoopLength; vlvi++) {
-                        const vx0index = vertexLoopStart + vlvi, vx0 = verticesMN[vx0index];
-                        const vx1index = vertexLoopStart + ((vlvi + 1) % vertexLoopLength), vx1 = verticesMN[vx1index];
-                        //console.log('dask', vx0index, vx1index)
+                        const vx0index = vertexLoopStart + vlvi;
+                        const vx0 = verticesMN[vx0index];
+                        const vx1index = vertexLoopStart + ((vlvi + 1) % vertexLoopLength);
+                        const vx1 = verticesMN[vx1index];
                         const vx01 = vx0.to(vx1);
-                        assert(vx0);
                         const di = vx01.x, dj = vx01.y;
                         let vxIndex = vx0index, vx = vx0, currentT = 0;
+                        // A single segment in the loop may require additional vertices, if the
+                        // segment crosses cell boundaries. This is handled by this while loop.
                         let whileLimit = 400;
                         while (--whileLimit) {
-                            // points which are on a grid line are assigned to the cell into which they are going (+
-                            // NLA_PRECISION * sign(di)) if they are parallel to the gridline (eq0(di)), they belong the
-                            // the cell for which they are a CCW boundary
-                            const baseM = floor$1(vx.u + (!eq0(di) ? sign$1(di) : -sign$1(dj)) * NLA_PRECISION) -
+                            // Points which are on a grid line are assigned to the cell into
+                            // which they are going (+ NLA_PRECISION * sign(di)). If they are
+                            // parallel to the grid line (eq0(di)), they belong the the cell for
+                            // which they are a CCW boundary.
+                            const baseM = floor$2(vx.u + (!eq0(di) ? sign$2(di) : -sign$2(dj)) * NLA_PRECISION) -
                                 mOffset;
-                            const baseN = floor$1(vx.v + (!eq0(dj) ? sign$1(dj) : sign$1(di)) * NLA_PRECISION) -
+                            const baseN = floor$2(vx.v + (!eq0(dj) ? sign$2(dj) : sign$2(di)) * NLA_PRECISION) -
                                 nOffset;
-                            assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`);
+                            assert(baseM < mRes && baseN < nRes, `baseM:${baseM} < mRes:${mRes} && baseN:${baseN} < nRes:${nRes}`);
                             // figure out the next intersection with a gridline:
-                            // iNext is the positive horizontal distance to the next vertical gridline
-                            const iNext = ceil(sign$1(di) * vx.u + NLA_PRECISION) - sign$1(di) * vx.u;
-                            const jNext = ceil(sign$1(dj) * vx.v + NLA_PRECISION) - sign$1(dj) * vx.v;
-                            const iNextT = currentT + iNext / abs$2(di);
-                            const jNextT = currentT + jNext / abs$2(dj);
-                            //console.log(vxIndex, vx.str, 'vij', vx.u, vx.v, 'd', di, dj, 'ijNext', iNext, jNext, 'nextT',
-                            // iNextT, jNextT)
+                            // iNext is the positive horizontal distance to the next vertical
+                            // gridline
+                            const iNext = ceil(sign$2(di) * vx.u + NLA_PRECISION) - sign$2(di) * vx.u;
+                            const jNext = ceil(sign$2(dj) * vx.v + NLA_PRECISION) - sign$2(dj) * vx.v;
+                            const iNextT = currentT + iNext / abs$3(di);
+                            const jNextT = currentT + jNext / abs$3(dj);
+                            //console.log(vxIndex, vx.toString(), 'vij', vx.u, vx.v, 'd', di,
+                            // dj, 'ijNext', iNext, jNext, 'nextT', iNextT, jNextT)
                             if (lastBaseM != baseM || lastBaseN != baseN) {
                                 if (part) {
                                     if (!firstPart) {
@@ -63309,7 +65123,7 @@ var demo = (function (exports, hljs) {
                             }
                             lastBaseM = baseM;
                             lastBaseN = baseN;
-                            currentT = min$3(iNextT, jNextT);
+                            currentT = min$4(iNextT, jNextT);
                             if (ge(currentT, 1)) {
                                 //console.log('breaking ', vx1index)
                                 part.push(vx1index);
@@ -63330,8 +65144,8 @@ var demo = (function (exports, hljs) {
                         // complete loop
                         assert(false, "found a hole, try increasing resolution");
                     }
-                    // at this point, the firstPart hasn't been added, and the last part also hasn't been added
-                    // either they belong to the same cell, or not
+                    // at this point, the firstPart hasn't been added, and the last part
+                    // also hasn't been added either they belong to the same cell, or not
                     if (firstPartBaseM == lastBaseM && firstPartBaseN == lastBaseN) {
                         part.pop();
                         fixUpPart(part.concat(firstPart), lastBaseM, lastBaseN);
@@ -63343,6 +65157,10 @@ var demo = (function (exports, hljs) {
                     console.log("firstPart", firstPart);
                 }
                 console.log("calculated parts", partss);
+                console.table(completeParts.map((_a) => {
+                    var { part } = _a, rest = __rest(_a, ["part"]);
+                    return (Object.assign({ part: "" + part }, rest));
+                }));
                 const fieldVertexIndices = new Array((mRes + 1) * (nRes + 1));
                 function addVertex(m, n) {
                     verticesMN.push(new V3(m, n, 0));
@@ -63379,7 +65197,7 @@ var demo = (function (exports, hljs) {
                                     " " +
                                     index +
                                     " " +
-                                    p.str +
+                                    p.toString() +
                                     "IF THIS FAILS check canonSeamU is correct");
                                 return v1 < u1 ? u1 + v1 : 4 - u1 - v1;
                             }
@@ -63399,21 +65217,24 @@ var demo = (function (exports, hljs) {
                                         : opos(nextPart[0]) + 4;
                                     let nextOpos = ceil(currentOpos + NLA_PRECISION);
                                     let flipping = eq0(((currentOpos + NLA_PRECISION) % 1) - NLA_PRECISION);
-                                    //inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2 < 1)
+                                    //inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2
+                                    // < 1)
                                     while (lt(nextOpos, nextPartStartOpos)) {
                                         switch (nextOpos % 4) {
                                             case 0:
                                                 outline.push(getGridVertexIndex(col, row));
                                                 break;
                                             case 1:
-                                                inside = inside != flipping;
+                                                if (flipping)
+                                                    inside = !inside;
                                                 outline.push(getGridVertexIndex(col + 1, row));
                                                 break;
                                             case 2:
                                                 outline.push(getGridVertexIndex(col + 1, row + 1));
                                                 break;
                                             case 3:
-                                                inside = inside != flipping;
+                                                if (flipping)
+                                                    inside = !inside;
                                                 outline.push(getGridVertexIndex(col, row + 1));
                                                 break;
                                         }
@@ -63421,11 +65242,10 @@ var demo = (function (exports, hljs) {
                                         nextOpos++;
                                     }
                                     // if the next loop would have completed a top or bottom segment
-                                    inside =
-                                        inside !=
-                                            (flipping &&
-                                                nextOpos % 2 == 1 &&
-                                                eq(nextOpos, nextPartStartOpos));
+                                    if (flipping &&
+                                        nextOpos % 2 == 1 &&
+                                        eq(nextOpos, nextPartStartOpos))
+                                        inside = !inside;
                                     currentOpos = nextOpos;
                                     currentPart = nextPart;
                                 } while (currentPart != startPart);
@@ -63444,14 +65264,15 @@ var demo = (function (exports, hljs) {
                     }
                 }
             }
-            //console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(),
-            // triangles.map(col => vertices[col].$).toSource() ) assert(normals.every(n => n.hasLength(1)), normals.find(n
-            // => !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
+            //console.log('trinagle', triangles.max(), vertices.length,
+            // triangles.length, triangles.toSource(), triangles.map(col =>
+            // vertices[col].$).toSource() ) assert(normals.every(n => n.hasLength(1)),
+            // normals.find(n => !n.hasLength(1)).length() +' '+normals.findIndex(n =>
+            // !n.hasLength(1)))
             Array.prototype.push.apply(mesh.TRIANGLES, triangles.map((index) => index + mesh.vertices.length));
             Array.prototype.push.apply(mesh.vertices, vertices);
             Array.prototype.push.apply(mesh.normals, normals);
             //this.addEdgeLines(mesh)
-            enableConsole();
         }
         addToMesh2(mesh) {
             const zSplit = 8;
@@ -63469,8 +65290,8 @@ var demo = (function (exports, hljs) {
                     if (index0 < 0) {
                         ribs.splice(-index0 - 1, 0, { value: d, left: [], right: [] });
                     }
-                    minZ = min$3(minZ, z);
-                    maxZ = max$3(maxZ, z);
+                    minZ = min$4(minZ, z);
+                    maxZ = max$4(maxZ, z);
                 });
             });
             console.log("zzzs", minZ, maxZ, vertexLoops[0].toSource().replace(/\), /g, ",\n"));
@@ -63521,8 +65342,9 @@ var demo = (function (exports, hljs) {
                     normals.push(normalF(d, detailZs[j]));
                 }
             }
-            // console.log('detailVerticesStart', detailVerticesStart, 'vl', vertices.length, vertices.length -
-            // detailVerticesStart, ribs.length) finally, fill in the ribs
+            // console.log('detailVerticesStart', detailVerticesStart, 'vl',
+            // vertices.length, vertices.length - detailVerticesStart, ribs.length)
+            // finally, fill in the ribs
             let vsStart = 0;
             const flipped2 = true;
             //for (var i = 0; i < 1; i++) {
@@ -63570,11 +65392,12 @@ var demo = (function (exports, hljs) {
                 }
                 vsStart += ribLeft.right.length * 2;
             }
-            //console.log('trinagle', triangles0.max(), vertices.length, triangles0.length, triangles0.toSource(),
-            // triangles0.map(i => vertices[i].$).toSource() )
+            //console.log('trinagle', triangles0.max(), vertices.length,
+            // triangles0.length, triangles0.toSource(), triangles0.map(i =>
+            // vertices[i].$).toSource() )
             const triangles = triangles0.map((index) => index + mesh.vertices.length);
-            //assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +'
-            // '+normals.findIndex(n => !n.hasLength(1)))
+            //assert(normals.every(n => n.hasLength(1)), normals.find(n =>
+            // !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
             Array.prototype.push.apply(mesh.vertices, vertices);
             Array.prototype.push.apply(mesh.TRIANGLES, triangles);
             Array.prototype.push.apply(mesh.normals, normals);
@@ -64074,10 +65897,10 @@ var demo = (function (exports, hljs) {
 
     // check if two segments intersect
     function intersects(p1, q1, p2, q2) {
-        var o1 = sign$2(area(p1, q1, p2));
-        var o2 = sign$2(area(p1, q1, q2));
-        var o3 = sign$2(area(p2, q2, p1));
-        var o4 = sign$2(area(p2, q2, q1));
+        var o1 = sign$3(area(p1, q1, p2));
+        var o2 = sign$3(area(p1, q1, q2));
+        var o3 = sign$3(area(p2, q2, p1));
+        var o4 = sign$3(area(p2, q2, q1));
 
         if (o1 !== o2 && o3 !== o4) return true; // general case
 
@@ -64094,7 +65917,7 @@ var demo = (function (exports, hljs) {
         return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) && q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
     }
 
-    function sign$2(num) {
+    function sign$3(num) {
         return num > 0 ? 1 : num < 0 ? -1 : 0;
     }
 
@@ -76248,7 +78071,7 @@ var demo = (function (exports, hljs) {
         let maxValue = -20, advanced = false, result = Number.MAX_SAFE_INTEGER;
         const normVector = currentEdge.bDir.cross(faceNormalAtCurrentB);
         const eps = 1e-4;
-        const dir = sign$1(currentEdge.deltaT());
+        const dir = sign$2(currentEdge.deltaT());
         const ecd = currentEdge.curve.diff(currentEdge.bT, -dir * eps).dot(normVector);
         for (let i = possibleEdges.length; i--;) {
             const edge = possibleEdges[i];
@@ -76261,7 +78084,7 @@ var demo = (function (exports, hljs) {
                 if (currentEdge.curve.isColinearTo(edge.curve)) {
                     continue;
                 }
-                const edgeDir = sign$1(edge.deltaT());
+                const edgeDir = sign$2(edge.deltaT());
                 const iscd = edge.curve.diff(edge.aT, edgeDir * eps).dot(normVector);
                 const diff = iscd - ecd;
                 // if diff > 0, the angle is actually ~= 0
@@ -76385,8 +78208,8 @@ var demo = (function (exports, hljs) {
                 let inside = this.infiniteVolume;
                 for (const face of this.faces) {
                     assert(!face.surface.containsCurve(testLine));
-                    const ists = face.surface.isTsForLine(testLine);
-                    for (const t of ists) {
+                    const isTs = face.surface.isTsForLine(testLine);
+                    for (const t of isTs) {
                         const p = testLine.at(t);
                         const pvf = face.containsPoint2(p);
                         //assert(pvf != PointVsFace.ON_EDGE)
@@ -76459,11 +78282,11 @@ var demo = (function (exports, hljs) {
                 .addVertexBuffer("normals", "ts_Normal")
                 .addIndexBuffer("TRIANGLES")
                 .addIndexBuffer("LINES");
-            mesh.faceIndexes = new Map();
+            const faceIndexes = new Map();
             for (const face of this.faces) {
                 const triangleStart = mesh.TRIANGLES.length;
                 face.addToMesh(mesh);
-                mesh.faceIndexes.set(face, {
+                faceIndexes.set(face, {
                     start: triangleStart,
                     count: mesh.TRIANGLES.length - triangleStart,
                 });
@@ -76472,7 +78295,7 @@ var demo = (function (exports, hljs) {
             //for (const edge of this.edgeFaces.keys()) {
             //
             //}
-            return mesh;
+            return Object.assign(mesh, { faceIndexes });
         }
         minus(other, infoFactory) {
             const generator = this.generator &&
@@ -76543,7 +78366,10 @@ var demo = (function (exports, hljs) {
         }
         toSource(useGenerator = true) {
             return ((useGenerator && this.generator) ||
-                `new BRep([\n${this.faces.map(SCE).join(",\n").replace(/^/gm, "\t")}], ${this.infiniteVolume})`);
+                `new BRep([\n${this.faces
+                .map(toSource)
+                .join(",\n")
+                .replace(/^/gm, "\t")}], ${this.infiniteVolume})`);
         }
         /**
          * Rightmost next segment doesn't work, as the correct next segment isn't obvious from the current corner
@@ -76830,7 +78656,7 @@ var demo = (function (exports, hljs) {
          *              e.g. box(5, 5, 5) - box(3, 3, 3).rotateZ([0, 1, 2] * PI / 2).translate(0, 1, 1)
          *          4.  edge/edge Two edges are colinear.
          *              implies vertex of A lying in edge of B
-         *           5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
+         *          5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
          *          6.  vertex/vertex with/without edge/edge, edge/face and face/face intersections
          *          7.  vertex lies in face
          *
@@ -76843,7 +78669,8 @@ var demo = (function (exports, hljs) {
             this.buildAdjacencies();
             other.buildAdjacencies();
             const faceMap = new Map();
-            const thisEdgePoints = new JavaMap$1(), otherEdgePoints = new JavaMap$1();
+            const thisEdgePoints = new JavaMap$1();
+            const otherEdgePoints = new JavaMap$1();
             const checkedPairs = new JavaSet();
             for (const thisFace of this.faces) {
                 for (const otherFace of other.faces) {
@@ -77083,7 +78910,7 @@ var demo = (function (exports, hljs) {
                 const testPlane = P3.normalOnAnchor(pDir1, p);
                 const isCurve = faceInfo.face.surface.isCurvesWithPlane(testPlane)[0];
                 const isCurvePT = isCurve.pointT(p);
-                const dirFactor = sign$1(isCurve.tangentAt(isCurvePT).dot(pInside));
+                const dirFactor = sign$2(isCurve.tangentAt(isCurvePT).dot(pInside));
                 const eps = 1e-4;
                 const iscd = isCurve
                     .at(isCurvePT)
@@ -77141,7 +78968,7 @@ var demo = (function (exports, hljs) {
         throw new Error();
     }
     function triangulateVertices(normal, vertices, holeStarts) {
-        const absMaxDim = normal.maxAbsDim(), factor = sign$1(normal.e(absMaxDim));
+        const absMaxDim = normal.maxAbsDim(), factor = sign$2(normal.e(absMaxDim));
         const contour = new Float64Array(vertices.length * 2);
         let i = vertices.length;
         /*
@@ -77186,7 +79013,7 @@ var demo = (function (exports, hljs) {
     function intersectionUnitCircleLine(a, b, c) {
         assertNumbers(a, b, c);
         // TODO: disambiguate on a < b
-        const term = sqrt$1(a * a + b * b - c * c);
+        const term = sqrt$2(a * a + b * b - c * c);
         return {
             x1: (a * c + b * term) / (a * a + b * b),
             x2: (a * c - b * term) / (a * a + b * b),
@@ -77206,7 +79033,7 @@ var demo = (function (exports, hljs) {
             return [[(a * c) / (a * a + b * b), (b * c) / (a * a + b * b)]];
         }
         else {
-            const term = sqrt$1(termSqr);
+            const term = sqrt$2(termSqr);
             return [
                 [
                     (a * c + b * term) / (a * a + b * b),
@@ -77233,8 +79060,8 @@ var demo = (function (exports, hljs) {
         const aa = a * a, bb = b * b, cc = c * c;
         // TODO: disambiguate on a < b
         //var xTerm = sqrt(4*cc*aa-4*(bb-aa)*(-cc-bb))
-        const xTerm = 2 * sqrt$1(bb * cc + bb * bb - aa * bb);
-        const yTerm = sqrt$1(4 * cc * bb - 4 * (bb - aa) * (cc - aa));
+        const xTerm = 2 * sqrt$2(bb * cc + bb * bb - aa * bb);
+        const yTerm = sqrt$2(4 * cc * bb - 4 * (bb - aa) * (cc - aa));
         return {
             x1: (-2 * a * c + xTerm) / 2 / (bb - aa),
             x2: (-2 * a * c - xTerm) / 2 / (bb - aa),
@@ -77365,7 +79192,7 @@ var demo = (function (exports, hljs) {
             if (tangent.dot(newTangent) < 0) {
                 const singularity = newtonIterate2d(ic.x, ic.y, p.x, p.y);
                 if (eq0(ic(singularity.x, singularity.y)) &&
-                    singularity.distanceTo(p) < abs$2(stepLength)) {
+                    singularity.distanceTo(p) < abs$3(stepLength)) {
                     // end on this point
                     points.push(singularity);
                     tangents.push(p.to(singularity));
@@ -77381,15 +79208,15 @@ var demo = (function (exports, hljs) {
             }
             // check if loop
             if (fullLoop) {
-                if (p.distanceTo(startP) > abs$2(stepLength)) {
+                if (p.distanceTo(startP) > abs$3(stepLength)) {
                     points.pop();
                     tangents.pop();
-                    assert(getLast(points).distanceTo(startP) <= abs$2(stepLength));
+                    assert(getLast(points).distanceTo(startP) <= abs$3(stepLength));
                     break;
                 }
             }
             else {
-                if (i > 4 && p.distanceTo(startP) <= abs$2(stepLength)) {
+                if (i > 4 && p.distanceTo(startP) <= abs$3(stepLength)) {
                     fullLoop = true;
                 }
             }
@@ -77398,7 +79225,7 @@ var demo = (function (exports, hljs) {
                 const endP = figureOutBorderPoint(bounds, p, ic);
                 points.pop();
                 tangents.pop();
-                if (getLast(points).distanceTo(endP) < abs$2(stepLength) / 2) {
+                if (getLast(points).distanceTo(endP) < abs$3(stepLength) / 2) {
                     points.pop();
                     tangents.pop();
                 }
@@ -77474,310 +79301,310 @@ var demo = (function (exports, hljs) {
     }
 
     const fragmentShaderLighting = `
-	precision highp float;
-	uniform vec4 color;
-	uniform vec3 camPos;
-	varying vec3 normal;
-	varying vec4 vPosition;
-	void main() {
-		vec3 normal1 = normalize(normal);
-		vec3 lightPos = vec3(1000, 2000, 4000);
-		vec3 lightDir = normalize(vPosition.xyz - lightPos);
-        vec3 reflectionDirection = reflect(lightDir, normal1);
-        vec3 eyeDirection = normalize(camPos.xyz-vPosition.xyz);
-        float uMaterialShininess = 256.0;
-		float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
-		float lightIntensity = 0.6 + 0.2 * max(0.0, -dot(lightDir, normal1)) + 0.2*specularLightWeighting;
-		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
-	}
+  precision highp float;
+  uniform vec4 color;
+  uniform vec3 camPos;
+  varying vec3 normal;
+  varying vec4 vPosition;
+  void main() {
+    vec3 normal1 = normalize(normal);
+    vec3 lightPos = vec3(1000, 2000, 4000);
+    vec3 lightDir = normalize(vPosition.xyz - lightPos);
+    vec3 reflectionDirection = reflect(lightDir, normal1);
+    vec3 eyeDirection = normalize(camPos.xyz-vPosition.xyz);
+    float uMaterialShininess = 256.0;
+    float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+    float lightIntensity = 0.6 + 0.2 * max(0.0, -dot(lightDir, normal1)) + 0.2*specularLightWeighting;
+    gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
+  }
 `;
     const vertexShaderLighting = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	uniform mat4 ts_ModelViewMatrix;
-	attribute vec4 ts_Vertex;
-	uniform mat3 ts_NormalMatrix;
-	attribute vec3 ts_Normal;
-	uniform vec4 color;
-	varying vec3 normal;
-	varying vec4 vPosition;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-        vPosition = ts_ModelViewMatrix * ts_Vertex;
-		normal = normalize(ts_NormalMatrix * ts_Normal);
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  uniform mat4 ts_ModelViewMatrix;
+  attribute vec4 ts_Vertex;
+  uniform mat3 ts_NormalMatrix;
+  attribute vec3 ts_Normal;
+  uniform vec4 color;
+  varying vec3 normal;
+  varying vec4 vPosition;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+    vPosition = ts_ModelViewMatrix * ts_Vertex;
+    normal = normalize(ts_NormalMatrix * ts_Normal);
+  }
 `;
     const vertexShaderWaves = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	uniform mat4 ts_ModelViewMatrix;
-	attribute vec4 ts_Vertex;
-	uniform mat3 ts_NormalMatrix;
-	attribute vec3 ts_Normal;
-	uniform vec4 color;
-	varying vec3 normal;
-	varying vec4 vPosition;
-	void main() {
-		normal = normalize(ts_NormalMatrix * ts_Normal);
-		float offset = mod  (((ts_Vertex.x + ts_Vertex.y + ts_Vertex.z) * 31.0), 20.0) - 10.0;
-		vec4 modPos = ts_Vertex + vec4(normal * offset, 0);
-		gl_Position = ts_ModelViewProjectionMatrix * modPos;
-        vPosition = ts_ModelViewMatrix * modPos;
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  uniform mat4 ts_ModelViewMatrix;
+  attribute vec4 ts_Vertex;
+  uniform mat3 ts_NormalMatrix;
+  attribute vec3 ts_Normal;
+  uniform vec4 color;
+  varying vec3 normal;
+  varying vec4 vPosition;
+  void main() {
+    normal = normalize(ts_NormalMatrix * ts_Normal);
+    float offset = mod  (((ts_Vertex.x + ts_Vertex.y + ts_Vertex.z) * 31.0), 20.0) - 10.0;
+    vec4 modPos = ts_Vertex + vec4(normal * offset, 0);
+    gl_Position = ts_ModelViewProjectionMatrix * modPos;
+    vPosition = ts_ModelViewMatrix * modPos;
+  }
 `;
     const vertexShaderBasic = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+  }
 `;
     const vertexShaderColor = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	attribute vec4 ts_Color;
-	varying vec4 fragColor;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-		fragColor = ts_Color;
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  attribute vec4 ts_Color;
+  varying vec4 fragColor;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+    fragColor = ts_Color;
+  }
 `;
     const vertexShaderArc = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform float step, offset;
-	uniform float radius, width;
-	void main() {
-		float r = radius;
-		float t = offset + ts_Vertex.x * step;
-		float pRadius = r - ts_Vertex.y * width;
-		vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
-		gl_Position = ts_ModelViewProjectionMatrix * p;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform float step, offset;
+  uniform float radius, width;
+  void main() {
+    float r = radius;
+    float t = offset + ts_Vertex.x * step;
+    float pRadius = r - ts_Vertex.y * width;
+    vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
+    gl_Position = ts_ModelViewProjectionMatrix * p;
 }
 `;
     const vertexShaderConic3d = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform float startT, endT, scale;
-	uniform vec3 center, f1, f2;
-	uniform int mode;
-	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
-	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
-	void main() {
-		float t = startT + ts_Vertex.x * (endT - startT);
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform float startT, endT, scale;
+  uniform vec3 center, f1, f2;
+  uniform int mode;
+  float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
+  float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
+  void main() {
+    float t = startT + ts_Vertex.x * (endT - startT);
 
-		vec3 normal = normalize(cross(f1, f2));
+    vec3 normal = normalize(cross(f1, f2));
 
-		vec3 p, tangent;
-		if (0 == mode) { // ellipse
-			p = center + f1 * cos(t) + f2 * sin(t);
-			tangent = f1 * -sin(t) + f2 * cos(t);
-		}
-		if (1 == mode) { // parabola
-			p = center + f1 * t + f2 * t * t;
-			tangent = f1 + 2.0 * f2 * t;
-		}
-		if (2 == mode) { // hyperbola
-			p = center + f1 * cosh(t) + f2 * sinh(t);
-			tangent = f1 * sinh(t) + f2 * cosh(t);
-		}
-		vec3 outDir = normalize(cross(normal, tangent));
-		vec3 p2 = p + scale * (outDir * ts_Vertex.y + normal * ts_Vertex.z);
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
-	}
+    vec3 p, tangent;
+    if (0 == mode) { // ellipse
+      p = center + f1 * cos(t) + f2 * sin(t);
+      tangent = f1 * -sin(t) + f2 * cos(t);
+    }
+    if (1 == mode) { // parabola
+      p = center + f1 * t + f2 * t * t;
+      tangent = f1 + 2.0 * f2 * t;
+    }
+    if (2 == mode) { // hyperbola
+      p = center + f1 * cosh(t) + f2 * sinh(t);
+      tangent = f1 * sinh(t) + f2 * cosh(t);
+    }
+    vec3 outDir = normalize(cross(normal, tangent));
+    vec3 p2 = p + scale * (outDir * ts_Vertex.y + normal * ts_Vertex.z);
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  }
 `;
     const vertexShaderNURBS = `#version 300 es
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	in vec4 ts_Vertex;
-	uniform float startT, endT, scale;
-	uniform vec4 points[32];
-	uniform int pointCount, degree;
-	uniform float knots[40];
-	uniform vec3 normal;
-	const int MIN_DEGREE = 1;
-	const int MAX_DEGREE = 6;
-	
-	int tInterval(float t) {
-		for (int s = degree; s < 40 - 1 - degree; s++) {
-			if (t >= knots[s] && t <= knots[s + 1]) {
-				return s;
-			}
-		}
-	}
-	
-	vec4 stepp(int k, int i, vec4 dkMinus1iMinus1, vec4 dkMinus1i) {
-	    return dkMinus1i - dkMinus1iMinus1 * float(k) / (knots[i + degree - k] - knots[i - 1]);
-	}
-	
-	void main() {
-		// ts_Vertex.x is in [0, 1]
-		float t = startT + ts_Vertex.x * (endT - startT);
-		
-		int s = tInterval(t);
-		
-		vec4 v[MAX_DEGREE + 1];
-		for (int i = 0; i < degree + 1; i++) {
-		    v[i] = points[s - degree + i];
-		}
-		
-		vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
-		for (int level = 0; level < degree; level++) {
-			if (level == degree - 2) {
-				// see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
-				vec4 a = v[degree];
-				vec4 b = v[degree - 1];
-				vec4 c = v[degree - 2];
-				ddt4 = stepp(degree, s + 1, stepp(degree - 1, s + 1, a, b), stepp(degree - 1, s, b, c));
-			}
-			if (level == degree - 1) {
-				vec4 a = v[degree];
-				vec4 b = v[degree - 1];
-				pTangent4 = (b - a) * (float(degree) / (knots[s] - knots[s + 1]));
-			}
-			for (int i = degree; i > level; i--) {
-				float alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  in vec4 ts_Vertex;
+  uniform float startT, endT, scale;
+  uniform vec4 points[32];
+  uniform int pointCount, degree;
+  uniform float knots[40];
+  uniform vec3 normal;
+  const int MIN_DEGREE = 1;
+  const int MAX_DEGREE = 6;
 
-				// interpolate each component
-                v[i] = (1.0 - alpha) * v[i - 1] + alpha * v[i];
-			}
-		}
-		
-		vec4 p4 = v[degree];
-		
-		vec3 p = p4.xyz / p4.w;
-		vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
-		vec3 ddt = (
-		    p4.xyz * (-p4.w * ddt4.w + 2.0 * pow(pTangent4.w, 2.0))
-		    + pTangent4.xyz * (-2.0 * p4.w * pTangent4.w) 
-		    + ddt4.xyz * pow(p4.w, 2.0)
-        ) / pow(p4.w, 3.0);
-		
-		vec3 outDir = normalize(cross(ddt, pTangent));
-		vec3 correctNormal = normalize(cross(pTangent, outDir));
-		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  int tInterval(float t) {
+    for (int s = degree; s < 40 - 1 - degree; s++) {
+      if (t >= knots[s] && t <= knots[s + 1]) {
+        return s;
+      }
     }
+  }
+
+  vec4 stepp(int k, int i, vec4 dkMinus1iMinus1, vec4 dkMinus1i) {
+    return dkMinus1i - dkMinus1iMinus1 * float(k) / (knots[i + degree - k] - knots[i - 1]);
+  }
+
+  void main() {
+    // ts_Vertex.x is in [0, 1]
+    float t = startT + ts_Vertex.x * (endT - startT);
+
+    int s = tInterval(t);
+
+    vec4 v[MAX_DEGREE + 1];
+    for (int i = 0; i < degree + 1; i++) {
+      v[i] = points[s - degree + i];
+    }
+
+    vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
+    for (int level = 0; level < degree; level++) {
+      if (level == degree - 2) {
+        // see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
+        vec4 a = v[degree];
+        vec4 b = v[degree - 1];
+        vec4 c = v[degree - 2];
+        ddt4 = stepp(degree, s + 1, stepp(degree - 1, s + 1, a, b), stepp(degree - 1, s, b, c));
+      }
+      if (level == degree - 1) {
+        vec4 a = v[degree];
+        vec4 b = v[degree - 1];
+        pTangent4 = (b - a) * (float(degree) / (knots[s] - knots[s + 1]));
+      }
+      for (int i = degree; i > level; i--) {
+        float alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+
+        // interpolate each component
+        v[i] = (1.0 - alpha) * v[i - 1] + alpha * v[i];
+      }
+    }
+
+    vec4 p4 = v[degree];
+
+    vec3 p = p4.xyz / p4.w;
+    vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
+    vec3 ddt = (
+      p4.xyz * (-p4.w * ddt4.w + 2.0 * pow(pTangent4.w, 2.0))
+      + pTangent4.xyz * (-2.0 * p4.w * pTangent4.w)
+      + ddt4.xyz * pow(p4.w, 2.0)
+    ) / pow(p4.w, 3.0);
+
+    vec3 outDir = normalize(cross(ddt, pTangent));
+    vec3 correctNormal = normalize(cross(pTangent, outDir));
+    vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  }
 `;
     const vertexShaderBezier = `
-    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform float width, startT, endT;
-	uniform vec3 p0, p1, p2, p3;
-	void main() {
-		// ts_Vertex.x is in [0, 1]
-		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
-		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
-		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
-		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
-		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
-		vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
-		vec4 p = vec4(pPos - ts_Vertex.y * width * pNormal, 1);
-		gl_Position = ts_ModelViewProjectionMatrix * p;
-	}
+  // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform float width, startT, endT;
+  uniform vec3 p0, p1, p2, p3;
+  void main() {
+    // ts_Vertex.x is in [0, 1]
+    float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
+    float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
+    vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
+    float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
+    vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
+    vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
+    vec4 p = vec4(pPos - ts_Vertex.y * width * pNormal, 1);
+    gl_Position = ts_ModelViewProjectionMatrix * p;
+  }
 `;
     const vertexShaderBezier3d = `
-    precision highp float;
-    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
-	uniform float scale, startT, endT;
-	uniform vec3 ps[4];
-	uniform vec3 p0, p1, p2, p3, normal;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	void main() {
-		// ts_Vertex.y is in [0, 1]
-		vec3 p5 = ps[0];
-		float t = startT * (1.0 - ts_Vertex.x) + endT * ts_Vertex.x, s = 1.0 - t;
-		float c0 = s * s * s, 
-		      c1 = 3.0 * s * s * t, 
-		      c2 = 3.0 * s * t * t, c3 = t * t * t;
-		vec3 p = (p0 * c0 + p1 * c1) + (p2 * c2 + p3 * c3);
-		float c01 = 3.0 * s * s, 
-		      c12 = 6.0 * s * t, 
-		      c23 = 3.0 * t * t;
-		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
-		vec3 outDir = normalize(cross(normal, pTangent));
-		vec3 correctNormal = normalize(cross(pTangent, outDir));
-		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
-	}
+  precision highp float;
+  // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
+  uniform float scale, startT, endT;
+  uniform vec3 ps[4];
+  uniform vec3 p0, p1, p2, p3, normal;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  void main() {
+    // ts_Vertex.y is in [0, 1]
+    vec3 p5 = ps[0];
+    float t = startT * (1.0 - ts_Vertex.x) + endT * ts_Vertex.x, s = 1.0 - t;
+    float c0 = s * s * s,
+        c1 = 3.0 * s * s * t,
+        c2 = 3.0 * s * t * t, c3 = t * t * t;
+    vec3 p = (p0 * c0 + p1 * c1) + (p2 * c2 + p3 * c3);
+    float c01 = 3.0 * s * s,
+        c12 = 6.0 * s * t,
+        c23 = 3.0 * t * t;
+    vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
+    vec3 outDir = normalize(cross(normal, pTangent));
+    vec3 correctNormal = normalize(cross(pTangent, outDir));
+    vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  }
 `;
     const vertexShaderGeneric = `
-	uniform float scale;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform mat3 ts_NormalMatrix;
-	attribute vec3 ts_Normal;
-	void main() {
-		vec3 normal = normalize(ts_NormalMatrix * ts_Normal);
-		vec4 vertexPos = ts_Vertex + vec4(normal * scale, 0);
-		gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
-	}
+  uniform float scale;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform mat3 ts_NormalMatrix;
+  attribute vec3 ts_Normal;
+  void main() {
+    vec3 normal = normalize(ts_NormalMatrix * ts_Normal);
+    vec4 vertexPos = ts_Vertex + vec4(normal * scale, 0);
+    gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
+  }
 `;
     const vertexShaderRing = `
-	#define M_PI 3.1415926535897932384626433832795
-	uniform float step;
-	uniform float innerRadius, outerRadius;
-	attribute float index;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(index, index, index, 1);
-		float id = atan(ts_Vertex.x, ts_Vertex.y) / M_PI  * 32.0;
-		float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
-	}
+  #define M_PI 3.1415926535897932384626433832795
+  uniform float step;
+  uniform float innerRadius, outerRadius;
+  attribute float index;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(index, index, index, 1);
+    float id = atan(ts_Vertex.x, ts_Vertex.y) / M_PI  * 32.0;
+    float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
+  }
 `;
     const fragmentShaderColor = `
-	precision highp float;
-	uniform vec4 color;
-	void main() {
-		gl_FragColor = color;
-	}
+  precision highp float;
+  uniform vec4 color;
+  void main() {
+    gl_FragColor = color;
+  }
 `;
     const fragmentShaderColor3 = `#version 300 es
-	precision highp float;
-	uniform vec4 color;
-	out vec4 fragColor;
-	void main() {
-		fragColor = color;
-	}
+  precision highp float;
+  uniform vec4 color;
+  out vec4 fragColor;
+  void main() {
+    fragColor = color;
+  }
 `;
     const fragmentShaderVaryingColor = `
-	precision highp float;
-	varying vec4 fragColor;
-	void main() {
-		gl_FragColor = fragColor;
-	}
+  precision highp float;
+  varying vec4 fragColor;
+  void main() {
+    gl_FragColor = fragColor;
+  }
 `;
     const fragmentShaderColorHighlight = `
-	precision highp float;
-	uniform vec4 color;
-	void main() {
-		float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
-		if (mod(diagonal, 50.0) > 40.0) { // mod(diagonal, 2.0) > 1.0
-			discard;
-			//gl_FragColor = color + vec4(0.2,0.2,0.2,0);
-		} else {
-			gl_FragColor = color - vec4(0.2,0.2,0.2,0);
-		}
-	}
+  precision highp float;
+  uniform vec4 color;
+  void main() {
+    float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
+    if (mod(diagonal, 50.0) > 40.0) { // mod(diagonal, 2.0) > 1.0
+      discard;
+      //gl_FragColor = color + vec4(0.2,0.2,0.2,0);
+    } else {
+      gl_FragColor = color - vec4(0.2,0.2,0.2,0);
+    }
+  }
 `;
     const vertexShaderTexture = `
-	varying vec2 texturePos;
-	attribute vec4 ts_Vertex;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	void main() {
-		texturePos = ts_Vertex.xy;
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-	}
+  varying vec2 texturePos;
+  attribute vec4 ts_Vertex;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  void main() {
+    texturePos = ts_Vertex.xy;
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+  }
 `;
     const fragmentShaderTextureColor = `
-	precision highp float;
-	varying vec2 texturePos;
-	uniform vec4 color;
-	uniform sampler2D texture;
-	void main() {
-		gl_FragColor = texture2D(texture, texturePos) * color;
-	}
+  precision highp float;
+  varying vec2 texturePos;
+  uniform vec4 color;
+  uniform sampler2D texture;
+  void main() {
+    gl_FragColor = texture2D(texture, texturePos) * color;
+  }
 `;
 
     const COLORS = {
@@ -77896,7 +79723,7 @@ var demo = (function (exports, hljs) {
                 gl.cachedMeshes.set(curve, mesh);
             }
             const startIndex = ceil(startT);
-            const endIndex = floor$1(endT);
+            const endIndex = floor$2(endT);
             if (startIndex <= endIndex) {
                 const indexFactor = 2 * // no of triangles per face
                     RES * // no of faces
@@ -77906,7 +79733,7 @@ var demo = (function (exports, hljs) {
                     color: color,
                     scale: width,
                 })
-                    .draw(mesh, gl.TRIANGLES, startIndex * indexFactor, (floor$1(endT) - startIndex) * indexFactor);
+                    .draw(mesh, gl.TRIANGLES, startIndex * indexFactor, (floor$2(endT) - startIndex) * indexFactor);
                 if (startT % 1 !== 0) {
                     const p = curve.at(startT);
                     gl.pushMatrix();
@@ -77971,7 +79798,7 @@ var demo = (function (exports, hljs) {
             })
                 .draw(gl.meshes.pipe);
         },
-        [L3.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
+        [L3.name](gl, curve, color, startT, endT, width = 2) {
             gl.pushMatrix();
             const a = curve.at(startT), b = curve.at(endT);
             const ab = b.minus(a), abT = ab.getPerpendicular().unit();
@@ -78080,7 +79907,7 @@ var demo = (function (exports, hljs) {
         });
         canvas.addEventListener("wheel", (e) => {
             // zoom
-            const wheelY = -sign$1(e.deltaY) * 2;
+            const wheelY = -sign$2(e.deltaY) * 2;
             // console.log(e.deltaY, e.deltaX)
             eye.zoomFactor *= pow(0.9, -wheelY);
             const mouseCoordsOnCanvas = getPosOnTarget(e);
@@ -78094,7 +79921,7 @@ var demo = (function (exports, hljs) {
             eye.focus = eye.focus.plus(worldMoveCamera);
             // tilt
             const mousePosWC = inverseProjectionMatrix.transformPoint(mousePosFrustrum);
-            const tiltMatrix = M4.rotateLine(mousePosWC, eye.pos.to(eye.focus), -sign$1(e.deltaX) * 10 * DEG);
+            const tiltMatrix = M4.rotateLine(mousePosWC, eye.pos.to(eye.focus), -sign$2(e.deltaX) * 10 * DEG);
             eye.up = tiltMatrix.transformVector(eye.up);
             eye.pos = tiltMatrix.transformPoint(eye.pos);
             eye.focus = tiltMatrix.transformPoint(eye.focus);
@@ -78190,9 +80017,15 @@ var demo = (function (exports, hljs) {
                 e.preventDefault();
             };
         }
+        componentDidMount() {
+            this.input.addEventListener("keypress", this.onWheel, { passive: false });
+        }
+        componentWillUnmount() {
+            this.input.removeEventListener("keypress", this.onWheel);
+        }
         render() {
             const _a = this.props, { step, value, change } = _a, atts = __rest(_a, ["step", "value", "change"]);
-            return (react.createElement("input", Object.assign({}, atts, { defaultValue: "" + value, className: classnames(this.props.className, step && "scrollable"), onWheel: step ? this.onWheel : undefined, onScroll: step ? (e) => e.preventDefault() : undefined, onBlur: (e) => change(e.target.value) })));
+            return (react.createElement("input", Object.assign({}, atts, { defaultValue: "" + value, className: classnames(this.props.className, step && "scrollable"), onBlur: (e) => change(e.target.value), ref: (ref) => (this.input = ref) })));
         }
     }
     function demoMain() {
@@ -78264,8 +80097,6 @@ var demo = (function (exports, hljs) {
         //viewerGL.scale(100, 100, 100)
         for (let i = 0; i < demo.meshes.length; i++) {
             const mesh = demo.meshes[i], b2 = demo.b2s[i];
-            if (!mesh)
-                continue;
             gl.pushMatrix();
             //viewerGL.translate(30, 0, 0)
             gl.projectionMatrix.m[11] -= 1 / (1 << 22); // prevent Z-fighting
@@ -78311,16 +80142,17 @@ var demo = (function (exports, hljs) {
         //	console.log(e.message)
         //}
         demo.gl.makeCurrent();
-        demo.meshes =
-            demo.b2s &&
-                demo.b2s.map((b2) => {
-                    try {
-                        return b2.toMesh().compile();
-                    }
-                    catch (e) {
-                        return undefined;
-                    }
-                });
+        demo.meshes = demo.b2s.flatMap((b2, i) => {
+            try {
+                const m = b2.toMesh();
+                assertf(() => m.faceIndexes.size == b2.faces.length);
+                return [b2.toMesh().compile()];
+            }
+            catch (e) {
+                console.error(`Error creating mesh from brep ${i}`, e, b2.toSource());
+                return [];
+            }
+        });
         paintDemo(demo);
     }
     window.onload = (e) => __awaiter(void 0, void 0, void 0, function* () {
@@ -78352,7 +80184,8 @@ var demo = (function (exports, hljs) {
                     def: 2,
                     step: 0.5,
                 },
-            ] }),
+            ] })));
+    const x = (react.createElement(react.Fragment, null,
         react.createElement("h3", null, "Functionality this library implements"),
         react.createElement("ul", null,
             react.createElement("li", null, "Parametric curves: lines, ellipses, parabolas, hyperbolas, quadratic/cubic beziers, intersection curves between parametric and implicit surfaces."),
@@ -78421,7 +80254,7 @@ var demo = (function (exports, hljs) {
                 // the ngon is counter-clockwise (CCW) when viewed from +Z
                 const ngon = edgeNgon(n, insideRadius);
                 // round the corners of the ngon with radius cornerRadius
-                const ngonRounded = round$2(ngon, cornerRadius);
+                const ngonRounded = round$3(ngon, cornerRadius);
                 // create a hole punch by extruding ngonRounded in direction +Z
                 // Like triangles in opengl, faces face the direction they are CCW when viewed from.
                 // Because we extrude in the direction the outline faces, the resulting is "inside-out",

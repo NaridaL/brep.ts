@@ -14,7 +14,7 @@ import {
   PlaneFace,
   P3,
   L3,
-} from ".."
+} from "../src"
 
 describe("BRep generators", () => {
   test("rotStep w/ straight edges", () => {
