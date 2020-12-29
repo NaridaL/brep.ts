@@ -1,4 +1,4 @@
-import { b2equals, inDifferentSystems } from "./manager"
+import { inDifferentSystems } from "./manager"
 
 import { JavaSet as CustomSet } from "javasetmap.ts"
 import { DEG, M4, V, V3 } from "ts3dutils"
@@ -221,7 +221,7 @@ describe("serialization", () => {
     const input = B2T.box().rotateX(20 * DEG)
     const str = cs.serialize(input)
     const output = cs.unserialize(str)
-    b2equals(output, input)
+    expect(output).toEqualBRep(input)
   })
 })
 

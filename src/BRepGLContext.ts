@@ -77,7 +77,7 @@ export class BREPGLContext {
   }
 
   static create(gl: TSGLContext) {
-    addOwnProperties(gl, BREPGLContext.prototype)
+    addOwnProperties(gl, BREPGLContext.prototype, "constructor")
     addOwnProperties(gl, new BREPGLContext(gl as BREPGLContext))
     return gl as BREPGLContext
   }
@@ -118,38 +118,6 @@ export class BREPGLContext {
       tEnd,
       width,
     )
-  }
-
-  drawVector(
-    vector: V3,
-    anchor: V3,
-    color: GL_COLOR = GL_COLOR_BLACK,
-    size = 1,
-  ) {
-    if (vector.likeO()) return
-    this.pushMatrix()
-
-    const headLength = size * 4
-    if (headLength > vector.length()) return
-
-    const vT = vector.getPerpendicular().unit()
-    this.multMatrix(
-      M4.forSys(vector.unit(), vT, vector.cross(vT).unit(), anchor),
-    )
-    this.scale(vector.length() - headLength, size / 2, size / 2)
-
-    this.shaders.singleColor
-      .uniforms({
-        color: color,
-      })
-      .draw(this.meshes.vectorShaft)
-
-    this.scale(1 / (vector.length() - headLength), 1, 1)
-    this.translate(vector.length() - headLength, 0, 0)
-    this.scale(headLength / 2, 1, 1)
-
-    this.shaders.singleColor.draw(this.meshes.vectorHead)
-    this.popMatrix()
   }
 
   drawVectors(

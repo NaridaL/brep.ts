@@ -93,7 +93,6 @@ declare global {
 }
 const arrayLiteralType = <T extends string>(x: T[]): T[] => x
 const g = window
-Object.assign
 
 function objectAssignConcatArray<T, U>(a: T, b: U): T & U {
   for (const key of Object.keys(b)) {
@@ -148,7 +147,6 @@ function initBRep() {
 
   if (g.mesh) {
     console.log("mesh/es from GET", bRepMeshes)
-    meshes = g.mesh instanceof Array ? g.mesh : [g.mesh]
     meshes.forEach((mesh) => {
       mesh.computeWireframeFromFlatTriangles("wireframe")
       mesh.computeNormalLines(0.1, "normallines")
@@ -186,9 +184,6 @@ function initBRep() {
     edgesMesh.compile()
   }
   if (g.face) {
-    if (undefined === g.face.length) {
-      g.face = [g.face] as any
-    }
     faceMesh = new Mesh()
       .addIndexBuffer("TRIANGLES")
       .addIndexBuffer("LINES")
@@ -450,6 +445,7 @@ function getHovering(
   return hoverHighlight
 }
 
+// @ts-expect-error
 function initInfoEvents(paintScreen: () => {}, gl: BREPGLContext) {
   gl.canvas.addEventListener("mousemove", function (e) {
     const mouseLine = getMouseLine({ x: e.clientX, y: e.clientY }, gl)
@@ -527,7 +523,7 @@ export async function viewerMain() {
   window.onerror = function (errorMsg, url, lineNumber, column, errorObj) {
     console.log(errorMsg, url, lineNumber, column, errorObj)
   }
-  window.onpopstate = function (e) {
+  window.onpopstate = function () {
     const hash =
       window.location.search.substr(1) || window.location.hash.substr(1) || ""
     const command = decodeURIComponent(hash)

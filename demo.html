@@ -3,90 +3,105 @@
   <head>
     <meta charset="UTF-8" />
     <title>BREP.TS</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/default.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/default.min.css"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
 
     <script type="text/javascript" src="dist/demo.js"></script>
 
     <style>
       @font-face {
-      	font-family: FiraMedia;
-      	src: url(fonts/FiraSansMedium.woff);
+        font-family: FiraMedia;
+        src: url(fonts/FiraSansMedium.woff);
       }
 
       body {
-      	font-family: FiraMedia, Verdana, sans-serif;
-      	max-width: 1280px;
-      	padding: 8px;
-      	margin: auto;
+        font-family: FiraMedia, Verdana, sans-serif;
+        max-width: 1280px;
+        padding: 8px;
+        margin: auto;
       }
 
       .democontainer {
-      	border: 1px solid cornflowerblue;
+        border: 1px solid cornflowerblue;
       }
+
       .canvascontainer {
-      	position: relative;
+        position: relative;
       }
 
       canvas {
-      	position: absolute;
-      	top: 0;
-      	left: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
       }
 
       .incont {
-      	position: relative;
-      	font-size: smaller;
-      	display: table;
-      	color: dimgrey;
-      	background-color: white;
-      	padding: 2px;
+        position: relative;
+        font-size: smaller;
+        display: table;
+        color: dimgrey;
+        background-color: white;
+        padding: 2px;
       }
+
       .incont input {
-      	width: 40px;
-      	margin-right: 0.5em;
+        width: 40px;
       }
+
+      .incont label {
+        margin-left: 0.5em;
+      }
+
       .scrollable {
-      	cursor: s-resize;
+        cursor: s-resize;
       }
+
       .info {
-      	position: absolute;
-      	bottom: 0;
-      	margin: 2px;
-      	font-size: x-small;
+        position: absolute;
+        bottom: 0;
+        margin: 2px;
+        font-size: x-small;
       }
+
       .navinfo {
-      	position: absolute;
-      	top: 0;
-      	right: 0;
-      	margin: 2px;
-      	font-size: x-small;
+        position: absolute;
+        top: 0;
+        right: 0;
+        margin: 2px;
+        font-size: x-small;
       }
+
       .sourcelink {
-      	position: absolute;
-      	bottom: 0;
-      	right: 0;
-      	margin: 2px;
-      	font-size: x-small;
-      	color: blue;
-      	cursor: pointer;
-      	text-decoration: underline;
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        margin: 2px;
+        font-size: x-small;
+        color: blue;
+        cursor: pointer;
+        text-decoration: underline;
       }
+
       .src {
-      	position: relative;
-      	display: block;
-      	white-space: pre;
-      	font-family: Consolas, monospace;
-      	font-size: smaller;
-      	padding: 8px;
-      	background-color: aliceblue;
+        position: relative;
+        display: block;
+        white-space: pre;
+        font-family: Consolas, monospace;
+        font-size: smaller;
+        padding: 8px;
+        background-color: aliceblue;
       }
+
       .hide {
-      	display: none;!important;
+        display: none;
+      !important;
       }
 
       .canvasinput {
-      	text-align: right;
+        text-align: right;
       }
     </style>
   </head>

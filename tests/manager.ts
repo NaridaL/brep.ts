@@ -2,17 +2,13 @@ import * as path from "path"
 import prettier from "prettier"
 import diff from "jest-diff"
 
-declare const require: any
 try {
   ;(global as any).WebGLRenderingContext = {}
-  //const mock = require('mock-require')
-  //mock('tsgl', {})
 } catch (e) {}
 
 import {
   arrayFromFunction,
   arraySamples,
-  assert,
   DEG,
   eq0,
   glqInSteps,
@@ -39,7 +35,6 @@ import {
   edgeForCurveAndTs,
   EllipseCurve,
   Face,
-  HyperbolaCurve,
   ImplicitSurface,
   L3,
   P3,
@@ -55,18 +50,52 @@ import * as ts3dutils from "ts3dutils"
 
 declare global {
   namespace jest {
+    // noinspection JSUnusedGlobalSymbols
     interface Matchers<R> {
       toMatchBRepSnapshot(additionalStuff?): R
+
+      toEqualBRep(expected: BRep)
     }
   }
 }
+const brepToString = (x: BRep) =>
+  prettier.format(x.toSource(false), {
+    parser: "typescript",
+    semi: false,
+    trailingComma: "all",
+  })
+
+function toEqualBRep(actual: BRep, expected: BRep, additionalStuff: {}) {
+  const x = expected.getAABB().max.x - actual.getAABB().min.x
+  let actualTranslated = actual.translate(x === -Infinity ? 0 : x + 1)
+  outputLink(
+    Object.assign(
+      {
+        a: expected,
+        b: actualTranslated,
+      },
+      additionalStuff,
+    ),
+  )
+  let message = ""
+  if (actual.faces.length !== expected.faces.length) {
+    message = `actual.faces.length !== expected.faces.length ${actual.faces.length} !== ${expected.faces.length}`
+  }
+  actual.faces.forEach((face) => {
+    if (!expected.faces.some((expectedFace) => expectedFace.likeFace(face))) {
+      message += "Unexpected face in result:" + face.toSource() + "\n"
+    }
+  })
+  return {
+    pass: !message,
+    message: () =>
+      message + "\n" + diff(brepToString(expected), brepToString(actual)),
+  }
+}
+
+// noinspection JSUnusedGlobalSymbols
 expect.extend({
   toMatchBRepSnapshot(actual: BRep, additionalStuff = {}) {
-    const brepToString = (x: BRep) =>
-      prettier.format(x.toSource(false), {
-        parser: "typescript",
-        semi: false,
-      })
     const fileName = path.join(
       __dirname,
       "snapshots",
@@ -78,46 +107,18 @@ expect.extend({
       fs.writeFileSync(fileName, brepToString(actual), "utf8")
       return { pass: true, message: () => "" }
     }
-    const cc = (x, y) => "const {" + Object.keys(x).join(",") + "} = " + y
-    const expected: BRep = eval(
-      "(() => { " +
-        cc(ts3dutils, "ts3dutils") +
-        ";" +
-        cc(brepts, "brepts") +
-        ";" +
-        "return " +
-        fs.readFileSync(fileName, "utf8") +
-        "})()",
-    )
+    const destructure = (x) => "{" + Object.keys(x).join(",") + "}"
+    const expected: BRep = new Function(
+      destructure(ts3dutils),
+      destructure(brepts),
+      "return " + fs.readFileSync(fileName, "utf8"),
+    )(ts3dutils, brepts)
 
-    let actualTranslated
-    //try {
-    const x = expected.getAABB().max.x - actual.getAABB().min.x
-    actualTranslated = actual.translate(x === -Infinity ? 0 : x + 1)
-    //} catch (e) { }
-    outputLink(
-      Object.assign(
-        {
-          a: expected,
-          b: actualTranslated,
-        },
-        additionalStuff,
-      ),
-    )
-    let message = ""
-    if (actual.faces.length !== expected.faces.length) {
-      message = `actual.faces.length !== expected.faces.length ${actual.faces.length} !== ${expected.faces.length}`
-    }
-    actual.faces.forEach((face) => {
-      if (!expected.faces.some((expectedFace) => expectedFace.likeFace(face))) {
-        message += "Unexpected face in result:" + face.toSource() + "\n"
-      }
-    })
-    return {
-      pass: !message,
-      message: () =>
-        message + "\n" + diff(brepToString(expected), brepToString(actual)),
-    }
+    return toEqualBRep(actual, expected, additionalStuff)
+  },
+
+  toEqualBRep(actual: BRep, expected: BRep, additionalStuff = {}) {
+    return toEqualBRep(actual, expected, additionalStuff)
   },
 })
 
@@ -181,41 +182,6 @@ export function testCurveCentralProjection(curve: Curve) {
   }
 }
 
-export function b2equals(actual: BRep, expected: BRep, message = "") {
-  expect(actual).toBeInstanceOf(BRep)
-
-  assert.push(
-    actual.faces.length == expected.faces.length,
-    actual.toSource(false),
-    expected.toSource(false),
-    `no of faces ${actual.faces.length} != ${expected.faces.length}`,
-  )
-
-  actual.faces.forEach((face) => {
-    if (!expected.faces.some((expectedFace) => expectedFace.likeFace(face))) {
-      assert.push(
-        false,
-        actual.toSource(false),
-        expected.toSource(false),
-        "Unexpected face in result:" + face.toSource(),
-      )
-    }
-  })
-}
-
-export function bRepEqual(actual: BRep, expected: BRep, message = "") {
-  let actualTranslated
-  //try {
-  const x = expected.getAABB().max.x - actual.getAABB().min.x
-  actualTranslated = actual.translate(x === -Infinity ? 0 : x + 1)
-  //} catch (e) { }
-  outputLink({
-    a: expected,
-    b: actualTranslated,
-  })
-  b2equals(actual, expected, message)
-}
-
 export function testBRepAnd(
   a: BRep,
   b: BRep,
@@ -248,22 +214,6 @@ export function testBRepOp(
         b,
       })
     }
-  }
-}
-
-export function registerTests(o: { [key: string]: (assert: Assert) => void })
-export function registerTests(
-  moduleName: string,
-  o: { [key: string]: (assert: Assert) => void },
-)
-export function registerTests(moduleName: any, o?: any) {
-  if ("string" == typeof moduleName) {
-    QUnit.module(moduleName)
-  } else {
-    o = moduleName
-  }
-  for (const key in o) {
-    QUnit.test(key, o[key])
   }
 }
 
@@ -310,8 +260,8 @@ export function outputLink(
   link("http://localhost:10001/tests/results/" + o, msg)
 }
 
-function link(link: string, msg?: string) {
-  console.log(link, msg)
+function link(url: string, msg?: string) {
+  console.log(url, msg)
 }
 
 const demoFile = fs.readFileSync(__dirname + "/../viewer.html", "utf8")
@@ -414,7 +364,7 @@ export function testLoopCCW(surface: Surface, loop: Edge[]) {
   const points = [loop[0].a, loop[0].atAvgT()]
   outputLink(
     {
-      mesh: surface.sce + ".toMesh()",
+      mesh: `[${surface.toSource()}.toMesh()]`,
       edges: loop,
       drPs: points,
     },
@@ -442,8 +392,8 @@ export function surfaceVolumeAndAreaTests(
   })
   test(msg + " flipped() area", () => {
     outputLink({
-      mesh: face.flipped().toSource() + ".toMesh()",
-      face: face.flipped(),
+      mesh: `[${face.flipped().toSource()}.toMesh()]`,
+      face: [face.flipped()],
     })
     const actualArea = flippedFace.calcArea()
     const expectedArea = faceMeshVol.area
@@ -530,13 +480,12 @@ export function surfaceVolumeAndAreaTests(
 
 export function testCurve(curve: Curve, checkTangents = true, msg?: string) {
   const edge = edgeForCurveAndTs(curve)
-  const debugInfo = curve.debugInfo && curve.debugInfo()
   const aabb = curve.getAABB()
   outputLink(
     {
       edges: [edge],
       drPs: [edge.a, edge.b],
-      aabbs: aabb ? [aabb] : [],
+      boxes: aabb ? [aabb.getM4()] : [],
     },
     msg,
   )
@@ -718,7 +667,7 @@ export function testContainsCurve(
 ) {
   outputLink(
     {
-      mesh: surface.sce + ".toMesh()",
+      mesh: `[${surface.toSource()}.toMesh()]`,
       edges: [edgeForCurveAndTs(curve)],
     },
     msg,
@@ -793,15 +742,15 @@ export function testCurveISInfos(
     intersections.forEach((is, i) => {
       expect(
         intersections.every((is2, j) => j == i || !is.like(is2)),
-        is.sce + " is not unique " + intersections,
+        is.toSource() + " is not unique " + intersections,
       ).toBeTruthy()
       expect(
         c1.containsPoint(is),
-        `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`,
+        `e1.containsPoint(is): ${c1.toSource()}.containsPoint(${is.toSource()},`,
       ).toBeTruthy()
       expect(
         c2.containsPoint(is),
-        `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.sce},`,
+        `e2.containsPoint(is): ${c1.toSource()}.containsPoint(${is.toSource()},`,
       ).toBeTruthy()
     })
   } finally {
@@ -858,9 +807,9 @@ export function testISTs(
   }
 }
 
-export function linkBRep(assert: Assert, hash: string, message = "view") {
+export function linkBRep(hash: string, message = "view") {
   const escapedHash = encodeURIComponent(
-    hash.replace(/, /g, ",").replace(/(\n|\t)+/g, ""),
+    hash.replace(/, /g, ",").replace(/([\n\t])+/g, ""),
   )
     .replace(/\(/g, "%28")
     .replace(/\)/g, "%29")
@@ -873,9 +822,8 @@ export function testLoopContainsPoint(
   p: V3,
   result: PointVsFace,
 ) {
-  const ccwLoop = surface.edgeLoopCCW(loop) ? loop : Edge.reversePath(loop)
   outputLink({
-    mesh: Face.create(surface, loop).sce + ".toMesh()",
+    mesh: `[${Face.create(surface, loop).toSource()}.toMesh()]`,
     drPs: [p],
   })
   expect(surface.loopContainsPoint(loop, p)).toBe(result)
@@ -945,7 +893,7 @@ export function testCurveTransform(
     const pT = m4.transformPoint(curve.at(t))
     expect(
       curveT.containsPoint(pT),
-      pT.sce + curveT.distanceToPoint(pT),
+      pT.toSource() + curveT.distanceToPoint(pT),
     ).toBeTruthy()
   })
   return curveT
@@ -960,7 +908,6 @@ export function testSurfaceTransform(
   const uvs = arraySamples(surface.uMin, surface.uMax, 4).flatMap((u) =>
     arraySamples(surface.vMin, surface.vMax, 4).map((v) => new V3(u, v, 0)),
   )
-  const normalT = transform.inversed().transposed()
   let surfaceT
   try {
     surfaceT = (surface.transform4 || surface.transform).call(
@@ -982,7 +929,7 @@ export function testSurfaceTransform(
           "[" +
           [surface, surfaceT]
             .filter((x) => x)
-            .map((s) => s.sce + ".toMesh()")
+            .map((s) => s.toSource() + ".toMesh()")
             .join(",") +
           "]",
         drPs: ss,
@@ -1007,7 +954,12 @@ export function testSurfaceTransform(
     ).toBeTruthy()
     expect(
       surfaceNT.isParallelTo(surfaceTN),
-      "uv " + uv.sce + " " + surfaceNT.sce + " " + surfaceTN.sce,
+      "uv " +
+        uv.toSource() +
+        " " +
+        surfaceNT.toSource() +
+        " " +
+        surfaceTN.toSource(),
     ).toBeTruthy()
     expect(surfaceNT.dot(surfaceTN) > 0, "normal same dir").toBeTruthy()
   })

@@ -28,6 +28,7 @@ import {
 
 import { ceil, floor, PI, sign } from "../math"
 import { WebGLDebugable } from "../WebGLDebugable"
+import { M4 } from "ts3dutils/src/index"
 
 export abstract class Surface
   extends Transformable
@@ -313,6 +314,8 @@ export abstract class Surface
   calculateArea(allEdges: Edge[]): number {
     return this.visit(CalculateAreaVisitor as any, allEdges)
   }
+
+  abstract transform4?(m4: M4, desc?: string): Surface
 }
 
 export enum PointVsFace {

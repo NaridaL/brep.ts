@@ -770,36 +770,20 @@ export namespace B2T {
 
   const loadedFonts = new Map<string, opentype.Font>()
 
-  export function loadFont(fontPath: string): Promise<opentype.Font> {
-    return new Promise<opentype.Font>(function (resolve, reject) {
-      const font = loadedFonts.get(fontPath)
-      if (font) {
-        resolve(font)
-      } else {
-        opentype.load(fontPath, function (err, f) {
-          if (err) {
-            reject(err)
-          } else {
-            loadedFonts.set(fontPath, f!)
-            resolve(f)
-          }
-        })
-      }
-    })
+  export async function loadFont(fontPath: string): Promise<opentype.Font> {
+    const font = loadedFonts.get(fontPath)
+    if (font) {
+      return font
+    } else {
+      const f = await opentype.load(fontPath)
+      loadedFonts.set(fontPath, f!)
+      return f
+    }
   }
 
-  export function loadFontsAsync(callback: () => void) {
-    if (defaultFont) {
-      callback()
-    } else {
-      opentype.load("fonts/FiraSansMedium.woff", function (err, font) {
-        if (err) {
-          throw new Error("Could not load font: " + err)
-        } else {
-          defaultFont = font!
-          callback()
-        }
-      })
+  export async function loadFontsAsync(): Promise<void> {
+    if (!defaultFont) {
+      defaultFont = await opentype.load("fonts/FiraSansMedium.woff")
     }
   }
 

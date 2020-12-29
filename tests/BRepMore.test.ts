@@ -1,4 +1,4 @@
-import { Assert, outputLink, testBRepAnd, testBRepOp } from "./manager"
+import { outputLink, testBRepAnd, testBRepOp } from "./manager"
 
 import { JavaMap as CustomMap, JavaSet as CustomSet } from "javasetmap.ts"
 import { assert, concatenated, DEG, M4, PI, snap, V, V3 } from "ts3dutils"
@@ -403,7 +403,7 @@ describe("BRep 2", () => {
     )
   })
 
-  test("tetrahedorn is point on line", () => {
+  test("tetrahedron is point on line", () => {
     const box = B2T.box(8, 9, 10, "box")
     let face = box.faces.find((face) =>
         (face as PlaneFace).surface.plane.normal1.like(V3.Z),
@@ -584,6 +584,7 @@ describe("BRep 2", () => {
       true,
     )
   })
+
   test("face box 5", () => {
     const box = B2T.box(10, 10, 5, "box").flipped()
     const face = box.faces.find(
@@ -595,6 +596,7 @@ describe("BRep 2", () => {
     doTestWithBrep(assert, face, box, testBrep, [], [], "???")
     doTestWithBrep(assert, face, box, testBrep, [], [], "???", true)
   })
+
   test("face box 6", () => {
     const box = B2T.box(10, 10, 10, "box").flipped()
     const box2 = B2T.box(10, 12, 12, "box").flipped()
@@ -638,6 +640,7 @@ describe("BRep 2", () => {
     )
     doTestWithBrep(assert, face, box, testBrep, [], [], "???", true)
   })
+
   test("face box 7", () => {
     const box = B2T.box(1, 1, 1, "box")
     const face = box.faces.find((face) =>
@@ -671,6 +674,7 @@ describe("BRep 2", () => {
       "???",
     )
   })
+
   test("sphere face box", () => {
     const sphere = B2T.sphere(4, "ball")
     const face = sphere.faces.find((face) =>
@@ -738,6 +742,7 @@ describe("BRep 2", () => {
       "???",
     )
   })
+
   test("sphere face box 2", () => {
     const sphere = B2T.sphere(5, "ball")
     const face = sphere.faces.find((face) =>
@@ -853,6 +858,7 @@ describe("BRep 2", () => {
       "cut hole at corner of test face",
     )
   })
+
   test("coplanar things 2", () => {
     const box = B2T.box(8, 9, 10, "box")
     const face = box.faces.find((face) =>
@@ -893,7 +899,7 @@ describe("BRep 2", () => {
     )
   })
 
-  test.skip("assembly", () => {
+  test("assembly", () => {
     const baseFace = PlaneFace.forVertices(P3.XY, [
       V(0, 0),
       V(10, 0),
@@ -1348,6 +1354,7 @@ describe("BRep 2", () => {
     )
     testBRepAnd(pie, k2, B2T.puckman(8, 90 * DEG, 5, "pie/4"), "2")
   })
+
   test("cut hole through side of pie", () => {
     const pie = B2T.puckman(8, 180 * DEG, 5, "pie/2")
     const punch = B2T.box(5, 10, 3, "knife").translate(1, -1, 1).flipped()
@@ -2211,24 +2218,31 @@ describe("BRep 2", () => {
 
     const b = B2T.box(10, 10, 10),
       a = B2T.box(2, 2, 2).translate(1, 1, 1)
+
     test("a - b", () => testBRepAnd(a, b.flipped(), BRep.EMPTY))
+
     test("b - a", () =>
       testBRepAnd(
         a.flipped(),
         b,
         new BRep(b.faces.concat(a.flipped().faces), false),
       ))
+
     test("a + b", () => testBRepAnd(a.flipped(), b.flipped(), b.flipped()))
+
     test("a and b", () => testBRepAnd(a, b, a))
 
     const c = B2T.box(2, 2, 2).translate(20)
+
     test("a - c", () => testBRepAnd(a, c.flipped(), a))
+
     test("a + c", () =>
       testBRepAnd(
         a.flipped(),
         c.flipped(),
         new BRep(c.faces.concat(a.faces), false).flipped(),
       ))
+
     test("a and c", () => testBRepAnd(a, c, BRep.EMPTY))
   })
 })

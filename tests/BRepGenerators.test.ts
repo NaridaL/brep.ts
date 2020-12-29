@@ -58,7 +58,7 @@ describe("BRep generators", () => {
     expect(actual).toMatchBRepSnapshot()
   })
 
-  test.only("torus", () => {
+  test("torus", () => {
     const actual = B2T.torus(1, 2)
     expect(actual).toMatchBRepSnapshot()
   })

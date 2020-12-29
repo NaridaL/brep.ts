@@ -1,4 +1,4 @@
-var viewer = (function (exports, javasetmap_ts) {
+var viewer = (function (exports) {
     'use strict';
 
     /*! *****************************************************************************
@@ -15,6 +15,18 @@ var viewer = (function (exports, javasetmap_ts) {
     OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
     ***************************************************************************** */
+
+    function __rest(s, e) {
+        var t = {};
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+            t[p] = s[p];
+        if (s != null && typeof Object.getOwnPropertySymbols === "function")
+            for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+                if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                    t[p[i]] = s[p[i]];
+            }
+        return t;
+    }
 
     function __awaiter(thisArg, _arguments, P, generator) {
         function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -1900,14 +1912,156 @@ var viewer = (function (exports, javasetmap_ts) {
 
     var debounce_1 = debounce;
 
+    /**
+     * Java style map.
+     */
+    class JavaMap {
+        constructor() {
+            this[Symbol.toStringTag] = "Map";
+            this._map = new Map();
+            this._size = 0;
+        }
+        toString() {
+            return ("{" +
+                Array.from(this.entries2())
+                    .map(({ key, value }) => key + ":" + value)
+                    .join(", ") +
+                "}");
+        }
+        forEach(callbackfn, thisArg) {
+            for (const bucket of this._map.values()) {
+                for (const { key, value } of bucket) {
+                    callbackfn.call(thisArg, value, key, this);
+                }
+            }
+        }
+        *keys() {
+            for (const bucket of this._map.values()) {
+                for (const { key } of bucket) {
+                    yield key;
+                }
+            }
+        }
+        *values() {
+            for (const bucket of this._map.values()) {
+                for (const { value } of bucket) {
+                    yield value;
+                }
+            }
+        }
+        [Symbol.iterator]() {
+            return this.entries();
+        }
+        set(key, value) {
+            this.set2(key, value);
+            return this;
+        }
+        /**
+         * Like {@link #set} except it returns true if key was new and false if the value was only updated.
+         *
+         */
+        set2(key, val) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+            //assert(hashCode === (hashCode | 0))
+            if (bucket) {
+                const pairIndex = bucket.findIndex((pair) => pair.key.equals(key));
+                if (-1 == pairIndex) {
+                    bucket.push({ key: key, value: val });
+                }
+                else {
+                    bucket[pairIndex].value = val;
+                    return false;
+                }
+            }
+            else {
+                this._map.set(hashCode, [{ key: key, value: val }]);
+            }
+            this._size++;
+            return true;
+        }
+        has(key) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+            //assert(hashCode === (hashCode | 0))
+            return undefined !== bucket && bucket.some((pair) => pair.key.equals(key));
+        }
+        get(key) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode), pair = bucket && bucket.find((pair) => pair.key.equals(key));
+            return pair && pair.value;
+        }
+        getLike(key) {
+            for (const hashCode of key.hashCodes()) {
+                const bucket = this._map.get(hashCode);
+                const canonVal = bucket && bucket.find((x) => x.key.like(key));
+                if (canonVal)
+                    return canonVal;
+            }
+        }
+        setLike(key, val) {
+            return !this.getLike(key) && this.set(key, val);
+        }
+        delete(key) {
+            const hashCode = key.hashCode(), bucket = this._map.get(hashCode);
+            if (bucket) {
+                const index = bucket.findIndex((x) => x.key.equals(key));
+                if (-1 != index) {
+                    if (1 == bucket.length) {
+                        this._map.delete(hashCode);
+                    }
+                    else {
+                        bucket.splice(index, 1);
+                    }
+                    this._size--;
+                    return true;
+                }
+            }
+            return false;
+        }
+        deleteLike(key) {
+            for (const hashCode of key.hashCodes()) {
+                const bucket = this._map.get(hashCode);
+                if (bucket) {
+                    const index = bucket.findIndex((x) => x.key.like(key));
+                    if (-1 != index) {
+                        const deleted = bucket[index];
+                        if (1 == bucket.length) {
+                            this._map.delete(hashCode);
+                        }
+                        else {
+                            bucket.splice(index, 1);
+                        }
+                        this._size--;
+                        return deleted;
+                    }
+                }
+            }
+        }
+        *entries2() {
+            for (const bucket of this._map.values()) {
+                yield* bucket;
+            }
+        }
+        *entries() {
+            for (const bucket of this._map.values()) {
+                for (const { key, value } of bucket) {
+                    yield [key, value];
+                }
+            }
+        }
+        clear() {
+            this._map.clear();
+            this._size = 0;
+        }
+        get size() {
+            return this._size;
+        }
+    }
+
     const PI$1 = Math.PI;
     const TAU = 2 * PI$1;
     /** Use rollup-plugin-replace or similar to avoid error in browser. */
     // @ts-ignore
     const NLA_DEBUG = "development" != "production";
     const NLA_PRECISION = 1 / (1 << 26);
-    console.log("NLA_PRECISION", NLA_PRECISION);
-    console.log("NLA_DEBUG", NLA_DEBUG);
     let oldConsole = undefined;
     function disableConsole() {
         oldConsole = console.log;
@@ -1945,7 +2099,6 @@ var viewer = (function (exports, javasetmap_ts) {
                 }
             }
         }
-        return true;
     }
     function assertInts(...numbers) {
         {
@@ -1955,7 +2108,17 @@ var viewer = (function (exports, javasetmap_ts) {
                 }
             }
         }
-        return true;
+    }
+    function assertReals(...numbers) {
+        {
+            for (let i = 0; i < numbers.length; i++) {
+                const x = numbers[i];
+                //noinspection SuspiciousTypeOfGuard
+                if ("number" !== typeof x || isNaN(x) || !isFinite(x)) {
+                    throw new Error(`assertNumbers arguments[${i}] = ${x} is not a real.`);
+                }
+            }
+        }
     }
     function assert(value, ...messages) {
         if ( !value) {
@@ -1967,7 +2130,7 @@ var viewer = (function (exports, javasetmap_ts) {
         return true;
     }
     function assertNever(value) {
-        throw new Error();
+        throw new Error(value);
     }
     function assertf(f, ...messages) {
         if ( !f()) {
@@ -2006,11 +2169,10 @@ var viewer = (function (exports, javasetmap_ts) {
     const snap0 = (x, EPS = NLA_PRECISION) => Math.abs(x) <= EPS ? 0 : x;
     const canonAngle = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     /** @deprecated */ const eq02 = eq0;
-    /** @deprecated */ const eq2 = eq;
     /**
      * Decimal adjustment of a number.
      *
-     * @param f  The type of adjustment.
+     * @param f The type of adjustment.
      * @param value The number.
      * @param exp The exponent (the 10 logarithm of the adjustment base).
      * @returns The adjusted value.
@@ -2102,7 +2264,7 @@ var viewer = (function (exports, javasetmap_ts) {
     }
     let defaultRoundFunction = (x) => x; // Math.round10(x, -4)
     function forceFinite(val) {
-        const valNum = parseFloat(val.replace(",", ".").replace(/^[^0-9,\.\-]/, ""));
+        const valNum = parseFloat(val.replace(",", ".").replace(/^[^0-9,.\-]/, ""));
         return Number.isFinite(valNum) ? valNum : 0;
     }
     const MINUS = (a, b) => a - b;
@@ -2110,8 +2272,8 @@ var viewer = (function (exports, javasetmap_ts) {
         return ~~(f * (1 << 28));
     }
     /**
-     * combinations(2) will generate
-     * [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
+     * @example
+     *   combinations(2) // [0,0] [0,1] [1,1] [0,2] [1,2] [2,2]
      */
     function* combinations(n) {
         for (let i = 0; i < n; i++) {
@@ -2132,9 +2294,7 @@ var viewer = (function (exports, javasetmap_ts) {
         assert(i != -1);
         return a;
     }
-    /**
-     * One degree in radians. Use like Math.sin(30 * DEG).
-     */
+    /** One degree in radians. Use like Math.sin(30 * DEG). */
     const DEG = 0.017453292519943295;
     function rad2deg(rad) {
         //  discuss at: http://phpjs.org/functions/deg2rad/
@@ -2145,14 +2305,14 @@ var viewer = (function (exports, javasetmap_ts) {
         return rad / DEG;
     }
     /**
-     * numberToStr(2/3) == '0.6p'
-     * numberToStr(7/12) == '0.583p'
-     * numberToStr(2/7) == '0.285714pppppp'
-     * numberToStr(NLA_PRECISION) == '0+'
-     * numberToStr(-NLA_PRECISION) == '0-'
-     * numberToStr(2-NLA_PRECISION) == '2-'
-     * numberToStr(0) == '0='
-     *
+     * @example
+     *   numberToStr(2 / 3) // "0.6p"
+     *   numberToStr(7 / 12) // "0.583p"
+     *   numberToStr(2 / 7) // "0.285714pppppp"
+     *   numberToStr(NLA_PRECISION) // "0+"
+     *   numberToStr(-NLA_PRECISION) // "0-"
+     *   numberToStr(2 - NLA_PRECISION) // "2-"
+     *   numberToStr(0) // "0="
      */
     function numberToStr(value, length) {
         let minAbsDiff = Infinity, closestValue = undefined, closestValueStr = undefined;
@@ -2226,29 +2386,8 @@ var viewer = (function (exports, javasetmap_ts) {
     String.prototype.equals = function (x) {
         return this == x;
     };
-    function SCE(o) {
-        switch (typeof o) {
-            case "undefined":
-                return "undefined";
-            case "function":
-                return o.toString();
-            case "number":
-                return "" + o;
-            case "string":
-                return JSON.stringify(o);
-            case "object":
-                if (null == o) {
-                    return "null";
-                }
-                else {
-                    return o.sce;
-                }
-            default:
-                throw new Error();
-        }
-    }
-    function STR(o) {
-        return o.str;
+    function toString(o) {
+        return o.toString();
     }
     Object.defineProperty(Object.prototype, "sce", {
         get: function () {
@@ -2256,12 +2395,14 @@ var viewer = (function (exports, javasetmap_ts) {
         },
         configurable: true,
     });
+    /*
     Object.defineProperty(Object.prototype, "str", {
-        get: function () {
-            return this.toString();
-        },
-        configurable: true,
-    });
+      get: function () {
+        return this.toString()
+      },
+      configurable: true,
+    })
+     */
     function ilog(x) {
         console.log(x);
         return x;
@@ -2272,9 +2413,7 @@ var viewer = (function (exports, javasetmap_ts) {
     //    assert(!NLA[nlaName])
     //    NLA[nlaName] = (arr, ...rest) => ARRAY_UTILITIES[key].apply(arr, rest)
     //}
-    /**
-     * solves x² + px + q = 0
-     */
+    /** Solves x² + px + q = 0 */
     function pqFormula(p, q) {
         // 4 times the discriminant:in
         const discriminantX4 = (p * p) / 4 - q;
@@ -2290,9 +2429,8 @@ var viewer = (function (exports, javasetmap_ts) {
         }
     }
     /**
-     * from pomax' library
-     * solves ax³ + bx² + cx + d = 0
-     * This function from pomax' utils
+     * From pomax' library solves ax³ + bx² + cx + d = 0 This function from pomax' utils
+     *
      * @returns 0-3 roots
      */
     function solveCubicReal2(a, b, c, d) {
@@ -2341,7 +2479,7 @@ var viewer = (function (exports, javasetmap_ts) {
         for (let t = a; t < b; t += (b - a) / 100) {
             const dfdt = df(t);
             const df2 = (f(t + eps) - f(t)) / eps;
-            assert((faults += +!eq2(df2, dfdt, 0.1)) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`);
+            assert((faults += +!eq(df2, dfdt, 0.1)) <= maxFaults, `df2 == ${df2} != ${df(t)} = df(t)`);
         }
     }
     function bisect$1(f, a, b, steps) {
@@ -2364,3934 +2502,12 @@ var viewer = (function (exports, javasetmap_ts) {
         assert(b >= (b + a) / 2);
         return lerp$1(a, b, 0.5);
     }
-    function callsce(name, ...params) {
-        return name + "(" + params.map(SCE).join(",") + ")";
+    function callSource(name, ...params) {
+        return name + "(" + params.map(toSource).join(",") + ")";
     }
     function removeJSComments(str) {
-        const SPLITTER = /\/\/[^\r\n]+(?:\r\n|\n\r|\r|\n|$)|\/\*(?:[^*]|\*[^/])+\*\/|"(?:[^"\\]|\\.)+"|'(?:[^'\\]|\\.)+'|(?:`|})(?:[^`\$\\]|\$[^{]|\\.)+(?:`|\${)|(?:\/(?:(?:(?!\\*\/).)|\\\\|\\\/|[^\\]\[(?:\\\\|\\\]|[^]])+\])+\/)|[^`"']/g;
+        const SPLITTER = /\/\/[^\r\n]+(?:\r\n|\n\r|\r|\n|$)|\/\*(?:[^*]|\*[^/])+\*\/|"(?:[^"\\]|\\.)+"|'(?:[^'\\]|\\.)+'|[`}](?:[^`$\\]|\$[^{]|\\.)+(?:`|\${)|(?:\/(?:(?:(?!\\*\/).)|\\\\|\\\/|[^\\]\[(?:\\\\|\\]|[^]])+])+\/)|[^`"']/g;
         return str.replace(SPLITTER, (x) => x.startsWith("//") || x.startsWith("/*") ? "" : x);
-    }
-
-    function arraySwap(arr, i, j) {
-        const temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-    }
-    function arrayCopy(src, sstart, dst, dstart, length) {
-        assertInts(sstart, dstart, length);
-        dstart += length;
-        length += sstart;
-        while (length-- > sstart) {
-            dst[--dstart] = src[length];
-        }
-        return dst;
-    }
-    /**
-     * Copies a number of items from one array to another, with a definable step size between items in the source and
-     * destination array.
-     *
-     * @param src The source array.
-     * @param sstart The location of the first item in the source array.
-     * @param sstep The offset between items in the source array.
-     * @param dst The destination array.
-     * @param dstart The location of the first item in the destination array.
-     * @param dstep The offset between items in the destination array.
-     * @param count The number of items to copy.
-     */
-    function arrayCopyStep(src, sstart, sstep, dst, dstart, dstep, count) {
-        let srcIndex = sstart + count * sstep;
-        let dIndex = dstart + count * dstep;
-        while (srcIndex > sstart) {
-            dst[(dIndex -= dstep)] = src[(srcIndex -= sstep)];
-        }
-    }
-    /**
-     * Copies a number of contiguous, evenly-spaced blocks from one array to another.
-     *
-     * @param src The source array.
-     * @param sstart The start of the first block in the source array.
-     * @param sstep The offset from the start of one block to the start of the next block in the source array.
-     * @param dst The destination array.
-     * @param dstart The start of the first block in the destination array.
-     * @param dstep The offset from the start of one block to the start of the next block in the destination array.
-     * @param blockSize The length of one block.
-     * @param blockCount The number of blocks to copy.
-     */
-    function arrayCopyBlocks(src, sstart, sstep, dst, dstart, dstep, blockSize, blockCount) {
-        for (let i = 0; i < blockCount; i++) {
-            arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize);
-        }
-    }
-    function arrayRange(startInclusive, endExclusive, step = 1) {
-        assertNumbers(startInclusive, step);
-        //console.log(Math.ceil((endExclusive - startInclusive) / step))
-        const arrLength = Math.ceil((endExclusive - startInclusive) / step);
-        const result = new Array(arrLength); // '- startInclusive' so that chunk in the last row will also be selected, even
-        // if the row is not complete
-        for (let i = startInclusive, index = 0; index < arrLength; i += step, index++) {
-            result[index] = i;
-        }
-        return result;
-    }
-    /**
-     * Returns a number of evenly-spaced values between t0 and t1 (inclusive).
-     * @param t0 First value.
-     * @param t1 Last value.
-     * @param count Total number of values.
-     */
-    function arraySamples(t0, t1, count = 64) {
-        return arrayFromFunction(count, (i) => lerp$1(t0, t1, i / (count - 1)));
-    }
-    function arrayFromFunction(length, f) {
-        assertNumbers(length);
-        assert("function" == typeof f);
-        const a = new Array(length);
-        let elIndex = length;
-        while (elIndex--) {
-            a[elIndex] = f(elIndex, length);
-        }
-        return a;
-    }
-    /**
-     * Return the element in the array for which f(el) is highest. There is no `withMin`, call withMax(x => -f(x))
-     * instead.
-     *
-     * @param arr The array to search.
-     * @param f
-     */
-    function withMax$1(arr, f) {
-        let i = arr.length, result = undefined, maxVal = -Infinity;
-        while (i--) {
-            const el = arr[i], val = f(el, i, arr);
-            if (val > maxVal) {
-                maxVal = val;
-                result = el;
-            }
-        }
-        return result;
-    }
-    /**
-     * Returns the sum of the absolute values of the components of arr vector.
-     * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
-     */
-    function absSum(arr) {
-        let i = arr.length;
-        let result = 0;
-        while (i--) {
-            result += Math.abs(arr[i]);
-        }
-        return result;
-    }
-    function emod(arr, i) {
-        return arr[mod(i, arr.length)];
-    }
-    function sliceStep(arr, start, end, step, chunkSize = 1) {
-        assertNumbers(start, step);
-        start < 0 && (start = arr.length + start);
-        end <= 0 && (end = arr.length + end);
-        const resultLength = Math.ceil((end - start) / step);
-        const result = new Array(resultLength); // '- start' so that chunk in the last row
-        // will also be selected, even if the row is
-        // not complete
-        let index = 0;
-        for (let i = start; i < end; i += step) {
-            for (let j = i; j < Math.min(i + chunkSize, end); j++) {
-                result[index++] = arr[j];
-            }
-        }
-        assert(resultLength == index);
-        return result;
-    }
-    function splicePure(arr, start = 0, deleteCount = 0, ...items) {
-        const arrayLength = arr.length;
-        const _deleteCount = deleteCount < 0 ? 0 : deleteCount;
-        let _start;
-        if (start < 0) {
-            if (Math.abs(start) > arrayLength) {
-                _start = 0;
-            }
-            else {
-                _start = arrayLength + start;
-            }
-        }
-        else if (start > arrayLength) {
-            _start = arrayLength;
-        }
-        else {
-            _start = start;
-        }
-        const newLength = arr.length - _deleteCount + items.length;
-        const result = new Array(newLength);
-        let dst = newLength;
-        let src = arr.length;
-        while (src-- > _start + _deleteCount) {
-            result[--dst] = arr[src];
-        }
-        src = items.length;
-        while (src--) {
-            result[--dst] = items[src];
-        }
-        src = _start;
-        while (src--) {
-            result[--dst] = items[src];
-        }
-        return result;
-    }
-    function arrayEquals(arr, obj) {
-        if (arr === obj)
-            return true;
-        if (Object.getPrototypeOf(obj) !== Array.prototype)
-            return false;
-        if (arr.length !== obj.length)
-            return false;
-        for (let i = 0; i < arr.length; i++) {
-            if (!equals(arr[i], obj[i]))
-                return false;
-        }
-        return true;
-    }
-    function equals(a, b) {
-        return Array.isArray(a)
-            ? arrayEquals(a, b)
-            : "object" === typeof a
-                ? a.equals(b)
-                : a === b;
-    }
-    /**
-     * arr.map(f).filter((x) => x)
-     */
-    function mapFilter(arr, f) {
-        const length = arr.length;
-        const result = [];
-        for (let i = 0; i < length; i++) {
-            if (i in arr) {
-                const val = f(arr[i], i, arr);
-                if (val) {
-                    result.push(val);
-                }
-            }
-        }
-        return result;
-    }
-    function clear(arr, ...newItems) {
-        return arr.splice(0, arr.length, ...newItems);
-    }
-    /**
-     *
-     * @returns function concat.apply([], arr)
-     */
-    function concatenated(arr) {
-        return Array.prototype.concat.apply([], arr);
-    }
-    function min$1(arr) {
-        let i = arr.length, max = Infinity;
-        while (i--) {
-            const val = arr[i];
-            if (max > val)
-                max = val;
-        }
-        return max;
-    }
-    function max$1(arr) {
-        // faster and no limit on array size, see https://jsperf.com/math-max-apply-vs-loop/2
-        let i = arr.length, max = -Infinity;
-        while (i--) {
-            const val = arr[i];
-            if (max < val)
-                max = val;
-        }
-        return max;
-    }
-    function indexWithMax(arr, f) {
-        if (arr.length == 0) {
-            return -1;
-        }
-        let i = arr.length, result = -1, maxVal = -Infinity;
-        while (i--) {
-            const val = f(arr[i], i, arr);
-            if (val > maxVal) {
-                maxVal = val;
-                result = i;
-            }
-        }
-        return result;
-    }
-    function sum(arr) {
-        let i = arr.length;
-        let result = 0;
-        while (i--) {
-            result += arr[i];
-        }
-        return result;
-    }
-    function sumInPlaceTree(arr) {
-        if (0 == arr.length)
-            return 0;
-        let l = arr.length;
-        while (l != 1) {
-            const lHalfFloor = Math.floor(l / 2);
-            const lHalfCeil = Math.ceil(l / 2);
-            for (let i = 0; i < lHalfFloor; i++) {
-                arr[i] += arr[i + lHalfCeil];
-            }
-            l = lHalfCeil;
-        }
-        return arr[0];
-    }
-    function unique(arr) {
-        const uniqueSet = new Set(arr);
-        return Array.from(uniqueSet);
-    }
-    function remove(arr, o) {
-        const index = arr.indexOf(o);
-        if (index != -1) {
-            arr.splice(index, 1);
-            return true;
-        }
-        return false;
-    }
-    function removeIndex(arr, i) {
-        const result = arr[i];
-        arr.splice(i, 1);
-        return result;
-    }
-    function bagRemoveIndex(arr, i) {
-        const result = arr[i];
-        if (i == arr.length - 1) {
-            arr.pop();
-        }
-        else {
-            arr[i] = arr.pop();
-        }
-        return result;
-    }
-    function removeMatch(arr, matcher) {
-        const index = arr.findIndex(matcher);
-        if (-1 != index) {
-            return removeIndex(arr, index);
-        }
-    }
-    function removeAll(arr, o) {
-        let i = o.length;
-        while (i--) {
-            remove(arr, o[i]);
-        }
-    }
-    function toggle(arr, o) {
-        const index = arr.indexOf(o);
-        if (index != -1) {
-            arr.splice(index, 1);
-            return false;
-        }
-        else {
-            arr.push(o);
-            return true;
-        }
-    }
-    function bagToggle(arr, o) {
-        const index = arr.indexOf(o);
-        if (index != -1) {
-            bagRemoveIndex(arr, index);
-            return false;
-        }
-        else {
-            arr.push(o);
-            return true;
-        }
-    }
-    function binaryIndexOf(arr, searchElement, cmp = (a, b) => a - b) {
-        let minIndex = 0;
-        let maxIndex = arr.length - 1;
-        let currentIndex;
-        let currentElement;
-        while (minIndex <= maxIndex) {
-            currentIndex = ((minIndex + maxIndex) / 2) | 0;
-            currentElement = arr[currentIndex];
-            if (cmp(currentElement, searchElement) < 0) {
-                minIndex = currentIndex + 1;
-            }
-            else if (cmp(currentElement, searchElement) > 0) {
-                maxIndex = currentIndex - 1;
-            }
-            else {
-                return currentIndex;
-            }
-        }
-        return -minIndex - 1;
-    }
-    function binaryInsert(arr, el, cmp = MINUS) {
-        let minIndex = 0;
-        let maxIndex = arr.length;
-        let currentIndex;
-        let currentElement;
-        while (minIndex < maxIndex) {
-            currentIndex = ~~((minIndex + maxIndex) / 2);
-            currentElement = arr[currentIndex];
-            if (cmp(currentElement, el) < 0) {
-                minIndex = currentIndex + 1;
-            }
-            else {
-                maxIndex = currentIndex;
-            }
-        }
-        arr.splice(minIndex, 0, el);
-    }
-    function firstUnsorted(arr, cmp) {
-        for (let i = 1; i < arr.length; i++) {
-            if (cmp(arr[i - 1], arr[i]) > 0)
-                return i;
-        }
-        return -1;
-    }
-    function getLast(arr) {
-        return arr[arr.length - 1];
-    }
-    function setLast(arr, val) {
-        return (arr[arr.length - 1] = val);
-    }
-    function removeIndexes(arr, indexes) {
-        indexes.sort((a, b) => a - b);
-        if (0 === indexes.length)
-            return arr;
-        if (1 === indexes.length) {
-            arr.splice(indexes[0], 1);
-            return arr;
-        }
-        let dstPos = indexes[0];
-        let nextSkip = indexes[0];
-        let indexesPos = 0;
-        for (let srcPos = indexes[0]; srcPos < arr.length; srcPos++) {
-            if (srcPos !== nextSkip) {
-                arr[dstPos++] = arr[srcPos];
-            }
-            else {
-                indexesPos++;
-                if (indexesPos < indexes.length) {
-                    nextSkip = indexes[indexesPos];
-                }
-                else {
-                    arr.splice(dstPos, srcPos + 1 - dstPos);
-                    return arr;
-                }
-            }
-        }
-        throw new Error("illegal state");
-    }
-
-    /**
-     * Immutable 3d-vector/point.
-     */
-    class V3 {
-        constructor(x, y, z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            assertNumbers(x, y, z);
-        }
-        static random() {
-            return new V3(Math.random(), Math.random(), Math.random());
-        }
-        static parallel(a, b) {
-            return a.dot(b) - a.length() * b.length();
-        }
-        /**
-         * See http://math.stackexchange.com/questions/44689/how-to-find-a-random-axis-or-unit-vector-in-3d
-         * @returns A random point on the unit sphere with uniform distribution across the surface.
-         */
-        static randomUnit() {
-            const zRotation = Math.random() * 2 * Math.PI;
-            const z = Math.random() * 2 - 1;
-            const zRadius = Math.sqrt(1 - Math.pow(z, 2));
-            return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z);
-        }
-        //noinspection JSUnusedLocalSymbols
-        /**
-         * Documentation stub. You want {@see V3#sphere}
-         */
-        static fromAngles(theta, phi) {
-            throw new Error();
-        }
-        static fromFunction(f) {
-            return new V3(f(0), f(1), f(2));
-        }
-        static min(a, b) {
-            return new V3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z));
-        }
-        static max(a, b) {
-            return new V3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z));
-        }
-        static lerp(a, b, t) {
-            return new V3(a.x * (1 - t) + b.x * t, a.y * (1 - t) + b.y * t, a.z * (1 - t) + b.z * t);
-        }
-        static fromArray(a) {
-            return new V3(a[0], a[1], a[2]);
-        }
-        static angleBetween(a, b) {
-            return a.angleTo(b);
-        }
-        static zip(f, ...args) {
-            assert(f instanceof Function);
-            return new V3(f.apply(undefined, args.map((x) => x.x)), f.apply(undefined, args.map((x) => x.y)), f.apply(undefined, args.map((x) => x.z)));
-        }
-        static normalOnPoints(a, b, c) {
-            assertVectors(a, b, c);
-            return a.to(b).cross(a.to(c));
-        }
-        static add(...vs) {
-            assertVectors(...vs);
-            let x = 0, y = 0, z = 0;
-            let i = vs.length;
-            while (i--) {
-                x += vs[i].x;
-                y += vs[i].y;
-                z += vs[i].z;
-            }
-            return new V3(x, y, z);
-        }
-        static sub(...vs) {
-            assertVectors(...vs);
-            let x = vs[0].x, y = vs[0].y, z = vs[0].z;
-            let i = vs.length;
-            while (i--) {
-                x -= vs[i].x;
-                y -= vs[i].y;
-                z -= vs[i].z;
-            }
-            return new V3(x, y, z);
-        }
-        /**
-         * Pack an array of V3s into an array of numbers (Float32Array by default).
-         *
-         * @param v3arr source array
-         * @param dest destination array. If provided, must be large enough to fit v3count items.
-         * @param srcStart starting index in source array
-         * @param destStart starting index in destination array
-         * @param v3count Number of V3s to copy.
-         * @returns Packed array.
-         */
-        static pack(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const result = dest || new Float32Array(3 * v3count); // TODO
-            assert(result.length - destStart >= v3count * 3, "dest.length - destStart >= v3count * 3", result.length, destStart, v3count * 3);
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                const v = v3arr[srcIndex++];
-                result[destIndex++] = v.x;
-                result[destIndex++] = v.y;
-                result[destIndex++] = v.z;
-            }
-            return result;
-        }
-        static unpack(packedArray, dest, srcStart = 0, destStart = 0, v3count = (packedArray.length - srcStart) / 3) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            dest = dest || new Array(v3count);
-            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                dest[destIndex++] = new V3(packedArray[srcIndex++], packedArray[srcIndex++], packedArray[srcIndex++]);
-            }
-            return dest;
-        }
-        static packXY(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const result = dest || new Float32Array(2 * v3count);
-            assert(result.length - destStart >= v3count, "dest.length - destStart >= v3count");
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                const v = v3arr[srcIndex++];
-                result[destIndex++] = v.x;
-                result[destIndex++] = v.y;
-            }
-            return result;
-        }
-        static unpackXY(src, dest, srcStart = 0, destStart = 0, v3count = Math.min(src.length / 2, (dest && dest.length) || Infinity) -
-            destStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            dest = dest || new Array(v3count);
-            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
-            assert(src.length - srcStart >= v3count * 2, "dest.length - destStart >= v3count");
-            let i = v3count, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                dest[destIndex++] = new V3(src[srcIndex++], src[srcIndex++], 0);
-            }
-            return dest;
-        }
-        static perturbed(v, delta) {
-            return v.perturbed(delta);
-        }
-        static polar(radius, phi, z = 0) {
-            return new V3(radius * Math.cos(phi), radius * Math.sin(phi), z);
-        }
-        /**
-         *
-         * @param longitude angle in XY plane
-         * @param latitude "height"/z dir angle
-         */
-        static sphere(longitude, latitude, length = 1) {
-            return new V3(length * Math.cos(latitude) * Math.cos(longitude), length * Math.cos(latitude) * Math.sin(longitude), length * Math.sin(latitude));
-        }
-        static inverseLerp(a, b, x) {
-            const ab = a.to(b);
-            return a.to(x).dot(ab) / ab.squared();
-        }
-        get [0]() {
-            return this.x;
-        }
-        get [1]() {
-            return this.y;
-        }
-        get [2]() {
-            return this.z;
-        }
-        get u() {
-            return this.x;
-        }
-        get v() {
-            return this.y;
-        }
-        perturbed(delta = NLA_PRECISION * 0.8) {
-            return this.map((x) => x + (Math.random() - 0.5) * delta);
-        }
-        *[Symbol.iterator]() {
-            yield this.x;
-            yield this.y;
-            yield this.z;
-        }
-        e(index) {
-            assert(index >= 0 && index < 3);
-            return 0 == index ? this.x : 1 == index ? this.y : this.z;
-        }
-        negated() {
-            return new V3(-this.x, -this.y, -this.z);
-        }
-        abs() {
-            return new V3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
-        }
-        plus(a) {
-            assertVectors(a);
-            return new V3(this.x + a.x, this.y + a.y, this.z + a.z);
-        }
-        /**
-         * Hadarmard product (or Schur product)
-         * Element-wise multiplication of two vectors.
-         * @see https://en.wikipedia.org/wiki/Hadamard_product_(matrices)
-         *
-         */
-        schur(a) {
-            return new V3(this.x * a.x, this.y * a.y, this.z * a.z);
-        }
-        /**
-         * Element-wise division.
-         */
-        divv(a) {
-            return new V3(this.x / a.x, this.y / a.y, this.z / a.z);
-        }
-        /**
-         * See also {@link to} which is a.minus(this)
-         */
-        minus(a) {
-            assertVectors(a);
-            return new V3(this.x - a.x, this.y - a.y, this.z - a.z);
-        }
-        to(a) {
-            assertVectors(a);
-            return a.minus(this);
-        }
-        times(factor) {
-            assertNumbers(factor);
-            return new V3(this.x * factor, this.y * factor, this.z * factor);
-        }
-        div(a) {
-            assertNumbers(a);
-            return new V3(this.x / a, this.y / a, this.z / a);
-        }
-        /**
-         * Dot product.
-         * @see https://en.wikipedia.org/wiki/Dot_product
-         */
-        dot(a) {
-            assertInst(V3, a);
-            return this.x * a.x + this.y * a.y + this.z * a.z;
-        }
-        /**
-         * Linearly interpolate
-         */
-        lerp(b, t) {
-            assertVectors(b);
-            assertNumbers(t);
-            return V3.lerp(this, b, t);
-        }
-        squared() {
-            return this.dot(this);
-        }
-        distanceTo(a) {
-            assertVectors(a);
-            //return this.minus(a).length()
-            return Math.hypot(this.x - a.x, this.y - a.y, this.z - a.z);
-        }
-        distanceToSquared(a) {
-            assertVectors(a);
-            return this.minus(a).squared();
-        }
-        ///**
-        // * See also {@see #setTo} for the individual
-        // *
-        // * @param v
-        // */
-        //assign(v) {
-        //	assertVectors(v)
-        //	this.x = v.x
-        //	this.y = v.y
-        //	this.z = v.z
-        //}
-        //
-        ///**
-        // * See also {@see #assign} for the V3 version
-        // *
-        // * @param x
-        // * @param y
-        // * @param z
-        // */
-        //setTo(x, y, z = 0) {
-        //	this.x = x
-        //	this.y = y
-        //	this.z = z
-        //}
-        toSource() {
-            return V3.NAMEMAP.get(this) || this.toString();
-        }
-        nonParallelVector() {
-            const abs = this.abs();
-            if (abs.x <= abs.y && abs.x <= abs.z) {
-                return V3.X;
-            }
-            else if (abs.y <= abs.x && abs.y <= abs.z) {
-                return V3.Y;
-            }
-            else {
-                return V3.Z;
-            }
-        }
-        slerp(b, t) {
-            assertVectors(b);
-            assertNumbers(t);
-            const sin = Math.sin;
-            const omega = this.angleTo(b);
-            return this.times(sin((1 - t) * omega) / sin(omega)).plus(b.times(sin(t * omega) / sin(omega)));
-        }
-        min(b) {
-            return new V3(Math.min(this.x, b.x), Math.min(this.y, b.y), Math.min(this.z, b.z));
-        }
-        max(b) {
-            return new V3(Math.max(this.x, b.x), Math.max(this.y, b.y), Math.max(this.z, b.z));
-        }
-        equals(v) {
-            return this == v || (this.x == v.x && this.y == v.y && this.z == v.z);
-        }
-        /**
-         *
-         * The cross product is defined as:
-         * a x b = |a| * |b| * sin(phi) * n
-         * where |.| is the euclidean norm, phi is the angle between the vectors
-         * and n is a unit vector perpendicular to both a and b.
-         *
-         * The cross product is zero for parallel vectors.
-         * @see https://en.wikipedia.org/wiki/Cross_product
-         */
-        cross(v) {
-            return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x);
-        }
-        minElement() {
-            return Math.min(this.x, this.y, this.z);
-        }
-        maxElement() {
-            return Math.max(this.x, this.y, this.z);
-        }
-        toArray(n = 3) {
-            return [this.x, this.y, this.z].slice(0, n);
-        }
-        /**
-         * Get a perpendicular vector.
-         * For vectors in the XY-Plane, returns vector rotated 90° CCW.
-         */
-        getPerpendicular() {
-            if (eq0(this.x) && eq0(this.y)) {
-                if (eq0(this.z)) {
-                    throw new Error("zero vector");
-                }
-                // v is Vector(0, 0, v.z)
-                return V3.Y;
-            }
-            return new V3(-this.y, this.x, 0);
-        }
-        //noinspection JSMethodCanBeStatic
-        dim() {
-            return 3;
-        }
-        els() {
-            return [this.x, this.y, this.z];
-        }
-        angleXY() {
-            return Math.atan2(this.y, this.x);
-        }
-        lengthXY() {
-            return Math.hypot(this.x, this.y);
-            //return Math.sqrt(this.x * this.x + this.y * this.y)
-        }
-        squaredXY() {
-            return this.x * this.x + this.y * this.y;
-        }
-        xy() {
-            return new V3(this.x, this.y, 0);
-        }
-        /**
-         * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
-         * @param f function to apply to elements (number -> number)
-         */
-        map(f) {
-            return new V3(f(this.x, "x"), f(this.y, "y"), f(this.z, "z"));
-        }
-        toString(roundFunction) {
-            roundFunction = roundFunction || defaultRoundFunction;
-            return (V3.NAMEMAP.get(this) ||
-                "V(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"); //+ this.id
-        }
-        angleTo(b) {
-            assert(1 == arguments.length);
-            assertVectors(b);
-            assert(!this.likeO());
-            assert(!b.likeO());
-            return Math.acos(Math.min(1, this.dot(b) / this.length() / b.length()));
-        }
-        /**
-         *
-         * phi = angle between A and B
-         * alpha = angle between n and normal1
-         *
-         * A . B = ||A|| * ||B|| * cos(phi)
-         * A x B = ||A|| * ||B|| * sin(phi) * n (n = unit vector perpendicular)
-         * (A x B) . normal1 = ||A|| * ||B|| * sin(phi) * cos(alpha)
-         */
-        angleRelativeNormal(vector, normal1) {
-            assert(2 == arguments.length);
-            assertVectors(vector, normal1);
-            assertf(() => normal1.hasLength(1));
-            //assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
-            //assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector)) //
-            // -0.000053600770598683675
-            return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector));
-        }
-        /**
-         * Returns true iff this is parallel to vector, i.e. this * s == vector, where s is a positive or negative number,
-         * using eq. Throw a DebugError
-         * - if vector is not a Vector or
-         * - if this has a length of 0 or
-         * - if vector has a length of 0
-         */
-        isParallelTo(vector) {
-            assertVectors(vector);
-            assert(!this.likeO());
-            assert(!vector.likeO());
-            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
-            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
-            const dot = this.dot(vector);
-            return eq(this.squared() * vector.squared(), dot * dot);
-        }
-        isPerpendicularTo(vector) {
-            assertVectors(vector);
-            assert(!this.likeO(), "!this.likeO()");
-            assert(!vector.likeO(), "!vector.likeO()");
-            return eq0(this.dot(vector));
-        }
-        isReverseDirTo(other) {
-            assertVectors(other);
-            assert(!this.likeO());
-            assert(!other.likeO());
-            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
-            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
-            const dot = this.dot(other);
-            return eq(Math.sqrt(this.squared() * other.squared()), dot);
-        }
-        /**
-         * Returns the length of this Vector, i.e. the euclidean norm.
-         *
-         * Note that the partial derivatives of the euclidean norm at point x are equal to the
-         * components of the unit vector x.
-         */
-        length() {
-            return Math.hypot(this.x, this.y, this.z);
-            //return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
-        }
-        /**
-         * Definition: V3.likeO == V3.like(V3.O)
-         */
-        likeO() {
-            return this.like(V3.O);
-        }
-        /**
-         * eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z)
-         * @param obj
-         */
-        like(obj) {
-            if (obj === this)
-                return true;
-            if (!(obj instanceof V3))
-                return false;
-            return eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z);
-        }
-        /**
-         * equivalent to this.like(v) || this.negated().like(v)
-         */
-        likeOrReversed(v) {
-            return eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()));
-        }
-        /**
-         * Returns a new unit Vector (.length() === 1) with the same direction as this vector. Throws a
-         * DebugError if this has a length of 0.
-         */
-        unit() {
-            assert(!this.likeO(), "cannot normalize zero vector");
-            return this.div(this.length());
-        }
-        /**
-         * Documentation stub. You want {@link unit}
-         */
-        normalized() {
-            throw new Error("documentation stub. use .unit()");
-        }
-        /**
-         * Returns a new V3 equal to this scaled so that its length is equal to newLength.
-         *
-         * Passing a negative newLength will flip the vector.
-         */
-        toLength(newLength) {
-            assertNumbers(newLength);
-            return this.times(newLength / this.length());
-        }
-        /**
-         * Returns a new Vector which is the projection of this vector onto the passed vector.
-         * Examples
-         *
-         * 	V(3, 4).projectedOn(V(1, 0)) // returns V(3, 0)
-         * 	V(3, 4).projectedOn(V(2, 0)) // returns V(3, 0)
-         * 	V(3, 4).projectedOn(V(-1, 0)) // returns V(-3, 0)
-         * 	V(3, 4).projectedOn(V(0, 1)) // returns V(0, 4)
-         * 	V(3, 4).projectedOn(V(1, 1)) // returns
-         */
-        projectedOn(b) {
-            assertVectors(b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return b.times(this.dot(b) / b.dot(b));
-        }
-        rejectedFrom(b) {
-            assertVectors(b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return this.minus(b.times(this.dot(b) / b.dot(b)));
-        }
-        rejectedFrom1(b1) {
-            assertVectors(b1);
-            assert(b1.hasLength(1));
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return this.minus(b1.times(this.dot(b1)));
-        }
-        /**
-         * Returns the length of this vector rejected from the unit vector b.
-         *
-         *       /|
-         * this / |    ^
-         *     /__|    | b
-         *      r
-         *  Returns length of r (r === this.rejectedFrom(b))
-         */
-        rejectedLength(b) {
-            assertVectors(b);
-            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b), 2) / b.dot(b));
-        }
-        /**
-         * Returns the length of this vector rejected from the unit vector b1.
-         *
-         *       /|
-         * this / |    ^
-         *     /__|    | b1
-         *      r
-         *  Returns length of r (r === this.rejectedFrom(b1))
-         */
-        rejected1Length(b1) {
-            assertVectors(b1);
-            assert(b1.hasLength(1));
-            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b1), 2));
-        }
-        /**
-         * Returns true iff the length() of this vector is equal to 'length', using eq
-         * @example
-         * V(3, 4).hasLength(5) === true
-         * @example
-         * V(1, 1).hasLength(1) === false
-         */
-        hasLength(length) {
-            assertNumbers(length);
-            return eq(length, this.length());
-        }
-        /**
-         * Returns the sum of the absolute values of the components of this vector.
-         * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
-         */
-        absSum() {
-            return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
-        }
-        /**
-         * returns min(|x|, |y|, |z|)
-         */
-        minAbsElement() {
-            return Math.min(Math.abs(this.x), Math.abs(this.y), Math.min(this.z));
-        }
-        /**
-         * returns max(|x|, |y|, |z|)
-         */
-        maxAbsElement() {
-            return Math.max(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
-        }
-        maxAbsDim() {
-            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
-            return xAbs >= yAbs ? (xAbs >= zAbs ? 0 : 2) : yAbs >= zAbs ? 1 : 2;
-        }
-        minAbsDim() {
-            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
-            return xAbs < yAbs ? (xAbs < zAbs ? 0 : 2) : yAbs < zAbs ? 1 : 2;
-        }
-        withElement(dim, el) {
-            assert(["x", "y", "z"].includes(dim), "" + dim);
-            assertNumbers(el);
-            if ("x" == dim) {
-                return new V3(el, this.y, this.z);
-            }
-            if ("y" == dim) {
-                return new V3(this.x, el, this.z);
-            }
-            return new V3(this.x, this.y, el);
-        }
-        hashCode() {
-            function floatHashCode(f) {
-                return ~~(f * (1 << 28));
-            }
-            return ~~((floatHashCode(this.x) * 31 + floatHashCode(this.y)) * 31 +
-                floatHashCode(this.z));
-        }
-        /**
-         * as sadjkh akjhs djkahsd kjahs k skjhdakjh dkjash dkjahs kjdhas kj dhkjahsd kjahs dkjahs dkjhas kjdkajs
-         * hdkljhfkjahdslfghal dasd
-         *
-         * * asdjklas dasds
-         */
-        hashCodes() {
-            //function floatHashCode(f) {
-            //	return ~~(f * (1 << 28))
-            //}
-            // compare hashCode.floatHashCode
-            // the following ops are equivalent to
-            // floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
-            // this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
-            // the other 7 can be calculated by adding constants
-            const xHC = ~~(this.x * (1 << 28) - 0.5), yHC = ~~(this.y * (1 << 28) - 0.5), zHC = ~~(this.z * (1 << 28) - 0.5), hc = ~~((xHC * 31 + yHC) * 31 + zHC);
-            return [
-                ~~hc,
-                ~~(hc + 961),
-                ~~(hc + 31),
-                ~~(hc + 31 + 961),
-                ~~(hc + 1),
-                ~~(hc + 1 + 961),
-                ~~(hc + 1 + 31),
-                ~~(hc + 1 + 31 + 961),
-            ];
-        }
-        //static areDisjoint(it: Iterable<V3>): boolean {
-        //	const vSet = new CustomSet
-        //	for (const v of it) {
-        //		if (!v.equals(vSet.canonicalizeLike(v))) {
-        //			// like value already in set
-        //			return false
-        //		}
-        //	}
-        //	return true
-        //}
-        compareTo(other) {
-            if (this.x != other.x) {
-                return this.x - other.x;
-            }
-            else if (this.y != other.y) {
-                return this.y - other.y;
-            }
-            else {
-                return this.z - other.z;
-            }
-        }
-        compareTo2(other, eps = NLA_PRECISION) {
-            if (!eq2(this.x, other.x, eps)) {
-                return this.x - other.x;
-            }
-            else if (!eq2(this.y, other.y, eps)) {
-                return this.y - other.y;
-            }
-            else if (!eq2(this.z, other.z, eps)) {
-                return this.z - other.z;
-            }
-            else {
-                return 0;
-            }
-        }
-        toAngles() {
-            return {
-                theta: Math.atan2(this.y, this.x),
-                phi: Math.asin(this.z / this.length()),
-            };
-        }
-    }
-    V3.O = new V3(0, 0, 0);
-    V3.X = new V3(1, 0, 0);
-    V3.Y = new V3(0, 1, 0);
-    V3.Z = new V3(0, 0, 1);
-    V3.XY = new V3(1, 1, 0);
-    V3.XYZ = new V3(1, 1, 1);
-    V3.INF = new V3(Infinity, Infinity, Infinity);
-    V3.UNITS = [V3.X, V3.Y, V3.Z];
-    V3.NAMEMAP = new javasetmap_ts.JavaMap()
-        .set(V3.O, "V3.O")
-        .set(V3.X, "V3.X")
-        .set(V3.Y, "V3.Y")
-        .set(V3.Z, "V3.Z")
-        .set(V3.XYZ, "V3.XYZ")
-        .set(V3.INF, "V3.INF");
-    function V(a, b, c) {
-        if (arguments.length == 3) {
-            return new V3(parseFloat(a), parseFloat(b), parseFloat(c));
-        }
-        else if (arguments.length == 2) {
-            return new V3(parseFloat(a), parseFloat(b), 0);
-        }
-        else if (arguments.length == 1) {
-            if (typeof a == "object") {
-                if (a instanceof V3) {
-                    // immutable, so
-                    return a;
-                }
-                else if (a instanceof Array ||
-                    a instanceof Float32Array ||
-                    a instanceof Float64Array) {
-                    if (2 == a.length) {
-                        return new V3(parseFloat(a[0]), parseFloat(a[1]), 0);
-                    }
-                    else if (3 == a.length) {
-                        return new V3(parseFloat(a[0]), parseFloat(a[1]), parseFloat(a[2]));
-                    }
-                }
-                else if ("x" in a && "y" in a) {
-                    return new V3(parseFloat(a.x), parseFloat(a.y), "z" in a ? parseFloat(a.z) : 0);
-                }
-            }
-        }
-        throw new Error("invalid arguments" + arguments);
-    }
-
-    const P3YZ = { normal1: V3.X, w: 0 };
-    const P3ZX = { normal1: V3.Y, w: 0 };
-    const P3XY = { normal1: V3.Z, w: 0 };
-    class Transformable {
-        mirror(plane) {
-            return this.transform(M4.mirror(plane));
-        }
-        mirroredX() {
-            return this.mirror(P3YZ);
-        }
-        mirrorY() {
-            return this.mirror(P3ZX);
-        }
-        mirrorZ() {
-            return this.mirror(P3XY);
-        }
-        project(plane) {
-            return this.transform(M4.project(plane));
-        }
-        projectXY() {
-            return this.transform(M4.project(P3XY));
-        }
-        projectYZ() {
-            return this.transform(M4.project(P3YZ));
-        }
-        projectZX() {
-            return this.transform(M4.project(P3ZX));
-        }
-        translate(...args) {
-            return this.transform(M4.translate.apply(undefined, args), callsce.call(undefined, ".translate", ...args));
-        }
-        scale(...args) {
-            return this.transform(M4.scale.apply(undefined, args), callsce.call(undefined, ".scale", ...args));
-        }
-        rotateX(radians) {
-            return this.transform(M4.rotateX(radians), `.rotateX(${radians})`);
-        }
-        rotateY(radians) {
-            return this.transform(M4.rotateY(radians), `.rotateY(${radians})`);
-        }
-        rotateZ(radians) {
-            return this.transform(M4.rotateZ(radians), `.rotateZ(${radians})`);
-        }
-        rotate(rotationCenter, rotationAxis, radians) {
-            return this.transform(M4.rotateLine(rotationCenter, rotationAxis, radians), callsce(".rotate", rotationCenter, rotationAxis, radians));
-        }
-        rotateAB(from, to) {
-            return this.transform(M4.rotateAB(from, to), callsce(".rotateAB", from, to));
-        }
-        eulerZXZ(alpha, beta, gamma) {
-            throw new Error();
-            //return this.transform(M4.eulerZXZ(alpha, beta, gamma))
-        }
-        shearX(y, z) {
-            // prettier-ignore
-            return this.transform(new M4([
-                1, y, z, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1
-            ]));
-        }
-        foo() {
-            return this.transform(M4.FOO);
-        }
-        fooInv() {
-            return this.transform(M4.FOO_INV);
-        }
-        visit(visitor, ...args) {
-            let proto = Object.getPrototypeOf(this);
-            // walk up the prototype chain until we find a defined function in o
-            while (!visitor.hasOwnProperty(proto.constructor.name) &&
-                proto !== Transformable.prototype) {
-                proto = Object.getPrototypeOf(proto);
-            }
-            if (visitor.hasOwnProperty(proto.constructor.name)) {
-                return visitor[proto.constructor.name].apply(this, args);
-            }
-            else {
-                throw new Error("No implementation for " + this.constructor.name);
-            }
-        }
-    }
-
-    class Vector {
-        constructor(v) {
-            this.v = v;
-            assertInst(Float64Array, v);
-        }
-        static fromFunction(dims, f) {
-            assertNumbers(dims);
-            const e = new Float64Array(dims);
-            let i = dims;
-            while (i--) {
-                e[i] = f(i);
-            }
-            return new Vector(e);
-        }
-        static random(dims) {
-            return Vector.fromFunction(dims, (i) => Math.random());
-        }
-        static from(...args) {
-            assert(args[0] instanceof Float64Array ||
-                args.every((a) => "number" == typeof a), 'args[0] instanceof Float64Array || args.every(a => "number" == typeof a)');
-            return new Vector(args[0] instanceof Float64Array ? args[0] : Float64Array.from(args));
-        }
-        static Zero(dims) {
-            assertNumbers(dims);
-            let i = 0;
-            const n = new Float64Array(dims);
-            while (i--) {
-                n[i] = 0;
-            }
-            return new Vector(n);
-        }
-        static Unit(dims, dir) {
-            assertNumbers(dims, dir);
-            let i = 0;
-            const n = new Float64Array(dims);
-            while (i--) {
-                n[i] = +(i == dir); // +true === 1, +false === 0
-            }
-            return new Vector(n);
-        }
-        /**
-         * Pack an array of Vectors into an array of numbers (Float32Array by default).
-         *
-         * @param vectors source array
-         * @param dest destination array. If provided, must be large enough to fit v3count items.
-         * @param srcStart starting index in source array
-         * @param destStart starting index in destination array
-         * @param vectorCount Number of V3s to copy.
-         * @returns Packed array.
-         */
-        static pack(vectors, dest, srcStart = 0, destStart = 0, vectorCount = vectors.length - srcStart) {
-            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
-            const dim = vectors[0].dim();
-            const result = dest || new Float32Array(dim * vectorCount); // TODO
-            assert(result.length - destStart >= vectorCount * dim, "dest.length - destStart >= v3count * 3", result.length, destStart, vectorCount * 3);
-            let i = vectorCount, srcIndex = srcStart, destIndex = destStart;
-            while (i--) {
-                const v = vectors[srcIndex++];
-                for (let d = 0; d < dim; d++) {
-                    result[destIndex++] = v.v[d];
-                }
-            }
-            return result;
-        }
-        static lerp(a, b, t) {
-            assert(a.dim() == b.dim());
-            const n = new Float64Array(a.v.length);
-            let i = a.v.length;
-            while (i--) {
-                n[i] = a.v[i] * (1 - t) + b.v[i] * t;
-            }
-            return new Vector(n);
-        }
-        static add(...vs) {
-            const dim = vs[0].v.length;
-            const result = new Float64Array(dim);
-            let i = vs.length;
-            while (i--) {
-                let d = dim;
-                while (d--) {
-                    result[d] += vs[i].v[d];
-                }
-            }
-            return new Vector(result);
-        }
-        /**
-         * Create a new 4D Vector from a V3 and a weight.
-         * @param v3
-         * @param weight
-         */
-        static fromV3AndWeight(v3, weight) {
-            return new Vector(new Float64Array([v3.x * weight, v3.y * weight, v3.z * weight, weight]));
-        }
-        get x() {
-            return this.v[0];
-        }
-        get y() {
-            return this.v[1];
-        }
-        get z() {
-            return this.v[2];
-        }
-        get w() {
-            return this.v[3];
-        }
-        [Symbol.iterator]() {
-            return this.v[Symbol.iterator]();
-        }
-        dim() {
-            return this.v.length;
-        }
-        e(index) {
-            if (0 > index || index >= this.v.length) {
-                throw new Error("array index out of bounds");
-            }
-            return this.v[index];
-        }
-        plus(vector) {
-            const u = this.v, v = vector.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] + v[i];
-            }
-            return new Vector(n);
-        }
-        minus(vector) {
-            const u = this.v, v = vector.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] - v[i];
-            }
-            return new Vector(n);
-        }
-        times(factor) {
-            const u = this.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] * factor;
-            }
-            return new Vector(n);
-        }
-        div(val) {
-            const u = this.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] / val;
-            }
-            return new Vector(n);
-        }
-        dot(vector) {
-            assert(this.dim == vector.dim, "passed vector must have the same dim");
-            let result = 0;
-            const u = this.v, v = vector.v;
-            let i = u.length;
-            while (i--) {
-                result += u[i] * v[i];
-            }
-            return result;
-        }
-        cross(vector) {
-            assertInst(Vector, vector);
-            const n = new Float64Array(3);
-            n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1];
-            n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2];
-            n[2] = this.v[0] * vector.v[1] - this.v[1] * vector.v[0];
-            return new Vector(n);
-        }
-        schur(vector) {
-            assertInst(Vector, vector);
-            const u = this.v, v = vector.v;
-            const n = new Float64Array(u.length);
-            let i = u.length;
-            while (i--) {
-                n[i] = u[i] * v[i];
-            }
-            return new Vector(n);
-        }
-        equals(obj) {
-            if (obj === this)
-                return true;
-            if (obj.constructor !== Vector)
-                return false;
-            if (this.v.length != obj.v.length)
-                return false;
-            let i = this.v.length;
-            while (i--) {
-                if (this.v[i] !== obj.v[i])
-                    return false;
-            }
-            return true;
-        }
-        like(obj) {
-            if (obj === this)
-                return true;
-            if (obj.constructor !== Vector)
-                return false;
-            if (this.v.length != obj.v.length)
-                return false;
-            let i = this.v.length;
-            while (i--) {
-                if (!eq(this.v[i], obj.v[i]))
-                    return false;
-            }
-            return true;
-        }
-        map(f) {
-            return new Vector(this.v.map(f));
-        }
-        toString(roundFunction) {
-            roundFunction = roundFunction || ((v) => +v.toFixed(6));
-            return "Vector(" + this.v.map(roundFunction).join(", ") + ")";
-        }
-        toSource() {
-            return callsce("VV", ...this.v);
-        }
-        angleTo(vector) {
-            assertInst(Vector, vector);
-            assert(!this.isZero(), "!this.likeO()");
-            assert(!vector.isZero(), "!vector.likeO()");
-            return Math.acos(clamp$1(this.dot(vector) / this.length() / vector.length(), -1, 1));
-        }
-        /**
-         * Returns true iff this is parallel to vector, using eq
-         * Throw a DebugError
-         * - if vector is not a Vector or
-         * - if this has a length of 0 or
-         * - if vector has a length of 0
-         */
-        isParallelTo(vector) {
-            assertInst(Vector, vector);
-            assert(!this.isZero(), "!this.likeO()");
-            assert(!vector.isZero(), "!vector.likeO()");
-            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
-            // in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
-            return eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)));
-        }
-        isPerpendicularTo(vector) {
-            assertInst(Vector, vector);
-            assert(!this.isZero(), "!this.likeO()");
-            assert(!vector.isZero(), "!vector.likeO()");
-            return eq0(this.dot(vector));
-        }
-        /**
-         * Returns true iff the length of this vector is 0, as returned by NLA.isZero.
-         * Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
-         */
-        isZero() {
-            return eq0(this.length());
-        }
-        /*/ Returns the length of this Vector, i.e. the euclidian norm.*/
-        length() {
-            return Math.hypot.apply(undefined, this.v);
-            //return Math.sqrt(this.lengthSquared())
-        }
-        lengthSquared() {
-            let result = 0;
-            const u = this.v;
-            let i = u.length;
-            while (i--) {
-                result += u[i] * u[i];
-            }
-            return result;
-        }
-        /**
-         * Returns a new unit Vector (.length() === 1) with the same direction as this vector. Throws a
-         */
-        unit() {
-            const length = this.length();
-            if (eq0(length)) {
-                throw new Error("cannot normalize zero vector");
-            }
-            return this.div(this.length());
-        }
-        /**
-         * Documentation stub. You want {@link unit}
-         */
-        normalized() {
-            throw new Error("documentation stub. use .unit()");
-        }
-        asRowMatrix() {
-            return new Matrix(this.v.length, 1, this.v);
-        }
-        asColMatrix() {
-            return new Matrix(1, this.v.length, this.v);
-        }
-        /**
-         * Returns a new Vector which is the projection of this vector onto the passed vector.
-         * @example
-         * VV(3, 4).projectedOn(VV(1, 0)) // returns VV(3, 0)
-         * @example
-         * VV(3, 4).projectedOn(VV(2, 0)) // returns VV(3, 0)
-         * @example
-         * VV(3, 4).projectedOn(VV(-1, 0)) // returns VV(-3, 0)
-         * @example
-         * VV(3, 4).projectedOn(VV(0, 1)) // returns VV(0, 4)
-         * @example
-         * VV(3, 4).projectedOn(VV(1, 1)) // returns
-         */
-        projectedOn(b) {
-            assertInst(Vector, b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return b.times(this.dot(b) / b.dot(b));
-        }
-        rejectedOn(b) {
-            assertInst(Vector, b);
-            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
-            return this.minus(b.times(this.dot(b) / b.dot(b)));
-        }
-        to(a) {
-            return a.minus(this);
-        }
-        /**
-         * Returns true iff the length() of this vector is equal to 'length', using equals
-         * E.g. NLA.V(3, 4).hasLength(5) === true
-         * NLA.V(1, 1).hasLength(1) === false
-         */
-        hasLength(length) {
-            assertNumbers(length);
-            return eq(length, this.length());
-        }
-        V3() {
-            //assert(this.dim() == 3)
-            return new V3(this.v[0], this.v[1], this.v[2]);
-        }
-        /**
-         * Project into 3 dimensions.
-         */
-        p3() {
-            assert(this.v.length == 4);
-            const w = this.v[3];
-            return new V3(this.v[0] / w, this.v[1] / w, this.v[2] / w);
-        }
-        transposed() {
-            return new Matrix(this.v.length, 1, this.v);
-        }
-    }
-    function VV(...values) {
-        return new Vector(new Float64Array(values));
-    }
-    function vArrGet(vArr, dim, i) {
-        assert(vArr.length % dim == 0);
-        return new Vector(Float64Array.prototype.slice.call(vArr, i * dim, (i + 1) * dim));
-    }
-    function vArrSet(vArr, i, vector) {
-        const dim = vector.dim();
-        assert(vArr.length % dim == 0);
-        let d = dim;
-        while (d--) {
-            vArr[i * dim + d] = vector.v[d];
-        }
-    }
-
-    class Matrix {
-        constructor(width, height, m) {
-            this.width = width;
-            this.height = height;
-            this.m = m;
-            assertInts(width, height);
-            assertf(() => 0 < width);
-            assertf(() => 0 < height);
-            assert(width * height == m.length, "width * height == m.length", width, height, m.length);
-        }
-        static random(width, height) {
-            return Matrix.fromFunction(width, height, () => Math.random());
-        }
-        static fromFunction(width, height, f) {
-            const m = new Float64Array(height * width);
-            let elIndex = height * width;
-            while (elIndex--) {
-                m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
-            }
-            return new Matrix(width, height, m);
-        }
-        static identityN(dim) {
-            assertInts(dim);
-            const m = new Float64Array(dim * dim);
-            // Float64Arrays are init to 0
-            let elIndex = dim * (dim + 1);
-            while (elIndex) {
-                elIndex -= dim + 1;
-                m[elIndex] = 1;
-            }
-            return new Matrix(dim, dim, m);
-        }
-        /**
-         * Create new dim x dim matrix equal to an identity matrix with rows/colums i and k swapped. Note that i and k
-         * are 0-indexed.
-         */
-        static permutation(dim, i, k) {
-            assertInts(dim, i, k);
-            assertf(() => 0 <= i && i < dim);
-            assertf(() => 0 <= k && k < dim);
-            const m = new Float64Array(dim * dim);
-            // Float64Array are init to 0
-            let elIndex = dim * (dim + 1);
-            while (elIndex) {
-                elIndex -= dim + 1;
-                m[elIndex] = 1;
-            }
-            m[i * dim + i] = 0;
-            m[k * dim + k] = 0;
-            m[i * dim + k] = 1;
-            m[k * dim + i] = 1;
-            return new Matrix(dim, dim, m);
-        }
-        static fromRowArrays(...rowArrays) {
-            if (0 == rowArrays.length) {
-                throw new Error("cannot have 0 vector");
-            }
-            const height = rowArrays.length;
-            const width = rowArrays[0].length;
-            const m = new Float64Array(height * width);
-            arrayCopy(rowArrays[0], 0, m, 0, width);
-            for (let rowIndex = 1; rowIndex < height; rowIndex++) {
-                if (rowArrays[rowIndex].length != width) {
-                    throw new Error("all row arrays must be the same length");
-                }
-                arrayCopy(rowArrays[rowIndex], 0, m, rowIndex * width, width);
-            }
-            return this.new(width, height, m);
-        }
-        static fromColVectors(colVectors) {
-            return Matrix.fromColArrays(...colVectors.map((v) => v.v));
-        }
-        static forWidthHeight(width, height) {
-            return new Matrix(width, height, new Float64Array(width * height));
-        }
-        static fromColArrays(...colArrays) {
-            if (0 == colArrays.length) {
-                throw new Error("cannot have 0 vector");
-            }
-            const width = colArrays.length;
-            const height = colArrays[0].length;
-            const m = new Float64Array(height * width);
-            arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height);
-            for (let colIndex = 1; colIndex < width; colIndex++) {
-                if (colArrays[colIndex].length != height) {
-                    throw new Error("all col arrays must be the same length");
-                }
-                arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height);
-            }
-            return this.new(width, height, m);
-        }
-        static product(...args) {
-            const [ms, result] = Array.isArray(args[0])
-                ? [args[0], args[1]]
-                : [args, undefined];
-            if (0 == ms.length)
-                throw new Error("Can't guess matrix size.");
-            if (1 == ms.length)
-                return Matrix.copy(ms[0], result);
-            return Matrix.copy(ms.reduce((a, b) => a.times(b)), result);
-        }
-        /**
-         * Numerically calculate all the partial derivatives of f at x0.
-         *
-         * @param f
-         * @param x0
-         * @param fx0 f(x0), pass it if you have it already
-         * @param EPSILON
-         */
-        static jacobi(f, x0, fx0 = f(x0), EPSILON = 1e-6) {
-            const jacobi = Matrix.forWidthHeight(x0.length, fx0.length);
-            for (let colIndex = 0; colIndex < x0.length; colIndex++) {
-                x0[colIndex] += EPSILON;
-                const fx = f(x0);
-                for (let rowIndex = 0; rowIndex < fx0.length; rowIndex++) {
-                    const value = (fx[rowIndex] - fx0[rowIndex]) / EPSILON;
-                    jacobi.setEl(rowIndex, colIndex, value);
-                }
-                x0[colIndex] -= EPSILON;
-            }
-            return jacobi;
-        }
-        static copy(src, result = src.new()) {
-            assertInst(Matrix, src, result);
-            assert(src.width == result.width);
-            assert(src.height == result.height);
-            assert(result != src, "result != src");
-            const s = src.m, d = result.m;
-            let i = s.length;
-            while (i--) {
-                d[i] = s[i];
-            }
-            return result;
-        }
-        static new(width, height, m) {
-            return new Matrix(width, height, m);
-        }
-        copy() {
-            return Matrix.copy(this);
-        }
-        e(rowIndex, colIndex) {
-            assertInts(rowIndex, colIndex);
-            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
-            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
-            return this.m[rowIndex * this.width + colIndex];
-        }
-        setEl(rowIndex, colIndex, val) {
-            assertInts(rowIndex, colIndex);
-            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
-            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
-            assertNumbers(val);
-            this.m[rowIndex * this.width + colIndex] = val;
-        }
-        plus(m) {
-            assert(this.width == m.width);
-            assert(this.height == m.height);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] + m.m[i];
-            return r;
-        }
-        minus(m) {
-            assert(this.width == m.width);
-            assert(this.height == m.height);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] - m.m[i];
-            return r;
-        }
-        mulScalar(scalar) {
-            assertNumbers(scalar);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] * scalar;
-            return r;
-        }
-        divScalar(scalar) {
-            assertNumbers(scalar);
-            const r = this.new();
-            let i = this.m.length;
-            while (i--)
-                r.m[i] = this.m[i] / scalar;
-            return r;
-        }
-        new() {
-            return new Matrix(this.width, this.height, new Float64Array(this.width * this.height));
-        }
-        toString(f, colNames, rowNames) {
-            f = f || ((v) => v.toFixed(6));
-            assert(typeof f(0) == "string", "" + typeof f(0));
-            assert(!colNames || colNames.length == this.width);
-            assert(!rowNames || rowNames.length == this.height);
-            const rounded = Array.from(this.m).map(f);
-            const rows = arrayFromFunction(this.height, (rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width)); // select matrix row
-            if (colNames) {
-                rows.unshift(Array.from(colNames));
-            }
-            if (rowNames) {
-                rows.forEach((row, rowIndex) => row.unshift(rowNames[rowIndex - (colNames ? 1 : 0)] || ""));
-            }
-            const colWidths = arrayFromFunction(this.width, (colIndex) => max$1(rows.map((row) => row[colIndex].length)));
-            return rows
-                .map((row, rowIndex) => row
-                .map((x, colIndex) => {
-                // pad numbers with spaces to col width
-                const padder = (rowIndex == 0 && colNames) || (colIndex == 0 && rowNames)
-                    ? String.prototype.padEnd
-                    : String.prototype.padStart;
-                return padder.call(x, colWidths[colIndex]);
-            })
-                .join("  "))
-                .map((x) => x + "\n")
-                .join(""); // join rows
-        }
-        row(rowIndex) {
-            assertInts(rowIndex);
-            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
-            const v = new Float64Array(this.width);
-            arrayCopy(this.m, rowIndex * this.width, v, 0, this.width);
-            return new Vector(v);
-        }
-        col(colIndex) {
-            assertInts(colIndex);
-            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
-            const v = new Float64Array(this.height);
-            arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height);
-            return new Vector(v);
-        }
-        dim() {
-            return { width: this.width, height: this.height };
-        }
-        dimString() {
-            return this.width + "x" + this.height;
-        }
-        equals(obj) {
-            if (obj.constructor != this.constructor)
-                return false;
-            if (this.width != obj.width || this.height != obj.height)
-                return false;
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                if (this.m[elIndex] != obj.m[elIndex])
-                    return false;
-            }
-            return true;
-        }
-        equalsMatrix(matrix, precision = NLA_PRECISION) {
-            assertInst(Matrix, matrix);
-            if (this.width != matrix.width || this.height != matrix.height)
-                return false;
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) > precision)
-                    return false;
-            }
-            return true;
-        }
-        hashCode() {
-            let result = 0;
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                result = result * 31 + floatHashCode(this.m[elIndex]);
-            }
-            return result;
-        }
-        // todo rename
-        isZero() {
-            let elIndex = this.m.length;
-            while (elIndex--) {
-                if (!eq0(this.m[elIndex])) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        isOrthogonal() {
-            return (this.isSquare() &&
-                this.transposed().times(this).equalsMatrix(Matrix.identityN(this.width)));
-        }
-        /**
-         * Returns L, U, P such that L * U == P * this
-         */
-        luDecomposition() {
-            assertf(() => this.isSquare(), this.dim().toSource());
-            const dim = this.width;
-            const uRowArrays = this.asRowArrays(Float64Array);
-            const lRowArrays = arrayFromFunction(dim, (row) => new Float64Array(dim));
-            const pRowArrays = Matrix.identityN(dim).asRowArrays(Float64Array);
-            let currentRowIndex = 0;
-            for (let colIndex = 0; colIndex < dim; colIndex++) {
-                // find largest value in colIndex
-                let maxAbsValue = 0, pivotRowIndex = -1, numberOfNonZeroRows = 0;
-                for (let rowIndex = currentRowIndex; rowIndex < dim; rowIndex++) {
-                    const el = uRowArrays[rowIndex][colIndex];
-                    numberOfNonZeroRows += +(0 != el);
-                    if (Math.abs(el) > maxAbsValue) {
-                        maxAbsValue = Math.abs(el);
-                        pivotRowIndex = rowIndex;
-                    }
-                }
-                // TODO: check with isZero
-                if (0 == maxAbsValue) {
-                    // column contains only zeros
-                    continue;
-                }
-                assert(-1 !== pivotRowIndex);
-                // swap rows
-                arraySwap(uRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(lRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(pRowArrays, currentRowIndex, pivotRowIndex);
-                lRowArrays[colIndex][colIndex] = 1;
-                if (1 < numberOfNonZeroRows) {
-                    // subtract pivot (now current) row from all below it
-                    for (let rowIndex = currentRowIndex + 1; rowIndex < dim; rowIndex++) {
-                        const l = uRowArrays[rowIndex][colIndex] /
-                            uRowArrays[currentRowIndex][colIndex];
-                        lRowArrays[rowIndex][colIndex] = l;
-                        // subtract pivot row * l from row 'rowIndex'
-                        for (let colIndex2 = colIndex; colIndex2 < dim; colIndex2++) {
-                            uRowArrays[rowIndex][colIndex2] -=
-                                l * uRowArrays[currentRowIndex][colIndex2];
-                        }
-                    }
-                }
-                currentRowIndex++; // this doesn't increase if pivot was zero
-            }
-            return {
-                L: Matrix.fromRowArrays(...lRowArrays),
-                U: Matrix.fromRowArrays(...uRowArrays),
-                P: Matrix.fromRowArrays(...pRowArrays),
-            };
-        }
-        gauss() {
-            const width = this.width, height = this.height;
-            const uRowArrays = this.asRowArrays(Float64Array);
-            const lRowArrays = arrayFromFunction(height, (row) => new Float64Array(width));
-            const pRowArrays = Matrix.identityN(height).asRowArrays(Float64Array);
-            let currentRowIndex = 0;
-            for (let colIndex = 0; colIndex < width; colIndex++) {
-                // console.log('currentRowIndex', currentRowIndex)	// find largest value in colIndex
-                let maxAbsValue = 0, pivotRowIndex = -1, numberOfNonZeroRows = 0;
-                for (let rowIndex = currentRowIndex; rowIndex < height; rowIndex++) {
-                    const el = uRowArrays[rowIndex][colIndex];
-                    numberOfNonZeroRows += +(0 != el);
-                    if (Math.abs(el) > maxAbsValue) {
-                        maxAbsValue = Math.abs(el);
-                        pivotRowIndex = rowIndex;
-                    }
-                }
-                // TODO: check with isZero
-                if (0 == maxAbsValue) {
-                    // column contains only zeros
-                    continue;
-                }
-                assert(-1 !== pivotRowIndex);
-                // swap rows
-                arraySwap(uRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(lRowArrays, currentRowIndex, pivotRowIndex);
-                arraySwap(pRowArrays, currentRowIndex, pivotRowIndex);
-                lRowArrays[currentRowIndex][colIndex] = 1;
-                if (1 < numberOfNonZeroRows) {
-                    // subtract pivot (now current) row from all below it
-                    for (let rowIndex = currentRowIndex + 1; rowIndex < height; rowIndex++) {
-                        const l = uRowArrays[rowIndex][colIndex] /
-                            uRowArrays[currentRowIndex][colIndex];
-                        lRowArrays[rowIndex][colIndex] = l;
-                        // subtract pivot row * l from row 'rowIndex'
-                        for (let colIndex2 = colIndex; colIndex2 < width; colIndex2++) {
-                            uRowArrays[rowIndex][colIndex2] -=
-                                l * uRowArrays[currentRowIndex][colIndex2];
-                        }
-                    }
-                }
-                currentRowIndex++; // this doesn't increase if pivot was zero
-            }
-            return {
-                L: Matrix.fromRowArrays(...lRowArrays),
-                U: Matrix.fromRowArrays(...uRowArrays),
-                P: Matrix.fromRowArrays(...pRowArrays),
-            };
-        }
-        qrDecompositionGivensRotation() {
-            // function sigma(c: number, s: number) {
-            // 	if (0 == c) {
-            // 		return 1
-            // 	}
-            // 	if (Math.abs(s) < Math.abs(c)) {
-            // 		return 0.5 * Math.sign(c) * s
-            // 	}
-            // 	return (2 * Math.sign(s)) / c
-            // }
-            const R = this.copy();
-            function matrixForCS(dim, i, k, c, s) {
-                const m = Matrix.identityN(dim);
-                m.setEl(i, i, c);
-                m.setEl(k, k, c);
-                m.setEl(i, k, s);
-                m.setEl(k, i, -s);
-                return m;
-            }
-            let qTransposed = Matrix.identityN(this.height);
-            for (let colIndex = 0; colIndex < this.width; colIndex++) {
-                // find largest value in colIndex
-                for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
-                    //console.log('row ', rowIndex, 'col ', colIndex)
-                    const xi = R.e(colIndex, colIndex);
-                    const xk = R.e(rowIndex, colIndex);
-                    if (xk == 0) {
-                        continue;
-                    }
-                    const r = Math.hypot(xi, xk);
-                    const c = xi / r;
-                    const s = xk / r;
-                    // apply transformation on every column:
-                    for (let col2 = colIndex; col2 < this.width; col2++) {
-                        const x1 = R.e(colIndex, col2) * c + R.e(rowIndex, col2) * s;
-                        const x2 = R.e(rowIndex, col2) * c - R.e(colIndex, col2) * s;
-                        R.setEl(colIndex, col2, x1);
-                        R.setEl(rowIndex, col2, x2);
-                    }
-                    //console.log('r ', r, 'c ', c, 's ', s, 'sigma', sigma(c, s))
-                    //console.log(this.toString(),'cs\n', matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
-                    qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed);
-                }
-            }
-            //console.log(qTransposed.transposed().toString(), this.toString(),
-            // qTransposed.transposed().times(this).toString())
-            return { Q: qTransposed.transposed(), R };
-        }
-        isPermutation() {
-            if (!this.isSquare())
-                return false;
-            if (this.m.some((value) => !eq0(value) && !eq(1, value)))
-                return false;
-            const rows = this.asRowArrays(Array);
-            if (rows.some((row) => row.filter((value) => eq(1, value)).length != 1))
-                return false;
-            const cols = this.asColArrays(Array);
-            if (cols.some((col) => col.filter((value) => eq(1, value)).length != 1))
-                return false;
-            return true;
-        }
-        isDiagonal(precision) {
-            let i = this.m.length;
-            while (i--) {
-                if (0 !== i % (this.width + 1) && !eq0(this.m[i]))
-                    return false;
-            }
-            return true;
-        }
-        isIdentity(precision) {
-            return (this.isLowerUnitriangular(precision) && this.isUpperTriangular(precision));
-        }
-        isUpperTriangular(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 1; rowIndex < this.height; rowIndex++) {
-                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
-                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        isSymmetric(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    const a = this.m[rowIndex * this.width + colIndex];
-                    const b = this.m[colIndex * this.width + rowIndex];
-                    if (!eq(a, b, precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        /**
-         * Returns x, so that this * x = b
-         * More efficient than calculating the inverse for few (~ <= this.height) values
-         */
-        solveLinearSystem(b) {
-            assertInst(Vector, b);
-            const { L, U, P } = this.luDecomposition();
-            const y = L.solveForwards(P.timesVector(b));
-            const x = U.solveBackwards(y);
-            return x;
-        }
-        isLowerUnitriangular(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-                for (let colIndex = rowIndex; colIndex < this.width; colIndex++) {
-                    const el = this.m[rowIndex * this.width + colIndex];
-                    if (rowIndex == colIndex ? !eq(1, el, precision) : !eq0(el, precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        isLowerTriangular(precision = NLA_PRECISION) {
-            if (!this.isSquare())
-                return false;
-            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
-                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        solveBackwards(x) {
-            assertVectors(x);
-            assert(this.height == x.dim(), "this.height == x.dim()");
-            assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.str);
-            const v = new Float64Array(this.width);
-            let rowIndex = this.height;
-            while (rowIndex--) {
-                let temp = x.v[rowIndex];
-                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
-                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
-                }
-                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
-            }
-            return new Vector(v);
-        }
-        solveBackwardsMatrix(matrix) {
-            const colVectors = new Array(matrix.width);
-            let i = matrix.width;
-            while (i--) {
-                colVectors[i] = this.solveBackwards(matrix.col(i));
-            }
-            return Matrix.fromColVectors(colVectors);
-        }
-        solveForwardsMatrix(matrix) {
-            const colVectors = new Array(matrix.width);
-            let i = matrix.width;
-            while (i--) {
-                colVectors[i] = this.solveForwards(matrix.col(i));
-            }
-            return Matrix.fromColVectors(colVectors);
-        }
-        solveForwards(x) {
-            assertVectors(x);
-            assert(this.height == x.dim(), "this.height == x.dim()");
-            assertf(() => this.isLowerTriangular(), this.toString());
-            const v = new Float64Array(this.width);
-            for (let rowIndex = 0; rowIndex < this.height; rowIndex++) {
-                let temp = x.v[rowIndex];
-                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
-                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
-                }
-                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
-            }
-            return new Vector(v);
-        }
-        /**
-         * Calculates rank of matrix.
-         * Number of linearly independant row/column vectors.
-         * Is equal to the unmber of dimensions the image of the affine transformation represented this matrix has.
-         */
-        rank() {
-            const U = this.gauss().U;
-            let rowIndex = this.height;
-            while (rowIndex-- && U.row(rowIndex).isZero()) { }
-            return rowIndex + 1;
-        }
-        rowsIndependent() {
-            return this.height == this.rank();
-        }
-        colsIndependent() {
-            return this.width == this.rank();
-        }
-        asRowArrays(arrayConstructor = Float64Array) {
-            return arrayFromFunction(this.height, (rowIndex) => this.rowArray(rowIndex, arrayConstructor));
-        }
-        asColArrays(arrayConstructor = Float64Array) {
-            return arrayFromFunction(this.width, (colIndex) => this.colArray(colIndex, arrayConstructor));
-        }
-        rowArray(rowIndex, arrayConstructor = Float64Array) {
-            const result = new arrayConstructor(this.width);
-            return arrayCopy(this.m, rowIndex * this.width, result, 0, this.width);
-        }
-        colArray(colIndex, arrayConstructor = Float64Array) {
-            const result = new arrayConstructor(this.width);
-            arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height);
-            return result;
-        }
-        subMatrix(firstColIndex, subWidth, firstRowIndex, subHeight) {
-            assert(0 < firstColIndex && 0 < subWidth && 0 < firstRowIndex && 0 < subHeight);
-            assert(firstColIndex + subWidth <= this.width &&
-                firstRowIndex + subHeight <= this.height);
-            const m = new Float64Array(subWidth * subHeight);
-            arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth);
-            return new Matrix(subWidth, subHeight, m);
-        }
-        map(fn) {
-            return new Matrix(this.width, this.height, this.m.map(fn));
-        }
-        dimEquals(matrix) {
-            assertInst(Matrix, matrix);
-            return this.width == matrix.width && this.height == matrix.height;
-        }
-        inversed() {
-            if (this.isSquare()) {
-                if (2 == this.width)
-                    return this.inversed2();
-                if (3 == this.width)
-                    return this.inversed3();
-                if (4 == this.width)
-                    return this.inversed4();
-            }
-            const { L, U, P } = this.luDecomposition();
-            const y = L.solveForwardsMatrix(P);
-            const inverse = U.solveBackwardsMatrix(y);
-            return inverse;
-        }
-        inversed2() {
-            assertf(() => 2 == this.width && 2 == this.height);
-            const result = Matrix.forWidthHeight(2, 2), m = this.m, r = result.m;
-            const det = m[0] * m[3] - m[1] * r[2];
-            r[0] = m[3] / det;
-            r[1] = -m[2] / det;
-            r[2] = -m[1] / det;
-            r[3] = m[0] / det;
-            return result;
-        }
-        inversed3(result = Matrix.forWidthHeight(3, 3)) {
-            assertInst(Matrix, result);
-            assertf(() => 3 == this.width && 3 == this.height);
-            assertf(() => 3 == result.width && 3 == result.height);
-            assert(() => this != result);
-            const m = this.m, r = result.m;
-            r[0] = m[4] * m[8] - m[5] * m[7];
-            r[1] = -m[1] * m[8] + m[2] * m[7];
-            r[2] = m[1] * m[5] - m[2] * m[4];
-            r[3] = -m[3] * m[8] + m[5] * m[6];
-            r[4] = m[0] * m[8] - m[2] * m[6];
-            r[5] = -m[0] * m[5] + m[2] * m[3];
-            r[6] = m[3] * m[7] - m[4] * m[6];
-            r[7] = -m[0] * m[7] + m[1] * m[6];
-            r[8] = m[0] * m[4] - m[1] * m[3];
-            const det = m[0] * r[0] + m[1] * r[3] + m[2] * r[6];
-            let i = 9;
-            while (i--) {
-                r[i] /= det;
-            }
-            return result;
-        }
-        // prettier-ignore
-        inversed4(result = Matrix.forWidthHeight(4, 4)) {
-            assertInst(Matrix, result);
-            assertf(() => 4 == this.width && 4 == this.height);
-            assertf(() => 4 == result.width && 4 == result.height);
-            assert(() => this != result);
-            const m = this.m, r = result.m;
-            // first compute transposed cofactor matrix:
-            // cofactor of an element is the determinant of the 3x3 matrix gained by removing the column and row belonging
-            // to the element
-            r[0] = m[5] * m[10] * m[15] - m[5] * m[14] * m[11] - m[6] * m[9] * m[15]
-                + m[6] * m[13] * m[11] + m[7] * m[9] * m[14] - m[7] * m[13] * m[10];
-            r[1] = -m[1] * m[10] * m[15] + m[1] * m[14] * m[11] + m[2] * m[9] * m[15]
-                - m[2] * m[13] * m[11] - m[3] * m[9] * m[14] + m[3] * m[13] * m[10];
-            r[2] = m[1] * m[6] * m[15] - m[1] * m[14] * m[7] - m[2] * m[5] * m[15]
-                + m[2] * m[13] * m[7] + m[3] * m[5] * m[14] - m[3] * m[13] * m[6];
-            r[3] = -m[1] * m[6] * m[11] + m[1] * m[10] * m[7] + m[2] * m[5] * m[11]
-                - m[2] * m[9] * m[7] - m[3] * m[5] * m[10] + m[3] * m[9] * m[6];
-            r[4] = -m[4] * m[10] * m[15] + m[4] * m[14] * m[11] + m[6] * m[8] * m[15]
-                - m[6] * m[12] * m[11] - m[7] * m[8] * m[14] + m[7] * m[12] * m[10];
-            r[5] = m[0] * m[10] * m[15] - m[0] * m[14] * m[11] - m[2] * m[8] * m[15]
-                + m[2] * m[12] * m[11] + m[3] * m[8] * m[14] - m[3] * m[12] * m[10];
-            r[6] = -m[0] * m[6] * m[15] + m[0] * m[14] * m[7] + m[2] * m[4] * m[15]
-                - m[2] * m[12] * m[7] - m[3] * m[4] * m[14] + m[3] * m[12] * m[6];
-            r[7] = m[0] * m[6] * m[11] - m[0] * m[10] * m[7] - m[2] * m[4] * m[11]
-                + m[2] * m[8] * m[7] + m[3] * m[4] * m[10] - m[3] * m[8] * m[6];
-            r[8] = m[4] * m[9] * m[15] - m[4] * m[13] * m[11] - m[5] * m[8] * m[15]
-                + m[5] * m[12] * m[11] + m[7] * m[8] * m[13] - m[7] * m[12] * m[9];
-            r[9] = -m[0] * m[9] * m[15] + m[0] * m[13] * m[11] + m[1] * m[8] * m[15]
-                - m[1] * m[12] * m[11] - m[3] * m[8] * m[13] + m[3] * m[12] * m[9];
-            r[10] = m[0] * m[5] * m[15] - m[0] * m[13] * m[7] - m[1] * m[4] * m[15]
-                + m[1] * m[12] * m[7] + m[3] * m[4] * m[13] - m[3] * m[12] * m[5];
-            r[11] = -m[0] * m[5] * m[11] + m[0] * m[9] * m[7] + m[1] * m[4] * m[11]
-                - m[1] * m[8] * m[7] - m[3] * m[4] * m[9] + m[3] * m[8] * m[5];
-            r[12] = -m[4] * m[9] * m[14] + m[4] * m[13] * m[10] + m[5] * m[8] * m[14]
-                - m[5] * m[12] * m[10] - m[6] * m[8] * m[13] + m[6] * m[12] * m[9];
-            r[13] = m[0] * m[9] * m[14] - m[0] * m[13] * m[10] - m[1] * m[8] * m[14]
-                + m[1] * m[12] * m[10] + m[2] * m[8] * m[13] - m[2] * m[12] * m[9];
-            r[14] = -m[0] * m[5] * m[14] + m[0] * m[13] * m[6] + m[1] * m[4] * m[14]
-                - m[1] * m[12] * m[6] - m[2] * m[4] * m[13] + m[2] * m[12] * m[5];
-            r[15] = m[0] * m[5] * m[10] - m[0] * m[9] * m[6] - m[1] * m[4] * m[10]
-                + m[1] * m[8] * m[6] + m[2] * m[4] * m[9] - m[2] * m[8] * m[5];
-            // calculate determinant using laplace expansion (cf https://en.wikipedia.org/wiki/Laplace_expansion),
-            // as we already have the cofactors. We multiply a column by a row as the cofactor matrix is transposed.
-            const det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12];
-            // assert(!isZero(det), 'det may not be zero, i.e. the matrix is not invertible')
-            let i = 16;
-            while (i--) {
-                r[i] /= det;
-            }
-            return result;
-        }
-        canMultiply(matrix) {
-            assertInst(Matrix, matrix);
-            return this.width == matrix.height;
-        }
-        times(matrix) {
-            assertInst(Matrix, matrix);
-            assert(this.canMultiply(matrix), `Cannot multiply this {this.dimString()} by matrix {matrix.dimString()}`);
-            const nWidth = matrix.width, nHeight = this.height, n = this.width;
-            const nM = new Float64Array(nWidth * nHeight);
-            let nRowIndex = nHeight;
-            while (nRowIndex--) {
-                let nColIndex = nWidth;
-                while (nColIndex--) {
-                    let result = 0;
-                    let i = n;
-                    while (i--) {
-                        result += this.m[nRowIndex * n + i] * matrix.m[i * nWidth + nColIndex];
-                    }
-                    nM[nRowIndex * nWidth + nColIndex] = result;
-                }
-            }
-            return new Matrix(nWidth, nHeight, nM);
-        }
-        timesVector(v) {
-            assertVectors(v);
-            assert(this.width == v.dim());
-            const nHeight = this.height, n = this.width;
-            const nM = new Float64Array(nHeight);
-            let nRowIndex = nHeight;
-            while (nRowIndex--) {
-                let result = 0;
-                let i = n;
-                while (i--) {
-                    result += this.m[nRowIndex * n + i] * v.v[i];
-                }
-                nM[nRowIndex] = result;
-            }
-            return new Vector(nM);
-        }
-        transposed() {
-            const tWidth = this.height, tHeight = this.width;
-            const tM = new Float64Array(tWidth * tHeight);
-            let tRowIndex = tHeight;
-            while (tRowIndex--) {
-                let tColIndex = tWidth;
-                while (tColIndex--) {
-                    tM[tRowIndex * tWidth + tColIndex] = this.m[tColIndex * tHeight + tRowIndex];
-                }
-            }
-            return new Matrix(tWidth, tHeight, tM);
-        }
-        /**
-         * In-place transpose.
-         */
-        transpose() {
-            const h = this.height, w = this.width, tM = this.m;
-            let tRowIndex = h;
-            while (tRowIndex--) {
-                let tColIndex = Math.min(tRowIndex, w);
-                while (tColIndex--) {
-                    const temp = tM[tRowIndex * w + tColIndex];
-                    tM[tRowIndex * w + tColIndex] = tM[tColIndex * h + tRowIndex];
-                    tM[tColIndex * h + tRowIndex] = temp;
-                }
-            }
-            this.width = h;
-            this.height = w;
-        }
-        isSquare() {
-            return this.height == this.width;
-        }
-        diagonal() {
-            if (!this.isSquare()) {
-                throw new Error("!!");
-            }
-            const v = new Float64Array(this.width);
-            let elIndex = this.width * (this.width + 1);
-            let vIndex = this.width;
-            while (vIndex--) {
-                elIndex -= this.width + 1;
-                v[vIndex] = this.m[elIndex];
-            }
-            return new Vector(v);
-        }
-        maxEl() {
-            return max$1(this.m);
-        }
-        minEl() {
-            return min$1(this.m);
-        }
-        maxAbsColSum() {
-            let result = 0;
-            let colIndex = this.width;
-            while (colIndex--) {
-                let absSum = 0;
-                let rowIndex = this.height;
-                while (rowIndex--) {
-                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
-                }
-                result = Math.max(result, absSum);
-            }
-            return result;
-        }
-        maxAbsRowSum() {
-            let result = 0;
-            let rowIndex = this.height;
-            while (rowIndex--) {
-                let absSum = 0;
-                let colIndex = this.width;
-                while (colIndex--) {
-                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
-                }
-                result = Math.max(result, absSum);
-            }
-            return result;
-        }
-        getTriangularDeterminant() {
-            assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix");
-            let product = 1;
-            let elIndex = this.width * (this.width + 1);
-            while (elIndex) {
-                elIndex -= this.width + 1;
-                product *= this.m[elIndex];
-            }
-            return product;
-        }
-        /**
-         * Calculates the determinant by first calculating the LU decomposition. If you already have that, use
-         * U.getTriangularDeterminant()
-         */
-        getDeterminant() {
-            // PA = LU
-            // det(A) * det(B) = det(A * B)
-            // det(P) == 1 (permutation matrix)
-            // det(L) == 1 (main diagonal is 1s
-            // =>  det(A) == det(U)
-            return this.luDecomposition().U.getTriangularDeterminant();
-        }
-        hasFullRank() {
-            return Math.min(this.width, this.height) == this.rank();
-        }
-        permutationAsIndexMap() {
-            assertf(() => this.isPermutation());
-            const result = new Array(this.height);
-            let i = this.height;
-            while (i--) {
-                const searchIndexStart = i * this.width;
-                let searchIndex = searchIndexStart;
-                while (this.m[searchIndex] < 0.5)
-                    searchIndex++;
-                result[i] = searchIndex - searchIndexStart;
-            }
-            return result;
-        }
-        getDependentRowIndexes(gauss = this.gauss()) {
-            const { L, U, P } = gauss;
-            // rows which end up as zero vectors in U are not linearly independent
-            const dependents = new Array(this.height);
-            let uRowIndex = this.height;
-            while (uRowIndex--) {
-                const uRow = U.row(uRowIndex);
-                if (uRow.length() < NLA_PRECISION) {
-                    dependents[uRowIndex] = true;
-                }
-                else {
-                    break;
-                }
-            }
-            // figure out from which other rows the rows which end up as zero vectors are created by
-            let lRowIndex = this.height;
-            while (lRowIndex--) {
-                if (dependents[lRowIndex]) {
-                    let lColIndex = Math.min(lRowIndex, this.width);
-                    while (lColIndex--) {
-                        if (0 !== L.e(lRowIndex, lColIndex)) {
-                            dependents[lColIndex] = true;
-                        }
-                    }
-                }
-            }
-            console.log("m\n", this.toString((x) => "" + x));
-            console.log("L\n", L.toString((x) => "" + x));
-            console.log("U\n", U.toString((x) => "" + x));
-            console.log("P\n", P.toString((x) => "" + x));
-            // gauss algorithm permutes the order of the rows, so map our results back to the original indices
-            const indexMap = P.permutationAsIndexMap();
-            const dependentRowIndexes = dependents
-                .map((b, index) => b && indexMap[index])
-                .filter((x) => x != undefined);
-            return dependentRowIndexes;
-        }
-        lerp(b, t, result = this.new()) {
-            assertInst(Matrix, b, result);
-            assertNumbers(t);
-            assert(this.width == b.width && this.height == b.height);
-            const s = 1 - t;
-            let i = this.m.length;
-            while (i--) {
-                result.m[i] = s * this.m[i] + t * b.m[i];
-            }
-            return result;
-        }
-    }
-
-    const { PI: PI$1$1, abs: abs$1 } = Math;
-    // tslint:enable:member-ordering
-    class M4 extends Matrix {
-        /**
-         * Takes 16 arguments in row-major order, which can be passed individually, as a list, or even as
-         * four lists, one for each row. If the arguments are omitted then the identity matrix is constructed instead.
-         *
-         *  0  1  2  3
-         *  4  5  6  7
-         *  8  9 10 11
-         * 12 13 14 15
-         */
-        constructor(...var_args) {
-            let m;
-            if (0 == var_args.length) {
-                m = new Float64Array(16);
-            }
-            else {
-                const flattened = concatenated(var_args);
-                assert(flattened.length == 16, "flattened.length == 16 " + flattened.length);
-                m = new Float64Array(flattened);
-            }
-            super(4, 4, m);
-        }
-        /**
-         * Returns the matrix that when multiplied with `matrix` results in the
-         * identity matrix. You can optionally pass an existing matrix in `result`
-         * to avoid allocating a new matrix. This implementation is from the Mesa
-         * OpenGL function `__gluInvertMatrixd()` found in `project.c`.
-         */
-        static inverse(matrix, result = new M4()) {
-            return matrix.inversed4(result);
-        }
-        /**
-         * Create new dim x dim matrix equal to an identity matrix with rows/colums i and k swapped. Note that i and k
-         * are 0-indexed.
-         */
-        static permutation4(i, k, result = new M4()) {
-            assertInts(i, k);
-            assertf(() => 0 <= i && i < 4);
-            assertf(() => 0 <= k && k < 4);
-            const m = result.m;
-            M4.identity(result);
-            m[i * 4 + i] = 0;
-            m[k * 4 + k] = 0;
-            m[i * 4 + k] = 1;
-            m[k * 4 + i] = 1;
-            return result;
-        }
-        /**
-         * Returns `matrix`, exchanging columns for rows. You can optionally pass an
-         * existing matrix in `result` to avoid allocating a new matrix.
-         */
-        static transpose(matrix, result = new M4()) {
-            assertInst(M4, matrix);
-            assertInst(M4, result);
-            assert(matrix != result, "matrix != result");
-            const m = matrix.m, r = result.m;
-            r[0] = m[0];
-            r[1] = m[4];
-            r[2] = m[8];
-            r[3] = m[12];
-            r[4] = m[1];
-            r[5] = m[5];
-            r[6] = m[9];
-            r[7] = m[13];
-            r[8] = m[2];
-            r[9] = m[6];
-            r[10] = m[10];
-            r[11] = m[14];
-            r[12] = m[3];
-            r[13] = m[7];
-            r[14] = m[11];
-            r[15] = m[15];
-            return result;
-        }
-        /**
-         * Returns the concatenation of the transforms for `left` and `right`.
-         */
-        static multiply(left, right, result = new M4()) {
-            assertInst(M4, left, right);
-            assertInst(M4, result);
-            assert(left != result, "left != result");
-            assert(right != result, "right != result");
-            const a = left.m, b = right.m, r = result.m;
-            r[0] = a[0] * b[0] + a[1] * b[4] + (a[2] * b[8] + a[3] * b[12]);
-            r[1] = a[0] * b[1] + a[1] * b[5] + (a[2] * b[9] + a[3] * b[13]);
-            r[2] = a[0] * b[2] + a[1] * b[6] + (a[2] * b[10] + a[3] * b[14]);
-            r[3] = a[0] * b[3] + a[1] * b[7] + (a[2] * b[11] + a[3] * b[15]);
-            r[4] = a[4] * b[0] + a[5] * b[4] + (a[6] * b[8] + a[7] * b[12]);
-            r[5] = a[4] * b[1] + a[5] * b[5] + (a[6] * b[9] + a[7] * b[13]);
-            r[6] = a[4] * b[2] + a[5] * b[6] + (a[6] * b[10] + a[7] * b[14]);
-            r[7] = a[4] * b[3] + a[5] * b[7] + (a[6] * b[11] + a[7] * b[15]);
-            r[8] = a[8] * b[0] + a[9] * b[4] + (a[10] * b[8] + a[11] * b[12]);
-            r[9] = a[8] * b[1] + a[9] * b[5] + (a[10] * b[9] + a[11] * b[13]);
-            r[10] = a[8] * b[2] + a[9] * b[6] + (a[10] * b[10] + a[11] * b[14]);
-            r[11] = a[8] * b[3] + a[9] * b[7] + (a[10] * b[11] + a[11] * b[15]);
-            r[12] = a[12] * b[0] + a[13] * b[4] + (a[14] * b[8] + a[15] * b[12]);
-            r[13] = a[12] * b[1] + a[13] * b[5] + (a[14] * b[9] + a[15] * b[13]);
-            r[14] = a[12] * b[2] + a[13] * b[6] + (a[14] * b[10] + a[15] * b[14]);
-            r[15] = a[12] * b[3] + a[13] * b[7] + (a[14] * b[11] + a[15] * b[15]);
-            return result;
-        }
-        static product(...args) {
-            const [m4s, result] = Array.isArray(args[0])
-                ? [args[0], args[1]]
-                : [args, new M4()];
-            if (0 == m4s.length)
-                return M4.identity(result);
-            if (1 == m4s.length)
-                return M4.copy(m4s[0], result);
-            if (2 == m4s.length)
-                return M4.multiply(m4s[0], m4s[1], result);
-            let a = M4.temp0, b = M4.temp1;
-            M4.multiply(m4s[0], m4s[1], a);
-            for (let i = 2; i < m4s.length - 1; i++) {
-                M4.multiply(a, m4s[i], b);
-                [a, b] = [b, a];
-            }
-            return M4.multiply(a, getLast(m4s), result);
-        }
-        static forSys(e0, e1, e2 = e0.cross(e1), origin = V3.O) {
-            assertVectors(e0, e1, e2, origin);
-            // prettier-ignore
-            return new M4(e0.x, e1.x, e2.x, origin.x, e0.y, e1.y, e2.y, origin.y, e0.z, e1.z, e2.z, origin.z, 0, 0, 0, 1);
-        }
-        static forRows(n0, n1, n2, n3 = V3.O) {
-            assertVectors(n0, n1, n2, n3);
-            // prettier-ignore
-            return new M4(n0.x, n0.y, n0.z, 0, n1.x, n1.y, n1.z, 0, n2.x, n2.y, n2.z, 0, n3.x, n3.y, n3.z, 1);
-        }
-        /**
-         * Returns an identity matrix. You can optionally pass an existing matrix in `result` to avoid allocating a new
-         * matrix. This emulates the OpenGL function `glLoadIdentity()`
-         *
-         * Unless initializing a matrix to be modified, use M4.IDENTITY
-         */
-        static identity(result = new M4()) {
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = m[5] = m[10] = m[15] = 1;
-            m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = m[12] = m[13] = m[14] = 0;
-            return result;
-        }
-        /**
-         * Creates a new M4 initialized by a user defined callback function
-         *
-         * @param f signature: (elRow, elCol, elIndex) =>
-         *     el, where elIndex is the row-major index, i.e. eLindex == elRow * 4 + elCol
-         * @param result
-         */
-        static fromFunction4(f, result = new M4()) {
-            assert(typeof f == "function");
-            assertInst(M4, result);
-            const m = result.m;
-            let i = 16;
-            while (i--) {
-                m[i] = f(Math.floor(i / 4), i % 4, i);
-            }
-            return result;
-        }
-        /**
-         * Returns a perspective transform matrix, which makes far away objects appear smaller than nearby objects. The
-         * `aspect` argument should be the width divided by the height of your viewport and `fov` is the top-to-bottom angle
-         * of the field of view in degrees. You can optionally pass an existing matrix in `result` to avoid allocating a new
-         * matrix. This emulates the OpenGL function `gluPerspective()`.
-         * {@see perspectiveRad}
-         * perspectiveRad
-         * @param fovDegrees in degrees
-         * @param aspect aspect ratio = width/height of viewport
-         * @param near near plane
-         * @param far far plane
-         * @param result A new M4 as described.
-         */
-        static perspective(fovDegrees, aspect, near, far, result = new M4()) {
-            return M4.perspectiveRad(fovDegrees * DEG, aspect, near, far, result);
-        }
-        static perspectiveRad(fov, aspect, near, far, result = new M4()) {
-            assertInst(M4, result);
-            assertNumbers(fov, aspect, near, far);
-            const y = Math.tan(fov / 2) * near;
-            const x = y * aspect;
-            return M4.frustum(-x, x, -y, y, near, far, result);
-        }
-        static perspectivePlane(vanishingPlane, result = new M4()) {
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = 1;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = 0;
-            m[4] = 0;
-            m[5] = 1;
-            m[6] = 0;
-            m[7] = 0;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = 1;
-            m[11] = 0;
-            m[12] = vanishingPlane.normal1.x;
-            m[13] = vanishingPlane.normal1.y;
-            m[14] = vanishingPlane.normal1.z;
-            m[15] = -vanishingPlane.w;
-            return result;
-        }
-        // the OpenGL function `glFrustum()`.
-        static frustum(left, right, bottom, top, near, far, result = new M4()) {
-            assertNumbers(left, right, bottom, top, near, far);
-            assert(0 < near, "0 < near");
-            assert(near < far, "near < far");
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = (2 * near) / (right - left);
-            m[1] = 0;
-            m[2] = (right + left) / (right - left);
-            m[3] = 0;
-            m[4] = 0;
-            m[5] = (2 * near) / (top - bottom);
-            m[6] = (top + bottom) / (top - bottom);
-            m[7] = 0;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = -(far + near) / (far - near);
-            m[11] = (-2 * far * near) / (far - near);
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = -1;
-            m[15] = 0;
-            return result;
-        }
-        /**
-         * Returns a new M4 representing the a projection through/towards a point onto a plane.
-         */
-        static projectPlanePoint(p, plane, result = new M4()) {
-            assertVectors(p, plane.normal1);
-            assertInst(M4, result);
-            const m = result.m;
-            const n = plane.normal1, w = plane.w;
-            const np = n.dot(p);
-            m[0] = p.x * n.x + w - np;
-            m[1] = p.x * n.y;
-            m[2] = p.x * n.z;
-            m[3] = -w * p.x;
-            m[4] = p.y * n.x;
-            m[5] = p.y * n.y + w - np;
-            m[6] = p.y * n.z;
-            m[7] = -w * p.y;
-            m[8] = p.z * n.x;
-            m[9] = p.z * n.y;
-            m[10] = p.z * n.z + w - np;
-            m[11] = -w * p.z;
-            m[12] = n.x;
-            m[13] = n.y;
-            m[14] = n.z;
-            m[15] = -np;
-            return result;
-        }
-        /**
-         * Orthographic/orthogonal projection. Transforms the cuboid with the dimensions X: [left right] Y: [bottom, top]
-         * Z: [near far] to the cuboid X: [-1, 1] Y [-1, 1] Z [-1, 1]
-         */
-        static ortho(left, right, bottom, top, near, far, result = new M4()) {
-            assertNumbers(left, right, bottom, top, near, far);
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = 2 / (right - left);
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = -(right + left) / (right - left);
-            m[4] = 0;
-            m[5] = 2 / (top - bottom);
-            m[6] = 0;
-            m[7] = -(top + bottom) / (top - bottom);
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = -2 / (far - near);
-            m[11] = -(far + near) / (far - near);
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static scale(...args) {
-            let x, y, z, result;
-            if (args[0] instanceof V3) {
-                assert(args.length <= 2);
-                ({ x, y, z } = args[0]);
-                result = args[1];
-            }
-            else if ("number" != typeof args[1]) {
-                x = y = z = args[0];
-                result = args[1];
-            }
-            else {
-                assert(args.length <= 4);
-                x = args[0];
-                y = args[1];
-                z = undefined != args[2] ? args[2] : 1;
-                result = args[3];
-            }
-            undefined == result && (result = new M4());
-            assertInst(M4, result);
-            assertNumbers(x, y, z);
-            const m = result.m;
-            m[0] = x;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = 0;
-            m[4] = 0;
-            m[5] = y;
-            m[6] = 0;
-            m[7] = 0;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = z;
-            m[11] = 0;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static translate(...args) {
-            let x, y, z, result;
-            if (args[0] instanceof V3) {
-                assert(args.length <= 2);
-                ({ x, y, z } = args[0]);
-                result = args[1];
-            }
-            else {
-                assert(args.length <= 4);
-                x = args[0];
-                y = undefined != args[1] ? args[1] : 0;
-                z = undefined != args[2] ? args[2] : 0;
-                result = args[3];
-            }
-            undefined == result && (result = new M4());
-            assertInst(M4, result);
-            assertNumbers(x, y, z);
-            const m = result.m;
-            m[0] = 1;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = x;
-            m[4] = 0;
-            m[5] = 1;
-            m[6] = 0;
-            m[7] = y;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = 1;
-            m[11] = z;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Returns a matrix that rotates by `a` degrees around the vector (x, y, z). You can optionally pass an existing
-         * matrix in `result` to avoid allocating a new matrix. This emulates the OpenGL function `glRotate()`.
-         */
-        //static rotation(radians: raddd, x: number, y: number, z: number, result?: M4): M4
-        static rotate(radians, v, result) {
-            undefined == result && (result = new M4());
-            assertInst(M4, result);
-            let { x, y, z } = v;
-            assert(!new V3(x, y, z).likeO(), "!V(x, y, z).likeO()");
-            const m = result.m;
-            const d = Math.sqrt(x * x + y * y + z * z);
-            x /= d;
-            y /= d;
-            z /= d;
-            const cos = Math.cos(radians), sin = Math.sin(radians), t = 1 - cos;
-            m[0] = x * x * t + cos;
-            m[1] = x * y * t - z * sin;
-            m[2] = x * z * t + y * sin;
-            m[3] = 0;
-            m[4] = y * x * t + z * sin;
-            m[5] = y * y * t + cos;
-            m[6] = y * z * t - x * sin;
-            m[7] = 0;
-            m[8] = z * x * t - y * sin;
-            m[9] = z * y * t + x * sin;
-            m[10] = z * z * t + cos;
-            m[11] = 0;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Returns a matrix that puts the camera at the eye point `ex, ey, ez` looking
-         * toward the center point `cx, cy, cz` with an up direction of `ux, uy, uz`.
-         * You can optionally pass an existing matrix in `result` to avoid allocating
-         * a new matrix. This emulates the OpenGL function `gluLookAt()`.
-         */
-        static lookAt(eye, focus, up, result = new M4()) {
-            assertVectors(eye, focus, up);
-            assertInst(M4, result);
-            const m = result.m;
-            const f = eye.minus(focus).unit();
-            const s = up.cross(f).unit();
-            const t = f.cross(s).unit();
-            m[0] = s.x;
-            m[1] = s.y;
-            m[2] = s.z;
-            m[3] = -s.dot(eye);
-            m[4] = t.x;
-            m[5] = t.y;
-            m[6] = t.z;
-            m[7] = -t.dot(eye);
-            m[8] = f.x;
-            m[9] = f.y;
-            m[10] = f.z;
-            m[11] = -f.dot(eye);
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Create a rotation matrix for rotating around the X axis
-         */
-        static rotateX(radians) {
-            assertNumbers(radians);
-            const sin = Math.sin(radians), cos = Math.cos(radians);
-            const els = [1, 0, 0, 0, 0, cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1];
-            return new M4(els);
-        }
-        /**
-         * Create a rotation matrix for rotating around the Y axis
-         */
-        static rotateY(radians) {
-            const sin = Math.sin(radians), cos = Math.cos(radians);
-            const els = [cos, 0, sin, 0, 0, 1, 0, 0, -sin, 0, cos, 0, 0, 0, 0, 1];
-            return new M4(els);
-        }
-        /**
-         * Create a rotation matrix for rotating around the Z axis
-         */
-        static rotateZ(radians) {
-            const sin = Math.sin(radians), cos = Math.cos(radians);
-            const els = [cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-            return new M4(els);
-        }
-        /**
-         * New rotation matrix such that result.transformVector(a).isParallelTo(b) through smallest rotation.
-         * Performs no scaling.
-         */
-        static rotateAB(a, b, result = new M4()) {
-            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
-            assertVectors(a, b);
-            assertInst(M4, result);
-            const rotationAxis = a.cross(b), rotationAxisLength = rotationAxis.length();
-            if (eq0(rotationAxisLength)) {
-                return M4.identity(result);
-            }
-            const radians = Math.atan2(rotationAxisLength, a.dot(b));
-            return M4.rotateLine(V3.O, rotationAxis, radians, result);
-        }
-        /**
-         * Matrix for rotation about arbitrary line defined by an anchor point and direction.
-         * rotationAxis does not need to be unit
-         */
-        static rotateLine(rotationAnchor, rotationAxis, radians, result = new M4()) {
-            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
-            assertVectors(rotationAnchor, rotationAxis);
-            assertNumbers(radians);
-            assertInst(M4, result);
-            rotationAxis = rotationAxis.unit();
-            const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z, dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z;
-            const m = result.m, cos = Math.cos(radians), sin = Math.sin(radians);
-            m[0] = dx * dx + (dy * dy + dz * dz) * cos;
-            m[1] = dx * dy * (1 - cos) - dz * sin;
-            m[2] = dx * dz * (1 - cos) + dy * sin;
-            m[3] =
-                (ax * (dy * dy + dz * dz) - dx * (ay * dy + az * dz)) * (1 - cos) +
-                    (ay * dz - az * dy) * sin;
-            m[4] = dx * dy * (1 - cos) + dz * sin;
-            m[5] = dy * dy + (dx * dx + dz * dz) * cos;
-            m[6] = dy * dz * (1 - cos) - dx * sin;
-            m[7] =
-                (ay * (dx * dx + dz * dz) - dy * (ax * dx + az * dz)) * (1 - cos) +
-                    (az * dx - ax * dz) * sin;
-            m[8] = dx * dz * (1 - cos) - dy * sin;
-            m[9] = dy * dz * (1 - cos) + dx * sin;
-            m[10] = dz * dz + (dx * dx + dy * dy) * cos;
-            m[11] =
-                (az * (dx * dx + dy * dy) - dz * (ax * dx + ay * dy)) * (1 - cos) +
-                    (ax * dy - ay * dx) * sin;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         * Create an affine matrix for mirroring into an arbitrary plane:
-         */
-        static mirror(plane, result = new M4()) {
-            assertVectors(plane.normal1);
-            assertInst(M4, result);
-            const [nx, ny, nz] = plane.normal1;
-            const w = plane.w;
-            const m = result.m;
-            m[0] = 1.0 - 2.0 * nx * nx;
-            m[1] = -2.0 * ny * nx;
-            m[2] = -2.0 * nz * nx;
-            m[3] = 2.0 * nx * w;
-            m[4] = -2.0 * nx * ny;
-            m[5] = 1.0 - 2.0 * ny * ny;
-            m[6] = -2.0 * nz * ny;
-            m[7] = 2.0 * ny * w;
-            m[8] = -2.0 * nx * nz;
-            m[9] = -2.0 * ny * nz;
-            m[10] = 1.0 - 2.0 * nz * nz;
-            m[11] = 2.0 * nz * w;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        /**
-         *
-         * @param plane
-         * @param dir Projection direction. Optional, if not specified plane normal1 will be used.
-         * @param result {@see M4}
-         */
-        static project(plane, dir = plane.normal1, result = new M4()) {
-            // TODO: doc
-            // plane.normal1 DOT (p + lambda * dir) = w (1)
-            // extract lambda:
-            // plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
-            // lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
-            // result = p + lambda * dir
-            // result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
-            // result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
-            //  a + d * (w - n . a) / (nd)
-            //  a + dw - d * na
-            assertVectors(dir, plane.normal1);
-            assertInst(M4, result);
-            const w = plane.w;
-            const m = result.m;
-            const nd = plane.normal1.dot(dir);
-            const { x: nx, y: ny, z: nz } = plane.normal1;
-            const { x: dx, y: dy, z: dz } = dir.div(nd);
-            /*
-                 rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
-                 return M4.forSys(
-                 V3.X.rejectedFrom(plane.normal1),
-                 V3.Y.rejectedFrom(plane.normal1),
-                 V3.Z.rejectedFrom(plane.normal1),
-                 plane.anchor,
-                 result
-                 )
-                 */
-            m[0] = 1.0 - nx * dx;
-            m[1] = -ny * dx;
-            m[2] = -nz * dx;
-            m[3] = dx * w;
-            m[4] = -nx * dy;
-            m[5] = 1.0 - ny * dy;
-            m[6] = -nz * dy;
-            m[7] = dy * w;
-            m[8] = -nx * dz;
-            m[9] = -ny * dz;
-            m[10] = 1.0 - nz * dz;
-            m[11] = dz * w;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static lineProjection(line, result = new M4()) {
-            assertVectors(line.anchor, line.dir1);
-            assertInst(M4, result);
-            const ax = line.anchor.x, ay = line.anchor.y, az = line.anchor.z;
-            const dx = line.dir1.x, dy = line.dir1.y, dz = line.dir1.z;
-            const m = result.m;
-            /*
-                 projectedOn: return b.times(this.dot(b) / b.dot(b))
-                 */
-            m[0] = dx * dx;
-            m[1] = dx * dy;
-            m[2] = dx * dz;
-            m[3] = ax;
-            m[4] = dy * dx;
-            m[5] = dy * dy;
-            m[6] = dy * dz;
-            m[7] = ay;
-            m[8] = dz * dx;
-            m[9] = dz * dy;
-            m[10] = dz * dz;
-            m[11] = az;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static pointInversion(p, result = new M4()) {
-            assertVectors(p);
-            assertInst(M4, result);
-            const m = result.m;
-            m[0] = -1;
-            m[1] = 0;
-            m[2] = 0;
-            m[3] = 2 * p.x;
-            m[4] = 0;
-            m[5] = -1;
-            m[6] = 0;
-            m[7] = 2 * p.y;
-            m[8] = 0;
-            m[9] = 0;
-            m[10] = -1;
-            m[11] = 2 * p.z;
-            m[12] = 0;
-            m[13] = 0;
-            m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        static new(width, height, m) {
-            assert(4 == width && 4 == height);
-            return new M4(...m);
-        }
-        get X() {
-            return this.transformVector(V3.X);
-        }
-        get Y() {
-            return this.transformVector(V3.Y);
-        }
-        get Z() {
-            return this.transformVector(V3.Z);
-        }
-        get O() {
-            return this.getTranslation();
-        }
-        isMirror(precision = NLA_PRECISION) {
-            const m = this.m;
-            const nx = Math.sqrt((1 - m[0]) / 2);
-            const ny = Math.sqrt((1 - m[5]) / 2);
-            const nz = Math.sqrt((1 - m[10]) / 2);
-            return (eq(m[1], -2.0 * ny * nx, precision) &&
-                eq(m[2], -2.0 * nz * nx, precision) &&
-                eq(m[4], -2.0 * nx * ny, precision) &&
-                eq(m[6], -2.0 * nz * ny, precision) &&
-                eq(m[8], -2.0 * nx * nz, precision) &&
-                eq(m[9], -2.0 * ny * nz, precision) &&
-                eq(m[12], 0, precision) &&
-                eq(m[13], 0, precision) &&
-                eq(m[14], 0, precision) &&
-                eq(m[15], 1, precision) &&
-                eq(m[3] * ny, m[7] * nx, precision) &&
-                eq(m[7] * nz, m[11] * ny, precision) &&
-                eq(m[11] * nx, m[3] * nz, precision));
-        }
-        // ### GL.Matrix.frustum(left, right, bottom, top, near, far[, result])
-        //
-        // Sets up a viewing frustum, which is shaped like a truncated pyramid with the
-        // camera where the point of the pyramid would be. You can optionally pass an
-        // existing matrix in `result` to avoid allocating a new matrix. This emulates
-        /**
-         * Returns a new M4 which is equal to the inverse of this.
-         */
-        inversed(result) {
-            return M4.inverse(this, result);
-        }
-        /**
-         * Matrix trace is defined as the sum of the elements of the main diagonal.
-         */
-        trace() {
-            return this.m[0] + this.m[5] + this.m[10] + this.m[15];
-        }
-        as3x3(result) {
-            result = M4.copy(this, result);
-            const m = result.m;
-            m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0;
-            m[15] = 1;
-            return result;
-        }
-        transform(m4) {
-            return m4.times(this);
-        }
-        realEigenValues3() {
-            const m = this.m;
-            assert(0 == m[12] && 0 == m[13] && 0 == m[14]);
-            // determinant of (this - λI):
-            // | a-λ  b   c  |
-            // |  d  e-λ  f  | = -λ^3 + λ^2 (a+e+i) + λ (-a e-a i+b d+c g-e i+f h) + a(ei - fh) - b(di - fg) + c(dh - eg)
-            // |  g   h  i-λ |
-            const [a, b, c, , d, e, f, , g, h, i] = m;
-            // det(this - λI) = -λ^3 +λ^2 (a+e+i) + λ (-a e-a i-b d+c g-e i+f h)+ (a e i-a f h-b d i+b f g+c d h-c e g)
-            const s = -1;
-            const t = a + e + i; // equivalent to trace of matrix
-            const u = -a * e - a * i + b * d + c * g - e * i + f * h; // equivalent to 1/2 (trace(this²) - trace²(A))
-            const w = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g); // equivalent to matrix determinant
-            console.log(s, t, u, w);
-            return solveCubicReal2(s, t, u, w);
-        }
-        realEigenVectors3() {
-            const eigenValues = this.realEigenValues3();
-            const this3x3 = this.times(M4.IDENTITY3);
-            console.log(this.toString());
-            console.log(this3x3.toString());
-            let mats = eigenValues.map((ev) => M4.IDENTITY3.scale(-ev).plus(this3x3));
-            console.log(mats.map((m) => m.determinant3()));
-            console.log(mats.map((m) => "" + m.toString((v) => "" + v)).join("\n\n"));
-            console.log(mats.map((m) => "" + m.gauss().U.toString((v) => "" + v)).join("\n\n"));
-            console.log("mats.map(m=>m.rank())", mats.map((m) => m.rank()));
-            if (1 == eigenValues.length) {
-                console.log(mats[0].toString());
-                assertf(() => 0 == mats[0].rank());
-                // col vectors
-                return arrayFromFunction(3, (col) => new V3(this.m[col], this.m[4 + col], this.m[8 + col]));
-            }
-            if (2 == eigenValues.length) {
-                // one matrix should have rank 1, the other rank 2
-                if (1 == mats[0].rank()) {
-                    mats = [mats[1], mats[0]];
-                }
-                assertf(() => 2 == mats[0].rank());
-                assertf(() => 1 == mats[1].rank());
-                // mat[0] has rank 2, mat[1] has rank 1
-                const gauss0 = mats[0].gauss().U;
-                const eigenVector0 = gauss0.row(0).cross(gauss0.row(1)).V3().unit();
-                const planeNormal = mats[1].gauss().U.row(0).V3();
-                const eigenVector1 = planeNormal.getPerpendicular().unit();
-                const eigenVector2 = eigenVector0
-                    .cross(eigenVector1)
-                    .rejectedFrom(planeNormal);
-                return [eigenVector0, eigenVector1, eigenVector2];
-            }
-            if (3 == eigenValues.length) {
-                mats.forEach((mat, i) => assert(2 == mat.rank(), i + ": " + mat.rank()));
-                // the (A - lambda I) matrices map to a plane. This means, that there is an entire line in R³ which maps to
-                // the point V3.O
-                return mats.map((mat) => {
-                    const gauss = mat.gauss().U;
-                    return gauss.row(0).cross(gauss.row(1)).V3().unit();
-                });
-            }
-            throw new Error("there cannot be more than 3 eigen values");
-        }
-        /**
-         * U * SIGMA * VSTAR = this
-         * U and VSTAR are orthogonal matrices
-         * SIGMA is a diagonal matrix
-         */
-        svd3() {
-            function matrixForCS(i, k, c, s) {
-                const m = M4.identity();
-                m.setEl(i, i, c);
-                m.setEl(k, k, c);
-                m.setEl(i, k, s);
-                m.setEl(k, i, -s);
-                return m;
-            }
-            const A = this.as3x3();
-            let S = A.transposed().times(A), V = M4.identity();
-            console.log(S.str);
-            for (let it = 0; it < 16; it++) {
-                console.log("blahg\n", V.times(S).times(V.transposed()).str);
-                assert(V.times(S).times(V.transposed()).likeM4(A.transposed().times(A)), V.times(S).times(V.transposed()).str, A.transposed().times(A).str);
-                let maxOffDiagonal = 0, maxOffDiagonalIndex = 1, j = 10;
-                while (j--) {
-                    const val = Math.abs(S.m[j]);
-                    if (j % 4 != Math.floor(j / 4) && val > maxOffDiagonal) {
-                        maxOffDiagonal = val;
-                        maxOffDiagonalIndex = j;
-                    }
-                }
-                const i = Math.floor(maxOffDiagonalIndex / 4), k = maxOffDiagonalIndex % 4;
-                const a_ii = S.m[5 * i], a_kk = S.m[5 * k], a_ik = S.m[maxOffDiagonalIndex];
-                const phi = a_ii === a_kk ? PI$1$1 / 4 : Math.atan((2 * a_ik) / (a_ii - a_kk)) / 2;
-                console.log(maxOffDiagonalIndex, i, k, "phi", phi);
-                const cos = Math.cos(phi), sin = Math.sin(phi);
-                const givensRotation = matrixForCS(i, k, cos, -sin);
-                assert(givensRotation.transposed().times(givensRotation).likeIdentity());
-                console.log(givensRotation.str);
-                V = V.times(givensRotation);
-                S = M4.product(givensRotation.transposed(), S, givensRotation);
-                console.log(S.str);
-            }
-            const sigma = S.map((el, elIndex) => (elIndex % 5 == 0 ? Math.sqrt(el) : 0));
-            return {
-                U: M4.product(A, V, sigma.map((el, elIndex) => (elIndex % 5 == 0 ? 1 / el : 0))),
-                SIGMA: sigma,
-                VSTAR: V.transposed(),
-            };
-        }
-        map(fn) {
-            return M4.fromFunction4((x, y, i) => fn(this.m[i], i, this.m));
-        }
-        likeM4(m4) {
-            assertInst(M4, m4);
-            return this.m.every((el, index) => eq(el, m4.m[index]));
-        }
-        /**
-         * Returns a new M4 equal to the transpose of this.
-         */
-        transposed(result) {
-            return M4.transpose(this, result);
-        }
-        /**
-         * Returns a new M4 which equal to (this * matrix) (in that order)
-         */
-        times(matrix) {
-            return M4.multiply(this, matrix);
-        }
-        /**
-         * In a perspective projection, parallel lines meet in a vanishing point.
-         *
-         * Returns undefined if there is no vanishing point, either because this is not a perspective transform,
-         * or because the passed dir is perpendicular to the projections direction.
-         *
-         * @param dir
-         */
-        vanishingPoint(dir) {
-            assertVectors(dir);
-            const m = this.m;
-            const vx = dir.x, vy = dir.y, vz = dir.z;
-            const w = vx * m[12] + vy * m[13] + vz * m[14];
-            if (eq0(w))
-                return undefined;
-            const x = vx * m[0] + vy * m[1] + vz * m[2];
-            const y = vx * m[4] + vy * m[5] + vz * m[6];
-            const z = vx * m[8] + vy * m[9] + vz * m[10];
-            return new V3(x / w, y / w, z / w);
-        }
-        /**
-         * Transforms the vector as a point with a w coordinate of 1. This means translations will have an effect, for
-         * example.
-         */
-        transformPoint(v) {
-            assertVectors(v);
-            const m = this.m;
-            const vx = v.x, vy = v.y, vz = v.z;
-            const x = vx * m[0] + vy * m[1] + vz * m[2] + m[3];
-            const y = vx * m[4] + vy * m[5] + vz * m[6] + m[7];
-            const z = vx * m[8] + vy * m[9] + vz * m[10] + m[11];
-            const w = vx * m[12] + vy * m[13] + vz * m[14] + m[15];
-            // scale such that fourth element becomes 1:
-            return new V3(x / w, y / w, z / w);
-        }
-        /**
-         * Transforms the vector as a vector with a w coordinate of 0. This means translations will have no effect, for
-         * example. Will throw an exception if the calculated w component != 0. This occurs for example when attempting
-         * to transform a vector with a perspective matrix.
-         */
-        transformVector(v, checkW = true) {
-            assertVectors(v);
-            const m = this.m;
-            const w = v.x * m[12] + v.y * m[13] + v.z * m[14];
-            checkW &&
-                assert(eq0(w), () => "w === 0 needs to be true for this to make sense (w =" + w + this.str);
-            return new V3(m[0] * v.x + m[1] * v.y + m[2] * v.z, m[4] * v.x + m[5] * v.y + m[6] * v.z, m[8] * v.x + m[9] * v.y + m[10] * v.z);
-        }
-        transformVector2(v, anchor) {
-            // v and anchor define a line(t) = anchor + t v
-            // we can view the calculation of the transformed vector as the derivative of the transformed line at t = 0
-            // d/dt (this * line(t)) (0)
-            assertVectors(v, anchor);
-            const transformedAnchor = this.timesVector(VV(anchor.x, anchor.y, anchor.z, 1));
-            const transformedVector = this.timesVector(VV(v.x, v.y, v.z, 0));
-            return transformedVector
-                .times(transformedAnchor.w)
-                .minus(transformedAnchor.times(transformedVector.w))
-                .div(Math.pow(transformedAnchor.w, 2))
-                .V3();
-        }
-        transformedPoints(vs) {
-            return vs.map((v) => this.transformPoint(v));
-        }
-        transformedVectors(vs) {
-            return vs.map((v) => this.transformVector(v));
-        }
-        new() {
-            return new M4();
-        }
-        isRegular() {
-            return !eq0(this.determinant());
-        }
-        isAxisAligned() {
-            const m = this.m;
-            return (1 >= +!eq0(m[0]) + +!eq0(m[1]) + +!eq0(m[2]) &&
-                1 >= +!eq0(m[4]) + +!eq0(m[5]) + +!eq0(m[6]) &&
-                1 >= +!eq0(m[8]) + +!eq0(m[9]) + +!eq0(m[10]));
-        }
-        /**
-         * A matrix M is orthogonal iff M * M^T = I
-         * I being the identity matrix.
-         *
-         * @returns If this matrix is orthogonal or very close to it. Comparison of the identity matrix and
-         * this * this^T is done with {@link #likeM4}
-         */
-        isOrthogonal() {
-            // return this.transposed().times(this).likeM4(M4.IDENTITY)
-            M4.transpose(this, M4.temp0);
-            M4.multiply(this, M4.temp0, M4.temp1);
-            return M4.IDENTITY.likeM4(M4.temp1);
-        }
-        /**
-         * A matrix M is symmetric iff M == M^T
-         * I being the identity matrix.
-         *
-         * @returns If this matrix is symmetric or very close to it. Comparison of the identity matrix and
-         * this * this^T is done with {@link #likeM4}
-         */
-        isSymmetric() {
-            M4.transpose(this, M4.temp0);
-            return this.likeM4(M4.temp0);
-        }
-        /**
-         * A matrix M is skew symmetric iff M = -M^T
-         */
-        isSkewSymmetric(precision) {
-            return (eq0(this.m[0], precision) &&
-                eq0(this.m[5], precision) &&
-                eq0(this.m[10], precision) &&
-                eq0(this.m[15], precision) &&
-                eq(this.m[1], this.m[4], precision) &&
-                eq(this.m[2], this.m[8], precision) &&
-                eq(this.m[3], this.m[12], precision) &&
-                eq(this.m[6], this.m[9], precision) &&
-                eq(this.m[7], this.m[13], precision) &&
-                eq(this.m[11], this.m[14], precision));
-        }
-        /**
-         * A matrix M is normal1 iff M * M^-T == M^T * M TODO: ^-T?
-         * I being the identity matrix.
-         *
-         * @returns If this matrix is symmetric or very close to it. Comparison of the identity matrix and
-         * this * this^T is done with {@link #likeM4}
-         */
-        isNormal() {
-            M4.transpose(this, M4.temp0); // temp0 = this^-T
-            M4.multiply(this, M4.temp0, M4.temp1); // temp1 = this * this^-T
-            M4.multiply(M4.temp0, this, M4.temp2); // temp2 = this^-T * this
-            return M4.temp1.likeM4(M4.temp2);
-        }
-        /**
-         * Determinant of matrix.
-         *
-         * Notes:
-         *      For matrices A and B
-         *      det(A * B) = det(A) * det(B)
-         *      det(A^-1) = 1 / det(A)
-         */
-        determinant() {
-            // | a b c d |
-            // | e f g h |
-            // | i j k l |
-            // | m n o p |
-            const $ = this.m, a = $[0], b = $[1], c = $[2], d = $[3], e = $[4], f = $[5], g = $[6], h = $[7], i = $[8], j = $[9], k = $[10], l = $[11], m = $[12], n = $[13], o = $[14], p = $[15], klop = k * p - l * o, jlnp = j * p - l * n, jkno = j * o - k * n, ilmp = i * p - l * m, ikmo = i * o - k * m, ijmn = i * n - j * m;
-            return (a * (f * klop - g * jlnp + h * jkno) -
-                b * (e * klop - g * ilmp + h * ikmo) +
-                c * (e * jlnp - f * ilmp + h * ijmn) -
-                d * (e * jkno - f * ikmo + g * ijmn));
-        }
-        determinant3() {
-            const [a, b, c, , d, e, f, , g, h, i] = this.m;
-            const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
-            return det;
-        }
-        /**
-         * determine whether this matrix is a mirroring transformation
-         */
-        isMirroring() {
-            /*
-                 var u = V(this.m[0], this.m[4], this.m[8])
-                 var v = V(this.m[1], this.m[5], this.m[9])
-                 var w = V(this.m[2], this.m[6], this.m[10])
-        
-                 // for a true orthogonal, non-mirrored base, u.cross(v) == w
-                 // If they have an opposite direction then we are mirroring
-                 var mirrorvalue = u.cross(v).dot(w)
-                 var ismirror = (mirrorvalue < 0)
-                 return ismirror
-                 */
-            return this.determinant() < 0; // TODO: also valid for 4x4?
-        }
-        /**
-         * Get the translation part of this matrix, i.e. the result of this.transformPoint(V3.O)
-         */
-        getTranslation() {
-            const m = this.m, w = m[15];
-            return new V3(m[3] / w, m[7] / w, m[11] / w);
-        }
-        /**
-         * Returns this matrix scaled so that the determinant is 1.
-         * det(c * A) = (c ** n) * det(A) for n x n matrices,
-         * so we need to divide by the 4th root of the determinant
-         */
-        normalized() {
-            const detAbs = abs$1(this.determinant());
-            return 1 == detAbs ? this : this.divScalar(Math.pow(detAbs, 0.25));
-        }
-        /**
-         * Returns this matrix scaled so that the determinant is 1.
-         * det(c * A) = (c ** n) * det(A) for n x n matrices,
-         * so we need to divide by the 4th root of the determinant
-         */
-        normalized2() {
-            const div = this.m[15];
-            return 1 == div ? this : this.divScalar(div);
-        }
-        /**
-         * Returns if the matrix has the following form (within NLA_PRECISION):
-         * a b c 0
-         * c d e 0
-         * f g h 0
-         * 0 0 0 1
-         */
-        like3x3() {
-            const m = this.m;
-            return (eq(1, m[15]) &&
-                eq0(m[12]) &&
-                eq0(m[13]) &&
-                eq0(m[14]) &&
-                eq0(m[3]) &&
-                eq0(m[7]) &&
-                eq0(m[11]));
-        }
-        isNoProj() {
-            const m = this.m;
-            return 0 == m[12] && 0 == m[13] && 0 == m[14] && 1 == m[15];
-        }
-        likeIdentity() {
-            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? eq(1, val) : eq0(val));
-        }
-        isIdentity() {
-            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? 1 == val : 0 == val);
-        }
-        toString(f = (v) => v.toFixed(6).replace(/([0.])(?=0*$)/g, " ")) {
-            assert(typeof f(0) == "string", "" + typeof f(0));
-            // slice this.m to convert it to an Array (from TypeArray)
-            const rounded = Array.prototype.slice.call(this.m).map(f);
-            const colWidths = [0, 1, 2, 3].map((colIndex) => max$1(sliceStep(rounded, colIndex, 0, 4).map((x) => x.length)));
-            return [0, 1, 2, 3]
-                .map((rowIndex) => rounded
-                .slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
-                .map((x, colIndex) => " ".repeat(colWidths[colIndex] - x.length) + x) // pad numbers with
-                // spaces to col width
-                .join(" "))
-                .join("\n"); // join rows
-        }
-        /**
-         * Wether this matrix is a translation matrix, i.e. of the form
-         * ```
-         *  1, 0, 0, x,
-         *  0, 1, 0, y,
-         *  0, 0, 1, z,
-         *  0, 0, 0, 1
-         * ```
-         */
-        isTranslation() {
-            // 2: any value, otherwise same value
-            // prettier-ignore
-            const mask = [
-                1, 0, 0, 2,
-                0, 1, 0, 2,
-                0, 0, 1, 2,
-                0, 0, 0, 1
-            ];
-            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
-        }
-        /**
-         * Wether this matrix is a translation matrix, i.e. of the form
-         * ```
-         *  s, 0, 0, 0,
-         *  0, t, 0, 0,
-         *  0, 0, v, 0,
-         *  0, 0, 0, 1
-         * ```
-         */
-        isScaling() {
-            // prettier-ignore
-            const mask = [
-                2, 0, 0, 0,
-                0, 2, 0, 0,
-                0, 0, 2, 0,
-                0, 0, 0, 1
-            ];
-            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
-        }
-        isZRotation() {
-            // prettier-ignore
-            const mask = [
-                2, 2, 0, 0,
-                2, 2, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1
-            ];
-            return (mask.every((expected, index) => expected == 2 || expected == this.m[index]) &&
-                eq(1, Math.pow(this.m[0], 2) + Math.pow(this.m[1], 2)) &&
-                this.m[0] == this.m[5] &&
-                this.m[1] == -this.m[4]);
-        }
-        toSource() {
-            const name = M4.NAMEMAP.get(this);
-            if (name) {
-                return name;
-            }
-            else if (this.isTranslation()) {
-                return callsce("M4.translate", this.O);
-            }
-            else if (this.isScaling()) {
-                return callsce("M4.scale", this.m[0], this.m[5], this.m[10]);
-            }
-            else if (this.isNoProj()) {
-                return !this.O.equals(V3.O)
-                    ? callsce("M4.forSys", this.X, this.Y, this.Z, this.O)
-                    : callsce("M4.forSys", this.X, this.Y, this.Z);
-            }
-            else if (this.isMirror(0)) {
-                const m = this.m;
-                const nx = Math.sqrt((1 - m[0]) / 2);
-                const ny = Math.sqrt((1 - m[5]) / 2);
-                const nz = Math.sqrt((1 - m[10]) / 2);
-                const w = m[3] / 2.0 / nx;
-                return callsce("M4.mirror", { normal1: new V3(nx, ny, nz), w });
-            }
-            else {
-                const m = this.m;
-                return ("new M4(" +
-                    ("\n\t" + m[0] + ",\t" + m[1] + ",\t" + m[2] + ",\t" + m[3] + ",") +
-                    ("\n\t" + m[4] + ",\t" + m[5] + ",\t" + m[6] + ",\t" + m[7] + ",") +
-                    ("\n\t" + m[8] + ",\t" + m[9] + ",\t" + m[10] + ",\t" + m[11] + ",") +
-                    ("\n\t" + m[12] + ",\t" + m[13] + ",\t" + m[14] + ",\t" + m[15] + ")"));
-            }
-        }
-        xyAreaFactor() {
-            return this.transformVector(V3.X).cross(this.transformVector(V3.Y)).length();
-        }
-    }
-    /**
-     * A simple (consists of integers), regular, non-orthogonal matrix, useful mainly for testing.
-     * M4.FOO_INV = M4.FOO.inverse()
-     */
-    // prettier-ignore
-    M4.FOO = new M4(0, 1, 1, 2, 0.3, 0.4, 0.8, 13, 2.1, 3.4, 5.5, 8.9, 0, 0, 0, 1);
-    M4.FOO_INV = M4.FOO.inversed();
-    M4.IDENTITY = M4.identity();
-    // prettier-ignore
-    M4.O = new M4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    M4.YZX = M4.forSys(V3.Y, V3.Z, V3.X);
-    M4.ZXY = M4.forSys(V3.Z, V3.X, V3.Y);
-    // prettier-ignore
-    M4.IDENTITY3 = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
-    M4.temp0 = new M4();
-    M4.temp1 = new M4();
-    M4.temp2 = new M4();
-    M4.NAMEMAP = new javasetmap_ts.JavaMap()
-        .set(M4.IDENTITY3, "M4.IDENTITY3")
-        .set(M4.FOO, "M4.FOO")
-        .set(M4.O, "M4.O")
-        .set(M4.FOO_INV, "M4.FOO_INV")
-        .set(M4.IDENTITY, "M4.IDENTITY")
-        .set(M4.ZXY, "M4.ZXY")
-        .set(M4.YZX, "M4.YZX");
-    M4.prototype.height = 4;
-    M4.prototype.width = 4;
-    addOwnProperties(M4.prototype, Transformable.prototype, "constructor");
-
-    const KEYWORD_REGEXP = new RegExp("^(" +
-        "abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|" +
-        "default|delete|do|double|else|enum|export|extends|false|final|finally|" +
-        "float|for|function|goto|if|implements|import|in|instanceof|int|interface|" +
-        "long|native|new|null|package|private|protected|public|return|short|static|" +
-        "super|switch|synchronized|this|throw|throws|transient|true|try|typeof|" +
-        "undefined|var|void|volatile|while|with" +
-        ")$");
-    function stringIsLegalKey(key) {
-        return /^[a-z_$][0-9a-z_$]*$/gi.test(key) && !KEYWORD_REGEXP.test(key);
-    }
-    const seen = [];
-    function toSource(o, indent = 0) {
-        if (undefined === o)
-            return "undefined";
-        if (null === o)
-            return "null";
-        return o.toSource();
-    }
-    function addToSourceMethodToPrototype(clazz, method) {
-        if (!clazz.prototype.toSource) {
-            Object.defineProperty(clazz.prototype, "toSource", {
-                value: method,
-                writable: true,
-                configurable: true,
-                enumerable: false,
-            });
-        }
-    }
-    addToSourceMethodToPrototype(Boolean, Boolean.prototype.toString);
-    addToSourceMethodToPrototype(Function, Function.prototype.toString);
-    addToSourceMethodToPrototype(Number, Number.prototype.toString);
-    addToSourceMethodToPrototype(RegExp, RegExp.prototype.toString);
-    addToSourceMethodToPrototype(Date, function () {
-        return "new Date(" + this.getTime() + ")";
-    });
-    addToSourceMethodToPrototype(String, function () {
-        return JSON.stringify(this);
-    });
-    addToSourceMethodToPrototype(Array, function () {
-        if (seen.includes(this)) {
-            return "CIRCULAR_REFERENCE";
-        }
-        seen.push(this);
-        let result = "[";
-        for (let i = 0; i < this.length; i++) {
-            result += "\n\t" + toSource(this[i]).replace(/\r\n|\n|\r/g, "$&\t");
-            if (i !== this.length - 1) {
-                result += ",";
-            }
-        }
-        result += 0 === this.length ? "]" : "\n]";
-        seen.pop();
-        return result;
-    });
-    addToSourceMethodToPrototype(Object, function () {
-        if (seen.includes(this)) {
-            return "CIRCULAR_REFERENCE";
-        }
-        seen.push(this);
-        let result = "{";
-        const keys = Object.keys(this).sort();
-        for (let i = 0; i < keys.length; i++) {
-            const k = keys[i];
-            result +=
-                "\n\t" +
-                    (stringIsLegalKey(k) ? k : JSON.stringify(k)) +
-                    ": " +
-                    toSource(this[k]).replace(/\r\n|\n|\r/g, "$&\t");
-            if (i !== keys.length - 1) {
-                result += ",";
-            }
-        }
-        result += 0 === keys.length ? "}" : "\n}";
-        seen.pop();
-        return result;
-    });
-
-    class AABB extends Transformable {
-        constructor(min = V3.INF, max = V3.INF.negated()) {
-            super();
-            this.min = min;
-            this.max = max;
-            assertVectors(min, max);
-        }
-        static forXYZ(x, y, z) {
-            return new AABB(V3.O, new V3(x, y, z));
-        }
-        static forAABBs(aabbs) {
-            const result = new AABB();
-            for (const aabb of aabbs) {
-                result.addAABB(aabb);
-            }
-            return result;
-        }
-        addPoint(p) {
-            assertVectors(p);
-            this.min = this.min.min(p);
-            this.max = this.max.max(p);
-            return this;
-        }
-        addPoints(ps) {
-            ps.forEach((p) => this.addPoint(p));
-            return this;
-        }
-        addAABB(aabb) {
-            assertInst(AABB, aabb);
-            this.addPoint(aabb.min);
-            this.addPoint(aabb.max);
-            return this;
-        }
-        /**
-         * Returns the largest AABB contained in this which doesn't overlap with aabb
-         * @param aabb
-         */
-        withoutAABB(aabb) {
-            assertInst(AABB, aabb);
-            let min, max;
-            const volume = this.volume(), size = this.size();
-            let remainingVolume = -Infinity;
-            for (let i = 0; i < 3; i++) {
-                const dim = ["x", "y", "z"][i];
-                const cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim];
-                const dimMin = cond
-                    ? this.min[dim]
-                    : Math.max(this.min[dim], aabb.max[dim]);
-                const dimMax = !cond
-                    ? this.max[dim]
-                    : Math.min(this.max[dim], aabb.min[dim]);
-                const newRemainingVolume = ((dimMax - dimMin) * volume) / size[dim];
-                if (newRemainingVolume > remainingVolume) {
-                    remainingVolume = newRemainingVolume;
-                    min = this.min.withElement(dim, dimMin);
-                    max = this.max.withElement(dim, dimMax);
-                }
-            }
-            return new AABB(min, max);
-        }
-        getIntersectionAABB(aabb) {
-            assertInst(AABB, aabb);
-            return new AABB(this.min.max(aabb.min), this.max.min(aabb.max));
-        }
-        touchesAABB(aabb) {
-            assertInst(AABB, aabb);
-            return !(this.min.x > aabb.max.x ||
-                this.max.x < aabb.min.x ||
-                this.min.y > aabb.max.y ||
-                this.max.y < aabb.min.y ||
-                this.min.z > aabb.max.z ||
-                this.max.z < aabb.min.z);
-        }
-        touchesAABBfuzzy(aabb, precisision = NLA_PRECISION) {
-            assertInst(AABB, aabb);
-            return !(lt(aabb.max.x, this.min.x, precisision) ||
-                lt(this.max.x, aabb.min.x, precisision) ||
-                lt(aabb.max.y, this.min.y, precisision) ||
-                lt(this.max.y, aabb.min.y, precisision) ||
-                lt(aabb.max.z, this.min.z, precisision) ||
-                lt(this.max.z, aabb.min.z, precisision));
-        }
-        intersectsAABB(aabb) {
-            assertInst(AABB, aabb);
-            return !(this.min.x >= aabb.max.x ||
-                this.max.x <= aabb.min.x ||
-                this.min.y >= aabb.max.y ||
-                this.max.y <= aabb.min.y ||
-                this.min.z >= aabb.max.z ||
-                this.max.z <= aabb.min.z);
-        }
-        intersectsAABB2d(aabb) {
-            assertInst(AABB, aabb);
-            return !(this.min.x >= aabb.max.x ||
-                this.max.x <= aabb.min.x ||
-                this.min.y >= aabb.max.y ||
-                this.max.y <= aabb.min.y);
-        }
-        containsPoint(p) {
-            assertVectors(p);
-            return (this.min.x <= p.x &&
-                this.min.y <= p.y &&
-                this.min.z <= p.z &&
-                this.max.x >= p.x &&
-                this.max.y >= p.y &&
-                this.max.z >= p.z);
-        }
-        containsSphere(center, radius) {
-            assertVectors(center);
-            assertNumbers(radius);
-            return this.distanceToPoint(center) > radius;
-        }
-        intersectsSphere(center, radius) {
-            assertVectors(center);
-            assertNumbers(radius);
-            return this.distanceToPoint(center) <= radius;
-        }
-        distanceToPoint(p) {
-            assertVectors(p);
-            const x = p.x, y = p.y, z = p.z;
-            const min = this.min, max = this.max;
-            if (this.containsPoint(p)) {
-                return Math.max(min.x - x, x - max.x, min.y - y, y - max.y, min.z - z, z - max.z);
-            }
-            return p.distanceTo(new V3(clamp$1(x, min.x, max.x), clamp$1(y, min.y, max.y), clamp$1(z, min.z, max.z)));
-        }
-        containsAABB(aabb) {
-            assertInst(AABB, aabb);
-            return this.containsPoint(aabb.min) && this.containsPoint(aabb.max);
-        }
-        likeAABB(aabb) {
-            assertInst(AABB, aabb);
-            return this.min.like(aabb.min) && this.max.like(aabb.max);
-        }
-        intersectsLine(line) {
-            assertVectors(line.anchor, line.dir1);
-            const dir = line.dir1.map((el) => el || Number.MIN_VALUE);
-            const minTs = this.min.minus(line.anchor).divv(dir);
-            const maxTs = this.max.minus(line.anchor).divv(dir);
-            const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(maxTs).minElement();
-            return tMin <= tMax && !(tMax < line.tMin || line.tMax < tMin);
-        }
-        hasVolume() {
-            return (this.min.x <= this.max.x &&
-                this.min.y <= this.max.y &&
-                this.min.z <= this.max.z);
-        }
-        volume() {
-            if (!this.hasVolume()) {
-                return -1;
-            }
-            const v = this.max.minus(this.min);
-            return v.x * v.y * v.z;
-        }
-        size() {
-            return this.max.minus(this.min);
-        }
-        getCenter() {
-            return this.min.plus(this.max).div(2);
-        }
-        transform(m4) {
-            assertInst(M4, m4);
-            assert(m4.isAxisAligned());
-            const aabb = new AABB();
-            aabb.addPoint(m4.transformPoint(this.min));
-            aabb.addPoint(m4.transformPoint(this.max));
-            return aabb;
-        }
-        ofTransformed(m4) {
-            assertInst(M4, m4);
-            const aabb = new AABB();
-            aabb.addPoints(m4.transformedPoints(this.corners()));
-            return aabb;
-        }
-        corners() {
-            const { min, max } = this;
-            return [
-                min,
-                new V3(min.x, min.y, max.z),
-                new V3(min.x, max.y, min.z),
-                new V3(min.x, max.y, max.z),
-                new V3(max.x, min.y, min.z),
-                new V3(max.x, min.y, max.z),
-                new V3(max.x, max.y, min.z),
-                max,
-            ];
-        }
-        toString() {
-            return callsce("new AABB", this.min, this.max);
-        }
-        toSource() {
-            return this.toString();
-        }
-        /**
-         * Return the matrix which transforms the AABB from V3.O to V3.XYZ to this AABB.
-         */
-        getM4() {
-            return M4.translate(this.min).times(M4.scale(this.size()));
-        }
     }
 
     const gaussLegendre24Xs = [
@@ -6381,6 +2597,7 @@ var viewer = (function (exports, javasetmap_ts) {
     }
     /**
      * Calculate the integral of f in the interval [-1;1].
+     *
      * @param f
      */
     function glq24_11(f) {
@@ -6397,15 +2614,15 @@ var viewer = (function (exports, javasetmap_ts) {
         return (sumInPlaceTree(arrayFromFunction(steps, (i) => startT + dt / 2 + dt * i).map(f)) * dt);
     }
     /**
-     * incomplete elliptic integral of the first kind
-     * EllipticF(phi, k2) = INT[0; phi] 1 / sqrt(1 - k2 * sin²(phi)) dphi
+     * Incomplete elliptic integral of the first kind EllipticF(phi, k2) = INT[0;
+     * phi] 1 / sqrt(1 - k2 * sin²(phi)) dphi
      */
     function EllipticF(phi, k2) {
         return gaussLegendreQuadrature24((phi) => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), -0.5), 0, phi);
     }
     /**
-     * incomplete elliptic integral of the second kind
-     * EllipticE(phi, k2) = INT[0; phi] sqrt(1 - k2 * sin²(phi)) dphi
+     * Incomplete elliptic integral of the second kind EllipticE(phi, k2) = INT[0;
+     * phi] sqrt(1 - k2 * sin²(phi)) dphi
      */
     function EllipticE(phi, k2) {
         return gaussLegendreQuadrature24((phi) => Math.pow(1 - k2 * Math.pow(Math.sin(phi), 2), 0.5), 0, phi);
@@ -6610,6 +2827,3845 @@ var viewer = (function (exports, javasetmap_ts) {
         return results;
     }
 
+    function arraySwap(arr, i, j) {
+        const temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+    function arrayCopy(src, sstart, dst, dstart, length) {
+        assertInts(sstart, dstart, length);
+        dstart += length;
+        length += sstart;
+        while (length-- > sstart) {
+            dst[--dstart] = src[length];
+        }
+        return dst;
+    }
+    /**
+     * Copies a number of items from one array to another, with a definable step
+     * size between items in the source and destination array.
+     *
+     * @param src The source array.
+     * @param sstart The location of the first item in the source array.
+     * @param sstep The offset between items in the source array.
+     * @param dst The destination array.
+     * @param dstart The location of the first item in the destination array.
+     * @param dstep The offset between items in the destination array.
+     * @param count The number of items to copy.
+     */
+    function arrayCopyStep(src, sstart, sstep, dst, dstart, dstep, count) {
+        let srcIndex = sstart + count * sstep;
+        let dIndex = dstart + count * dstep;
+        while (srcIndex > sstart) {
+            dst[(dIndex -= dstep)] = src[(srcIndex -= sstep)];
+        }
+    }
+    /**
+     * Copies a number of contiguous, evenly-spaced blocks from one array to another.
+     *
+     * @param src The source array.
+     * @param sstart The start of the first block in the source array.
+     * @param sstep The offset from the start of one block to the start of the next
+     *     block in the source array.
+     * @param dst The destination array.
+     * @param dstart The start of the first block in the destination array.
+     * @param dstep The offset from the start of one block to the start of the next
+     *     block in the destination array.
+     * @param blockSize The length of one block.
+     * @param blockCount The number of blocks to copy.
+     */
+    function arrayCopyBlocks(src, sstart, sstep, dst, dstart, dstep, blockSize, blockCount) {
+        for (let i = 0; i < blockCount; i++) {
+            arrayCopy(src, sstart + sstep * i, dst, dstart + dstep * i, blockSize);
+        }
+    }
+    function arrayRange(startInclusive, endExclusive, step = 1) {
+        assertNumbers(startInclusive, step);
+        //console.log(Math.ceil((endExclusive - startInclusive) / step))
+        const arrLength = Math.ceil((endExclusive - startInclusive) / step);
+        const result = new Array(arrLength); // '- startInclusive' so that chunk in the last row will also be selected, even
+        // if the row is not complete
+        for (let i = startInclusive, index = 0; index < arrLength; i += step, index++) {
+            result[index] = i;
+        }
+        return result;
+    }
+    /**
+     * Returns a number of evenly-spaced values between t0 and t1 (inclusive).
+     *
+     * @param t0 First value.
+     * @param t1 Last value.
+     * @param count Total number of values.
+     */
+    function arraySamples(t0, t1, count = 64) {
+        return arrayFromFunction(count, (i) => lerp$1(t0, t1, i / (count - 1)));
+    }
+    function arrayFromFunction(length, f) {
+        assertNumbers(length);
+        assert("function" == typeof f);
+        const a = new Array(length);
+        let elIndex = length;
+        while (elIndex--) {
+            a[elIndex] = f(elIndex, length);
+        }
+        return a;
+    }
+    /**
+     * Return the element in the array for which f(el) is highest. There is no
+     * `withMin`, call `withMax(x => -f(x))` instead.
+     *
+     * @param arr The array to search.
+     * @param f
+     */
+    function withMax$1(arr, f) {
+        let i = arr.length, result = undefined, maxVal = -Infinity;
+        while (i--) {
+            const el = arr[i], val = f(el, i, arr);
+            if (val > maxVal) {
+                maxVal = val;
+                result = el;
+            }
+        }
+        return result;
+    }
+    /**
+     * Returns the sum of the absolute values of the components of arr vector.
+     *
+     * @example
+     *   absSum(V(1, -2, 3)) === abs(1) + abs(-2) + abs(3)) === 1 + 2 + 3 === 6
+     */
+    function absSum(arr) {
+        let i = arr.length;
+        let result = 0;
+        while (i--) {
+            result += Math.abs(arr[i]);
+        }
+        return result;
+    }
+    function emod(arr, i) {
+        return arr[mod(i, arr.length)];
+    }
+    function sliceStep(arr, start, end, step, chunkSize = 1) {
+        assertNumbers(start, step);
+        start < 0 && (start = arr.length + start);
+        end <= 0 && (end = arr.length + end);
+        const resultLength = Math.ceil((end - start) / step);
+        const result = new Array(resultLength); // '- start' so that chunk in the last row
+        // will also be selected, even if the row is
+        // not complete
+        let index = 0;
+        for (let i = start; i < end; i += step) {
+            for (let j = i; j < Math.min(i + chunkSize, end); j++) {
+                result[index++] = arr[j];
+            }
+        }
+        assert(resultLength == index);
+        return result;
+    }
+    function splicePure(arr, start = 0, deleteCount = 0, ...items) {
+        const arrayLength = arr.length;
+        const _deleteCount = deleteCount < 0 ? 0 : deleteCount;
+        let _start;
+        if (start < 0) {
+            if (Math.abs(start) > arrayLength) {
+                _start = 0;
+            }
+            else {
+                _start = arrayLength + start;
+            }
+        }
+        else if (start > arrayLength) {
+            _start = arrayLength;
+        }
+        else {
+            _start = start;
+        }
+        const newLength = arr.length - _deleteCount + items.length;
+        const result = new Array(newLength);
+        let dst = newLength;
+        let src = arr.length;
+        while (src-- > _start + _deleteCount) {
+            result[--dst] = arr[src];
+        }
+        src = items.length;
+        while (src--) {
+            result[--dst] = items[src];
+        }
+        src = _start;
+        while (src--) {
+            result[--dst] = items[src];
+        }
+        return result;
+    }
+    function arrayEquals(arr, obj) {
+        if (arr === obj)
+            return true;
+        if (Object.getPrototypeOf(obj) !== Array.prototype)
+            return false;
+        if (arr.length !== obj.length)
+            return false;
+        for (let i = 0; i < arr.length; i++) {
+            if (!equals(arr[i], obj[i]))
+                return false;
+        }
+        return true;
+    }
+    function equals(a, b) {
+        return Array.isArray(a)
+            ? arrayEquals(a, b)
+            : "object" === typeof a
+                ? a.equals(b)
+                : a === b;
+    }
+    /** Equivalent to `arr.map(f).filter((x) => x)`. */
+    function mapFilter(arr, f) {
+        const length = arr.length;
+        const result = [];
+        for (let i = 0; i < length; i++) {
+            if (i in arr) {
+                const val = f(arr[i], i, arr);
+                if (val) {
+                    result.push(val);
+                }
+            }
+        }
+        return result;
+    }
+    function clear(arr, ...newItems) {
+        return arr.splice(0, arr.length, ...newItems);
+    }
+    function concatenated(arr) {
+        return Array.prototype.concat.apply([], arr);
+    }
+    function min$1(arr) {
+        let i = arr.length, max = Infinity;
+        while (i--) {
+            const val = arr[i];
+            if (max > val)
+                max = val;
+        }
+        return max;
+    }
+    function max$1(arr) {
+        // faster and no limit on array size, see https://jsperf.com/math-max-apply-vs-loop/2
+        let i = arr.length, max = -Infinity;
+        while (i--) {
+            const val = arr[i];
+            if (max < val)
+                max = val;
+        }
+        return max;
+    }
+    function indexWithMax(arr, f) {
+        if (arr.length == 0) {
+            return -1;
+        }
+        let i = arr.length, result = -1, maxVal = -Infinity;
+        while (i--) {
+            const val = f(arr[i], i, arr);
+            if (val > maxVal) {
+                maxVal = val;
+                result = i;
+            }
+        }
+        return result;
+    }
+    function sum(arr) {
+        let i = arr.length;
+        let result = 0;
+        while (i--) {
+            result += arr[i];
+        }
+        return result;
+    }
+    function sumInPlaceTree(arr) {
+        if (0 == arr.length)
+            return 0;
+        let l = arr.length;
+        while (l != 1) {
+            const lHalfFloor = Math.floor(l / 2);
+            const lHalfCeil = Math.ceil(l / 2);
+            for (let i = 0; i < lHalfFloor; i++) {
+                arr[i] += arr[i + lHalfCeil];
+            }
+            l = lHalfCeil;
+        }
+        return arr[0];
+    }
+    function unique(arr) {
+        const uniqueSet = new Set(arr);
+        return Array.from(uniqueSet);
+    }
+    function remove(arr, o) {
+        const index = arr.indexOf(o);
+        if (index != -1) {
+            arr.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+    function removeIndex(arr, i) {
+        const result = arr[i];
+        arr.splice(i, 1);
+        return result;
+    }
+    function bagRemoveIndex(arr, i) {
+        const result = arr[i];
+        if (i == arr.length - 1) {
+            arr.pop();
+        }
+        else {
+            arr[i] = arr.pop();
+        }
+        return result;
+    }
+    function removeMatch(arr, matcher) {
+        const index = arr.findIndex(matcher);
+        if (-1 != index) {
+            return removeIndex(arr, index);
+        }
+    }
+    function removeAll(arr, o) {
+        let i = o.length;
+        while (i--) {
+            remove(arr, o[i]);
+        }
+    }
+    function toggle(arr, o) {
+        const index = arr.indexOf(o);
+        if (index != -1) {
+            arr.splice(index, 1);
+            return false;
+        }
+        else {
+            arr.push(o);
+            return true;
+        }
+    }
+    function bagToggle(arr, o) {
+        const index = arr.indexOf(o);
+        if (index != -1) {
+            bagRemoveIndex(arr, index);
+            return false;
+        }
+        else {
+            arr.push(o);
+            return true;
+        }
+    }
+    function binaryIndexOf(arr, searchElement, cmp = (a, b) => a - b) {
+        let minIndex = 0;
+        let maxIndex = arr.length - 1;
+        let currentIndex;
+        let currentElement;
+        while (minIndex <= maxIndex) {
+            currentIndex = ((minIndex + maxIndex) / 2) | 0;
+            currentElement = arr[currentIndex];
+            if (cmp(currentElement, searchElement) < 0) {
+                minIndex = currentIndex + 1;
+            }
+            else if (cmp(currentElement, searchElement) > 0) {
+                maxIndex = currentIndex - 1;
+            }
+            else {
+                return currentIndex;
+            }
+        }
+        return -minIndex - 1;
+    }
+    function binaryInsert(arr, el, cmp = MINUS) {
+        let minIndex = 0;
+        let maxIndex = arr.length;
+        let currentIndex;
+        let currentElement;
+        while (minIndex < maxIndex) {
+            currentIndex = ~~((minIndex + maxIndex) / 2);
+            currentElement = arr[currentIndex];
+            if (cmp(currentElement, el) < 0) {
+                minIndex = currentIndex + 1;
+            }
+            else {
+                maxIndex = currentIndex;
+            }
+        }
+        arr.splice(minIndex, 0, el);
+    }
+    function firstUnsorted(arr, cmp) {
+        for (let i = 1; i < arr.length; i++) {
+            if (cmp(arr[i - 1], arr[i]) > 0)
+                return i;
+        }
+        return -1;
+    }
+    function getLast(arr) {
+        return arr[arr.length - 1];
+    }
+    function setLast(arr, val) {
+        return (arr[arr.length - 1] = val);
+    }
+    function removeIndexes(arr, indexes) {
+        indexes.sort((a, b) => a - b);
+        if (0 === indexes.length)
+            return arr;
+        if (1 === indexes.length) {
+            arr.splice(indexes[0], 1);
+            return arr;
+        }
+        let dstPos = indexes[0];
+        let nextSkip = indexes[0];
+        let indexesPos = 0;
+        for (let srcPos = indexes[0]; srcPos < arr.length; srcPos++) {
+            if (srcPos !== nextSkip) {
+                arr[dstPos++] = arr[srcPos];
+            }
+            else {
+                indexesPos++;
+                if (indexesPos < indexes.length) {
+                    nextSkip = indexes[indexesPos];
+                }
+                else {
+                    arr.splice(dstPos, srcPos + 1 - dstPos);
+                    return arr;
+                }
+            }
+        }
+        throw new Error("illegal state");
+    }
+
+    /** Immutable 3d-vector/point. */
+    class V3 {
+        constructor(x, y, z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            assertNumbers(x, y, z);
+        }
+        static random() {
+            return new V3(Math.random(), Math.random(), Math.random());
+        }
+        static parallel(a, b) {
+            return a.dot(b) - a.length() * b.length();
+        }
+        /**
+         * See
+         * http://math.stackexchange.com/questions/44689/how-to-find-a-random-axis-or-unit-vector-in-3d
+         *
+         *
+         * @returns A random point on the unit sphere with uniform distribution across
+         *     the surface.
+         */
+        static randomUnit() {
+            const zRotation = Math.random() * 2 * Math.PI;
+            const z = Math.random() * 2 - 1;
+            const zRadius = Math.sqrt(1 - Math.pow(z, 2));
+            return new V3(zRadius * Math.cos(zRotation), zRadius * Math.sin(zRotation), z);
+        }
+        //noinspection JSUnusedLocalSymbols
+        /** Documentation stub. You want {@see V3#sphere} */
+        static fromAngles(theta, phi) {
+            throw new Error();
+        }
+        static fromFunction(f) {
+            return new V3(f(0), f(1), f(2));
+        }
+        static min(a, b) {
+            return new V3(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z));
+        }
+        static max(a, b) {
+            return new V3(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z));
+        }
+        static lerp(a, b, t) {
+            return new V3(a.x * (1 - t) + b.x * t, a.y * (1 - t) + b.y * t, a.z * (1 - t) + b.z * t);
+        }
+        static fromArray(a) {
+            return new V3(a[0], a[1], a[2]);
+        }
+        static angleBetween(a, b) {
+            return a.angleTo(b);
+        }
+        static zip(f, ...args) {
+            assert(f instanceof Function);
+            return new V3(f.apply(undefined, args.map((x) => x.x)), f.apply(undefined, args.map((x) => x.y)), f.apply(undefined, args.map((x) => x.z)));
+        }
+        static normalOnPoints(a, b, c) {
+            assertVectors(a, b, c);
+            return a.to(b).cross(a.to(c));
+        }
+        static add(...vs) {
+            assertVectors(...vs);
+            let x = 0, y = 0, z = 0;
+            let i = vs.length;
+            while (i--) {
+                x += vs[i].x;
+                y += vs[i].y;
+                z += vs[i].z;
+            }
+            return new V3(x, y, z);
+        }
+        static sub(...vs) {
+            assertVectors(...vs);
+            let x = vs[0].x, y = vs[0].y, z = vs[0].z;
+            let i = vs.length;
+            while (i--) {
+                x -= vs[i].x;
+                y -= vs[i].y;
+                z -= vs[i].z;
+            }
+            return new V3(x, y, z);
+        }
+        /**
+         * Pack an array of V3s into an array of numbers (Float32Array by default).
+         *
+         * @param v3arr Source array
+         * @param dest Destination array. If provided, must be large enough to fit
+         *     v3count items.
+         * @param srcStart Starting index in source array
+         * @param destStart Starting index in destination array
+         * @param v3count Number of V3s to copy.
+         * @returns Packed array.
+         */
+        static pack(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            const result = dest || new Float32Array(3 * v3count); // TODO
+            assert(result.length - destStart >= v3count * 3, "dest.length - destStart >= v3count * 3", result.length, destStart, v3count * 3);
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                const v = v3arr[srcIndex++];
+                result[destIndex++] = v.x;
+                result[destIndex++] = v.y;
+                result[destIndex++] = v.z;
+            }
+            return result;
+        }
+        static unpack(packedArray, dest, srcStart = 0, destStart = 0, v3count = (packedArray.length - srcStart) / 3) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            dest = dest || new Array(v3count);
+            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                dest[destIndex++] = new V3(packedArray[srcIndex++], packedArray[srcIndex++], packedArray[srcIndex++]);
+            }
+            return dest;
+        }
+        static packXY(v3arr, dest, srcStart = 0, destStart = 0, v3count = v3arr.length - srcStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            const result = dest || new Float32Array(2 * v3count);
+            assert(result.length - destStart >= v3count, "dest.length - destStart >= v3count");
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                const v = v3arr[srcIndex++];
+                result[destIndex++] = v.x;
+                result[destIndex++] = v.y;
+            }
+            return result;
+        }
+        static unpackXY(src, dest, srcStart = 0, destStart = 0, v3count = Math.min(src.length / 2, (dest && dest.length) || Infinity) -
+            destStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            dest = dest || new Array(v3count);
+            assert(dest.length - destStart >= v3count, "dest.length - destStart >= v3count");
+            assert(src.length - srcStart >= v3count * 2, "dest.length - destStart >= v3count");
+            let i = v3count, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                dest[destIndex++] = new V3(src[srcIndex++], src[srcIndex++], 0);
+            }
+            return dest;
+        }
+        static perturbed(v, delta) {
+            return v.perturbed(delta);
+        }
+        static polar(radius, phi, z = 0) {
+            return new V3(radius * Math.cos(phi), radius * Math.sin(phi), z);
+        }
+        /**
+         * @param longitude Angle in XY plane
+         * @param latitude "height"/z dir angle
+         */
+        static sphere(longitude, latitude, length = 1) {
+            return new V3(length * Math.cos(latitude) * Math.cos(longitude), length * Math.cos(latitude) * Math.sin(longitude), length * Math.sin(latitude));
+        }
+        static inverseLerp(a, b, x) {
+            const ab = a.to(b);
+            return a.to(x).dot(ab) / ab.squared();
+        }
+        get [0]() {
+            return this.x;
+        }
+        get [1]() {
+            return this.y;
+        }
+        get [2]() {
+            return this.z;
+        }
+        get u() {
+            return this.x;
+        }
+        get v() {
+            return this.y;
+        }
+        perturbed(delta = NLA_PRECISION * 0.8) {
+            return this.map((x) => x + (Math.random() - 0.5) * delta);
+        }
+        *[Symbol.iterator]() {
+            yield this.x;
+            yield this.y;
+            yield this.z;
+        }
+        e(index) {
+            assert(index >= 0 && index < 3);
+            return 0 == index ? this.x : 1 == index ? this.y : this.z;
+        }
+        negated() {
+            return new V3(-this.x, -this.y, -this.z);
+        }
+        abs() {
+            return new V3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
+        }
+        plus(a) {
+            assertVectors(a);
+            return new V3(this.x + a.x, this.y + a.y, this.z + a.z);
+        }
+        /**
+         * Hadarmard product (or Schur product): element-wise multiplication of two vectors.
+         *
+         * @see https://en.wikipedia.org/wiki/Hadamard_product_(matrices)
+         */
+        schur(a) {
+            return new V3(this.x * a.x, this.y * a.y, this.z * a.z);
+        }
+        /** Element-wise division. */
+        divv(a) {
+            return new V3(this.x / a.x, this.y / a.y, this.z / a.z);
+        }
+        /** See also {@link to} which is a.minus(this) */
+        minus(a) {
+            assertVectors(a);
+            return new V3(this.x - a.x, this.y - a.y, this.z - a.z);
+        }
+        to(a) {
+            assertVectors(a);
+            return a.minus(this);
+        }
+        times(factor) {
+            assertNumbers(factor);
+            return new V3(this.x * factor, this.y * factor, this.z * factor);
+        }
+        div(a) {
+            assertNumbers(a);
+            return new V3(this.x / a, this.y / a, this.z / a);
+        }
+        /**
+         * Dot product.
+         *
+         * @see https://en.wikipedia.org/wiki/Dot_product
+         */
+        dot(a) {
+            assertInst(V3, a);
+            return this.x * a.x + this.y * a.y + this.z * a.z;
+        }
+        /** Linearly interpolate */
+        lerp(b, t) {
+            assertVectors(b);
+            assertNumbers(t);
+            return V3.lerp(this, b, t);
+        }
+        squared() {
+            return this.dot(this);
+        }
+        distanceTo(a) {
+            assertVectors(a);
+            //return this.minus(a).length()
+            return Math.hypot(this.x - a.x, this.y - a.y, this.z - a.z);
+        }
+        distanceToSquared(a) {
+            assertVectors(a);
+            return this.minus(a).squared();
+        }
+        ///**
+        // * See also {@see #setTo} for the individual
+        // *
+        // * @param v
+        // */
+        //assign(v) {
+        //	assertVectors(v)
+        //	this.x = v.x
+        //	this.y = v.y
+        //	this.z = v.z
+        //}
+        //
+        ///**
+        // * See also {@see #assign} for the V3 version
+        // *
+        // * @param x
+        // * @param y
+        // * @param z
+        // */
+        //setTo(x, y, z = 0) {
+        //	this.x = x
+        //	this.y = y
+        //	this.z = z
+        //}
+        toSource() {
+            return V3.NAMEMAP.get(this) || this.toString();
+        }
+        nonParallelVector() {
+            const abs = this.abs();
+            if (abs.x <= abs.y && abs.x <= abs.z) {
+                return V3.X;
+            }
+            else if (abs.y <= abs.x && abs.y <= abs.z) {
+                return V3.Y;
+            }
+            else {
+                return V3.Z;
+            }
+        }
+        slerp(b, t) {
+            assertVectors(b);
+            assertNumbers(t);
+            const sin = Math.sin;
+            const omega = this.angleTo(b);
+            return this.times(sin((1 - t) * omega) / sin(omega)).plus(b.times(sin(t * omega) / sin(omega)));
+        }
+        min(b) {
+            return new V3(Math.min(this.x, b.x), Math.min(this.y, b.y), Math.min(this.z, b.z));
+        }
+        max(b) {
+            return new V3(Math.max(this.x, b.x), Math.max(this.y, b.y), Math.max(this.z, b.z));
+        }
+        equals(v) {
+            return this == v || (this.x == v.x && this.y == v.y && this.z == v.z);
+        }
+        /**
+         * The cross product is defined as: a x b = |a| * |b| * sin(phi) * n where |.|
+         * is the euclidean norm, phi is the angle between the vectors and n is a
+         * unit vector perpendicular to both a and b.
+         *
+         * The cross product is zero for parallel vectors.
+         *
+         * @see https://en.wikipedia.org/wiki/Cross_product
+         */
+        cross(v) {
+            return new V3(this.y * v.z - this.z * v.y, this.z * v.x - this.x * v.z, this.x * v.y - this.y * v.x);
+        }
+        minElement() {
+            return Math.min(this.x, this.y, this.z);
+        }
+        maxElement() {
+            return Math.max(this.x, this.y, this.z);
+        }
+        toArray(n = 3) {
+            return [this.x, this.y, this.z].slice(0, n);
+        }
+        /**
+         * Get a perpendicular vector.
+         *
+         * For vectors in the XY-Plane, returns vector rotated 90° CCW.
+         */
+        getPerpendicular() {
+            if (eq0(this.x) && eq0(this.y)) {
+                if (eq0(this.z)) {
+                    throw new Error("zero vector");
+                }
+                // v is Vector(0, 0, v.z)
+                return V3.Y;
+            }
+            return new V3(-this.y, this.x, 0);
+        }
+        //noinspection JSMethodCanBeStatic
+        dim() {
+            return 3;
+        }
+        els() {
+            return [this.x, this.y, this.z];
+        }
+        angleXY() {
+            return Math.atan2(this.y, this.x);
+        }
+        lengthXY() {
+            return Math.hypot(this.x, this.y);
+            //return Math.sqrt(this.x * this.x + this.y * this.y)
+        }
+        squaredXY() {
+            return this.x * this.x + this.y * this.y;
+        }
+        xy() {
+            return new V3(this.x, this.y, 0);
+        }
+        /**
+         * Transform this vector element-wise by way of function f. Returns V3(f(x), f(y), f(z))
+         *
+         * @param f Function to apply to elements (number -> number)
+         */
+        map(f) {
+            return new V3(f(this.x, "x"), f(this.y, "y"), f(this.z, "z"));
+        }
+        toString(roundFunction) {
+            roundFunction = roundFunction || defaultRoundFunction;
+            return (V3.NAMEMAP.get(this) ||
+                "V(" + [this.x, this.y, this.z].map(roundFunction).join(", ") + ")"); //+ this.id
+        }
+        angleTo(b) {
+            assert(1 == arguments.length);
+            assertVectors(b);
+            assert(!this.likeO());
+            assert(!b.likeO());
+            return Math.acos(Math.min(1, this.dot(b) / this.length() / b.length()));
+        }
+        /**
+         * Phi = angle between A and B alpha = angle between n and normal1
+         *
+         * A . B = ||A|| * ||B|| * cos(phi) A x B = ||A|| * ||B|| * sin(phi) * n (n =
+         * unit vector perpendicular) (A x B) . normal1 = ||A|| * ||B|| * sin(phi) * cos(alpha)
+         */
+        angleRelativeNormal(vector, normal1) {
+            assert(2 == arguments.length);
+            assertVectors(vector, normal1);
+            assertf(() => normal1.hasLength(1));
+            //assert(vector.isPerpendicularTo(normal1), 'vector.isPerpendicularTo(normal1)' + vector.sce + normal1.sce)
+            //assert(this.isPerpendicularTo(normal1), 'this.isPerpendicularTo(normal1)' + this.dot(vector)) //
+            // -0.000053600770598683675
+            return Math.atan2(this.cross(vector).dot(normal1), this.dot(vector));
+        }
+        /**
+         * Returns true iff this is parallel to vector, i.e. this * s == vector, where
+         * s is a positive or negative number, using eq. Throw a DebugError - if
+         * vector is not a Vector or - if this has a length of 0 or - if vector has a
+         * length of 0
+         */
+        isParallelTo(vector) {
+            assertVectors(vector);
+            assert(!this.likeO());
+            assert(!vector.likeO());
+            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
+            const dot = this.dot(vector);
+            return eq(this.squared() * vector.squared(), dot * dot);
+        }
+        isPerpendicularTo(vector) {
+            assertVectors(vector);
+            assert(!this.likeO(), "!this.likeO()");
+            assert(!vector.likeO(), "!vector.likeO()");
+            return eq0(this.dot(vector));
+        }
+        isReverseDirTo(other) {
+            assertVectors(other);
+            assert(!this.likeO());
+            assert(!other.likeO());
+            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+            // in both cases the vectors are parallel, so check if abs(a . b) == |a|*|b|
+            const dot = this.dot(other);
+            return eq(Math.sqrt(this.squared() * other.squared()), dot);
+        }
+        /**
+         * Returns the length of this Vector, i.e. the euclidean norm.
+         *
+         * Note that the partial derivatives of the euclidean norm at point x are
+         * equal to the components of the unit vector x.
+         */
+        length() {
+            return Math.hypot(this.x, this.y, this.z);
+            //return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
+        }
+        /** Definition: V3.likeO == V3.like(V3.O) */
+        likeO() {
+            return this.like(V3.O);
+        }
+        /**
+         * Eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z)
+         *
+         * @param obj
+         */
+        like(obj) {
+            if (obj === this)
+                return true;
+            if (!(obj instanceof V3))
+                return false;
+            return eq(this.x, obj.x) && eq(this.y, obj.y) && eq(this.z, obj.z);
+        }
+        /** Equivalent to this.like(v) || this.negated().like(v) */
+        likeOrReversed(v) {
+            return eq(Math.abs(this.dot(v)), Math.sqrt(this.squared() * v.squared()));
+        }
+        /**
+         * Returns a new unit Vector (.length() === 1) with the same direction as this
+         * vector. Throws a DebugError if this has a length of 0.
+         */
+        unit() {
+            assert(!this.likeO(), "cannot normalize zero vector");
+            return this.div(this.length());
+        }
+        /** Documentation stub. You want {@link unit} */
+        normalized() {
+            throw new Error("documentation stub. use .unit()");
+        }
+        /**
+         * Returns a new V3 equal to this scaled so that its length is equal to newLength.
+         *
+         * Passing a negative newLength will flip the vector.
+         */
+        toLength(newLength) {
+            assertNumbers(newLength);
+            return this.times(newLength / this.length());
+        }
+        /**
+         * Returns a new Vector which is the projection of this vector onto the passed
+         * vector. Examples
+         *
+         * V(3, 4).projectedOn(V(1, 0)) // returns V(3, 0) V(3, 4).projectedOn(V(2,
+         * 0)) // returns V(3, 0) V(3, 4).projectedOn(V(-1, 0)) // returns V(-3, 0)
+         * V(3, 4).projectedOn(V(0, 1)) // returns V(0, 4) V(3, 4).projectedOn(V(1,
+         * 1)) // returns
+         */
+        projectedOn(b) {
+            assertVectors(b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return b.times(this.dot(b) / b.dot(b));
+        }
+        rejectedFrom(b) {
+            assertVectors(b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return this.minus(b.times(this.dot(b) / b.dot(b)));
+        }
+        rejectedFrom1(b1) {
+            assertVectors(b1);
+            assert(b1.hasLength(1));
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return this.minus(b1.times(this.dot(b1)));
+        }
+        /**
+         * Returns the length of this vector rejected from the unit vector b.
+         *
+         *     /| this / | ^
+         *     /__| | b
+         *     r Returns length of r (r === this.rejectedFrom(b))
+         */
+        rejectedLength(b) {
+            assertVectors(b);
+            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b), 2) / b.dot(b));
+        }
+        /**
+         * Returns the length of this vector rejected from the unit vector b1.
+         *
+         *     /| this / | ^
+         *     /__| | b1
+         *     r Returns length of r (r === this.rejectedFrom(b1))
+         */
+        rejected1Length(b1) {
+            assertVectors(b1);
+            assert(b1.hasLength(1));
+            return Math.sqrt(this.dot(this) - Math.pow(this.dot(b1), 2));
+        }
+        /**
+         * Returns true iff the length() of this vector is equal to 'length', using eq
+         *
+         * @example
+         *   V(3, 4).hasLength(5) === true
+         *
+         * @example
+         *   V(1, 1).hasLength(1) === false
+         */
+        hasLength(length) {
+            assertNumbers(length);
+            return eq(length, this.length());
+        }
+        /**
+         * Returns the sum of the absolute values of the components of this vector.
+         * E.g. V(1, -2, 3) === abs(1) + abs(-2) + abs(3) === 1 + 2 + 3 === 6
+         */
+        absSum() {
+            return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
+        }
+        /** @returns `min(|x|, |y|, |z|)` */
+        minAbsElement() {
+            return Math.min(Math.abs(this.x), Math.abs(this.y), Math.min(this.z));
+        }
+        /** @returns `max(|x|, |y|, |z|)` */
+        maxAbsElement() {
+            return Math.max(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
+        }
+        maxAbsDim() {
+            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
+            return xAbs >= yAbs ? (xAbs >= zAbs ? 0 : 2) : yAbs >= zAbs ? 1 : 2;
+        }
+        minAbsDim() {
+            const xAbs = Math.abs(this.x), yAbs = Math.abs(this.y), zAbs = Math.abs(this.z);
+            return xAbs < yAbs ? (xAbs < zAbs ? 0 : 2) : yAbs < zAbs ? 1 : 2;
+        }
+        withElement(dim, el) {
+            assert(["x", "y", "z"].includes(dim), "" + dim);
+            assertNumbers(el);
+            if ("x" == dim) {
+                return new V3(el, this.y, this.z);
+            }
+            if ("y" == dim) {
+                return new V3(this.x, el, this.z);
+            }
+            return new V3(this.x, this.y, el);
+        }
+        hashCode() {
+            function floatHashCode(f) {
+                return ~~(f * (1 << 28));
+            }
+            return ~~((floatHashCode(this.x) * 31 + floatHashCode(this.y)) * 31 +
+                floatHashCode(this.z));
+        }
+        hashCodes() {
+            //function floatHashCode(f) {
+            //	return ~~(f * (1 << 28))
+            //}
+            // compare hashCode.floatHashCode
+            // the following ops are equivalent to
+            // floatHashCode((el - NLA_PRECISION) % (2 * NLA_PRECISION))
+            // this results in the hashCode for the (out of 8 possible) cube with the lowest hashCode
+            // the other 7 can be calculated by adding constants
+            const xHC = ~~(this.x * (1 << 28) - 0.5), yHC = ~~(this.y * (1 << 28) - 0.5), zHC = ~~(this.z * (1 << 28) - 0.5), hc = ~~((xHC * 31 + yHC) * 31 + zHC);
+            return [
+                ~~hc,
+                ~~(hc + 961),
+                ~~(hc + 31),
+                ~~(hc + 31 + 961),
+                ~~(hc + 1),
+                ~~(hc + 1 + 961),
+                ~~(hc + 1 + 31),
+                ~~(hc + 1 + 31 + 961),
+            ];
+        }
+        //static areDisjoint(it: Iterable<V3>): boolean {
+        //	const vSet = new CustomSet
+        //	for (const v of it) {
+        //		if (!v.equals(vSet.canonicalizeLike(v))) {
+        //			// like value already in set
+        //			return false
+        //		}
+        //	}
+        //	return true
+        //}
+        compareTo(other) {
+            if (this.x != other.x) {
+                return this.x - other.x;
+            }
+            else if (this.y != other.y) {
+                return this.y - other.y;
+            }
+            else {
+                return this.z - other.z;
+            }
+        }
+        compareTo2(other, eps = NLA_PRECISION) {
+            if (!eq(this.x, other.x, eps)) {
+                return this.x - other.x;
+            }
+            else if (!eq(this.y, other.y, eps)) {
+                return this.y - other.y;
+            }
+            else if (!eq(this.z, other.z, eps)) {
+                return this.z - other.z;
+            }
+            else {
+                return 0;
+            }
+        }
+        toAngles() {
+            return {
+                theta: Math.atan2(this.y, this.x),
+                phi: Math.asin(this.z / this.length()),
+            };
+        }
+    }
+    V3.O = new V3(0, 0, 0);
+    V3.X = new V3(1, 0, 0);
+    V3.Y = new V3(0, 1, 0);
+    V3.Z = new V3(0, 0, 1);
+    V3.XY = new V3(1, 1, 0);
+    V3.XYZ = new V3(1, 1, 1);
+    V3.INF = new V3(Infinity, Infinity, Infinity);
+    V3.UNITS = [V3.X, V3.Y, V3.Z];
+    V3.NAMEMAP = new JavaMap()
+        .set(V3.O, "V3.O")
+        .set(V3.X, "V3.X")
+        .set(V3.Y, "V3.Y")
+        .set(V3.Z, "V3.Z")
+        .set(V3.XYZ, "V3.XYZ")
+        .set(V3.INF, "V3.INF");
+    function V(a, b, c) {
+        if (arguments.length == 3) {
+            return new V3(parseFloat(a), parseFloat(b), parseFloat(c));
+        }
+        else if (arguments.length == 2) {
+            return new V3(parseFloat(a), parseFloat(b), 0);
+        }
+        else if (arguments.length == 1) {
+            if (typeof a == "object") {
+                if (a instanceof V3) {
+                    // immutable, so
+                    return a;
+                }
+                else if (a instanceof Array ||
+                    a instanceof Float32Array ||
+                    a instanceof Float64Array) {
+                    if (2 == a.length) {
+                        return new V3(parseFloat(a[0]), parseFloat(a[1]), 0);
+                    }
+                    else if (3 == a.length) {
+                        return new V3(parseFloat(a[0]), parseFloat(a[1]), parseFloat(a[2]));
+                    }
+                }
+                else if ("x" in a && "y" in a) {
+                    return new V3(parseFloat(a.x), parseFloat(a.y), "z" in a ? parseFloat(a.z) : 0);
+                }
+            }
+        }
+        throw new Error("invalid arguments" + arguments);
+    }
+
+    const P3YZ = { normal1: V3.X, w: 0 };
+    const P3ZX = { normal1: V3.Y, w: 0 };
+    const P3XY = { normal1: V3.Z, w: 0 };
+    class Transformable {
+        mirror(plane) {
+            return this.transform(M4.mirror(plane));
+        }
+        mirroredX() {
+            return this.mirror(P3YZ);
+        }
+        mirrorY() {
+            return this.mirror(P3ZX);
+        }
+        mirrorZ() {
+            return this.mirror(P3XY);
+        }
+        project(plane) {
+            return this.transform(M4.project(plane));
+        }
+        projectXY() {
+            return this.transform(M4.project(P3XY));
+        }
+        projectYZ() {
+            return this.transform(M4.project(P3YZ));
+        }
+        projectZX() {
+            return this.transform(M4.project(P3ZX));
+        }
+        translate(...args) {
+            return this.transform(M4.translate.apply(undefined, args), callSource.call(undefined, ".translate", ...args));
+        }
+        scale(...args) {
+            return this.transform(M4.scale.apply(undefined, args), callSource.call(undefined, ".scale", ...args));
+        }
+        rotateX(radians) {
+            return this.transform(M4.rotateX(radians), `.rotateX(${radians})`);
+        }
+        rotateY(radians) {
+            return this.transform(M4.rotateY(radians), `.rotateY(${radians})`);
+        }
+        rotateZ(radians) {
+            return this.transform(M4.rotateZ(radians), `.rotateZ(${radians})`);
+        }
+        rotate(rotationCenter, rotationAxis, radians) {
+            return this.transform(M4.rotateLine(rotationCenter, rotationAxis, radians), callSource(".rotate", rotationCenter, rotationAxis, radians));
+        }
+        rotateAB(from, to) {
+            return this.transform(M4.rotateAB(from, to), callSource(".rotateAB", from, to));
+        }
+        eulerZXZ(alpha, beta, gamma) {
+            throw new Error();
+            //return this.transform(M4.eulerZXZ(alpha, beta, gamma))
+        }
+        shearX(y, z) {
+            // prettier-ignore
+            return this.transform(new M4([
+                1, y, z, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ]));
+        }
+        foo() {
+            return this.transform(M4.FOO);
+        }
+        fooInv() {
+            return this.transform(M4.FOO_INV);
+        }
+        visit(visitor, ...args) {
+            let proto = Object.getPrototypeOf(this);
+            // walk up the prototype chain until we find a defined function in o
+            while (!visitor.hasOwnProperty(proto.constructor.name) &&
+                proto !== Transformable.prototype) {
+                proto = Object.getPrototypeOf(proto);
+            }
+            if (visitor.hasOwnProperty(proto.constructor.name)) {
+                return visitor[proto.constructor.name].apply(this, args);
+            }
+            else {
+                throw new Error("No implementation for " + this.constructor.name);
+            }
+        }
+    }
+
+    class Matrix {
+        constructor(width, height, m) {
+            this.width = width;
+            this.height = height;
+            this.m = m;
+            assertInts(width, height);
+            assertf(() => 0 < width);
+            assertf(() => 0 < height);
+            assert(width * height == m.length, "width * height == m.length", width, height, m.length);
+        }
+        static random(width, height) {
+            return Matrix.fromFunction(width, height, () => Math.random());
+        }
+        static fromFunction(width, height, f) {
+            const m = new Float64Array(height * width);
+            let elIndex = height * width;
+            while (elIndex--) {
+                m[elIndex] = f(Math.floor(elIndex / width), elIndex % width, elIndex);
+            }
+            return new Matrix(width, height, m);
+        }
+        static identityN(dim) {
+            assertInts(dim);
+            const m = new Float64Array(dim * dim);
+            // Float64Arrays are init to 0
+            let elIndex = dim * (dim + 1);
+            while (elIndex) {
+                elIndex -= dim + 1;
+                m[elIndex] = 1;
+            }
+            return new Matrix(dim, dim, m);
+        }
+        /**
+         * Create new dim x dim matrix equal to an identity matrix with rows/colums i
+         * and k swapped. Note that i and k are 0-indexed.
+         */
+        static permutation(dim, i, k) {
+            assertInts(dim, i, k);
+            assertf(() => 0 <= i && i < dim);
+            assertf(() => 0 <= k && k < dim);
+            const m = new Float64Array(dim * dim);
+            // Float64Array are init to 0
+            let elIndex = dim * (dim + 1);
+            while (elIndex) {
+                elIndex -= dim + 1;
+                m[elIndex] = 1;
+            }
+            m[i * dim + i] = 0;
+            m[k * dim + k] = 0;
+            m[i * dim + k] = 1;
+            m[k * dim + i] = 1;
+            return new Matrix(dim, dim, m);
+        }
+        static fromRowArrays(...rowArrays) {
+            if (0 == rowArrays.length) {
+                throw new Error("cannot have 0 vector");
+            }
+            const height = rowArrays.length;
+            const width = rowArrays[0].length;
+            const m = new Float64Array(height * width);
+            arrayCopy(rowArrays[0], 0, m, 0, width);
+            for (let rowIndex = 1; rowIndex < height; rowIndex++) {
+                if (rowArrays[rowIndex].length != width) {
+                    throw new Error("all row arrays must be the same length");
+                }
+                arrayCopy(rowArrays[rowIndex], 0, m, rowIndex * width, width);
+            }
+            return this.new(width, height, m);
+        }
+        static fromColVectors(colVectors) {
+            return Matrix.fromColArrays(...colVectors.map((v) => v.v));
+        }
+        static forWidthHeight(width, height) {
+            return new Matrix(width, height, new Float64Array(width * height));
+        }
+        static fromColArrays(...colArrays) {
+            if (0 == colArrays.length) {
+                throw new Error("cannot have 0 vector");
+            }
+            const width = colArrays.length;
+            const height = colArrays[0].length;
+            const m = new Float64Array(height * width);
+            arrayCopyStep(colArrays[0], 0, 1, m, 0, width, height);
+            for (let colIndex = 1; colIndex < width; colIndex++) {
+                if (colArrays[colIndex].length != height) {
+                    throw new Error("all col arrays must be the same length");
+                }
+                arrayCopyStep(colArrays[colIndex], 0, 1, m, colIndex, width, height);
+            }
+            return this.new(width, height, m);
+        }
+        static product(...args) {
+            const [ms, result] = Array.isArray(args[0])
+                ? [args[0], args[1]]
+                : [args, undefined];
+            if (0 == ms.length)
+                throw new Error("Can't guess matrix size.");
+            if (1 == ms.length)
+                return Matrix.copy(ms[0], result);
+            return Matrix.copy(ms.reduce((a, b) => a.times(b)), result);
+        }
+        /**
+         * Numerically calculate all the partial derivatives of f at x0.
+         *
+         * @param f
+         * @param x0
+         * @param fx0 F(x0), pass it if you have it already
+         * @param EPSILON
+         */
+        static jacobi(f, x0, fx0 = f(x0), EPSILON = 1e-6) {
+            const jacobi = Matrix.forWidthHeight(x0.length, fx0.length);
+            for (let colIndex = 0; colIndex < x0.length; colIndex++) {
+                x0[colIndex] += EPSILON;
+                const fx = f(x0);
+                for (let rowIndex = 0; rowIndex < fx0.length; rowIndex++) {
+                    const value = (fx[rowIndex] - fx0[rowIndex]) / EPSILON;
+                    jacobi.setEl(rowIndex, colIndex, value);
+                }
+                x0[colIndex] -= EPSILON;
+            }
+            return jacobi;
+        }
+        static copy(src, result = src.new()) {
+            assertInst(Matrix, src, result);
+            assert(src.width == result.width);
+            assert(src.height == result.height);
+            assert(result != src, "result != src");
+            const s = src.m, d = result.m;
+            let i = s.length;
+            while (i--) {
+                d[i] = s[i];
+            }
+            return result;
+        }
+        static new(width, height, m) {
+            return new Matrix(width, height, m);
+        }
+        copy() {
+            return Matrix.copy(this);
+        }
+        e(rowIndex, colIndex) {
+            assertInts(rowIndex, colIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
+            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
+            return this.m[rowIndex * this.width + colIndex];
+        }
+        setEl(rowIndex, colIndex, val) {
+            assertInts(rowIndex, colIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
+            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
+            assertNumbers(val);
+            this.m[rowIndex * this.width + colIndex] = val;
+        }
+        plus(m) {
+            assert(this.width == m.width);
+            assert(this.height == m.height);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] + m.m[i];
+            return r;
+        }
+        minus(m) {
+            assert(this.width == m.width);
+            assert(this.height == m.height);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] - m.m[i];
+            return r;
+        }
+        mulScalar(scalar) {
+            assertNumbers(scalar);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] * scalar;
+            return r;
+        }
+        divScalar(scalar) {
+            assertNumbers(scalar);
+            const r = this.new();
+            let i = this.m.length;
+            while (i--)
+                r.m[i] = this.m[i] / scalar;
+            return r;
+        }
+        new() {
+            return new Matrix(this.width, this.height, new Float64Array(this.width * this.height));
+        }
+        toString(f, colNames, rowNames) {
+            f = f || ((v) => v.toFixed(6));
+            assert(typeof f(0) == "string", "" + typeof f(0));
+            assert(!colNames || colNames.length == this.width);
+            assert(!rowNames || rowNames.length == this.height);
+            const rounded = Array.from(this.m).map(f);
+            const rows = arrayFromFunction(this.height, (rowIndex) => rounded.slice(rowIndex * this.width, (rowIndex + 1) * this.width)); // select matrix row
+            if (colNames) {
+                rows.unshift(Array.from(colNames));
+            }
+            if (rowNames) {
+                rows.forEach((row, rowIndex) => row.unshift(rowNames[rowIndex - (colNames ? 1 : 0)] || ""));
+            }
+            const colWidths = arrayFromFunction(this.width, (colIndex) => max$1(rows.map((row) => row[colIndex].length)));
+            return rows
+                .map((row, rowIndex) => row
+                .map((x, colIndex) => {
+                // pad numbers with spaces to col width
+                const padder = (rowIndex == 0 && colNames) || (colIndex == 0 && rowNames)
+                    ? String.prototype.padEnd
+                    : String.prototype.padStart;
+                return padder.call(x, colWidths[colIndex]);
+            })
+                .join("  "))
+                .map((x) => x + "\n")
+                .join(""); // join rows
+        }
+        row(rowIndex) {
+            assertInts(rowIndex);
+            assert(0 <= rowIndex && rowIndex < this.height, "rowIndex out of bounds " + rowIndex);
+            const v = new Float64Array(this.width);
+            arrayCopy(this.m, rowIndex * this.width, v, 0, this.width);
+            return new Vector(v);
+        }
+        col(colIndex) {
+            assertInts(colIndex);
+            assert(0 <= colIndex && colIndex < this.width, "colIndex out of bounds " + colIndex);
+            const v = new Float64Array(this.height);
+            arrayCopyStep(this.m, colIndex, this.width, v, 0, 1, this.height);
+            return new Vector(v);
+        }
+        dim() {
+            return { width: this.width, height: this.height };
+        }
+        dimString() {
+            return this.width + "x" + this.height;
+        }
+        equals(obj) {
+            if (obj.constructor != this.constructor)
+                return false;
+            if (this.width != obj.width || this.height != obj.height)
+                return false;
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                if (this.m[elIndex] != obj.m[elIndex])
+                    return false;
+            }
+            return true;
+        }
+        equalsMatrix(matrix, precision = NLA_PRECISION) {
+            assertInst(Matrix, matrix);
+            if (this.width != matrix.width || this.height != matrix.height)
+                return false;
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                if (Math.abs(this.m[elIndex] - matrix.m[elIndex]) > precision)
+                    return false;
+            }
+            return true;
+        }
+        hashCode() {
+            let result = 0;
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                result = result * 31 + floatHashCode(this.m[elIndex]);
+            }
+            return result;
+        }
+        // todo rename
+        isZero() {
+            let elIndex = this.m.length;
+            while (elIndex--) {
+                if (!eq0(this.m[elIndex])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        isOrthogonal() {
+            return (this.isSquare() &&
+                this.transposed().times(this).equalsMatrix(Matrix.identityN(this.width)));
+        }
+        /** Returns L, U, P such that L * U == P * this */
+        luDecomposition() {
+            const width = this.width;
+            const height = this.height;
+            const uRowArrays = this.asRowArrays(Float64Array);
+            const lRowArrays = arrayFromFunction(height, () => new Float64Array(height));
+            const pRowArrays = Matrix.identityN(height).asRowArrays(Float64Array);
+            let currentRowIndex = 0;
+            for (let colIndex = 0; colIndex < width; colIndex++) {
+                currentRowIndex = colIndex;
+                // console.log('currentRowIndex', currentRowIndex)	// find largest value in colIndex
+                let maxAbsValue = 0, pivotRowIndex = -1, numberOfNonZeroRows = 0;
+                for (let rowIndex = currentRowIndex; rowIndex < height; rowIndex++) {
+                    const el = uRowArrays[rowIndex][colIndex];
+                    numberOfNonZeroRows += +(0 != el);
+                    if (Math.abs(el) > maxAbsValue) {
+                        maxAbsValue = Math.abs(el);
+                        pivotRowIndex = rowIndex;
+                    }
+                }
+                // TODO: check with isZero
+                if (0 == maxAbsValue) {
+                    // column contains only zeros
+                    continue;
+                }
+                assert(-1 !== pivotRowIndex);
+                // swap rows
+                arraySwap(uRowArrays, currentRowIndex, pivotRowIndex);
+                arraySwap(lRowArrays, currentRowIndex, pivotRowIndex);
+                arraySwap(pRowArrays, currentRowIndex, pivotRowIndex);
+                lRowArrays[currentRowIndex][colIndex] = 1;
+                if (1 < numberOfNonZeroRows) {
+                    // subtract pivot (now current) row from all below it
+                    for (let rowIndex = currentRowIndex + 1; rowIndex < height; rowIndex++) {
+                        const l = uRowArrays[rowIndex][colIndex] /
+                            uRowArrays[currentRowIndex][colIndex];
+                        lRowArrays[rowIndex][colIndex] = l;
+                        // subtract pivot row * l from row 'rowIndex'
+                        for (let colIndex2 = colIndex; colIndex2 < width; colIndex2++) {
+                            uRowArrays[rowIndex][colIndex2] -=
+                                l * uRowArrays[currentRowIndex][colIndex2];
+                        }
+                    }
+                }
+                //  currentRowIndex++ // this doesn't increase if pivot was zero
+            }
+            return {
+                L: Matrix.fromRowArrays(...lRowArrays),
+                U: Matrix.fromRowArrays(...uRowArrays),
+                P: Matrix.fromRowArrays(...pRowArrays),
+            };
+        }
+        qrDecompositionGivensRotation() {
+            // function sigma(c: number, s: number) {
+            // 	if (0 == c) {
+            // 		return 1
+            // 	}
+            // 	if (Math.abs(s) < Math.abs(c)) {
+            // 		return 0.5 * Math.sign(c) * s
+            // 	}
+            // 	return (2 * Math.sign(s)) / c
+            // }
+            const R = this.copy();
+            function matrixForCS(dim, i, k, c, s) {
+                const m = Matrix.identityN(dim);
+                m.setEl(i, i, c);
+                m.setEl(k, k, c);
+                m.setEl(i, k, s);
+                m.setEl(k, i, -s);
+                return m;
+            }
+            let qTransposed = Matrix.identityN(this.height);
+            for (let colIndex = 0; colIndex < this.width; colIndex++) {
+                // find largest value in colIndex
+                for (let rowIndex = colIndex + 1; rowIndex < this.height; rowIndex++) {
+                    //console.log('row ', rowIndex, 'col ', colIndex)
+                    const xi = R.e(colIndex, colIndex);
+                    const xk = R.e(rowIndex, colIndex);
+                    if (xk == 0) {
+                        continue;
+                    }
+                    const r = Math.hypot(xi, xk);
+                    const c = xi / r;
+                    const s = xk / r;
+                    // apply transformation on every column:
+                    for (let col2 = colIndex; col2 < this.width; col2++) {
+                        const x1 = R.e(colIndex, col2) * c + R.e(rowIndex, col2) * s;
+                        const x2 = R.e(rowIndex, col2) * c - R.e(colIndex, col2) * s;
+                        R.setEl(colIndex, col2, x1);
+                        R.setEl(rowIndex, col2, x2);
+                    }
+                    //console.log('r ', r, 'c ', c, 's ', s, 'sigma', sigma(c, s))
+                    //console.log(this.toString(),'cs\n', matrixForCS(this.height, colIndex, rowIndex, c, s).toString())
+                    qTransposed = matrixForCS(this.height, colIndex, rowIndex, c, s).times(qTransposed);
+                }
+            }
+            //console.log(qTransposed.transposed().toString(), this.toString(),
+            // qTransposed.transposed().times(this).toString())
+            return { Q: qTransposed.transposed(), R };
+        }
+        isPermutation() {
+            if (!this.isSquare())
+                return false;
+            if (this.m.some((value) => !eq0(value) && !eq(1, value)))
+                return false;
+            const rows = this.asRowArrays(Array);
+            if (rows.some((row) => row.filter((value) => eq(1, value)).length != 1))
+                return false;
+            const cols = this.asColArrays(Array);
+            return !cols.some((col) => col.filter((value) => eq(1, value)).length != 1);
+        }
+        isDiagonal(precision) {
+            let i = this.m.length;
+            while (i--) {
+                if (0 !== i % (this.width + 1) && !eq0(this.m[i], precision))
+                    return false;
+            }
+            return true;
+        }
+        isIdentity(precision) {
+            return (this.isLowerUnitriangular(precision) && this.isUpperTriangular(precision));
+        }
+        /**
+         * @example
+         *   Matrix.fromRowArrays(
+         *     [1, 2, 3], //
+         *     [0, 4, 5],
+         *     [0, 0, 5],
+         *   ).isUpperTriangular() // true
+         *
+         * @param precision {@link eq}
+         */
+        isUpperTriangular(precision) {
+            return this.isSquare() && this.isUpperTrapezoidal(precision);
+        }
+        isUpperTrapezoidal(precision = NLA_PRECISION) {
+            for (let rowIndex = 1; rowIndex < this.height; rowIndex++) {
+                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
+                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        isSymmetric(precision = NLA_PRECISION) {
+            if (!this.isSquare())
+                return false;
+            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+                    const a = this.m[rowIndex * this.width + colIndex];
+                    const b = this.m[colIndex * this.width + rowIndex];
+                    if (!eq(a, b, precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        /**
+         * Returns x, so that this * x = b More efficient than calculating the inverse
+         * for few (~ <= this.height) values
+         */
+        solveLinearSystem(b) {
+            assertInst(Vector, b);
+            const { L, U, P } = this.luDecomposition();
+            const y = L.solveForwards(P.timesVector(b));
+            return U.solveBackwards(y);
+        }
+        isLowerUnitriangular(precision = NLA_PRECISION) {
+            if (!this.isSquare())
+                return false;
+            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+                for (let colIndex = rowIndex; colIndex < this.width; colIndex++) {
+                    const el = this.m[rowIndex * this.width + colIndex];
+                    if (rowIndex == colIndex ? !eq(1, el, precision) : !eq0(el, precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        isLowerTriangular(precision) {
+            return this.isSquare() && this.isLowerTrapezoidal(precision);
+        }
+        isLowerTrapezoidal(precision = NLA_PRECISION) {
+            for (let rowIndex = 0; rowIndex < this.height - 1; rowIndex++) {
+                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+                    if (!eq0(this.m[rowIndex * this.width + colIndex], precision)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        solveBackwards(x) {
+            assertVectors(x);
+            assert(this.height == x.dim(), "this.height == x.dim()");
+            assert(this.isUpperTriangular(), "this.isUpperTriangular()\n" + this.toString());
+            const v = new Float64Array(this.width);
+            let rowIndex = this.height;
+            while (rowIndex--) {
+                let temp = x.v[rowIndex];
+                for (let colIndex = rowIndex + 1; colIndex < this.width; colIndex++) {
+                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
+                }
+                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
+            }
+            return new Vector(v);
+        }
+        solveBackwardsMatrix(matrix) {
+            const colVectors = new Array(matrix.width);
+            let i = matrix.width;
+            while (i--) {
+                colVectors[i] = this.solveBackwards(matrix.col(i));
+            }
+            return Matrix.fromColVectors(colVectors);
+        }
+        solveForwardsMatrix(matrix) {
+            const colVectors = new Array(matrix.width);
+            let i = matrix.width;
+            while (i--) {
+                colVectors[i] = this.solveForwards(matrix.col(i));
+            }
+            return Matrix.fromColVectors(colVectors);
+        }
+        solveForwards(x) {
+            assertVectors(x);
+            assert(this.height == x.dim(), "this.height == x.dim()");
+            assertf(() => this.isLowerTriangular(), this.toString());
+            const v = new Float64Array(this.width);
+            for (let rowIndex = 0; rowIndex < this.height; rowIndex++) {
+                let temp = x.v[rowIndex];
+                for (let colIndex = 0; colIndex < rowIndex; colIndex++) {
+                    temp -= v[colIndex] * this.e(rowIndex, colIndex);
+                }
+                v[rowIndex] = temp / this.e(rowIndex, rowIndex);
+            }
+            return new Vector(v);
+        }
+        /**
+         * Calculates rank of matrix. Number of linearly independant row/column
+         * vectors. Is equal to the unmber of dimensions the image of the affine
+         * transformation represented this matrix has.
+         */
+        rank() {
+            const U = this.luDecomposition().U;
+            let rowIndex = this.height;
+            let rank = this.height;
+            while (rowIndex--) {
+                rank -= +U.row(rowIndex).isZero();
+            }
+            return rank;
+        }
+        rowsIndependent() {
+            return this.height == this.rank();
+        }
+        colsIndependent() {
+            return this.width == this.rank();
+        }
+        asRowArrays(arrayConstructor = Float64Array) {
+            return arrayFromFunction(this.height, (rowIndex) => this.rowArray(rowIndex, arrayConstructor));
+        }
+        asColArrays(arrayConstructor = Float64Array) {
+            return arrayFromFunction(this.width, (colIndex) => this.colArray(colIndex, arrayConstructor));
+        }
+        rowArray(rowIndex, arrayConstructor = Float64Array) {
+            const result = new arrayConstructor(this.width);
+            return arrayCopy(this.m, rowIndex * this.width, result, 0, this.width);
+        }
+        colArray(colIndex, arrayConstructor = Float64Array) {
+            const result = new arrayConstructor(this.width);
+            arrayCopyStep(this.m, colIndex, this.height, result, 0, 1, this.height);
+            return result;
+        }
+        subMatrix(firstColIndex, subWidth, firstRowIndex, subHeight) {
+            assert(0 < firstColIndex && 0 < subWidth && 0 < firstRowIndex && 0 < subHeight);
+            assert(firstColIndex + subWidth <= this.width &&
+                firstRowIndex + subHeight <= this.height);
+            const m = new Float64Array(subWidth * subHeight);
+            arrayCopyBlocks(this.m, firstColIndex, this.width, m, 0, subWidth, subHeight, subWidth);
+            return new Matrix(subWidth, subHeight, m);
+        }
+        map(fn) {
+            return new Matrix(this.width, this.height, this.m.map(fn));
+        }
+        dimEquals(matrix) {
+            assertInst(Matrix, matrix);
+            return this.width == matrix.width && this.height == matrix.height;
+        }
+        inversed() {
+            if (this.isSquare()) {
+                if (2 == this.width)
+                    return this.inversed2();
+                if (3 == this.width)
+                    return this.inversed3();
+                if (4 == this.width)
+                    return this.inversed4();
+            }
+            const { L, U, P } = this.luDecomposition();
+            const y = L.solveForwardsMatrix(P);
+            return U.solveBackwardsMatrix(y);
+        }
+        inversed2() {
+            assertf(() => 2 == this.width && 2 == this.height);
+            const result = Matrix.forWidthHeight(2, 2), m = this.m, r = result.m;
+            const det = m[0] * m[3] - m[1] * r[2];
+            r[0] = m[3] / det;
+            r[1] = -m[2] / det;
+            r[2] = -m[1] / det;
+            r[3] = m[0] / det;
+            return result;
+        }
+        inversed3(result = Matrix.forWidthHeight(3, 3)) {
+            assertInst(Matrix, result);
+            assertf(() => 3 == this.width && 3 == this.height);
+            assertf(() => 3 == result.width && 3 == result.height);
+            assert(() => this != result);
+            const m = this.m, r = result.m;
+            r[0] = m[4] * m[8] - m[5] * m[7];
+            r[1] = -m[1] * m[8] + m[2] * m[7];
+            r[2] = m[1] * m[5] - m[2] * m[4];
+            r[3] = -m[3] * m[8] + m[5] * m[6];
+            r[4] = m[0] * m[8] - m[2] * m[6];
+            r[5] = -m[0] * m[5] + m[2] * m[3];
+            r[6] = m[3] * m[7] - m[4] * m[6];
+            r[7] = -m[0] * m[7] + m[1] * m[6];
+            r[8] = m[0] * m[4] - m[1] * m[3];
+            const det = m[0] * r[0] + m[1] * r[3] + m[2] * r[6];
+            let i = 9;
+            while (i--) {
+                r[i] /= det;
+            }
+            return result;
+        }
+        // prettier-ignore
+        inversed4(result = Matrix.forWidthHeight(4, 4)) {
+            assertInst(Matrix, result);
+            assertf(() => 4 == this.width && 4 == this.height);
+            assertf(() => 4 == result.width && 4 == result.height);
+            assert(() => this != result);
+            const m = this.m, r = result.m;
+            // first compute transposed cofactor matrix:
+            // cofactor of an element is the determinant of the 3x3 matrix gained by removing the column and row belonging
+            // to the element
+            r[0] = m[5] * m[10] * m[15] - m[5] * m[14] * m[11] - m[6] * m[9] * m[15]
+                + m[6] * m[13] * m[11] + m[7] * m[9] * m[14] - m[7] * m[13] * m[10];
+            r[1] = -m[1] * m[10] * m[15] + m[1] * m[14] * m[11] + m[2] * m[9] * m[15]
+                - m[2] * m[13] * m[11] - m[3] * m[9] * m[14] + m[3] * m[13] * m[10];
+            r[2] = m[1] * m[6] * m[15] - m[1] * m[14] * m[7] - m[2] * m[5] * m[15]
+                + m[2] * m[13] * m[7] + m[3] * m[5] * m[14] - m[3] * m[13] * m[6];
+            r[3] = -m[1] * m[6] * m[11] + m[1] * m[10] * m[7] + m[2] * m[5] * m[11]
+                - m[2] * m[9] * m[7] - m[3] * m[5] * m[10] + m[3] * m[9] * m[6];
+            r[4] = -m[4] * m[10] * m[15] + m[4] * m[14] * m[11] + m[6] * m[8] * m[15]
+                - m[6] * m[12] * m[11] - m[7] * m[8] * m[14] + m[7] * m[12] * m[10];
+            r[5] = m[0] * m[10] * m[15] - m[0] * m[14] * m[11] - m[2] * m[8] * m[15]
+                + m[2] * m[12] * m[11] + m[3] * m[8] * m[14] - m[3] * m[12] * m[10];
+            r[6] = -m[0] * m[6] * m[15] + m[0] * m[14] * m[7] + m[2] * m[4] * m[15]
+                - m[2] * m[12] * m[7] - m[3] * m[4] * m[14] + m[3] * m[12] * m[6];
+            r[7] = m[0] * m[6] * m[11] - m[0] * m[10] * m[7] - m[2] * m[4] * m[11]
+                + m[2] * m[8] * m[7] + m[3] * m[4] * m[10] - m[3] * m[8] * m[6];
+            r[8] = m[4] * m[9] * m[15] - m[4] * m[13] * m[11] - m[5] * m[8] * m[15]
+                + m[5] * m[12] * m[11] + m[7] * m[8] * m[13] - m[7] * m[12] * m[9];
+            r[9] = -m[0] * m[9] * m[15] + m[0] * m[13] * m[11] + m[1] * m[8] * m[15]
+                - m[1] * m[12] * m[11] - m[3] * m[8] * m[13] + m[3] * m[12] * m[9];
+            r[10] = m[0] * m[5] * m[15] - m[0] * m[13] * m[7] - m[1] * m[4] * m[15]
+                + m[1] * m[12] * m[7] + m[3] * m[4] * m[13] - m[3] * m[12] * m[5];
+            r[11] = -m[0] * m[5] * m[11] + m[0] * m[9] * m[7] + m[1] * m[4] * m[11]
+                - m[1] * m[8] * m[7] - m[3] * m[4] * m[9] + m[3] * m[8] * m[5];
+            r[12] = -m[4] * m[9] * m[14] + m[4] * m[13] * m[10] + m[5] * m[8] * m[14]
+                - m[5] * m[12] * m[10] - m[6] * m[8] * m[13] + m[6] * m[12] * m[9];
+            r[13] = m[0] * m[9] * m[14] - m[0] * m[13] * m[10] - m[1] * m[8] * m[14]
+                + m[1] * m[12] * m[10] + m[2] * m[8] * m[13] - m[2] * m[12] * m[9];
+            r[14] = -m[0] * m[5] * m[14] + m[0] * m[13] * m[6] + m[1] * m[4] * m[14]
+                - m[1] * m[12] * m[6] - m[2] * m[4] * m[13] + m[2] * m[12] * m[5];
+            r[15] = m[0] * m[5] * m[10] - m[0] * m[9] * m[6] - m[1] * m[4] * m[10]
+                + m[1] * m[8] * m[6] + m[2] * m[4] * m[9] - m[2] * m[8] * m[5];
+            // calculate determinant using laplace expansion (cf https://en.wikipedia.org/wiki/Laplace_expansion),
+            // as we already have the cofactors. We multiply a column by a row as the cofactor matrix is transposed.
+            const det = m[0] * r[0] + m[1] * r[4] + m[2] * r[8] + m[3] * r[12];
+            // assert(!isZero(det), 'det may not be zero, i.e. the matrix is not invertible')
+            let i = 16;
+            while (i--) {
+                r[i] /= det;
+            }
+            return result;
+        }
+        canMultiply(matrix) {
+            assertInst(Matrix, matrix);
+            return this.width == matrix.height;
+        }
+        times(matrix) {
+            assertInst(Matrix, matrix);
+            assert(this.canMultiply(matrix), `Cannot multiply this ${this.dimString()} by matrix ${matrix.dimString()}`);
+            const nWidth = matrix.width, nHeight = this.height, n = this.width;
+            const nM = new Float64Array(nWidth * nHeight);
+            let nRowIndex = nHeight;
+            while (nRowIndex--) {
+                let nColIndex = nWidth;
+                while (nColIndex--) {
+                    let result = 0;
+                    let i = n;
+                    while (i--) {
+                        result += this.m[nRowIndex * n + i] * matrix.m[i * nWidth + nColIndex];
+                    }
+                    nM[nRowIndex * nWidth + nColIndex] = result;
+                }
+            }
+            return new Matrix(nWidth, nHeight, nM);
+        }
+        timesVector(v) {
+            assertVectors(v);
+            assert(this.width == v.dim());
+            const nHeight = this.height, n = this.width;
+            const nM = new Float64Array(nHeight);
+            let nRowIndex = nHeight;
+            while (nRowIndex--) {
+                let result = 0;
+                let i = n;
+                while (i--) {
+                    result += this.m[nRowIndex * n + i] * v.v[i];
+                }
+                nM[nRowIndex] = result;
+            }
+            return new Vector(nM);
+        }
+        transposed() {
+            const tWidth = this.height, tHeight = this.width;
+            const tM = new Float64Array(tWidth * tHeight);
+            let tRowIndex = tHeight;
+            while (tRowIndex--) {
+                let tColIndex = tWidth;
+                while (tColIndex--) {
+                    tM[tRowIndex * tWidth + tColIndex] = this.m[tColIndex * tHeight + tRowIndex];
+                }
+            }
+            return new Matrix(tWidth, tHeight, tM);
+        }
+        /** In-place transpose. */
+        transpose() {
+            const h = this.height, w = this.width, tM = this.m;
+            let tRowIndex = h;
+            while (tRowIndex--) {
+                let tColIndex = Math.min(tRowIndex, w);
+                while (tColIndex--) {
+                    const temp = tM[tRowIndex * w + tColIndex];
+                    tM[tRowIndex * w + tColIndex] = tM[tColIndex * h + tRowIndex];
+                    tM[tColIndex * h + tRowIndex] = temp;
+                }
+            }
+            this.width = h;
+            this.height = w;
+        }
+        isSquare() {
+            return this.height == this.width;
+        }
+        diagonal() {
+            if (!this.isSquare()) {
+                throw new Error("!!");
+            }
+            const v = new Float64Array(this.width);
+            let elIndex = this.width * (this.width + 1);
+            let vIndex = this.width;
+            while (vIndex--) {
+                elIndex -= this.width + 1;
+                v[vIndex] = this.m[elIndex];
+            }
+            return new Vector(v);
+        }
+        maxEl() {
+            return max$1(this.m);
+        }
+        minEl() {
+            return min$1(this.m);
+        }
+        //noinspection DuplicatedCode
+        maxAbsColSum() {
+            let result = 0;
+            let colIndex = this.width;
+            while (colIndex--) {
+                let absSum = 0;
+                let rowIndex = this.height;
+                while (rowIndex--) {
+                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
+                }
+                result = Math.max(result, absSum);
+            }
+            return result;
+        }
+        //noinspection DuplicatedCode
+        maxAbsRowSum() {
+            let result = 0;
+            let rowIndex = this.height;
+            while (rowIndex--) {
+                let absSum = 0;
+                let colIndex = this.width;
+                while (colIndex--) {
+                    absSum += Math.abs(this.m[rowIndex * this.width + colIndex]);
+                }
+                result = Math.max(result, absSum);
+            }
+            return result;
+        }
+        getTriangularDeterminant() {
+            assert(this.isUpperTriangular() || this.isLowerTriangular(), "not a triangular matrix");
+            let product = 1;
+            let elIndex = this.width * (this.width + 1);
+            while (elIndex) {
+                elIndex -= this.width + 1;
+                product *= this.m[elIndex];
+            }
+            return product;
+        }
+        /**
+         * Calculates the determinant by first calculating the LU decomposition. If
+         * you already have that, use U.getTriangularDeterminant()
+         */
+        getDeterminant() {
+            // PA = LU
+            // det(A) * det(B) = det(A * B)
+            // det(P) == 1 (permutation matrix)
+            // det(L) == 1 (main diagonal is 1s
+            // =>  det(A) == det(U)
+            return this.luDecomposition().U.getTriangularDeterminant();
+        }
+        hasFullRank() {
+            return Math.min(this.width, this.height) == this.rank();
+        }
+        permutationAsIndexMap() {
+            assertf(() => this.isPermutation());
+            const result = new Array(this.height);
+            let i = this.height;
+            while (i--) {
+                const searchIndexStart = i * this.width;
+                let searchIndex = searchIndexStart;
+                while (this.m[searchIndex] < 0.5)
+                    searchIndex++;
+                result[i] = searchIndex - searchIndexStart;
+            }
+            return result;
+        }
+        getDependentRowIndexes(gauss = this.luDecomposition()) {
+            const { L, U, P } = gauss;
+            // rows which end up as zero vectors in U are not linearly independent
+            const dependents = new Array(this.height);
+            let uRowIndex = this.height;
+            while (uRowIndex--) {
+                const uRow = U.row(uRowIndex);
+                if (uRow.length() < NLA_PRECISION) {
+                    dependents[uRowIndex] = true;
+                }
+                else {
+                    break;
+                }
+            }
+            // figure out from which other rows the rows which end up as zero vectors are created by
+            let lRowIndex = this.height;
+            while (lRowIndex--) {
+                if (dependents[lRowIndex]) {
+                    let lColIndex = Math.min(lRowIndex, this.width);
+                    while (lColIndex--) {
+                        if (0 !== L.e(lRowIndex, lColIndex)) {
+                            dependents[lColIndex] = true;
+                        }
+                    }
+                }
+            }
+            console.log("m\n", this.toString((x) => "" + x));
+            console.log("L\n", L.toString((x) => "" + x));
+            console.log("U\n", U.toString((x) => "" + x));
+            console.log("P\n", P.toString((x) => "" + x));
+            // gauss algorithm permutes the order of the rows, so map our results back to the original indices
+            const indexMap = P.permutationAsIndexMap();
+            return dependents
+                .map((b, index) => b && indexMap[index])
+                .filter((x) => x != undefined);
+        }
+        lerp(b, t, result = this.new()) {
+            assertInst(Matrix, b, result);
+            assertNumbers(t);
+            assert(this.width == b.width && this.height == b.height);
+            const s = 1 - t;
+            let i = this.m.length;
+            while (i--) {
+                result.m[i] = s * this.m[i] + t * b.m[i];
+            }
+            return result;
+        }
+    }
+
+    const { PI: PI$1$1, abs: abs$1 } = Math;
+    // tslint:enable:member-ordering
+    class M4 extends Matrix {
+        /**
+         * Takes 16 arguments in row-major order, which can be passed individually, as
+         * a list, or even as four lists, one for each row. If the arguments are
+         * omitted then the identity matrix is constructed instead.
+         *
+         *     ```
+         *     0 1 2 3
+         *     4 5 6 7
+         *     8 9 10 11
+         *     12 13 14 15
+         *     ```
+         */
+        constructor(...var_args) {
+            let m;
+            if (0 == var_args.length) {
+                m = new Float64Array(16);
+            }
+            else {
+                const flattened = concatenated(var_args);
+                assert(flattened.length == 16, "flattened.length == 16 " + flattened.length);
+                m = new Float64Array(flattened);
+            }
+            super(4, 4, m);
+        }
+        /**
+         * Returns the matrix that when multiplied with `matrix` results in the
+         * identity matrix. You can optionally pass an existing matrix in `result` to
+         * avoid allocating a new matrix. This implementation is from the Mesa OpenGL
+         * function `__gluInvertMatrixd()` found in `project.c`.
+         */
+        static inverse(matrix, result = new M4()) {
+            return matrix.inversed4(result);
+        }
+        /**
+         * Create new dim x dim matrix equal to an identity matrix with rows/colums i
+         * and k swapped. Note that i and k are 0-indexed.
+         */
+        static permutation4(i, k, result = new M4()) {
+            assertInts(i, k);
+            assertf(() => 0 <= i && i < 4);
+            assertf(() => 0 <= k && k < 4);
+            const m = result.m;
+            M4.identity(result);
+            m[i * 4 + i] = 0;
+            m[k * 4 + k] = 0;
+            m[i * 4 + k] = 1;
+            m[k * 4 + i] = 1;
+            return result;
+        }
+        /**
+         * Returns `matrix`, exchanging columns for rows. You can optionally pass an
+         * existing matrix in `result` to avoid allocating a new matrix.
+         */
+        static transpose(matrix, result = new M4()) {
+            assertInst(M4, matrix);
+            assertInst(M4, result);
+            assert(matrix != result, "matrix != result");
+            const m = matrix.m, r = result.m;
+            r[0] = m[0];
+            r[1] = m[4];
+            r[2] = m[8];
+            r[3] = m[12];
+            r[4] = m[1];
+            r[5] = m[5];
+            r[6] = m[9];
+            r[7] = m[13];
+            r[8] = m[2];
+            r[9] = m[6];
+            r[10] = m[10];
+            r[11] = m[14];
+            r[12] = m[3];
+            r[13] = m[7];
+            r[14] = m[11];
+            r[15] = m[15];
+            return result;
+        }
+        /** Returns the concatenation of the transforms for `left` and `right`. */
+        static multiply(left, right, result = new M4()) {
+            assertInst(M4, left, right);
+            assertInst(M4, result);
+            assert(left != result, "left != result");
+            assert(right != result, "right != result");
+            const a = left.m, b = right.m, r = result.m;
+            r[0] = a[0] * b[0] + a[1] * b[4] + (a[2] * b[8] + a[3] * b[12]);
+            r[1] = a[0] * b[1] + a[1] * b[5] + (a[2] * b[9] + a[3] * b[13]);
+            r[2] = a[0] * b[2] + a[1] * b[6] + (a[2] * b[10] + a[3] * b[14]);
+            r[3] = a[0] * b[3] + a[1] * b[7] + (a[2] * b[11] + a[3] * b[15]);
+            r[4] = a[4] * b[0] + a[5] * b[4] + (a[6] * b[8] + a[7] * b[12]);
+            r[5] = a[4] * b[1] + a[5] * b[5] + (a[6] * b[9] + a[7] * b[13]);
+            r[6] = a[4] * b[2] + a[5] * b[6] + (a[6] * b[10] + a[7] * b[14]);
+            r[7] = a[4] * b[3] + a[5] * b[7] + (a[6] * b[11] + a[7] * b[15]);
+            r[8] = a[8] * b[0] + a[9] * b[4] + (a[10] * b[8] + a[11] * b[12]);
+            r[9] = a[8] * b[1] + a[9] * b[5] + (a[10] * b[9] + a[11] * b[13]);
+            r[10] = a[8] * b[2] + a[9] * b[6] + (a[10] * b[10] + a[11] * b[14]);
+            r[11] = a[8] * b[3] + a[9] * b[7] + (a[10] * b[11] + a[11] * b[15]);
+            r[12] = a[12] * b[0] + a[13] * b[4] + (a[14] * b[8] + a[15] * b[12]);
+            r[13] = a[12] * b[1] + a[13] * b[5] + (a[14] * b[9] + a[15] * b[13]);
+            r[14] = a[12] * b[2] + a[13] * b[6] + (a[14] * b[10] + a[15] * b[14]);
+            r[15] = a[12] * b[3] + a[13] * b[7] + (a[14] * b[11] + a[15] * b[15]);
+            return result;
+        }
+        static product(...args) {
+            const [m4s, result] = Array.isArray(args[0])
+                ? [args[0], args[1]]
+                : [args, new M4()];
+            if (0 == m4s.length)
+                return M4.identity(result);
+            if (1 == m4s.length)
+                return M4.copy(m4s[0], result);
+            if (2 == m4s.length)
+                return M4.multiply(m4s[0], m4s[1], result);
+            let a = M4.temp0, b = M4.temp1;
+            M4.multiply(m4s[0], m4s[1], a);
+            for (let i = 2; i < m4s.length - 1; i++) {
+                M4.multiply(a, m4s[i], b);
+                [a, b] = [b, a];
+            }
+            return M4.multiply(a, getLast(m4s), result);
+        }
+        static forSys(e0, e1, e2 = e0.cross(e1), origin = V3.O) {
+            assertVectors(e0, e1, e2, origin);
+            // prettier-ignore
+            return new M4(e0.x, e1.x, e2.x, origin.x, e0.y, e1.y, e2.y, origin.y, e0.z, e1.z, e2.z, origin.z, 0, 0, 0, 1);
+        }
+        static forRows(n0, n1, n2, n3 = V3.O) {
+            assertVectors(n0, n1, n2, n3);
+            // prettier-ignore
+            return new M4(n0.x, n0.y, n0.z, 0, n1.x, n1.y, n1.z, 0, n2.x, n2.y, n2.z, 0, n3.x, n3.y, n3.z, 1);
+        }
+        /**
+         * Returns an identity matrix. You can optionally pass an existing matrix in
+         * `result` to avoid allocating a new matrix. This emulates the OpenGL
+         * function `glLoadIdentity()`
+         *
+         * Unless initializing a matrix to be modified, use M4.IDENTITY
+         */
+        static identity(result = new M4()) {
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = m[5] = m[10] = m[15] = 1;
+            m[1] = m[2] = m[3] = m[4] = m[6] = m[7] = m[8] = m[9] = m[11] = m[12] = m[13] = m[14] = 0;
+            return result;
+        }
+        /**
+         * Creates a new M4 initialized by a user defined callback function
+         *
+         * @param f Signature: (elRow, elCol, elIndex) =>
+         *     el, where elIndex is the row-major index, i.e. eLindex == elRow * 4 + elCol
+         * @param result
+         */
+        static fromFunction4(f, result = new M4()) {
+            assert(typeof f == "function");
+            assertInst(M4, result);
+            const m = result.m;
+            let i = 16;
+            while (i--) {
+                m[i] = f(Math.floor(i / 4), i % 4, i);
+            }
+            return result;
+        }
+        /**
+         * Returns a perspective transform matrix, which makes far away objects appear
+         * smaller than nearby objects. The `aspect` argument should be the width
+         * divided by the height of your viewport and `fov` is the top-to-bottom
+         * angle of the field of view in degrees. You can optionally pass an existing
+         * matrix in `result` to avoid allocating a new matrix. This emulates the
+         * OpenGL function `gluPerspective()`. {@see perspectiveRad} perspectiveRad
+         *
+         * @param fovDegrees In degrees
+         * @param aspect Aspect ratio = width/height of viewport
+         * @param near Near plane
+         * @param far Far plane
+         * @param result A new M4 as described.
+         */
+        static perspective(fovDegrees, aspect, near, far, result = new M4()) {
+            return M4.perspectiveRad(fovDegrees * DEG, aspect, near, far, result);
+        }
+        static perspectiveRad(fov, aspect, near, far, result = new M4()) {
+            assertInst(M4, result);
+            assertNumbers(fov, aspect, near, far);
+            const y = Math.tan(fov / 2) * near;
+            const x = y * aspect;
+            return M4.frustum(-x, x, -y, y, near, far, result);
+        }
+        static perspectivePlane(vanishingPlane, result = new M4()) {
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = 1;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = 0;
+            m[4] = 0;
+            m[5] = 1;
+            m[6] = 0;
+            m[7] = 0;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = 1;
+            m[11] = 0;
+            m[12] = vanishingPlane.normal1.x;
+            m[13] = vanishingPlane.normal1.y;
+            m[14] = vanishingPlane.normal1.z;
+            m[15] = -vanishingPlane.w;
+            return result;
+        }
+        // the OpenGL function `glFrustum()`.
+        static frustum(left, right, bottom, top, near, far, result = new M4()) {
+            assertNumbers(left, right, bottom, top, near, far);
+            assert(0 < near, "0 < near");
+            assert(near < far, "near < far");
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = (2 * near) / (right - left);
+            m[1] = 0;
+            m[2] = (right + left) / (right - left);
+            m[3] = 0;
+            m[4] = 0;
+            m[5] = (2 * near) / (top - bottom);
+            m[6] = (top + bottom) / (top - bottom);
+            m[7] = 0;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = -(far + near) / (far - near);
+            m[11] = (-2 * far * near) / (far - near);
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = -1;
+            m[15] = 0;
+            return result;
+        }
+        /** Returns a new M4 representing the a projection through/towards a point onto a plane. */
+        static projectPlanePoint(p, plane, result = new M4()) {
+            assertVectors(p, plane.normal1);
+            assertInst(M4, result);
+            const m = result.m;
+            const n = plane.normal1, w = plane.w;
+            const np = n.dot(p);
+            m[0] = p.x * n.x + w - np;
+            m[1] = p.x * n.y;
+            m[2] = p.x * n.z;
+            m[3] = -w * p.x;
+            m[4] = p.y * n.x;
+            m[5] = p.y * n.y + w - np;
+            m[6] = p.y * n.z;
+            m[7] = -w * p.y;
+            m[8] = p.z * n.x;
+            m[9] = p.z * n.y;
+            m[10] = p.z * n.z + w - np;
+            m[11] = -w * p.z;
+            m[12] = n.x;
+            m[13] = n.y;
+            m[14] = n.z;
+            m[15] = -np;
+            return result;
+        }
+        /**
+         * Orthographic/orthogonal projection. Transforms the cuboid with the
+         * dimensions X: [left right] Y: [bottom, top] Z: [near far] to the cuboid X:
+         * [-1, 1] Y [-1, 1] Z [-1, 1]
+         */
+        static ortho(left, right, bottom, top, near, far, result = new M4()) {
+            assertNumbers(left, right, bottom, top, near, far);
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = 2 / (right - left);
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = -(right + left) / (right - left);
+            m[4] = 0;
+            m[5] = 2 / (top - bottom);
+            m[6] = 0;
+            m[7] = -(top + bottom) / (top - bottom);
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = -2 / (far - near);
+            m[11] = -(far + near) / (far - near);
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static scale(...args) {
+            let x, y, z, result;
+            if (args[0] instanceof V3) {
+                assert(args.length <= 2);
+                ({ x, y, z } = args[0]);
+                result = args[1];
+            }
+            else if ("number" != typeof args[1]) {
+                x = y = z = args[0];
+                result = args[1];
+            }
+            else {
+                assert(args.length <= 4);
+                x = args[0];
+                y = args[1];
+                z = undefined != args[2] ? args[2] : 1;
+                result = args[3];
+            }
+            undefined == result && (result = new M4());
+            assertInst(M4, result);
+            assertNumbers(x, y, z);
+            const m = result.m;
+            m[0] = x;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = 0;
+            m[4] = 0;
+            m[5] = y;
+            m[6] = 0;
+            m[7] = 0;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = z;
+            m[11] = 0;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static translate(...args) {
+            let x, y, z, result;
+            if (args[0] instanceof V3) {
+                assert(args.length <= 2);
+                ({ x, y, z } = args[0]);
+                result = args[1];
+            }
+            else {
+                assert(args.length <= 4);
+                x = args[0];
+                y = undefined != args[1] ? args[1] : 0;
+                z = undefined != args[2] ? args[2] : 0;
+                result = args[3];
+            }
+            undefined == result && (result = new M4());
+            assertInst(M4, result);
+            assertNumbers(x, y, z);
+            const m = result.m;
+            m[0] = 1;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = x;
+            m[4] = 0;
+            m[5] = 1;
+            m[6] = 0;
+            m[7] = y;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = 1;
+            m[11] = z;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /**
+         * Returns a matrix that rotates by `a` degrees around the vector (x, y, z).
+         * You can optionally pass an existing matrix in `result` to avoid allocating
+         * a new matrix. This emulates the OpenGL function `glRotate()`.
+         */
+        //static rotation(radians: raddd, x: number, y: number, z: number, result?: M4): M4
+        static rotate(radians, v, result) {
+            undefined == result && (result = new M4());
+            assertInst(M4, result);
+            let { x, y, z } = v;
+            assert(!new V3(x, y, z).likeO(), "!V(x, y, z).likeO()");
+            const m = result.m;
+            const d = Math.sqrt(x * x + y * y + z * z);
+            x /= d;
+            y /= d;
+            z /= d;
+            const cos = Math.cos(radians), sin = Math.sin(radians), t = 1 - cos;
+            m[0] = x * x * t + cos;
+            m[1] = x * y * t - z * sin;
+            m[2] = x * z * t + y * sin;
+            m[3] = 0;
+            m[4] = y * x * t + z * sin;
+            m[5] = y * y * t + cos;
+            m[6] = y * z * t - x * sin;
+            m[7] = 0;
+            m[8] = z * x * t - y * sin;
+            m[9] = z * y * t + x * sin;
+            m[10] = z * z * t + cos;
+            m[11] = 0;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /**
+         * Returns a matrix that puts the camera at the eye point `ex, ey, ez` looking
+         * toward the center point `cx, cy, cz` with an up direction of `ux, uy, uz`.
+         * You can optionally pass an existing matrix in `result` to avoid allocating
+         * a new matrix. This emulates the OpenGL function `gluLookAt()`.
+         */
+        static lookAt(eye, focus, up, result = new M4()) {
+            assertVectors(eye, focus, up);
+            assertInst(M4, result);
+            const m = result.m;
+            const f = eye.minus(focus).unit();
+            const s = up.cross(f).unit();
+            const t = f.cross(s).unit();
+            m[0] = s.x;
+            m[1] = s.y;
+            m[2] = s.z;
+            m[3] = -s.dot(eye);
+            m[4] = t.x;
+            m[5] = t.y;
+            m[6] = t.z;
+            m[7] = -t.dot(eye);
+            m[8] = f.x;
+            m[9] = f.y;
+            m[10] = f.z;
+            m[11] = -f.dot(eye);
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /** Create a rotation matrix for rotating around the X axis */
+        static rotateX(radians) {
+            assertNumbers(radians);
+            const sin = Math.sin(radians), cos = Math.cos(radians);
+            const els = [1, 0, 0, 0, 0, cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1];
+            return new M4(els);
+        }
+        /** Create a rotation matrix for rotating around the Y axis */
+        static rotateY(radians) {
+            const sin = Math.sin(radians), cos = Math.cos(radians);
+            const els = [cos, 0, sin, 0, 0, 1, 0, 0, -sin, 0, cos, 0, 0, 0, 0, 1];
+            return new M4(els);
+        }
+        /** Create a rotation matrix for rotating around the Z axis */
+        static rotateZ(radians) {
+            const sin = Math.sin(radians), cos = Math.cos(radians);
+            const els = [cos, -sin, 0, 0, sin, cos, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+            return new M4(els);
+        }
+        /**
+         * New rotation matrix such that result.transformVector(a).isParallelTo(b)
+         * through smallest rotation. Performs no scaling.
+         */
+        static rotateAB(a, b, result = new M4()) {
+            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
+            assertVectors(a, b);
+            assertInst(M4, result);
+            const rotationAxis = a.cross(b), rotationAxisLength = rotationAxis.length();
+            if (eq0(rotationAxisLength)) {
+                return M4.identity(result);
+            }
+            const radians = Math.atan2(rotationAxisLength, a.dot(b));
+            return M4.rotateLine(V3.O, rotationAxis, radians, result);
+        }
+        /**
+         * Matrix for rotation about arbitrary line defined by an anchor point and
+         * direction. rotationAxis does not need to be unit
+         */
+        static rotateLine(rotationAnchor, rotationAxis, radians, result = new M4()) {
+            // see http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
+            assertVectors(rotationAnchor, rotationAxis);
+            assertNumbers(radians);
+            assertInst(M4, result);
+            rotationAxis = rotationAxis.unit();
+            const ax = rotationAnchor.x, ay = rotationAnchor.y, az = rotationAnchor.z, dx = rotationAxis.x, dy = rotationAxis.y, dz = rotationAxis.z;
+            const m = result.m, cos = Math.cos(radians), sin = Math.sin(radians);
+            m[0] = dx * dx + (dy * dy + dz * dz) * cos;
+            m[1] = dx * dy * (1 - cos) - dz * sin;
+            m[2] = dx * dz * (1 - cos) + dy * sin;
+            m[3] =
+                (ax * (dy * dy + dz * dz) - dx * (ay * dy + az * dz)) * (1 - cos) +
+                    (ay * dz - az * dy) * sin;
+            m[4] = dx * dy * (1 - cos) + dz * sin;
+            m[5] = dy * dy + (dx * dx + dz * dz) * cos;
+            m[6] = dy * dz * (1 - cos) - dx * sin;
+            m[7] =
+                (ay * (dx * dx + dz * dz) - dy * (ax * dx + az * dz)) * (1 - cos) +
+                    (az * dx - ax * dz) * sin;
+            m[8] = dx * dz * (1 - cos) - dy * sin;
+            m[9] = dy * dz * (1 - cos) + dx * sin;
+            m[10] = dz * dz + (dx * dx + dy * dy) * cos;
+            m[11] =
+                (az * (dx * dx + dy * dy) - dz * (ax * dx + ay * dy)) * (1 - cos) +
+                    (ax * dy - ay * dx) * sin;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /** Create an affine matrix for mirroring into an arbitrary plane: */
+        static mirror(plane, result = new M4()) {
+            assertVectors(plane.normal1);
+            assertInst(M4, result);
+            const [nx, ny, nz] = plane.normal1;
+            const w = plane.w;
+            const m = result.m;
+            m[0] = 1.0 - 2.0 * nx * nx;
+            m[1] = -2.0 * ny * nx;
+            m[2] = -2.0 * nz * nx;
+            m[3] = 2.0 * nx * w;
+            m[4] = -2.0 * nx * ny;
+            m[5] = 1.0 - 2.0 * ny * ny;
+            m[6] = -2.0 * nz * ny;
+            m[7] = 2.0 * ny * w;
+            m[8] = -2.0 * nx * nz;
+            m[9] = -2.0 * ny * nz;
+            m[10] = 1.0 - 2.0 * nz * nz;
+            m[11] = 2.0 * nz * w;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        /**
+         * @param plane
+         * @param dir Projection direction. Optional, if not specified plane normal1
+         *     will be used.
+         * @param result {@see M4}
+         */
+        static project(plane, dir = plane.normal1, result = new M4()) {
+            // TODO: doc
+            // plane.normal1 DOT (p + lambda * dir) = w (1)
+            // extract lambda:
+            // plane.normal1 DOT p + lambda * plane.normal1 DOT dir = w
+            // lambda = (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+            // result = p + lambda * dir
+            // result = p + dir * (w - plane.normal1 DOT p) / plane.normal1 DOT dir
+            // result =  w * dir / (plane.normal1 DOT dir) + p - plane.normal1 DOT p * dir / (plane.normal1 DOT dir) *
+            //  a + d * (w - n . a) / (nd)
+            //  a + dw - d * na
+            assertVectors(dir, plane.normal1);
+            assertInst(M4, result);
+            const w = plane.w;
+            const m = result.m;
+            const nd = plane.normal1.dot(dir);
+            const { x: nx, y: ny, z: nz } = plane.normal1;
+            const { x: dx, y: dy, z: dz } = dir.div(nd);
+            /*
+             rejectedFrom: return this.minus(b.times(this.dot(b) / b.dot(b)))
+             return M4.forSys(
+             V3.X.rejectedFrom(plane.normal1),
+             V3.Y.rejectedFrom(plane.normal1),
+             V3.Z.rejectedFrom(plane.normal1),
+             plane.anchor,
+             result
+             )
+             */
+            m[0] = 1.0 - nx * dx;
+            m[1] = -ny * dx;
+            m[2] = -nz * dx;
+            m[3] = dx * w;
+            m[4] = -nx * dy;
+            m[5] = 1.0 - ny * dy;
+            m[6] = -nz * dy;
+            m[7] = dy * w;
+            m[8] = -nx * dz;
+            m[9] = -ny * dz;
+            m[10] = 1.0 - nz * dz;
+            m[11] = dz * w;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static lineProjection(line, result = new M4()) {
+            assertVectors(line.anchor, line.dir1);
+            assertInst(M4, result);
+            const ax = line.anchor.x, ay = line.anchor.y, az = line.anchor.z;
+            const dx = line.dir1.x, dy = line.dir1.y, dz = line.dir1.z;
+            const m = result.m;
+            /*
+             projectedOn: return b.times(this.dot(b) / b.dot(b))
+             */
+            m[0] = dx * dx;
+            m[1] = dx * dy;
+            m[2] = dx * dz;
+            m[3] = ax;
+            m[4] = dy * dx;
+            m[5] = dy * dy;
+            m[6] = dy * dz;
+            m[7] = ay;
+            m[8] = dz * dx;
+            m[9] = dz * dy;
+            m[10] = dz * dz;
+            m[11] = az;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static pointInversion(p, result = new M4()) {
+            assertVectors(p);
+            assertInst(M4, result);
+            const m = result.m;
+            m[0] = -1;
+            m[1] = 0;
+            m[2] = 0;
+            m[3] = 2 * p.x;
+            m[4] = 0;
+            m[5] = -1;
+            m[6] = 0;
+            m[7] = 2 * p.y;
+            m[8] = 0;
+            m[9] = 0;
+            m[10] = -1;
+            m[11] = 2 * p.z;
+            m[12] = 0;
+            m[13] = 0;
+            m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        static new(width, height, m) {
+            assert(4 == width && 4 == height);
+            return new M4(...m);
+        }
+        get X() {
+            return this.transformVector(V3.X);
+        }
+        get Y() {
+            return this.transformVector(V3.Y);
+        }
+        get Z() {
+            return this.transformVector(V3.Z);
+        }
+        get O() {
+            return this.getTranslation();
+        }
+        isMirror(precision = NLA_PRECISION) {
+            const m = this.m;
+            const nx = Math.sqrt((1 - m[0]) / 2);
+            const ny = Math.sqrt((1 - m[5]) / 2);
+            const nz = Math.sqrt((1 - m[10]) / 2);
+            return (eq(m[1], -2.0 * ny * nx, precision) &&
+                eq(m[2], -2.0 * nz * nx, precision) &&
+                eq(m[4], -2.0 * nx * ny, precision) &&
+                eq(m[6], -2.0 * nz * ny, precision) &&
+                eq(m[8], -2.0 * nx * nz, precision) &&
+                eq(m[9], -2.0 * ny * nz, precision) &&
+                eq(m[12], 0, precision) &&
+                eq(m[13], 0, precision) &&
+                eq(m[14], 0, precision) &&
+                eq(m[15], 1, precision) &&
+                eq(m[3] * ny, m[7] * nx, precision) &&
+                eq(m[7] * nz, m[11] * ny, precision) &&
+                eq(m[11] * nx, m[3] * nz, precision));
+        }
+        // ### GL.Matrix.frustum(left, right, bottom, top, near, far[, result])
+        //
+        // Sets up a viewing frustum, which is shaped like a truncated pyramid with the
+        // camera where the point of the pyramid would be. You can optionally pass an
+        // existing matrix in `result` to avoid allocating a new matrix. This emulates
+        /** Returns a new M4 which is equal to the inverse of this. */
+        inversed(result) {
+            return M4.inverse(this, result);
+        }
+        /** Matrix trace is defined as the sum of the elements of the main diagonal. */
+        trace() {
+            return this.m[0] + this.m[5] + this.m[10] + this.m[15];
+        }
+        as3x3(result) {
+            result = M4.copy(this, result);
+            const m = result.m;
+            m[3] = m[7] = m[11] = m[12] = m[13] = m[14] = 0;
+            m[15] = 1;
+            return result;
+        }
+        transform(m4) {
+            return m4.times(this);
+        }
+        realEigenValues3() {
+            const m = this.m;
+            assert(0 == m[12] && 0 == m[13] && 0 == m[14]);
+            // determinant of (this - λI):
+            // | a-λ  b   c  |
+            // |  d  e-λ  f  | = -λ^3 + λ^2 (a+e+i) + λ (-a e-a i+b d+c g-e i+f h) + a(ei - fh) - b(di - fg) + c(dh - eg)
+            // |  g   h  i-λ |
+            const [a, b, c, , d, e, f, , g, h, i] = m;
+            // det(this - λI) = -λ^3 +λ^2 (a+e+i) + λ (-a e-a i-b d+c g-e i+f h)+ (a e i-a f h-b d i+b f g+c d h-c e g)
+            const s = -1;
+            const t = a + e + i; // equivalent to trace of matrix
+            const u = -a * e - a * i + b * d + c * g - e * i + f * h; // equivalent to 1/2 (trace(this²) - trace²(A))
+            const w = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g); // equivalent to matrix determinant
+            console.log(s, t, u, w);
+            return solveCubicReal2(s, t, u, w);
+        }
+        realEigenVectors3() {
+            const eigenValues = this.realEigenValues3();
+            const this3x3 = this.times(M4.IDENTITY3);
+            console.log(this.toString());
+            console.log(this3x3.toString());
+            let mats = eigenValues.map((ev) => M4.IDENTITY3.scale(-ev).plus(this3x3));
+            console.log(mats.map((m) => m.determinant3()));
+            console.log(mats.map((m) => "" + m.toString((v) => "" + v)).join("\n\n"));
+            console.log(mats
+                .map((m) => "" + m.luDecomposition().U.toString((v) => "" + v))
+                .join("\n\n"));
+            console.log("mats.map(m=>m.rank())", mats.map((m) => m.rank()));
+            if (1 == eigenValues.length) {
+                console.log(mats[0].toString());
+                assertf(() => 0 == mats[0].rank());
+                // col vectors
+                return arrayFromFunction(3, (col) => new V3(this.m[col], this.m[4 + col], this.m[8 + col]));
+            }
+            if (2 == eigenValues.length) {
+                // one matrix should have rank 1, the other rank 2
+                if (1 == mats[0].rank()) {
+                    mats = [mats[1], mats[0]];
+                }
+                assertf(() => 2 == mats[0].rank());
+                assertf(() => 1 == mats[1].rank());
+                // mat[0] has rank 2, mat[1] has rank 1
+                const gauss0 = mats[0].luDecomposition().U;
+                const eigenVector0 = gauss0.row(0).cross(gauss0.row(1)).V3().unit();
+                const planeNormal = mats[1].luDecomposition().U.row(0).V3();
+                const eigenVector1 = planeNormal.getPerpendicular().unit();
+                const eigenVector2 = eigenVector0
+                    .cross(eigenVector1)
+                    .rejectedFrom(planeNormal);
+                return [eigenVector0, eigenVector1, eigenVector2];
+            }
+            if (3 == eigenValues.length) {
+                mats.forEach((mat, i) => assert(2 == mat.rank(), i + ": " + mat.rank()));
+                // the (A - lambda I) matrices map to a plane. This means, that there is an entire line in R³ which maps to
+                // the point V3.O
+                return mats.map((mat) => {
+                    const gauss = mat.luDecomposition().U;
+                    return gauss.row(0).cross(gauss.row(1)).V3().unit();
+                });
+            }
+            throw new Error("there cannot be more than 3 eigen values");
+        }
+        /**
+         * U * SIGMA * VSTAR = this
+         *
+         * U and VSTAR are orthogonal matrices
+         *
+         * SIGMA is a diagonal matrix
+         */
+        svd3() {
+            function matrixForCS(i, k, c, s) {
+                const m = M4.identity();
+                m.setEl(i, i, c);
+                m.setEl(k, k, c);
+                m.setEl(i, k, s);
+                m.setEl(k, i, -s);
+                return m;
+            }
+            const A = this.as3x3();
+            let S = A.transposed().times(A), V = M4.identity();
+            console.log(S.toString());
+            for (let it = 0; it < 16; it++) {
+                console.log("blahg\n", V.times(S).times(V.transposed()).toString());
+                assert(V.times(S).times(V.transposed()).likeM4(A.transposed().times(A)), V.times(S).times(V.transposed()).toString(), A.transposed().times(A).toString());
+                let maxOffDiagonal = 0, maxOffDiagonalIndex = 1, j = 10;
+                while (j--) {
+                    const val = Math.abs(S.m[j]);
+                    if (j % 4 != Math.floor(j / 4) && val > maxOffDiagonal) {
+                        maxOffDiagonal = val;
+                        maxOffDiagonalIndex = j;
+                    }
+                }
+                const i = Math.floor(maxOffDiagonalIndex / 4), k = maxOffDiagonalIndex % 4;
+                const a_ii = S.m[5 * i], a_kk = S.m[5 * k], a_ik = S.m[maxOffDiagonalIndex];
+                const phi = a_ii === a_kk ? PI$1$1 / 4 : Math.atan((2 * a_ik) / (a_ii - a_kk)) / 2;
+                console.log(maxOffDiagonalIndex, i, k, "phi", phi);
+                const cos = Math.cos(phi), sin = Math.sin(phi);
+                const givensRotation = matrixForCS(i, k, cos, -sin);
+                assert(givensRotation.transposed().times(givensRotation).likeIdentity());
+                console.log(givensRotation.toString());
+                V = V.times(givensRotation);
+                S = M4.product(givensRotation.transposed(), S, givensRotation);
+                console.log(S.toString());
+            }
+            const sigma = S.map((el, elIndex) => (elIndex % 5 == 0 ? Math.sqrt(el) : 0));
+            return {
+                U: M4.product(A, V, sigma.map((el, elIndex) => (elIndex % 5 == 0 ? 1 / el : 0))),
+                SIGMA: sigma,
+                VSTAR: V.transposed(),
+            };
+        }
+        map(fn) {
+            return M4.fromFunction4((x, y, i) => fn(this.m[i], i, this.m));
+        }
+        likeM4(m4) {
+            assertInst(M4, m4);
+            return this.m.every((el, index) => eq(el, m4.m[index]));
+        }
+        /** Returns a new M4 equal to the transpose of this. */
+        transposed(result) {
+            return M4.transpose(this, result);
+        }
+        /** Returns a new M4 which equal to (this * matrix) (in that order) */
+        times(matrix) {
+            return M4.multiply(this, matrix);
+        }
+        /**
+         * In a perspective projection, parallel lines meet in a vanishing point.
+         *
+         * Returns undefined if there is no vanishing point, either because this is
+         * not a perspective transform, or because the passed dir is perpendicular to
+         * the projections direction.
+         *
+         * @param dir
+         */
+        vanishingPoint(dir) {
+            assertVectors(dir);
+            const m = this.m;
+            const vx = dir.x, vy = dir.y, vz = dir.z;
+            const w = vx * m[12] + vy * m[13] + vz * m[14];
+            if (eq0(w))
+                return undefined;
+            const x = vx * m[0] + vy * m[1] + vz * m[2];
+            const y = vx * m[4] + vy * m[5] + vz * m[6];
+            const z = vx * m[8] + vy * m[9] + vz * m[10];
+            return new V3(x / w, y / w, z / w);
+        }
+        /**
+         * Transforms the vector as a point with a w coordinate of 1. This means
+         * translations will have an effect, for example.
+         */
+        transformPoint(v) {
+            assertVectors(v);
+            const m = this.m;
+            const vx = v.x, vy = v.y, vz = v.z;
+            const x = vx * m[0] + vy * m[1] + vz * m[2] + m[3];
+            const y = vx * m[4] + vy * m[5] + vz * m[6] + m[7];
+            const z = vx * m[8] + vy * m[9] + vz * m[10] + m[11];
+            const w = vx * m[12] + vy * m[13] + vz * m[14] + m[15];
+            // scale such that fourth element becomes 1:
+            return new V3(x / w, y / w, z / w);
+        }
+        /**
+         * Transforms the vector as a vector with a w coordinate of 0. This means
+         * translations will have no effect, for example. Will throw an exception if
+         * the calculated w component != 0. This occurs for example when attempting
+         * to transform a vector with a perspective matrix.
+         */
+        transformVector(v, checkW = true) {
+            assertVectors(v);
+            const m = this.m;
+            const w = v.x * m[12] + v.y * m[13] + v.z * m[14];
+            checkW &&
+                assert(eq0(w), () => "w === 0 needs to be true for this to make sense (w =" +
+                    w +
+                    this.toString());
+            return new V3(m[0] * v.x + m[1] * v.y + m[2] * v.z, m[4] * v.x + m[5] * v.y + m[6] * v.z, m[8] * v.x + m[9] * v.y + m[10] * v.z);
+        }
+        transformVector2(v, anchor) {
+            // v and anchor define a line(t) = anchor + t v
+            // we can view the calculation of the transformed vector as the derivative of the transformed line at t = 0
+            // d/dt (this * line(t)) (0)
+            assertVectors(v, anchor);
+            const transformedAnchor = this.timesVector(VV(anchor.x, anchor.y, anchor.z, 1));
+            const transformedVector = this.timesVector(VV(v.x, v.y, v.z, 0));
+            return transformedVector
+                .times(transformedAnchor.w)
+                .minus(transformedAnchor.times(transformedVector.w))
+                .div(Math.pow(transformedAnchor.w, 2))
+                .V3();
+        }
+        transformedPoints(vs) {
+            return vs.map((v) => this.transformPoint(v));
+        }
+        transformedVectors(vs) {
+            return vs.map((v) => this.transformVector(v));
+        }
+        new() {
+            return new M4();
+        }
+        isRegular() {
+            return !eq0(this.determinant());
+        }
+        isAxisAligned() {
+            const m = this.m;
+            return (1 >= +!eq0(m[0]) + +!eq0(m[1]) + +!eq0(m[2]) &&
+                1 >= +!eq0(m[4]) + +!eq0(m[5]) + +!eq0(m[6]) &&
+                1 >= +!eq0(m[8]) + +!eq0(m[9]) + +!eq0(m[10]));
+        }
+        /**
+         * A matrix M is orthogonal iff M * M^T = I I being the identity matrix.
+         *
+         * @returns If this matrix is orthogonal or very close to it. Comparison of
+         *     the identity matrix and this * this^T is done with {@link #likeM4}
+         */
+        isOrthogonal() {
+            // return this.transposed().times(this).likeM4(M4.IDENTITY)
+            M4.transpose(this, M4.temp0);
+            M4.multiply(this, M4.temp0, M4.temp1);
+            return M4.IDENTITY.likeM4(M4.temp1);
+        }
+        /**
+         * A matrix M is symmetric iff M == M^T I being the identity matrix.
+         *
+         * @returns If this matrix is symmetric or very close to it. Comparison of the
+         *     identity matrix and this * this^T is done with {@link #likeM4}
+         */
+        isSymmetric() {
+            M4.transpose(this, M4.temp0);
+            return this.likeM4(M4.temp0);
+        }
+        /** A matrix M is skew symmetric iff M = -M^T */
+        isSkewSymmetric(precision) {
+            return (eq0(this.m[0], precision) &&
+                eq0(this.m[5], precision) &&
+                eq0(this.m[10], precision) &&
+                eq0(this.m[15], precision) &&
+                eq(this.m[1], this.m[4], precision) &&
+                eq(this.m[2], this.m[8], precision) &&
+                eq(this.m[3], this.m[12], precision) &&
+                eq(this.m[6], this.m[9], precision) &&
+                eq(this.m[7], this.m[13], precision) &&
+                eq(this.m[11], this.m[14], precision));
+        }
+        /**
+         * A matrix M is normal1 iff M * M^-T == M^T * M TODO: ^-T? I being the identity matrix.
+         *
+         * @returns If this matrix is symmetric or very close to it. Comparison of the
+         *     identity matrix and this * this^T is done with {@link #likeM4}
+         */
+        isNormal() {
+            M4.transpose(this, M4.temp0); // temp0 = this^-T
+            M4.multiply(this, M4.temp0, M4.temp1); // temp1 = this * this^-T
+            M4.multiply(M4.temp0, this, M4.temp2); // temp2 = this^-T * this
+            return M4.temp1.likeM4(M4.temp2);
+        }
+        /**
+         * Determinant of matrix.
+         *
+         * Notes:
+         *     For matrices A and B
+         *     det(A * B) = det(A) * det(B)
+         *     det(A^-1) = 1 / det(A)
+         */
+        determinant() {
+            // | a b c d |
+            // | e f g h |
+            // | i j k l |
+            // | m n o p |
+            const $ = this.m, a = $[0], b = $[1], c = $[2], d = $[3], e = $[4], f = $[5], g = $[6], h = $[7], i = $[8], j = $[9], k = $[10], l = $[11], m = $[12], n = $[13], o = $[14], p = $[15], klop = k * p - l * o, jlnp = j * p - l * n, jkno = j * o - k * n, ilmp = i * p - l * m, ikmo = i * o - k * m, ijmn = i * n - j * m;
+            return (a * (f * klop - g * jlnp + h * jkno) -
+                b * (e * klop - g * ilmp + h * ikmo) +
+                c * (e * jlnp - f * ilmp + h * ijmn) -
+                d * (e * jkno - f * ikmo + g * ijmn));
+        }
+        determinant3() {
+            const [a, b, c, , d, e, f, , g, h, i] = this.m;
+            return a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+        }
+        /** Determine whether this matrix is a mirroring transformation */
+        isMirroring() {
+            /*
+             var u = V(this.m[0], this.m[4], this.m[8])
+             var v = V(this.m[1], this.m[5], this.m[9])
+             var w = V(this.m[2], this.m[6], this.m[10])
+        
+             // for a true orthogonal, non-mirrored base, u.cross(v) == w
+             // If they have an opposite direction then we are mirroring
+             var mirrorvalue = u.cross(v).dot(w)
+             var ismirror = (mirrorvalue < 0)
+             return ismirror
+             */
+            return this.determinant() < 0; // TODO: also valid for 4x4?
+        }
+        /** Get the translation part of this matrix, i.e. the result of this.transformPoint(V3.O) */
+        getTranslation() {
+            const m = this.m, w = m[15];
+            return new V3(m[3] / w, m[7] / w, m[11] / w);
+        }
+        /**
+         * Returns this matrix scaled so that the determinant is 1. det(c * A) = (c **
+         * n) * det(A) for n x n matrices, so we need to divide by the 4th root of
+         * the determinant
+         */
+        normalized() {
+            const detAbs = abs$1(this.determinant());
+            return 1 == detAbs ? this : this.divScalar(Math.pow(detAbs, 0.25));
+        }
+        /** Returns this matrix scaled so that the bottom-right element is 1. */
+        normalized2() {
+            const div = this.m[15];
+            return 1 == div ? this : this.divScalar(div);
+        }
+        /**
+         * Returns if the matrix has the following form (within NLA_PRECISION): a b c
+         * 0 c d e 0 f g h 0 0 0 0 1
+         */
+        like3x3() {
+            const m = this.m;
+            return (eq(1, m[15]) &&
+                eq0(m[12]) &&
+                eq0(m[13]) &&
+                eq0(m[14]) &&
+                eq0(m[3]) &&
+                eq0(m[7]) &&
+                eq0(m[11]));
+        }
+        isNoProj() {
+            const m = this.m;
+            return 0 == m[12] && 0 == m[13] && 0 == m[14] && 1 == m[15];
+        }
+        likeIdentity() {
+            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? eq(1, val) : eq0(val));
+        }
+        isIdentity() {
+            return this.m.every((val, i) => ((i / 4) | 0) == i % 4 ? 1 == val : 0 == val);
+        }
+        toString(f = (v) => v.toFixed(6).replace(/([0.])(?=0*$)/g, " ")) {
+            assert(typeof f(0) == "string", "" + typeof f(0));
+            // slice this.m to convert it to an Array (from TypeArray)
+            const rounded = Array.prototype.slice.call(this.m).map(f);
+            const colWidths = [0, 1, 2, 3].map((colIndex) => max$1(sliceStep(rounded, colIndex, 0, 4).map((x) => x.length)));
+            return [0, 1, 2, 3]
+                .map((rowIndex) => rounded
+                .slice(rowIndex * 4, rowIndex * 4 + 4) // select matrix row
+                .map((x, colIndex) => " ".repeat(colWidths[colIndex] - x.length) + x) // pad numbers with
+                // spaces to col width
+                .join(" "))
+                .join("\n"); // join rows
+        }
+        /**
+         * Wether this matrix is a translation matrix, i.e. of the form
+         *
+         *     1, 0, 0, x,
+         *     0, 1, 0, y,
+         *     0, 0, 1, z,
+         *     0, 0, 0, 1
+         */
+        isTranslation() {
+            // 2: any value, otherwise same value
+            // prettier-ignore
+            const mask = [
+                1, 0, 0, 2,
+                0, 1, 0, 2,
+                0, 0, 1, 2,
+                0, 0, 0, 1
+            ];
+            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
+        }
+        /**
+         * Wether this matrix is a translation matrix, i.e. of the form
+         *
+         *     S, 0, 0, 0,
+         *     0, t, 0, 0,
+         *     0, 0, v, 0,
+         *     0, 0, 0, 1
+         */
+        isScaling() {
+            // prettier-ignore
+            const mask = [
+                2, 0, 0, 0,
+                0, 2, 0, 0,
+                0, 0, 2, 0,
+                0, 0, 0, 1
+            ];
+            return mask.every((expected, index) => expected == 2 || expected == this.m[index]);
+        }
+        isZRotation() {
+            // prettier-ignore
+            const mask = [
+                2, 2, 0, 0,
+                2, 2, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ];
+            return (mask.every((expected, index) => expected == 2 || expected == this.m[index]) &&
+                eq(1, Math.pow(this.m[0], 2) + Math.pow(this.m[1], 2)) &&
+                this.m[0] == this.m[5] &&
+                this.m[1] == -this.m[4]);
+        }
+        toSource() {
+            const name = M4.NAMEMAP.get(this);
+            if (name) {
+                return name;
+            }
+            else if (this.isTranslation()) {
+                return callSource("M4.translate", this.O);
+            }
+            else if (this.isScaling()) {
+                return callSource("M4.scale", this.m[0], this.m[5], this.m[10]);
+            }
+            else if (this.isNoProj()) {
+                return !this.O.equals(V3.O)
+                    ? callSource("M4.forSys", this.X, this.Y, this.Z, this.O)
+                    : callSource("M4.forSys", this.X, this.Y, this.Z);
+            }
+            else if (this.isMirror(0)) {
+                const m = this.m;
+                const nx = Math.sqrt((1 - m[0]) / 2);
+                const ny = Math.sqrt((1 - m[5]) / 2);
+                const nz = Math.sqrt((1 - m[10]) / 2);
+                const w = m[3] / 2.0 / nx;
+                return callSource("M4.mirror", { normal1: new V3(nx, ny, nz), w });
+            }
+            else {
+                const m = this.m;
+                return ("new M4(" +
+                    ("\n\t" + m[0] + ",\t" + m[1] + ",\t" + m[2] + ",\t" + m[3] + ",") +
+                    ("\n\t" + m[4] + ",\t" + m[5] + ",\t" + m[6] + ",\t" + m[7] + ",") +
+                    ("\n\t" + m[8] + ",\t" + m[9] + ",\t" + m[10] + ",\t" + m[11] + ",") +
+                    ("\n\t" + m[12] + ",\t" + m[13] + ",\t" + m[14] + ",\t" + m[15] + ")"));
+            }
+        }
+        xyAreaFactor() {
+            return this.transformVector(V3.X).cross(this.transformVector(V3.Y)).length();
+        }
+    }
+    /**
+     * A simple (consists of integers), regular, non-orthogonal matrix, useful
+     * mainly for testing. M4.FOO_INV = M4.FOO.inverse()
+     */
+    // prettier-ignore
+    M4.FOO = new M4(0, 1, 1, 2, 0.3, 0.4, 0.8, 13, 2.1, 3.4, 5.5, 8.9, 0, 0, 0, 1);
+    M4.FOO_INV = M4.FOO.inversed();
+    M4.IDENTITY = M4.identity();
+    // prettier-ignore
+    M4.O = new M4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    M4.YZX = M4.forSys(V3.Y, V3.Z, V3.X);
+    M4.ZXY = M4.forSys(V3.Z, V3.X, V3.Y);
+    // prettier-ignore
+    M4.IDENTITY3 = new M4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
+    M4.temp0 = new M4();
+    M4.temp1 = new M4();
+    M4.temp2 = new M4();
+    M4.NAMEMAP = new JavaMap()
+        .set(M4.IDENTITY3, "M4.IDENTITY3")
+        .set(M4.FOO, "M4.FOO")
+        .set(M4.O, "M4.O")
+        .set(M4.FOO_INV, "M4.FOO_INV")
+        .set(M4.IDENTITY, "M4.IDENTITY")
+        .set(M4.ZXY, "M4.ZXY")
+        .set(M4.YZX, "M4.YZX");
+    M4.prototype.height = 4;
+    M4.prototype.width = 4;
+    addOwnProperties(M4.prototype, Transformable.prototype, "constructor");
+
+    class Vector {
+        constructor(v) {
+            this.v = v;
+            assertInst(Float64Array, v);
+        }
+        static fromFunction(dims, f) {
+            assertNumbers(dims);
+            const e = new Float64Array(dims);
+            let i = dims;
+            while (i--) {
+                e[i] = f(i);
+            }
+            return new Vector(e);
+        }
+        static random(dims) {
+            return Vector.fromFunction(dims, (_i) => Math.random());
+        }
+        static from(...args) {
+            assert(args[0] instanceof Float64Array ||
+                args.every((a) => "number" == typeof a), 'args[0] instanceof Float64Array || args.every(a => "number" == typeof a)');
+            return new Vector(args[0] instanceof Float64Array ? args[0] : Float64Array.from(args));
+        }
+        static Zero(dims) {
+            assertNumbers(dims);
+            let i = 0;
+            const n = new Float64Array(dims);
+            while (i--) {
+                n[i] = 0;
+            }
+            return new Vector(n);
+        }
+        static Unit(dims, dir) {
+            assertNumbers(dims, dir);
+            let i = 0;
+            const n = new Float64Array(dims);
+            while (i--) {
+                n[i] = +(i == dir); // +true === 1, +false === 0
+            }
+            return new Vector(n);
+        }
+        /**
+         * Pack an array of Vectors into an array of numbers (Float32Array by default).
+         *
+         * @param vectors Source array
+         * @param dest Destination array. If provided, must be large enough to fit
+         *     v3count items.
+         * @param srcStart Starting index in source array
+         * @param destStart Starting index in destination array
+         * @param vectorCount Number of V3s to copy.
+         * @returns Packed array.
+         */
+        static pack(vectors, dest, srcStart = 0, destStart = 0, vectorCount = vectors.length - srcStart) {
+            //assert (v3arr.every(v3 => v3 instanceof V3), 'v3arr.every(v3 => v3 instanceof V3)')
+            const dim = vectors[0].dim();
+            const result = dest || new Float32Array(dim * vectorCount); // TODO
+            assert(result.length - destStart >= vectorCount * dim, "dest.length - destStart >= v3count * 3", result.length, destStart, vectorCount * 3);
+            let i = vectorCount, srcIndex = srcStart, destIndex = destStart;
+            while (i--) {
+                const v = vectors[srcIndex++];
+                for (let d = 0; d < dim; d++) {
+                    result[destIndex++] = v.v[d];
+                }
+            }
+            return result;
+        }
+        static lerp(a, b, t) {
+            assert(a.dim() == b.dim());
+            const n = new Float64Array(a.v.length);
+            let i = a.v.length;
+            while (i--) {
+                n[i] = a.v[i] * (1 - t) + b.v[i] * t;
+            }
+            return new Vector(n);
+        }
+        static add(...vs) {
+            const dim = vs[0].v.length;
+            const result = new Float64Array(dim);
+            let i = vs.length;
+            while (i--) {
+                let d = dim;
+                while (d--) {
+                    result[d] += vs[i].v[d];
+                }
+            }
+            return new Vector(result);
+        }
+        /**
+         * Create a new 4D Vector from a V3 and a weight.
+         *
+         * @param v3
+         * @param weight
+         */
+        static fromV3AndWeight(v3, weight) {
+            return new Vector(new Float64Array([v3.x * weight, v3.y * weight, v3.z * weight, weight]));
+        }
+        get x() {
+            return this.v[0];
+        }
+        get y() {
+            return this.v[1];
+        }
+        get z() {
+            return this.v[2];
+        }
+        get w() {
+            return this.v[3];
+        }
+        [Symbol.iterator]() {
+            return this.v[Symbol.iterator]();
+        }
+        dim() {
+            return this.v.length;
+        }
+        e(index) {
+            if (0 > index || index >= this.v.length) {
+                throw new Error("array index out of bounds");
+            }
+            return this.v[index];
+        }
+        plus(vector) {
+            const u = this.v, v = vector.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] + v[i];
+            }
+            return new Vector(n);
+        }
+        minus(vector) {
+            const u = this.v, v = vector.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] - v[i];
+            }
+            return new Vector(n);
+        }
+        times(factor) {
+            const u = this.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] * factor;
+            }
+            return new Vector(n);
+        }
+        div(val) {
+            const u = this.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] / val;
+            }
+            return new Vector(n);
+        }
+        dot(vector) {
+            assert(this.dim == vector.dim, "passed vector must have the same dim");
+            let result = 0;
+            const u = this.v, v = vector.v;
+            let i = u.length;
+            while (i--) {
+                result += u[i] * v[i];
+            }
+            return result;
+        }
+        cross(vector) {
+            assertInst(Vector, vector);
+            const n = new Float64Array(3);
+            n[0] = this.v[1] * vector.v[2] - this.v[2] * vector.v[1];
+            n[1] = this.v[2] * vector.v[0] - this.v[0] * vector.v[2];
+            n[2] = this.v[0] * vector.v[1] - this.v[1] * vector.v[0];
+            return new Vector(n);
+        }
+        schur(vector) {
+            assertInst(Vector, vector);
+            const u = this.v, v = vector.v;
+            const n = new Float64Array(u.length);
+            let i = u.length;
+            while (i--) {
+                n[i] = u[i] * v[i];
+            }
+            return new Vector(n);
+        }
+        equals(obj) {
+            if (obj === this)
+                return true;
+            if (obj.constructor !== Vector)
+                return false;
+            if (this.v.length != obj.v.length)
+                return false;
+            let i = this.v.length;
+            while (i--) {
+                if (this.v[i] !== obj.v[i])
+                    return false;
+            }
+            return true;
+        }
+        like(obj, precision) {
+            if (obj === this)
+                return true;
+            if (obj.constructor !== Vector)
+                return false;
+            if (this.v.length != obj.v.length)
+                return false;
+            let i = this.v.length;
+            while (i--) {
+                if (!eq(this.v[i], obj.v[i], precision))
+                    return false;
+            }
+            return true;
+        }
+        map(f) {
+            return new Vector(this.v.map(f));
+        }
+        toString(roundFunction) {
+            roundFunction = roundFunction || ((v) => +v.toFixed(6));
+            return "Vector(" + this.v.map(roundFunction).join(", ") + ")";
+        }
+        toSource() {
+            return callSource("VV", ...this.v);
+        }
+        angleTo(vector) {
+            assertInst(Vector, vector);
+            assert(!this.isZero(), "!this.likeO()");
+            assert(!vector.isZero(), "!vector.likeO()");
+            return Math.acos(clamp$1(this.dot(vector) / this.length() / vector.length(), -1, 1));
+        }
+        /**
+         * Returns true iff this is parallel to vector, using eq Throw a DebugError -
+         * if vector is not a Vector or - if this has a length of 0 or - if vector
+         * has a length of 0
+         */
+        isParallelTo(vector) {
+            assertInst(Vector, vector);
+            assert(!this.isZero(), "!this.likeO()");
+            assert(!vector.isZero(), "!vector.likeO()");
+            // a . b takes on values of +|a|*|b| (vectors same direction) to -|a|*|b| (opposite direction)
+            // in both cases the vectors are paralle, so check if abs(a . b) == |a|*|b|
+            return eq(Math.sqrt(this.lengthSquared() * vector.lengthSquared()), Math.abs(this.dot(vector)));
+        }
+        isPerpendicularTo(vector) {
+            assertInst(Vector, vector);
+            assert(!this.isZero(), "!this.likeO()");
+            assert(!vector.isZero(), "!vector.likeO()");
+            return eq0(this.dot(vector));
+        }
+        /**
+         * Returns true iff the length of this vector is 0, as returned by NLA.isZero.
+         * Definition: Vector.prototype.isZero = () => NLA.isZero(this.length())
+         */
+        isZero() {
+            return eq0(this.length());
+        }
+        /*/ Returns the length of this Vector, i.e. the euclidian norm.*/
+        length() {
+            return Math.hypot.apply(undefined, this.v);
+            //return Math.sqrt(this.lengthSquared())
+        }
+        lengthSquared() {
+            let result = 0;
+            const u = this.v;
+            let i = u.length;
+            while (i--) {
+                result += u[i] * u[i];
+            }
+            return result;
+        }
+        /**
+         * Returns a new unit Vector (.length() === 1) with the same direction as this
+         * vector. Throws a
+         */
+        unit() {
+            const length = this.length();
+            if (eq0(length)) {
+                throw new Error("cannot normalize zero vector");
+            }
+            return this.div(this.length());
+        }
+        /** Documentation stub. You want {@link unit} */
+        normalized() {
+            throw new Error("documentation stub. use .unit()");
+        }
+        asRowMatrix() {
+            return new Matrix(this.v.length, 1, this.v);
+        }
+        asColMatrix() {
+            return new Matrix(1, this.v.length, this.v);
+        }
+        /**
+         * Returns a new Vector which is the projection of this vector onto the passed vector.
+         *
+         * @example
+         *   VV(3, 4).projectedOn(VV(1, 0)) // VV(3, 0)
+         *   VV(3, 4).projectedOn(VV(2, 0)) // VV(3, 0)
+         *   VV(3, 4).projectedOn(VV(-1, 0)) // VV(-3, 0)
+         *   VV(3, 4).projectedOn(VV(0, 1)) // VV(0, 4)
+         *   VV(3, 4).projectedOn(VV(1, 1)) //
+         */
+        projectedOn(b) {
+            assertInst(Vector, b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return b.times(this.dot(b) / b.dot(b));
+        }
+        rejectedOn(b) {
+            assertInst(Vector, b);
+            // https://en.wikipedia.org/wiki/Vector_projection#Vector_projection_2
+            return this.minus(b.times(this.dot(b) / b.dot(b)));
+        }
+        to(a) {
+            return a.minus(this);
+        }
+        /**
+         * Returns true iff the length() of this vector is equal to 'length', using equals
+         *
+         * @example
+         *   V(3, 4).hasLength(5) // true
+         *   V(1, 1).hasLength(1) // false
+         */
+        hasLength(length) {
+            assertNumbers(length);
+            return eq(length, this.length());
+        }
+        V3() {
+            //assert(this.dim() == 3)
+            return new V3(this.v[0], this.v[1], this.v[2]);
+        }
+        /** Project into 3 dimensions. */
+        p3() {
+            assert(this.v.length == 4);
+            const w = this.v[3];
+            return new V3(this.v[0] / w, this.v[1] / w, this.v[2] / w);
+        }
+        transposed() {
+            return new Matrix(this.v.length, 1, this.v);
+        }
+    }
+    function VV(...values) {
+        return new Vector(new Float64Array(values));
+    }
+    function vArrGet(vArr, dim, i) {
+        assert(vArr.length % dim == 0);
+        return new Vector(Float64Array.prototype.slice.call(vArr, i * dim, (i + 1) * dim));
+    }
+    function vArrSet(vArr, i, vector) {
+        const dim = vector.dim();
+        assert(vArr.length % dim == 0);
+        let d = dim;
+        while (d--) {
+            vArr[i * dim + d] = vector.v[d];
+        }
+    }
+
+    const KEYWORD_REGEXP = new RegExp("^(" +
+        "abstract|boolean|break|byte|case|catch|char|class|const|continue|debugger|" +
+        "default|delete|do|double|else|enum|export|extends|false|final|finally|" +
+        "float|for|function|goto|if|implements|import|in|instanceof|int|interface|" +
+        "long|native|new|null|package|private|protected|public|return|short|static|" +
+        "super|switch|synchronized|this|throw|throws|transient|true|try|typeof|" +
+        "undefined|var|void|volatile|while|with" +
+        ")$");
+    function stringIsLegalKey(key) {
+        return /^[a-z_$][0-9a-z_$]*$/gi.test(key) && !KEYWORD_REGEXP.test(key);
+    }
+    const seen = [];
+    function toSource(o, indent = 0) {
+        switch (typeof o) {
+            case "undefined":
+                return "undefined";
+            case "function":
+                return o.toString();
+            case "number":
+                return "" + o;
+            case "string":
+                return JSON.stringify(o);
+            case "object":
+                if (null == o) {
+                    return "null";
+                }
+                else {
+                    return o.sce;
+                }
+            default:
+                throw new Error();
+        }
+    }
+    function addToSourceMethodToPrototype(clazz, method) {
+        if (!clazz.prototype.toSource) {
+            Object.defineProperty(clazz.prototype, "toSource", {
+                value: method,
+                writable: true,
+                configurable: true,
+                enumerable: false,
+            });
+        }
+    }
+    addToSourceMethodToPrototype(Boolean, Boolean.prototype.toString);
+    addToSourceMethodToPrototype(Function, Function.prototype.toString);
+    addToSourceMethodToPrototype(Number, Number.prototype.toString);
+    addToSourceMethodToPrototype(RegExp, RegExp.prototype.toString);
+    addToSourceMethodToPrototype(Date, function () {
+        return "new Date(" + this.getTime() + ")";
+    });
+    addToSourceMethodToPrototype(String, function () {
+        return JSON.stringify(this);
+    });
+    addToSourceMethodToPrototype(Array, function () {
+        if (seen.includes(this)) {
+            return "CIRCULAR_REFERENCE";
+        }
+        seen.push(this);
+        let result = "[";
+        for (let i = 0; i < this.length; i++) {
+            result += "\n\t" + toSource(this[i]).replace(/\r\n|\n|\r/g, "$&\t");
+            if (i !== this.length - 1) {
+                result += ",";
+            }
+        }
+        result += 0 === this.length ? "]" : "\n]";
+        seen.pop();
+        return result;
+    });
+    addToSourceMethodToPrototype(Object, function () {
+        if (seen.includes(this)) {
+            return "CIRCULAR_REFERENCE";
+        }
+        seen.push(this);
+        let result = "{";
+        const keys = Object.keys(this).sort();
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            result +=
+                "\n\t" +
+                    (stringIsLegalKey(k) ? k : JSON.stringify(k)) +
+                    ": " +
+                    toSource(this[k]).replace(/\r\n|\n|\r/g, "$&\t");
+            if (i !== keys.length - 1) {
+                result += ",";
+            }
+        }
+        result += 0 === keys.length ? "}" : "\n}";
+        seen.pop();
+        return result;
+    });
+
+    class AABB extends Transformable {
+        constructor(min = V3.INF, max = V3.INF.negated()) {
+            super();
+            this.min = min;
+            this.max = max;
+            assertVectors(min, max);
+        }
+        static forXYZ(x, y, z) {
+            return new AABB(V3.O, new V3(x, y, z));
+        }
+        static forAABBs(aabbs) {
+            const result = new AABB();
+            for (const aabb of aabbs) {
+                result.addAABB(aabb);
+            }
+            return result;
+        }
+        addPoint(p) {
+            assertVectors(p);
+            this.min = this.min.min(p);
+            this.max = this.max.max(p);
+            return this;
+        }
+        addPoints(ps) {
+            ps.forEach((p) => this.addPoint(p));
+            return this;
+        }
+        addAABB(aabb) {
+            assertInst(AABB, aabb);
+            this.addPoint(aabb.min);
+            this.addPoint(aabb.max);
+            return this;
+        }
+        /**
+         * Returns the largest AABB contained in this which doesn't overlap with aabb
+         *
+         * @param aabb
+         */
+        withoutAABB(aabb) {
+            assertInst(AABB, aabb);
+            let min, max;
+            const volume = this.volume(), size = this.size();
+            let remainingVolume = -Infinity;
+            for (let i = 0; i < 3; i++) {
+                const dim = ["x", "y", "z"][i];
+                const cond = aabb.min[dim] - this.min[dim] > this.max[dim] - aabb.max[dim];
+                const dimMin = cond
+                    ? this.min[dim]
+                    : Math.max(this.min[dim], aabb.max[dim]);
+                const dimMax = !cond
+                    ? this.max[dim]
+                    : Math.min(this.max[dim], aabb.min[dim]);
+                const newRemainingVolume = ((dimMax - dimMin) * volume) / size[dim];
+                if (newRemainingVolume > remainingVolume) {
+                    remainingVolume = newRemainingVolume;
+                    min = this.min.withElement(dim, dimMin);
+                    max = this.max.withElement(dim, dimMax);
+                }
+            }
+            return new AABB(min, max);
+        }
+        getIntersectionAABB(aabb) {
+            assertInst(AABB, aabb);
+            return new AABB(this.min.max(aabb.min), this.max.min(aabb.max));
+        }
+        touchesAABB(aabb) {
+            assertInst(AABB, aabb);
+            return !(this.min.x > aabb.max.x ||
+                this.max.x < aabb.min.x ||
+                this.min.y > aabb.max.y ||
+                this.max.y < aabb.min.y ||
+                this.min.z > aabb.max.z ||
+                this.max.z < aabb.min.z);
+        }
+        touchesAABBfuzzy(aabb, precisision = NLA_PRECISION) {
+            assertInst(AABB, aabb);
+            return !(lt(aabb.max.x, this.min.x, precisision) ||
+                lt(this.max.x, aabb.min.x, precisision) ||
+                lt(aabb.max.y, this.min.y, precisision) ||
+                lt(this.max.y, aabb.min.y, precisision) ||
+                lt(aabb.max.z, this.min.z, precisision) ||
+                lt(this.max.z, aabb.min.z, precisision));
+        }
+        intersectsAABB(aabb) {
+            assertInst(AABB, aabb);
+            return !(this.min.x >= aabb.max.x ||
+                this.max.x <= aabb.min.x ||
+                this.min.y >= aabb.max.y ||
+                this.max.y <= aabb.min.y ||
+                this.min.z >= aabb.max.z ||
+                this.max.z <= aabb.min.z);
+        }
+        intersectsAABB2d(aabb) {
+            assertInst(AABB, aabb);
+            return !(this.min.x >= aabb.max.x ||
+                this.max.x <= aabb.min.x ||
+                this.min.y >= aabb.max.y ||
+                this.max.y <= aabb.min.y);
+        }
+        containsPoint(p) {
+            assertVectors(p);
+            return (this.min.x <= p.x &&
+                this.min.y <= p.y &&
+                this.min.z <= p.z &&
+                this.max.x >= p.x &&
+                this.max.y >= p.y &&
+                this.max.z >= p.z);
+        }
+        containsSphere(center, radius) {
+            assertVectors(center);
+            assertNumbers(radius);
+            return this.distanceToPoint(center) > radius;
+        }
+        intersectsSphere(center, radius) {
+            assertVectors(center);
+            assertNumbers(radius);
+            return this.distanceToPoint(center) <= radius;
+        }
+        distanceToPoint(p) {
+            assertVectors(p);
+            const x = p.x, y = p.y, z = p.z;
+            const min = this.min, max = this.max;
+            if (this.containsPoint(p)) {
+                return Math.max(min.x - x, x - max.x, min.y - y, y - max.y, min.z - z, z - max.z);
+            }
+            return p.distanceTo(new V3(clamp$1(x, min.x, max.x), clamp$1(y, min.y, max.y), clamp$1(z, min.z, max.z)));
+        }
+        containsAABB(aabb) {
+            assertInst(AABB, aabb);
+            return this.containsPoint(aabb.min) && this.containsPoint(aabb.max);
+        }
+        likeAABB(aabb) {
+            assertInst(AABB, aabb);
+            return this.min.like(aabb.min) && this.max.like(aabb.max);
+        }
+        intersectsLine(line) {
+            assertVectors(line.anchor, line.dir1);
+            const dir = line.dir1.map((el) => el || Number.MIN_VALUE);
+            const minTs = this.min.minus(line.anchor).divv(dir);
+            const maxTs = this.max.minus(line.anchor).divv(dir);
+            const tMin = minTs.min(maxTs).maxElement(), tMax = minTs.max(maxTs).minElement();
+            return tMin <= tMax && !(tMax < line.tMin || line.tMax < tMin);
+        }
+        hasVolume() {
+            return (this.min.x <= this.max.x &&
+                this.min.y <= this.max.y &&
+                this.min.z <= this.max.z);
+        }
+        volume() {
+            if (!this.hasVolume()) {
+                return -1;
+            }
+            const v = this.max.minus(this.min);
+            return v.x * v.y * v.z;
+        }
+        size() {
+            return this.max.minus(this.min);
+        }
+        getCenter() {
+            return this.min.plus(this.max).div(2);
+        }
+        transform(m4) {
+            assertInst(M4, m4);
+            assert(m4.isAxisAligned());
+            const aabb = new AABB();
+            aabb.addPoint(m4.transformPoint(this.min));
+            aabb.addPoint(m4.transformPoint(this.max));
+            return aabb;
+        }
+        ofTransformed(m4) {
+            assertInst(M4, m4);
+            const aabb = new AABB();
+            aabb.addPoints(m4.transformedPoints(this.corners()));
+            return aabb;
+        }
+        corners() {
+            const { min, max } = this;
+            return [
+                min,
+                new V3(min.x, min.y, max.z),
+                new V3(min.x, max.y, min.z),
+                new V3(min.x, max.y, max.z),
+                new V3(max.x, min.y, min.z),
+                new V3(max.x, min.y, max.z),
+                new V3(max.x, max.y, min.z),
+                max,
+            ];
+        }
+        toString() {
+            return callSource("new AABB", this.min, this.max);
+        }
+        toSource() {
+            return this.toString();
+        }
+        /** Return the matrix which transforms the AABB from V3.O to V3.XYZ to this AABB. */
+        getM4() {
+            return M4.translate(this.min).times(M4.scale(this.size()));
+        }
+    }
+
     var ts3dutils = /*#__PURE__*/Object.freeze({
         __proto__: null,
         AABB: AABB,
@@ -6626,8 +6682,6 @@ var viewer = (function (exports, javasetmap_ts) {
         P3YZ: P3YZ,
         P3ZX: P3ZX,
         PI: PI$1,
-        SCE: SCE,
-        STR: STR,
         TAU: TAU,
         Transformable: Transformable,
         V: V,
@@ -6651,6 +6705,7 @@ var viewer = (function (exports, javasetmap_ts) {
         assertInts: assertInts,
         assertNever: assertNever,
         assertNumbers: assertNumbers,
+        assertReals: assertReals,
         assertVectors: assertVectors,
         assertf: assertf,
         bagRemoveIndex: bagRemoveIndex,
@@ -6659,7 +6714,7 @@ var viewer = (function (exports, javasetmap_ts) {
         binaryIndexOf: binaryIndexOf,
         binaryInsert: binaryInsert,
         bisect: bisect$1,
-        callsce: callsce,
+        callSource: callSource,
         canonAngle: canonAngle,
         ceil10: ceil10,
         checkDerivate: checkDerivate,
@@ -6675,7 +6730,6 @@ var viewer = (function (exports, javasetmap_ts) {
         eq: eq,
         eq0: eq0,
         eq02: eq02,
-        eq2: eq2,
         eqAngle: eqAngle,
         equals: equals,
         firstUnsorted: firstUnsorted,
@@ -6739,6 +6793,7 @@ var viewer = (function (exports, javasetmap_ts) {
         sumInPlaceTree: sumInPlaceTree,
         time: time,
         toSource: toSource,
+        toString: toString,
         toggle: toggle,
         unique: unique,
         vArrGet: vArrGet,
@@ -9682,9 +9737,7 @@ var viewer = (function (exports, javasetmap_ts) {
             super();
             this.tMin = tMin;
             this.tMax = tMax;
-            assertNumbers(tMin, tMax);
-            assert("number" === typeof tMin && !isNaN(tMin));
-            assert("number" === typeof tMax && !isNaN(tMax));
+            assertReals(tMin, tMax);
             assert(tMin < tMax, "tMin < tMax " + tMin + " < " + tMax);
         }
         static integrate(curve, startT, endT, steps) {
@@ -9843,7 +9896,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return this.toSource();
         }
         toSource(rounder = (x) => x) {
-            return callsce.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters(), this.tMin, this.tMax);
+            return callSource.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters(), this.tMin, this.tMax);
         }
         withBounds(tMin = this.tMin, tMax = this.tMax) {
             //assert(this.tMin <= tMin && tMin <= this.tMax)
@@ -10505,7 +10558,7 @@ var viewer = (function (exports, javasetmap_ts) {
         const wx0 = (x) => Number.isFinite(x) ? snap0(Math.pow(x, 2) * w2 + x * w1 + wc) : sign$1(w2) * Infinity;
         if (wx0(tMin) * wx0(tMax) < 0 ||
             extremas.some((x) => wx0(x) * (wx0(tMin) + wx0(tMax)) < 0)) {
-            console.log(m.str);
+            console.log(m.toString());
             throw new Error("The entire interval must be on one side of the vanishing plane. P=" +
                 toSource(P3.vanishingPlane(m)));
         }
@@ -11008,7 +11061,7 @@ var viewer = (function (exports, javasetmap_ts) {
         }
         transform(m4) {
             // perspective projection turn bezier curve into rational spline
-            assert(m4.isNoProj(), m4.str);
+            assert(m4.isNoProj(), m4.toString());
             return new BezierCurve(m4.transformPoint(this.p0), m4.transformPoint(this.p1), m4.transformPoint(this.p2), m4.transformPoint(this.p3), this.tMin, this.tMax);
         }
         transform4(m4) {
@@ -12002,7 +12055,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return surfaceIsICurveIsInfosWithLine.call(this, this.implicitSurface, this.parametricSurface, anchorWC, dirWC, tMin, tMax, lineMin, lineMax);
         }
         toSource(rounder = (x) => x) {
-            const result = callsce("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], getLast(this.pmPoints), this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
+            const result = callSource("PICurve.forParametricStartEnd", this.parametricSurface, this.implicitSurface, this.pmPoints[0], getLast(this.pmPoints), this.stepSize, this.pmTangents[0], this.tMin, this.tMax);
             return result;
         }
     }
@@ -12095,7 +12148,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return new PPCurve(m4.transformedPoints(this.points), m4.transformedVectors(this.tangents), this.parametricSurface1.transform(m4), this.parametricSurface2.transform(m4), this.st1s, undefined, this.stepSize, this.dir, undefined);
         }
         toSource() {
-            return callsce("PPCurve.forStartEnd", this.parametricSurface1, this.parametricSurface2, this.points[0], getLast(this.points), this.stepSize);
+            return callSource("PPCurve.forStartEnd", this.parametricSurface1, this.parametricSurface2, this.points[0], getLast(this.points), this.stepSize);
         }
         static forStartEnd(ps1, ps2, startPoint, end, stepSize = 0.02) {
             const { points, tangents, st1s } = followAlgorithmPP(ps1, ps2, startPoint, stepSize);
@@ -13596,7 +13649,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return eq0(this.normal1.dot(plane.normal1));
         }
         toSource() {
-            return callsce("new P3", this.normal1, this.w);
+            return callSource("new P3", this.normal1, this.w);
         }
         translated(offset) {
             return new P3(this.normal1, this.w + offset.dot(this.normal1));
@@ -13853,7 +13906,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return this.toSource();
         }
         toSource(rounder = (x) => x) {
-            return callsce.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters());
+            return callSource.call(undefined, "new " + this.constructor.name, ...this.getConstructorParameters());
         }
         /**
          * Return points which would touch AABB. Doesnt include borders due to parametric bounds, for example.
@@ -13970,7 +14023,7 @@ var viewer = (function (exports, javasetmap_ts) {
         normalUV(u, v) {
             return this.normalUVFunc()(u, v);
         }
-        parametersValid(u, v) {
+        validUV(u, v) {
             return between(u, this.uMin, this.uMax) && between(v, this.vMin, this.vMax);
         }
         toMesh(uStep = this.uStep, vStep = this.vStep) {
@@ -14318,8 +14371,8 @@ var viewer = (function (exports, javasetmap_ts) {
                 const y = isometricV(this.vMax).transform4(matrixInv.times(m4).times(this.matrix));
                 const aabb = AABB.forAABBs([x.getAABB(), y.getAABB()]);
                 console.log("aabb", aabb);
-                console.log(matrixInv.str);
-                console.log(x.str, y.str);
+                console.log(matrixInv.toString());
+                console.log(x.toString(), y.toString());
                 return new ConicSurface(c, f1, f2, dir, this.uMin, this.uMax, aabb.min.z, aabb.max.z);
             }
             else {
@@ -15466,11 +15519,10 @@ var viewer = (function (exports, javasetmap_ts) {
         uvPFunc() {
             return (pWC) => {
                 const pLC = this.matrixInverse.transformPoint(pWC);
-                const alpha = abs$2(pLC.angleXY());
-                const beta = Math.asin(clamp$1(pLC.z, -1, 1));
-                assert(isFinite(alpha));
-                assert(isFinite(beta));
-                return new V3(alpha, beta, 0);
+                const u = abs$2(pLC.angleXY());
+                const v = Math.asin(clamp$1(pLC.z, -1, 1));
+                assert(this.validUV(u, v), u, v);
+                return new V3(u, v, 0);
             };
         }
         pUVFunc() {
@@ -15683,7 +15735,7 @@ var viewer = (function (exports, javasetmap_ts) {
             this.matrix = M4.forSys(right, up, plane.normal1, plane.anchor);
         }
         toSource(rounder = (x) => x) {
-            return callsce.call(undefined, "new PlaneSurface", ...this.getConstructorParameters());
+            return callSource.call(undefined, "new PlaneSurface", ...this.getConstructorParameters());
         }
         static throughPoints(a, b, c) {
             return new PlaneSurface(P3.throughPoints(a, b, c));
@@ -31071,7 +31123,7 @@ var viewer = (function (exports, javasetmap_ts) {
                 new V3(width, height, 0),
                 new V3(width, 0, 0),
             ];
-            const generator = callsce("B2T.box", width, height, depth, name);
+            const generator = callSource("B2T.box", width, height, depth, name);
             return B2T.extrudeVertices(baseVertices, P3.XY.flipped(), new V3(0, 0, depth), name, generator);
         }
         B2T.box = box;
@@ -31145,7 +31197,7 @@ var viewer = (function (exports, javasetmap_ts) {
             faces.push(bottomFace, topFace);
             gen =
                 gen ||
-                    callsce("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name);
+                    callSource("B2T.extrudeEdges", baseFaceEdges, baseFacePlane, offset, name);
             return new BRep(faces, baseFacePlane.normal1.dot(offset) > 0, gen, vertexNames);
         }
         B2T.extrudeEdges = extrudeEdges;
@@ -31170,7 +31222,7 @@ var viewer = (function (exports, javasetmap_ts) {
         B2T.cone = cone;
         function sphere(radius = 1, name = "sphere" + getGlobalId(), rot = TAU) {
             const ee = new PCurveEdge(new EllipseCurve(V3.O, new V3(0, 0, -radius), new V3(radius, 0, 0)), new V3(0, 0, -radius), new V3(0, 0, radius), 0, PI$3, undefined, new V3(radius, 0, 0), new V3(-radius, 0, 0));
-            const generator = callsce("B2T.sphere", radius, name, rot);
+            const generator = callSource("B2T.sphere", radius, name, rot);
             return rotateEdges([StraightEdge.throughPoints(ee.b, ee.a), ee], rot, name, generator);
         }
         B2T.sphere = sphere;
@@ -31451,7 +31503,7 @@ var viewer = (function (exports, javasetmap_ts) {
                 return loop;
             });
             const faces = Face.assembleFacesFromLoops(loops, new PlaneSurface(P3.XY), PlaneFace);
-            const generator = callsce("B2T.text", text, size, depth);
+            const generator = callSource("B2T.text", text, size, depth);
             return BRep.join(faces.map((face) => B2T.extrudeFace(face, V(0, 0, -depth))), generator);
         }
         B2T.text = text;
@@ -31641,7 +31693,7 @@ var viewer = (function (exports, javasetmap_ts) {
             const edges = StraightEdge.chain(baseVertices, true);
             generator =
                 generator ||
-                    callsce("B2T.extrudeVertices", baseVertices, baseFacePlane, offset, name);
+                    callSource("B2T.extrudeVertices", baseVertices, baseFacePlane, offset, name);
             return B2T.extrudeEdges(edges, baseFacePlane, offset, name, generator);
         }
         B2T.extrudeVertices = extrudeVertices;
@@ -31676,7 +31728,7 @@ var viewer = (function (exports, javasetmap_ts) {
                 new PlaneFace(PlaneSurface.throughPoints(b, d, c), [bd, cd.flipped(), bc.flipped()], [], name + "bdc"),
                 new PlaneFace(PlaneSurface.throughPoints(c, d, a), [cd, ad.flipped(), ac], [], name + "cda"),
             ];
-            const gen = callsce("B2T.tetrahedron", a, b, c, d);
+            const gen = callSource("B2T.tetrahedron", a, b, c, d);
             return new BRep(faces, false, gen);
         }
         B2T.tetrahedron = tetrahedron;
@@ -31840,7 +31892,7 @@ var viewer = (function (exports, javasetmap_ts) {
             const baseSurface = new PlaneSurface(P3.XY).flipped();
             const bottomFace = Face.create(baseSurface, Edge.reversePath(baseEdges));
             faces.push(bottomFace);
-            const generator = callsce("B2T.pyramidEdges", baseEdges, apex, name);
+            const generator = callSource("B2T.pyramidEdges", baseEdges, apex, name);
             return new BRep(faces, false, generator);
         }
         B2T.pyramidEdges = pyramidEdges;
@@ -31889,7 +31941,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return new PlaneSurface(this, this.right, this.up);
         }
         toSource() {
-            return callsce("new CustomPlane", this.anchor, this.right, this.up, this.name, this.color, this.uMin, this.uMax, this.vMin, this.vMax);
+            return callSource("new CustomPlane", this.anchor, this.right, this.up, this.name, this.color, this.uMin, this.uMax, this.vMin, this.vMax);
         }
         static forPlane(plane, color = GL_COLOR_BLACK, name) {
             //assert(!name)
@@ -31952,7 +32004,7 @@ var viewer = (function (exports, javasetmap_ts) {
             assertNumbers(aT, bT);
             assert(!eq(aT, bT));
             assertVectors(a, b);
-            assertf(() => curve instanceof Curve, curve);
+            assertInst(Curve, curve);
             assertf(() => !curve.isValidT || (curve.isValidT(aT) && curve.isValidT(bT)), aT, bT, curve);
             //if (curve instanceof PICurve) {
             //    assertf(() => curve.at(aT).to(a).length() < 0.1, ''+curve.at(aT)+a)
@@ -32008,7 +32060,7 @@ var viewer = (function (exports, javasetmap_ts) {
                 : path;
         }
         toString() {
-            return callsce("new " + this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir);
+            return callSource("new " + this.constructor.name, this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir);
         }
         colinearToLine(line) {
             return this.curve instanceof L3 && this.curve.isColinearTo(line);
@@ -32141,7 +32193,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return arrayFromFunction(closed ? vc : vc - 1, (i) => StraightEdge.throughPoints(vertices[i], vertices[(i + 1) % vc]));
         }
         toSource() {
-            return callsce("new StraightEdge", this.curve, this.a, this.b, this.aT, this.bT);
+            return callSource("new StraightEdge", this.curve, this.a, this.b, this.aT, this.bT);
         }
         getVerticesNo0() {
             return [this.b];
@@ -32258,7 +32310,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return new PCurveEdge(curve, curve.at(aT), curve.at(bT), aT, bT, undefined, aT < bT ? curve.tangentAt(aT) : curve.tangentAt(aT).negated(), aT < bT ? curve.tangentAt(bT) : curve.tangentAt(bT).negated(), name);
         }
         toSource() {
-            return callsce("new PCurveEdge", this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir, this.name);
+            return callSource("new PCurveEdge", this.curve, this.a, this.b, this.aT, this.bT, undefined, this.aDir, this.bDir, this.name);
         }
         getVerticesNo0() {
             return this.curve.calcSegmentPoints(this.aT, this.bT, this.a, this.b, this.reversed, false);
@@ -32567,7 +32619,7 @@ var viewer = (function (exports, javasetmap_ts) {
     /**
      * Java style map.
      */
-    class JavaMap {
+    class JavaMap$1 {
         constructor() {
             this[Symbol.toStringTag] = "Map";
             this._map = new Map();
@@ -32879,17 +32931,17 @@ var viewer = (function (exports, javasetmap_ts) {
             this.info = info;
             this.aabb = undefined;
             //assert(name)
+            assertInst(Edge, ...contour);
             Edge.assertLoop(contour);
-            assert(contour.every((f) => f instanceof Edge), () => "contour.every(f => f instanceof Edge)" + contour);
             // contour.forEach(e => !surface.containsCurve(e.curve) &&
             // console.log('FAIL:'+surface.distanceToPoint(e.curve.anchor)))
             //contour.forEach(e => {
-            //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
-            //})
-            //assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
-            holes && holes.forEach((hole) => Edge.assertLoop(hole));
-            holes && holes.forEach((hole) => assert(!surface.edgeLoopCCW(hole)));
+            //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e +
+            // surface) }) assert(surface.edgeLoopCCW(contour), surface.toString() +
+            // contour.join('\n'))
             assert(!holes || holes.constructor == Array, holes && holes.toString());
+            holes.forEach((hole) => Edge.assertLoop(hole));
+            holes.forEach((hole) => assert(!surface.edgeLoopCCW(hole)));
             this.allEdges = Array.prototype.concat.apply(this.contour, this.holes);
         }
         static assembleFacesFromLoops(loops, surface, faceConstructor) {
@@ -32906,7 +32958,8 @@ var viewer = (function (exports, javasetmap_ts) {
                         // newLoopInfo isnt contained by any other subLoopInfo
                         for (let i = loopInfos.length; --i >= 0;) {
                             const subLoopInfo = loopInfos[i];
-                            //console.log('cheving subLoopInfo', surface.loopContainsPoint(newLoopInfo.edges,
+                            //console.log('cheving subLoopInfo',
+                            // surface.loopContainsPoint(newLoopInfo.edges,
                             // subLoopInfo.edges[0].a))
                             if (BRep.loop1ContainsLoop2(newLoopInfo.loop, newLoopInfo.ccw, subLoopInfo.loop, subLoopInfo.ccw, surface)) {
                                 newLoopInfo.subloops.push(subLoopInfo);
@@ -32937,21 +32990,17 @@ var viewer = (function (exports, javasetmap_ts) {
         //		if (loopInfos.length == 0) {
         //			loopInfos.push(newLoopInfo)
         //		} else {
-        //			const subLoopInfo = loopInfos.find(loopInfo => BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw,
-        // newLoopInfo.loop, newLoopInfo.ccw, surface)) if (subLoopInfo) { placeRecursively(newLoopInfo,
-        // subLoopInfo.subloops) } else { // newLoopInfo isnt contained by any other subLoopInfo for (let i =
-        // loopInfos.length; --i >= 0;) { const subLoopInfo = loopInfos[i] //console.log('cheving subLoopInfo',
+        //			const subLoopInfo = loopInfos.find(loopInfo =>
+        // BRep.loop1ContainsLoop2(loopInfo.loop, loopInfo.ccw, newLoopInfo.loop,
+        // newLoopInfo.ccw, surface)) if (subLoopInfo) {
+        // placeRecursively(newLoopInfo, subLoopInfo.subloops) } else { //
+        // newLoopInfo isnt contained by any other subLoopInfo for (let i =
+        // loopInfos.length; --i >= 0;) { const subLoopInfo = loopInfos[i]
+        // //console.log('cheving subLoopInfo',
         // surface.loopContainsPoint(newLoopInfo.edges, subLoopInfo.edges[0].a)) if
-        // (BRep.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) { newLoopInfo.subloops.push(subLoopInfo)
-        // loopInfos.splice(i, 1) // remove it } } loopInfos.push(newLoopInfo) } } }  function newFacesRecursive(loopInfo:
-        // LoopInfo): void { // CW loops can be top level, if they are holes in the original face not contained in the new
-        // face if (loopInfo.ccw) { if (loopInfo.subloops.every(sl => !sl.ccw)) { const newFace = new
-        // faceConstructor(surface, loopInfo.loop, loopInfo.subloops.map(sl => sl.loop)) newFaces.push(newFace)
-        // loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl))) } else {
-        // loopInfo.subloops.forEach(sl => sl.ccw && newFacesRecursive(sl)) } } }  const newFaces: Face[] = [] const
-        // topLevelLoops:LoopInfo[] = [] loops.forEach(loop => placeRecursively({loop: loop, ccw:
-        // surface.edgeLoopCCW(loop), subloops: []}, topLevelLoops)) topLevelLoops.forEach(tll => newFacesRecursive(tll))
-        // return newFaces }
+        // (BRep.loop1ContainsLoop2(newLoopInfo.loop, subLoopInfo.loop, surface)) {
+        // newLoopInfo.subloops.push(subLoopInfo) loopInfos.splice(i, 1) // remove it
+        // } } loopInfos.push(newLoopInfo) } } }  function newFacesRecursive(loopInfo: LoopInfo): void { // CW loops can be top level, if they are holes in the original face not contained in the new face if (loopInfo.ccw) { if (loopInfo.subloops.every(sl => !sl.ccw)) { const newFace = new faceConstructor(surface, loopInfo.loop, loopInfo.subloops.map(sl => sl.loop)) newFaces.push(newFace) loopInfo.subloops.forEach(sl => sl.subloops.forEach(slsl => slsl.ccw && newFacesRecursive(slsl))) } else { loopInfo.subloops.forEach(sl => sl.ccw && newFacesRecursive(sl)) } } }  const newFaces: Face[] = [] const topLevelLoops:LoopInfo[] = [] loops.forEach(loop => placeRecursively({loop: loop, ccw: surface.edgeLoopCCW(loop), subloops: []}, topLevelLoops)) topLevelLoops.forEach(tll => newFacesRecursive(tll)) return newFaces }
         static create(surface, faceEdges, holes, faceName, info) {
             return surface instanceof PlaneSurface
                 ? new PlaneFace(surface, faceEdges, holes, faceName, info)
@@ -32975,7 +33024,8 @@ var viewer = (function (exports, javasetmap_ts) {
             }
             /**
              * @param newEdge generated segment
-             * @param col1 if newEdge is colinear to an edge of this, the edge in question
+             * @param col1 if newEdge is colinear to an edge of this, the edge in
+             *   question
              * @param col2 same for face2
              * @return whether new edge was added.
              */
@@ -33028,9 +33078,10 @@ var viewer = (function (exports, javasetmap_ts) {
                             return false;
                         //add(col1.getCanon(), face2)
                         const surface2 = face2.surface;
-                        // NB: a new edge is inserted even though it may be the same as an old one
-                        // however it indicates that it intersects the other volume here, i.e. the old edge cannot
-                        // be counted as 'inside' for purposes of reconstitution
+                        // NB: a new edge is inserted even though it may be the same as an
+                        // old one however it indicates that it intersects the other volume
+                        // here, i.e. the old edge cannot be counted as 'inside' for purposes
+                        // of reconstitution
                         thisBrep.edgeFaces.get(col1.getCanon()).forEach((faceInfo) => {
                             //const dot = snap0(surface2.normal1.dot(faceInfo.inside))
                             //if (dot == 0 ? !coplanarSameIsInside : dot < 0) {
@@ -33081,10 +33132,12 @@ var viewer = (function (exports, javasetmap_ts) {
                     addPair(col1.getCanon(), col2.getCanon());
                     function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside, thisEdgePoints, has, add) {
                         // not entirely sure for what i had the dirInsides in?
-                        //const aDirNegatedInside = (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) &&
-                        // splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE const
-                        // bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
-                        // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
+                        //const aDirNegatedInside = (newEdge.a.like(col2.a) ||
+                        // newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep,
+                        // newEdge.a, newEdge.aDir.negated()) == INSIDE const bDirInside =
+                        // (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
+                        // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) ==
+                        // INSIDE
                         for (const faceInfo of thisBrep.edgeFaces.get(col1.getCanon())) {
                             const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA);
                             const edgeInside = sVEF == INSIDE || (coplanarSameIsInside && sVEF == COPLANAR_SAME);
@@ -33122,10 +33175,12 @@ var viewer = (function (exports, javasetmap_ts) {
                 return false;
             }
             // what needs to be generated: new edges on face
-            // points on edges where they are cut by faces so that sub edges will be generated for loops
-            // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B
-            //         you don't want those to be marked as 'inside', otherwise invalid faces will be added
-            // if a face cuts a corner, nothing needs to be done, as that alone does not limit what adjacent faces will be
+            // points on edges where they are cut by faces so that sub edges will be
+            // generated for loops points on ends of edges where the edge will be an
+            // edge in the new volume where it goes from A to B you don't want those to
+            // be marked as 'inside', otherwise invalid faces will be added if a face
+            // cuts a corner, nothing needs to be done, as that alone does not limit
+            // what adjacent faces will be
             function handleEndPoint(a, b, newEdge) {
                 // ends in the middle of b's face
                 if (a && !b) {
@@ -33145,8 +33200,9 @@ var viewer = (function (exports, javasetmap_ts) {
                 }
                 if (a && b) {
                     assert(a.colinear || b.colinear || eq(a.t, b.t));
-                    // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge
-                    // segment starts/ends on edge/edge intersection
+                    // if a or b is colinear the correct points will already have been
+                    // added to the edge by handleNewEdge segment starts/ends on edge/edge
+                    // intersection
                     function handleAB(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) {
                         if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
                             //if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) {
@@ -33158,7 +33214,8 @@ var viewer = (function (exports, javasetmap_ts) {
                                 // face2brep corner on edge
                                 const sVEC1 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, 1);
                                 const sVEC2 = splitsVolumeEnclosingCone2(face2Brep, corner, a.edge.curve, a.edgeT, -1);
-                                // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge
+                                // if either of these return ALONG_EDGE_OR_PLANE, then the breps
+                                // share a colinear edge
                                 if (INSIDE == sVEC1 || INSIDE == sVEC2) {
                                     mapPush(thisEdgePoints, a.edge.getCanon(), a);
                                     assert(a.edge.isValidT(a.edgeT));
@@ -33166,8 +33223,8 @@ var viewer = (function (exports, javasetmap_ts) {
                             }
                             else {
                                 // edge / edge center intersection
-                                // todo: is this even necessary considering we add edges anyway? i think so...
-                                // const testVector =
+                                // todo: is this even necessary considering we add edges anyway?
+                                // i think so... const testVector =
                                 // a.edge.tangentAt(a.edgeT).rejectedFrom(b.edge.tangentAt(b.edge.curve.pointT(a.p)))
                                 // assert(!testVector.likeO())
                                 const sVEF1 = splitsVolumeEnclosingFacesP2(face2Brep, b.edge.getCanon(), a.p, a.edge.curve, a.edgeT, 1, thisPlane.normalP(a.p));
@@ -33209,12 +33266,13 @@ var viewer = (function (exports, javasetmap_ts) {
                 const isCurve = isCurves[isCurveIndex];
                 const ps1 = face.edgeISPsWithSurface(isCurve, face2.surface);
                 const ps2 = face2.edgeISPsWithSurface(isCurve, face.surface);
-                // for non-endless curves, e.g. ellipses, the intersections of the faces can be non-zero, even if one of
-                // the faces doesn't register any points on the curve. For example, if a cylinder is cut entirely by a
-                // plane face (all its edges around the cylinder), then the face will contain the entire curve and
-                // 'ps' for the plane face will be empty
-                // TODO: behavior when curves touch face?
-                // !! start in does depend on insideDir... TODO
+                // for non-endless curves, e.g. ellipses, the intersections of the faces
+                // can be non-zero, even if one of the faces doesn't register any points
+                // on the curve. For example, if a cylinder is cut entirely by a plane
+                // face (all its edges around the cylinder), then the face will contain
+                // the entire curve and 'ps' for the plane face will be empty TODO:
+                // behavior when curves touch face? !! start in does depend on
+                // insideDir... TODO
                 assertf(() => 0 == ps1.length ||
                     !eq0(ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t))), () => ps1[0].insideDir.dot(isCurve.tangentAt(ps1[0].t)));
                 assertf(() => 0 == ps2.length ||
@@ -33324,8 +33382,9 @@ var viewer = (function (exports, javasetmap_ts) {
             const ps = [];
             for (const loop of loops) {
                 const colinearEdges = loop.map((edge) => edge.curve.isColinearTo(isCurve));
-                //const colinearSides = loop.map((edge, edgeIndex) => -1 != colinearEdges[edgeIndex]
-                //            && -sign(isCurves[colinearEdges[edgeIndex]].tangentAt(edge.aT).dot(edge.aDir)))
+                //const colinearSides = loop.map((edge, edgeIndex) => -1 !=
+                // colinearEdges[edgeIndex] &&
+                // -sign(isCurves[colinearEdges[edgeIndex]].tangentAt(edge.aT).dot(edge.aDir)))
                 for (let edgeIndex = 0; edgeIndex < loop.length; edgeIndex++) {
                     const edge = loop[edgeIndex];
                     const nextEdgeIndex = (edgeIndex + 1) % loop.length, nextEdge = loop[nextEdgeIndex];
@@ -33393,7 +33452,8 @@ var viewer = (function (exports, javasetmap_ts) {
                                 .negated();
                             const isTangent = isCurve.tangentAt(curveT);
                             //if(!eq0(insideDir.dot(isTangent))) {
-                            // Edge.edgeISTsWithSurface returns snapped values, so comparison with == is ok:
+                            // Edge.edgeISTsWithSurface returns snapped values, so comparison
+                            // with == is ok:
                             if (edgeT == edge.bT) {
                                 // endpoint lies on intersection line
                                 if (!colinearEdges[nextEdgeIndex]) {
@@ -33429,22 +33489,22 @@ var viewer = (function (exports, javasetmap_ts) {
                                     //if (eq0(thisSide)) {
                                     //    // advanced test
                                     //    const dir = -sign(edge.deltaT())
-                                    //    const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir * dirFactor *
-                                    // eps)).dot(normVector) const ecd = edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir
-                                    // * eps)).dot(normVector) thisSide = sign(ecd - iscd) } let nextSide =
-                                    // normVector.dot(nextEdge.aDir) if (eq0(nextSide)) { // advanced test const dirFactor
-                                    // = sign(snap0(isTangent.dot(nextEdge.curve.tangentAt(nextEdge.aT)))) assert(dirFactor
-                                    // !== 0) const dir = sign(nextEdge.deltaT()) const iscd =
-                                    // isCurve.at(curveT).to(isCurve.at(curveT + dir * dirFactor * eps)).dot(normVector)
-                                    // const ecd = nextEdge.curve.at(nextEdge.aT).to(nextEdge.curve.at(nextEdge.aT + dir *
-                                    // eps)).dot(normVector) nextSide = sign(ecd - iscd) } if (nextSide < 0 || thisSide <
-                                    // 0) { assert(!eq0(insideDir.dot(isTangent))) // next segment is not colinear and ends
-                                    // on different side ps.push({ p: edge.b, insideDir: insideDir, t: curveT, edge: edge,
-                                    // edgeT: edge.bT, colinear: false}) }
+                                    //    const iscd = isCurve.at(curveT).to(isCurve.at(curveT +
+                                    // dir * dirFactor * eps)).dot(normVector) const ecd =
+                                    // edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir *
+                                    // eps)).dot(normVector) thisSide = sign(ecd - iscd) } let
+                                    // nextSide = normVector.dot(nextEdge.aDir) if (eq0(nextSide))
+                                    // { // advanced test const dirFactor =
+                                    // sign(snap0(isTangent.dot(nextEdge.curve.tangentAt(nextEdge.aT))))
+                                    // assert(dirFactor !== 0) const dir = sign(nextEdge.deltaT())
+                                    // const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir *
+                                    // dirFactor * eps)).dot(normVector) const ecd =
+                                    // nextEdge.curve.at(nextEdge.aT).to(nextEdge.curve.at(nextEdge.aT + dir * eps)).dot(normVector) nextSide = sign(ecd - iscd) } if (nextSide < 0 || thisSide < 0) { assert(!eq0(insideDir.dot(isTangent))) // next segment is not colinear and ends on different side ps.push({ p: edge.b, insideDir: insideDir, t: curveT, edge: edge, edgeT: edge.bT, colinear: false}) }
                                 }
                             }
                             else if (edgeT != edge.aT) {
-                                // edge crosses/touches an intersection curve, neither starts nor ends on it
+                                // edge crosses/touches an intersection curve, neither starts nor
+                                // ends on it
                                 if (eq0(insideDir.dot(isTangent))) {
                                     const dirFactor = sign$1(isTangent.dot(edge.curve.tangentAt(edgeT)));
                                     const eps = 1e-4;
@@ -33487,25 +33547,23 @@ var viewer = (function (exports, javasetmap_ts) {
                             }
                             //} else {
                             //
-                            //	const dirFactor = sign(isTangent.dot(edge.curve.tangentAt(edgeT)))
-                            //	const eps = 1e-4
-                            //	const normVector = surface2.normalP(p)
-                            //	for (const dir of [-1, 1]) {
-                            //		if (-1 == dir * dirFactor && edgeT == edge.minT ||
-                            //			1 == dir * dirFactor && edgeT == edge.maxT ||
-                            //			-1 == dir && curveT == isCurve.tMin ||
-                            //			1 == dir && curveT == isCurve.tMax) continue
-                            //		const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir * eps)).dot(normVector)
-                            //		const ecd = edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir * dirFactor *
-                            // eps)).dot(normVector) if (iscd > ecd) { ps.push({p, insideDir: isTangent.times(dir *
-                            // dirFactor), t: curveT, edge: edge, edgeT: edgeT, colinear: false}) } }
-                            // curveVsSurface(isCurve, curveT, p, surface2) }
+                            //	const dirFactor =
+                            // sign(isTangent.dot(edge.curve.tangentAt(edgeT))) const eps =
+                            // 1e-4 const normVector = surface2.normalP(p) for (const dir of
+                            // [-1, 1]) { if (-1 == dir * dirFactor && edgeT == edge.minT || 1
+                            // == dir * dirFactor && edgeT == edge.maxT || -1 == dir && curveT
+                            // == isCurve.tMin || 1 == dir && curveT == isCurve.tMax) continue
+                            // const iscd = isCurve.at(curveT).to(isCurve.at(curveT + dir *
+                            // eps)).dot(normVector) const ecd =
+                            // edge.curve.at(edgeT).to(edge.curve.at(edgeT + dir * dirFactor *
+                            // eps)).dot(normVector) if (iscd > ecd) { ps.push({p, insideDir:
+                            // isTangent.times(dir * dirFactor), t: curveT, edge: edge, edgeT: edgeT, colinear: false}) } } curveVsSurface(isCurve, curveT, p, surface2) }
                         }
                     }
                 }
             }
-            // duplicate 't's are ok, as sometimes a segment needs to stop and start again
-            // should be sorted so that back facing ones are first
+            // duplicate 't's are ok, as sometimes a segment needs to stop and start
+            // again should be sorted so that back facing ones are first
             ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isCurve.tangentAt(a.t)));
             return ps;
         }
@@ -33681,7 +33739,8 @@ var viewer = (function (exports, javasetmap_ts) {
                     const edgeT = aEqP ? edge.aT : edge.bT;
                     const edgeDir = (aEqP ? 1 : -1) * sign$1(edge.deltaT());
                     const iscd = edge.curve.diff(edgeT, edgeDir * eps).dot(up);
-                    //const iscd = edge.curve.at(edgeT).to(curve.at(edgeT + edgeDir * eps)).dot(up)
+                    //const iscd = edge.curve.at(edgeT).to(curve.at(edgeT + edgeDir *
+                    // eps)).dot(up)
                     const diff = iscd - ecd;
                     if (diff > 0 && (!advanced || diff < minValue)) {
                         advanced = true;
@@ -33706,22 +33765,14 @@ var viewer = (function (exports, javasetmap_ts) {
             //const normal = this.surface.normalP(p)
             //let minAngle = Infinity, inOut = false
             //function test(v, b) {
-            //	const angle = (dir.angleRelativeNormal(v, normal) + TAU + NLA_PRECISION / 2) % TAU
-            //	if (angle <= 2 * NLA_PRECISION) {
-            //		return true
-            //	}
-            //	if (angle < minAngle) {
-            //		minAngle = angle
-            //		inOut = b
-            //	}
-            //}
-            //for (const edge of this.getAllEdges()) {
-            //	assert(edge.a.equals(p) || !edge.a.like(p))
-            //	assert(edge.b.equals(p) || !edge.b.like(p))
-            //	if (edge.a.equals(p) && test(edge.aDir, false)) return PointVsFace.ON_EDGE
-            //	if (edge.b.equals(p) && test(edge.bDir.negated(), true)) return PointVsFace.ON_EDGE
-            //}
-            //return inOut ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
+            //	const angle = (dir.angleRelativeNormal(v, normal) + TAU + NLA_PRECISION
+            // / 2) % TAU if (angle <= 2 * NLA_PRECISION) { return true } if (angle <
+            // minAngle) { minAngle = angle inOut = b } } for (const edge of
+            // this.getAllEdges()) { assert(edge.a.equals(p) || !edge.a.like(p))
+            // assert(edge.b.equals(p) || !edge.b.like(p)) if (edge.a.equals(p) &&
+            // test(edge.aDir, false)) return PointVsFace.ON_EDGE if (edge.b.equals(p)
+            // && test(edge.bDir.negated(), true)) return PointVsFace.ON_EDGE } return
+            // inOut ? PointVsFace.INSIDE : PointVsFace.OUTSIDE
         }
     }
     class PlaneFace extends Face {
@@ -33767,107 +33818,17 @@ var viewer = (function (exports, javasetmap_ts) {
         //                   thisBrep: BRep,
         //                   face2Brep: BRep,
         //                   faceMap: Map<Face, Edge[]>,
-        //                   thisEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
-        //                   otherEdgePoints: CustomMap<Edge, { edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>,
-        //                   checkedPairs: CustomSet<Pair<Equalable, Equalable>>) {
-        //	assertInst(CustomMap, thisEdgePoints, otherEdgePoints)
-        //
-        //	function hasPair(a: Equalable, b: Equalable) {
-        //		return checkedPairs.has(new Pair(a, b))
-        //	}
-        //	function addPair(a: Equalable, b: Equalable) {
-        //		return checkedPairs.add(new Pair(a, b))
-        //	}
-        //
-        //	/**
-        //	 * @param newEdge generated segment
-        //	 * @param col1 if newEdge is colinear to an edge of this, the edge in question
-        //	 * @param col2 same for face2
-        //	 */
-        //	function handleNewEdge(newEdge: StraightEdge, col1: Edge, col2: Edge) {
-        //		if (!col1 && !col2) {
-        //			mapPush(faceMap, face, newEdge)
-        //			mapPush(faceMap, face2, newEdge.flipped())
-        //			return true
-        //		}
-        //		function handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, coplanarSameIsInside: boolean,
-        // has, add) { if (col1 && !col2) { if (hasPair(col1.getCanon(), face2)) return  //add(col1.getCanon(), face2)
-        // const face2Plane = face2.surface.plane  // NB: a new edge is inserted even though it may be the same as an old
-        // one // however it indicates that it intersects the other volume here, i.e. the old edge cannot // be counted as
-        // 'inside' for purposes of reconstitution thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { //const
-        // dot = snap0(face2Plane.normal1.dot(faceInfo.inside)) //if (dot == 0 ? !coplanarSameIsInside : dot < 0) { const
-        // pointsInsideFace = fff(faceInfo, face2.surface) const edgeInside = pointsInsideFace == INSIDE ||
-        // !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME const pushEdge =
-        // (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped()
-        // assert(faceInfo.edge.aDir.like(pushEdge.aDir)) edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) })  const
-        // newEdgeInside = face2Plane.normal1.cross(newEdge.aDir) const sVEF1 = splitsVolumeEnclosingFaces(thisBrep,
-        // col1.getCanon(), newEdgeInside, face2Plane.normal1) let addNewEdge, addNewEdgeFlipped if (addNewEdge = sVEF1 ==
-        // INSIDE || coplanarSameIsInside && sVEF1 == COPLANAR_SAME) { mapPush(faceMap, face2, newEdge) } const sVEF2 =
-        // splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside.negated(), face2Plane.normal1) if
-        // (addNewEdgeFlipped = sVEF2 == INSIDE || coplanarSameIsInside && sVEF2 == COPLANAR_SAME) { mapPush(faceMap,
-        // face2, newEdge.flipped()) } if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE ||
-        // sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE) { return true } } } const c1 = handleEdgeInFace(col1, col2, face,
-        // face2, thisBrep, face2Brep, false, hasPair, addPair) const c2 = handleEdgeInFace(col2, col1, face2, face,
-        // face2Brep, thisBrep, true, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) if (c1 || c2) return true  if (col1
-        // && col2) { if (hasPair(col1.getCanon(), col2.getCanon())) return  addPair(col1.getCanon(), col2.getCanon())
-        // function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean, thisEdgePoints,
-        // has, add) { // not entirely sure for what i had the dirInsides in? //const aDirNegatedInside =
-        // (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a,
-        // newEdge.aDir.negated()) == INSIDE //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) &&
-        // splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE
-        // thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { const sVEF = splitsVolumeEnclosingFaces(face2Brep,
-        // col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA) const edgeInside = sVEF == INSIDE ||
-        // coplanarSameIsInside && sVEF == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge
-        // : newEdge.flipped() edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) }) } handleColinearEdgeFaces(col1,
-        // col2, thisBrep, face2Brep, true, thisEdgePoints, hasPair, addPair) handleColinearEdgeFaces(col2, col1,
-        // face2Brep, thisBrep, false, otherEdgePoints, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) } }   // what
-        // needs to be generated: new edges on face // points on edges where they are cut by faces so that sub edges will
-        // be generated for loops // points on ends of edges where the edge will be an edge in the new volume where it goes
-        // from A to B //         you don't want thos to be marked as 'inside', otherwise invalid faces will be added // if
-        // a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be
-        // function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) { // ends in the
-        // middle of b's face if (a && !b) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) {
-        // mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } // else colinear segment ends
-        // in middle of other face, do nothing } // ends in the middle of a's face if (b && !a) { if (!b.colinear &&
-        // b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) { mapPush(otherEdgePoints, b.edge.getCanon(), b)
-        // assert(b.edge.isValidT(b.edgeT)) } // else colinear segment ends in middle of other face, do nothing } if (a &&
-        // b) { // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge //
-        // segment starts/ends on edge/edge intersection function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep,
-        // face2Brep, first, thisEdgePoints) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { if
-        // (!hasPair(a.edge.getCanon(), b.edge.getCanon())) { addPair(a.edge.getCanon(), b.edge.getCanon()) // ends on a,
-        // on colinear segment b bT != a.edge.bT && // b can be colinear, so edgeT == aT is possible if (a.p.like(b.edge.a)
-        // || a.p.like(b.edge.b)) { const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b // face2brep corner on edge
-        // const sVEC1 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir) const sVEC2 =
-        // splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir.negated()) // if either of these return
-        // ALONG_EDGE_OR_PLANE, then the breps share a colinear edge  if (INSIDE == sVEC1 || INSIDE == sVEC2) {
-        // mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center
-        // intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const
-        // testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 =
-        // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector, thisPlane.normal1) const sVEF2 =
-        // splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector.negated(), thisPlane.normal1) if (INSIDE ==
-        // sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } }
-        // } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2,
-        // face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2)
-        // const face: PlaneFace = this // get intersection const thisPlane = this.surface.plane, face2Plane =
-        // face2.surface.plane if (thisPlane.isParallelToPlane(face2Plane)) { if (thisPlane.like(face2Plane)) { // normal1
-        // same and same location in space // addLikeSurfaceFaces(likeSurfaceFaces, this, face2) } return } const isLine =
-        // L3.fromPlanes(thisPlane, face2Plane) // get intersections of newCurve with other edges of face and face2 const
-        // ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane) const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine,
-        // thisPlane) if (ps1.length == 0 || ps2.length == 0) { // faces to not intersect return }  let col1:
-        // IntersectionPointInfo, col2: IntersectionPointInfo let in1 = false, in2 = false let i = 0, j = 0, last let
-        // startP, startDir, startT, startA, startB while (i < ps1.length || j < ps2.length) { assert(i <= ps1.length)
-        // assert(j <= ps2.length) const a = ps1[i], b = ps2[j] assert(a || b) if (j == ps2.length || i < ps1.length &&
-        // lt(a.t, b.t)) { last = a in1 = !in1 a.used = true in1 && (col1 = a.colinear && a) i++ } else if (i == ps1.length
-        // || gt(a.t, b.t)) { last = b in2 = !in2 b.used = true in2 && (col2 = b.colinear && b) j++ } else { // TODO: this
-        // will break if 3 points on the same t last = a in1 = !in1 in2 = !in2 //if (in1 == in2) { a.used = true b.used =
-        // true in1 && (col1 = a.colinear && a) in2 && (col2 = b.colinear && b) //} i++ j++ } if (startP && !(in1 && in2))
-        // { // segment end const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' +
-        // getGlobalId()) startP = undefined last.used = true if (handleNewEdge(newEdge, col1 && col1.edge, col2 &&
-        // col2.edge)) { handleEndPoint(startA || col1, startB || col2, newEdge) handleEndPoint(a && a.used && a || col1, b
-        // && b.used && b || col2, newEdge) } } else if (in1 && in2) { // new segment just started startP = last.p startDir
-        // = last.insideDir startT = last.t startA = a && a.used && a startB = b && b.used && b } if (!in1 && a && last ==
-        // a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used)
-        // && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
+        //                   thisEdgePoints: CustomMap<Edge, { edge: Edge, edgeT:
+        // number, p: V3, passEdge?: Edge }[]>, otherEdgePoints: CustomMap<Edge, {
+        // edge: Edge, edgeT: number, p: V3, passEdge?: Edge }[]>, checkedPairs:
+        // CustomSet<Pair<Equalable, Equalable>>) { assertInst(CustomMap,
+        // thisEdgePoints, otherEdgePoints)  function hasPair(a: Equalable, b:
+        // Equalable) { return checkedPairs.has(new Pair(a, b)) } function addPair(a:
+        // Equalable, b: Equalable) { return checkedPairs.add(new Pair(a, b)) }  /**
+        // * @param newEdge generated segment * @param col1 if newEdge is colinear to
+        // an edge of this, the edge in question * @param col2 same for face2 */
+        // function handleNewEdge(newEdge: StraightEdge, col1: Edge, col2: Edge) { if
+        // (!col1 && !col2) { mapPush(faceMap, face, newEdge) mapPush(faceMap, face2, newEdge.flipped()) return true } function handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, coplanarSameIsInside: boolean, has, add) { if (col1 && !col2) { if (hasPair(col1.getCanon(), face2)) return  //add(col1.getCanon(), face2) const face2Plane = face2.surface.plane  // NB: a new edge is inserted even though it may be the same as an old one // however it indicates that it intersects the other volume here, i.e. the old edge cannot // be counted as 'inside' for purposes of reconstitution thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { //const dot = snap0(face2Plane.normal1.dot(faceInfo.inside)) //if (dot == 0 ? !coplanarSameIsInside : dot < 0) { const pointsInsideFace = fff(faceInfo, face2.surface) const edgeInside = pointsInsideFace == INSIDE || !coplanarSameIsInside && pointsInsideFace == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped() assert(faceInfo.edge.aDir.like(pushEdge.aDir)) edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) })  const newEdgeInside = face2Plane.normal1.cross(newEdge.aDir) const sVEF1 = splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside, face2Plane.normal1) let addNewEdge, addNewEdgeFlipped if (addNewEdge = sVEF1 == INSIDE || coplanarSameIsInside && sVEF1 == COPLANAR_SAME) { mapPush(faceMap, face2, newEdge) } const sVEF2 = splitsVolumeEnclosingFaces(thisBrep, col1.getCanon(), newEdgeInside.negated(), face2Plane.normal1) if (addNewEdgeFlipped = sVEF2 == INSIDE || coplanarSameIsInside && sVEF2 == COPLANAR_SAME) { mapPush(faceMap, face2, newEdge.flipped()) } if (addNewEdge || addNewEdgeFlipped || sVEF1 == COPLANAR_SAME && sVEF2 == INSIDE || sVEF2 == COPLANAR_SAME && sVEF1 == INSIDE) { return true } } } const c1 = handleEdgeInFace(col1, col2, face, face2, thisBrep, face2Brep, false, hasPair, addPair) const c2 = handleEdgeInFace(col2, col1, face2, face, face2Brep, thisBrep, true, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) if (c1 || c2) return true  if (col1 && col2) { if (hasPair(col1.getCanon(), col2.getCanon())) return  addPair(col1.getCanon(), col2.getCanon()) function handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, coplanarSameIsInside: boolean, thisEdgePoints, has, add) { // not entirely sure for what i had the dirInsides in? //const aDirNegatedInside = (newEdge.a.like(col2.a) || newEdge.a.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.a, newEdge.aDir.negated()) == INSIDE //const bDirInside = (newEdge.b.like(col2.a) || newEdge.b.like(col2.b)) && splitsVolumeEnclosingCone(face2Brep, newEdge.b, newEdge.bDir) == INSIDE thisBrep.edgeFaces.get(col1.getCanon()).forEach(faceInfo => { const sVEF = splitsVolumeEnclosingFaces(face2Brep, col2.getCanon(), faceInfo.inside, faceInfo.normalAtCanonA) const edgeInside = sVEF == INSIDE || coplanarSameIsInside && sVEF == COPLANAR_SAME const pushEdge = (faceInfo.edge.aDir.like(newEdge.aDir)) ? newEdge : newEdge.flipped() edgeInside && mapPush(faceMap, faceInfo.face, pushEdge) }) } handleColinearEdgeFaces(col1, col2, thisBrep, face2Brep, true, thisEdgePoints, hasPair, addPair) handleColinearEdgeFaces(col2, col1, face2Brep, thisBrep, false, otherEdgePoints, (a, b) => hasPair(b, a), (a, b) => addPair(b, a)) } }   // what needs to be generated: new edges on face // points on edges where they are cut by faces so that sub edges will be generated for loops // points on ends of edges where the edge will be an edge in the new volume where it goes from A to B //         you don't want thos to be marked as 'inside', otherwise invalid faces will be added // if a face cuts a corner, nothings needs to be done, as that alone does not limit what adjacent faces will be function handleEndPoint(a: IntersectionPointInfo, b: IntersectionPointInfo, newEdge: Edge) { // ends in the middle of b's face if (a && !b) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } // else colinear segment ends in middle of other face, do nothing } // ends in the middle of a's face if (b && !a) { if (!b.colinear && b.edgeT != b.edge.aT && b.edgeT != b.edge.bT) { mapPush(otherEdgePoints, b.edge.getCanon(), b) assert(b.edge.isValidT(b.edgeT)) } // else colinear segment ends in middle of other face, do nothing } if (a && b) { // if a or b is colinear the correct points will already have been added to the edge by handleNewEdge // segment starts/ends on edge/edge intersection function foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, first, thisEdgePoints) { if (!a.colinear && a.edgeT != a.edge.aT && a.edgeT != a.edge.bT) { if (!hasPair(a.edge.getCanon(), b.edge.getCanon())) { addPair(a.edge.getCanon(), b.edge.getCanon()) // ends on a, on colinear segment b bT != a.edge.bT && // b can be colinear, so edgeT == aT is possible if (a.p.like(b.edge.a) || a.p.like(b.edge.b)) { const corner = a.p.like(b.edge.a) ? b.edge.a : b.edge.b // face2brep corner on edge const sVEC1 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir) const sVEC2 = splitsVolumeEnclosingCone(face2Brep, corner, a.edge.aDir.negated()) // if either of these return ALONG_EDGE_OR_PLANE, then the breps share a colinear edge  if (INSIDE == sVEC1 || INSIDE == sVEC2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } else { // edge / edge center intersection const aEdgeDir = a.edge.tangentAt(a.edgeT) const bEdgeDir = b.edge.tangentAt(b.edgeT) const testVector = aEdgeDir.rejectedFrom(bEdgeDir) assert(!testVector.likeO()) const sVEF1 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector, thisPlane.normal1) const sVEF2 = splitsVolumeEnclosingFaces(face2Brep, b.edge.getCanon()Vector.negated(), thisPlane.normal1) if (INSIDE == sVEF1 || INSIDE == sVEF2) { mapPush(thisEdgePoints, a.edge.getCanon(), a) assert(a.edge.isValidT(a.edgeT)) } } } } }  foo(a, b, face, face2, thisPlane, face2Plane, thisBrep, face2Brep, true, thisEdgePoints) foo(b, a, face2, face, face2Plane, thisPlane, face2Brep, thisBrep, false, otherEdgePoints)  } }   assertInst(PlaneFace, face2) const face: PlaneFace = this // get intersection const thisPlane = this.surface.plane, face2Plane = face2.surface.plane if (thisPlane.isParallelToPlane(face2Plane)) { if (thisPlane.like(face2Plane)) { // normal1 same and same location in space // addLikeSurfaceFaces(likeSurfaceFaces, this, face2) } return } const isLine = L3.fromPlanes(thisPlane, face2Plane) // get intersections of newCurve with other edges of face and face2 const ps1 = planeFaceEdgeISPsWithPlane(face, isLine, face2Plane) const ps2 = planeFaceEdgeISPsWithPlane(face2, isLine, thisPlane) if (ps1.length == 0 || ps2.length == 0) { // faces to not intersect return }  let col1: IntersectionPointInfo, col2: IntersectionPointInfo let in1 = false, in2 = false let i = 0, j = 0, last let startP, startDir, startT, startA, startB while (i < ps1.length || j < ps2.length) { assert(i <= ps1.length) assert(j <= ps2.length) const a = ps1[i], b = ps2[j] assert(a || b) if (j == ps2.length || i < ps1.length && lt(a.t, b.t)) { last = a in1 = !in1 a.used = true in1 && (col1 = a.colinear && a) i++ } else if (i == ps1.length || gt(a.t, b.t)) { last = b in2 = !in2 b.used = true in2 && (col2 = b.colinear && b) j++ } else { // TODO: this will break if 3 points on the same t last = a in1 = !in1 in2 = !in2 //if (in1 == in2) { a.used = true b.used = true in1 && (col1 = a.colinear && a) in2 && (col2 = b.colinear && b) //} i++ j++ } if (startP && !(in1 && in2)) { // segment end const newEdge = new StraightEdge(isLine, startP, last.p, startT, last.t, undefined, 'genseg' + getGlobalId()) startP = undefined last.used = true if (handleNewEdge(newEdge, col1 && col1.edge, col2 && col2.edge)) { handleEndPoint(startA || col1, startB || col2, newEdge) handleEndPoint(a && a.used && a || col1, b && b.used && b || col2, newEdge) } } else if (in1 && in2) { // new segment just started startP = last.p startDir = last.insideDir startT = last.t startA = a && a.used && a startB = b && b.used && b } if (!in1 && a && last == a && a.colinear) { checkedPairs.add(new Pair(a.edge.getCanon(), face2)) } if (!in2 && b && (last == b || b.used) && b.colinear) { checkedPairs.add(new Pair(b.edge.getCanon(), face)) } } }
         withHole(holeEdges) {
             return new PlaneFace(this.surface, this.contour, [holeEdges]);
         }
@@ -33922,7 +33883,8 @@ var viewer = (function (exports, javasetmap_ts) {
                         }
                     }
                     else {
-                        // not necessarily a straight edge, so multiple intersections are possible
+                        // not necessarily a straight edge, so multiple intersections are
+                        // possible
                         const edgeTs = edge.edgeISTsWithPlane(plane2);
                         assert(edgeTs.every((t) => plane2.containsPoint(edge.curve.at(t))), edgeTs);
                         for (const edgeT of edgeTs) {
@@ -33962,8 +33924,8 @@ var viewer = (function (exports, javasetmap_ts) {
                     }
                 });
             });
-            // duplicate 't's are ok, as sometimes a segment needs to stop and start again
-            // should be sorted so that back facing ones are first
+            // duplicate 't's are ok, as sometimes a segment needs to stop and start
+            // again should be sorted so that back facing ones are first
             ps.sort((a, b) => a.t - b.t || a.insideDir.dot(isLine.dir1));
             return ps;
         }
@@ -34048,12 +34010,12 @@ var viewer = (function (exports, javasetmap_ts) {
          */
         unrollEllipsoidLoops(edgeLoops) {
             const verticesUV = [], vertices = [], loopStarts = [];
-            const ellipsoid = this.surface;
-            const ptpf = ellipsoid.uvPFunc();
-            const testDegeneratePoint = ellipsoid instanceof EllipsoidSurface
-                ? (nextStart) => nextStart.like(ellipsoid.center.plus(ellipsoid.f3)) ||
-                    nextStart.like(ellipsoid.center.minus(ellipsoid.f3))
-                : (nextStart) => nextStart.like(this.surface.center);
+            const surface = this.surface;
+            const ptpf = surface.uvPFunc();
+            const testDegeneratePoint = surface instanceof EllipsoidSurface
+                ? (p) => p.like(surface.center.plus(surface.f3)) ||
+                    p.like(surface.center.minus(surface.f3))
+                : (p) => p.like(surface.center);
             for (const edgeLoop of edgeLoops) {
                 loopStarts.push(verticesUV.length);
                 // console.log(startEdgeIndex)
@@ -34063,13 +34025,18 @@ var viewer = (function (exports, javasetmap_ts) {
                     vertices.push(...verticesNo0);
                     verticesUV.push(...verticesNo0.map((v) => ptpf(v)));
                     const nextStart = edgeLoop[ipp].a;
-                    //console.log('BLAH', nextStart.str, ellipsoid.center.plus(ellipsoid.f3).str)
+                    //console.log('BLAH', nextStart.toString(),
+                    // surface.center.plus(surface.f3).toString())
                     if (testDegeneratePoint(nextStart)) {
-                        const bDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[i].bDir), aDirLC = ellipsoid.matrixInverse.transformVector(edgeLoop[ipp].aDir);
-                        const inAngle = Math.atan2(-bDirLC.y, -bDirLC.x);
-                        const outAngle = Math.atan2(aDirLC.y, aDirLC.x);
-                        const stLast = verticesUV.pop();
-                        verticesUV.push(new V3(inAngle, stLast.y, 0), new V3(outAngle, stLast.y, 0));
+                        const bDirLC = surface.matrixInverse.transformVector(edgeLoop[i].bDir);
+                        const aDirLC = surface.matrixInverse.transformVector(edgeLoop[ipp].aDir);
+                        const fixAngle = (u) => abs$2(u) === PI$1 && !between(u, surface.uMin, surface.uMax) ? -u : u;
+                        const inAngle = fixAngle(Math.atan2(-bDirLC.y, -bDirLC.x));
+                        const outAngle = fixAngle(Math.atan2(aDirLC.y, aDirLC.x));
+                        const lastV = verticesUV.pop().y;
+                        assert(surface.validUV(inAngle, lastV), inAngle, lastV);
+                        assert(surface.validUV(outAngle, lastV), outAngle, lastV);
+                        verticesUV.push(new V3(inAngle, lastV, 0), new V3(outAngle, lastV, 0));
                         vertices.push(getLast(vertices));
                     }
                     verticesUV.forEach(({ u, v }) => {
@@ -34080,14 +34047,14 @@ var viewer = (function (exports, javasetmap_ts) {
             }
             let normals;
             if (this.surface instanceof EllipsoidSurface) {
-                normals = vertices.map((v) => ellipsoid.normalP(v));
+                normals = vertices.map((v) => surface.normalP(v));
             }
             else {
-                const normalUV = ellipsoid.normalUVFunc();
+                const normalUV = surface.normalUVFunc();
                 normals = verticesUV.map(({ u, v }) => normalUV(u, v));
             }
             assert(vertices.length == vertices.length);
-            //console.log(verticesUV.map(v => v.str).join('\n'))
+            //console.log(verticesUV.map(v => v.toString()).join('\n'))
             return {
                 verticesUV: verticesUV,
                 vertices: vertices,
@@ -34148,14 +34115,15 @@ var viewer = (function (exports, javasetmap_ts) {
             const triangles = [];
             const pMN = (m, n) => this.surface.pUVFunc()(m * uStep, n * vStep);
             const normalMN = (m, n) => this.surface.normalUVFunc()(m * uStep, n * vStep);
-            const loops = this.getLoops();
             const { vertices, verticesUV, normals, loopStarts } = this.surface instanceof EllipsoidSurface ||
                 this.surface instanceof ConicSurface
-                ? this.unrollEllipsoidLoops(loops)
-                : this.unrollCylinderLoops(loops);
+                ? this.unrollEllipsoidLoops(this.getLoops())
+                : this.unrollCylinderLoops(this.getLoops());
             loopStarts.push(vertices.length);
             const verticesMN = verticesUV.map(({ u, v }) => new V3(u / uStep, v / vStep, 0));
-            for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
+            console.table(verticesUV, ["x", "y"]);
+            // Add all loops as lines to the mesh.
+            for (let vertexLoopIndex = 0; vertexLoopIndex < this.getLoops().length; vertexLoopIndex++) {
                 const vertexLoopStart = loopStarts[vertexLoopIndex];
                 const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart;
                 const base = mesh.vertices.length + loopStarts[vertexLoopIndex];
@@ -34163,12 +34131,8 @@ var viewer = (function (exports, javasetmap_ts) {
                     mesh.LINES.push(base + i, base + ((i + 1) % vertexLoopLength));
                 }
             }
-            disableConsole();
+            // Figure out min/max m/n.
             let minM = Infinity, maxM = -Infinity, minN = Infinity, maxN = -Infinity;
-            //console.log('surface', this.surface.str)
-            //console.log(verticesMN)
-            //drPs.push(...verticesMN.map((v, i) => ({p: vertices[i], text: `${i} uv: ${v.toString(x => round10(x,
-            // -4))}`})))
             verticesMN.forEach(([m, n]) => {
                 assert(isFinite(m));
                 assert(isFinite(n));
@@ -34177,6 +34141,7 @@ var viewer = (function (exports, javasetmap_ts) {
                 minN = min$3(minN, n);
                 maxN = max$3(maxN, n);
             });
+            console.log(minM, maxM, minN, maxN);
             if (ParametricSurface.is(this.surface)) ;
             const mOffset = floor$1(minM + NLA_PRECISION), nOffset = floor$1(minN + NLA_PRECISION);
             const mRes = ceil(maxM - NLA_PRECISION) - mOffset, nRes = ceil(maxN - NLA_PRECISION) - nOffset;
@@ -34187,27 +34152,27 @@ var viewer = (function (exports, javasetmap_ts) {
                 triangles.push(...polyTriangles);
             }
             else {
+                const completeParts = [];
                 const partss = new Array(mRes * nRes);
                 function fixUpPart(part, baseM, baseN) {
                     assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`);
-                    console.log("complete part", part, baseM, baseN);
+                    completeParts.push({ part, baseM, baseN });
                     //console.trace()
                     assert(part.length);
                     const cellM = baseM + mOffset, cellN = baseN + nOffset;
                     for (const index of part) {
                         assert(le(cellM, verticesMN[index].x) &&
-                            le(verticesMN[index].x, cellM + 1), `${index} ${verticesMN[index].str} ${cellM} ${cellM}`);
+                            le(verticesMN[index].x, cellM + 1), `${index} ${verticesMN[index]} ${cellM} ${cellM}`);
                         assert(le(cellN, verticesMN[index].y) &&
                             le(verticesMN[index].y, cellN + 1));
                     }
                     const pos = baseN * mRes + baseM;
                     (partss[pos] || (partss[pos] = [])).push(part);
-                    //const outline = partss[pos] || (partss[pos] = [minM + baseM * uStep, minN + baseN * vStep, minM +
-                    // (baseM + 1) * uStep, minN + (baseN + 1) * vStep])
+                    //const outline = partss[pos] || (partss[pos] = [minM + baseM * uStep,
+                    // minN + baseN * vStep, minM + (baseM + 1) * uStep, minN + (baseN + 1)
+                    // * vStep])
                 }
-                // 'some' instead of forEach so we can return out of the entire function if this.edges crosses no borders
-                // and
-                for (let vertexLoopIndex = 0; vertexLoopIndex < loops.length; vertexLoopIndex++) {
+                for (let vertexLoopIndex = 0; vertexLoopIndex < this.getLoops().length; vertexLoopIndex++) {
                     let part = undefined;
                     let firstPart = undefined;
                     let firstPartBaseM = -1;
@@ -34217,31 +34182,35 @@ var viewer = (function (exports, javasetmap_ts) {
                     const vertexLoopStart = loopStarts[vertexLoopIndex];
                     const vertexLoopLength = loopStarts[vertexLoopIndex + 1] - vertexLoopStart;
                     for (let vlvi = 0; vlvi < vertexLoopLength; vlvi++) {
-                        const vx0index = vertexLoopStart + vlvi, vx0 = verticesMN[vx0index];
-                        const vx1index = vertexLoopStart + ((vlvi + 1) % vertexLoopLength), vx1 = verticesMN[vx1index];
-                        //console.log('dask', vx0index, vx1index)
+                        const vx0index = vertexLoopStart + vlvi;
+                        const vx0 = verticesMN[vx0index];
+                        const vx1index = vertexLoopStart + ((vlvi + 1) % vertexLoopLength);
+                        const vx1 = verticesMN[vx1index];
                         const vx01 = vx0.to(vx1);
-                        assert(vx0);
                         const di = vx01.x, dj = vx01.y;
                         let vxIndex = vx0index, vx = vx0, currentT = 0;
+                        // A single segment in the loop may require additional vertices, if the
+                        // segment crosses cell boundaries. This is handled by this while loop.
                         let whileLimit = 400;
                         while (--whileLimit) {
-                            // points which are on a grid line are assigned to the cell into which they are going (+
-                            // NLA_PRECISION * sign(di)) if they are parallel to the gridline (eq0(di)), they belong the
-                            // the cell for which they are a CCW boundary
+                            // Points which are on a grid line are assigned to the cell into
+                            // which they are going (+ NLA_PRECISION * sign(di)). If they are
+                            // parallel to the grid line (eq0(di)), they belong the the cell for
+                            // which they are a CCW boundary.
                             const baseM = floor$1(vx.u + (!eq0(di) ? sign$1(di) : -sign$1(dj)) * NLA_PRECISION) -
                                 mOffset;
                             const baseN = floor$1(vx.v + (!eq0(dj) ? sign$1(dj) : sign$1(di)) * NLA_PRECISION) -
                                 nOffset;
-                            assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`);
+                            assert(baseM < mRes && baseN < nRes, `baseM:${baseM} < mRes:${mRes} && baseN:${baseN} < nRes:${nRes}`);
                             // figure out the next intersection with a gridline:
-                            // iNext is the positive horizontal distance to the next vertical gridline
+                            // iNext is the positive horizontal distance to the next vertical
+                            // gridline
                             const iNext = ceil(sign$1(di) * vx.u + NLA_PRECISION) - sign$1(di) * vx.u;
                             const jNext = ceil(sign$1(dj) * vx.v + NLA_PRECISION) - sign$1(dj) * vx.v;
                             const iNextT = currentT + iNext / abs$2(di);
                             const jNextT = currentT + jNext / abs$2(dj);
-                            //console.log(vxIndex, vx.str, 'vij', vx.u, vx.v, 'd', di, dj, 'ijNext', iNext, jNext, 'nextT',
-                            // iNextT, jNextT)
+                            //console.log(vxIndex, vx.toString(), 'vij', vx.u, vx.v, 'd', di,
+                            // dj, 'ijNext', iNext, jNext, 'nextT', iNextT, jNextT)
                             if (lastBaseM != baseM || lastBaseN != baseN) {
                                 if (part) {
                                     if (!firstPart) {
@@ -34279,8 +34248,8 @@ var viewer = (function (exports, javasetmap_ts) {
                         // complete loop
                         assert(false, "found a hole, try increasing resolution");
                     }
-                    // at this point, the firstPart hasn't been added, and the last part also hasn't been added
-                    // either they belong to the same cell, or not
+                    // at this point, the firstPart hasn't been added, and the last part
+                    // also hasn't been added either they belong to the same cell, or not
                     if (firstPartBaseM == lastBaseM && firstPartBaseN == lastBaseN) {
                         part.pop();
                         fixUpPart(part.concat(firstPart), lastBaseM, lastBaseN);
@@ -34292,6 +34261,10 @@ var viewer = (function (exports, javasetmap_ts) {
                     console.log("firstPart", firstPart);
                 }
                 console.log("calculated parts", partss);
+                console.table(completeParts.map((_a) => {
+                    var { part } = _a, rest = __rest(_a, ["part"]);
+                    return (Object.assign({ part: "" + part }, rest));
+                }));
                 const fieldVertexIndices = new Array((mRes + 1) * (nRes + 1));
                 function addVertex(m, n) {
                     verticesMN.push(new V3(m, n, 0));
@@ -34328,7 +34301,7 @@ var viewer = (function (exports, javasetmap_ts) {
                                     " " +
                                     index +
                                     " " +
-                                    p.str +
+                                    p.toString() +
                                     "IF THIS FAILS check canonSeamU is correct");
                                 return v1 < u1 ? u1 + v1 : 4 - u1 - v1;
                             }
@@ -34348,21 +34321,24 @@ var viewer = (function (exports, javasetmap_ts) {
                                         : opos(nextPart[0]) + 4;
                                     let nextOpos = ceil(currentOpos + NLA_PRECISION);
                                     let flipping = eq0(((currentOpos + NLA_PRECISION) % 1) - NLA_PRECISION);
-                                    //inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2 < 1)
+                                    //inside = inside != (!eq0(currentOpos % 1) && currentOpos % 2
+                                    // < 1)
                                     while (lt(nextOpos, nextPartStartOpos)) {
                                         switch (nextOpos % 4) {
                                             case 0:
                                                 outline.push(getGridVertexIndex(col, row));
                                                 break;
                                             case 1:
-                                                inside = inside != flipping;
+                                                if (flipping)
+                                                    inside = !inside;
                                                 outline.push(getGridVertexIndex(col + 1, row));
                                                 break;
                                             case 2:
                                                 outline.push(getGridVertexIndex(col + 1, row + 1));
                                                 break;
                                             case 3:
-                                                inside = inside != flipping;
+                                                if (flipping)
+                                                    inside = !inside;
                                                 outline.push(getGridVertexIndex(col, row + 1));
                                                 break;
                                         }
@@ -34370,11 +34346,10 @@ var viewer = (function (exports, javasetmap_ts) {
                                         nextOpos++;
                                     }
                                     // if the next loop would have completed a top or bottom segment
-                                    inside =
-                                        inside !=
-                                            (flipping &&
-                                                nextOpos % 2 == 1 &&
-                                                eq(nextOpos, nextPartStartOpos));
+                                    if (flipping &&
+                                        nextOpos % 2 == 1 &&
+                                        eq(nextOpos, nextPartStartOpos))
+                                        inside = !inside;
                                     currentOpos = nextOpos;
                                     currentPart = nextPart;
                                 } while (currentPart != startPart);
@@ -34393,14 +34368,15 @@ var viewer = (function (exports, javasetmap_ts) {
                     }
                 }
             }
-            //console.log('trinagle', triangles.max(), vertices.length, triangles.length, triangles.toSource(),
-            // triangles.map(col => vertices[col].$).toSource() ) assert(normals.every(n => n.hasLength(1)), normals.find(n
-            // => !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
+            //console.log('trinagle', triangles.max(), vertices.length,
+            // triangles.length, triangles.toSource(), triangles.map(col =>
+            // vertices[col].$).toSource() ) assert(normals.every(n => n.hasLength(1)),
+            // normals.find(n => !n.hasLength(1)).length() +' '+normals.findIndex(n =>
+            // !n.hasLength(1)))
             Array.prototype.push.apply(mesh.TRIANGLES, triangles.map((index) => index + mesh.vertices.length));
             Array.prototype.push.apply(mesh.vertices, vertices);
             Array.prototype.push.apply(mesh.normals, normals);
             //this.addEdgeLines(mesh)
-            enableConsole();
         }
         addToMesh2(mesh) {
             const zSplit = 8;
@@ -34470,8 +34446,9 @@ var viewer = (function (exports, javasetmap_ts) {
                     normals.push(normalF(d, detailZs[j]));
                 }
             }
-            // console.log('detailVerticesStart', detailVerticesStart, 'vl', vertices.length, vertices.length -
-            // detailVerticesStart, ribs.length) finally, fill in the ribs
+            // console.log('detailVerticesStart', detailVerticesStart, 'vl',
+            // vertices.length, vertices.length - detailVerticesStart, ribs.length)
+            // finally, fill in the ribs
             let vsStart = 0;
             const flipped2 = true;
             //for (var i = 0; i < 1; i++) {
@@ -34519,11 +34496,12 @@ var viewer = (function (exports, javasetmap_ts) {
                 }
                 vsStart += ribLeft.right.length * 2;
             }
-            //console.log('trinagle', triangles0.max(), vertices.length, triangles0.length, triangles0.toSource(),
-            // triangles0.map(i => vertices[i].$).toSource() )
+            //console.log('trinagle', triangles0.max(), vertices.length,
+            // triangles0.length, triangles0.toSource(), triangles0.map(i =>
+            // vertices[i].$).toSource() )
             const triangles = triangles0.map((index) => index + mesh.vertices.length);
-            //assert(normals.every(n => n.hasLength(1)), normals.find(n => !n.hasLength(1)).length() +'
-            // '+normals.findIndex(n => !n.hasLength(1)))
+            //assert(normals.every(n => n.hasLength(1)), normals.find(n =>
+            // !n.hasLength(1)).length() +' '+normals.findIndex(n => !n.hasLength(1)))
             Array.prototype.push.apply(mesh.vertices, vertices);
             Array.prototype.push.apply(mesh.TRIANGLES, triangles);
             Array.prototype.push.apply(mesh.normals, normals);
@@ -47366,8 +47344,8 @@ var viewer = (function (exports, javasetmap_ts) {
                 let inside = this.infiniteVolume;
                 for (const face of this.faces) {
                     assert(!face.surface.containsCurve(testLine));
-                    const ists = face.surface.isTsForLine(testLine);
-                    for (const t of ists) {
+                    const isTs = face.surface.isTsForLine(testLine);
+                    for (const t of isTs) {
                         const p = testLine.at(t);
                         const pvf = face.containsPoint2(p);
                         //assert(pvf != PointVsFace.ON_EDGE)
@@ -47440,11 +47418,11 @@ var viewer = (function (exports, javasetmap_ts) {
                 .addVertexBuffer("normals", "ts_Normal")
                 .addIndexBuffer("TRIANGLES")
                 .addIndexBuffer("LINES");
-            mesh.faceIndexes = new Map();
+            const faceIndexes = new Map();
             for (const face of this.faces) {
                 const triangleStart = mesh.TRIANGLES.length;
                 face.addToMesh(mesh);
-                mesh.faceIndexes.set(face, {
+                faceIndexes.set(face, {
                     start: triangleStart,
                     count: mesh.TRIANGLES.length - triangleStart,
                 });
@@ -47453,7 +47431,7 @@ var viewer = (function (exports, javasetmap_ts) {
             //for (const edge of this.edgeFaces.keys()) {
             //
             //}
-            return mesh;
+            return Object.assign(mesh, { faceIndexes });
         }
         minus(other, infoFactory) {
             const generator = this.generator &&
@@ -47524,7 +47502,10 @@ var viewer = (function (exports, javasetmap_ts) {
         }
         toSource(useGenerator = true) {
             return ((useGenerator && this.generator) ||
-                `new BRep([\n${this.faces.map(SCE).join(",\n").replace(/^/gm, "\t")}], ${this.infiniteVolume})`);
+                `new BRep([\n${this.faces
+                .map(toSource)
+                .join(",\n")
+                .replace(/^/gm, "\t")}], ${this.infiniteVolume})`);
         }
         /**
          * Rightmost next segment doesn't work, as the correct next segment isn't obvious from the current corner
@@ -47612,7 +47593,7 @@ var viewer = (function (exports, javasetmap_ts) {
             newFaces.push(...oldFaces.filter((face) => oldFaceStatuses.get(face) == "inside"));
         }
         static getLooseEdgeSegments(edgePointInfoss, edgeFaces) {
-            const result = new JavaMap();
+            const result = new JavaMap$1();
             // if there are no point info, the original edge will be kept, so we should return nothing
             // otherwise, something will be returned, even if it a new edge identical to the base edge
             for (const [canonEdge, pointInfos] of edgePointInfoss) {
@@ -47647,7 +47628,7 @@ var viewer = (function (exports, javasetmap_ts) {
             return result;
         }
         getIntersectionEdges(brep2) {
-            const faceMap = new Map(), thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
+            const faceMap = new Map(), thisEdgePoints = new JavaMap$1(), otherEdgePoints = new JavaMap$1();
             const checkedPairs = new JavaSet();
             this.faces.forEach((face) => {
                 //console.log('face', face.toString())
@@ -47764,7 +47745,7 @@ var viewer = (function (exports, javasetmap_ts) {
         buildAdjacencies() {
             if (this.edgeFaces)
                 return this;
-            this.edgeFaces = new JavaMap();
+            this.edgeFaces = new JavaMap$1();
             for (const face of this.faces) {
                 for (const edge of face.getAllEdges()) {
                     const canon = edge.getCanon();
@@ -47811,7 +47792,7 @@ var viewer = (function (exports, javasetmap_ts) {
          *              e.g. box(5, 5, 5) - box(3, 3, 3).rotateZ([0, 1, 2] * PI / 2).translate(0, 1, 1)
          *          4.  edge/edge Two edges are colinear.
          *              implies vertex of A lying in edge of B
-         *           5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
+         *          5.  vertex/edge Vertex of A lies on edge of B (but no edge/edge)
          *          6.  vertex/vertex with/without edge/edge, edge/face and face/face intersections
          *          7.  vertex lies in face
          *
@@ -47824,7 +47805,8 @@ var viewer = (function (exports, javasetmap_ts) {
             this.buildAdjacencies();
             other.buildAdjacencies();
             const faceMap = new Map();
-            const thisEdgePoints = new JavaMap(), otherEdgePoints = new JavaMap();
+            const thisEdgePoints = new JavaMap$1();
+            const otherEdgePoints = new JavaMap$1();
             const checkedPairs = new JavaSet();
             for (const thisFace of this.faces) {
                 for (const otherFace of other.faces) {
@@ -48860,310 +48842,310 @@ var viewer = (function (exports, javasetmap_ts) {
     }
 
     const fragmentShaderLighting = `
-	precision highp float;
-	uniform vec4 color;
-	uniform vec3 camPos;
-	varying vec3 normal;
-	varying vec4 vPosition;
-	void main() {
-		vec3 normal1 = normalize(normal);
-		vec3 lightPos = vec3(1000, 2000, 4000);
-		vec3 lightDir = normalize(vPosition.xyz - lightPos);
-        vec3 reflectionDirection = reflect(lightDir, normal1);
-        vec3 eyeDirection = normalize(camPos.xyz-vPosition.xyz);
-        float uMaterialShininess = 256.0;
-		float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
-		float lightIntensity = 0.6 + 0.2 * max(0.0, -dot(lightDir, normal1)) + 0.2*specularLightWeighting;
-		gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
-	}
+  precision highp float;
+  uniform vec4 color;
+  uniform vec3 camPos;
+  varying vec3 normal;
+  varying vec4 vPosition;
+  void main() {
+    vec3 normal1 = normalize(normal);
+    vec3 lightPos = vec3(1000, 2000, 4000);
+    vec3 lightDir = normalize(vPosition.xyz - lightPos);
+    vec3 reflectionDirection = reflect(lightDir, normal1);
+    vec3 eyeDirection = normalize(camPos.xyz-vPosition.xyz);
+    float uMaterialShininess = 256.0;
+    float specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+    float lightIntensity = 0.6 + 0.2 * max(0.0, -dot(lightDir, normal1)) + 0.2*specularLightWeighting;
+    gl_FragColor = vec4(vec3(color) * lightIntensity, 1);
+  }
 `;
     const vertexShaderLighting = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	uniform mat4 ts_ModelViewMatrix;
-	attribute vec4 ts_Vertex;
-	uniform mat3 ts_NormalMatrix;
-	attribute vec3 ts_Normal;
-	uniform vec4 color;
-	varying vec3 normal;
-	varying vec4 vPosition;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-        vPosition = ts_ModelViewMatrix * ts_Vertex;
-		normal = normalize(ts_NormalMatrix * ts_Normal);
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  uniform mat4 ts_ModelViewMatrix;
+  attribute vec4 ts_Vertex;
+  uniform mat3 ts_NormalMatrix;
+  attribute vec3 ts_Normal;
+  uniform vec4 color;
+  varying vec3 normal;
+  varying vec4 vPosition;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+    vPosition = ts_ModelViewMatrix * ts_Vertex;
+    normal = normalize(ts_NormalMatrix * ts_Normal);
+  }
 `;
     const vertexShaderWaves = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	uniform mat4 ts_ModelViewMatrix;
-	attribute vec4 ts_Vertex;
-	uniform mat3 ts_NormalMatrix;
-	attribute vec3 ts_Normal;
-	uniform vec4 color;
-	varying vec3 normal;
-	varying vec4 vPosition;
-	void main() {
-		normal = normalize(ts_NormalMatrix * ts_Normal);
-		float offset = mod  (((ts_Vertex.x + ts_Vertex.y + ts_Vertex.z) * 31.0), 20.0) - 10.0;
-		vec4 modPos = ts_Vertex + vec4(normal * offset, 0);
-		gl_Position = ts_ModelViewProjectionMatrix * modPos;
-        vPosition = ts_ModelViewMatrix * modPos;
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  uniform mat4 ts_ModelViewMatrix;
+  attribute vec4 ts_Vertex;
+  uniform mat3 ts_NormalMatrix;
+  attribute vec3 ts_Normal;
+  uniform vec4 color;
+  varying vec3 normal;
+  varying vec4 vPosition;
+  void main() {
+    normal = normalize(ts_NormalMatrix * ts_Normal);
+    float offset = mod  (((ts_Vertex.x + ts_Vertex.y + ts_Vertex.z) * 31.0), 20.0) - 10.0;
+    vec4 modPos = ts_Vertex + vec4(normal * offset, 0);
+    gl_Position = ts_ModelViewProjectionMatrix * modPos;
+    vPosition = ts_ModelViewMatrix * modPos;
+  }
 `;
     const vertexShaderBasic = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+  }
 `;
     const vertexShaderColor = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	attribute vec4 ts_Color;
-	varying vec4 fragColor;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-		fragColor = ts_Color;
-	}
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  attribute vec4 ts_Color;
+  varying vec4 fragColor;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+    fragColor = ts_Color;
+  }
 `;
     const vertexShaderArc = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform float step, offset;
-	uniform float radius, width;
-	void main() {
-		float r = radius;
-		float t = offset + ts_Vertex.x * step;
-		float pRadius = r - ts_Vertex.y * width;
-		vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
-		gl_Position = ts_ModelViewProjectionMatrix * p;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform float step, offset;
+  uniform float radius, width;
+  void main() {
+    float r = radius;
+    float t = offset + ts_Vertex.x * step;
+    float pRadius = r - ts_Vertex.y * width;
+    vec4 p = vec4(pRadius * cos(t), pRadius * sin(t), 0, 1);
+    gl_Position = ts_ModelViewProjectionMatrix * p;
 }
 `;
     const vertexShaderConic3d = `
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform float startT, endT, scale;
-	uniform vec3 center, f1, f2;
-	uniform int mode;
-	float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
-	float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
-	void main() {
-		float t = startT + ts_Vertex.x * (endT - startT);
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform float startT, endT, scale;
+  uniform vec3 center, f1, f2;
+  uniform int mode;
+  float sinh(float x) { return (exp(x) - exp(-x)) / 2.0; }
+  float cosh(float x) { return (exp(x) + exp(-x)) / 2.0; }
+  void main() {
+    float t = startT + ts_Vertex.x * (endT - startT);
 
-		vec3 normal = normalize(cross(f1, f2));
+    vec3 normal = normalize(cross(f1, f2));
 
-		vec3 p, tangent;
-		if (0 == mode) { // ellipse
-			p = center + f1 * cos(t) + f2 * sin(t);
-			tangent = f1 * -sin(t) + f2 * cos(t);
-		}
-		if (1 == mode) { // parabola
-			p = center + f1 * t + f2 * t * t;
-			tangent = f1 + 2.0 * f2 * t;
-		}
-		if (2 == mode) { // hyperbola
-			p = center + f1 * cosh(t) + f2 * sinh(t);
-			tangent = f1 * sinh(t) + f2 * cosh(t);
-		}
-		vec3 outDir = normalize(cross(normal, tangent));
-		vec3 p2 = p + scale * (outDir * ts_Vertex.y + normal * ts_Vertex.z);
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
-	}
+    vec3 p, tangent;
+    if (0 == mode) { // ellipse
+      p = center + f1 * cos(t) + f2 * sin(t);
+      tangent = f1 * -sin(t) + f2 * cos(t);
+    }
+    if (1 == mode) { // parabola
+      p = center + f1 * t + f2 * t * t;
+      tangent = f1 + 2.0 * f2 * t;
+    }
+    if (2 == mode) { // hyperbola
+      p = center + f1 * cosh(t) + f2 * sinh(t);
+      tangent = f1 * sinh(t) + f2 * cosh(t);
+    }
+    vec3 outDir = normalize(cross(normal, tangent));
+    vec3 p2 = p + scale * (outDir * ts_Vertex.y + normal * ts_Vertex.z);
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  }
 `;
     const vertexShaderNURBS = `#version 300 es
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	in vec4 ts_Vertex;
-	uniform float startT, endT, scale;
-	uniform vec4 points[32];
-	uniform int pointCount, degree;
-	uniform float knots[40];
-	uniform vec3 normal;
-	const int MIN_DEGREE = 1;
-	const int MAX_DEGREE = 6;
-	
-	int tInterval(float t) {
-		for (int s = degree; s < 40 - 1 - degree; s++) {
-			if (t >= knots[s] && t <= knots[s + 1]) {
-				return s;
-			}
-		}
-	}
-	
-	vec4 stepp(int k, int i, vec4 dkMinus1iMinus1, vec4 dkMinus1i) {
-	    return dkMinus1i - dkMinus1iMinus1 * float(k) / (knots[i + degree - k] - knots[i - 1]);
-	}
-	
-	void main() {
-		// ts_Vertex.x is in [0, 1]
-		float t = startT + ts_Vertex.x * (endT - startT);
-		
-		int s = tInterval(t);
-		
-		vec4 v[MAX_DEGREE + 1];
-		for (int i = 0; i < degree + 1; i++) {
-		    v[i] = points[s - degree + i];
-		}
-		
-		vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
-		for (int level = 0; level < degree; level++) {
-			if (level == degree - 2) {
-				// see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
-				vec4 a = v[degree];
-				vec4 b = v[degree - 1];
-				vec4 c = v[degree - 2];
-				ddt4 = stepp(degree, s + 1, stepp(degree - 1, s + 1, a, b), stepp(degree - 1, s, b, c));
-			}
-			if (level == degree - 1) {
-				vec4 a = v[degree];
-				vec4 b = v[degree - 1];
-				pTangent4 = (b - a) * (float(degree) / (knots[s] - knots[s + 1]));
-			}
-			for (int i = degree; i > level; i--) {
-				float alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  in vec4 ts_Vertex;
+  uniform float startT, endT, scale;
+  uniform vec4 points[32];
+  uniform int pointCount, degree;
+  uniform float knots[40];
+  uniform vec3 normal;
+  const int MIN_DEGREE = 1;
+  const int MAX_DEGREE = 6;
 
-				// interpolate each component
-                v[i] = (1.0 - alpha) * v[i - 1] + alpha * v[i];
-			}
-		}
-		
-		vec4 p4 = v[degree];
-		
-		vec3 p = p4.xyz / p4.w;
-		vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
-		vec3 ddt = (
-		    p4.xyz * (-p4.w * ddt4.w + 2.0 * pow(pTangent4.w, 2.0))
-		    + pTangent4.xyz * (-2.0 * p4.w * pTangent4.w) 
-		    + ddt4.xyz * pow(p4.w, 2.0)
-        ) / pow(p4.w, 3.0);
-		
-		vec3 outDir = normalize(cross(ddt, pTangent));
-		vec3 correctNormal = normalize(cross(pTangent, outDir));
-		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  int tInterval(float t) {
+    for (int s = degree; s < 40 - 1 - degree; s++) {
+      if (t >= knots[s] && t <= knots[s + 1]) {
+        return s;
+      }
     }
+  }
+
+  vec4 stepp(int k, int i, vec4 dkMinus1iMinus1, vec4 dkMinus1i) {
+    return dkMinus1i - dkMinus1iMinus1 * float(k) / (knots[i + degree - k] - knots[i - 1]);
+  }
+
+  void main() {
+    // ts_Vertex.x is in [0, 1]
+    float t = startT + ts_Vertex.x * (endT - startT);
+
+    int s = tInterval(t);
+
+    vec4 v[MAX_DEGREE + 1];
+    for (int i = 0; i < degree + 1; i++) {
+      v[i] = points[s - degree + i];
+    }
+
+    vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
+    for (int level = 0; level < degree; level++) {
+      if (level == degree - 2) {
+        // see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
+        vec4 a = v[degree];
+        vec4 b = v[degree - 1];
+        vec4 c = v[degree - 2];
+        ddt4 = stepp(degree, s + 1, stepp(degree - 1, s + 1, a, b), stepp(degree - 1, s, b, c));
+      }
+      if (level == degree - 1) {
+        vec4 a = v[degree];
+        vec4 b = v[degree - 1];
+        pTangent4 = (b - a) * (float(degree) / (knots[s] - knots[s + 1]));
+      }
+      for (int i = degree; i > level; i--) {
+        float alpha = (t - knots[i + s - degree]) / (knots[i + s - level] - knots[i + s - degree]);
+
+        // interpolate each component
+        v[i] = (1.0 - alpha) * v[i - 1] + alpha * v[i];
+      }
+    }
+
+    vec4 p4 = v[degree];
+
+    vec3 p = p4.xyz / p4.w;
+    vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
+    vec3 ddt = (
+      p4.xyz * (-p4.w * ddt4.w + 2.0 * pow(pTangent4.w, 2.0))
+      + pTangent4.xyz * (-2.0 * p4.w * pTangent4.w)
+      + ddt4.xyz * pow(p4.w, 2.0)
+    ) / pow(p4.w, 3.0);
+
+    vec3 outDir = normalize(cross(ddt, pTangent));
+    vec3 correctNormal = normalize(cross(pTangent, outDir));
+    vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  }
 `;
     const vertexShaderBezier = `
-    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform float width, startT, endT;
-	uniform vec3 p0, p1, p2, p3;
-	void main() {
-		// ts_Vertex.x is in [0, 1]
-		float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
-		float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
-		vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
-		float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
-		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
-		vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
-		vec4 p = vec4(pPos - ts_Vertex.y * width * pNormal, 1);
-		gl_Position = ts_ModelViewProjectionMatrix * p;
-	}
+  // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform float width, startT, endT;
+  uniform vec3 p0, p1, p2, p3;
+  void main() {
+    // ts_Vertex.x is in [0, 1]
+    float t = startT + ts_Vertex.x * (endT - startT), s = 1.0 - t;
+    float c0 = s * s * s, c1 = 3.0 * s * s * t, c2 = 3.0 * s * t * t, c3 = t * t * t;
+    vec3 pPos = p0 * c0 + p1 * c1 + p2 * c2 + p3 * c3;
+    float c01 = 3.0 * s * s, c12 = 6.0 * s * t, c23 = 3.0 * t * t;
+    vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
+    vec3 pNormal = normalize(vec3(pTangent.y, -pTangent.x, 0));
+    vec4 p = vec4(pPos - ts_Vertex.y * width * pNormal, 1);
+    gl_Position = ts_ModelViewProjectionMatrix * p;
+  }
 `;
     const vertexShaderBezier3d = `
-    precision highp float;
-    // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
-	uniform float scale, startT, endT;
-	uniform vec3 ps[4];
-	uniform vec3 p0, p1, p2, p3, normal;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	void main() {
-		// ts_Vertex.y is in [0, 1]
-		vec3 p5 = ps[0];
-		float t = startT * (1.0 - ts_Vertex.x) + endT * ts_Vertex.x, s = 1.0 - t;
-		float c0 = s * s * s, 
-		      c1 = 3.0 * s * s * t, 
-		      c2 = 3.0 * s * t * t, c3 = t * t * t;
-		vec3 p = (p0 * c0 + p1 * c1) + (p2 * c2 + p3 * c3);
-		float c01 = 3.0 * s * s, 
-		      c12 = 6.0 * s * t, 
-		      c23 = 3.0 * t * t;
-		vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
-		vec3 outDir = normalize(cross(normal, pTangent));
-		vec3 correctNormal = normalize(cross(pTangent, outDir));
-		vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
-	}
+  precision highp float;
+  // calculates a bezier curve using ts_Vertex.x as the (t) parameter of the curve
+  uniform float scale, startT, endT;
+  uniform vec3 ps[4];
+  uniform vec3 p0, p1, p2, p3, normal;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  void main() {
+    // ts_Vertex.y is in [0, 1]
+    vec3 p5 = ps[0];
+    float t = startT * (1.0 - ts_Vertex.x) + endT * ts_Vertex.x, s = 1.0 - t;
+    float c0 = s * s * s,
+        c1 = 3.0 * s * s * t,
+        c2 = 3.0 * s * t * t, c3 = t * t * t;
+    vec3 p = (p0 * c0 + p1 * c1) + (p2 * c2 + p3 * c3);
+    float c01 = 3.0 * s * s,
+        c12 = 6.0 * s * t,
+        c23 = 3.0 * t * t;
+    vec3 pTangent = (p1 - p0) * c01 + (p2 - p1) * c12 + (p3 - p2) * c23;
+    vec3 outDir = normalize(cross(normal, pTangent));
+    vec3 correctNormal = normalize(cross(pTangent, outDir));
+    vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+  }
 `;
     const vertexShaderGeneric = `
-	uniform float scale;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	uniform mat3 ts_NormalMatrix;
-	attribute vec3 ts_Normal;
-	void main() {
-		vec3 normal = normalize(ts_NormalMatrix * ts_Normal);
-		vec4 vertexPos = ts_Vertex + vec4(normal * scale, 0);
-		gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
-	}
+  uniform float scale;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  uniform mat3 ts_NormalMatrix;
+  attribute vec3 ts_Normal;
+  void main() {
+    vec3 normal = normalize(ts_NormalMatrix * ts_Normal);
+    vec4 vertexPos = ts_Vertex + vec4(normal * scale, 0);
+    gl_Position = ts_ModelViewProjectionMatrix * vertexPos;
+  }
 `;
     const vertexShaderRing = `
-	#define M_PI 3.1415926535897932384626433832795
-	uniform float step;
-	uniform float innerRadius, outerRadius;
-	attribute float index;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	attribute vec4 ts_Vertex;
-	void main() {
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(index, index, index, 1);
-		float id = atan(ts_Vertex.x, ts_Vertex.y) / M_PI  * 32.0;
-		float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
-		gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
-	}
+  #define M_PI 3.1415926535897932384626433832795
+  uniform float step;
+  uniform float innerRadius, outerRadius;
+  attribute float index;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  attribute vec4 ts_Vertex;
+  void main() {
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(index, index, index, 1);
+    float id = atan(ts_Vertex.x, ts_Vertex.y) / M_PI  * 32.0;
+    float radius = mod(id, 2.0) < 1.0 ? outerRadius : innerRadius;
+    gl_Position = ts_ModelViewProjectionMatrix * vec4(radius * cos(index * step), radius * sin(index * step), 0, 1);
+  }
 `;
     const fragmentShaderColor = `
-	precision highp float;
-	uniform vec4 color;
-	void main() {
-		gl_FragColor = color;
-	}
+  precision highp float;
+  uniform vec4 color;
+  void main() {
+    gl_FragColor = color;
+  }
 `;
     const fragmentShaderColor3 = `#version 300 es
-	precision highp float;
-	uniform vec4 color;
-	out vec4 fragColor;
-	void main() {
-		fragColor = color;
-	}
+  precision highp float;
+  uniform vec4 color;
+  out vec4 fragColor;
+  void main() {
+    fragColor = color;
+  }
 `;
     const fragmentShaderVaryingColor = `
-	precision highp float;
-	varying vec4 fragColor;
-	void main() {
-		gl_FragColor = fragColor;
-	}
+  precision highp float;
+  varying vec4 fragColor;
+  void main() {
+    gl_FragColor = fragColor;
+  }
 `;
     const fragmentShaderColorHighlight = `
-	precision highp float;
-	uniform vec4 color;
-	void main() {
-		float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
-		if (mod(diagonal, 50.0) > 40.0) { // mod(diagonal, 2.0) > 1.0
-			discard;
-			//gl_FragColor = color + vec4(0.2,0.2,0.2,0);
-		} else {
-			gl_FragColor = color - vec4(0.2,0.2,0.2,0);
-		}
-	}
+  precision highp float;
+  uniform vec4 color;
+  void main() {
+    float diagonal = (gl_FragCoord.x + 2.0 * gl_FragCoord.y);
+    if (mod(diagonal, 50.0) > 40.0) { // mod(diagonal, 2.0) > 1.0
+      discard;
+      //gl_FragColor = color + vec4(0.2,0.2,0.2,0);
+    } else {
+      gl_FragColor = color - vec4(0.2,0.2,0.2,0);
+    }
+  }
 `;
     const vertexShaderTexture = `
-	varying vec2 texturePos;
-	attribute vec4 ts_Vertex;
-	uniform mat4 ts_ModelViewProjectionMatrix;
-	void main() {
-		texturePos = ts_Vertex.xy;
-		gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
-	}
+  varying vec2 texturePos;
+  attribute vec4 ts_Vertex;
+  uniform mat4 ts_ModelViewProjectionMatrix;
+  void main() {
+    texturePos = ts_Vertex.xy;
+    gl_Position = ts_ModelViewProjectionMatrix * ts_Vertex;
+  }
 `;
     const fragmentShaderTextureColor = `
-	precision highp float;
-	varying vec2 texturePos;
-	uniform vec4 color;
-	uniform sampler2D texture;
-	void main() {
-		gl_FragColor = texture2D(texture, texturePos) * color;
-	}
+  precision highp float;
+  varying vec2 texturePos;
+  uniform vec4 color;
+  uniform sampler2D texture;
+  void main() {
+    gl_FragColor = texture2D(texture, texturePos) * color;
+  }
 `;
 
     function parseGetParams(str) {
@@ -49370,7 +49352,7 @@ var viewer = (function (exports, javasetmap_ts) {
             })
                 .draw(gl.meshes.pipe);
         },
-        [L3.name](gl, curve, color, startT, endT, width = 2, normal = V3.Z) {
+        [L3.name](gl, curve, color, startT, endT, width = 2) {
             gl.pushMatrix();
             const a = curve.at(startT), b = curve.at(endT);
             const ab = b.minus(a), abT = ab.getPerpendicular().unit();
@@ -50139,5 +50121,5 @@ var viewer = (function (exports, javasetmap_ts) {
 
     return exports;
 
-}({}, javasetmap_ts));
+}({}));
 //# sourceMappingURL=viewer.js.map

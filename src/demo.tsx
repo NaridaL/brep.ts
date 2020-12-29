@@ -1,25 +1,9 @@
 import * as chroma from "chroma.ts"
 import classnames from "classnames"
 import * as hljs from "highlight.js"
-import React, {
-  Component,
-  InputHTMLAttributes,
-  MouseEvent,
-  WheelEvent,
-} from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import ReactDOM from "react-dom"
-import {
-  assertf,
-  clamp,
-  DEG,
-  emod,
-  int,
-  NLA_DEBUG,
-  round10,
-  TAU,
-  V,
-  V3,
-} from "ts3dutils"
+import { assertf, clamp, DEG, emod, int, round10, TAU, V, V3 } from "ts3dutils"
 import { TSGLContext } from "tsgl"
 
 import {
@@ -34,6 +18,11 @@ import { B2T, BRep, CustomPlane, edgeNgon, P3, round } from "."
 const fakeB2Mesh = (false as true) && ({} as BRep).toMesh()
 type B2Mesh = typeof fakeB2Mesh
 
+function fixFunctionIndentation(src: string): string {
+  const indent = /([ \t]*).*$/g.exec(src)![1]
+  return src.replace(new RegExp("^" + indent, "gm"), "")
+}
+
 type DemoProps = {
   width: string
   height: string
@@ -42,7 +31,6 @@ type DemoProps = {
   args: DemoArg[]
 }
 type DemoDesc = {
-  showingSource: boolean
   id: string
   f(...args: any[]): BRep | BRep[]
   args: DemoArg[]
@@ -53,90 +41,84 @@ type DemoDesc = {
   meshes: (B2Mesh & { lines?: int[] })[]
 }
 
-class Demo extends Component<DemoProps, DemoDesc> {
-  constructor(props: DemoProps) {
-    super(props)
-    this.state = Object.assign({}, props, {
-      canvas: undefined,
+function Demo({ id, f, args, height, width, ...props }: DemoProps) {
+  const [state, setState] = useState(() => {
+    args.forEach((arg) => (arg.value = "" + arg.def))
+    return {
       showingSource: false,
-    }) as any
-    props.args.forEach((arg) => (arg.value = "" + arg.def))
-  }
+      demo: ({ id, f, args, height, width } as any) as DemoDesc,
+    }
+  })
 
-  container!: HTMLDivElement
-  argInputs: InputComponent[] = []
-  sourceContainer!: HTMLElement
-  onChange = () => {
-    const demo = this.state
-    update(
-      demo,
-      this.props.args.map((a) => a.value!),
-    )
-    this.forceUpdate()
-  }
+  const container = useRef<HTMLDivElement>(null)
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const sourceContainer = useRef<HTMLDivElement>(null)
 
-  onClickSource = (e: MouseEvent<HTMLAnchorElement>) => {
-    this.setState({ showingSource: !this.state.showingSource })
-  }
+  const onChange = useCallback(() => {
+    update(state.demo)
+    setState((s) => ({ ...s }))
+  }, [state, setState])
 
-  componentDidMount() {
-    setupDemo(this.state.canvas, this.state, this.container)
-    hljs.highlightBlock(this.sourceContainer)
-    this.forceUpdate()
-  }
+  const onClickSource = useCallback(() => {
+    setState((s) => ({ ...s, showingSource: !s.showingSource }))
+  }, [setState])
 
-  render() {
-    console.log(this.state)
-    const demo = this.state as DemoDesc
-    const { f, args, height, width, ...props } = this.props
-    const info =
-      demo.b2s &&
-      "faces: " +
-        demo.b2s.map((b2) => b2.faces.length).join("/") +
-        " edges: " +
-        demo.b2s
-          .map((b2) => (b2.edgeFaces && b2.edgeFaces.size) || "?")
-          .join("/") +
-        " triangles: " +
-        demo.meshes.map((m) => (m ? m.TRIANGLES.length / 3 : 0)).join("/")
-    return (
-      <div {...props} style={{ width }} className={"democontainer"}>
-        <div
-          className="canvascontainer"
-          ref={(r) => (this.container = r!)}
-          style={{ width: "100%", height }}
-        >
-          <canvas style={{ height }} ref={(r) => (demo.canvas = r!)} />
-          {this.props.args.map((arg) => (
-            <span className="incont" key={arg.name}>
-              <InputComponent
-                type="text"
-                data-name={arg.name}
-                value={arg.value}
-                step={(arg as any).step}
-                ref={(r) => this.argInputs.push(r)}
-                change={(e) => ((arg.value = e), this.onChange())}
-              />
-              {arg.name}
-            </span>
-          ))}
-          <span className="info">{info}</span>
-          <span className="navinfo">
-            pan: drag-mmb | rotate: drag-rmb | zoom: scroll
-          </span>
-          <a className="sourcelink" onClick={this.onClickSource}>
-            {this.state.showingSource ? "hide source" : "show source"}
-          </a>
-        </div>
-        <code
-          className={classnames("src", !demo.showingSource && "hide")}
-          ref={(r) => (this.sourceContainer = r!)}
-        >
-          {this.props.f.toSource()}
-        </code>
+  useEffect(() => {
+    setupDemo(canvas.current!, state.demo, container.current!)
+    hljs.highlightBlock(sourceContainer.current!)
+  }, [])
+
+  const demo = state.demo
+  const info =
+    demo.b2s &&
+    "faces: " +
+      demo.b2s.map((b2) => b2.faces.length).join("/") +
+      " edges: " +
+      demo.b2s
+        .map((b2) => (b2.edgeFaces && b2.edgeFaces.size) || "?")
+        .join("/") +
+      " triangles: " +
+      demo.meshes.map((m) => (m ? m.TRIANGLES.length / 3 : 0)).join("/")
+  return (
+    <div {...props} style={{ width }} className={"democontainer"}>
+      <div
+        className="canvascontainer"
+        ref={container}
+        style={{ width: "100%", height }}
+      >
+        <canvas style={{ height }} ref={canvas} />
+        {demo.args.map((arg) => (
+          <InputComponent
+            key={arg.name}
+            label={arg.name}
+            value={arg.value!}
+            step={(arg as any).step}
+            change={(e) => {
+              arg.value = e
+              onChange()
+            }}
+          />
+        ))}
+        <span className="info">{info}</span>
+        <span className="navinfo">
+          pan: drag-mmb | rotate: drag-rmb | zoom: scroll
+        </span>
+        <a className="sourcelink" onClick={onClickSource}>
+          {state.showingSource ? "hide source" : "show source"}
+        </a>
       </div>
-    )
-  }
+      <code
+        className={classnames(
+          "src",
+          !state.showingSource && "hide",
+          "language-typescript",
+        )}
+        ref={sourceContainer}
+      >
+        {fixFunctionIndentation(f.toSource())}
+      </code>
+    </div>
+  )
 }
 
 export type DemoArg =
@@ -156,43 +138,51 @@ export type DemoArg =
       value?: string
     }
 
-class InputComponent extends Component<
-  InputHTMLAttributes<HTMLInputElement> & {
-    step: number
-    change(x: string): void
-  },
-  {}
-> {
-  onWheel = (e: WheelEvent<HTMLInputElement>) => {
-    const target = e.target as HTMLInputElement
-    const delta =
-      (e.shiftKey ? 0.1 : 1) * Math.sign(-e.deltaY) * this.props.step
-    target.value = "" + round10(parseFloat(target.value) + delta, -6)
-    this.props.change(target.value)
+function InputComponent({
+  step,
+  value,
+  change,
+  label,
+  ...atts
+}: {
+  step: number
+  label: string
+  value: string
+  change(x: string): void
+}) {
+  const foo = (delta: number) =>
+    change("" + round10(parseFloat(value) + delta, -6))
+
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const onWheel = (e: WheelEvent) => {
     e.preventDefault()
-  }
-  private input!: HTMLInputElement
-
-  componentDidMount() {
-    this.input.addEventListener("keypress", this.onWheel, { passive: false })
+    const delta = (e.shiftKey ? 0.1 : 1) * Math.sign(-e.deltaY) * step
+    foo(delta)
   }
 
-  componentWillUnmount() {
-    this.input.removeEventListener("keypress", this.onWheel)
-  }
+  useEffect(() => {
+    const input = inputRef.current!
+    input.addEventListener("wheel", onWheel)
+    return () => {
+      input.removeEventListener("wheel", onWheel)
+    }
+  }, [onWheel])
 
-  render() {
-    const { step, value, change, ...atts } = this.props
-    return (
+  return (
+    <span className="incont">
       <input
         {...atts}
-        defaultValue={"" + value}
-        className={classnames(this.props.className, step && "scrollable")}
-        onBlur={(e) => change((e.target as any).value)}
-        ref={(ref) => (this.input = ref!)}
+        value={value}
+        onChange={(e) => change(e.target.value)}
+        className={classnames(step && "scrollable")}
+        step={step}
+        type={step ? "number" : "text"}
+        ref={inputRef}
       />
-    )
-  }
+      <label>{label}</label>
+    </span>
+  )
 }
 
 export async function demoMain() {
@@ -204,17 +194,14 @@ function setupDemo(
   demo: DemoDesc,
   container: HTMLDivElement,
 ) {
-  //if (demoi !== 0) return
-  // const canvas = new MooEl('canvas', {
-  ;(canvas.width = container.clientWidth),
-    (canvas.height = container.clientHeight),
-    // }) as HTMLCanvasElement
-    window.addEventListener("resize", (e) => {
-      canvas.width = container.clientWidth
-      canvas.height = container.clientHeight
-      gl.viewport(0, 0, canvas.width, canvas.height)
-      setupCamera(demo.eye, gl)
-    })
+  canvas.width = container.clientWidth
+  canvas.height = container.clientHeight
+  window.addEventListener("resize", () => {
+    canvas.width = container.clientWidth
+    canvas.height = container.clientHeight
+    gl.viewport(0, 0, canvas.width, canvas.height)
+    setupCamera(demo.eye, gl)
+  })
   const gl = (demo.gl = BREPGLContext.create(TSGLContext.create({ canvas })))
   gl.clearColor(1.0, 1.0, 1.0, 0.0)
   gl.enable(gl.BLEND)
@@ -222,7 +209,7 @@ function setupDemo(
   gl.enable(gl.CULL_FACE)
   canvas.oncontextmenu = () => false
   gl.depthFunc(gl.LEQUAL)
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA) // TODO ?!
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
   gl.loadIdentity()
@@ -248,10 +235,7 @@ function setupDemo(
   // 	}),
   // )
   // hljs.highlightBlock(demo.srcContainer)
-  update(
-    demo,
-    demo.args.map((a) => "" + a.def),
-  )
+  update(demo)
 }
 
 const meshColorss = [
@@ -346,16 +330,16 @@ function paintDemo(demo: DemoDesc) {
   }
 }
 
-function update(demo: DemoDesc, params: string[]) {
-  const fixedParams = params.map((p, i) => {
-    switch (demo.args[i].type) {
+function update(demo: DemoDesc) {
+  const fixedParams = demo.args.map((arg) => {
+    switch (arg.type) {
       case "number":
       case "int":
-        return parseFloat(p)
+        return parseFloat(arg.value!)
       case "angle":
-        return parseFloat(p) * DEG
+        return parseFloat(arg.value!) * DEG
     }
-    return p
+    return arg.value
   })
   //try {
   const b2s = demo.f.apply(undefined, fixedParams)
@@ -378,7 +362,7 @@ function update(demo: DemoDesc, params: string[]) {
   paintDemo(demo)
 }
 
-window.onload = async (e) => {
+window.onload = async () => {
   await B2T.loadFonts()
   ReactDOM.render(<Body />, document.getElementById("react-root"))
 }
@@ -425,11 +409,6 @@ const Body = () => (
         },
       ]}
     />
-  </div>
-)
-
-const x = (
-  <>
     <h3>Functionality this library implements</h3>
     <ul>
       <li>
@@ -590,5 +569,5 @@ const x = (
         },
       ]}
     />
-  </>
+  </div>
 )

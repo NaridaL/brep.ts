@@ -515,7 +515,7 @@ describe("BREP", () => {
   })
 
   describe("toMesh", () => {
-    test.only("B2T.sphere(2.5).translate(5, 5, 2)", () => {
+    test("B2T.sphere(2.5).translate(5, 5, 2)", () => {
       const bRep = B2T.sphere(2.5).translate(5, 5, 2)
       const mesh = bRep.toMesh()
       expect(mesh.faceIndexes.size).toEqual(bRep.faces.length)

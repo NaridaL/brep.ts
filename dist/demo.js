@@ -40534,7 +40534,6 @@ var demo = (function (exports, hljs) {
                             canvas.getContext("experimental-webgl", options);
                     newGL && (newGL.version = 1);
                 }
-                console.log("getting context");
             }
             catch (e) {
                 console.log(e, "Failed to get context");
@@ -62412,40 +62411,25 @@ var demo = (function (exports, hljs) {
         B2T.loadFonts = loadFonts;
         const loadedFonts = new Map();
         function loadFont(fontPath) {
-            return new Promise(function (resolve, reject) {
+            return __awaiter(this, void 0, void 0, function* () {
                 const font = loadedFonts.get(fontPath);
                 if (font) {
-                    resolve(font);
+                    return font;
                 }
                 else {
-                    load(fontPath, function (err, f) {
-                        if (err) {
-                            reject(err);
-                        }
-                        else {
-                            loadedFonts.set(fontPath, f);
-                            resolve(f);
-                        }
-                    });
+                    const f = yield load(fontPath);
+                    loadedFonts.set(fontPath, f);
+                    return f;
                 }
             });
         }
         B2T.loadFont = loadFont;
-        function loadFontsAsync(callback) {
-            if (B2T.defaultFont) {
-                callback();
-            }
-            else {
-                load("fonts/FiraSansMedium.woff", function (err, font) {
-                    if (err) {
-                        throw new Error("Could not load font: " + err);
-                    }
-                    else {
-                        B2T.defaultFont = font;
-                        callback();
-                    }
-                });
-            }
+        function loadFontsAsync() {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (!B2T.defaultFont) {
+                    B2T.defaultFont = yield load("fonts/FiraSansMedium.woff");
+                }
+            });
         }
         B2T.loadFontsAsync = loadFontsAsync;
         /**
@@ -64926,7 +64910,13 @@ var demo = (function (exports, hljs) {
                     if (testDegeneratePoint(nextStart)) {
                         const bDirLC = surface.matrixInverse.transformVector(edgeLoop[i].bDir);
                         const aDirLC = surface.matrixInverse.transformVector(edgeLoop[ipp].aDir);
-                        const fixAngle = (u) => abs$3(u) === PI$1 && !between(u, surface.uMin, surface.uMax) ? -u : u;
+                        const fixAngle = (u) => {
+                            if (abs$3(u) === PI$1 && !between(u, surface.uMin, surface.uMax))
+                                return -u;
+                            if (u < surface.uMin && eq(u, surface.uMin))
+                                return surface.uMin;
+                            return u;
+                        };
                         const inAngle = fixAngle(Math.atan2(-bDirLC.y, -bDirLC.x));
                         const outAngle = fixAngle(Math.atan2(aDirLC.y, aDirLC.x));
                         const lastV = verticesUV.pop().y;
@@ -65017,7 +65007,7 @@ var demo = (function (exports, hljs) {
                 : this.unrollCylinderLoops(this.getLoops());
             loopStarts.push(vertices.length);
             const verticesMN = verticesUV.map(({ u, v }) => new V3(u / uStep, v / vStep, 0));
-            console.table(verticesUV, ["x", "y"]);
+            //console.table(verticesUV, ["x", "y"])
             // Add all loops as lines to the mesh.
             for (let vertexLoopIndex = 0; vertexLoopIndex < this.getLoops().length; vertexLoopIndex++) {
                 const vertexLoopStart = loopStarts[vertexLoopIndex];
@@ -65037,22 +65027,19 @@ var demo = (function (exports, hljs) {
                 minN = min$4(minN, n);
                 maxN = max$4(maxN, n);
             });
-            console.log(minM, maxM, minN, maxN);
             if (ParametricSurface.is(this.surface)) ;
             const mOffset = floor$2(minM + NLA_PRECISION), nOffset = floor$2(minN + NLA_PRECISION);
             const mRes = ceil(maxM - NLA_PRECISION) - mOffset, nRes = ceil(maxN - NLA_PRECISION) - nOffset;
-            console.log(uStep, vStep, mRes, nRes);
+            //console.log(uStep, vStep, mRes, nRes)
             if (mRes == 1 && nRes == 1) {
                 // triangulate this face as if it were a plane
                 const polyTriangles = triangulateVertices(V3.Z, verticesMN, loopStarts.slice(1, 1 + this.holes.length));
                 triangles.push(...polyTriangles);
             }
             else {
-                const completeParts = [];
                 const partss = new Array(mRes * nRes);
                 function fixUpPart(part, baseM, baseN) {
                     assert(baseM < mRes && baseN < nRes, `${baseM}, ${baseN}, ${mRes}, ${nRes}`);
-                    completeParts.push({ part, baseM, baseN });
                     //console.trace()
                     assert(part.length);
                     const cellM = baseM + mOffset, cellN = baseN + nOffset;
@@ -65154,13 +65141,9 @@ var demo = (function (exports, hljs) {
                         fixUpPart(firstPart, firstPartBaseM, firstPartBaseN);
                         fixUpPart(part, lastBaseM, lastBaseN);
                     }
-                    console.log("firstPart", firstPart);
+                    //      console.log("firstPart", firstPart)
                 }
-                console.log("calculated parts", partss);
-                console.table(completeParts.map((_a) => {
-                    var { part } = _a, rest = __rest(_a, ["part"]);
-                    return (Object.assign({ part: "" + part }, rest));
-                }));
+                //      console.log("calculated parts", partss)
                 const fieldVertexIndices = new Array((mRes + 1) * (nRes + 1));
                 function addVertex(m, n) {
                     verticesMN.push(new V3(m, n, 0));
@@ -79622,7 +79605,7 @@ var demo = (function (exports, hljs) {
             initMeshes((this.meshes = {}), gl);
         }
         static create(gl) {
-            addOwnProperties(gl, BREPGLContext.prototype);
+            addOwnProperties(gl, BREPGLContext.prototype, "constructor");
             addOwnProperties(gl, new BREPGLContext(gl));
             return gl;
         }
@@ -79640,27 +79623,6 @@ var demo = (function (exports, hljs) {
         }
         drawCurve(curve, color = GL_COLOR_BLACK, width = 2, tStart, tEnd) {
             CURVE_PAINTERS[curve.constructor.name](this, curve, color, tStart, tEnd, width);
-        }
-        drawVector(vector, anchor, color = GL_COLOR_BLACK, size = 1) {
-            if (vector.likeO())
-                return;
-            this.pushMatrix();
-            const headLength = size * 4;
-            if (headLength > vector.length())
-                return;
-            const vT = vector.getPerpendicular().unit();
-            this.multMatrix(M4.forSys(vector.unit(), vT, vector.cross(vT).unit(), anchor));
-            this.scale(vector.length() - headLength, size / 2, size / 2);
-            this.shaders.singleColor
-                .uniforms({
-                color: color,
-            })
-                .draw(this.meshes.vectorShaft);
-            this.scale(1 / (vector.length() - headLength), 1, 1);
-            this.translate(vector.length() - headLength, 0, 0);
-            this.scale(headLength / 2, 1, 1);
-            this.shaders.singleColor.draw(this.meshes.vectorHead);
-            this.popMatrix();
         }
         drawVectors(drVs, size = undefined) {
             this.drawVector(V3.X, V3.O, color("red").gl(), size);
@@ -79958,75 +79920,74 @@ var demo = (function (exports, hljs) {
     // 	, normallines: boolean = false, b2s: BRep[] = []
     // const
 
-    class Demo extends react.Component {
-        constructor(props) {
-            super(props);
-            this.argInputs = [];
-            this.onChange = () => {
-                const demo = this.state;
-                update(demo, this.props.args.map((a) => a.value));
-                this.forceUpdate();
-            };
-            this.onClickSource = (e) => {
-                this.setState({ showingSource: !this.state.showingSource });
-            };
-            this.state = Object.assign({}, props, {
-                canvas: undefined,
-                showingSource: false,
-            });
-            props.args.forEach((arg) => (arg.value = "" + arg.def));
-        }
-        componentDidMount() {
-            setupDemo(this.state.canvas, this.state, this.container);
-            hljs.highlightBlock(this.sourceContainer);
-            this.forceUpdate();
-        }
-        render() {
-            console.log(this.state);
-            const demo = this.state;
-            const _a = this.props, { f, args, height, width } = _a, props = __rest(_a, ["f", "args", "height", "width"]);
-            const info = demo.b2s &&
-                "faces: " +
-                    demo.b2s.map((b2) => b2.faces.length).join("/") +
-                    " edges: " +
-                    demo.b2s
-                        .map((b2) => (b2.edgeFaces && b2.edgeFaces.size) || "?")
-                        .join("/") +
-                    " triangles: " +
-                    demo.meshes.map((m) => (m ? m.TRIANGLES.length / 3 : 0)).join("/");
-            return (react.createElement("div", Object.assign({}, props, { style: { width }, className: "democontainer" }),
-                react.createElement("div", { className: "canvascontainer", ref: (r) => (this.container = r), style: { width: "100%", height } },
-                    react.createElement("canvas", { style: { height }, ref: (r) => (demo.canvas = r) }),
-                    this.props.args.map((arg) => (react.createElement("span", { className: "incont", key: arg.name },
-                        react.createElement(InputComponent, { type: "text", "data-name": arg.name, value: arg.value, step: arg.step, ref: (r) => this.argInputs.push(r), change: (e) => ((arg.value = e), this.onChange()) }),
-                        arg.name))),
-                    react.createElement("span", { className: "info" }, info),
-                    react.createElement("span", { className: "navinfo" }, "pan: drag-mmb | rotate: drag-rmb | zoom: scroll"),
-                    react.createElement("a", { className: "sourcelink", onClick: this.onClickSource }, this.state.showingSource ? "hide source" : "show source")),
-                react.createElement("code", { className: classnames("src", !demo.showingSource && "hide"), ref: (r) => (this.sourceContainer = r) }, this.props.f.toSource())));
-        }
+    function fixFunctionIndentation(src) {
+        const indent = /([ \t]*).*$/g.exec(src)[1];
+        return src.replace(new RegExp("^" + indent, "gm"), "");
     }
-    class InputComponent extends react.Component {
-        constructor() {
-            super(...arguments);
-            this.onWheel = (e) => {
-                const target = e.target;
-                const delta = (e.shiftKey ? 0.1 : 1) * Math.sign(-e.deltaY) * this.props.step;
-                target.value = "" + round10(parseFloat(target.value) + delta, -6);
-                this.props.change(target.value);
-                e.preventDefault();
+    function Demo(_a) {
+        var { id, f, args, height, width } = _a, props = __rest(_a, ["id", "f", "args", "height", "width"]);
+        const [state, setState] = react.useState(() => {
+            args.forEach((arg) => (arg.value = "" + arg.def));
+            return {
+                showingSource: false,
+                demo: { id, f, args, height, width },
             };
-        }
-        componentDidMount() {
-            this.input.addEventListener("keypress", this.onWheel, { passive: false });
-        }
-        componentWillUnmount() {
-            this.input.removeEventListener("keypress", this.onWheel);
-        }
-        render() {
-            const _a = this.props, { step, value, change } = _a, atts = __rest(_a, ["step", "value", "change"]);
-            return (react.createElement("input", Object.assign({}, atts, { defaultValue: "" + value, className: classnames(this.props.className, step && "scrollable"), onBlur: (e) => change(e.target.value), ref: (ref) => (this.input = ref) })));
-        }
+        });
+        const container = react.useRef(null);
+        const canvas = react.useRef(null);
+        const sourceContainer = react.useRef(null);
+        const onChange = react.useCallback(() => {
+            update(state.demo);
+            setState((s) => (Object.assign({}, s)));
+        }, [state, setState]);
+        const onClickSource = react.useCallback(() => {
+            setState((s) => (Object.assign(Object.assign({}, s), { showingSource: !s.showingSource })));
+        }, [setState]);
+        react.useEffect(() => {
+            setupDemo(canvas.current, state.demo, container.current);
+            hljs.highlightBlock(sourceContainer.current);
+        }, []);
+        const demo = state.demo;
+        const info = demo.b2s &&
+            "faces: " +
+                demo.b2s.map((b2) => b2.faces.length).join("/") +
+                " edges: " +
+                demo.b2s
+                    .map((b2) => (b2.edgeFaces && b2.edgeFaces.size) || "?")
+                    .join("/") +
+                " triangles: " +
+                demo.meshes.map((m) => (m ? m.TRIANGLES.length / 3 : 0)).join("/");
+        return (react.createElement("div", Object.assign({}, props, { style: { width }, className: "democontainer" }),
+            react.createElement("div", { className: "canvascontainer", ref: container, style: { width: "100%", height } },
+                react.createElement("canvas", { style: { height }, ref: canvas }),
+                demo.args.map((arg) => (react.createElement(InputComponent, { key: arg.name, label: arg.name, value: arg.value, step: arg.step, change: (e) => {
+                        arg.value = e;
+                        onChange();
+                    } }))),
+                react.createElement("span", { className: "info" }, info),
+                react.createElement("span", { className: "navinfo" }, "pan: drag-mmb | rotate: drag-rmb | zoom: scroll"),
+                react.createElement("a", { className: "sourcelink", onClick: onClickSource }, state.showingSource ? "hide source" : "show source")),
+            react.createElement("code", { className: classnames("src", !state.showingSource && "hide", "language-typescript"), ref: sourceContainer }, fixFunctionIndentation(f.toSource()))));
+    }
+    function InputComponent(_a) {
+        var { step, value, change, label } = _a, atts = __rest(_a, ["step", "value", "change", "label"]);
+        const foo = (delta) => change("" + round10(parseFloat(value) + delta, -6));
+        const inputRef = react.useRef(null);
+        const onWheel = (e) => {
+            e.preventDefault();
+            const delta = (e.shiftKey ? 0.1 : 1) * Math.sign(-e.deltaY) * step;
+            foo(delta);
+        };
+        react.useEffect(() => {
+            const input = inputRef.current;
+            input.addEventListener("wheel", onWheel);
+            return () => {
+                input.removeEventListener("wheel", onWheel);
+            };
+        }, [onWheel]);
+        return (react.createElement("span", { className: "incont" },
+            react.createElement("input", Object.assign({}, atts, { value: value, onChange: (e) => change(e.target.value), className: classnames(step && "scrollable"), step: step, type: step ? "number" : "text", ref: inputRef })),
+            react.createElement("label", null, label)));
     }
     function demoMain() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -80034,15 +79995,14 @@ var demo = (function (exports, hljs) {
         });
     }
     function setupDemo(canvas, demo, container) {
-        (canvas.width = container.clientWidth),
-            (canvas.height = container.clientHeight),
-            // }) as HTMLCanvasElement
-            window.addEventListener("resize", (e) => {
-                canvas.width = container.clientWidth;
-                canvas.height = container.clientHeight;
-                gl.viewport(0, 0, canvas.width, canvas.height);
-                setupCamera(demo.eye, gl);
-            });
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        window.addEventListener("resize", () => {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            setupCamera(demo.eye, gl);
+        });
         const gl = (demo.gl = BREPGLContext.create(TSGLContext.create({ canvas })));
         gl.clearColor(1.0, 1.0, 1.0, 0.0);
         gl.enable(gl.BLEND);
@@ -80050,7 +80010,7 @@ var demo = (function (exports, hljs) {
         gl.enable(gl.CULL_FACE);
         canvas.oncontextmenu = () => false;
         gl.depthFunc(gl.LEQUAL);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // TODO ?!
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.loadIdentity();
         gl.scale(10, 10, 10);
@@ -80072,7 +80032,7 @@ var demo = (function (exports, hljs) {
         // 	}),
         // )
         // hljs.highlightBlock(demo.srcContainer)
-        update(demo, demo.args.map((a) => "" + a.def));
+        update(demo);
     }
     const meshColorss = [
         scale(["#ffa621", "#ffd026"]).mode("lab").colors(20, "gl"),
@@ -80123,16 +80083,16 @@ var demo = (function (exports, hljs) {
             gl.popMatrix();
         }
     }
-    function update(demo, params) {
-        const fixedParams = params.map((p, i) => {
-            switch (demo.args[i].type) {
+    function update(demo) {
+        const fixedParams = demo.args.map((arg) => {
+            switch (arg.type) {
                 case "number":
                 case "int":
-                    return parseFloat(p);
+                    return parseFloat(arg.value);
                 case "angle":
-                    return parseFloat(p) * DEG;
+                    return parseFloat(arg.value) * DEG;
             }
-            return p;
+            return arg.value;
         });
         //try {
         const b2s = demo.f.apply(undefined, fixedParams);
@@ -80155,7 +80115,7 @@ var demo = (function (exports, hljs) {
         });
         paintDemo(demo);
     }
-    window.onload = (e) => __awaiter(void 0, void 0, void 0, function* () {
+    window.onload = () => __awaiter(void 0, void 0, void 0, function* () {
         yield B2T.loadFonts();
         reactDom.render(react.createElement(Body, null), document.getElementById("react-root"));
     });
@@ -80184,8 +80144,7 @@ var demo = (function (exports, hljs) {
                     def: 2,
                     step: 0.5,
                 },
-            ] })));
-    const x = (react.createElement(react.Fragment, null,
+            ] }),
         react.createElement("h3", null, "Functionality this library implements"),
         react.createElement("ul", null,
             react.createElement("li", null, "Parametric curves: lines, ellipses, parabolas, hyperbolas, quadratic/cubic beziers, intersection curves between parametric and implicit surfaces."),

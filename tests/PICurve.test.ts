@@ -1,12 +1,6 @@
-import {
-  testCurve,
-  testCurveISInfos,
-  testISCurves,
-  testISTs,
-  testPointT,
-} from "./manager"
+import { testCurve, testISCurves, testISTs, testPointT } from "./manager"
 
-import { DEG, eq, M4, V, V3 } from "ts3dutils"
+import { DEG, M4, V, V3 } from "ts3dutils"
 import {
   BezierCurve,
   P3,

@@ -21,7 +21,7 @@ describe("L3", () => {
     expect(L3.X.isInfoWithLine(new L3(V(1, 1, 0), V3.Y))).toEqualV(V3.X)
   })
 
-  function testCurvePerspectiveTransform(assert: Assert, curve: Curve, m4: M4) {
+  function testCurvePerspectiveTransform(curve: Curve, m4: M4) {
     Mesh.prototype.compile = function () {
       return this
     }

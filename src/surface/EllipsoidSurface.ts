@@ -1,6 +1,7 @@
 import {
   arrayFromFunction,
   assert,
+  assertBetween,
   assertf,
   assertInst,
   assertNumbers,
@@ -70,10 +71,10 @@ export class EllipsoidSurface
     vMax: number = PI / 2,
   ) {
     super(uMin, uMax, vMin, vMax)
-    assert(0 <= uMin && uMin <= PI, uMin)
-    assert(0 <= uMax && uMax <= PI, uMax)
-    assert(-PI / 2 <= vMin && vMin <= PI / 2)
-    assert(-PI / 2 <= vMax && vMax <= PI / 2)
+    assertBetween(0, PI, uMin, "uMin")
+    assertBetween(0, PI, uMax, "uMax")
+    assertBetween(-PI / 2, PI / 2, vMin, "vMin")
+    assertBetween(-PI / 2, PI / 2, vMax, "vMax")
     assertVectors(center, f1, f2, f3)
     this.matrix = M4.forSys(f1, f2, f3, center)
     this.matrixInverse = this.matrix.inversed()

@@ -1709,8 +1709,12 @@ export class RotationFace extends Face {
           const aDirLC = surface.matrixInverse.transformVector(
             edgeLoop[ipp].aDir,
           )
-          const fixAngle = (u: raddd) =>
-            abs(u) === PI && !between(u, surface.uMin, surface.uMax) ? -u : u
+          const fixAngle = (u: raddd) => {
+            if (abs(u) === PI && !between(u, surface.uMin, surface.uMax))
+              return -u
+            if (u < surface.uMin && eq(u, surface.uMin)) return surface.uMin
+            return u
+          }
           const inAngle = fixAngle(Math.atan2(-bDirLC.y, -bDirLC.x))
           const outAngle = fixAngle(Math.atan2(aDirLC.y, aDirLC.x))
 
@@ -1823,7 +1827,7 @@ export class RotationFace extends Face {
     const verticesMN = verticesUV.map(
       ({ u, v }) => new V3(u / uStep, v / vStep, 0),
     )
-    console.table(verticesUV, ["x", "y"])
+    //console.table(verticesUV, ["x", "y"])
 
     // Add all loops as lines to the mesh.
     for (
@@ -1852,7 +1856,6 @@ export class RotationFace extends Face {
       minN = min(minN, n)
       maxN = max(maxN, n)
     })
-    console.log(minM, maxM, minN, maxN)
     if (ParametricSurface.is(this.surface)) {
       //assert(this.surface.boundsSigned(minM * uStep, minN * vStep) >
       // -NLA_PRECISION) assert(this.surface.boundsSigned(maxM * uStep, maxN *
@@ -1862,7 +1865,7 @@ export class RotationFace extends Face {
       nOffset = floor(minN + NLA_PRECISION)
     const mRes = ceil(maxM - NLA_PRECISION) - mOffset,
       nRes = ceil(maxN - NLA_PRECISION) - nOffset
-    console.log(uStep, vStep, mRes, nRes)
+    //console.log(uStep, vStep, mRes, nRes)
     if (mRes == 1 && nRes == 1) {
       // triangulate this face as if it were a plane
       const polyTriangles = triangulateVertices(
@@ -2003,15 +2006,9 @@ export class RotationFace extends Face {
           fixUpPart(firstPart!, firstPartBaseM!, firstPartBaseN!)
           fixUpPart(part!, lastBaseM, lastBaseN)
         }
-        console.log("firstPart", firstPart)
+        //      console.log("firstPart", firstPart)
       }
-      console.log("calculated parts", partss)
-      console.table(
-        completeParts.map(({ part, ...rest }) => ({
-          part: "" + part,
-          ...rest,
-        })),
-      )
+      //      console.log("calculated parts", partss)
       const fieldVertexIndices = new Array((mRes + 1) * (nRes + 1))
 
       function addVertex(m: number, n: number): int {

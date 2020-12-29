@@ -6,7 +6,7 @@ import {
   testLoopContainsPoint,
 } from "./manager"
 
-import { assertf, DEG, M4, V, V3, lt, assert } from "ts3dutils"
+import { assertf, DEG, M4, V, V3 } from "ts3dutils"
 import {
   B2T,
   BezierCurve,
@@ -24,7 +24,7 @@ import {
   edgeForCurveAndTs,
 } from "../src"
 
-import { PI, sin, sqrt } from "../src/math"
+import { PI, sin } from "../src/math"
 
 describe("EllipsoidSurface", () => {
   const ses2 = EllipsoidSurface.UNIT.scale(2)
@@ -516,7 +516,7 @@ describe("EllipsoidSurface", () => {
   })
 
   test("transform4", () => {
-    const s = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z, -PI, PI).flipped()
+    const s = new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z).flipped()
     // prettier-ignore
     const m4 = new M4(
       1, 0, 0, 0,
