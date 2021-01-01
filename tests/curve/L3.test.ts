@@ -1,8 +1,8 @@
-import { outputLink, testCurveCentralProjection } from "./manager"
+import { outputLink, testCurveCentralProjection } from "../manager"
 
 import { M4, V, V3 } from "ts3dutils"
 import { Mesh } from "tsgl"
-import { Curve, L3, edgeForCurveAndTs } from "../src"
+import { Curve, L3, edgeForCurveAndTs } from "brepts"
 
 describe("L3", () => {
   test("isInfosWithLine", () => {

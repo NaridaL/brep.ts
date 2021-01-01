@@ -5,9 +5,9 @@ import {
   testCurvesColinear,
   testCurveTransform,
   testISTs,
-} from "./manager"
+} from "../manager"
 
-import { Curve, Edge, P3, ParabolaCurve } from "../src"
+import { Curve, Edge, P3, ParabolaCurve } from "brepts"
 
 describe("ParabolaCurve", () => {
   const curve = new ParabolaCurve(V(1, 1), V(4, 1, -2), V(1, 10, 2))

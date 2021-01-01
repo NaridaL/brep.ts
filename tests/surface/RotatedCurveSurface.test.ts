@@ -6,7 +6,7 @@ import {
   testISCurves,
   testISTs,
   testLoopContainsPoint,
-} from "./manager"
+} from "../manager"
 
 import { DEG, M4, raddd, TAU, V, V3 } from "ts3dutils"
 import {
@@ -22,8 +22,8 @@ import {
   EllipseCurve,
   StraightEdge,
   edgeForCurveAndTs,
-} from "../src"
-import { cos, PI, sin } from "../src/math"
+} from "brepts"
+import { cos, PI, sin } from "../../src/math"
 
 describe("RotatedCurveSurface", () => {
   const baseCurve = EllipseCurve.forAB(2, 2)

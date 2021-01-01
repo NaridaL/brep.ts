@@ -7,7 +7,7 @@ import {
   testLoopCCW,
   testLoopContainsPoint,
   testSurfaceTransform,
-} from "./manager"
+} from "../manager"
 
 import { DEG, M4, V, V3 } from "ts3dutils"
 import {
@@ -24,8 +24,8 @@ import {
   PointVsFace,
   RotationFace,
   StraightEdge,
-} from "../src"
-import { PI } from "../src/math"
+} from "brepts"
+import { PI } from "../../src/math"
 
 describe("ConicSurface", () => {
   const UCS = ConicSurface.UNIT

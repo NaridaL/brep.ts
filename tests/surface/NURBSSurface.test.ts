@@ -1,4 +1,4 @@
-import { outputLink, suiteSurface, testISTs } from "./manager"
+import { outputLink, suiteSurface, testISTs } from "../manager"
 
 import { arrayFromFunction, DEG, M4, V, V3, VV } from "ts3dutils"
 import {
@@ -8,7 +8,7 @@ import {
   rotateCurve,
   RotatedCurveSurface,
   StraightEdge,
-} from "../src"
+} from "brepts"
 
 describe("NURBSSurface", () => {
   const baseCurve = EllipseCurve.forAB(2, 2)

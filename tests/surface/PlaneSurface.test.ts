@@ -1,4 +1,4 @@
-import { surfaceVolumeAndAreaTests, testLoopContainsPoint } from "./manager"
+import { surfaceVolumeAndAreaTests, testLoopContainsPoint } from "../manager"
 
 import {
   Edge,
@@ -10,9 +10,9 @@ import {
   EllipseCurve,
   StraightEdge,
   edgeForCurveAndTs,
-} from "../src"
+} from "brepts"
 
-import { assert, DEG, V, V3 } from "ts3dutils"
+import { DEG, V, V3 } from "ts3dutils"
 
 describe("PlaneSurface", () => {
   test("loopContainsPoint", () => {

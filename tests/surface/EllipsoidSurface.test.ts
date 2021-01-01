@@ -4,7 +4,7 @@ import {
   surfaceVolumeAndAreaTests,
   testISCurves,
   testLoopContainsPoint,
-} from "./manager"
+} from "../manager"
 
 import { assertf, DEG, M4, V, V3 } from "ts3dutils"
 import {
@@ -22,9 +22,9 @@ import {
   EllipsoidSurface,
   StraightEdge,
   edgeForCurveAndTs,
-} from "../src"
+} from "brepts"
 
-import { PI, sin } from "../src/math"
+import { PI, sin } from "../../src/math"
 
 describe("EllipsoidSurface", () => {
   const ses2 = EllipsoidSurface.UNIT.scale(2)

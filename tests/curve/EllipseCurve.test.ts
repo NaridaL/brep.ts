@@ -4,7 +4,7 @@ import {
   testCurveISInfos,
   testCurveTransform,
   testISTs,
-} from "./manager"
+} from "../manager"
 
 import {
   arrayFromFunction,
@@ -25,7 +25,7 @@ import {
   PlaneSurface,
   parabola4Projection,
   edgeForCurveAndTs,
-} from "../src"
+} from "brepts"
 
 const { PI } = Math
 

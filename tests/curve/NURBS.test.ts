@@ -1,4 +1,4 @@
-import { outputLink, testCurve, testCurveISInfos, testISTs } from "./manager"
+import { outputLink, testCurve, testCurveISInfos, testISTs } from "../manager"
 
 import {
   arrayFromFunction,
@@ -23,8 +23,8 @@ import {
   NURBS,
   P3,
   XiEtaCurve,
-} from "../src"
-import { PI, SQRT1_2, SQRT2 } from "../src/math"
+} from "brepts"
+import { PI, SQRT1_2, SQRT2 } from "../../src/math"
 
 describe("NURBS", () => {
   test("openUniformKnots", () => {

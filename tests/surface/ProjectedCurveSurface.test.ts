@@ -7,7 +7,7 @@ import {
   testISTs,
   testLoopCCW,
   testSurfaceTransform,
-} from "./manager"
+} from "../manager"
 
 import { DEG, M4, V, V3 } from "ts3dutils"
 
@@ -27,7 +27,7 @@ import {
   ProjectedCurveSurface,
   RotationFace,
   StraightEdge,
-} from "../src"
+} from "brepts"
 
 describe("ProjectedCurveSurface", () => {
   const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, 0, 2)

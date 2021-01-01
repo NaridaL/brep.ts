@@ -5,7 +5,7 @@ import {
   testISCurves,
   testISTs,
   testLoopContainsPoint,
-} from "./manager"
+} from "../manager"
 
 import { DEG, V, V3 } from "ts3dutils"
 import {
@@ -26,8 +26,8 @@ import {
   EllipsoidSurface,
   StraightEdge,
   edgeForCurveAndTs,
-} from "../src"
-import { PI, sin } from "../src/math"
+} from "brepts"
+import { PI, sin } from "../../src/math"
 
 describe("CylinderSurface", () => {
   test("loopContainsPoint with PICurve", () => {

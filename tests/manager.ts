@@ -98,7 +98,7 @@ expect.extend({
   toMatchBRepSnapshot(actual: BRep, additionalStuff = {}) {
     const fileName = path.join(
       __dirname,
-      "snapshots",
+      "__snapshots__",
       sanitizeFilename(expect.getState().currentTestName) + ".ts",
     )
     console.log("snapshot", fileName)

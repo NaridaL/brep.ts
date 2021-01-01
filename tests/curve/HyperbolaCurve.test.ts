@@ -1,9 +1,7 @@
-import { testCurve, testCurveTransform, testISTs } from "./manager"
+import { testCurve, testCurveTransform, testISTs } from "../manager"
 
 import { DEG, M4, V } from "ts3dutils"
-import { HyperbolaCurve, intersectionUnitHyperbolaLine, P3 } from "../src"
-
-import { sqrt } from "../src/math"
+import { HyperbolaCurve, intersectionUnitHyperbolaLine, P3 } from "brepts"
 
 describe("HyperbolaCurve", () => {
   test("testCurve", () => {
@@ -19,9 +17,9 @@ describe("HyperbolaCurve", () => {
 
     expect(intersectionUnitHyperbolaLine(1, 0, 2)).toEqual({
       x1: 2,
-      y1: sqrt(3),
+      y1: Math.sqrt(3),
       x2: 2,
-      y2: -sqrt(3),
+      y2: -Math.sqrt(3),
     })
   })
   test("isTsWithPlane", () => {

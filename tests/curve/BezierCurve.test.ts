@@ -5,7 +5,7 @@ import {
   testISTs,
   testPointT,
   outputLink,
-} from "./manager"
+} from "../manager"
 
 import { DEG, eq, eq0, M4, NLA_PRECISION, V, V3, arraySamples } from "ts3dutils"
 import {
@@ -17,9 +17,9 @@ import {
   EllipsoidSurface,
   Edge,
   edgeForCurveAndTs,
-} from "../src"
+} from "brepts"
 
-import { PI } from "../src/math"
+import { PI } from "../../src/math"
 
 describe("BezierCurve", () => {
   describe("isTsWithSurface(CylinderSurface)", () =>

@@ -3,8 +3,6 @@ import { testParametricSurface } from "./manager"
 import { M4, TAU } from "ts3dutils"
 import { RotationREqFOfZ } from "../src"
 
-import { sin, cos } from "../src/math"
-
 describe.skip("RotationREqFOfZ", () => {
   const sinSurface = new RotationREqFOfZ(
     M4.IDENTITY,

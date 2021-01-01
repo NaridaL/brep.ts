@@ -1,4 +1,4 @@
-import { testCurve, testISCurves, testISTs, testPointT } from "./manager"
+import { testCurve, testISCurves, testISTs, testPointT } from "../manager"
 
 import { DEG, M4, V, V3 } from "ts3dutils"
 import {
@@ -12,7 +12,7 @@ import {
   CylinderSurface,
   EllipseCurve,
   EllipsoidSurface,
-} from "../src"
+} from "brepts"
 
 describe("PICurve", () => {
   describe("pointT", () => {

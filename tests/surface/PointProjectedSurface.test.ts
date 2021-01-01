@@ -1,4 +1,4 @@
-import { outputLink, suiteSurface } from "./manager"
+import { outputLink, suiteSurface } from "../manager"
 
 import {
   addOwnProperties,
@@ -17,7 +17,7 @@ import {
   P3,
   PointProjectedSurface,
   ProjectedCurveSurface,
-} from "../src"
+} from "brepts"
 
 test.skip("PointProjectedSurface", () => {
   const baseCurve = BezierCurve.graphXY(2, -3, -3, 2, -1, 2)
