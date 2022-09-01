@@ -1,11 +1,11 @@
+import { load, Path } from 'opentype.js';
+import { SVGPathData } from 'svg-pathdata';
+import earcut from 'earcut';
+import { Pair, JavaMap, JavaSet } from 'javasetmap.ts';
+import nerdamer from 'nerdamer';
+import chroma from 'chroma-js';
 import { AABB, arrayFromFunction, assert, assertNumbers, callsce, clamp, eq, eq0, fuzzyUniquesF, getIntervals, glqInSteps, hasConstructor, le, newtonIterate1d, newtonIterate2dWithDerivatives, newtonIterateWithDerivative, NLA_PRECISION, Transformable, V, V3, assertInst, assertVectors, M4, snap0, solveCubicReal2, TAU, DEG, arrayRange, bisect, assertf, assertNever, between, combinations, fuzzyUniques, lerp, MINUS, lt, VV, newtonIterate, pqFormula, checkDerivate, fuzzyBetween, newtonIterateSmart, arraySamples, newtonIterateWithDerivative2, snap, vArrGet, Vector, floatHashCode, isCCW, gaussLegendreQuadrature24, getRoots, toSource, gaussLegendre24Weights, gaussLegendre24Xs, GOLDEN_RATIO, mod, snap2, disableConsole, doubleSignedArea, enableConsole, ge, gt, mapPush, newtonIterate2d, NLA_DEBUG, SCE, addOwnProperties } from 'ts3dutils';
 import { pushQuad, Mesh, GL_COLOR_BLACK, Shader } from 'tsgl';
-import { load, Path } from 'opentype.js';
-import chroma from 'chroma-js';
-import { SVGPathData } from 'svg-pathdata';
-import { Pair, JavaMap, JavaSet } from 'javasetmap.ts';
-import earcut from 'earcut';
-import nerdamer from 'nerdamer';
 
 const { abs, acos, acosh, asin, asinh, atan, atanh, atan2, ceil, cbrt, expm1, clz32, cos, cosh, exp, floor, fround, hypot, imul, log, log1p, log2, log10, max, min, pow, random, round, sign, sin, sinh, sqrt, tan, tanh, trunc, E, LN10, LN2, LOG10E, LOG2E, PI, SQRT1_2, SQRT2, } = Math;
 
@@ -1910,7 +1910,7 @@ class L3$$1 extends Curve$$1 {
         const s = anchorDiff.cross(this.dir1).dot(dirCross) / div;
         const t = anchorDiff.cross(line.dir1).dot(dirCross) / div;
         return { s: s, t: t };
-        //console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1,
+        // console.log(segmentIntersectsRay, a, b, "ab", ab, "p", p, "dir", dir, s > 0 && t / div >= 0 && t / div <= 1,
         // "s", s, "t", t, "div", div)
     }
     ddt() {
@@ -3007,9 +3007,7 @@ class NURBS$$1 extends Curve$$1 {
         }
         assert(degree >= 1, 'degree must be at least 1 (linear)');
         assert(degree % 1 == 0);
-        for (let i = 0; i < knots.length - 1; i++) {
-            assert(knots[i] <= knots[i + 1], 'knot values must be in ascending order');
-        }
+        assert(-1 == knots.firstUnsorted(MINUS), 'knot values must be in ascending order');
     }
     getConstructorParameters() {
         return [this.points, this.degree, this.knots];
@@ -6131,7 +6129,11 @@ class PointProjectedSurface$$1 extends ParametricSurface$$1 {
 PointProjectedSurface$$1.prototype.vStep = 256;
 
 class NURBSSurface$$1 extends ParametricSurface$$1 {
-    constructor(points, knotsU, knotsV, degreeU, degreeV, uMin = knotsU[degreeU], uMax = knotsU[knotsU.length - degreeU - 1], vMin = knotsV[degreeV], vMax = knotsV[knotsV.length - degreeV - 1]) {
+    constructor(
+    /**
+     * Control points in u-major order. I.e. the first pointCountU points are a NURBS.
+     */
+    points, knotsU, knotsV, degreeU, degreeV, uMin = knotsU[degreeU], uMax = knotsU[knotsU.length - degreeU - 1], vMin = knotsV[degreeV], vMax = knotsV[knotsV.length - degreeV - 1]) {
         super(uMin, uMax, vMin, vMax);
         this.points = points;
         this.knotsU = knotsU;
@@ -6142,6 +6144,8 @@ class NURBSSurface$$1 extends ParametricSurface$$1 {
         const pointCountV = knotsV.length - 1 - degreeV;
         assert(pointCountU * pointCountV == points.length);
         assert(degreeU <= degreeV, 'degreeU <= degreeV');
+        assert(-1 == knotsU.firstUnsorted(MINUS), 'knot values must be in ascending order');
+        assert(-1 == knotsV.firstUnsorted(MINUS), 'knot values must be in ascending order');
     }
     getConstructorParameters() {
         return [
@@ -6150,45 +6154,43 @@ class NURBSSurface$$1 extends ParametricSurface$$1 {
             this.knotsV,
             this.degreeU,
             this.degreeV,
-            this.sMin,
-            this.sMax,
-            this.tMin,
-            this.tMax,
+            this.uMin,
+            this.uMax,
+            this.vMin,
+            this.vMax,
         ];
     }
     transform(m4) {
         return this.transform4(m4);
     }
     transform4(m4) {
-        return new NURBSSurface$$1(this.points.map(p => m4.timesVector(p)), this.knotsU, this.knotsV, this.degreeU, this.degreeV, this.sMin, this.sMax, this.tMin, this.tMax);
+        return new NURBSSurface$$1(this.points.map(p => m4.timesVector(p)), this.knotsU, this.knotsV, this.degreeU, this.degreeV, this.uMin, this.uMax, this.vMin, this.vMax);
     }
-    pST(s, t) {
-        return this.isoparametricU(s).at(t);
+    pUV(u, v) {
+        return this.isoparametricU(u).at(v);
     }
-    dpds() {
-        return (s, t) => this.isoparametricV(t).tangentAt(s);
+    dpdu() {
+        return (u, v) => this.isoparametricV(v).tangentAt(u);
     }
-    dpdt() {
-        return (s, t) => this.isoparametricU(s).tangentAt(t);
+    dpdv() {
+        return (u, v) => this.isoparametricU(u).tangentAt(v);
     }
-    normalST(s, t) {
-        return this.dpds()(s, t)
-            .cross(this.dpdt()(s, t))
-            .unit();
+    normalUV(u, v) {
+        const normal = this.dpdu()(u, v).cross(this.dpdv()(u, v));
+        return normal.likeO() ? V3.X : normal.unit();
     }
     isoparametricU(u) {
         const pointCountU = this.knotsU.length - 1 - this.degreeU;
         const pointCountV = this.knotsV.length - 1 - this.degreeV;
         return new NURBS$$1(arrayFromFunction(pointCountV, i => {
             return deBoor(this.points.slice(i * pointCountU, (i + 1) * pointCountU), this.degreeU, this.knotsU, u);
-        }), this.degreeV, this.knotsV, this.tMin, this.tMax);
+        }), this.degreeV, this.knotsV, this.vMin, this.vMax);
     }
     isoparametricV(v) {
         const pointCountU = this.knotsU.length - 1 - this.degreeU;
-        const pointCountV = this.knotsV.length - 1 - this.degreeV;
         return new NURBS$$1(arrayFromFunction(pointCountU, i => {
             return deBoor(this.points.sliceStep(i, this.points.length, pointCountU, 1), this.degreeV, this.knotsV, v);
-        }), this.degreeU, this.knotsU, this.sMin, this.sMax);
+        }), this.degreeU, this.knotsU, this.uMin, this.uMax);
     }
     debugInfo() {
         const pointCountU = this.knotsU.length - 1 - this.degreeU;
@@ -6208,6 +6210,13 @@ class NURBSSurface$$1 extends ParametricSurface$$1 {
             }
         }
         return { points: this.points.map(p => p.p3()), lines: grid };
+    }
+    flipped() {
+        const pointCountU = this.knotsU.length - 1 - this.degreeU;
+        return new NURBSSurface$$1(arrayFromFunction(this.points.length, i => {
+            const u = i % pointCountU;
+            return this.points[i - u + (pointCountU - u - 1)];
+        }), this.knotsU.map(x => -x).reverse(), this.knotsV, this.degreeU, this.degreeV, -this.uMax, -this.uMin, this.vMin, this.vMax);
     }
 }
 NURBSSurface$$1.prototype.uStep = 1 / 8;
@@ -7677,7 +7686,7 @@ var B2T;
     }
     B2T$$1.pyramidEdges = pyramidEdges;
     function fromBPT(bpt) {
-        const lineRegex = /.*/g;
+        const lineRegex = /.+/g;
         const readLine = () => lineRegex.exec(bpt)[0];
         const readLineNumbers = () => readLine()
             .trim()
@@ -7685,9 +7694,10 @@ var B2T;
             .map(s => parseFloat(s));
         const numOfPatches = parseInt(readLine());
         const faces = arrayFromFunction(numOfPatches, () => {
-            const [degreeU, degreeV] = readLineNumbers();
-            const points = arrayFromFunction(degreeU * degreeV, () => VV(...readLineNumbers(), 1));
-            const surface = new NURBSSurface$$1(points, NURBS$$1.bezierKnots(degreeU), NURBS$$1.bezierKnots(degreeV), degreeU, degreeV, 0, 1, 0, 1);
+            const [pointsUCount, pointsVCount] = readLineNumbers();
+            const points = Array.from({ length: (pointsUCount + 1) * (pointsVCount + 1) }, () => VV(...readLineNumbers(), 1));
+            const surface = new NURBSSurface$$1(points, NURBS$$1.bezierKnots(pointsUCount), NURBS$$1.bezierKnots(pointsVCount), pointsUCount, pointsVCount, 0, 1, 0, 1);
+            return surface;
             const edges = [
                 Edge$$1.forCurveAndTs(surface.isoparametricV(0)),
                 Edge$$1.forCurveAndTs(surface.isoparametricU(1)),
@@ -7696,6 +7706,7 @@ var B2T;
             ];
             return Face$$1.create(surface, edges);
         });
+        return faces;
         return new BRep$$1(faces, false);
     }
     B2T$$1.fromBPT = fromBPT;
@@ -8365,7 +8376,7 @@ class Face$$1 extends Transformable {
         //contour.forEach(e => {
         //	assert(surface.containsCurve(e.curve), 'edge not in surface ' + e + surface)
         //})
-        assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'));
+        //assert(surface.edgeLoopCCW(contour), surface.toString() + contour.join('\n'))
         holes && holes.forEach(hole => Edge$$1.assertLoop(hole));
         holes && holes.forEach(hole => assert(!surface.edgeLoopCCW(hole)));
         assert(!holes || holes.constructor == Array, holes && holes.toString());
@@ -12267,7 +12278,7 @@ function setupCamera$$1(_eye, _gl, suppressEvents = false) {
     !suppressEvents && cameraChangeListeners$$1.forEach(l => l(_eye));
 }
 const cameraChangeListeners$$1 = [];
-const SHADERS_TYPE_VAR$$1 = false;
+const SHADERS_TYPE_VAR$$1 = false && initShaders$$1(0);
 // let shaders: typeof SHADERS_TYPE_VAR
 // declare let a: BRep, b: BRep, c: BRep, d: BRep, edges: Edge[] = [], hovering: any,
 // 	, normallines: boolean = false, b2s: BRep[] = []

@@ -34,4 +34,4 @@ export * from './Face'
 export * from './BRep'
 
 export * from './ClassSerializer'
-export * from './BREPGLContext'
+export * from './BRepGLContext'

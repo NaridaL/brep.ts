@@ -41,21 +41,21 @@ export const COLORS = {
 	PP_FILL: chroma('#F3B6CF'),
 	PP_STROKE: chroma('#EB81B4'),
 }
-export interface BREPGLContext extends TSGLContext {}
-export class BREPGLContext {
+export interface BRepGLContext extends TSGLContext {}
+export class BRepGLContext {
 	shaders: SHADERS_TYPE
 
 	cachedMeshes: WeakMap<any, Mesh & { TRIANGLES: int[]; normals: V3[] }> = new WeakMap()
 
-	constructor(gl: BREPGLContext) {
+	constructor(gl: BRepGLContext) {
 		this.shaders = initShaders(gl)
 		initMeshes((this.meshes = {}), gl)
 	}
 
 	static create(gl: TSGLContext) {
-		addOwnProperties(gl, BREPGLContext.prototype)
-		addOwnProperties(gl, new BREPGLContext(gl as BREPGLContext))
-		return gl as BREPGLContext
+		addOwnProperties(gl, BRepGLContext.prototype)
+		addOwnProperties(gl, new BRepGLContext(gl as BRepGLContext))
+		return gl as BRepGLContext
 	}
 
 	drawPoint(p: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 5) {
@@ -133,7 +133,7 @@ export class BREPGLContext {
 
 function conicPainter(
 	mode: 0 | 1 | 2,
-	gl: BREPGLContext,
+	gl: BRepGLContext,
 	ellipse: EllipseCurve,
 	color: GL_COLOR,
 	startT: number,
@@ -156,7 +156,7 @@ function conicPainter(
 
 export const CURVE_PAINTERS: {
 	[curveConstructorName: string]: (
-		gl: BREPGLContext,
+		gl: BRepGLContext,
 		curve: Curve,
 		color: GL_COLOR,
 		startT: number,
@@ -279,7 +279,7 @@ export const CURVE_PAINTERS: {
 CURVE_PAINTERS[PICurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 CURVE_PAINTERS[PPCurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
-export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BREPGLContext) {
+export function initMeshes(_meshes: { [name: string]: Mesh }, _gl: BRepGLContext) {
 	_gl.makeCurrent()
 	_meshes.cube = (() => {
 		const cube = B2T.box()
@@ -337,7 +337,7 @@ function makeDottedLinePlane(count: int = 128) {
 }
 
 export type Eye = { pos: V3; focus: V3; up: V3; zoomFactor: number }
-export function initNavigationEvents(_gl: BREPGLContext, eye: Eye, paintScreen: () => void) {
+export function initNavigationEvents(_gl: BRepGLContext, eye: Eye, paintScreen: () => void) {
 	const canvas = _gl.canvas
 	let lastPos: V3 = V3.O
 	//_gl.onmousedown.push((e) => {
