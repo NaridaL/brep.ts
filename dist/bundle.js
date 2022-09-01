@@ -11943,15 +11943,15 @@ const COLORS$$1 = {
     PP_FILL: chroma('#F3B6CF'),
     PP_STROKE: chroma('#EB81B4'),
 };
-class BREPGLContext$$1 {
+class BRepGLContext$$1 {
     constructor(gl) {
         this.cachedMeshes = new WeakMap();
         this.shaders = initShaders$$1(gl);
         initMeshes$$1((this.meshes = {}), gl);
     }
     static create(gl) {
-        ts3dutils.addOwnProperties(gl, BREPGLContext$$1.prototype);
-        ts3dutils.addOwnProperties(gl, new BREPGLContext$$1(gl));
+        ts3dutils.addOwnProperties(gl, BRepGLContext$$1.prototype);
+        ts3dutils.addOwnProperties(gl, new BRepGLContext$$1(gl));
         return gl;
     }
     drawPoint(p, color = tsgl.GL_COLOR_BLACK, size = 5) {
@@ -12370,7 +12370,7 @@ exports.doNotSerialize = doNotSerialize$$1;
 exports.ClassSerializer = ClassSerializer$$1;
 exports.parseGetParams = parseGetParams$$1;
 exports.COLORS = COLORS$$1;
-exports.BREPGLContext = BREPGLContext$$1;
+exports.BRepGLContext = BRepGLContext$$1;
 exports.CURVE_PAINTERS = CURVE_PAINTERS$$1;
 exports.initMeshes = initMeshes$$1;
 exports.initShaders = initShaders$$1;
