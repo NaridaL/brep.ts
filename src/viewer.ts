@@ -8,7 +8,7 @@ import { GL_COLOR, GL_COLOR_BLACK, Mesh, TSGLContext } from 'tsgl'
 import {
 	B2T,
 	BRep,
-	BREPGLContext,
+	BRepGLContext,
 	cameraChangeListeners,
 	COLORS,
 	Curve,
@@ -205,7 +205,7 @@ const brepMeshColors: Color[][] = [
 const brepMeshColorssGL = brepMeshColors.map(cs => cs.map(c => c.gl()))
 const meshColorsGL: GL_COLOR[] = chroma.scale('GnBu').colors(16, 'gl')
 
-function viewerPaint(time: int, gl: BREPGLContext) {
+function viewerPaint(time: int, gl: BRepGLContext) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.loadIdentity()
 
@@ -392,7 +392,7 @@ function getHovering(
 	return hoverHighlight
 }
 
-function initInfoEvents(paintScreen: () => {}, gl: BREPGLContext) {
+function initInfoEvents(paintScreen: () => {}, gl: BRepGLContext) {
 	gl.canvas.addEventListener('mousemove', function(e) {
 		const mouseLine = getMouseLine({ x: e.clientX, y: e.clientY }, gl)
 		const faces = bReps.flatMap(b2 => b2 && b2.faces)
@@ -468,7 +468,7 @@ export async function viewerMain() {
 		setupCamera(eye, gl, true)
 		paintScreen()
 	}
-	const gl = BREPGLContext.create(
+	const gl = BRepGLContext.create(
 		TSGLContext.create({ canvas: document.getElementById('testcanvas') as HTMLCanvasElement }),
 	)
 	gl.fullscreen()

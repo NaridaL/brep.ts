@@ -76,6 +76,7 @@
   "scripts": {
     "clean": "rm -r dist/* out/*",
     "build": "tsc & rollup -c & npm run minify",
+    "build-linux": "tsc ; rollup -c && npm run minify",
     "config": "node node_modules/naridal-tslib-config",
     "dev": "concurrently --kill-others \"tsc -w\" \"rollup -c -w\"",
     "linky": "npm link tsgl ts3dutils naridal-tslib-config",
