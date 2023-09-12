@@ -137,17 +137,17 @@ describe("NURBS", () => {
   })
 
   test("UnitCircle", () => {
-    console.log(NURBS.UnitCircle().toString())
-    testCurve(NURBS.UnitCircle(), undefined, "half circle in 2 segments")
+    testCurve(NURBS.UnitCircle(), true, "half circle in 2 segments")
+    // Edges can't be loops, so we can't do a full circle.
     testCurve(
-      NURBS.UnitCircle(5, -PI, PI),
-      undefined,
-      "full circle in 5 segments",
+      NURBS.UnitCircle(5, -PI, (3 / 10) * PI),
+      true,
+      "4/5 circle in 4 segments",
     )
     testCurve(
-      NURBS.UnitCircle(3, -PI, PI),
-      undefined,
-      "full circle in 3 segments",
+      NURBS.UnitCircle(3, -PI, (1 / 6) * PI),
+      true,
+      "2/3 circle in 2 segments",
     )
   })
 

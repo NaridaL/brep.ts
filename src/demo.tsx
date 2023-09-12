@@ -7,7 +7,7 @@ import { assertf, clamp, DEG, emod, int, round10, TAU, V, V3 } from "ts3dutils"
 import { TSGLContext } from "tsgl"
 
 import {
-  BREPGLContext,
+  BRepGLContext,
   initMeshes,
   initNavigationEvents,
   initShaders,
@@ -35,7 +35,7 @@ type DemoDesc = {
   f(...args: any[]): BRep | BRep[]
   args: DemoArg[]
   canvas: HTMLCanvasElement
-  gl: BREPGLContext
+  gl: BRepGLContext
   eye: { pos: V3; focus: V3; up: V3; zoomFactor: 8 }
   b2s: BRep[]
   meshes: (B2Mesh & { lines?: int[] })[]
@@ -202,7 +202,7 @@ function setupDemo(
     gl.viewport(0, 0, canvas.width, canvas.height)
     setupCamera(demo.eye, gl)
   })
-  const gl = (demo.gl = BREPGLContext.create(TSGLContext.create({ canvas })))
+  const gl = (demo.gl = BRepGLContext.create(TSGLContext.create({ canvas })))
   gl.clearColor(1.0, 1.0, 1.0, 0.0)
   gl.enable(gl.BLEND)
   gl.enable(gl.DEPTH_TEST)

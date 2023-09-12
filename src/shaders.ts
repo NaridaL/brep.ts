@@ -171,11 +171,11 @@ export const vertexShaderConic3d: ShaderType<{
 export const vertexShaderNURBS: ShaderType<{}> = `#version 300 es
   uniform mat4 ts_ModelViewProjectionMatrix;
   in vec4 ts_Vertex;
+  out vec4 color;
   uniform float startT, endT, scale;
   uniform vec4 points[32];
   uniform int pointCount, degree;
   uniform float knots[40];
-  uniform vec3 normal;
   const int MIN_DEGREE = 1;
   const int MAX_DEGREE = 6;
 
@@ -203,7 +203,7 @@ export const vertexShaderNURBS: ShaderType<{}> = `#version 300 es
     }
 
     vec4 pTangent4, ddt4 = vec4(0, 0, 1, 0);
-    for (int level = 0; level < degree; level++) {
+    for (int level = 0; level < 1; level++) {
       if (level == degree - 2) {
         // see https://www.globalspec.com/reference/61012/203279/10-8-derivatives
         vec4 a = v[degree];
@@ -224,7 +224,7 @@ export const vertexShaderNURBS: ShaderType<{}> = `#version 300 es
       }
     }
 
-    vec4 p4 = v[degree];
+    vec4 p4 = ts_Vertex;
 
     vec3 p = p4.xyz / p4.w;
     vec3 pTangent = ((pTangent4.xyz * p4.w) - (p4.xyz * pTangent4.w)) / (p4.w * p4.w);
@@ -238,6 +238,7 @@ export const vertexShaderNURBS: ShaderType<{}> = `#version 300 es
     vec3 correctNormal = normalize(cross(pTangent, outDir));
     vec3 p2 = p + scale * (outDir * ts_Vertex.y + correctNormal * ts_Vertex.z);
     gl_Position = ts_ModelViewProjectionMatrix * vec4(p2, 1);
+    color = vec4(ts_Vertex.x, 0.0, 0.0, 1.0);
   }
 `
 
@@ -354,6 +355,14 @@ export const fragmentShaderVaryingColor: ShaderType<{}> = `
   varying vec4 fragColor;
   void main() {
     gl_FragColor = fragColor;
+  }
+`
+export const fragmentShaderVaryingColor3: ShaderType<{}> = `#version 300 es
+  precision highp float;
+  in vec4 color;
+  out vec4 fragColor;
+  void main() {
+    fragColor = color;
   }
 `
 export const fragmentShaderColorHighlight: ShaderType<{}> = `

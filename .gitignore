@@ -8,6 +8,7 @@ out
 lib
 *.pdf
 .nyc_output
+.cache
 
 # WebStorm
 .idea/**/workspace.xml

@@ -60,10 +60,9 @@ export const COLORS = {
   PP_FILL: chroma.color("#F3B6CF"),
   PP_STROKE: chroma.color("#EB81B4"),
 }
-
-export interface BREPGLContext extends TSGLContextBase {}
-
-export class BREPGLContext {
+export type BRepGLContext = BRepGLContextBase & WebGL2RenderingContextStrict
+export interface BRepGLContextBase extends TSGLContextBase {}
+export class BRepGLContextBase {
   shaders: SHADERS_TYPE
 
   cachedMeshes: WeakMap<
@@ -71,15 +70,26 @@ export class BREPGLContext {
     Mesh & { TRIANGLES: int[]; normals: V3[] }
   > = new WeakMap()
 
-  constructor(gl: BREPGLContext) {
-    this.shaders = initShaders(gl)
-    initMeshes((this.meshes = {}), gl)
+  constructor(gl: BRepGLContext) {}
+
+  init() {
+    this.shaders = initShaders(this)
+    initMeshes((this.meshes = {}), this)
   }
 
-  static create(gl: TSGLContext) {
-    addOwnProperties(gl, BREPGLContext.prototype, "constructor")
-    addOwnProperties(gl, new BREPGLContext(gl as BREPGLContext))
-    return gl as BREPGLContext
+  static create(
+    options: Partial<
+      WebGLRenderingContextStrict.WebGLContextAttributes & {
+        canvas: HTMLCanvasElement
+        throwOnError: boolean
+      }
+    > = {},
+  ): BRepGLContext {
+    const tsgl = TSGLContext.create(options)
+    addOwnProperties(tsgl, BRepGLContextBase.prototype, "constructor")
+    addOwnProperties(tsgl, new BRepGLContextBase(tsgl))
+    tsgl.init()
+    return tsgl
   }
 
   drawPoint(p: V3, color: GL_COLOR = GL_COLOR_BLACK, size = 5) {
@@ -94,7 +104,7 @@ export class BREPGLContext {
 
   drawEdge(edge: Edge, color: GL_COLOR = GL_COLOR_BLACK, width = 2) {
     CURVE_PAINTERS[edge.curve.constructor.name](
-      this,
+      (this as unknown) as BRepGLContext,
       edge.curve,
       color,
       edge.minT,
@@ -111,7 +121,7 @@ export class BREPGLContext {
     tEnd: number,
   ) {
     CURVE_PAINTERS[curve.constructor.name](
-      this,
+      (this as unknown) as BRepGLContext,
       curve,
       color,
       tStart,
@@ -173,10 +183,12 @@ export class BREPGLContext {
     this.popMatrix()
   }
 }
-
+export namespace BRepGLContext {
+  export const create = BRepGLContextBase.create
+}
 function conicPainter(
   mode: 0 | 1 | 2,
-  gl: BREPGLContext,
+  gl: BRepGLContext,
   ellipse: EllipseCurve,
   color: GL_COLOR,
   startT: number,
@@ -199,7 +211,7 @@ function conicPainter(
 
 export const CURVE_PAINTERS: {
   [curveConstructorName: string]: (
-    gl: BREPGLContext,
+    gl: BRepGLContext,
     curve: any,
     color: GL_COLOR,
     startT: number,
@@ -324,6 +336,8 @@ export const CURVE_PAINTERS: {
     width = 2,
     normal = V3.Z,
   ) {
+    console.log(Vector.pack(curve.points))
+    console.log(curve.knots)
     gl.shaders.nurbs
       .uniforms({
         "points[0]": Vector.pack(curve.points),
@@ -360,7 +374,7 @@ CURVE_PAINTERS[PPCurve.name] = CURVE_PAINTERS[ImplicitCurve.name]
 
 export function initMeshes(
   _meshes: { [name: string]: Mesh },
-  _gl: BREPGLContext,
+  _gl: BRepGLContext,
 ) {
   _gl.makeCurrent()
   _meshes.cube = (() => {
@@ -413,48 +427,80 @@ export function initShaders(_gl: TSGLContext) {
     singleColor: Shader.create(
       shaders.vertexShaderBasic,
       shaders.fragmentShaderColor,
+      _gl,
+      "singleColor",
     ),
     multiColor: Shader.create(
       shaders.vertexShaderColor,
       shaders.fragmentShaderVaryingColor,
+      _gl,
+      "multiColor",
     ),
     singleColorHighlight: Shader.create(
       shaders.vertexShaderBasic,
       shaders.fragmentShaderColorHighlight,
+      _gl,
+      "singleColorHighlight",
     ),
     textureColor: Shader.create(
       shaders.vertexShaderTexture,
       shaders.fragmentShaderTextureColor,
+      _gl,
+      "textureColor",
     ),
-    arc: Shader.create(shaders.vertexShaderRing, shaders.fragmentShaderColor),
-    arc2: Shader.create(shaders.vertexShaderArc, shaders.fragmentShaderColor),
+    arc: Shader.create(
+      shaders.vertexShaderRing,
+      shaders.fragmentShaderColor,
+      _gl,
+      "arc",
+    ),
+    arc2: Shader.create(
+      shaders.vertexShaderArc,
+      shaders.fragmentShaderColor,
+      _gl,
+      "arc2",
+    ),
     ellipse3d: Shader.create(
       shaders.vertexShaderConic3d,
       shaders.fragmentShaderColor,
+      _gl,
+      "ellipse3d",
     ),
     generic3d: Shader.create(
       shaders.vertexShaderGeneric,
       shaders.fragmentShaderColor,
+      _gl,
+      "generic3d",
     ),
     bezier3d: Shader.create(
       shaders.vertexShaderBezier3d,
       shaders.fragmentShaderColor,
+      _gl,
+      "bezier3d",
     ),
     nurbs: Shader.create(
       shaders.vertexShaderNURBS,
-      shaders.fragmentShaderColor3,
+      shaders.fragmentShaderVaryingColor3,
+      _gl,
+      "nurbs",
     ),
     bezier: Shader.create(
       shaders.vertexShaderBezier,
       shaders.fragmentShaderColor,
+      _gl,
+      "bezier",
     ),
     lighting: Shader.create(
       shaders.vertexShaderLighting,
       shaders.fragmentShaderLighting,
+      _gl,
+      "lighting",
     ),
     waves: Shader.create(
       shaders.vertexShaderWaves,
       shaders.fragmentShaderLighting,
+      _gl,
+      "waves",
     ),
   }
 }
@@ -484,9 +530,10 @@ function makeDottedLinePlane(count: int = 128) {
 export type Eye = { pos: V3; focus: V3; up: V3; zoomFactor: number }
 
 export function initNavigationEvents(
-  _gl: BREPGLContext,
+  _gl: BRepGLContext,
   eye: Eye,
   paintScreen: () => void,
+  rotationFocus: (eye: Eye) => V3 = (eye) => eye.focus,
 ) {
   const canvas = _gl.canvas
   let lastPos: V3 = V3.O
@@ -520,15 +567,17 @@ export function initNavigationEvents(
     // scene rotation
     //noinspection JSBitwiseOperatorUsage
     if (e.buttons & 2) {
+      const focus = rotationFocus(eye)
       const rotateLR = (-delta.x / 6.0) * DEG
       const rotateUD = (-delta.y / 6.0) * DEG
       // rotate
-      let matrix = M4.rotateLine(eye.focus, eye.up, rotateLR)
+      let matrix = M4.rotateLine(focus, eye.up, rotateLR)
       //let horizontalRotationAxis = focus.minus(pos).cross(up)
-      const horizontalRotationAxis = eye.up.cross(eye.pos.minus(eye.focus))
+      const horizontalRotationAxis = eye.up.cross(eye.pos.minus(focus))
       matrix = matrix.times(
-        M4.rotateLine(eye.focus, horizontalRotationAxis, rotateUD),
+        M4.rotateLine(focus, horizontalRotationAxis, rotateUD),
       )
+      eye.focus = matrix.transformPoint(eye.focus)
       eye.pos = matrix.transformPoint(eye.pos)
       eye.up = matrix.transformVector(eye.up)
 

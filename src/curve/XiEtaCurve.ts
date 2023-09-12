@@ -432,8 +432,9 @@ export function parabola4Projection(
   ) {
     console.log(m.toString())
     throw new Error(
-      "The entire interval must be on one side of the vanishing plane. P=" +
-        toSource(P3.vanishingPlane(m)),
+      `The entire interval [${tMin},${tMax}] must be on one side of the vanishing plane. P=${toSource(
+        P3.vanishingPlane(m),
+      )}`,
     )
   }
   if (eq0(wc)) {

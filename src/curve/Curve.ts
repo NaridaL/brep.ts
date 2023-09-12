@@ -45,6 +45,7 @@ import {
 
 import { abs, ceil, floor } from "../math"
 import { WebGLDebugable } from "../WebGLDebugable"
+import { Mesh } from "tsgl/lib"
 
 /**
  * Information about the intersection of two curves.
@@ -68,7 +69,7 @@ export abstract class Curve
   hlol!: number;
   readonly ["constructor"]: new (...args: any[]) => this
 
-  debugInfo?(): { points: V3[]; lines: V3[] }
+  debugInfo?(): { points?: V3[]; lines?: V3[]; mesh?: Mesh[] }
 
   /**
    * Derivative of tangentAt for parameter t at t.

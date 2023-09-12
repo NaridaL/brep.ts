@@ -9,6 +9,7 @@ module.exports = {
     },
   },
   setupFilesAfterEnv: ["jest-expect-message"],
+  reporters: ["default", "<rootDir>/tests/reporter.js"],
   moduleNameMapper: {
     brepts: "<rootDir>/src/index.ts",
   },

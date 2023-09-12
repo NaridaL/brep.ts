@@ -7,8 +7,10 @@ import {
   clamp,
   fuzzyUniques,
   getLast,
+  indexWithMax,
   int,
   M4,
+  newtonIterate2d,
   newtonIterate2dWithDerivatives,
   V3,
   withMax,
@@ -33,17 +35,25 @@ import {
 } from "../index"
 
 import { abs, ceil, floor, max, min } from "../math"
+import { Mesh } from "tsgl/lib"
+import dedent from "dedent"
 
 export class PICurve extends ImplicitCurve {
-  didu: (u: number, v: number) => number
-  didv: (u: number, v: number) => number
+  readonly didu: (u: number, v: number) => number
+  readonly didv: (u: number, v: number) => number
 
   constructor(
     points: ReadonlyArray<V3>,
     tangents: ReadonlyArray<V3>,
     readonly parametricSurface: ParametricSurface,
     readonly implicitSurface: ImplicitSurface,
+    /**
+     * Points of the curve in UV coordinates on the parametric surface.
+     */
     readonly pmPoints: ReadonlyArray<V3>,
+    /**
+     * Tangents of the curve in UV coordinates on the parametric surface.
+     */
     readonly pmTangents: ReadonlyArray<V3>,
     readonly stepSize: number,
     dir: number = 1,
@@ -73,13 +83,13 @@ export class PICurve extends ImplicitCurve {
       const dpdu = ps.dpdu()
       const dpdv = ps.dpdv()
       const didp = is.didp.bind(is)
-      const mf = MathFunctionR2R.forFFxFy(
+      const ic2d = MathFunctionR2R.forFFxFy(
         (x, y) => iFunc(pFunc(x, y)),
         (u, v) => didp(pFunc(u, v)).dot(dpdu(u, v)),
         (u, v) => didp(pFunc(u, v)).dot(dpdv(u, v)),
       )
       const { points } = followAlgorithm2d(
-        mf,
+        ic2d,
         this.pmPoints[0],
         stepSize,
         ps,
@@ -89,7 +99,7 @@ export class PICurve extends ImplicitCurve {
       )
       if (points.length !== this.points.length) {
         followAlgorithm2d(
-          mf,
+          ic2d,
           this.pmPoints[0],
           stepSize,
           ps,
@@ -258,12 +268,13 @@ export class PICurve extends ImplicitCurve {
 
   equals(obj: any): boolean {
     return (
-      Object.getPrototypeOf(obj) == PICurve.prototype &&
-      this.parametricSurface.equals(obj.parametricSurface) &&
-      this.implicitSurface.equals(obj.implicitSurface) &&
-      this.points[0].equals(obj.points[0]) &&
-      this.tangents[0].equals(obj.tangents[0]) &&
-      this.dir === obj.dir
+      this === obj ||
+      (Object.getPrototypeOf(obj) == PICurve.prototype &&
+        this.parametricSurface.equals(obj.parametricSurface) &&
+        this.implicitSurface.equals(obj.implicitSurface) &&
+        this.points[0].equals(obj.points[0]) &&
+        this.tangents[0].equals(obj.tangents[0]) &&
+        this.dir === obj.dir)
     )
   }
 
@@ -352,11 +363,11 @@ export class PICurve extends ImplicitCurve {
       }
     } else if (ImplicitSurface.is(surface)) {
       const result: number[] = []
-      const iF = surface.implicitFunction()
-      let prevSignedDistance = iF(this.points[0])
+      const iF2 = surface.implicitFunction()
+      let prevSignedDistance = iF2(this.points[0])
       for (let i = 1; i < this.points.length; i++) {
         const point = this.points[i]
-        const signedDistance = iF(point)
+        const signedDistance = iF2(point)
         if (prevSignedDistance * signedDistance <= 0) {
           const pF = this.parametricSurface.pUVFunc()
           const dpdu = this.parametricSurface.dpdu()
@@ -366,7 +377,7 @@ export class PICurve extends ImplicitCurve {
           ]
           const isUV = newtonIterate2dWithDerivatives(
             this.implicitCurve(),
-            (u, v) => iF(pF(u, v)),
+            (u, v) => iF2(pF(u, v)),
             startUV.x,
             startUV.y,
             4,
@@ -398,46 +409,45 @@ export class PICurve extends ImplicitCurve {
     // return ts.filter(t => !isNaN(t) && this.isValidT(t))
   }
 
-  pointT(p: V3): number {
+  pointT(p: V3): number | undefined {
     assertVectors(p)
     if (
       !this.parametricSurface.containsPoint(p) ||
       !this.implicitSurface.containsPoint(p)
     ) {
-      return NaN
+      return undefined
     }
     const pmPoint = this.parametricSurface.uvPFunc()(p)
-    const ps = this.points,
-      pmps = this.pmPoints
-    let t = 0,
-      pmDistance = pmPoint.distanceTo(pmps[0])
-    while (pmDistance > abs(this.stepSize) && t < ps.length - 1) {
+    // find the closest int t to the target point.
+    let t = 0
+    let pmDistance = pmPoint.distanceTo(this.pmPoints[0])
+    while (pmDistance > abs(this.stepSize) && t < this.points.length - 1) {
       // TODO -1?
       //console.log(t, pmps[t].$, pmDistance)
       t = min(
-        pmps.length - 1,
+        this.pmPoints.length - 1,
         t + max(1, Math.round(pmDistance / abs(this.stepSize) / 2 / 2)),
       )
-      pmDistance = pmPoint.distanceTo(pmps[t])
+      pmDistance = pmPoint.distanceTo(this.pmPoints[t])
     }
     // if (t < this.pmPoints.length - 1 && pmDistance > pmPoint.distanceTo(pmps[t + 1])) {
     //     t++
     // }
     if (pmDistance > abs(this.stepSize) * 1.1) {
       // p is not on this curve
-      return NaN
+      return undefined
     }
-    if (t == ps.length - 1) {
+    if (t == this.points.length - 1) {
       t--
     }
-    if (ps[t].like(p)) return t
-    if (ps[t + 1].like(p)) return t + 1
+    if (this.points[t].like(p)) return t
+    if (this.points[t + 1].like(p)) return t + 1
     const startT = withMax(
       arrayRange(floor(this.tMin), ceil(this.tMax), 1),
-      (t) => -pmPoint.distanceTo(pmps[t]),
+      (t) => -pmPoint.distanceTo(this.pmPoints[t]),
     )
     if (undefined === startT) throw new Error()
-    if (ps[startT].like(p)) return startT
+    if (this.points[startT].like(p)) return startT
     //const [a, b] = 0 === startT
     //    ? [0, 1]
     //    : this.points.length - 1 === startT
@@ -497,9 +507,63 @@ export class PICurve extends ImplicitCurve {
     //this.tMin, this.tMax)
   }
 
+  /**
+   * For each dim, do newton iteration in (u, v) => (iC(u, v), tangentAt(u,
+   * v).e(dim))
+   *
+   *
+   */
   roots(): [number[], number[], number[]] {
-    const allTs = arrayRange(0, this.points.length)
-    return [allTs, allTs, allTs]
+    function requireDefined<T>(x: T | undefined): T {
+      if (x === undefined) {
+        throw new Error("undefined")
+      } else {
+        return x
+      }
+    }
+
+    const ic = this.implicitCurve()
+    const dpdu = this.parametricSurface.dpdu()
+    const dpdv = this.parametricSurface.dpdv()
+    const tangentUV = (u: number, v: number) => {
+      const uvTangent = new V3(-this.didv(u, v), this.didu(u, v), 0)
+      const du = dpdu(u, v)
+      const dv = dpdv(u, v)
+      return du.times(uvTangent.x).plus(dv.times(uvTangent.y))
+    }
+    // V(-8.132383655379272e-15, 0.21929060879519185, 1.4848030775538033)
+    // V(0.016080294423317397, -0.0018163401414633719, 0.0018163401415682895)
+    //return [allTs, allTs, allTs]
+    return ([0, 1, 2] as [int, int, int]).map((dim): number[] => {
+      return [-1, 1].flatMap((dir) => {
+        const tStart = indexWithMax(this.points, (p) => dir * p.e(dim))!
+        if (tStart <= this.tMin || this.tMax <= tStart) {
+          return []
+        }
+        const uvStart = this.uvT(tStart)
+        const rootUV = newtonIterate2d(
+          ic,
+          (u, v) => tangentUV(u, v).e(dim),
+          uvStart.x,
+          uvStart.y,
+          8,
+          /* this.didu,
+           this.didv,*/
+        )!
+        const rootP = this.parametricSurface.pUV(rootUV.x, rootUV.y)
+        const rootT = this.pointT(rootP)
+        console.log(
+          dedent`
+            dim ${dim}
+            rootP ${rootP}
+            tangentUV ${tangentUV(rootUV.x, rootUV.y)}
+            rootT ${rootT}
+            at(rootT) ${this.at(rootT!)}
+            `,
+        )
+        return [requireDefined(rootT)]
+      })
+    })
   }
 
   isInfosWithLine(
@@ -536,6 +600,12 @@ export class PICurve extends ImplicitCurve {
       this.tMax,
     )
     return result
+  }
+
+  debugInfo(): { mesh: Mesh[] } {
+    return {
+      mesh: [this.parametricSurface.toMesh(), this.implicitSurface.toMesh()],
+    }
   }
 }
 

@@ -1,4 +1,5 @@
-import { int } from "ts3dutils"
+import { getLast, int } from "ts3dutils"
+import Interval = RangeTree.Interval
 
 export class RangeTree {
   nextIntervals: RangeTree = undefined
@@ -20,8 +21,8 @@ export class RangeTree {
     if (end - start == 1) {
       return values[start]
     } else {
-      const p = start + Math.floor((end - start) / 2),
-        s = values[p - 1]
+      const p = start + Math.floor((end - start) / 2)
+      const s = values[p - 1]
       return new RangeTree(
         s,
         RangeTree.fromArray(values, start, p),
@@ -29,20 +30,6 @@ export class RangeTree {
       )
     }
   }
-
-  //addIntervals(intervals) {
-  //    intervals.forEach(int => addTo(this, int))
-  //    function addTo(rt, int) {
-  //        rt.recIntCount++
-  //        if (int.right < rt.s) {
-  //            addTo(rt.left, int)
-  //        } else if (int.left > rt.s) {
-  //            addTo(rt.right, int)
-  //        } else {
-  //            rt.intervals.push(int)
-  //        }
-  //    }
-  //}
 
   removeInterval(interval: RangeTree.Interval) {
     let x: any
@@ -71,6 +58,20 @@ export class RangeTree {
       }
     }
   }
+
+  //addIntervals(intervals) {
+  //    intervals.forEach(int => addTo(this, int))
+  //    function addTo(rt, int) {
+  //        rt.recIntCount++
+  //        if (int.right < rt.s) {
+  //            addTo(rt.left, int)
+  //        } else if (int.left > rt.s) {
+  //            addTo(rt.right, int)
+  //        } else {
+  //            rt.intervals.push(int)
+  //        }
+  //    }
+  //}
 
   addIntervals(intervals: RangeTree.Interval[]) {
     let last: RangeTree.Interval[]
@@ -101,7 +102,7 @@ export class RangeTree {
     recurse(this, intervals)
   }
 
-  getIntervals(interval) {
+  getIntervals(interval: Interval): Interval[] {
     const u = this
 
     function getPath(a, b, u) {
@@ -147,6 +148,7 @@ export class RangeTree {
     addIntersections(P1, result)
     addIntersections(P2, result)
     addIntersections(P3, result)
+    return result
   }
 
   toString() {

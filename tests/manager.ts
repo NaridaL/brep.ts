@@ -1,6 +1,7 @@
 import * as path from "path"
 import prettier from "prettier"
 import diff from "jest-diff"
+import isPlainObject from "is-plain-object"
 
 try {
   ;(global as any).WebGLRenderingContext = {}
@@ -47,6 +48,8 @@ import {
 } from "../src"
 import * as brepts from "../src"
 import * as ts3dutils from "ts3dutils"
+import deepmerge from "deepmerge"
+import typescriptParser from "prettier/parser-typescript"
 
 declare global {
   namespace jest {
@@ -63,6 +66,7 @@ const brepToString = (x: BRep) =>
     parser: "typescript",
     semi: false,
     trailingComma: "all",
+    plugins: [typescriptParser],
   })
 
 function toEqualBRep(actual: BRep, expected: BRep, additionalStuff: {}) {
@@ -124,9 +128,6 @@ expect.extend({
 
 const sanitizeFilenameOptions = {
   multicharmap: Object.defineProperties(Object.assign({}, slug.multicharmap), {
-    str: {
-      value: "str",
-    },
     sce: {
       value: "sce",
     },
@@ -226,6 +227,13 @@ export function makeLink(values: any) {
     .join(";")
 }
 
+function addLinksToIndex(links: { [name: string]: string }) {
+  const indexPath = path.join(__dirname, "results", "index.json")
+  const existing = JSON.parse(fs.readFileSync(indexPath, "utf8"))
+  const _new = JSON.stringify(Object.assign(existing, links), null, "  ")
+  fs.writeFileSync(indexPath, _new, "utf8")
+}
+
 export function outputLink(
   values: { [K in keyof RenderObjects]?: RenderObjects[K] | string },
   msg = "view",
@@ -258,6 +266,7 @@ export function outputLink(
     "utf8",
   )
   link("http://localhost:10001/tests/results/" + o, msg)
+  addLinksToIndex({ [expect.getState().currentTestName]: o })
 }
 
 function link(url: string, msg?: string) {
@@ -478,15 +487,26 @@ export function surfaceVolumeAndAreaTests(
   })
 }
 
-export function testCurve(curve: Curve, checkTangents = true, msg?: string) {
+export function testCurve(
+  curve: Curve,
+  checkTangents = true,
+  msg?: string,
+  additional: any = {},
+) {
   const edge = edgeForCurveAndTs(curve)
   const aabb = curve.getAABB()
   outputLink(
-    {
-      edges: [edge],
-      drPs: [edge.a, edge.b],
-      boxes: aabb ? [aabb.getM4()] : [],
-    },
+    deepmerge(
+      {
+        edges: [edge],
+        drPs: [edge.a, edge.b],
+        boxes: aabb ? [aabb.getM4()] : [],
+      },
+      additional,
+      {
+        isMergeableObject: isPlainObject,
+      },
+    ),
     msg,
   )
   const STEPS = 12
@@ -500,7 +520,7 @@ export function testCurve(curve: Curve, checkTangents = true, msg?: string) {
       `containsPoint(at(t == ${t}) == ${p})`,
     ).toBeTruthy()
 
-    expect(aabb.containsPoint(p)).toBeTruthy()
+    expect(aabb.containsPoint(p), `${aabb}.containsPoint(${p})`).toBeTruthy()
 
     // check that tangentAt() behaves correctly
     if (checkTangents) {

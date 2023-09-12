@@ -954,15 +954,9 @@ export class NURBS extends Curve {
   }
 
   roots() {
-    console.log(this.tMin, this.tMax)
-    arraySamples(this.tMin, this.tMax, 30).forEach((t) => {
-      console.log(t + "," + this.tangentAt(t).z)
-    })
-
     const result: Tuple3<number[]> = [[], [], []]
     for (let i = 0; i < this.points.length - 1; i++) {
       const findClosest = (startT: number, d: int) => {
-        console.log("d", d, "startT", startT)
         // try {
         const root = newtonIterateWithDerivative2(
           (t) => {
@@ -977,7 +971,6 @@ export class NURBS extends Curve {
         if (undefined !== root) {
           result[d].push(root)
         }
-        console.log("d", d, "startT", startT, "root", root)
       }
       const a = this.points[i].p3()
       const b = this.points[i + 1].p3()
@@ -1001,7 +994,6 @@ export class NURBS extends Curve {
         }
       }
     }
-    console.log(result)
     return result
   }
 

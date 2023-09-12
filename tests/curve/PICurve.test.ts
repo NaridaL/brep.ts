@@ -1,22 +1,23 @@
 import { testCurve, testISCurves, testISTs, testPointT } from "../manager"
-
+import dedent from "dedent"
 import { DEG, M4, V, V3 } from "ts3dutils"
 import {
   BezierCurve,
+  CylinderSurface,
+  EllipseCurve,
+  EllipsoidSurface,
   P3,
   PCurveEdge,
   PICurve,
   PlaneSurface,
   ProjectedCurveSurface,
   RotatedCurveSurface,
-  CylinderSurface,
-  EllipseCurve,
-  EllipsoidSurface,
 } from "brepts"
+import { doc } from "prettier"
 
 describe("PICurve", () => {
   describe("pointT", () => {
-    test("1", () => {
+    test("point not on curve => undefined", () => {
       const piCurve = PICurve.forStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -30,8 +31,8 @@ describe("PICurve", () => {
           V(0, 0, -1),
           0,
           1,
-          -Infinity,
-          Infinity,
+          -100,
+          100,
         ),
         new EllipsoidSurface(V3.O, V3.X, V3.Y, V3.Z),
         V(0.010937499999999989, 0.2890625, -0.9572477433702835),
@@ -41,7 +42,8 @@ describe("PICurve", () => {
       const p = V(0.010937499999999989, 0.2890625, 0.9572477433702835)
       testPointT(piCurve, p, NaN)
     })
-    test("2", () => {
+
+    test("piCurve.points[8]", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
           new BezierCurve(
@@ -82,6 +84,7 @@ describe("PICurve", () => {
       const p = piCurve.points[8]
       testPointT(piCurve, p, 8)
     })
+
     test("3", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
@@ -110,6 +113,7 @@ describe("PICurve", () => {
       const p = V(-0.16499999999999998, 0.255, 0.9527591510974849)
       testPointT(piCurve, p, 20)
     })
+
     test("4", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
@@ -151,6 +155,7 @@ describe("PICurve", () => {
       const p = V(2.700000000000252, 13.710000000000084, 13.80000000000074)
       testPointT(piCurve, p)
     })
+
     test("5", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
@@ -188,6 +193,7 @@ describe("PICurve", () => {
       )
       testPointT(piCurve, p, 13.449200584902428)
     })
+
     test("6", () => {
       const piCurve = PICurve.forParametricStartEnd(
         new ProjectedCurveSurface(
@@ -230,6 +236,7 @@ describe("PICurve", () => {
       testPointT(piCurve, p)
     })
   })
+
   test("is curves", () => {
     const pcs = new ProjectedCurveSurface(
       new BezierCurve(
@@ -446,6 +453,7 @@ describe("PICurve", () => {
       ),
     ]
   })
+
   test("isTsWithSurface", () => {
     const pcs = new ProjectedCurveSurface(
       BezierCurve.EX2D,
@@ -462,6 +470,7 @@ describe("PICurve", () => {
     console.log(piCurve)
     testISTs(piCurve, new PlaneSurface(P3.XY), 1)
   })
+
   test("isTsWithPlane", () => {
     const piCurve = PICurve.forParametricStartEnd(
       new RotatedCurveSurface(
@@ -494,6 +503,7 @@ describe("PICurve", () => {
     )
     testISTs(piCurve, plane, 1)
   })
+
   test("testCurve", () => {
     const curve = PICurve.forParametricStartEnd(
       new ProjectedCurveSurface(
@@ -520,8 +530,32 @@ describe("PICurve", () => {
       13.433240755090269,
     )
     testCurve(curve, true, "curve")
-    testCurve(curve.transform(M4.FOO), true, "curve.foo()")
+    const curveFoo = curve.transform(M4.FOO)
+    testCurve(curveFoo, true, "curve.foo()", {
+      drPs: [V(1.111182481682829, 12.285190464999221, 4.054554240538709)],
+    })
+    const roots = curveFoo.roots()
+    expect(roots).toEqual([
+      [1.4160324062686414],
+      [11.253090623533353],
+      [9.631006746785715],
+    ])
+
+    for (const dim of [0, 1, 2]) {
+      for (const root of roots[dim]) {
+        const tangent = curveFoo.tangentAt(root)
+        expect(
+          tangent.e(dim),
+          dedent`
+            dim:${dim}
+            root:${root}
+            p:${curveFoo.at(root)}
+            tangent:${tangent}`,
+        ).toFuzzyEqual(0)
+      }
+    }
   })
+
   test("testCurve 2", () => {
     const curve = PICurve.forParametricStartEnd(
       new ProjectedCurveSurface(

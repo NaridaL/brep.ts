@@ -11,7 +11,7 @@ import * as fs from "fs"
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"))
 export default {
-  input: "src/viewer.ts",
+  input: "src/viewer.tsx",
   output: {
     format: "iife",
     file: "dist/viewer.js",
@@ -30,6 +30,7 @@ export default {
     typescriptPlugin({
       typescript,
     }),
+    sourcemapsPlugin(),
     nodeResolvePlugin({
       mainFields: ["module", "jsnext:main", "main"],
 
@@ -78,12 +79,6 @@ export default {
       // if false then skip sourceMap generation for CommonJS modules
       // sourceMap: false,  // Default: true
 
-      // explicitly specify unresolvable named exports
-      // (see below for more details)
-      namedExports: {
-        react: ["Component"],
-      }, // Default: undefined
-
       // sometimes you have to leave require statements
       // unconverted. Pass an array containing the IDs
       // or a `id => boolean` function. Only use this
@@ -93,7 +88,6 @@ export default {
     replacePlugin({
       "process.env.NODE_ENV": JSON.stringify("development"),
     }),
-    sourcemapsPlugin(),
     glsl({
       // By default, everything gets included
       include: "src/**/*.glslx",
